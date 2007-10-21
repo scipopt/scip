@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.25 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.26 2007/10/21 15:39:57 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,6 +35,8 @@
 
 #include "scip/reader_lp.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
 
 
 #define READER_NAME             "lpreader"
@@ -365,7 +368,7 @@ void pushToken(
 {
    assert(lpinput != NULL);
    assert(lpinput->npushedtokens < LP_MAX_PUSHEDTOKENS);
-   
+
    swapPointers(&lpinput->pushedtokens[lpinput->npushedtokens], &lpinput->token);
    lpinput->npushedtokens++;
 }
@@ -378,7 +381,7 @@ void pushBufferToken(
 {
    assert(lpinput != NULL);
    assert(lpinput->npushedtokens < LP_MAX_PUSHEDTOKENS);
-   
+
    swapPointers(&lpinput->pushedtokens[lpinput->npushedtokens], &lpinput->tokenbuf);
    lpinput->npushedtokens++;
 }
@@ -390,7 +393,7 @@ void swapTokenBuffer(
    )
 {
    assert(lpinput != NULL);
-   
+
    swapPointers(&lpinput->token, &lpinput->tokenbuf);
 }
 
@@ -633,7 +636,7 @@ SCIP_Bool isValue(
    {
       double val;
       char* endptr;
-      
+
       val = strtod(lpinput->token, &endptr);
       if( endptr != lpinput->token && *endptr == '\0' )
       {
@@ -702,11 +705,11 @@ SCIP_RETCODE getVariable(
 
       /* create new variable of the given name */
       SCIPdebugMessage("creating new variable: <%s>\n", name);
-      SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, 
+      SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
             initial, removable, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, newvar) );
       *var = newvar;
-      
+
       /* because the variable was added to the problem, it is captured by SCIP and we can safely release it right now
        * without making the returned *var invalid
        */
@@ -786,7 +789,7 @@ SCIP_RETCODE readCoefficients(
 
       /* remember the token in the token buffer */
       swapTokenBuffer(lpinput);
-      
+
       /* get the next token and check, whether it is a colon */
       if( getNextToken(lpinput) )
       {
@@ -1045,7 +1048,7 @@ SCIP_RETCODE readConstraints(
    SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber, 
+   SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1318,30 +1321,206 @@ SCIP_RETCODE readSemicontinuous(
       syntaxError(scip, lpinput, "semi-continuous variables not yet supported by SCIP");
       return SCIP_OKAY;
    }
-   
+
    return SCIP_OKAY;
 }
 
-/** reads the sos section */
+/** reads the sos section
+ *
+ *  The format is as follows:
+ *
+ *  SOS
+ *  <constraint name>: [S1|S2]:: {<variable name>:<weight>}
+ *  ...
+ *  <constraint name>: [S1|S2]:: {<variable name>:<weight>}
+ * */
 static
 SCIP_RETCODE readSos(
    SCIP*                 scip,               /**< SCIP data structure */
    LPINPUT*              lpinput             /**< LP reading data */
    )
 {
+   SCIP_Bool initial, separate, enforce, check, propagate;
+   SCIP_Bool local, modifiable, dynamic, removable;
+   char name[SCIP_MAXSTRLEN];
+
    assert(lpinput != NULL);
 
-   while( getNextToken(lpinput) )
+   /* standard settings for SOS constraints: */
+   initial = TRUE;
+   separate = FALSE;
+   enforce = TRUE;
+   check = TRUE;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   dynamic = FALSE;
+   removable = FALSE;
+
+   while ( getNextToken(lpinput) )
    {
+      int type = -1;
+      SCIP_CONS* cons;
+      SCIP_Bool nextSection = FALSE;
+
       /* check if we reached a new section */
-      if( isNewSection(lpinput) )
+      if ( isNewSection(lpinput) )
          return SCIP_OKAY;
 
-      /* semi-continuous variables are not yet supported by SCIP */
-      syntaxError(scip, lpinput, "SOS constraints not yet supported by SCIP");
-      return SCIP_OKAY;
+      /* check for an SOS constraint name */
+      *name = '\0';
+
+      /* remember the token in the token buffer */
+      swapTokenBuffer(lpinput);
+
+      /* get the next token and check, whether it is a colon */
+      if ( getNextToken(lpinput) )
+      {
+         if ( strcmp(lpinput->token, ":") == 0 )
+         {
+            /* the second token was a colon: the first token is the constraint name */
+            strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
+            name[SCIP_MAXSTRLEN-1] = '\0';
+         }
+         else
+         {
+            /* the second token was no colon: push the tokens back onto the token stack and parse it next */
+            pushToken(lpinput);
+            pushBufferToken(lpinput);
+         }
+      }
+      else
+      {
+         /* there was only one token left: push it back onto the token stack and parse it next */
+         pushBufferToken(lpinput);
+      }
+
+      /* get type */
+      if ( ! getNextToken(lpinput) )
+      {
+	 syntaxError(scip, lpinput, "expected SOS type: 'S1::' or 'S2::'");
+	 return SCIP_OKAY;
+      }
+      /* check whether constraint name was left out */
+      if ( strcmp(lpinput->token, ":") == 0 )
+      {
+	 /* we have to push twice ':' and once the type: */
+	 pushToken(lpinput);
+	 lpinput->token[0] = ':';
+	 lpinput->token[1] = '\0';
+	 pushToken(lpinput);
+	 swapTokenBuffer(lpinput);
+      }
+
+      /* check whether it is type 1 or type 2 */
+      if ( strcmp(lpinput->token, "S1") == 0 )
+      {
+	 type = 1;
+	 SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+				       local, modifiable, dynamic, removable) );
+      }
+      else if ( strcmp(lpinput->token, "S2") == 0 )
+      {
+	 type = 2;
+	 SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+				       local, modifiable, dynamic, removable) );
+      }
+      else
+      {
+	 syntaxError(scip, lpinput, "SOS constraint type other than 1 or 2 appeared");
+	 return SCIP_OKAY;
+      }
+      assert( type == 1 || type == 2 );
+
+      SCIPdebugMessage("created SOS%d constraint <%s>\n", type, name);
+
+      /* make sure that a colons follows */
+      if ( ! getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+      {
+	 syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons");
+	 return SCIP_OKAY;
+      }
+
+      /* make sure that another colons follows */
+      if ( ! getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+      {
+	 syntaxError(scip, lpinput, "SOS constraint type has to be followed by two colons");
+	 return SCIP_OKAY;
+      }
+
+      /* parse elements of SOS constraint */
+      while ( getNextToken(lpinput) && ! nextSection )
+      {
+	 SCIP_VAR* var;
+	 SCIP_Real weight;
+
+	 /* check if we reached a new section */
+	 if ( isNewSection(lpinput) )
+	 {
+	    nextSection = TRUE;
+	    break;
+	 }
+
+	 /* remember the token in the token buffer */
+	 swapTokenBuffer(lpinput);
+
+	 /* get variable and colon */
+	 var = SCIPfindVar(scip, lpinput->tokenbuf);
+
+	 /* if token is a variable name */
+	 if ( var == NULL )
+	 {
+	    pushBufferToken(lpinput);
+	    break;
+	 }
+	 else
+	 {
+	    SCIPdebugMessage("found variable <%s>\n", SCIPvarGetName(var));
+	    if ( ! getNextToken(lpinput) || strcmp(lpinput->token, ":") != 0 )
+	    {
+	       syntaxError(scip, lpinput, "expected colon and weight.");
+	       return SCIP_OKAY;
+	    }
+	    /* check next token */
+	    if ( ! getNextToken(lpinput) )
+	    {
+	       /* push back token, since it could be the name of a new constraint */
+	       pushToken(lpinput);
+	       pushBufferToken(lpinput);
+	       break;
+	    }
+	    else
+	    {
+	       /* get weight */
+	       if ( ! isValue(scip, lpinput, &weight) )
+	       {
+		  /* push back token, since it could be the name of a new constraint */
+		  pushToken(lpinput);
+		  pushBufferToken(lpinput);
+		  break;
+	       }
+	       else
+	       {
+		  /* we now know that we have a variable/weight pair -> add variable*/
+		  switch (type)
+		  {
+		  case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
+		  case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
+		  default: abort(); // should not happen
+		  }
+		  SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
+	       }
+	    }
+	 }
+      }
+
+      /* add the SOS constraint */
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIPdebugMessage("(line %d) added constraint <%s>: ", lpinput->linenumber, SCIPconsGetName(cons));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -1366,7 +1545,7 @@ SCIP_RETCODE readLPFile(
 
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
-   
+
    /* parse the file */
    lpinput->section = LP_START;
    while( lpinput->section != LP_END )
@@ -1499,7 +1678,7 @@ SCIP_RETCODE SCIPincludeReaderLp(
 
    /* create lp reader data */
    readerdata = NULL;
-   
+
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
          readerFreeLp, readerReadLp, readerdata) );
@@ -1514,6 +1693,6 @@ SCIP_RETCODE SCIPincludeReaderLp(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/lpreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
          NULL, FALSE, FALSE, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }
