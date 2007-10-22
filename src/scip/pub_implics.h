@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_implics.h,v 1.7 2007/06/06 11:25:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_implics.h,v 1.8 2007/10/22 16:06:22 bzfpfets Exp $"
 
-/**@file   implics.h
+/**@file   pub_implics.h
  * @brief  public methods for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
