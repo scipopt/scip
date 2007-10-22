@@ -14,12 +14,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.71 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.72 2007/10/22 15:40:10 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -30,6 +31,8 @@
 
 #include "scip/reader_mps.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_sos1.h"
+#include "scip/cons_sos2.h"
 
 
 #define READER_NAME             "mpsreader"
@@ -59,6 +62,7 @@ enum MpsSection
    MPS_RHS,
    MPS_RANGES,
    MPS_BOUNDS,
+   MPS_SOS,
    MPS_ENDATA
 };
 typedef enum MpsSection MPSSECTION;
@@ -283,13 +287,13 @@ void mpsinputSetProbname(
    assert(mpsi     != NULL);
    assert(probname != NULL);
    assert(strlen(probname) < sizeof(mpsi->probname));
-   
+
    strcpy(mpsi->probname, probname);
 }
 
 static
 void mpsinputSetObjname(
-   MPSINPUT*             mpsi, 
+   MPSINPUT*             mpsi,
    const char*           objname
    )
 {
@@ -314,7 +318,7 @@ void mpsinputSetObjsense(
 static
 void mpsinputSyntaxerror(
    MPSINPUT*             mpsi
-   ) 
+   )
 {
    assert(mpsi != NULL);
 
@@ -326,10 +330,10 @@ void mpsinputSyntaxerror(
 static
 void mpsinputEntryIgnored(
    SCIP*                 scip,               /**< SCIP data structure */
-   MPSINPUT*             mpsi, 
-   const char*           what, 
-   const char*           what_name, 
-   const char*           entity, 
+   MPSINPUT*             mpsi,
+   const char*           what,
+   const char*           what_name,
+   const char*           entity,
    const char*           entity_name
    )
 {
@@ -339,7 +343,7 @@ void mpsinputEntryIgnored(
    assert(entity      != NULL);
    assert(entity_name != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
       "Warning line %d: %s \"%s\" for %s \"%s\" ignored\n", mpsi->lineno, what, what_name, entity, entity_name);
 }
 
@@ -408,7 +412,7 @@ SCIP_Bool mpsinputReadLine(
          if (NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp))
             return FALSE;
          mpsi->lineno++;
-      } 
+      }
       while(*mpsi->buf == '*');
 
       /* Normalize line
@@ -418,7 +422,7 @@ SCIP_Bool mpsinputReadLine(
       for(i = 0; i < len; i++)
          if ((mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r'))
             mpsi->buf[i] = BLANK;
-      
+
       if (len < 80)
          clearFrom(mpsi->buf, len);
 
@@ -450,10 +454,10 @@ SCIP_Bool mpsinputReadLine(
 
          /* Test for fixed format
           */
-         space = mpsi->buf[12] | mpsi->buf[13] 
-            | mpsi->buf[22] | mpsi->buf[23] 
+         space = mpsi->buf[12] | mpsi->buf[13]
+            | mpsi->buf[22] | mpsi->buf[23]
             | mpsi->buf[36] | mpsi->buf[37] | mpsi->buf[38]
-            | mpsi->buf[47] | mpsi->buf[48] 
+            | mpsi->buf[47] | mpsi->buf[48]
             | mpsi->buf[61] | mpsi->buf[62] | mpsi->buf[63];
 
          if (space == BLANK)
@@ -462,13 +466,13 @@ SCIP_Bool mpsinputReadLine(
              * But are there also the non space where they
              * should be ?
              */
-            SCIP_Bool number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25]) 
-               || isdigit(mpsi->buf[26]) || isdigit(mpsi->buf[27]) 
-               || isdigit(mpsi->buf[28]) || isdigit(mpsi->buf[29]) 
-               || isdigit(mpsi->buf[30]) || isdigit(mpsi->buf[31]) 
-               || isdigit(mpsi->buf[32]) || isdigit(mpsi->buf[33]) 
-               || isdigit(mpsi->buf[34]) || isdigit(mpsi->buf[35]); 
-            
+            SCIP_Bool number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25])
+               || isdigit(mpsi->buf[26]) || isdigit(mpsi->buf[27])
+               || isdigit(mpsi->buf[28]) || isdigit(mpsi->buf[29])
+               || isdigit(mpsi->buf[30]) || isdigit(mpsi->buf[31])
+               || isdigit(mpsi->buf[32]) || isdigit(mpsi->buf[33])
+               || isdigit(mpsi->buf[34]) || isdigit(mpsi->buf[35]);
+
             /* len < 13 is handle ROW lines with embedded spaces
              * in the names correctly
              */
@@ -493,11 +497,11 @@ SCIP_Bool mpsinputReadLine(
          }
       }
       s = &mpsi->buf[1];
-      
+
       /* At this point it is not clear if we have a indicator field.
        * If there is none (e.g. empty) f1 will be the first name field.
        * If there is one, f2 will be the first name field.
-       * 
+       *
        * Initially comment marks '$' ar only allowed in the beginning
        * of the 2nd and 3rd name field. We test all fields but the first.
        * This makes no difference, since if the $ is at the start of a value
@@ -507,19 +511,19 @@ SCIP_Bool mpsinputReadLine(
       {
          if (NULL == (mpsi->f1 = SCIPstrtok(s, " ", &nexttok)))
             break;
-         
+
          if ((NULL == (mpsi->f2 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f2 == '$'))
          {
             mpsi->f2 = 0;
-            break;      
+            break;
          }
          if (!strcmp(mpsi->f2, "'MARKER'"))
             is_marker = TRUE;
-            
+
          if ((NULL == (mpsi->f3 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f3 == '$'))
          {
             mpsi->f3 = 0;
-            break;      
+            break;
          }
          if (is_marker)
          {
@@ -536,7 +540,7 @@ SCIP_Bool mpsinputReadLine(
          if ((NULL == (mpsi->f4 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f4 == '$'))
          {
             mpsi->f4 = 0;
-            break;      
+            break;
          }
          if (is_marker)
          {
@@ -604,9 +608,9 @@ SCIP_RETCODE readName(
 
    /* Sometimes the name is omitted. */
    mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
-   
+
    /*printf("Problem name   : %s\n", mpsinputProbname(mpsi));*/
-   
+
    /* This hat to be a new section */
    if (!mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL))
    {
@@ -691,7 +695,7 @@ SCIP_RETCODE readObjname(
    )
 {
    assert(mpsi != NULL);
-   
+
    /* This has to be the Line with the name. */
    if (!mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL)
    {
@@ -700,7 +704,7 @@ SCIP_RETCODE readObjname(
    }
 
    mpsinputSetObjname(mpsi, mpsinputField1(mpsi));
-   
+
    /* Look for ROWS, USERCUTS, or LAZYCONS Section */
    if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
    {
@@ -719,12 +723,12 @@ SCIP_RETCODE readObjname(
    return SCIP_OKAY;
 }
 
-/* Process ROWS, USERCUTS, or LAZYCONS section. 
+/* Process ROWS, USERCUTS, or LAZYCONS section.
  */
-static 
+static
 SCIP_RETCODE readRows(
    MPSINPUT*             mpsi,
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    while(mpsinputReadLine(mpsi))
@@ -784,7 +788,7 @@ SCIP_RETCODE readRows(
          switch(*mpsinputField1(mpsi))
          {
          case 'G' :
-            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip), 
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, mpsinputField2(mpsi), 0, NULL, NULL, 0.0, SCIPinfinity(scip),
                   initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
             break;
          case 'E' :
@@ -813,8 +817,8 @@ SCIP_RETCODE readRows(
 static
 SCIP_RETCODE readCols(
    MPSINPUT*             mpsi,
-   SCIP*                 scip                /**< SCIP data structure */   
-   ) 
+   SCIP*                 scip                /**< SCIP data structure */
+   )
 {
    char          colname[MPS_MAX_LINELEN] = { '\0' };
    SCIP_CONS*    cons;
@@ -881,7 +885,7 @@ SCIP_RETCODE readCols(
       {
          SCIP_CALL( SCIPchgVarObj(scip, var, val) );
       }
-      else 
+      else
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
@@ -901,7 +905,7 @@ SCIP_RETCODE readCols(
          {
             SCIP_CALL( SCIPchgVarObj(scip, var, val) );
          }
-         else 
+         else
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
@@ -918,12 +922,12 @@ SCIP_RETCODE readCols(
    return SCIP_OKAY;
 }
 
-/* Process RHS section. 
+/* Process RHS section.
  */
 static
 SCIP_RETCODE readRhs(
    MPSINPUT*             mpsi,
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    char        rhsname[MPS_MAX_LINELEN] = { '\0' };
@@ -942,6 +946,8 @@ SCIP_RETCODE readRhs(
             mpsinputSetSection(mpsi, MPS_RANGES);
          else if (!strcmp(mpsinputField0(mpsi), "BOUNDS"))
             mpsinputSetSection(mpsi, MPS_BOUNDS);
+         else if (!strcmp(mpsinputField0(mpsi), "SOS"))
+            mpsinputSetSection(mpsi, MPS_SOS);
          else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
@@ -951,13 +957,13 @@ SCIP_RETCODE readRhs(
       if ((mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
          || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL))
          mpsinputInsertName(mpsi, "_RHS_", FALSE);
-      
+
       if (mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL)
          break;
 
       if (*rhsname == '\0')
          strcpy(rhsname, mpsinputField1(mpsi));
-      
+
       if (!strcmp(rhsname, mpsinputField1(mpsi)))
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
@@ -999,7 +1005,7 @@ SCIP_RETCODE readRhs(
             else
             {
                val = atof(mpsinputField5(mpsi));
-               
+
                /* find out the row sense */
                lhs = SCIPgetLhsLinear(scip, cons);
                rhs = SCIPgetRhsLinear(scip, cons);
@@ -1037,7 +1043,7 @@ SCIP_RETCODE readRhs(
 static
 SCIP_RETCODE readRanges(
    MPSINPUT*             mpsi,
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    char        rngname[MPS_MAX_LINELEN] = { '\0' };
@@ -1054,6 +1060,8 @@ SCIP_RETCODE readRanges(
 
          if (!strcmp(mpsinputField0(mpsi), "BOUNDS"))
             mpsinputSetSection(mpsi, MPS_BOUNDS);
+         if (!strcmp(mpsinputField0(mpsi), "SOS"))
+            mpsinputSetSection(mpsi, MPS_SOS);
          else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
@@ -1076,9 +1084,9 @@ SCIP_RETCODE readRanges(
        *  G   +/-   rhs             rhs + |range|
        *  L   +/-   rhs - |range|   rhs
        *  E   +     rhs             rhs + range
-       *  E   -     rhs + range     rhs 
+       *  E   -     rhs + range     rhs
        * ----------------------------------------
-       */  
+       */
       if (!strcmp(rngname, mpsinputField1(mpsi)))
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
@@ -1159,12 +1167,12 @@ SCIP_RETCODE readRanges(
    return SCIP_OKAY;
 }
 
-/* Process BOUNDS section. 
+/* Process BOUNDS section.
  */
 static
 SCIP_RETCODE readBounds(
    MPSINPUT*             mpsi,
-   SCIP*                 scip                /**< SCIP data structure */   
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    char        bndname[MPS_MAX_LINELEN] = { '\0' };
@@ -1177,10 +1185,10 @@ SCIP_RETCODE readBounds(
       {
          /*printf("Bound name     : %s\n", bndname);*/
 
-         if (strcmp(mpsinputField0(mpsi), "ENDATA"))
-            break;
-
-         mpsinputSetSection(mpsi, MPS_ENDATA);
+         if (!strcmp(mpsinputField0(mpsi), "SOS"))
+            mpsinputSetSection(mpsi, MPS_SOS);
+         else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
+            mpsinputSetSection(mpsi, MPS_ENDATA);
          return SCIP_OKAY;
       }
       /* Is the value field used ? */
@@ -1219,7 +1227,7 @@ SCIP_RETCODE readBounds(
 
       if (*bndname == '\0')
          strcpy(bndname, mpsinputField2(mpsi));
-      
+
       /* Only read the first Bound in section */
       if (!strcmp(bndname, mpsinputField2(mpsi)))
       {
@@ -1227,7 +1235,7 @@ SCIP_RETCODE readBounds(
          if( var == NULL )
             mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname);
          else
-         { 
+         {
             if( mpsinputField4(mpsi) == NULL )
                val = 0.0;
             else
@@ -1300,25 +1308,186 @@ SCIP_RETCODE readBounds(
    return SCIP_OKAY;
 }
 
+/* Process SOS section.
+ *
+ * We read the SOS section, which is a nonstandard section introduced by CPLEX.
+ *
+ * @note Currently do not support the standard way of specifying SOS constraints via markers.
+*/
+static
+SCIP_RETCODE readSOS(
+   MPSINPUT*             mpsi,
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Bool initial, separate, enforce, check, propagate;
+   SCIP_Bool local, modifiable, dynamic, removable;
+   char name[SCIP_MAXSTRLEN];
+   SCIP_CONS*  cons = NULL;
+   int consType = -1;
+   int cnt = 0;
+
+   /* standard settings for SOS constraints: */
+   initial = TRUE;
+   separate = FALSE;
+   enforce = TRUE;
+   check = TRUE;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   dynamic = FALSE;
+   removable = FALSE;
+
+   /* loop through section */
+   while ( mpsinputReadLine(mpsi) )
+   {
+      int type = -1;
+
+      /* check if next section is found */
+      if ( mpsinputField0(mpsi) != NULL )
+      {
+	 if ( ! strcmp(mpsinputField0(mpsi), "ENDATA") )
+            mpsinputSetSection(mpsi, MPS_ENDATA);
+	 break;
+      }
+      if ( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
+      {
+	 SCIPerrorMessage("empty data in a non-comment line.\n");
+	 mpsinputSyntaxerror(mpsi);
+	 return SCIP_OKAY;
+      }
+
+      /* check for new SOS set */
+      if ( strcmp(mpsinputField1(mpsi), "S1") == 0 )
+	 type = 1;
+      if ( strcmp(mpsinputField1(mpsi), "S2") == 0 )
+	 type = 2;
+
+      /* add last constraint and create a new one */
+      if ( type > 0 )
+      {
+	 assert( type == 1 || type == 2 );
+	 if ( cons != NULL )
+	 {
+	    /* add last constraint */
+	    SCIP_CALL( SCIPaddCons(scip, cons) );
+	    SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+	    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+	 }
+
+	 /* check name */
+	 if ( mpsinputField2(mpsi) != NULL )
+	    strncpy(name, mpsinputField2(mpsi), SCIP_MAXSTRLEN);
+	 else
+	 {
+	    /* create new name */
+	    snprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
+	 }
+
+	 /* create new SOS constraint */
+	 if ( type == 1 )
+	 {
+	    /* we do not know the name of the constraint */
+	    SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+					  local, modifiable, dynamic, removable) );
+	 }
+	 else
+	 {
+	    assert( type == 2 );
+	    SCIP_CALL( SCIPcreateConsSOS2(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
+					  local, modifiable, dynamic, removable) );
+	 }
+	 consType = type;
+	 SCIPdebugMessage("created constraint <%s> of type %d.\n", name, type);
+	 /* note: we ignore the priorities! */
+      }
+      else
+      {
+	 /* otherwise we are in the section given variables */
+	 SCIP_VAR* var = NULL;
+	 SCIP_Real weight = 0.0;
+	 char* endptr;
+
+	 if ( consType != 1 && consType != 2 )
+	 {
+	    SCIPerrorMessage("missing SOS type specification.\n");
+	    mpsinputSyntaxerror(mpsi);
+	    return SCIP_OKAY;
+	 }
+
+	 /* get variable */
+	 var = SCIPfindVar(scip, mpsinputField1(mpsi));
+	 if ( var == NULL )
+	 {
+	    /* ignore unkown variables - we would not know the type anyway */
+            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "SOS", name);
+	 }
+	 else
+	 {
+	    /* get weight */
+	    weight = strtod(mpsinputField2(mpsi), &endptr);
+	    if ( endptr == mpsinputField2(mpsi) || *endptr != '\0' )
+	    {
+	       SCIPerrorMessage("weight for variable <%s> not specified.\n", mpsinputField1(mpsi));
+	       mpsinputSyntaxerror(mpsi);
+	       return SCIP_OKAY;
+	    }
+
+	    /* add variable and weight */
+	    assert( consType == 1 || consType == 2 );
+	    switch (consType)
+	    {
+	    case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
+	    case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
+	    default: abort(); // should not happen
+	    }
+	    SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
+	 }
+	 /* check other fields */
+	 if ( ( mpsinputField3(mpsi) != NULL && mpsinputField3(mpsi) != '\0' ) ||
+	      ( mpsinputField4(mpsi) != NULL && mpsinputField4(mpsi) != '\0' ) ||
+	      ( mpsinputField5(mpsi) != NULL && mpsinputField5(mpsi) != '\0' ) )
+	 {
+	    SCIPwarningMessage("ignoring data in fields 3-5 <%s> <%s> <%s>.\n",
+			       mpsinputField3(mpsi), mpsinputField4(mpsi), mpsinputField5(mpsi));
+	 }
+      }
+   }
+
+   if ( cons != NULL )
+   {
+      /* add last constraint */
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
 /* Read LP in "MPS File Format".
- * 
+ *
  *  The specification is taken from the
  *
  *  IBM Optimization Library Guide and Reference
  *
  *  Online available at http://www.software.ibm.com/sos/features/libuser.htm
  *
- *  and from the 
+ *  and from the
  *
  *  ILOG CPLEX 7.0 Reference Manual, Appendix E, Page 531.
  *
- *  This routine should read all valid MPS format files. 
- *  What it will not do, is find all cases where a file is ill formed. 
+ *  This routine should read all valid MPS format files.
+ *  What it will not do, is find all cases where a file is ill formed.
  *  If this happens it may complain and read nothing or read "something".
- */  
+ */
 static
 SCIP_RETCODE readMps(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of the input file */
    )
 {
@@ -1334,7 +1503,7 @@ SCIP_RETCODE readMps(
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
       return SCIP_NOFILE;
-   }   
+   }
 
    SCIP_CALL( mpsinputCreate(scip, &mpsi, fp) );
 
@@ -1371,6 +1540,10 @@ SCIP_RETCODE readMps(
    if (mpsinputSection(mpsi) == MPS_BOUNDS)
    {
       SCIP_CALL( readBounds(mpsi, scip) );
+   }
+   if (mpsinputSection(mpsi) == MPS_SOS)
+   {
+      SCIP_CALL( readSOS(mpsi, scip) );
    }
    if (mpsinputSection(mpsi) != MPS_ENDATA)
       mpsinputSyntaxerror(mpsi);
@@ -1451,7 +1624,6 @@ SCIP_RETCODE SCIPincludeReaderMps(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/mpsreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
          NULL, FALSE, FALSE, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }
-
