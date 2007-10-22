@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.23 2007/10/19 18:22:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.24 2007/10/22 17:42:27 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -68,7 +68,7 @@ static SCIP_Bool issuedbranchpriowarning_ = FALSE;
 static SCIP_Bool readerror_ = FALSE;
 
 void xlp_alloc(const char* name, Bool need_startval)
-{
+{  /*lint --e{715}*/
    /* create problem */
    SCIP_CALL_ABORT( SCIPcreateProb(scip_, name, NULL, NULL, NULL, NULL, NULL, NULL) );
 }
@@ -89,32 +89,32 @@ void xlp_scale(void)
 }
 
 void xlp_write(FILE* fp, LpFormat format, const char* title)
-{
+{  /*lint --e{715}*/
    /* nothing to be done here */
 }
 
 void xlp_transtable(FILE* fp, LpFormat format)
-{
+{  /*lint --e{715}*/
    /* nothing to be done here */
 }
 
 void xlp_orderfile(FILE* fp, LpFormat format)
-{
+{  /*lint --e{715}*/
    /* nothing to be done here */
 }
 
 void xlp_mstfile(FILE* fp, LpFormat format)
-{
+{  /*lint --e{715}*/
    /* nothing to be done here */
 }
 
 void xlp_sosfile(FILE* fp, LpFormat format)
-{
+{  /*lint --e{715}*/
    /* nothing to be done here */
 }
 
 Bool xlp_conname_exists(const char* conname)
-{
+{  /*lint --e{715}*/
    return (SCIPfindCons(scip_, conname) != NULL);
 }
 
@@ -270,7 +270,7 @@ Con* xlp_addcon_term(const char* name, ConType type, const Numb* lhs, const Numb
 }
 
 Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, const Bound* upper, const Numb* priority, const Numb* startval)
-{
+{  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_Real lb;
    SCIP_Real ub;
@@ -361,7 +361,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
 }
 
 Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
-{
+{  /*lint --e{715}*/
    SCIP_CONS* cons;
    SCIP_Bool initial;
    SCIP_Bool separate;
@@ -369,7 +369,6 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
    SCIP_Bool check;
    SCIP_Bool propagate;
    SCIP_Bool local;
-   SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
    Sos* zplsos = NULL;
@@ -383,7 +382,6 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
       check = enforce;
       propagate = TRUE;
       local = FALSE;
-      modifiable = FALSE;
       dynamic = FALSE;
       removable = dynamic;
 
@@ -516,7 +514,7 @@ Bound* xlp_getupper(const Var* var)
 }
 
 void xlp_objname(const char* name)
-{
+{  /*lint --e{715}*/
    /* nothing to be done */
 }
 
@@ -564,7 +562,7 @@ Bool xlp_hassos(void)
 }
 
 Bool xlp_concheck(const Con* con)
-{
+{  /*lint --e{715}*/
    return TRUE;
 }
 
