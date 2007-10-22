@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.251 2007/10/22 07:27:08 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.252 2007/10/22 10:02:11 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -12289,7 +12289,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    
    /* print objective function */
    /**@note the transformed prblem in SCIP is always an minimization problem */
-   if( !origobj || objsense == SCIP_OBJSEN_MINIMIZE )
+   if( !origobj || objsense == SCIP_OBJSENSE_MINIMIZE )
       fprintf(file, "Minimize");
    else
       fprintf(file, "Maximize");
