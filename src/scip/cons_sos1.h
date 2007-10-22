@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.h,v 1.3 2007/10/19 18:23:47 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.h,v 1.4 2007/10/22 16:05:03 bzfpfets Exp $"
 
 /**@file   cons_sos1.h
  * @brief  constraint handler for SOS type 1 constraints
@@ -45,6 +45,8 @@
  * - All other calls ignore the weights, i.e., if an nonempty
  *   constraint is created or variables are added with
  *   SCIPappendVarSOS1().
+ *
+ * @todo Allow to adapt the order of the constraints, e.g. by priorities.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
