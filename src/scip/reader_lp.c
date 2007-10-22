@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.26 2007/10/21 15:39:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.27 2007/10/22 15:39:46 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1343,6 +1343,7 @@ SCIP_RETCODE readSos(
    SCIP_Bool initial, separate, enforce, check, propagate;
    SCIP_Bool local, modifiable, dynamic, removable;
    char name[SCIP_MAXSTRLEN];
+   int cnt = 0;
 
    assert(lpinput != NULL);
 
@@ -1410,6 +1411,9 @@ SCIP_RETCODE readSos(
 	 lpinput->token[1] = '\0';
 	 pushToken(lpinput);
 	 swapTokenBuffer(lpinput);
+
+	 /* set artificial name */
+	 snprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
       }
 
       /* check whether it is type 1 or type 2 */
