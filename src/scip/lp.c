@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.250 2007/10/17 19:57:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.251 2007/10/22 07:27:08 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -12413,7 +12413,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
-      if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,-lp->cols[i]->ub) )
+      if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
