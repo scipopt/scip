@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.24 2007/10/22 17:42:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.25 2007/10/22 17:43:00 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -399,7 +399,6 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
       check = enforce;
       propagate = TRUE;
       local = FALSE;
-      modifiable = FALSE;
       dynamic = FALSE;
       removable = dynamic;
 
