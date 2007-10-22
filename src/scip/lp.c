@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.252 2007/10/22 10:02:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.253 2007/10/22 20:25:46 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -12309,9 +12309,9 @@ SCIP_RETCODE SCIPlpWriteMip(
          }
 
          if( genericnames )
-            fprintf(file," %+gx_%d", coeff, lp->cols[i]->lppos);
+            fprintf(file," %+g x_%d", coeff, lp->cols[i]->lppos);
          else
-            fprintf(file," %+g%s", coeff, lp->cols[i]->var->name);
+            fprintf(file," %+g %s", coeff, lp->cols[i]->var->name);
          
          ++j;
          if( j % 10 == 0 )
@@ -12376,9 +12376,9 @@ SCIP_RETCODE SCIPlpWriteMip(
       for( j = 0; j < lp->rows[i]->nlpcols; ++j )
       {
          if( genericnames )
-            fprintf(file," %+gx_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            fprintf(file," %+g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
          else
-            fprintf(file," %+g%s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+            fprintf(file," %+g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
          
          if( (j+1) % 10 == 0 )
             fprintf(file,"\n          ");
@@ -12388,24 +12388,23 @@ SCIP_RETCODE SCIPlpWriteMip(
       switch( type )
       {
       case 'b':
-         fprintf(file," >= %+g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
+         fprintf(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
          type = 'B';
          goto WRITEROW;
       case 'l':
-         fprintf(file," >= %+g",lp->rows[i]->lhs - lp->rows[i]->constant);
+         fprintf(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       case 'B':
       case 'r':
-         fprintf(file," <= %+g",lp->rows[i]->rhs - lp->rows[i]->constant);
+         fprintf(file," <= %g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
          break;
       case 'e':
-         fprintf(file," = %+g",lp->rows[i]->lhs - lp->rows[i]->constant);
+         fprintf(file," = %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
          return SCIP_ERROR;
       }
-      fprintf(file,"\n");
    }
 
    /* print variable bounds */
@@ -12417,7 +12416,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
-            fprintf(file," %+g <=", lp->cols[i]->lb);
+            fprintf(file," %g <=", lp->cols[i]->lb);
          
          /* print variable name */
          if( genericnames )
@@ -12427,7 +12426,7 @@ SCIP_RETCODE SCIPlpWriteMip(
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
-            fprintf(file,"<= %+g", lp->cols[i]->ub);
+            fprintf(file,"<= %g", lp->cols[i]->ub);
          fprintf(file,"\n");
       }
    }

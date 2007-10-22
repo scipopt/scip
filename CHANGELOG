@@ -16,13 +16,13 @@ plugins:
 - added first version of SOS type 2 constraint handler (cons_sos.{c,h})
 
 parameters:
-- new parameter "constraint/linear/binpack" to enable or disable the linear upgrading process
-- new parameter "constraint/linear/eqknapsack" to enable or disable the linear upgrading process
-- new parameter "constraint/linear/invarknapsack" to enable or disable the linear upgrading process
-- new parameter "constraint/linear/knapsack" to enable or disable the linear upgrading process
-- new parameter "constraint/linear/logicor" to enable or disable the linear upgrading process
-- new parameter "constraint/linear/setppc" to enable or disable the linear upgrading process
-- new parameter "constraint/linear/varbound" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/upgrade/binpack" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/upgrade/eqknapsack" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/upgrade/invarknapsack" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/upgrade/knapsack" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/upgrade/logicor" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/upgrade/setppc" to enable or disable the linear upgrading process
+- new parameter "constraint/linear/upgrade/varbound" to enable or disable the linear upgrading process
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
