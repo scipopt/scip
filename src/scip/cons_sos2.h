@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.h,v 1.1 2007/10/19 18:20:41 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.h,v 1.2 2007/10/22 16:01:40 bzfpfets Exp $"
 
 /**@file   cons_sos2.h
  * @brief  constraint handler for SOS type 2 constraints
@@ -59,6 +59,13 @@
  * - All other calls ignore the weights, i.e., if an nonempty
  *   constraint is created or variables are added with
  *   SCIPappendVarSOS2().
+ *
+ * @todo Allow to adapt the order of the constraints, e.g. by priorities.
+ * @todo Separate the following cuts for each pair of variables x, y of at
+ *       least distance 2 in the SOS2 constraint:
+ *       \f$ \min \{l_x, l_y\} \leq x + y \leq \max \{u_x, u_y\}\f$,
+ *       where \f$l_x, u_x, l_y, u_y\f$ are the lower and upper bounds of
+ *       x and y, respectively.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
