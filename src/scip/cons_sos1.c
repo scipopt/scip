@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.3 2007/10/19 18:26:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.4 2007/10/22 16:08:01 bzfpfets Exp $"
 
 /**@file   cons_sos1.c
  * @brief  constraint handler for SOS type 1 constraints
@@ -533,7 +533,7 @@ SCIP_RETCODE propSOS1(
  *  \f]
  *  The branches are then
  *  \f[
- *        x_1 = 0, \ldots, x_{k-1} = 0 \qquad \mbox{and}\qquad
+ *        x_1 = 0, \ldots, x_k = 0 \qquad \mbox{and}\qquad
  *        x_{k+1} = 0, \ldots, x_n = 0.
  *  \f]
  *
