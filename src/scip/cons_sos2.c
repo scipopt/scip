@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.2 2007/10/22 16:08:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.3 2007/10/22 16:33:33 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
@@ -64,7 +64,6 @@ struct SCIP_ConsData
    int nFixedNonzero;      /**< number of variables fixed to be nonzero */
    SCIP_VAR** Vars;        /**< variables in constraint */
    SCIP_ROW* row;          /**< row corresponding to upper and lower bound inequalities, or NULL if not yet created */
-   SCIP_ROW** rowsPairs;   /**< rows corresponding to pairwise uppar and lower bound inequalities, or NULL */
    SCIP_Real* weights;     /**< weights determining the order (ascending), or NULL if not used */
 };
 
@@ -671,7 +670,7 @@ SCIP_RETCODE enforceSOS2(
    assert( !SCIPisFeasZero(scip, weight2) );
    w = weight1/weight2;
 
-   ind = SCIPfloor(scip, w);
+   ind = (int) SCIPfloor(scip, w);
    assert( 0 <= ind && ind < nVars-1 );
 
    /* create branches */
@@ -854,7 +853,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS2)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolSOS2)
-{
+{  /*lint --e{715}*/
    int c;
 
    assert( scip != NULL );
@@ -1020,7 +1019,7 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
  */
 static
 SCIP_DECL_CONSPRESOL(consPresolSOS2)
-{
+{  /*lint --e{715}*/
    int c;
    int oldnfixedvars = 0;
    int oldndelconss = 0;
@@ -1064,12 +1063,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
       if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
       {
 	 SCIP_VAR** Vars;
-	 SCIP_Real* weights;
 	 int nFixedNonzero = 0;
 	 int lastFixedNonzero = -1;
 	 int j = 0;
 
-	 weights = consdata->weights;
 	 Vars = consdata->Vars;
 
 	 /* check for variables fixed to 0 and bounds that fix a variable to be nonzero */
@@ -1244,7 +1241,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS2)
 /** separation method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSSEPALP(consSepalpSOS2)
-{
+{  /*lint --e{715}*/
    int c;
    int nGen = 0;
 
@@ -1291,7 +1288,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS2)
 /** separation method of constraint handler for arbitrary primal solutions */
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
-{
+{  /*lint --e{715}*/
    int c;
    int nGen = 0;
 
@@ -1339,7 +1336,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS2)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSOS2)
-{
+{  /*lint --e{715}*/
    int c;
 
    assert( scip != NULL );
@@ -1375,7 +1372,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS2)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSOS2)
-{
+{  /*lint --e{715}*/
    int c;
 
    assert( scip != NULL );
@@ -1415,7 +1412,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS2)
  */
 static
 SCIP_DECL_CONSCHECK(consCheckSOS2)
-{
+{  /*lint --e{715}*/
    int c;
 
    assert( scip != NULL );
@@ -1466,7 +1463,7 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
 /** domain propagation method of constraint handler */
 static
 SCIP_DECL_CONSPROP(consPropSOS2)
-{
+{  /*lint --e{715}*/
    int c;
    int nGen = 0;
 
@@ -1518,7 +1515,7 @@ SCIP_DECL_CONSPROP(consPropSOS2)
  *  bounds that fix it to be nonzero (these bounds are the reason). */
 static
 SCIP_DECL_CONSRESPROP(consRespropSOS2)
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
 
@@ -1824,7 +1821,7 @@ SCIP_RETCODE SCIPcreateConsSOS2(
    }
 
    /* create constraint data */
-   SCIPallocBlockMemory(scip, &consdata);
+   SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    consdata->Vars = NULL;
    consdata->nVars = nvars;
    consdata->maxVars = nvars;
@@ -1832,13 +1829,13 @@ SCIP_RETCODE SCIPcreateConsSOS2(
    consdata->nFixedNonzero = -1;
    consdata->weights = NULL;
    if ( nvars > 0 )
-      SCIPduplicateBlockMemoryArray(scip, &consdata->Vars, vars, nvars);
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->Vars, vars, nvars) );
 
    /* check weights */
    if ( weights != NULL )
    {
       /* store weights */
-      SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars);
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars) );
       /* sort variables - ascending order */
       SCIPbsortRealPtr(consdata->weights, (void**) consdata->Vars, nvars);
    }
@@ -1878,7 +1875,6 @@ SCIP_RETCODE SCIPaddVarSOS2(
 
 
 /** appends variable to SOS2 constraint */
-extern
 SCIP_RETCODE SCIPappendVarSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
