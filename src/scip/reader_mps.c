@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.72 2007/10/22 15:40:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.73 2007/10/22 17:42:20 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -1322,7 +1322,7 @@ SCIP_RETCODE readSOS(
 {
    SCIP_Bool initial, separate, enforce, check, propagate;
    SCIP_Bool local, modifiable, dynamic, removable;
-   char name[SCIP_MAXSTRLEN];
+   char name[SCIP_MAXSTRLEN] = { '\0' };
    SCIP_CONS*  cons = NULL;
    int consType = -1;
    int cnt = 0;
@@ -1445,9 +1445,9 @@ SCIP_RETCODE readSOS(
 	    SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
 	 }
 	 /* check other fields */
-	 if ( ( mpsinputField3(mpsi) != NULL && mpsinputField3(mpsi) != '\0' ) ||
-	      ( mpsinputField4(mpsi) != NULL && mpsinputField4(mpsi) != '\0' ) ||
-	      ( mpsinputField5(mpsi) != NULL && mpsinputField5(mpsi) != '\0' ) )
+	 if ( ( mpsinputField3(mpsi) != NULL && *mpsinputField3(mpsi) != '\0' ) ||
+	      ( mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
+	      ( mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
 	 {
 	    SCIPwarningMessage("ignoring data in fields 3-5 <%s> <%s> <%s>.\n",
 			       mpsinputField3(mpsi), mpsinputField4(mpsi), mpsinputField5(mpsi));
