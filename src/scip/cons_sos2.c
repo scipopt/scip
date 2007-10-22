@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.1 2007/10/19 18:20:41 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.2 2007/10/22 16:08:29 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
@@ -712,7 +712,7 @@ SCIP_RETCODE enforceSOS2(
  *        x_1 + \ldots + x_n \geq L + L'.
  *  \f]
  *  Of course, these inequalities are only added if the upper and
- *  lower bounds are all finite and \f$L+L' < 0\f$ or \f$U+U' > 0$.
+ *  lower bounds are all finite and \f$L+L' < 0\f$ or \f$U+U' > 0\f$.
  */
 static
 SCIP_RETCODE generateBasicRowSOS2(
