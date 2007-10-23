@@ -14,8 +14,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.3 2007/10/22 16:33:33 bzfpfets Exp $"
-
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.4 2007/10/23 15:18:33 bzfpfets Exp $"
+#define SCIP_DEBUG
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
  * @author Marc Pfetsch
@@ -597,6 +597,16 @@ SCIP_RETCODE propSOS2(
  *        x_1 = 0, \ldots, x_{k-1} = 0 \qquad \mbox{and}\qquad
  *        x_{k+1} = 0, \ldots, x_n = 0.
  *  \f]
+ *
+ *  There is one special case that we have to consider: It can happen
+ *  that \f$k\f$ is one too small. Example: \f$x_1 = 1 - \epsilon, x_2
+ *  = 0, x_3 = \epsilon\f$. Then \f$w = 1 - \epsilon + 3 \epsilon = 1
+ *  + 2 \epsilon\f$. This yields \f$k = 1\f$ and hence the first
+ *  branch does not change the solution. We therefore increase \f$k\f$
+ *  by one if \f$x_k \neq 0\f$. This is valid, since we know that
+ *  \f$x_{k+1} \neq 0\f$ (with respect to the original \f$k\f$); the
+ *  corresponding branch will cut off the current solution, since
+ *  \f$x_k \neq 0\f$.
  */
 static
 SCIP_RETCODE enforceSOS2(
@@ -656,7 +666,10 @@ SCIP_RETCODE enforceSOS2(
 	 lastNonzero = j;
 	 ++cnt;
       }
+
+      printf("%f (%d)", val, j);
    }
+   printf("\n");
 
    /* if at most one variable is nonzero, the constraint is feasible -> return */
    if ( cnt < 2 )
@@ -673,11 +686,16 @@ SCIP_RETCODE enforceSOS2(
    ind = (int) SCIPfloor(scip, w);
    assert( 0 <= ind && ind < nVars-1 );
 
+   /* correct index if necessary */
+   if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[ind])) )
+      ++ind;
+
    /* create branches */
    SCIPdebugMessage("Branching on variable <%s>.\n", SCIPvarGetName(Vars[ind]));
 
    /* branch on variable ind: either all variables before ind or all variables after ind are zero */
    SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPgetLocalTransEstimate(scip) ) );
+
    for (j = 0; j < ind; ++j)
    {
       SCIP_CALL( fixVariableZeroNode(scip, Vars[j], node1, &infeasible) );
