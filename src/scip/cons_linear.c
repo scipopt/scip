@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.252 2007/10/16 15:03:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.253 2007/10/26 10:17:45 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1836,20 +1836,12 @@ static
 SCIP_DECL_SORTINDCOMP(consdataCompVar)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata = (SCIP_CONSDATA*)dataptr;
-   int cmp;
 
    assert(consdata != NULL);
    assert(0 <= ind1 && ind1 < consdata->nvars);
    assert(0 <= ind2 && ind2 < consdata->nvars);
-   assert(SCIP_VARTYPE_BINARY < SCIP_VARTYPE_INTEGER);
-   assert(SCIP_VARTYPE_INTEGER < SCIP_VARTYPE_IMPLINT);
-   assert(SCIP_VARTYPE_IMPLINT < SCIP_VARTYPE_CONTINUOUS);
 
-   cmp = (int)SCIPvarGetType(consdata->vars[ind1]) - (int)SCIPvarGetType(consdata->vars[ind2]);
-   if( cmp == 0 )
-      return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
-   else
-      return cmp;
+   return SCIPvarCompare(consdata->vars[ind1], consdata->vars[ind2]);
 }
 
 /** sorts linear constraint's variables by binaries, integers, implicit integers, and continuous variables,
@@ -3915,17 +3907,17 @@ SCIP_RETCODE extractCliques(
 
    /* currently, we only check whether the constraint is a set packing / partitioning constraint */
    /**@todo extract more cliques from linear constraints */
-   if( SCIPvarGetType(consdata->vars[consdata->nvars-1]) != SCIP_VARTYPE_BINARY )
-      return SCIP_OKAY;
 
-   /* all variables are binary: check, if the coefficients are +1 or -1, and if the right hand side is equal
+   /* check if all variables are binary, if the coefficients are +1 or -1, and if the right hand side is equal
     * to 1 - number of negative coefficients, or if the left hand side is equal to number of positive coefficients - 1
     */
    nposcoefs = 0;
    nnegcoefs = 0;
    for( i = 0; i < consdata->nvars; ++i )
    {
-      if( SCIPisEQ(scip, consdata->vals[i], +1.0) )
+      if( SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_BINARY )
+         return SCIP_OKAY;
+      else if( SCIPisEQ(scip, consdata->vals[i], +1.0) )
          nposcoefs++;
       else if( SCIPisEQ(scip, consdata->vals[i], -1.0) )
          nnegcoefs++;
