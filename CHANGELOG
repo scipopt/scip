@@ -34,6 +34,8 @@ fixed bugs:
 - fixed bug with writing the MIP relaxation to a file concerning the objective function; in case the original 
   objective function is requested, the transformed objective function gets re-transformed (scaling, offset)  
 - added checks whether a plugin (handler) has already been included to avoid later complications e.g. with parameters.
+- Fixed obvious bug in linear constraint data sorting. Most part of the code assumed pure index sorting, but in fact,
+  it was sorted by variable type as first criterion and index as second criterion.
 
 SCIP version 1.00
 =================
