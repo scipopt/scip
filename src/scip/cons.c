@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.164 2007/10/29 12:03:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.165 2007/10/29 15:16:32 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4511,7 +4511,7 @@ SCIP_RETCODE SCIPconsPrint(
    assert(set != NULL);
    assert(format != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   printresult = SCIP_DIDNOTRUN;
    
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
