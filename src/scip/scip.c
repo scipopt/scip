@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.424 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.425 2007/10/29 15:07:32 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2577,7 +2577,6 @@ SCIP_RETCODE writeProblem(
    
    if( filename != NULL &&  filename[0] != '\0' )
    {
-
       /* get extension from filename */
       SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
       SCIPsplitFilename(tmpfilename, NULL, NULL, &extension, NULL);
@@ -2588,7 +2587,6 @@ SCIP_RETCODE writeProblem(
          SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
          return SCIP_FILECREATEERROR;
       }
-      BMSfreeMemoryArray(&tmpfilename);
    }
    
    if( transformed )
@@ -2600,6 +2598,12 @@ SCIP_RETCODE writeProblem(
       retcode =  SCIPprintOrigProblem(scip, file, extension);
    }
    
+   if( filename != NULL &&  filename[0] != '\0' )
+   {
+      BMSfreeMemoryArray(&tmpfilename);
+   }
+
+
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR )
       return retcode;
