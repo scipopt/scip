@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.113 2007/06/06 11:25:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.114 2007/10/29 11:23:18 bzfpfend Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX >= 8.0
@@ -893,6 +893,11 @@ SCIP_RETCODE SCIPlpiCreate(
       assert(numlp == 0);
       cpxenv = CPXopenCPLEX(&restat);
       CHECK_ZERO( restat );
+
+#if CPX_VERSION >= 1100
+      /* manually set number of threads to 1 to avoid huge system load due to CPLEX bug */
+      CHECK_ZERO( CPXsetintparam(cpxenv, CPX_PARAM_THREADS, 1) );
+#endif
 
 #if 0 /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
       /* turn presolve off, s.t. for an infeasible problem, a ray is always available */
