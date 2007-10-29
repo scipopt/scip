@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.1 2007/10/21 15:41:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.2 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader_sos.c
  * @brief  SOS file reader
@@ -54,7 +54,7 @@
 enum SosSection
 {
    SOS_NAME,
-   SOS_SOSSECTION,
+   [5~   SOS_SOSSECTION,
    SOS_ENDATA
 };
 typedef enum SosSection SOSSECTION;
@@ -498,7 +498,7 @@ SCIP_RETCODE readSOS(
 	    /* add last constraint */
 	    SCIP_CALL( SCIPaddCons(scip, cons) );
 	    SCIPdebugMessage("(line %d) added constraint <%s>: ", sosi->lineno, SCIPconsGetName(cons));
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL) ) );
 	    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 	 }
 	 /* create new name, since we do not get a name from the file */
@@ -665,6 +665,8 @@ SCIP_DECL_READERREAD(readerReadSOS)
 }
 
 
+/** problem writing method of reader */
+#define readerWriteSOS NULL
 
 
 /*
@@ -685,7 +687,7 @@ SCIP_RETCODE SCIPincludeReaderSOS(
 
    /* include sos reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-				readerFreeSOS, readerReadSOS, readerdata) );
+         readerFreeSOS, readerReadSOS, readerWriteSOS, readerdata) );
 
    return SCIP_OKAY;
 }

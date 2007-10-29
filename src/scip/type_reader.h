@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_reader.h,v 1.13 2007/06/06 11:25:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_reader.h,v 1.14 2007/10/29 12:03:11 bzfheinz Exp $"
 
 /**@file   type_reader.h
  * @brief  type definitions for input file readers
@@ -55,6 +55,47 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  */
 #define SCIP_DECL_READERREAD(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, const char* filename, SCIP_RESULT* result)
 
+/** problem writing method of reader
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - reader          : the reader itself
+ *  - file            : output file, or NULL if standard output should be used
+ *  - name            : problem name
+ *  - probdata        : user problem data set by the reader
+ *  - transformed     : TRUE iff problem is the transformed problem
+ *  - objsense        : objective sense
+ *  - objscale        : scalar applied to objective function; external objective value is
+                        extobj = objsense * objscale * (intobj + objoffset)
+ *  - objoffset       : objective offset from bound shifting and fixing 
+ *  - vars            : array with active variables ordered binary, integer, implicit, continuous 
+ *  - nvars           : number of mutable variables in the problem
+ *  - nbinvars        : number of binary variables
+ *  - nintvars        : number of general integer variables
+ *  - nimplvars       : number of implicit integer variables 
+ *  - ncontvars;      : number of continuous variables
+ *  - fixedvars       : array with fixed and aggregated variables
+ *  - nfixedvars      : number of fixed and aggregated variables in the problem
+ *  - startnvars      : number of variables existing when problem solving started
+ *  - conss           : array with constraints of the problem
+ *  - nconss          : number of constraints in the problem
+ *  - maxnconss       : maximum number of constraints existing at the same time 
+ *  - startnconss     : number of constraints existing when problem solving started
+ *  - result          : pointer to store the result of the file reading call
+ *
+ *  possible return values for *result:
+ *  - SCIP_SUCCESS    : the reader wrote the file correctly
+ *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
+ *
+ *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERROR or SCIP_NOFILE.
+ */
+#define SCIP_DECL_READERWRITE(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, FILE* file, \
+      const char* name, SCIP_PROBDATA* probdata, SCIP_Bool transformed, \
+      SCIP_OBJSENSE objsense, SCIP_Real objscale, SCIP_Real objoffset,  \
+      SCIP_VAR** vars, int nvars, int nbinvars, int nintvars, int nimplvars, int ncontvars, \
+      SCIP_VAR** fixedvars, int nfixedvars, int startnvars, \
+      SCIP_CONS** conss, int nconss, int maxnconss, int startnconss, \
+      SCIP_RESULT* result)
 
 
 #include "scip/def.h"

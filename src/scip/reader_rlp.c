@@ -14,49 +14,21 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.c,v 1.17 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.1 2007/10/29 12:03:10 bzfheinz Exp $"
 
-/**@file   reader_xxx.c
- * @brief  XXX file reader
- * @author Tobias Achterberg
+/**@file   reader_rlp.h
+ * @brief  RLP file reader (LP format with generic variables and row names)
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
+#include "scip/reader_lp.h"
+#include "scip/reader_rlp.h"
 
-#include "scip/reader_xxx.h"
-
-
-#define READER_NAME             "xxxreader"
-#define READER_DESC             "xxx file reader"
-#define READER_EXTENSION        "xxx"
-
-
-
-
-/*
- * Data structures
- */
-
-/* TODO: (optional) fill in the necessary reader data */
-
-/** data for xxx reader */
-struct SCIP_ReaderData
-{
-};
-
-
-
-
-/*
- * Local methods
- */
-
-/* put your local methods here, and declare them static */
-
-
-
+#define READER_NAME             "rlpreader"
+#define READER_DESC             "file reader for MIPs in ILOG's RLP file format"
+#define READER_EXTENSION        "rlp"
 
 
 /*
@@ -64,71 +36,56 @@ struct SCIP_ReaderData
  */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
-#if 0
-static
-SCIP_DECL_READERFREE(readerFreeXxx)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx reader not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define readerFreeXxx NULL
-#endif
+#define readerFreeRlp NULL
 
 
 /** problem reading method of reader */
-#if 0
 static
-SCIP_DECL_READERREAD(readerReadXxx)
+SCIP_DECL_READERREAD(readerReadRlp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx reader not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_CALL( SCIPreadLp(scip, reader, filename, result) );
 
    return SCIP_OKAY;
 }
-#else
-#define readerReadXxx NULL
-#endif
 
 
-#if 0
 /** problem writing method of reader */
 static
-SCIP_DECL_READERWRITE(readerWriteXxx)
+SCIP_DECL_READERWRITE(readerWriteRlp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx reader not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
+   
+   /* print statistics as comment to file */
+   SCIPmessageFPrintInfo(file, "/ STATISTICS\n");
+   SCIPmessageFPrintInfo(file, "/   Problem name     : %s\n", name);
+   SCIPmessageFPrintInfo(file, "/   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+      nvars, nbinvars, nintvars, nimplvars, ncontvars);
+   
+   SCIPmessageFPrintInfo(file, "/   Constraints      : %d initial, %d maximal\n", startnconss, maxnconss);
+   
+   SCIP_CALL( SCIPwriteLp(scip, file, TRUE, objsense, vars, nvars, conss, nconss, result) );
+   
    return SCIP_OKAY;
 }
-#else
-#define readerWriteXxx NULL
-#endif
 
 
 /*
  * reader specific interface methods
  */
 
-/** includes the xxx file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderXxx(
+/** includes the lp file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderRlp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_READERDATA* readerdata;
 
-   /* create xxx reader data */
+   /* create lp reader data */
    readerdata = NULL;
-   /* TODO: (optional) create reader specific data here */
    
-   /* include xxx reader */
+   /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeXxx, readerReadXxx, readerWriteXxx, readerdata) );
-
-   /* add xxx reader parameters */
-   /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */
+         readerFreeRlp, readerReadRlp, readerWriteRlp, readerdata) );
    
    return SCIP_OKAY;
 }

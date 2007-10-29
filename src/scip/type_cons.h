@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.41 2007/09/28 16:21:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.42 2007/10/29 12:03:11 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -599,8 +599,15 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that should be displayed
  *  - file            : the text file to store the information into
+ *  - format          : the format to write the information
+ *  - result          : pointer to store the result of the callback method 
+ *
+ *  possible return values for *result:
+ *  - SCIP_SUCCESS    : the constraint handler supports the required format 
+ *  - SCIP_DIDNOTRUN  : the constraint handler does not supports the required format 
  */
-#define SCIP_DECL_CONSPRINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, FILE* file)
+#define SCIP_DECL_CONSPRINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
+      FILE* file, const char* format, SCIP_RESULT* result)
 
 
 #include "scip/def.h"

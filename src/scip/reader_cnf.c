@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.36 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.37 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader_cnf.c
  * @brief  CNF file reader
@@ -355,6 +355,8 @@ SCIP_DECL_READERREAD(readerReadCnf)
 }
 
 
+/** problem writing method of reader */
+#define readerWriteCnf NULL
 
 
 /*
@@ -373,7 +375,7 @@ SCIP_RETCODE SCIPincludeReaderCnf(
 
    /* include cnf reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeCnf, readerReadCnf, readerdata) );
+         readerFreeCnf, readerReadCnf, readerWriteCnf, readerdata) );
 
    /* add cnf reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

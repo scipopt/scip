@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.91 2007/06/06 11:25:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.92 2007/10/29 12:03:09 bzfheinz Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1456,57 +1456,4 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
-}
-
-/** outputs problem to file stream */
-SCIP_RETCODE SCIPprobPrint(
-   SCIP_PROB*            prob,               /**< problem data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   FILE*                 file                /**< output file (or NULL for standard output) */
-   )
-{
-   int i;
-
-   assert(prob != NULL);
-
-   SCIPmessageFPrintInfo(file, "STATISTICS\n");
-   SCIPprobPrintStatistics(prob, file);
-
-   SCIPmessageFPrintInfo(file, "OBJECTIVE\n");
-   SCIPmessageFPrintInfo(file, "  Sense            : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
-   if( !SCIPsetIsZero(set, prob->objoffset) )
-   {
-      SCIPmessageFPrintInfo(file, "  Offset           : %+g\n", prob->objoffset);
-   }
-   if( !SCIPsetIsEQ(set, prob->objscale, 1.0) )
-   {
-      SCIPmessageFPrintInfo(file, "  Scale            : %g\n", prob->objscale);
-   }
-
-   if( prob->nvars > 0 )
-   {
-      SCIPmessageFPrintInfo(file, "VARIABLES\n");
-      for( i = 0; i < prob->nvars; ++i )
-         SCIPvarPrint(prob->vars[i], set, file);
-   }
-
-   if( prob->nfixedvars > 0 )
-   {
-      SCIPmessageFPrintInfo(file, "FIXED\n");
-      for( i = 0; i < prob->nfixedvars; ++i )
-         SCIPvarPrint(prob->fixedvars[i], set, file);
-   }
-
-   if( prob->nconss > 0 )
-   {
-      SCIPmessageFPrintInfo(file, "CONSTRAINTS\n");
-      for( i = 0; i < prob->nconss; ++i )
-      {
-         SCIP_CALL( SCIPconsPrint(prob->conss[i], set, file) );
-      }
-   }
-
-   SCIPmessageFPrintInfo(file, "END\n");
-
-   return SCIP_OKAY;
 }

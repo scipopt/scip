@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.72 2007/10/17 19:57:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.73 2007/10/29 12:03:09 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -133,6 +133,57 @@ SCIP_Bool parseBoolValue(
    return FALSE;
 }        
 
+
+/* writes problem to file */
+static
+SCIP_RETCODE writeProblem(
+   SCIP*                 scip,               /**< SCIP data structure */                
+   SCIP_DIALOG*          dialog,             /**< dialog menu */
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG**         nextdialog,         /**< pointer to store next dialog to execute */
+   SCIP_Bool             transformed         /**< output the transformed problem? */
+   )
+{
+   char* filename;
+   SCIP_Bool endoffile;
+   SCIP_RETCODE retcode;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+      
+      if( transformed )
+      {
+         retcode = SCIPwriteTransProblem(scip, filename);
+      }
+      else
+      {
+         retcode = SCIPwriteOrigProblem(scip, filename);
+      }
+
+
+      if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
+      {
+         SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         SCIP_CALL( retcode );
+      }
+   }
+  
+   return SCIP_OKAY;
+}
+
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu)
 {  /*lint --e{715}*/
@@ -194,7 +245,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       { 
          SCIPdialogMessage(scip, NULL, "best solution violates constraint <%s> [%s] of original problem:\n", 
             SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
-         SCIP_CALL( SCIPprintCons(scip, infeascons, NULL) );
+         SCIP_CALL( SCIPprintCons(scip, infeascons, NULL, NULL, NULL) );
       }
    }
    SCIPdialogMessage(scip, NULL, "\n");
@@ -559,7 +610,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayProblem)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPprintOrigProblem(scip, NULL) );
+   
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip") );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no problem available\n");
+
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -700,7 +758,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPprintTransProblem(scip, NULL) );
+   if(SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED)
+   {
+      SCIP_CALL( SCIPprintTransProblem(scip, NULL, "cip") );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no transformed problem available\n");
+   
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1659,39 +1723,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteProblem)
 {  /*lint --e{715}*/
-   char* filename;
-   SCIP_Bool endoffile;
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
-   SCIPdialogMessage(scip, NULL, "\n");
-
-   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
-   if( endoffile )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
    {
-      *nextdialog = NULL;
-      return SCIP_OKAY;
+      SCIP_CALL( writeProblem(scip, dialog, dialoghdlr, nextdialog, FALSE) );
    }
-   if( filename[0] != '\0' )
-   {
-      FILE* file;
-
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-
-      file = fopen(filename, "w");
-      if( file == NULL )
-      {
-         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
-         SCIPdialoghdlrClearBuffer(dialoghdlr);
-      }
-      else
-      {
-         SCIP_CALL( SCIPprintOrigProblem(scip, file) );
-         SCIPdialogMessage(scip, NULL, "written original problem to file <%s>\n", filename);
-         fclose(file);
-      }
-   }
-
+   else
+      SCIPdialogMessage(scip, NULL, "no problem available\n");
+   
    SCIPdialogMessage(scip, NULL, "\n");
-
+   
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
@@ -1788,37 +1830,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteTransproblem)
 {  /*lint --e{715}*/
-   char* filename;
-   SCIP_Bool endoffile;
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
-   SCIPdialogMessage(scip, NULL, "\n");
-
-   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
-   if( endoffile )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
-      *nextdialog = NULL;
-      return SCIP_OKAY;
+      SCIP_CALL( writeProblem(scip, dialog, dialoghdlr, nextdialog, TRUE) );
    }
-   if( filename[0] != '\0' )
-   {
-      FILE* file;
-
-      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-
-      file = fopen(filename, "w");
-      if( file == NULL )
-      {
-         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
-         SCIPdialoghdlrClearBuffer(dialoghdlr);
-      }
-      else
-      {
-         SCIP_CALL( SCIPprintTransProblem(scip, file) );
-         SCIPdialogMessage(scip, NULL, "written transformed problem to file <%s>\n", filename);
-         fclose(file);
-      }
-   }
-
+   else
+      SCIPdialogMessage(scip, NULL, "no transformed problem available\n");
+   
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);

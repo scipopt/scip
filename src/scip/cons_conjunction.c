@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.30 2007/08/21 14:39:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.31 2007/10/29 12:03:08 bzfheinz Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -486,18 +486,33 @@ SCIP_DECL_CONSPRINT(consPrintConjunction)
    SCIP_CONSDATA* consdata;
    int i;
 
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( cons != NULL );
+   assert( format != NULL );
+   assert( result != NULL );
+   
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPinfoMessage(scip, file, "conjunction(");
-   for( i = 0; i < consdata->nconss; ++i )
+   *result = SCIP_SUCCESS;
+   
+   if( strcasecmp(format, "cip") == 0 )
    {
-      if( i > 0 )
-         SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s>", SCIPconsGetName(consdata->conss[i]));
+      SCIPinfoMessage(scip, file, "  [%s] <%s>: ", CONSHDLR_NAME, SCIPconsGetName(cons));
+      SCIPinfoMessage(scip, file, "conjunction(");
+      
+      for( i = 0; i < consdata->nconss; ++i )
+      {
+         if( i > 0 )
+            SCIPinfoMessage(scip, file, ", ");
+         SCIPinfoMessage(scip, file, "<%s>", SCIPconsGetName(consdata->conss[i]));
+      }
+      SCIPinfoMessage(scip, file, ")\n");
    }
-   SCIPinfoMessage(scip, file, ")\n");
-
+   else
+      *result = SCIP_DIDNOTRUN;
+   
    return SCIP_OKAY;
 }
 

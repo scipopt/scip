@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.3 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.4 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader_fix.c
  * @brief  file reader for variable fixings
@@ -198,6 +198,9 @@ SCIP_DECL_READERREAD(readerReadFix)
 }
 
 
+/** problem writing method of reader */
+#define readerWriteFix NULL
+
 
 
 /*
@@ -216,7 +219,7 @@ SCIP_RETCODE SCIPincludeReaderFix(
 
    /* include fix reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeFix, readerReadFix, readerdata) );
+         readerFreeFix, readerReadFix, readerWriteFix, readerdata) );
 
    return SCIP_OKAY;
 }

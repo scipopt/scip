@@ -14,8 +14,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.4 2007/10/23 15:18:33 bzfpfets Exp $"
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.5 2007/10/29 12:03:09 bzfheinz Exp $"
+
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
  * @author Marc Pfetsch
@@ -1633,22 +1633,32 @@ SCIP_DECL_CONSPRINT(consPrintSOS2)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
+   assert( format != NULL );
+   assert( result != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+ 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-
-   SCIPinfoMessage(scip, file, "SOS2[");
-   for (j = 0; j < consdata->nVars; ++j)
+   *result = SCIP_SUCCESS;
+   
+   if( strcasecmp(format, "cip") == 0 )
    {
-      if ( j > 0 )
-	 SCIPinfoMessage(scip, file, ", ");
-      if ( consdata->weights == NULL )
-	 SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(consdata->Vars[j]));
-      else
-	 SCIPinfoMessage(scip, file, "%s (%3.2f)", SCIPvarGetName(consdata->Vars[j]), consdata->weights[j]);
-   }
-   SCIPinfoMessage(scip, file, "]\n");
+      SCIPinfoMessage(scip, file, "  [%s] <%s>: SOS2(", CONSHDLR_NAME, SCIPconsGetName(cons));
 
+      for (j = 0; j < consdata->nVars; ++j)
+      {
+         if ( j > 0 )
+            SCIPinfoMessage(scip, file, ", ");
+         if ( consdata->weights == NULL )
+            SCIPinfoMessage(scip, file, "%s", SCIPvarGetName(consdata->Vars[j]));
+         else
+            SCIPinfoMessage(scip, file, "%s (%3.2f)", SCIPvarGetName(consdata->Vars[j]), consdata->weights[j]);
+      }
+      SCIPinfoMessage(scip, file, ")\n");
+   }
+   else
+      *result = SCIP_DIDNOTRUN;
+   
    return SCIP_OKAY;
 }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.27 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.28 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -28,6 +28,7 @@
 
 
 #include "scip/def.h"
+#include "scip/type_prob.h"
 #include "scip/type_retcode.h"
 #include "scip/type_result.h"
 #include "scip/type_set.h"
@@ -45,6 +46,7 @@ SCIP_RETCODE SCIPreaderCreate(
    const char*           extension,          /**< file extension that reader processes */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
+   SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
    SCIP_READERDATA*      readerdata          /**< reader data */
    );
 
@@ -61,6 +63,17 @@ SCIP_RETCODE SCIPreaderRead(
    SCIP_READER*          reader,             /**< reader */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           filename,           /**< name of the input file */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** writes problem data to file with given reader or returns SCIP_DIDNOTRUN */
+extern
+SCIP_RETCODE SCIPreaderWrite(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           format,             /**< file format (or NULL) */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

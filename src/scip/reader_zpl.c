@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.25 2007/10/22 17:43:00 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.26 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -54,7 +54,7 @@ Bool zpl_read_with_args(int argc, char** argv);
 #define READER_NAME             "zplreader"
 #define READER_DESC             "file reader for ZIMPL model files"
 #define READER_EXTENSION        "zpl"
-
+[5~[5~
 
 
 
@@ -761,6 +761,11 @@ SCIP_DECL_READERREAD(readerReadZpl)
       return SCIP_OKAY;
 }
 
+
+/** problem writing method of reader */
+#define readerWriteZpl NULL
+
+
 #endif
 
 
@@ -783,7 +788,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 
    /* include zpl reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeZpl, readerReadZpl, readerdata) );
+         readerFreeZpl, readerReadZpl, readerWriteZpl, readerdata) );
 
    /* add zpl reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

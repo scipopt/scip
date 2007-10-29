@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.14 2007/06/06 11:25:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.15 2007/10/29 12:03:07 bzfheinz Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -90,6 +90,25 @@ SCIP_DECL_READERREAD(readerReadObj)
 }
 
 
+/** problem writing method of reader */
+static
+SCIP_DECL_READERWRITE(readerWriteObj)
+{  /*lint --e{715}*/
+   SCIP_READERDATA* readerdata;
+
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+   assert(readerdata->objreader != NULL);
+
+   /* call virtual method of reader object */
+   SCIP_CALL( readerdata->objreader->scip_write(scip, reader, file, name, probdata, transformed, 
+         objsense, objscale, objoffset, 
+         vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, startnvars,
+         conss, nconss, maxnconss, startnconss, result) );
+   
+   return SCIP_OKAY;
+}
+
 
 
 /*
@@ -112,8 +131,7 @@ SCIP_RETCODE SCIPincludeObjReader(
 
    /* include file reader */
    SCIP_CALL( SCIPincludeReader(scip, objreader->scip_name_, objreader->scip_desc_, objreader->scip_extension_,
-         readerFreeObj, readerReadObj,
-         readerdata) ); /*lint !e429*/
+         readerFreeObj, readerReadObj, readerWriteObj, readerdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

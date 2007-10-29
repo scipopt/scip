@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.229 2007/10/19 18:27:33 bzfpfets Exp $
+# $Id: Makefile,v 1.230 2007/10/29 12:03:06 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -33,7 +33,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	1.00.2
+VERSION		:=	1.00.3
 
 TIME     	=  	3600
 NODES           =       2100000000
@@ -424,10 +424,12 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/presol_trivial.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_rootredcost.o \
+			scip/reader_cip.o \
 			scip/reader_cnf.o \
 			scip/reader_fix.o \
 			scip/reader_lp.o \
 			scip/reader_mps.o \
+			scip/reader_rlp.o \
 			scip/reader_sol.o \
 			scip/reader_zpl.o \
 			scip/sepa_clique.o \

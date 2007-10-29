@@ -14,34 +14,26 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_reader.h,v 1.12 2007/10/29 12:03:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_rlp.h,v 1.1 2007/10/29 12:03:10 bzfheinz Exp $"
 
-/**@file   struct_reader.h
- * @brief  datastructures for input file readers
- * @author Tobias Achterberg
+/**@file   reader_rlp.h
+ * @brief  RLP file reader (LP format with generic variables and row names)
+ * @author Stefan Heinz
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_READER_H__
-#define __SCIP_STRUCT_READER_H__
+#ifndef __SCIP_READER_RLP_H__
+#define __SCIP_READER_RLP_H__
 
 
-#include "scip/def.h"
-#include "scip/type_reader.h"
+#include "scip/scip.h"
 
 
-/** input file reader */
-struct SCIP_Reader
-{
-   const char*           name;               /**< name of reader */
-   const char*           desc;               /**< description of reader */
-   const char*           extension;          /**< file extension that reader processes */
-   SCIP_DECL_READERFREE  ((*readerfree));    /**< destructor of reader */
-   SCIP_DECL_READERREAD  ((*readerread));    /**< read method */
-   SCIP_DECL_READERWRITE ((*readerwrite));   /**< write method */
-   SCIP_READERDATA*      readerdata;         /**< reader data */
-};
-
+/** includes the rlp file reader into SCIP */
+extern
+SCIP_RETCODE SCIPincludeReaderRlp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #endif

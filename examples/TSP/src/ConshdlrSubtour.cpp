@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.13 2007/08/22 13:22:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.14 2007/10/29 12:03:07 bzfheinz Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -679,20 +679,29 @@ SCIP_RETCODE ConshdlrSubtour::scip_print(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
    SCIP_CONS*         cons,               /**< the constraint that should be displayed */
-   FILE*              file                /**< the text file to store the information into */
+   FILE*              file,               /**< the text file to store the information into */
+   const char*        format,             /**< the format to write the information */
+   SCIP_RESULT*       result              /**< pointer to store the result of the callback method */ 
    )
 {
    SCIP_CONSDATA* consdata;
    GRAPH* g;
-      
+   
+   *result = SCIP_SUCCESS;
+   
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
       
-   g = consdata->graph;
-   assert(g != NULL);
+   if( strcasecmp(format, "cip") == 0 )
+   {
+      g = consdata->graph;
+      assert(g != NULL);
 
-   SCIPinfoMessage(scip, file, "subtour of Graph G with %d nodes and %d edges\n", g->nnodes, g->nedges);
-
+      SCIPinfoMessage(scip, file, "subtour of Graph G with %d nodes and %d edges\n", g->nnodes, g->nedges);
+   }
+   else
+      *result = SCIP_DIDNOTRUN;
+   
    return SCIP_OKAY;
 }
 

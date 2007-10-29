@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.308 2007/10/17 19:57:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.309 2007/10/29 12:03:11 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -550,6 +550,7 @@ SCIP_RETCODE SCIPincludeReader(
    const char*           extension,          /**< file extension that reader processes */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
+   SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
    SCIP_READERDATA*      readerdata          /**< reader data */
    );
 
@@ -1301,6 +1302,20 @@ SCIP_RETCODE SCIPreadProb(
    const char*           filename            /**< problem file name */
    );
 
+/** writes original problem to file  */
+extern
+SCIP_RETCODE SCIPwriteOrigProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< output file (or NULL for standard output) */
+   );
+
+/** writes transformed problem to file  */
+extern 
+SCIP_RETCODE SCIPwriteTransProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< output file (or NULL for standard output) */
+   );
+
 /** frees problem and branch and bound data structures */
 extern
 SCIP_RETCODE SCIPfreeProb(
@@ -1905,6 +1920,23 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    SCIP_Bool*            negated             /**< pointer to store whether the negation of an active variable was returned */
    );
 
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant;
+ *
+ * if the number of needed active variables is greater than the available slots in the variable array, nothing happens except  
+ * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
+ * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays 
+ *
+ */
+SCIP_RETCODE SCIPgetProbvarLinearSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< vars array to get active variables for */
+   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */ 
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   int                   varssize,           /**< available slots in vars and scalars array */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
+   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
+   );
+   
 /** returns the reduced costs of the variable in the current node's LP relaxation, 
  *  if the variable is not in the current LP, SCIP_INVALID will be returned,
  *  the current node has to have an LP
@@ -3130,7 +3162,9 @@ extern
 SCIP_RETCODE SCIPprintCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           format,             /**< format (or NULL for default CIP) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method or NULL if not needed */
    );
 
 /**@} */
@@ -5311,14 +5345,16 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
 extern
 SCIP_RETCODE SCIPprintOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension           /**< file format (or NULL for default CIP format)*/
    );
 
 /** outputs transformed problem to file stream */
 extern
 SCIP_RETCODE SCIPprintTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension           /**< file format (or NULL for default CIP format)*/
    );
 
 /** outputs solving statistics */

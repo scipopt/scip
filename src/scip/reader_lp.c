@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.27 2007/10/22 15:39:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.28 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1050,7 +1050,7 @@ SCIP_RETCODE readConstraints(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
  TERMINATE:
@@ -1521,7 +1521,7 @@ SCIP_RETCODE readSos(
       /* add the SOS constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", lpinput->linenumber, SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -1616,6 +1616,45 @@ SCIP_RETCODE readLPFile(
 static
 SCIP_DECL_READERREAD(readerReadLp)
 {  /*lint --e{715}*/
+   
+   SCIP_CALL( SCIPreadLp(scip, reader, filename, result) );
+
+   return SCIP_OKAY;
+}
+
+
+/** problem writing method of reader */
+static
+SCIP_DECL_READERWRITE(readerWriteLp)
+{  /*lint --e{715}*/
+   
+   /* print statistics as comment to file */
+   SCIPinfoMessage(scip, file, "/ STATISTICS\n");
+   SCIPinfoMessage(scip, file, "/   Problem name     : %s\n", name);
+   SCIPinfoMessage(scip, file, "/   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+      nvars, nbinvars, nintvars, nimplvars, ncontvars);
+   
+   SCIPinfoMessage(scip, file, "/   Constraints      : %d initial, %d maximal\n", startnconss, maxnconss);
+   
+   SCIP_CALL( SCIPwriteLp(scip, file, FALSE, objsense, vars, nvars, conss, nconss, result) );
+   
+   return SCIP_OKAY;
+}
+
+
+/*
+ * reader specific interface methods
+ */
+
+
+/* reads problem from file */
+SCIP_RETCODE SCIPreadLp(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_READER*       reader,             /**< the file reader itself */
+   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   )
+{
    LPINPUT lpinput;
    int i;
 
@@ -1666,12 +1705,121 @@ SCIP_DECL_READERREAD(readerReadLp)
    return SCIP_OKAY;
 }
 
+/* writes problem to file */
+SCIP_RETCODE SCIPwriteLp(
+   SCIP*              scip,               /**< SCIP data structure */
+   FILE*              file,               /**< output file, or NULL if standard output should be used */
+   SCIP_Bool          genericnames,       /**< use generic variable and row names? */
+   SCIP_OBJSENSE      objsense,           /**< objective sense */
+   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, 
+                                           *   continuous */
+   int                nvars,              /**< number of mutable variables in the problem */
+   SCIP_CONS**        conss,              /**< array with constraints of the problem */
+   int                nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   )
+{
+   int i;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_RESULT consresult;
+   
+   assert( scip != NULL );
 
+   /* print objective sense */
+   SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "Minimize" : "Maximize");
+   
+   /* print objective function */
+   SCIPinfoMessage(scip, file, "Obj:");
+   for( i = 0; i < nvars; ++i )
+   {
+      if( genericnames )
+         SCIPinfoMessage(scip, file, " %+gx%d", SCIPvarGetObj(vars[i]), SCIPvarGetProbindex(vars[i]) ); 
+      else
+         SCIPinfoMessage(scip, file, " %+g %s", SCIPvarGetObj(vars[i]), SCIPvarGetName(vars[i]) ); 
+      
+      if( (i + 1)  % 10 == 0 )
+         SCIPinfoMessage(scip, file, "\n     ");
+   }
+   
+   /* print constraint section */
+   SCIPinfoMessage(scip, file, "\n\nSubject to\n");
 
+   for( i = 0; i < nconss; ++i )
+   {
+      if( genericnames )
+      {
+         SCIP_CALL( SCIPprintCons(scip, conss[i], file, "rlp", &consresult) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPprintCons(scip, conss[i], file, "lp", &consresult) );
+      }
+      
+      if( consresult != SCIP_SUCCESS )
+      {
+         SCIPwarningMessage("constraint <%s> could not be written in <%s> format\n", SCIPconsGetName(conss[i]), genericnames ? "rlp" : "lp");
+      }
+   }
+   
+   /* print variable bounds */
+   SCIPinfoMessage(scip, file, "\n\nBounds\n");
+   for( i = 0; i < nvars; ++i )
+   {
+      lb = SCIPvarGetLbGlobal(vars[i]);
+      ub = SCIPvarGetUbGlobal(vars[i]);
+      
+      if( !SCIPisInfinity(scip, -lb) || !SCIPisInfinity(scip, ub) )
+      {
+         /* print lower bound as far this one is not infinity */
+         if( !SCIPisInfinity(scip, lb) )
+            SCIPinfoMessage(scip, file, " %g <=", lb);
+         
+         /* print variable name */
+         if( genericnames )
+            SCIPinfoMessage(scip, file, " x%d ", SCIPvarGetProbindex(vars[i]) ); 
+         else
+            SCIPinfoMessage(scip, file, " %s ", SCIPvarGetName(vars[i]) ); 
 
-/*
- * reader specific interface methods
- */
+         /* print upper bound as far this one is not infinity */
+         if( !SCIPisInfinity(scip, ub) )
+            SCIPinfoMessage(scip, file, "<= %g", ub);
+
+         SCIPinfoMessage(scip, file, "\n");
+      }
+   }
+   
+   /* print generals section */
+   if( nvars > 0 && SCIPvarGetType(vars[0]) != SCIP_VARTYPE_CONTINUOUS )
+   {
+      SCIPinfoMessage(scip, file, "\n\nGenerals\n");
+      
+      for( i = 0; i < nvars; ++i )
+      {
+         if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS)
+            break;
+
+         assert( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS );
+         
+         /* print variable name */
+         if( genericnames )
+            SCIPinfoMessage(scip, file, " x%d", SCIPvarGetProbindex(vars[i]) ); 
+         else
+            SCIPinfoMessage(scip, file, " %s", SCIPvarGetName(vars[i]) ); 
+         
+         if( (i + 1)  % 10 == 0 )
+            SCIPinfoMessage(scip, file, "\n");
+      }
+   }
+   
+   /* end of lp format */
+   SCIPmessageFPrintInfo(file, "\n\nEnd");
+   
+   *result = SCIP_SUCCESS;
+   
+   return SCIP_OKAY;
+}
+
 
 /** includes the lp file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderLp(
@@ -1685,7 +1833,7 @@ SCIP_RETCODE SCIPincludeReaderLp(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeLp, readerReadLp, readerdata) );
+         readerFreeLp, readerReadLp, readerWriteLp, readerdata) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

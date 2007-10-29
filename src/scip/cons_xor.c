@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.55 2007/08/21 14:39:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.56 2007/10/29 12:03:09 bzfheinz Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -1388,8 +1388,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* even parity: constraints are redundant */
             SCIPdebugMessage("xor constraints <%s> and <%s> are redundant: delete <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPconsGetName(cons1));
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL, NULL, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL, NULL, NULL));
             SCIP_CALL( SCIPdelCons(scip, cons1) );
             (*ndelconss)++;
          }
@@ -1398,8 +1398,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* odd parity: constraints are contradicting */
             SCIPdebugMessage("xor constraints <%s> and <%s> are contradicting\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL, NULL, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL, NULL, NULL));
             *cutoff = TRUE;
          }
       }
@@ -1414,8 +1414,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* only one additional variable in cons0: fix this variable according to the parity */
             SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %d == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar0));
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL, NULL, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL, NULL, NULL));
             SCIP_CALL( SCIPfixVar(scip, singlevar0, parity ? 1.0 : 0.0, &infeasible, &fixed) );
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
@@ -1430,8 +1430,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* more than one additional variable in cons0: add cons1 to cons0, thus eliminating the equal variables */
             SCIPdebugMessage("xor constraint <%s> is superset of <%s> with parity %d\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL, NULL, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL, NULL, NULL));
             for( v = 0; v < consdata1->nvars; ++v )
             {
                SCIP_CALL( addCoef(scip, cons0, conshdlrdata->eventhdlr, consdata1->vars[v]) );
@@ -1453,8 +1453,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* only one additional variable in cons1: fix this variable according to the parity */
             SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %d == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar1));
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL, NULL, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL, NULL, NULL));
             SCIP_CALL( SCIPfixVar(scip, singlevar1, parity ? 1.0 : 0.0, &infeasible, &fixed) );
             assert(infeasible || fixed);
             *cutoff = *cutoff || infeasible;
@@ -1469,8 +1469,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* more than one additional variable in cons1: add cons0 to cons1, thus eliminating the equal variables */
             SCIPdebugMessage("xor constraint <%s> is subset of <%s> with parity %d\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
-            SCIPdebug(SCIPprintCons(scip, cons0, NULL));
-            SCIPdebug(SCIPprintCons(scip, cons1, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons0, NULL, NULL, NULL));
+            SCIPdebug(SCIPprintCons(scip, cons1, NULL, NULL, NULL));
             for( v = 0; v < consdata0->nvars; ++v )
             {
                SCIP_CALL( addCoef(scip, cons1, conshdlrdata->eventhdlr, consdata0->vars[v]) );
@@ -1987,8 +1987,22 @@ SCIP_DECL_CONSLOCK(consLockXor)
 static
 SCIP_DECL_CONSPRINT(consPrintXor)
 {  /*lint --e{715}*/
-   consdataPrint(scip, SCIPconsGetData(cons), file);
-
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( cons != NULL );
+   assert( format != NULL );
+   assert( result != NULL );
+   
+   *result = SCIP_SUCCESS;
+   
+   if( strcasecmp(format, "cip") == 0 )
+   {
+      SCIPinfoMessage(scip, file, "  [%s] <%s>: ", CONSHDLR_NAME, SCIPconsGetName(cons));
+      consdataPrint(scip, SCIPconsGetData(cons), file);
+   }
+   else
+      *result = SCIP_DIDNOTRUN;
+   
    return SCIP_OKAY;
 }
 

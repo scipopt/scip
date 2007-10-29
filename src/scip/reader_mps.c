@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.73 2007/10/22 17:42:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.74 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -1372,7 +1372,7 @@ SCIP_RETCODE readSOS(
 	    /* add last constraint */
 	    SCIP_CALL( SCIPaddCons(scip, cons) );
 	    SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ) );
 	    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 	 }
 
@@ -1460,7 +1460,7 @@ SCIP_RETCODE readSOS(
       /* add last constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -1594,6 +1594,8 @@ SCIP_DECL_READERREAD(readerReadMps)
 }
 
 
+/** problem writing method of reader */
+#define readerWriteMps NULL
 
 
 /*
@@ -1612,7 +1614,7 @@ SCIP_RETCODE SCIPincludeReaderMps(
 
    /* include mps reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeMps, readerReadMps, readerdata) );
+         readerFreeMps, readerReadMps, readerWriteMps, readerdata) );
 
    /* add mps reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

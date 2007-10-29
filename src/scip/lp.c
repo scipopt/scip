@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.253 2007/10/22 20:25:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254 2007/10/29 12:03:09 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -12436,7 +12436,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    }
 
    /* print integer variables */
-   fprintf(file,"\n\nInteger\n ");
+   fprintf(file,"\n\nGenerals\n ");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {

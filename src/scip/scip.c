@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.423 2007/10/19 16:07:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.424 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1178,6 +1178,7 @@ SCIP_RETCODE SCIPincludeReader(
    const char*           extension,          /**< file extension that reader processes */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
+   SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
    SCIP_READERDATA*      readerdata          /**< reader data */
    )
 {
@@ -1192,7 +1193,7 @@ SCIP_RETCODE SCIPincludeReader(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readerfree, readerread, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readerfree, readerread, readerwrite, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    return SCIP_OKAY;
@@ -2558,6 +2559,107 @@ SCIP_RETCODE SCIPreadProb(
       return SCIP_READERROR;
    }  /*lint !e788*/
 }
+
+/* write original or transformed problem */
+static
+SCIP_RETCODE writeProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< output file (or NULL for standard output) */
+   SCIP_Bool             transformed         /**< output the transformed problem? */
+   )
+{
+   SCIP_RETCODE retcode;
+   char* tmpfilename; 
+   char* extension = NULL;
+   FILE* file = NULL;
+   
+   assert(scip != NULL );
+   
+   if( filename != NULL &&  filename[0] != '\0' )
+   {
+
+      /* get extension from filename */
+      SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
+      SCIPsplitFilename(tmpfilename, NULL, NULL, &extension, NULL);
+   
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
+         return SCIP_FILECREATEERROR;
+      }
+      BMSfreeMemoryArray(&tmpfilename);
+   }
+   
+   if( transformed )
+   {
+      retcode = SCIPprintTransProblem(scip, file, extension);
+   }
+   else
+   {
+      retcode =  SCIPprintOrigProblem(scip, file, extension);
+   }
+   
+   /* check for write errors */
+   if( retcode == SCIP_WRITEERROR )
+      return retcode;
+   else
+      SCIP_CALL( retcode );
+   
+   return SCIP_OKAY;
+}
+
+/** writes original problem to file  */
+extern
+SCIP_RETCODE SCIPwriteOrigProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_RETCODE retcode;
+   
+   SCIP_CALL( checkStage(scip, "SCIPwriteOrigProblem", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   assert( scip != NULL );
+   assert( scip->origprob != NULL );
+   
+   retcode = writeProblem(scip, filename, FALSE);
+
+   /* check for write errors */
+   if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
+      return retcode;
+   else
+      SCIP_CALL( retcode );
+   
+   return SCIP_OKAY;
+}
+
+/** writes transformed problem to file  */
+extern 
+SCIP_RETCODE SCIPwriteTransProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_RETCODE retcode;
+   
+   SCIP_CALL( checkStage(scip, "SCIPwriteTransProblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   assert( scip != NULL );
+   assert( scip->transprob != NULL );
+
+   retcode = writeProblem(scip, filename, TRUE);
+
+   /* check for write errors */
+   if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
+      return retcode;
+   else
+      SCIP_CALL( retcode );
+
+
+   return SCIP_OKAY;
+}
+
 
 /** frees problem and solution process data */
 SCIP_RETCODE SCIPfreeProb(
@@ -5038,7 +5140,7 @@ SCIP_RETCODE SCIPsolve(
                {
                   SCIPmessagePrintInfo("best solution violates constraint <%s> [%s] of original problem:\n",
                      SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
-                  SCIP_CALL( SCIPprintCons(scip, infeascons, NULL) );
+                  SCIP_CALL( SCIPprintCons(scip, infeascons, NULL, NULL, NULL) );
                }
             }
          }
@@ -5423,6 +5525,186 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
 
    return SCIP_OKAY;
 }
+
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant;
+ *
+ * if the number of needed active variables is greater than the available slots in the variable array, nothing happens except  
+ * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
+ * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays 
+ *
+ */
+SCIP_RETCODE SCIPgetProbvarLinearSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< vars array to get active variables for */
+   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */ 
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   int                   varssize,           /**< available slots in vars and scalars array */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
+   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
+   )
+{
+   SCIP_VAR** activevars;
+   SCIP_Real* activescalars;
+   int nactivevars = 0;
+   SCIP_Real activeconstant = 0.0;
+   int activevarssize = (*nvars) * 2;
+   
+   SCIP_VAR* var;
+   SCIP_Real scalar;
+   int v,r;
+   
+   SCIP_VAR** multvars;
+   SCIP_Real* multscalars;
+   SCIP_Real multconstant;
+   SCIP_Real multvarssize;
+   int nmultvars;
+   int multrequiredsize;
+   
+   SCIP_CALL( checkStage(scip, "SCIPgetProbvarLinearSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( scalars != NULL );
+   assert( nvars != NULL );
+   assert( constant != NULL );
+   assert( requiredsize != NULL );
+   assert( *nvars <= varssize );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &activevars, activevarssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &activescalars, activevarssize) );
+
+   /* collect for each variable the representation in active variables */
+   for( v = 0; v < (*nvars); ++v )
+   {
+      var = vars[v];
+      scalar = scalars[v];
+
+      assert( var != NULL );
+      
+      /* transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
+       * scalar and constant;
+       * if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
+       * in "constant"
+       */
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
+      assert( var != NULL );
+
+      switch( SCIPvarGetStatus(var) )
+      { 
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         /* x = a*y + c */
+         if( nactivevars >= activevarssize )
+         {
+            nactivevars *= 2;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, activevarssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &activescalars, activevarssize) );
+            assert(nactivevars < activevarssize);
+         }
+         activevars[nactivevars] = var;
+         activescalars[nactivevars] = scalar;
+         nactivevars++;
+         break;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         /* x = a_1*y_1 + ... + a_n*y_n + c */
+         multconstant = SCIPvarGetMultaggrConstant(var);
+         nmultvars = SCIPvarGetMultaggrNVars(var);
+         
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &multvars, SCIPvarGetMultaggrVars(var), nmultvars) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &multscalars, SCIPvarGetMultaggrScalars(var), nmultvars) );
+         multvarssize = nmultvars;
+
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
+         
+         if( multrequiredsize > multvarssize )
+         {
+            multvarssize = multrequiredsize;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &multvars, multvarssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &multscalars, multvarssize) );
+            
+            SCIP_CALL( SCIPgetProbvarLinearSum(scip, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
+
+            assert(multrequiredsize <= multvarssize );
+         }
+         
+         if( nactivevars + nmultvars > activevarssize )
+         {
+            activevarssize += nactivevars + nmultvars;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, activevarssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &activescalars, activevarssize) );
+         }
+
+         /* copy the variables and scalars */
+         for( r = 0; r < nmultvars; ++r, ++nactivevars )
+         {
+            assert( SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_COLUMN );
+            assert( nactivevars < activevarssize );
+            
+            activevars[nactivevars] = multvars[r];
+            activescalars[nactivevars] = scalar * multscalars[r];
+         }
+
+         activeconstant += scalar * multconstant;
+
+         /* free buffers for multiaggregated variables */
+         SCIPfreeBufferArray(scip, &multvars);
+         SCIPfreeBufferArray(scip, &multscalars);
+         break;
+      
+      default:
+         /* x = c */
+         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
+         
+      }
+   }
+   
+   /* sort variable and scalar array by variable index */
+   SCIPbsortPtrReal((void**)activevars, activescalars, nactivevars, SCIPvarComp);
+   
+   /* eliminate duplicates and count required size */
+   r = 0;
+   for( v = 1; v < nactivevars; ++v )
+   {
+      assert( r <= v );
+      if( SCIPvarGetIndex(activevars[r]) == SCIPvarGetIndex(activevars[v]) )
+      {
+         /* combine both variable since they are the same */
+         activevars[r] = activevars[v];
+         activescalars[r] += activescalars[v];
+      }
+      else if( SCIPvarGetIndex(activevars[r]) < SCIPvarGetIndex(activevars[v]) )
+      {
+         r++;
+         if( r != v )
+         {
+            activevars[r] = activevars[v];
+            activescalars[r] += activescalars[v];
+         }
+      }
+   }
+   
+   *requiredsize = r +  1;
+   
+   if( *nvars >= *requiredsize )
+   {
+      *nvars = *requiredsize;
+      (*constant) += activeconstant;
+
+      /* copy active variable and scalar array to the given arrays */
+      for( v = 0; v < *nvars; ++v )
+      {
+         vars[v] = activevars[v];
+         scalars[v] = activescalars[v];
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &activevars);
+   SCIPfreeBufferArray(scip, &activescalars);
+
+   return SCIP_OKAY;
+}
+   
 
 
 /** returns the reduced costs of the variable in the current node's LP relaxation,
@@ -8935,13 +9217,22 @@ SCIP_RETCODE SCIPcheckCons(
 SCIP_RETCODE SCIPprintCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           format,             /**< format (or NULL for default CIP) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method or NULL if not needed */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPprintCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   SCIP_CALL( SCIPconsPrint(cons, scip->set, file) );
-
+   
+   if( format == NULL )
+   {
+      SCIP_CALL( SCIPconsPrint(cons, scip->set, file, "cip", result) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPconsPrint(cons, scip->set, file, format, result) );
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -13422,39 +13713,105 @@ SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, NULL, cutoffsdown, cutoffsup);
 }
 
+/** outputs problem to file stream */
+static
+SCIP_RETCODE printProblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROB*            prob,               /**< problem data */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension           /**< file format (or NULL for defaul CIP format)*/
+   )
+{
+   SCIP_RESULT result;
+   int i;
+   assert(scip != NULL);
+   assert(prob != NULL);
+   
+   /* try all readers until one could read the file */
+   result = SCIP_DIDNOTRUN;
+   for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
+   {
+      SCIP_RETCODE retcode;
+
+      if( extension != NULL )
+      {
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, extension, &result);
+      }
+      else
+      {
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, "cip", &result);
+      }
+      
+      /* check for reader errors */
+      if( retcode == SCIP_WRITEERROR )
+         return retcode;
+      SCIP_CALL( retcode );
+   }
+
+   switch( result )
+   {
+   case SCIP_DIDNOTRUN:
+      SCIPwarningMessage("No reader for output in <%s> format available\n", extension);
+      return SCIP_WRITEERROR;
+      
+   case SCIP_SUCCESS:
+      return SCIP_OKAY;
+      
+   default:
+      assert(i < scip->set->nreaders);
+      SCIPerrorMessage("invalid result code <%d> from reader <%s> writing <%s> format\n",
+         result, SCIPreaderGetName(scip->set->readers[i]), extension);
+      return SCIP_READERROR;
+   }  /*lint !e788*/
+}
+
 /** outputs original problem to file stream */
 SCIP_RETCODE SCIPprintOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension           /**< file format (or NULL for default CIP format)*/
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPprintOrigProblem", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   if( scip->origprob == NULL )
-      SCIPmessageFPrintInfo(file, "no problem available\n");
+   SCIP_RETCODE retcode;
+   
+   SCIP_CALL( checkStage(scip, "SCIPprintOrigProblem", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   
+   assert(scip != NULL);
+   assert( scip->origprob != NULL );
+   
+   retcode = printProblem(scip, scip->origprob, file, extension);
+   
+   /* check for write errors */
+   if( retcode == SCIP_WRITEERROR )
+      return retcode;
    else
-   {
-      SCIP_CALL( SCIPprobPrint(scip->origprob, scip->set, file) );
-   }
-
+      SCIP_CALL( retcode );
+   
    return SCIP_OKAY;
 }
 
 /** outputs transformed problem to file stream */
 SCIP_RETCODE SCIPprintTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension           /**< file format (or NULL for default CIP format)*/
    )
-{
-   SCIP_CALL( checkStage(scip, "SCIPprintTransProblem", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+{ 
+   SCIP_RETCODE retcode;
+   
+   SCIP_CALL( checkStage(scip, "SCIPprintTransProblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   if( scip->transprob == NULL )
-      SCIPmessageFPrintInfo(file, "no transformed problem available\n");
+   assert(scip != NULL);
+   assert(scip->transprob != NULL );
+
+   retcode =  printProblem(scip, scip->transprob, file, extension);
+   
+   /* check for write errors */
+   if( retcode == SCIP_WRITEERROR )
+      return retcode;
    else
-   {
-      SCIP_CALL( SCIPprobPrint(scip->transprob, scip->set, file) );
-   }
-
+      SCIP_CALL( retcode );
+   
    return SCIP_OKAY;
 }
 

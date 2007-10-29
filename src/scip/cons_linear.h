@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.51 2007/10/16 14:57:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.52 2007/10/29 12:03:08 bzfheinz Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -236,4 +236,19 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
 
+/** prints given linear constraint information in LP format to file stream */
+extern
+SCIP_RETCODE SCIPprintLpFormatLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< name of the row */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of coefficients values (or NULL if all coefficient values are 1) */
+   int                   nvars,              /**< number of variables */
+   SCIP_Real*            lhs,                /**< left hand side (or NULL if none)*/
+   SCIP_Real*            rhs,                /**< right hand side (or NULL if none)*/ 
+   SCIP_Bool             genericnames,       /**< using generic variable names? */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   );
+   
 #endif

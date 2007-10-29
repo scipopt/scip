@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.34 2007/06/06 11:25:22 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.35 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -367,6 +367,12 @@ const char* SCIPconsGetName(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns the position of constraint in the corresponding handler's conss array */
+extern
+int SCIPconsGetPos(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns the constraint handler of the constraint */
 extern
 SCIP_CONSHDLR* SCIPconsGetHdlr(
@@ -562,6 +568,7 @@ int SCIPconsGetNLocksNeg(
  */
 
 #define SCIPconsGetName(cons)           (cons)->name
+#define SCIPconsGetPos(cons)           (cons)->consspos
 #define SCIPconsGetHdlr(cons)           (cons)->conshdlr
 #define SCIPconsGetData(cons)           (cons)->consdata
 #define SCIPconsGetNUses(cons)          (cons)->nuses

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.163 2007/09/04 16:20:09 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.164 2007/10/29 12:03:07 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4499,25 +4499,36 @@ SCIP_RETCODE SCIPconsRelease(
 SCIP_RETCODE SCIPconsPrint(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           format,             /**< format */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method or NULL if not needed */
    )
 {
    SCIP_CONSHDLR* conshdlr;
+   SCIP_RESULT printresult;
 
    assert(cons != NULL);
    assert(set != NULL);
+   assert(format != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+   
    conshdlr = cons->conshdlr;
    assert(conshdlr != NULL);
-
-   SCIPmessageFPrintInfo(file, "  [%s] <%s>: ", conshdlr->name, cons->name);
+   
    if( conshdlr->consprint != NULL )
    {
-      SCIP_CALL( conshdlr->consprint(set->scip, conshdlr, cons, file) );
-   }
-   else
-      SCIPmessageFPrintInfo(file, "constraint handler <%s> doesn't support printing constraints\n", conshdlr->name);
+      SCIP_CALL( conshdlr->consprint(set->scip, conshdlr, cons, file, format, &printresult) );
 
+      /* the result value has to be SCIP_SUCCESS if printing was successfully or SCIP_DIDNOTRUN otherwise */
+      assert( printresult == SCIP_SUCCESS || printresult == SCIP_DIDNOTRUN );
+   }
+
+   if( result != NULL )
+      *result = printresult;
+   else if( printresult != SCIP_SUCCESS )
+      SCIPmessageFPrintInfo(file, "constraint handler <%s> doesn't support <%s> formt\n", conshdlr->name, format);
+   
    return SCIP_OKAY;
 }
 
@@ -5336,6 +5347,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons)
  */
 
 #undef SCIPconsGetName
+#undef SCIPconsGetPos
 #undef SCIPconsGetHdlr
 #undef SCIPconsGetData
 #undef SCIPconsGetNUses
@@ -5376,6 +5388,16 @@ const char* SCIPconsGetName(
    assert(cons != NULL);
 
    return cons->name;
+}
+
+/** returns the position of constraint in the corresponding handler's conss array */
+int SCIPconsGetPos(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->consspos;
 }
 
 /** returns the constraint handler of the constraint */

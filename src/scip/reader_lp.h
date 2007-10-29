@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.h,v 1.3 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.h,v 1.4 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader_lp.h
  * @brief  LP file reader
@@ -34,6 +34,32 @@
 extern
 SCIP_RETCODE SCIPincludeReaderLp(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/* reads problem from file */
+extern
+SCIP_RETCODE SCIPreadLp(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_READER*       reader,             /**< the file reader itself */
+   const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
+   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   );
+
+
+/* writes problem to file */
+extern
+SCIP_RETCODE SCIPwriteLp(
+   SCIP*              scip,               /**< SCIP data structure */
+   FILE*              file,               /**< output file, or NULL if standard output should be used */
+   SCIP_Bool          genericnames,       /**< use generic variable and row names? */
+   SCIP_OBJSENSE      objsense,           /**< objective sense */
+   SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, 
+                                           *   continuous */
+   int                nvars,              /**< number of mutable variables in the problem */
+   SCIP_CONS**        conss,              /**< array with constraints of the problem */
+   int                nconss,             /**< number of constraints in the problem */
+   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
    );
 
 #endif

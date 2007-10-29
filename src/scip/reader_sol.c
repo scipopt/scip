@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.8 2007/06/28 14:56:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.9 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader_sol.c
  * @brief  file reader for primal solutions
@@ -82,6 +82,8 @@ SCIP_DECL_READERREAD(readerReadSol)
 }
 
 
+/** problem writing method of reader */
+#define readerWriteSol NULL
 
 
 /*
@@ -100,7 +102,7 @@ SCIP_RETCODE SCIPincludeReaderSol(
 
    /* include sol reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeSol, readerReadSol, readerdata) );
+         readerFreeSol, readerReadSol, readerWriteSol, readerdata) );
 
    return SCIP_OKAY;
 }

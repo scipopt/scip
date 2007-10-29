@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.34 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.35 2007/10/29 12:03:10 bzfheinz Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -35,6 +35,7 @@
 #include "scip/set.h"
 #include "scip/misc.h"
 #include "scip/reader.h"
+#include "scip/prob.h"
 
 #include "scip/struct_reader.h"
 
@@ -48,6 +49,7 @@ SCIP_RETCODE SCIPreaderCreate(
    const char*           extension,          /**< file extension that reader processes */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
+   SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
    SCIP_READERDATA*      readerdata          /**< reader data */
    )
 {
@@ -55,7 +57,6 @@ SCIP_RETCODE SCIPreaderCreate(
    assert(name != NULL);
    assert(desc != NULL);
    assert(extension != NULL);
-   assert(readerread != NULL);
 
    SCIP_ALLOC( BMSallocMemory(reader) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->name, name, strlen(name)+1) );
@@ -63,8 +64,9 @@ SCIP_RETCODE SCIPreaderCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->extension, extension, strlen(extension)+1) );
    (*reader)->readerfree = readerfree;
    (*reader)->readerread = readerread;
+   (*reader)->readerwrite = readerwrite;
    (*reader)->readerdata = readerdata;
-
+   
    return SCIP_OKAY;
 }
 
@@ -122,7 +124,6 @@ SCIP_RETCODE SCIPreaderRead(
    char* compression;
 
    assert(reader != NULL);
-   assert(reader->readerread != NULL);
    assert(set != NULL);
    assert(filename != NULL);
    assert(result != NULL);
@@ -132,7 +133,7 @@ SCIP_RETCODE SCIPreaderRead(
    SCIPsplitFilename(tmpfilename, &path, &name, &extension, &compression);
 
    /* check, if reader is applicable on the given file */
-   if( readerIsApplicable(reader, extension) )
+   if( readerIsApplicable(reader, extension) && reader->readerread != NULL )
    {
       /* call reader to read problem */
       retcode = reader->readerread(set->scip, reader, filename, result);
@@ -149,6 +150,48 @@ SCIP_RETCODE SCIPreaderRead(
    if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
       return retcode;
 
+   SCIP_CALL( retcode );
+
+   return SCIP_OKAY;
+}
+
+/** writes problem data to file with given reader or returns SCIP_DIDNOTRUN */
+SCIP_RETCODE SCIPreaderWrite(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< file format */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_RETCODE retcode;
+   
+   assert(reader != NULL);
+   assert(set != NULL);
+   assert(extension != NULL);
+   assert(result != NULL);
+
+   /* check, if reader is applicable on the given file */
+   if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
+   {
+      /* call reader to write problem */
+      retcode = reader->readerwrite(set->scip, reader, file, prob->name, prob->probdata, prob->transformed,
+         prob->objsense, prob->objscale, prob->objoffset,
+         prob->vars, prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
+         prob->fixedvars, prob->nfixedvars, prob->startnvars, 
+         prob->conss, prob->nconss, prob->maxnconss, prob->startnconss, result);
+   }
+   else
+   {
+      *result = SCIP_DIDNOTRUN;
+      retcode = SCIP_OKAY;
+   }
+   
+   /* check for reader errors */
+   if( retcode == SCIP_WRITEERROR )
+      return retcode;
+   
    SCIP_CALL( retcode );
 
    return SCIP_OKAY;

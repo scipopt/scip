@@ -2,9 +2,28 @@ current version
 ===============
 
 interface:
+- new callback method SCIPprintLpFormatLinear()
+- new callback method SCIPconsGetPos()
+- new parameters "format" and "result" in callback method SCIP_DECL_CONSPRINT() same meaning as 
+  in SCIPprintCons() ecept that the result has to be set to SCIP_DIDNOTRUN or SCIP_SUCCESS
+- new parameters "format" and "result" in SCIPprintCons(); first one defining the requested format 
+  or NULL for default CIP format; second one to store the result of the printing process or NULL if not needed,
+  e.g., SCIPprintCons(cons, NULL, NULL, NULL) displays the constraint in CIP format as far as the 
+  corresponding constrain handler supports this format;
+- new parameter "extension" in SCIPprintTransProblem() defining the requested format or NULL for default CIP format,
+  e.g, SCIPprintTransProblem(scip, NULL, NULL) displays the transformed problem in CIP format 
+- new parameter "extension" in SCIPprintOrigProblem() defining the requested format or NULL for default CIP format,
+  e.g., SCIPprintOrigProblem(scip, NULL, "lp") displays the original problem in LP format 
+- new callback method SCIP_DECL_READERWRITE(x) in type_reader.h; this method calls the reader 
+  to write a problem to file stream. useful for writing the transformed problem in LP format
 - new parameter "conshdlrname" in SCIPincludeLinconsUpgrade() 
 
 features:
+- new callback method SCIPwriteOrigProblem(), e.g., 
+  SCIPwriteOrigProblem(scip, "orig.lp") prints the original problem in LP format in the file "orig.lp"
+- new callback method SCIPwriteTransProblem(), e.g.,
+  SCIPwriteOrigProblem(scip, NULL) displays the transformed problem in CIP format 
+- new callback methed SCIPgetProbvarLinearSum()
 - added SOS2 example
 - extended TSP example
 - the ZIMPL reader now understands SOS type 1 and 2 constraints
