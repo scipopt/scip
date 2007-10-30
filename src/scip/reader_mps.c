@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.74 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.75 2007/10/30 15:16:44 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -334,7 +334,8 @@ void mpsinputEntryIgnored(
    const char*           what,
    const char*           what_name,
    const char*           entity,
-   const char*           entity_name
+   const char*           entity_name,
+   int                   verblevel
    )
 {
    assert(mpsi        != NULL);
@@ -343,7 +344,7 @@ void mpsinputEntryIgnored(
    assert(entity      != NULL);
    assert(entity_name != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+   SCIPverbMessage(scip, verblevel, NULL,
       "Warning line %d: %s \"%s\" for %s \"%s\" ignored\n", mpsi->lineno, what, what_name, entity, entity_name);
 }
 
@@ -889,7 +890,7 @@ SCIP_RETCODE readCols(
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
-            mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
+            mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_FULL);
          else if( !SCIPisZero(scip, val) )
          {
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
@@ -909,7 +910,7 @@ SCIP_RETCODE readCols(
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
-               mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
+               mpsinputEntryIgnored(scip, mpsi, "Column", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_FULL);
             else if( !SCIPisZero(scip, val) )
             {
                SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
@@ -968,7 +969,7 @@ SCIP_RETCODE readRhs(
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
-            mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
+            mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_NORMAL);
          else
          {
             val = atof(mpsinputField3(mpsi));
@@ -1001,7 +1002,7 @@ SCIP_RETCODE readRhs(
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
-               mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
+               mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_NORMAL);
             else
             {
                val = atof(mpsinputField5(mpsi));
@@ -1060,7 +1061,7 @@ SCIP_RETCODE readRanges(
 
          if (!strcmp(mpsinputField0(mpsi), "BOUNDS"))
             mpsinputSetSection(mpsi, MPS_BOUNDS);
-         if (!strcmp(mpsinputField0(mpsi), "SOS"))
+         else if (!strcmp(mpsinputField0(mpsi), "SOS"))
             mpsinputSetSection(mpsi, MPS_SOS);
          else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
             mpsinputSetSection(mpsi, MPS_ENDATA);
@@ -1091,7 +1092,7 @@ SCIP_RETCODE readRanges(
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
-            mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField2(mpsi));
+            mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_NORMAL);
          else
          {
             val = atof(mpsinputField3(mpsi));
@@ -1127,7 +1128,7 @@ SCIP_RETCODE readRanges(
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
-               mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField4(mpsi));
+               mpsinputEntryIgnored(scip, mpsi, "Range", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_NORMAL);
             else
             {
                val = atof(mpsinputField5(mpsi));
@@ -1189,6 +1190,8 @@ SCIP_RETCODE readBounds(
             mpsinputSetSection(mpsi, MPS_SOS);
          else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
             mpsinputSetSection(mpsi, MPS_ENDATA);
+	 else
+	    break;
          return SCIP_OKAY;
       }
       /* Is the value field used ? */
@@ -1204,7 +1207,7 @@ SCIP_RETCODE readBounds(
          if( !mpsi->semicontwarning && !strcmp(mpsinputField1(mpsi), "SC") )
          {
             mpsinputEntryIgnored(scip, mpsi, "not supported semi continuous declaration", mpsinputField1(mpsi),
-               "variable", mpsinputField3(mpsi));
+				 "variable", mpsinputField3(mpsi), SCIP_VERBLEVEL_NORMAL);
             mpsi->semicontwarning = TRUE;
          }
       }
@@ -1233,7 +1236,7 @@ SCIP_RETCODE readBounds(
       {
          var = SCIPfindVar(scip, mpsinputField3(mpsi));
          if( var == NULL )
-            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname);
+            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField3(mpsi), "bound", bndname, SCIP_VERBLEVEL_NORMAL);
          else
          {
             if( mpsinputField4(mpsi) == NULL )
@@ -1421,7 +1424,7 @@ SCIP_RETCODE readSOS(
 	 if ( var == NULL )
 	 {
 	    /* ignore unkown variables - we would not know the type anyway */
-            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "SOS", name);
+            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "SOS", name, SCIP_VERBLEVEL_NORMAL);
 	 }
 	 else
 	 {
@@ -1471,18 +1474,17 @@ SCIP_RETCODE readSOS(
 
 /* Read LP in "MPS File Format".
  *
- *  The specification is taken from the
+ *  A specification of the MPS format can be found at
  *
- *  IBM Optimization Library Guide and Reference
+ *  http://plato.asu.edu/ftp/mps_format.txt,
+ *  ftp://ftp.caam.rice.edu/pub/people/bixby/miplib/mps_format,
  *
- *  Online available at http://www.software.ibm.com/sos/features/libuser.htm
+ *  and in the
  *
- *  and from the
- *
- *  ILOG CPLEX 7.0 Reference Manual, Appendix E, Page 531.
+ *  ILOG CPLEX Reference Manual
  *
  *  This routine should read all valid MPS format files.
- *  What it will not do, is find all cases where a file is ill formed.
+ *  What it will not do, is to find all cases where a file is ill formed.
  *  If this happens it may complain and read nothing or read "something".
  */
 static
