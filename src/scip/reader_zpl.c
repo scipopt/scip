@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.26 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27 2007/10/30 15:17:23 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -54,7 +54,7 @@ Bool zpl_read_with_args(int argc, char** argv);
 #define READER_NAME             "zplreader"
 #define READER_DESC             "file reader for ZIMPL model files"
 #define READER_EXTENSION        "zpl"
-[5~[5~
+
 
 
 
