@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.28 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.29 2007/10/30 13:32:48 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1733,6 +1733,9 @@ SCIP_RETCODE SCIPwriteLp(
    SCIPinfoMessage(scip, file, "Obj:");
    for( i = 0; i < nvars; ++i )
    {
+      if(SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+         continue;
+      
       if( genericnames )
          SCIPinfoMessage(scip, file, " %+gx%d", SCIPvarGetObj(vars[i]), SCIPvarGetProbindex(vars[i]) ); 
       else
