@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.20 2007/06/06 11:25:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.21 2007/10/31 19:15:13 bzfpfets Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -70,7 +70,7 @@ struct SCIP_Prob
    int                   maxnconss;          /**< maximum number of constraints existing at the same time */
    int                   startnvars;         /**< number of variables existing when problem solving started */
    int                   startnconss;        /**< number of constraints existing when problem solving started */
-   SCIP_OBJSENSE         objsense;           /**< objective sense */
+   SCIP_OBJSENSE         objsense;           /**< objective sense of the original problem */
    SCIP_Bool             objisintegral;      /**< is objective value always integral for feasible solutions? */
    SCIP_Bool             transformed;        /**< TRUE iff problem is the transformed problem */
 };

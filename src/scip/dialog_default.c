@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.75 2007/10/31 09:26:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.76 2007/10/31 19:15:12 bzfpfets Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -148,8 +148,6 @@ SCIP_RETCODE writeProblem(
    SCIP_Bool endoffile;
    SCIP_RETCODE retcode;
 
-   SCIPdialogMessage(scip, NULL, "\n");
-   
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
    if( endoffile )
    {
@@ -169,11 +167,17 @@ SCIP_RETCODE writeProblem(
          retcode = SCIPwriteOrigProblem(scip, filename);
       }
 
-
       if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
       {
          SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else if ( retcode == SCIP_OKAY )
+      {
+	 if ( transformed )
+	    SCIPdialogMessage(scip, NULL, "written transformed problem to file <%s>\n", filename);
+	 else
+	    SCIPdialogMessage(scip, NULL, "written original problem to file <%s>\n", filename);
       }
       else
       {
@@ -1732,8 +1736,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteProblem)
    else
       SCIPdialogMessage(scip, NULL, "no problem available\n");
    
-   SCIPdialogMessage(scip, NULL, "\n");
-   
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
@@ -1839,8 +1841,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteTransproblem)
    else
       SCIPdialogMessage(scip, NULL, "no transformed problem available\n");
    
-   SCIPdialogMessage(scip, NULL, "\n");
-
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;

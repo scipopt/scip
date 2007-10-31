@@ -49,6 +49,9 @@ fixed bugs:
 - added checks whether a plugin (handler) has already been included to avoid later complications e.g. with parameters.
 - Fixed obvious bug in linear constraint data sorting. Most part of the code assumed pure index sorting, but in fact,
   it was sorted by variable type as first criterion and index as second criterion.
+- Fixed bug with wrong objective sense output for transformed problem. The transformed problem is always a minimization
+  problem!
+
 
 SCIP version 1.00
 =================

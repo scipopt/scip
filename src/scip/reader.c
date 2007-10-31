@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.35 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.36 2007/10/31 19:15:12 bzfpfets Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -177,7 +177,7 @@ SCIP_RETCODE SCIPreaderWrite(
    {
       /* call reader to write problem */
       retcode = reader->readerwrite(set->scip, reader, file, prob->name, prob->probdata, prob->transformed,
-         prob->objsense, prob->objscale, prob->objoffset,
+         prob->transformed ? SCIP_OBJSENSE_MINIMIZE : prob->objsense, prob->objscale, prob->objoffset,
          prob->vars, prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars, 
          prob->fixedvars, prob->nfixedvars, prob->startnvars, 
          prob->conss, prob->nconss, prob->maxnconss, prob->startnconss, result);

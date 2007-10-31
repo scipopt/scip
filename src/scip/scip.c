@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.426 2007/10/31 09:26:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427 2007/10/31 19:15:12 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13799,7 +13799,7 @@ SCIP_RETCODE SCIPprintTransProblem(
    assert(scip != NULL);
    assert(scip->transprob != NULL );
 
-   retcode =  printProblem(scip, scip->transprob, file, extension);
+   retcode = printProblem(scip, scip->transprob, file, extension);
    
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR )
