@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.31 2007/10/31 10:32:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.32 2007/10/31 10:37:54 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1609,7 +1609,12 @@ SCIP_RETCODE readLPFile(
  * Local methods (for writing)
  */
 
-/* prints variable name LP format conform */
+/* prints variable name LP format conform; always use this method to stay consistent
+ *
+ * 1) variable names should not start with a digit 
+ * 2) avoid variable name starting with an 'e' or 'E' since this notation is reserved for exponential entries
+ *
+ */
 static
 void printVarName(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1625,7 +1630,7 @@ void printVarName(
    name = SCIPvarGetName(var);
    assert( name != NULL );
 
-   if( isdigit(name[0]) )
+   if( isdigit(name[0]) || name[0] == 'a' || name[0] == 'E' )
       SCIPinfoMessage(scip, file, "_%s ", name);
    else
       SCIPinfoMessage(scip, file, "%s ", name);
