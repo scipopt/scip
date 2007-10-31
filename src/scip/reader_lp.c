@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.32 2007/10/31 10:37:54 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.33 2007/10/31 10:56:24 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1617,9 +1617,10 @@ SCIP_RETCODE readLPFile(
  */
 static
 void printVarName(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_VAR*             var                 /**< variable */
+   SCIP*                scip,               /**< SCIP data structure */
+   FILE*                file,               /**< output file (or NULL for standard output) */
+   SCIP_VAR*            var,                /**< variable */
+   SCIP_Bool            genericnames        /**< use generic variable names? */
    )
 {
    const char* name;
@@ -1630,10 +1631,15 @@ void printVarName(
    name = SCIPvarGetName(var);
    assert( name != NULL );
 
-   if( isdigit(name[0]) || name[0] == 'a' || name[0] == 'E' )
-      SCIPinfoMessage(scip, file, "_%s ", name);
+   if( genericnames )
+      SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(var));
    else
-      SCIPinfoMessage(scip, file, "%s ", name);
+   {
+      if( isdigit(name[0]) || name[0] == 'a' || name[0] == 'E' )
+         SCIPinfoMessage(scip, file, "_%s ", name);
+      else
+         SCIPinfoMessage(scip, file, "%s ", name);
+   }
 }
 
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant */
@@ -1714,10 +1720,7 @@ void printRow(
    for( v = 0; v < nvars; ++v )
    {
       SCIPinfoMessage(scip, file, "%+g ", vals[v]);
-      if( consnumber != NULL )
-         SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(vars[v]) + 1 );
-      else
-         printVarName(scip, file, vars[v]);
+      printVarName(scip, file, vars[v], consnumber != NULL);
    }
    
    /* print left hand side */
@@ -1990,14 +1993,10 @@ SCIP_RETCODE SCIPwriteLp(
 
       if(SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
+
+      SCIPinfoMessage(scip, file, "%+g ", SCIPvarGetObj(var));
+      printVarName(scip, file, var, genericnames);
       
-      if( genericnames )
-         SCIPinfoMessage(scip, file, "%+gx%d ", SCIPvarGetObj(var), SCIPvarGetProbindex(var) + 1 ); 
-      else
-      {
-         SCIPinfoMessage(scip, file, "%+g ", SCIPvarGetObj(var) ); 
-         printVarName(scip, file, var);
-      } 
       if( (v + 1)  % 10 == 0 )
          SCIPinfoMessage(scip, file, "\n     ");
    }
@@ -2117,10 +2116,7 @@ SCIP_RETCODE SCIPwriteLp(
             SCIPinfoMessage(scip, file, "%g <= ", lb);
          }
          /* print variable name */
-         if( genericnames )
-            SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(var) + 1 ); 
-         else
-            printVarName(scip, file, var); 
+         printVarName(scip, file, var, genericnames); 
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPisInfinity(scip, ub) )
@@ -2144,10 +2140,7 @@ SCIP_RETCODE SCIPwriteLp(
             continue;
 
          /* print variable name */
-         if( genericnames )
-            SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(var) + 1 ); 
-         else
-            printVarName(scip, file, var); 
+         printVarName(scip, file, var, genericnames); 
          
          if( (v + 1)  % 10 == 0 )
             SCIPinfoMessage(scip, file, "\n");
