@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.34 2007/10/31 11:24:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.35 2007/10/31 11:48:36 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1635,12 +1635,13 @@ void printVarName(
       SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(var) + 1);
    else
    {
-      if( isdigit(name[0]) || name[0] == 'a' || name[0] == 'E' )
+      if( isdigit(name[0]) || name[0] == 'e' || name[0] == 'E' )
          SCIPinfoMessage(scip, file, "_%s ", name);
       else
          SCIPinfoMessage(scip, file, "%s ", name);
    }
 }
+
 
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant */
 static
@@ -1679,9 +1680,7 @@ SCIP_RETCODE getActiveVariables(
    else
    {
       for( v = 0; v < *nvars; ++v )
-      {
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
-      }
    }
    return SCIP_OKAY;
 }
@@ -1772,9 +1771,7 @@ SCIP_RETCODE printLinearCons(
       SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
    
       for( v = 0; v < nactivevars; ++v )
-      {
          activevals[v] = 1.0;
-      }
    }
 
    /* retransform given variables to active variables */
@@ -1838,7 +1835,7 @@ SCIP_DECL_READERWRITE(readerWriteLp)
 {  /*lint --e{715}*/
    
    /* print statistics as comment to file */
-   SCIPinfoMessage(scip, file, "\\ STATISTICS\n");
+   SCIPinfoMessage(scip, file, "\\ SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "\\   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "\\   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
@@ -2096,7 +2093,7 @@ SCIP_RETCODE SCIPwriteLp(
    }
 
    /* print "Bounds" section */
-   SCIPinfoMessage(scip, file, "\n\nBounds\n ");
+   SCIPinfoMessage(scip, file, "\nBounds\n ");
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -2129,7 +2126,7 @@ SCIP_RETCODE SCIPwriteLp(
    /* print generals section */
    if( nvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "\n\nGenerals\n ");
+      SCIPinfoMessage(scip, file, "\nGenerals\n ");
       
       for( v = 0; v < nvars; ++v )
       {
@@ -2148,7 +2145,7 @@ SCIP_RETCODE SCIPwriteLp(
    }
    
    /* end of lp format */
-   SCIPmessageFPrintInfo(file, "\n\nEnd");
+   SCIPmessageFPrintInfo(file, "\nEnd");
    
    *result = SCIP_SUCCESS;
    

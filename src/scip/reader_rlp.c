@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_rlp.c,v 1.2 2007/10/31 10:32:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.3 2007/10/31 11:48:37 bzfheinz Exp $"
 
 /**@file   reader_rlp.h
  * @brief  RLP file reader (LP format with generic variables and row names)
@@ -56,7 +56,7 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
 {  /*lint --e{715}*/
    
    /* print statistics as comment to file */
-   SCIPmessageFPrintInfo(file, "\\ STATISTICS\n");
+   SCIPmessageFPrintInfo(file, "\\ SCIP STATISTICS\n");
    SCIPmessageFPrintInfo(file, "\\   Problem name     : %s\n", name);
    SCIPmessageFPrintInfo(file, "\\   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
