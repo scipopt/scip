@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.35 2007/10/31 11:48:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.36 2007/10/31 11:56:00 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1631,7 +1631,7 @@ void printVarName(
    name = SCIPvarGetName(var);
    assert( name != NULL );
 
-   if( genericnames )
+   if( genericnames || name[0] == '\0' )
       SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(var) + 1);
    else
    {
