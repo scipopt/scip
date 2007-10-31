@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.30 2007/10/31 09:26:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.31 2007/10/31 10:32:20 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1609,6 +1609,28 @@ SCIP_RETCODE readLPFile(
  * Local methods (for writing)
  */
 
+/* prints variable name LP format conform */
+static
+void printVarName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   const char* name;
+
+   assert( scip != NULL );
+   assert( var != NULL );
+   
+   name = SCIPvarGetName(var);
+   assert( name != NULL );
+
+   if( isdigit(name[0]) )
+      SCIPinfoMessage(scip, file, "_%s ", name);
+   else
+      SCIPinfoMessage(scip, file, "%s ", name);
+}
+
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant */
 static
 SCIP_RETCODE getActiveVariables(
@@ -1686,11 +1708,11 @@ void printRow(
    /* print coefficients */
    for( v = 0; v < nvars; ++v )
    {
-      SCIPinfoMessage(scip, file, "%+g", vals[v]);
+      SCIPinfoMessage(scip, file, "%+g ", vals[v]);
       if( consnumber != NULL )
          SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(vars[v]) + 1 );
       else
-         SCIPinfoMessage(scip, file, " %s ", SCIPvarGetName(vars[v]));
+         printVarName(scip, file, vars[v]);
    }
    
    /* print left hand side */
@@ -1808,12 +1830,12 @@ SCIP_DECL_READERWRITE(readerWriteLp)
 {  /*lint --e{715}*/
    
    /* print statistics as comment to file */
-   SCIPinfoMessage(scip, file, "/ STATISTICS\n");
-   SCIPinfoMessage(scip, file, "/   Problem name     : %s\n", name);
-   SCIPinfoMessage(scip, file, "/   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+   SCIPinfoMessage(scip, file, "\\ STATISTICS\n");
+   SCIPinfoMessage(scip, file, "\\   Problem name     : %s\n", name);
+   SCIPinfoMessage(scip, file, "\\   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    
-   SCIPinfoMessage(scip, file, "/   Constraints      : %d initial, %d maximal\n", startnconss, maxnconss);
+   SCIPinfoMessage(scip, file, "\\   Constraints      : %d initial, %d maximal\n", startnconss, maxnconss);
    
    SCIP_CALL( SCIPwriteLp(scip, file, FALSE, objsense, vars, nvars, conss, nconss, result) );
    
@@ -1956,7 +1978,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "Minimize" : "Maximize");
    
    /* print objective function */
-   SCIPinfoMessage(scip, file, " obj:");
+   SCIPinfoMessage(scip, file, " Obj: ");
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -1965,10 +1987,12 @@ SCIP_RETCODE SCIPwriteLp(
          continue;
       
       if( genericnames )
-         SCIPinfoMessage(scip, file, " %+gx%d", SCIPvarGetObj(var), SCIPvarGetProbindex(var) + 1 ); 
+         SCIPinfoMessage(scip, file, "%+gx%d ", SCIPvarGetObj(var), SCIPvarGetProbindex(var) + 1 ); 
       else
-         SCIPinfoMessage(scip, file, " %+g %s", SCIPvarGetObj(var), SCIPvarGetName(var) ); 
-      
+      {
+         SCIPinfoMessage(scip, file, "%+g ", SCIPvarGetObj(var) ); 
+         printVarName(scip, file, var);
+      } 
       if( (v + 1)  % 10 == 0 )
          SCIPinfoMessage(scip, file, "\n     ");
    }
@@ -1988,13 +2012,13 @@ SCIP_RETCODE SCIPwriteLp(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       transformed = SCIPconsIsTransformed(cons);
       
-      if( strcasecmp(conshdlrname, "linear") == 0 )
+      if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_CALL( printLinearCons(scip, file, consname,  consnumber,
                SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
                SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
       }
-      else if( strcasecmp(conshdlrname, "setppc") == 0 )
+      else if( strcmp(conshdlrname, "setppc") == 0 )
       {
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
@@ -2015,13 +2039,13 @@ SCIP_RETCODE SCIPwriteLp(
             break;
          }
       }
-      else if( strcasecmp(conshdlrname, "logicor") == 0 )
+      else if( strcmp(conshdlrname, "logicor") == 0 )
       {
          SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
                SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 
                1.0, SCIP_DEFAULT_INFINITY, transformed) );
       }
-      else if( strcasecmp(conshdlrname, "knapsack") == 0 )
+      else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
          consvars = SCIPgetVarsKnapsack(scip, cons);
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
@@ -2041,7 +2065,7 @@ SCIP_RETCODE SCIPwriteLp(
          SCIPfreeBufferArray(scip, &consvals);
 
       }
-      else if( strcasecmp(conshdlrname, "varbounds") == 0 )
+      else if( strcmp(conshdlrname, "varbounds") == 0 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
          SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
@@ -2062,11 +2086,13 @@ SCIP_RETCODE SCIPwriteLp(
       else
       {
          SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
+         SCIPinfoMessage(scip, file, "\\ ");
+         SCIP_CALL( SCIPprintCons(scip, cons, file) );
       }
    }
 
    /* print "Bounds" section */
-   SCIPinfoMessage(scip, file, "\n\nBounds\n");
+   SCIPinfoMessage(scip, file, "\n\nBounds\n ");
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -2079,26 +2105,30 @@ SCIP_RETCODE SCIPwriteLp(
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPisInfinity(scip, lb) )
-            SCIPinfoMessage(scip, file, " %g <=", lb);
-         
+         {
+            if( SCIPisZero(scip, lb) )
+               lb = 0.0;
+            
+            SCIPinfoMessage(scip, file, "%g <= ", lb);
+         }
          /* print variable name */
          if( genericnames )
-            SCIPinfoMessage(scip, file, " x%d ", SCIPvarGetProbindex(var) + 1 ); 
+            SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(var) + 1 ); 
          else
-            SCIPinfoMessage(scip, file, " %s ", SCIPvarGetName(var) ); 
+            printVarName(scip, file, var); 
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPisInfinity(scip, ub) )
             SCIPinfoMessage(scip, file, "<= %g", ub);
          
-         SCIPinfoMessage(scip, file, "\n");
+         SCIPinfoMessage(scip, file, "\n ");
       }
    }
    
    /* print generals section */
    if( nvars > 0 )
    {
-      SCIPinfoMessage(scip, file, "\n\nGenerals\n");
+      SCIPinfoMessage(scip, file, "\n\nGenerals\n ");
       
       for( v = 0; v < nvars; ++v )
       {
@@ -2110,9 +2140,9 @@ SCIP_RETCODE SCIPwriteLp(
 
          /* print variable name */
          if( genericnames )
-            SCIPinfoMessage(scip, file, " x%d", SCIPvarGetProbindex(var) + 1 ); 
+            SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(var) + 1 ); 
          else
-            SCIPinfoMessage(scip, file, " %s", SCIPvarGetName(var) ); 
+            printVarName(scip, file, var); 
          
          if( (v + 1)  % 10 == 0 )
             SCIPinfoMessage(scip, file, "\n");
