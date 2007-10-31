@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.110 2007/10/29 12:03:08 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.111 2007/10/31 09:26:30 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1590,48 +1590,12 @@ static
 SCIP_DECL_CONSPRINT(consPrintLogicor)
 {  /*lint --e{715}*/
 
-   SCIP_CONSDATA* consdata;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( format != NULL );
-   assert( result != NULL );
-   
-   *result = SCIP_SUCCESS;
 
-   consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
-  
-
-   if( strcasecmp(format, "cip") == 0 )
-   {
-      /* CIP format */
-
-      SCIPinfoMessage(scip, file, "  [%s] <%s>: ", CONSHDLR_NAME, SCIPconsGetName(cons));
-      consdataPrint(scip, consdata, file);
-   }
-   else if( strcasecmp(format, "lp") == 0 )
-   {
-      /* LP format */
-
-      SCIP_Real lhs = 1.0;
-      SCIP_CALL( SCIPprintLpFormatLinear(scip, file, SCIPconsGetName(cons), 
-            consdata->vars, NULL, consdata->nvars, 
-            &lhs, NULL, FALSE, SCIPconsIsTransformed(cons) ) );
-   }
-   else if( strcasecmp(format, "rlp") == 0 )
-   {
-      /* LP format with generic names */
-      
-      SCIP_Real lhs = 1.0;
-      SCIP_CALL( SCIPprintLpFormatLinear(scip, file, SCIPconsGetName(cons), 
-            consdata->vars, NULL, consdata->nvars, 
-            &lhs, NULL, TRUE, SCIPconsIsTransformed(cons) ) );
-   }
-   else
-      *result = SCIP_DIDNOTRUN;
-   
+   consdataPrint(scip, SCIPconsGetData(cons), file);
+    
    return SCIP_OKAY;
 }
 

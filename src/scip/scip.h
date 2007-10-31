@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.309 2007/10/29 12:03:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310 2007/10/31 09:26:31 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3162,9 +3162,7 @@ extern
 SCIP_RETCODE SCIPprintCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           format,             /**< format (or NULL for default CIP) */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method or NULL if not needed */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /**@} */

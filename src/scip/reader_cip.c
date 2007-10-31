@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.1 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.2 2007/10/31 09:26:31 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @brief  CIP file reader
@@ -74,7 +74,6 @@ static
 SCIP_DECL_READERWRITE(readerWriteCip)
 {  /*lint --e{715}*/
 
-   SCIP_RESULT consresult;
    int i;
 
    SCIPinfoMessage(scip, file, "STATISTICS\n");
@@ -113,12 +112,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
       SCIPinfoMessage(scip, file, "CONSTRAINTS\n");
       for( i = 0; i < nconss; ++i )
       {
-         SCIP_CALL( SCIPprintCons(scip, conss[i], file, "cip", &consresult) );
-         
-         if( consresult != SCIP_SUCCESS )
-         {
-            SCIPwarningMessage("constraint <%s> could not be written in <cip> format\n", SCIPconsGetName(conss[i]));
-         }
+         SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
       }
    }
    

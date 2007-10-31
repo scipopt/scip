@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.29 2007/10/30 13:32:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.30 2007/10/31 09:26:31 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -34,10 +34,13 @@
 #include <ctype.h>
 
 #include "scip/reader_lp.h"
+#include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
+#include "scip/cons_setppc.h"
+#include "scip/cons_varbound.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-
 
 #define READER_NAME             "lpreader"
 #define READER_DESC             "file reader for MIPs in ILOG's LP file format"
@@ -100,7 +103,7 @@ static const char commentchars[] = "\\";
 
 
 /*
- * Local methods
+ * Local methods (for reading)
  */
 
 /** issues an error message and marks the LP data to have errors */
@@ -1050,7 +1053,7 @@ SCIP_RETCODE readConstraints(
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
  TERMINATE:
@@ -1521,7 +1524,7 @@ SCIP_RETCODE readSos(
       /* add the SOS constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", lpinput->linenumber, SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
@@ -1602,6 +1605,182 @@ SCIP_RETCODE readLPFile(
 }
 
 
+/*
+ * Local methods (for writing)
+ */
+
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant */
+static
+SCIP_RETCODE getActiveVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< vars array to get active variables for */
+   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */ 
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   int requiredsize;
+   int v;
+
+   assert( scip != NULL );
+   assert( vars != NULL );
+   assert( scalars != NULL );
+   assert( nvars != NULL );
+   assert( constant != NULL );
+
+   if( transformed )
+   {
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize) );
+            
+      if( requiredsize > *nvars )
+      {
+         *nvars = requiredsize;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, *nvars ) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, *nvars ) );
+         
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize) );
+         assert( requiredsize <= *nvars );
+      }
+   }
+   else
+   {
+      for( v = 0; v < *nvars; ++v )
+      {
+         SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
+      }
+   }
+   return SCIP_OKAY;
+}
+
+
+/* print row in LP format to file stream */
+static
+void printRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   int*                  consnumber,         /**< pointer to constraint counter (or NULL) */
+   const char*           rowname,            /**< row name */
+   const char*           rownameextension,   /**< row name extension */
+   const char*           type,               /** row type ("=", "<=", or ">=") */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of values */
+   int                   nvars,              /**< number of variables */
+   SCIP_Real             rhs                 /**< right hand side */
+   )
+{
+   int v;
+
+   assert( scip != NULL );
+   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") || strcmp(type, ">=") );
+   
+   /* print row name */
+   if( consnumber == NULL )
+      SCIPinfoMessage(scip, file, " %s%s: ", rowname, rownameextension );
+   else
+   {
+      (*consnumber)++;
+      SCIPinfoMessage(scip, file, " c%d: ", *consnumber);
+   }
+   
+   /* print coefficients */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIPinfoMessage(scip, file, "%+g", vals[v]);
+      if( consnumber != NULL )
+         SCIPinfoMessage(scip, file, "x%d ", SCIPvarGetProbindex(vars[v]) + 1 );
+      else
+         SCIPinfoMessage(scip, file, " %s ", SCIPvarGetName(vars[v]));
+   }
+   
+   /* print left hand side */
+   if( SCIPisZero(scip, rhs) )
+      rhs = 0.0;
+   
+   SCIPinfoMessage(scip, file, "%s %g\n", type, rhs );
+}
+
+
+
+/** prints given linear constraint information in LP format to file stream */
+static
+SCIP_RETCODE printLinearCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< name of the row */
+   int*                  consnumber,         /**< pointer to constraint counter (or NULL) */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of coefficients values (or NULL if all coefficient values are 1) */
+   int                   nvars,              /**< number of variables */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs,                /**< right hand side */ 
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   int v;
+   SCIP_VAR** activevars;
+   SCIP_Real* activevals;
+   int nactivevars;
+   SCIP_Real activeconstant = 0.0;
+
+   assert( scip != NULL );
+   assert( rowname != NULL );
+   assert( vars != NULL );
+   assert( nvars > 0 );
+   assert( lhs <= rhs );
+
+   if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
+      return SCIP_OKAY;
+   
+   /* duplicate variable and value array */
+   nactivevars = nvars;
+   SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars );
+   if( vals != NULL )
+      SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars );
+   else
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
+   
+      for( v = 0; v < nactivevars; ++v )
+      {
+         activevals[v] = 1.0;
+      }
+   }
+
+   /* retransform given variables to active variables */
+   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   
+   /* print row(s) in LP format */
+   if( SCIPisEQ(scip, lhs, rhs) )
+   {
+      assert( !SCIPisInfinity(scip, rhs) );
+      
+      /* equal constrain */
+      printRow(scip, file, consnumber, rowname, "", "=", activevars, activevals, nactivevars, rhs - activeconstant);
+   }
+   else
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         /* print inequality ">=" */
+         printRow(scip, file, consnumber, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", ">=", 
+            activevars, activevals, nactivevars, lhs - activeconstant);
+      }
+      if( !SCIPisInfinity(scip, rhs) )
+      {
+         /* print inequality "<=" */
+         printRow(scip, file, consnumber, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "<=", 
+            activevars, activevals, nactivevars, rhs - activeconstant);
+      }
+   }
+   
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &activevars);
+   SCIPfreeBufferArray(scip, &activevals);
+
+   return SCIP_OKAY;
+}
+
 
 
 /*
@@ -1645,6 +1824,34 @@ SCIP_DECL_READERWRITE(readerWriteLp)
 /*
  * reader specific interface methods
  */
+
+/** includes the lp file reader in SCIP */
+SCIP_RETCODE SCIPincludeReaderLp(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_READERDATA* readerdata;
+
+   /* create lp reader data */
+   readerdata = NULL;
+
+   /* include lp reader */
+   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+         readerFreeLp, readerReadLp, readerWriteLp, readerdata) );
+
+   /* add lp reader parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/lpreader/dynamicconss", "should model constraints be subject to aging?",
+         NULL, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/lpreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
+         NULL, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/lpreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
+         NULL, FALSE, FALSE, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
 
 
 /* reads problem from file */
@@ -1705,6 +1912,7 @@ SCIP_RETCODE SCIPreadLp(
    return SCIP_OKAY;
 }
 
+
 /* writes problem to file */
 SCIP_RETCODE SCIPwriteLp(
    SCIP*              scip,               /**< SCIP data structure */
@@ -1716,61 +1924,156 @@ SCIP_RETCODE SCIPwriteLp(
    int                nvars,              /**< number of mutable variables in the problem */
    SCIP_CONS**        conss,              /**< array with constraints of the problem */
    int                nconss,             /**< number of constraints in the problem */
-   SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
+   SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    )
 {
-   int i;
+   int c,v;
+   int counter = 0;
+   
+   SCIP_CONSHDLR* conshdlr;
+   const char* conshdlrname;
+   SCIP_CONS* cons;
+   const char* consname;
+   SCIP_Bool transformed;
+   int* consnumber;
+   
+   SCIP_VAR** consvars;
+   SCIP_Real* consvals;
+   int nconsvars;
+
+   SCIP_VAR* var;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_RESULT consresult;
    
    assert( scip != NULL );
 
+   if( genericnames )
+      consnumber = &counter;
+   else
+      consnumber = NULL;
+   
    /* print objective sense */
    SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "Minimize" : "Maximize");
    
    /* print objective function */
-   SCIPinfoMessage(scip, file, "Obj:");
-   for( i = 0; i < nvars; ++i )
+   SCIPinfoMessage(scip, file, " obj:");
+   for( v = 0; v < nvars; ++v )
    {
-      if(SCIPisZero(scip, SCIPvarGetObj(vars[i])) )
+      var = vars[v];
+
+      if(SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
       
       if( genericnames )
-         SCIPinfoMessage(scip, file, " %+gx%d", SCIPvarGetObj(vars[i]), SCIPvarGetProbindex(vars[i]) ); 
+         SCIPinfoMessage(scip, file, " %+gx%d", SCIPvarGetObj(var), SCIPvarGetProbindex(var) + 1 ); 
       else
-         SCIPinfoMessage(scip, file, " %+g %s", SCIPvarGetObj(vars[i]), SCIPvarGetName(vars[i]) ); 
+         SCIPinfoMessage(scip, file, " %+g %s", SCIPvarGetObj(var), SCIPvarGetName(var) ); 
       
-      if( (i + 1)  % 10 == 0 )
+      if( (v + 1)  % 10 == 0 )
          SCIPinfoMessage(scip, file, "\n     ");
    }
    
-   /* print constraint section */
+   /* print "Subsect to" section */
    SCIPinfoMessage(scip, file, "\n\nSubject to\n");
 
-   for( i = 0; i < nconss; ++i )
+   for( c = 0; c < nconss; ++c )
    {
-      if( genericnames )
+      cons = conss[c];
+      assert( cons != NULL);
+
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert( conshdlr != NULL );
+      
+      consname = SCIPconsGetName(cons);
+      conshdlrname = SCIPconshdlrGetName(conshdlr);
+      transformed = SCIPconsIsTransformed(cons);
+      
+      if( strcasecmp(conshdlrname, "linear") == 0 )
       {
-         SCIP_CALL( SCIPprintCons(scip, conss[i], file, "rlp", &consresult) );
+         SCIP_CALL( printLinearCons(scip, file, consname,  consnumber,
+               SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
+               SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
+      }
+      else if( strcasecmp(conshdlrname, "setppc") == 0 )
+      {
+         consvars = SCIPgetVarsSetppc(scip, cons);
+         nconsvars = SCIPgetNVarsSetppc(scip, cons);
+         
+         switch ( SCIPgetTypeSetppc(scip, cons) )
+         {
+         case SCIP_SETPPCTYPE_PARTITIONING :
+            SCIP_CALL( printLinearCons(scip, file, consname,  consnumber,
+                  consvars, NULL, nconsvars, 1.0, 1.0, transformed) );
+            break;
+         case SCIP_SETPPCTYPE_PACKING :
+            SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
+                  consvars, NULL, nconsvars, -SCIP_DEFAULT_INFINITY, 1.0, transformed) );
+            break;
+         case SCIP_SETPPCTYPE_COVERING :
+            SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
+                  consvars, NULL, nconsvars, 1.0, SCIP_DEFAULT_INFINITY, transformed) );
+            break;
+         }
+      }
+      else if( strcasecmp(conshdlrname, "logicor") == 0 )
+      {
+         SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
+               SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), 
+               1.0, SCIP_DEFAULT_INFINITY, transformed) );
+      }
+      else if( strcasecmp(conshdlrname, "knapsack") == 0 )
+      {
+         consvars = SCIPgetVarsKnapsack(scip, cons);
+         nconsvars = SCIPgetNVarsKnapsack(scip, cons);
+
+         /* copy Longint array to SCIP_Real array */
+         SCIP_Longint* weights = SCIPgetWeightsKnapsack(scip, cons);
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
+         for( v = 0; v < nconsvars; ++v )
+         {
+            consvals[v] = weights[v];
+         }
+         
+         SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
+               consvars, consvals, nconsvars, 
+               -SCIP_DEFAULT_INFINITY, SCIPgetCapacityKnapsack(scip, cons), transformed) );
+         
+         SCIPfreeBufferArray(scip, &consvals);
+
+      }
+      else if( strcasecmp(conshdlrname, "varbounds") == 0 )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
+
+         consvars[0] = SCIPgetVarVarbound(scip, cons);
+         consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
+
+         consvals[0] = 1.0;
+         consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+
+         SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
+               consvars, consvals, 2, 
+               SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed) );
+         
+         SCIPfreeBufferArray(scip, &consvars);
+         SCIPfreeBufferArray(scip, &consvals);
       }
       else
       {
-         SCIP_CALL( SCIPprintCons(scip, conss[i], file, "lp", &consresult) );
-      }
-      
-      if( consresult != SCIP_SUCCESS )
-      {
-         SCIPwarningMessage("constraint <%s> could not be written in <%s> format\n", SCIPconsGetName(conss[i]), genericnames ? "rlp" : "lp");
+         SCIPwarningMessage("constraint handler <%s> can not print requested format\n", conshdlrname );
       }
    }
-   
-   /* print variable bounds */
+
+   /* print "Bounds" section */
    SCIPinfoMessage(scip, file, "\n\nBounds\n");
-   for( i = 0; i < nvars; ++i )
+   for( v = 0; v < nvars; ++v )
    {
-      lb = SCIPvarGetLbGlobal(vars[i]);
-      ub = SCIPvarGetUbGlobal(vars[i]);
+      var = vars[v];
+      assert( var != NULL );
+      
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
       
       if( !SCIPisInfinity(scip, -lb) || !SCIPisInfinity(scip, ub) )
       {
@@ -1780,37 +2083,38 @@ SCIP_RETCODE SCIPwriteLp(
          
          /* print variable name */
          if( genericnames )
-            SCIPinfoMessage(scip, file, " x%d ", SCIPvarGetProbindex(vars[i]) ); 
+            SCIPinfoMessage(scip, file, " x%d ", SCIPvarGetProbindex(var) + 1 ); 
          else
-            SCIPinfoMessage(scip, file, " %s ", SCIPvarGetName(vars[i]) ); 
-
+            SCIPinfoMessage(scip, file, " %s ", SCIPvarGetName(var) ); 
+         
          /* print upper bound as far this one is not infinity */
          if( !SCIPisInfinity(scip, ub) )
             SCIPinfoMessage(scip, file, "<= %g", ub);
-
+         
          SCIPinfoMessage(scip, file, "\n");
       }
    }
    
    /* print generals section */
-   if( nvars > 0 && SCIPvarGetType(vars[0]) != SCIP_VARTYPE_CONTINUOUS )
+   if( nvars > 0 )
    {
       SCIPinfoMessage(scip, file, "\n\nGenerals\n");
       
-      for( i = 0; i < nvars; ++i )
+      for( v = 0; v < nvars; ++v )
       {
-         if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS)
-            break;
+         var = vars[v];
+         assert( var != NULL );
 
-         assert( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS );
-         
+         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS)
+            continue;
+
          /* print variable name */
          if( genericnames )
-            SCIPinfoMessage(scip, file, " x%d", SCIPvarGetProbindex(vars[i]) ); 
+            SCIPinfoMessage(scip, file, " x%d", SCIPvarGetProbindex(var) + 1 ); 
          else
-            SCIPinfoMessage(scip, file, " %s", SCIPvarGetName(vars[i]) ); 
+            SCIPinfoMessage(scip, file, " %s", SCIPvarGetName(var) ); 
          
-         if( (i + 1)  % 10 == 0 )
+         if( (v + 1)  % 10 == 0 )
             SCIPinfoMessage(scip, file, "\n");
       }
    }
@@ -1824,30 +2128,3 @@ SCIP_RETCODE SCIPwriteLp(
 }
 
 
-/** includes the lp file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderLp(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_READERDATA* readerdata;
-
-   /* create lp reader data */
-   readerdata = NULL;
-
-   /* include lp reader */
-   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeLp, readerReadLp, readerWriteLp, readerdata) );
-
-   /* add lp reader parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamicconss", "should model constraints be subject to aging?",
-         NULL, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/lpreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
-         NULL, FALSE, FALSE, NULL, NULL) );
-
-   return SCIP_OKAY;
-}

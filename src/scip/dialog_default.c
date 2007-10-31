@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.74 2007/10/30 10:22:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.75 2007/10/31 09:26:31 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -245,7 +245,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       { 
          SCIPdialogMessage(scip, NULL, "best solution violates constraint <%s> [%s] of original problem:\n", 
             SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
-         SCIP_CALL( SCIPprintCons(scip, infeascons, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPprintCons(scip, infeascons, NULL) );
       }
    }
    SCIPdialogMessage(scip, NULL, "\n");

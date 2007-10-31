@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.75 2007/10/30 15:16:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.76 2007/10/31 09:26:31 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -1375,7 +1375,7 @@ SCIP_RETCODE readSOS(
 	    /* add last constraint */
 	    SCIP_CALL( SCIPaddCons(scip, cons) );
 	    SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ) );
+	    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 	    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 	 }
 
@@ -1463,7 +1463,7 @@ SCIP_RETCODE readSOS(
       /* add last constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 

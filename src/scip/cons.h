@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.113 2007/10/29 12:03:08 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.114 2007/10/31 09:26:29 bzfheinz Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -435,9 +435,7 @@ extern
 SCIP_RETCODE SCIPconsPrint(
    SCIP_CONS*            cons,               /**< constraint to print */
    SCIP_SET*             set,                /**< global SCIP settings */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           format,             /**< format */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method or if not needed */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** globally removes constraint from all subproblems; removes constraint from the constraint set change data of the

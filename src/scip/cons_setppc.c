@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.118 2007/10/29 12:03:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.119 2007/10/31 09:26:30 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -1421,8 +1421,8 @@ SCIP_RETCODE removeRedundantCons(
 
    SCIPdebugMessage(" -> removing setppc constraint <%s> which is redundant to <%s>\n",
       SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL, NULL, NULL) ) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL, NULL, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
 
    /* update flags of cons0 */
    if( SCIPconsIsInitial(cons1) )
@@ -1766,8 +1766,8 @@ SCIP_RETCODE removeRedundantConstraints(
       {
          SCIPdebugMessage("setppc constraints <%s> and <%s> have identical variable sets\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL, NULL, NULL) ) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL, NULL, NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
 
          /* both constraints consists of the same variables */
          if( consdata0->setppctype == consdata1->setppctype )
@@ -1803,16 +1803,16 @@ SCIP_RETCODE removeRedundantConstraints(
       {
          /* cons0 is contained in cons1 */
          SCIPdebugMessage("setppc constraint <%s> is contained in <%s>\n", SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL, NULL, NULL) ) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL, NULL, NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
          SCIP_CALL( processContainedCons(scip, cons0, cons1, cutoff, nfixedvars, ndelconss, nchgsides) );
       }
       else if( cons1iscontained )
       {
          /* cons1 is contained in cons1 */
          SCIPdebugMessage("setppc constraint <%s> is contained in <%s>\n", SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL, NULL, NULL) ) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL, NULL, NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
          SCIP_CALL( processContainedCons(scip, cons1, cons0, cutoff, nfixedvars, ndelconss, nchgsides) );
       }
    }
@@ -3080,58 +3080,13 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSetppc)
 static
 SCIP_DECL_CONSPRINT(consPrintSetppc)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( format != NULL );
-   assert( result != NULL );
-   
-   *result = SCIP_SUCCESS;
-   
-   consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
 
-   if( strcasecmp(format, "cip") == 0 )
-   {
-      /* CIP format */
-
-      SCIPinfoMessage(scip, file, "  [%s] <%s>: ", CONSHDLR_NAME, SCIPconsGetName(cons));
-      consdataPrint(scip, consdata, file);
-   }
-   else if( (strcasecmp(format, "lp") == 0) || (strcasecmp(format, "rlp") == 0) )
-   {
-      /* LP or RLP (generic names) format */
-
-      SCIP_Real lhs = 1.0;
-      SCIP_Real rhs = 1.0;
-      
-      switch( consdata->setppctype )
-      {
-      case SCIP_SETPPCTYPE_PARTITIONING:
-         SCIP_CALL( SCIPprintLpFormatLinear(scip, file, SCIPconsGetName(cons), 
-               consdata->vars, NULL, consdata->nvars, 
-               &lhs, &rhs, strcasecmp(format, "rlp") == 0, SCIPconsIsTransformed(cons) ) );
-         break;
-      case SCIP_SETPPCTYPE_PACKING:
-         SCIP_CALL( SCIPprintLpFormatLinear(scip, file, SCIPconsGetName(cons), 
-               consdata->vars, NULL, consdata->nvars, 
-               NULL, &rhs, strcasecmp(format, "rlp") == 0, SCIPconsIsTransformed(cons) ) );
-         break;
-      case SCIP_SETPPCTYPE_COVERING:
-         SCIP_CALL( SCIPprintLpFormatLinear(scip, file, SCIPconsGetName(cons), 
-               consdata->vars, NULL, consdata->nvars, 
-               &lhs, NULL, strcasecmp(format, "rlp") == 0, SCIPconsIsTransformed(cons) ) );
-         break;
-      default:
-         SCIPerrorMessage("unknown setppc type\n");
-         return SCIP_INVALIDDATA;
-      }
-   }
-   else
-      *result = SCIP_DIDNOTRUN;
-
+   consdataPrint(scip, SCIPconsGetData(cons), file);
+ 
    return SCIP_OKAY;
 }
 

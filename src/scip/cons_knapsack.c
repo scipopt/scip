@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.149 2007/10/29 12:03:08 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.150 2007/10/31 09:26:30 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -2633,7 +2633,7 @@ SCIP_RETCODE applyFixings(
    assert(consdata->onesweightsum == 0);
 
    SCIPdebugMessage("after fixings:\n");
-   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ));
+   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
     * to clean up the constraint
@@ -2641,7 +2641,7 @@ SCIP_RETCODE applyFixings(
    SCIP_CALL( mergeMultiples(scip, cons) );
    
    SCIPdebugMessage("after merging:\n");
-   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ));
+   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
    return SCIP_OKAY;
 }
@@ -3314,7 +3314,7 @@ SCIP_RETCODE tightenWeights(
                            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                            SCIPconsIsStickingAtNode(cons)) );
                      SCIPdebugMessage(" -> adding clique constraint: ");
-                     SCIPdebug(SCIPprintCons(scip, cliquecons, NULL, NULL, NULL));
+                     SCIPdebug(SCIPprintCons(scip, cliquecons, NULL));
                      SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                      SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                      SCIPfreeBufferArray(scip, &cliquevars);
@@ -3890,7 +3890,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          continue;
 
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL, NULL, NULL) ));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
       consdata->presolved = TRUE;
 
@@ -4050,52 +4050,17 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( format != NULL );
-   assert( result != NULL );
-   
-   *result = SCIP_SUCCESS;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
-   if( strcasecmp(format, "cip") == 0 )
+   for( i = 0; i < consdata->nvars; ++i )
    {
-      /* CIP format */
-      SCIPinfoMessage(scip, file, "  [%s] <%s>: ", CONSHDLR_NAME, SCIPconsGetName(cons));
-
-      for( i = 0; i < consdata->nvars; ++i )
-      {
-         if( i > 0 )
-            SCIPinfoMessage(scip, file, " ");
-         SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT"<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
-      }
-      SCIPinfoMessage(scip, file, " <= %"SCIP_LONGINT_FORMAT"\n", consdata->capacity);
+      if( i > 0 )
+         SCIPinfoMessage(scip, file, " ");
+      SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT"<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
    }
-   else if( (strcasecmp(format, "lp") == 0) || strcasecmp(format, "rlp") == 0 )
-   {
-      /* LP and RLP (generic) Format */
-
-      SCIP_Real* vals;
-      int v;
-      SCIP_Real rhs = consdata->capacity;
-
-      /* transformed weights array to SCIP_Real array */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, consdata->nvars) );
-      
-      for( v = 0; v < consdata->nvars; ++v )
-      {
-         vals[v] = consdata->weights[v];
-      }
-
-      SCIP_CALL( SCIPprintLpFormatLinear(scip, file, SCIPconsGetName(cons), 
-            consdata->vars, vals, consdata->nvars, 
-            NULL, &rhs, strcasecmp(format, "rlp") == 0, SCIPconsIsTransformed(cons) ) );
-      
-      /* free buffer array */
-      SCIPfreeBufferArray(scip, &vals);
-   }
-   else
-      *result = SCIP_DIDNOTRUN;
+   SCIPinfoMessage(scip, file, " <= %"SCIP_LONGINT_FORMAT"\n", consdata->capacity);
    
    return SCIP_OKAY;
 }

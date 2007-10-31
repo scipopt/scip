@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.66 2007/10/29 12:03:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.67 2007/10/31 09:26:30 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -1433,55 +1433,17 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( format != NULL );
-   assert( result != NULL );
    
-   *result = SCIP_SUCCESS;
-
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( strcasecmp(format, "cip") == 0 )
-   {
-      /* CIP format */
-      
-      SCIPinfoMessage(scip, file, "  [%s] <%s>: ", CONSHDLR_NAME, SCIPconsGetName(cons));
-
-
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
-         SCIPinfoMessage(scip, file, "%g <= ", consdata->lhs);
-      SCIPinfoMessage(scip, file, "<%s> %+g<%s>", SCIPvarGetName(consdata->var), consdata->vbdcoef,
-         SCIPvarGetName(consdata->vbdvar));
-      if( !SCIPisInfinity(scip, consdata->rhs) )
-         SCIPinfoMessage(scip, file, " <= %g", consdata->rhs);
-      SCIPinfoMessage(scip, file, "\n");
-   }
-   else if( (strcasecmp(format, "lp") == 0) || (strcasecmp(format, "rlp") == 0) )
-   {
-      /* LP or RLP (generic names) format */
-
-      SCIP_VAR** vars;
-      SCIP_Real* vals;
-
-      /* alloc buffer array */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
-      
-      vars[0] = consdata->var;
-      vars[1] = consdata->vbdvar;
-      vals[0] = 1.0;
-      vals[1] = consdata->vbdcoef;
-      
-      SCIP_CALL( SCIPprintLpFormatLinear(scip, file, SCIPconsGetName(cons), 
-            vars, vals, 2, &consdata->lhs, &consdata->rhs, 
-            strcasecmp(format, "rlp") == 0, SCIPconsIsTransformed(cons) ) );
-
-      /* free buffer array */
-      SCIPfreeBufferArray(scip, &vars);
-      SCIPfreeBufferArray(scip, &vals);
-   }
-   else
-      *result = SCIP_DIDNOTRUN;
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+      SCIPinfoMessage(scip, file, "%g <= ", consdata->lhs);
+   SCIPinfoMessage(scip, file, "<%s> %+g<%s>", SCIPvarGetName(consdata->var), consdata->vbdcoef,
+      SCIPvarGetName(consdata->vbdvar));
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+      SCIPinfoMessage(scip, file, " <= %g", consdata->rhs);
+   SCIPinfoMessage(scip, file, "\n");
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.82 2007/10/29 12:03:08 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.83 2007/10/31 09:26:29 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -2071,20 +2071,9 @@ SCIP_DECL_CONSPRINT(consPrintAnd)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
-   assert( format != NULL );
-   assert( result != NULL );
-   
-   *result = SCIP_SUCCESS;
-   
-   if( strcasecmp(format, "cip") == 0 )
-   {
-      SCIPinfoMessage(scip, file, "  [%s] <%s>: ", CONSHDLR_NAME, SCIPconsGetName(cons));
-      consdataPrint(scip, SCIPconsGetData(cons), file);
+
+   consdataPrint(scip, SCIPconsGetData(cons), file);
       
-   }
-   else
-      *result = SCIP_DIDNOTRUN;
-   
    return SCIP_OKAY;
 }
 

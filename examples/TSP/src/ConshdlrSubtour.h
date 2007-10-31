@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.10 2007/10/29 12:03:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.h,v 1.11 2007/10/31 09:26:29 bzfheinz Exp $"
 
 /**@file   ConshdlrSubtour.h
  * @brief  C++ constraint handler for TSP subtour elimination constraints
@@ -331,9 +331,7 @@ public:
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_CONSHDLR*     conshdlr,           /**< the constraint handler itself */
       SCIP_CONS*         cons,               /**< the constraint that should be displayed */
-      FILE*              file,               /**< the text file to store the information into */
-      const char*        format,             /**< the format to write the information */
-      SCIP_RESULT*       result              /**< pointer to store the result of the callback method */ 
+      FILE*              file                /**< the text file to store the information into */
       );
 };
 

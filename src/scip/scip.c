@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.425 2007/10/29 15:07:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.426 2007/10/31 09:26:31 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5144,7 +5144,7 @@ SCIP_RETCODE SCIPsolve(
                {
                   SCIPmessagePrintInfo("best solution violates constraint <%s> [%s] of original problem:\n",
                      SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
-                  SCIP_CALL( SCIPprintCons(scip, infeascons, NULL, NULL, NULL) );
+                  SCIP_CALL( SCIPprintCons(scip, infeascons, NULL) );
                }
             }
          }
@@ -9221,21 +9221,12 @@ SCIP_RETCODE SCIPcheckCons(
 SCIP_RETCODE SCIPprintCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           format,             /**< format (or NULL for default CIP) */
-   SCIP_RESULT*          result              /**< pointer to store the result of the callback method or NULL if not needed */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPprintCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
    
-   if( format == NULL )
-   {
-      SCIP_CALL( SCIPconsPrint(cons, scip->set, file, "cip", result) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPconsPrint(cons, scip->set, file, format, result) );
-   }
+   SCIP_CALL( SCIPconsPrint(cons, scip->set, file) );
    
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.34 2007/10/29 12:03:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.35 2007/10/31 09:26:29 bzfheinz Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -464,7 +464,7 @@ SCIP_DECL_CONSPRINT(consPrintObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_print(scip, conshdlr, cons, file, format, result) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_print(scip, conshdlr, cons, file) );
 
    return SCIP_OKAY;
 }
