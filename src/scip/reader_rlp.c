@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_rlp.c,v 1.3 2007/10/31 11:48:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.4 2007/11/01 13:58:37 bzfpfets Exp $"
 
 /**@file   reader_rlp.h
  * @brief  RLP file reader (LP format with generic variables and row names)
@@ -54,17 +54,9 @@ SCIP_DECL_READERREAD(readerReadRlp)
 static
 SCIP_DECL_READERWRITE(readerWriteRlp)
 {  /*lint --e{715}*/
-   
-   /* print statistics as comment to file */
-   SCIPmessageFPrintInfo(file, "\\ SCIP STATISTICS\n");
-   SCIPmessageFPrintInfo(file, "\\   Problem name     : %s\n", name);
-   SCIPmessageFPrintInfo(file, "\\   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
-      nvars, nbinvars, nintvars, nimplvars, ncontvars);
-   
-   SCIPmessageFPrintInfo(file, "\\   Constraints      : %d initial, %d maximal\n", startnconss, maxnconss);
-   
-   SCIP_CALL( SCIPwriteLp(scip, file, TRUE, objsense, vars, nvars, conss, nconss, result) );
-   
+   SCIP_CALL( SCIPwriteLp(scip, file, TRUE, name, transformed, objsense, objscale, objoffset, vars,
+			  nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+
    return SCIP_OKAY;
 }
 
@@ -82,10 +74,10 @@ SCIP_RETCODE SCIPincludeReaderRlp(
 
    /* create lp reader data */
    readerdata = NULL;
-   
+
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
          readerFreeRlp, readerReadRlp, readerWriteRlp, readerdata) );
-   
+
    return SCIP_OKAY;
 }
