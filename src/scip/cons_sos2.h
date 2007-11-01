@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.h,v 1.2 2007/10/22 16:01:40 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.h,v 1.3 2007/11/01 13:51:10 bzfpfets Exp $"
 
 /**@file   cons_sos2.h
  * @brief  constraint handler for SOS type 2 constraints
@@ -139,6 +139,12 @@ int SCIPgetNVarsSOS2(
 
 /** gets array of variables in SOS2 constraint */
 SCIP_VAR** SCIPgetVarsSOS2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets array of weights in SOS2 constraint (or NULL if not existent) */
+SCIP_Real* SCIPgetWeightsSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

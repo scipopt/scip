@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.h,v 1.4 2007/10/22 16:05:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.h,v 1.5 2007/11/01 13:51:10 bzfpfets Exp $"
 
 /**@file   cons_sos1.h
  * @brief  constraint handler for SOS type 1 constraints
@@ -120,6 +120,12 @@ int SCIPgetNVarsSOS1(
 
 /** gets array of variables in SOS1 constraint */
 SCIP_VAR** SCIPgetVarsSOS1(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets array of weights in SOS1 constraint (or NULL if not existent) */
+SCIP_Real* SCIPgetWeightsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
