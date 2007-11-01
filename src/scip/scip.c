@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427 2007/10/31 19:15:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.428 2007/11/01 16:07:18 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2638,7 +2638,7 @@ SCIP_RETCODE SCIPwriteOrigProblem(
    return SCIP_OKAY;
 }
 
-/** writes transformed problem to file  */
+/** writes transformed problem which are valid in the current node to file */
 extern 
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13785,7 +13785,7 @@ SCIP_RETCODE SCIPprintOrigProblem(
    return SCIP_OKAY;
 }
 
-/** outputs transformed problem to file stream */
+/** outputs transformed problem of the current node to file stream */
 SCIP_RETCODE SCIPprintTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */

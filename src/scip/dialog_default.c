@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.76 2007/10/31 19:15:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.77 2007/11/01 16:07:17 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -2038,7 +2038,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "transproblem") )
    {
       SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDisplayTransproblem, NULL, NULL,
-            "transproblem", "display transformed/preprocessed problem", FALSE, NULL) );
+            "transproblem", "display current node transformed problem", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -2201,7 +2201,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    {
       SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteTransproblem, NULL, NULL,
             "transproblem", 
-            "write transformed (preprocessed) problem to file (format is given by file extension, e.g., trans.{lp,rlp,cip})", 
+            "write currend node transformed problem to file (format is given by file extension, e.g., trans.{lp,rlp,cip})", 
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
