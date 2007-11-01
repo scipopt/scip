@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.6 2007/10/31 09:26:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.7 2007/11/01 13:53:05 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
@@ -1101,11 +1101,15 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
 	    SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
 
 	    /* if constant is zero and we get a different variable, substitute variable */
-	    if ( SCIPisZero(scip, constant) && var != Vars[j] )
+	    if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != Vars[j] )
 	    {
 	       SCIPdebugMessage("substituted variable <%s> by <%s>.\n", SCIPvarGetName(Vars[j]), SCIPvarGetName(var));
 	       SCIP_CALL( SCIPdropVarEvent(scip, consdata->Vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, -1) );
 	       SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, (SCIP_EVENTDATA*)consdata, NULL) );
+	       /* change the rounding locks */
+	       SCIP_CALL( unlockVariableSOS2(scip, cons, consdata->Vars[j]) );
+	       SCIP_CALL( lockVariableSOS2(scip, cons, var) );
+
 	       Vars[j] = var;
 	    }
 
@@ -1634,7 +1638,7 @@ SCIP_DECL_CONSPRINT(consPrintSOS2)
    assert( conshdlr != NULL );
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
- 
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
@@ -1648,7 +1652,7 @@ SCIP_DECL_CONSPRINT(consPrintSOS2)
          SCIPinfoMessage(scip, file, "%s (%3.2f)", SCIPvarGetName(consdata->Vars[j]), consdata->weights[j]);
    }
    SCIPinfoMessage(scip, file, ")\n");
-   
+
    return SCIP_OKAY;
 }
 
@@ -1962,4 +1966,28 @@ SCIP_VAR** SCIPgetVarsSOS2(
    assert( consdata != NULL );
 
    return consdata->Vars;
+}
+
+
+/** gets array of weights in SOS2 constraint (or NULL if not existent) */
+SCIP_Real* SCIPgetWeightsSOS2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+
+   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an SOS2 constraint.\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   return consdata->weights;
 }
