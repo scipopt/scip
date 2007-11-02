@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254 2007/10/29 12:03:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.255 2007/11/02 08:17:03 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8989,7 +8989,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
 static
 const char* lpalgoName(
    SCIP_LPALGO           lpalgo              /**< LP algorithm */
-)
+   )
 {
    switch( lpalgo )
    {
@@ -10538,7 +10538,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
       if( oldobj != newobj ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-                        newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
       }
    }
    else
@@ -10546,7 +10546,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
       if( !SCIPsetIsEQ(set, oldobj, newobj) )
       {
          SCIP_CALL( lpUpdateVar(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-                        newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
       }
    }
    
@@ -10570,7 +10570,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
-                        SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
       }
    }
    else
@@ -10578,7 +10578,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
       if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
       {
          SCIP_CALL( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
-                        SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
       }
    }
    
@@ -10602,7 +10602,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
-                        SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
       }
    }
    else
@@ -10610,7 +10610,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
       if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
       {
          SCIP_CALL( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
-                        SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
       }
    }
 
@@ -12222,26 +12222,7 @@ SCIP_RETCODE SCIPlpWrite(
    assert(fname != NULL);
 
    SCIP_CALL( SCIPlpiWriteLP(lp->lpi, fname) );
-
-#if 0
-   {
-      FILE* f;
-      int c;
-
-      SCIPmessagePrintInfo("storing integrality conditions in <%s>\n", fname);
-      f = fopen(fname, "a");
-      SCIPmessageFPrintInfo(f, "General\n");
-      for( c = 0; c < lp->ncols; ++c )
-      {
-         assert(lp->cols[c] == lp->lpicols[c]);
-         if( SCIPvarGetType(SCIPcolGetVar(lp->cols[c])) != SCIP_VARTYPE_CONTINUOUS )
-            SCIPmessageFPrintInfo(f, "%s\n", SCIPvarGetName(SCIPcolGetVar(lp->cols[c])));
-      }
-      SCIPmessageFPrintInfo(f, "End\n");
-      fclose(f);
-   }
-#endif
-
+   
    return SCIP_OKAY;
 }
 
@@ -12274,28 +12255,28 @@ SCIP_RETCODE SCIPlpWriteMip(
 
    /* print comments */
    if( genericnames )
-      fprintf(file, "\\\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
+      SCIPmessageFPrintInfo(file, "\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
    else
    {
-      fprintf(file,"\\\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
-      fprintf(file, "\\\\ If this is the case, the model may be corrupted!\n");
+      SCIPmessageFPrintInfo(file,"\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
+      SCIPmessageFPrintInfo(file, "\\ If this is the case, the model may be corrupted!\n");
    }
 
    if( origobj && objoffset != 0.0 )
    {
-      fprintf(file, "\\\\ An artifical variable 'objoffset' has been added and fixed to 1.\n"); 
-      fprintf(file, "\\\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
+      SCIPmessageFPrintInfo(file, "\\ An artifical variable 'objoffset' has been added and fixed to 1.\n"); 
+      SCIPmessageFPrintInfo(file, "\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
    }
    
    /* print objective function */
-   /**@note the transformed prblem in SCIP is always an minimization problem */
+   /**@note the transformed problem in SCIP is always an minimization problem */
    if( !origobj || objsense == SCIP_OBJSENSE_MINIMIZE )
-      fprintf(file, "Minimize");
+      SCIPmessageFPrintInfo(file, "Minimize");
    else
-      fprintf(file, "Maximize");
+      SCIPmessageFPrintInfo(file, "Maximize");
    
    /* print objective */
-   fprintf(file, "\n Obj:");
+   SCIPmessageFPrintInfo(file, "\n Obj:");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -12309,20 +12290,20 @@ SCIP_RETCODE SCIPlpWriteMip(
          }
 
          if( genericnames )
-            fprintf(file," %+g x_%d", coeff, lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(file," %+g x_%d", coeff, lp->cols[i]->lppos);
          else
-            fprintf(file," %+g %s", coeff, lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(file," %+g %s", coeff, lp->cols[i]->var->name);
          
          ++j;
          if( j % 10 == 0 )
-            fprintf(file,"\n     ");
+            SCIPmessageFPrintInfo(file,"\n     ");
       }
    }
    if( origobj && objoffset != 0.0 ) 
-      fprintf(file," %+gobjoffset", objoffset * objsense * objscale);
+      SCIPmessageFPrintInfo(file," %+gobjoffset", objoffset * objsense * objscale);
 
    /* print constraint section */
-   fprintf(file,"\n\nSubject to\n");
+   SCIPmessageFPrintInfo(file,"\n\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
    {
       char type;
@@ -12353,17 +12334,17 @@ SCIP_RETCODE SCIPlpWriteMip(
       case 'r':
       case 'l':
       case 'e':
-         fprintf(file,"%s: ", rowname);
+         SCIPmessageFPrintInfo(file,"%s: ", rowname);
          break;
       case 'b':
-         fprintf(file,"%s_lhs: ", rowname);
+         SCIPmessageFPrintInfo(file,"%s_lhs: ", rowname);
          break;
       case 'B':
-         fprintf(file,"%s_rhs: ", rowname);
+         SCIPmessageFPrintInfo(file,"%s_rhs: ", rowname);
          break;
       case 'i':
-         fprintf(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
-         fprintf(file,"are not in a valid range. The following two constraints may be corrupted!\n");
+         SCIPmessageFPrintInfo(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
+         SCIPmessageFPrintInfo(file,"are not in a valid range. The following two constraints may be corrupted!\n");
          SCIPwarningMessage("The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
          type = 'b';
          goto WRITEROW;
@@ -12376,30 +12357,30 @@ SCIP_RETCODE SCIPlpWriteMip(
       for( j = 0; j < lp->rows[i]->nlpcols; ++j )
       {
          if( genericnames )
-            fprintf(file," %+g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            SCIPmessageFPrintInfo(file," %+g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
          else
-            fprintf(file," %+g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+            SCIPmessageFPrintInfo(file," %+g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
          
          if( (j+1) % 10 == 0 )
-            fprintf(file,"\n          ");
+            SCIPmessageFPrintInfo(file,"\n          ");
       }
       
       /* print right hand side */
       switch( type )
       {
       case 'b':
-         fprintf(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
+         SCIPmessageFPrintInfo(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
          type = 'B';
          goto WRITEROW;
       case 'l':
-         fprintf(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       case 'B':
       case 'r':
-         fprintf(file," <= %g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(file," <= %g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
          break;
       case 'e':
-         fprintf(file," = %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(file," = %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -12408,7 +12389,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    }
 
    /* print variable bounds */
-   fprintf(file,"\n\nBounds\n");
+   SCIPmessageFPrintInfo(file,"\n\nBounds\n");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -12416,27 +12397,27 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
-            fprintf(file," %g <=", lp->cols[i]->lb);
+            SCIPmessageFPrintInfo(file," %g <=", lp->cols[i]->lb);
          
          /* print variable name */
          if( genericnames )
-            fprintf(file," x_%d ", lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(file," x_%d ", lp->cols[i]->lppos);
          else
-            fprintf(file," %s ", lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(file," %s ", lp->cols[i]->var->name);
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
-            fprintf(file,"<= %g", lp->cols[i]->ub);
-         fprintf(file,"\n");
+            SCIPmessageFPrintInfo(file,"<= %g", lp->cols[i]->ub);
+         SCIPmessageFPrintInfo(file,"\n");
       }
    }
    if( origobj && objoffset != 0.0 )
    {   
-      fprintf(file," objoffset = 1");
+      SCIPmessageFPrintInfo(file," objoffset = 1");
    }
 
    /* print integer variables */
-   fprintf(file,"\n\nGenerals\n ");
+   SCIPmessageFPrintInfo(file,"\n\nGenerals\n ");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -12444,17 +12425,17 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print variable name */
          if( genericnames )
-            fprintf(file," x_%d ", lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(file," x_%d ", lp->cols[i]->lppos);
          else
-            fprintf(file," %s ", lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(file," %s ", lp->cols[i]->var->name);
 
          j++;
          if( j % 10 == 0 )
-            fprintf(file,"\n ");
+            SCIPmessageFPrintInfo(file,"\n ");
       }
    }
    
-   fprintf(file,"\n\nEnd");
+   SCIPmessageFPrintInfo(file,"\n\nEnd");
    fclose(file);
    
    return SCIP_OKAY;
