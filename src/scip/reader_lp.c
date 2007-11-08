@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.38 2007/11/01 16:07:17 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.39 2007/11/08 20:06:01 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1751,10 +1751,8 @@ void printRow(
       printVarName(scip, file, vars[v], consnumber != NULL);
       SCIPinfoMessage(scip, file, " ");
 
-#if 0
       if( (v + 1)  % 10 == 0 && v < nvars-1 )
          SCIPinfoMessage(scip, file, "\n       ");
-#endif
    }
 
    /* print left hand side */
@@ -2201,11 +2199,11 @@ SCIP_RETCODE SCIPwriteLp(
             break;
          case SCIP_SETPPCTYPE_PACKING :
             SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
-                  consvars, NULL, nconsvars, -SCIP_DEFAULT_INFINITY, 1.0, transformed) );
+                  consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, transformed) );
             break;
          case SCIP_SETPPCTYPE_COVERING :
             SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
-                  consvars, NULL, nconsvars, 1.0, SCIP_DEFAULT_INFINITY, transformed) );
+                  consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), transformed) );
             break;
          }
       }
@@ -2213,7 +2211,7 @@ SCIP_RETCODE SCIPwriteLp(
       {
          SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
                SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
-               1.0, SCIP_DEFAULT_INFINITY, transformed) );
+               1.0, SCIPinfinity(scip), transformed) );
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
@@ -2230,7 +2228,7 @@ SCIP_RETCODE SCIPwriteLp(
 
          SCIP_CALL( printLinearCons(scip, file, consname, consnumber,
                consvars, consvals, nconsvars,
-               -SCIP_DEFAULT_INFINITY, SCIPgetCapacityKnapsack(scip, cons), transformed) );
+               -SCIPinfinity(scip), SCIPgetCapacityKnapsack(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }

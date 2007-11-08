@@ -13,6 +13,7 @@ interface:
 - new parameter "conshdlrname" in SCIPincludeLinconsUpgrade() 
 
 features:
+- the MPS reader in now able to write a problem in MPS format
 - new callback method SCIPwriteOrigProblem(), e.g., 
   SCIPwriteOrigProblem(scip, "orig.lp") prints the original problem in LP format in the file "orig.lp"
 - new callback method SCIPwriteTransProblem(), e.g.,
