@@ -14,9 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.77 2007/11/08 20:06:02 bzfheinz Exp $"
-
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: reader_mps.c,v 1.78 2007/11/08 20:10:54 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
