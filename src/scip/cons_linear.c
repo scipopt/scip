@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.255 2007/10/31 09:26:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.256 2007/11/09 14:33:40 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -92,7 +92,7 @@
 #define KNAPSACKRELAX_MAXSCALE   1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
-#define MAXSCALEDCOEF             1e+06 /**< maximal coefficient value after scaling */
+#define MAXSCALEDCOEF             1e+03 /**< maximal coefficient value after scaling */
 
 
 /** constraint data for linear constraints */
@@ -2506,7 +2506,7 @@ SCIP_RETCODE normalizeCons(
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
    maxabsval = consdataGetMaxAbsval(consdata);
-   maxmult = MIN(maxmult, (SCIP_Longint)(MAXSCALEDCOEF/MAX(maxabsval, 1.0)));
+   maxmult = MIN(maxmult, (SCIP_Longint)( MAXSCALEDCOEF/MAX(maxabsval, 1.0)));
 
    /*
     * multiplication with +1 or -1
