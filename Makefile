@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.230 2007/10/29 12:03:06 bzfheinz Exp $
+# $Id: Makefile,v 1.231 2007/11/09 13:49:43 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -58,6 +58,7 @@ MAKESOFTLINKS	=	true
 READLINE	=	true
 ZLIB		=	true
 ZIMPL		=	true
+ZIMPLOPT	=	opt
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
@@ -116,7 +117,7 @@ LIBDIR		=	lib
 EXEEXTENSION	=
 ALLSRC		=
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL).$(ZIMPLOPT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -307,11 +308,11 @@ ifeq ($(ZLIB),false)
 $(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
 endif
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc $(ZIMPL_FLAGS)
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
 DIRECTORIES	+=	$(LIBDIR)/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/zimplinc/zimpl
-SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(LIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(SHAREDLIBEXT)
 endif
 
 
@@ -726,7 +727,7 @@ links:		echosoftlinks $(LIBDIR) $(DIRECTORIES) $(SOFTLINKS)
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "** creating softlinks: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL)"
+		@echo "** creating softlinks: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT)"
 		@echo
 
 $(DIRECTORIES):
