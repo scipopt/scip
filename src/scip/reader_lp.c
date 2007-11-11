@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.39 2007/11/08 20:06:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.40 2007/11/11 12:05:33 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1648,13 +1648,13 @@ void printVarName(
    )
 {
    const char* name;
-   
+
    assert( scip != NULL );
    assert( var != NULL );
 
    name = SCIPvarGetName(var);
    assert( name != NULL );
-   
+
    if( genericnames || name[0] == '\0' )
       SCIPinfoMessage(scip, file, "x%d", SCIPvarGetProbindex(var) + 1);
    else
@@ -1667,7 +1667,7 @@ void printVarName(
 }
 
 
-/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant */
+/** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
 SCIP_RETCODE getActiveVariables(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1726,10 +1726,10 @@ void printRow(
    )
 {
    int v;
-   
+
    assert( scip != NULL );
    assert( strcmp(type, "=") == 0 || strcmp(type, "<=") || strcmp(type, ">=") );
-   
+
    /* print row name */
    if ( consnumber == NULL )
    {
@@ -2134,32 +2134,32 @@ SCIP_RETCODE SCIPwriteLp(
    for (v = 0; v < nvars; ++v)
    {
       var = vars[v];
-      
+
 #ifndef NDEBUG
       /* in case the original problem has to posted the variables have to be either "original" or "negated" */
       if ( !transformed )
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
             SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
-      
+
       if (SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
-      
+
       counter++;
-      
+
       SCIPinfoMessage(scip, file, "%+g ", SCIPvarGetObj(var));
       printVarName(scip, file, var, genericnames);
       SCIPinfoMessage(scip, file, " ");
-      
+
       if( (counter + 1)  % 10 == 0 && v < nvars-1 )
          SCIPinfoMessage(scip, file, "\n      ");
    }
-   
+
    counter = 0;
-   
+
    /* print "Subsect to" section */
    SCIPinfoMessage(scip, file, "\nSubject to\n");
-   
+
    /* collect SOS constraints in array for later output */
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS1, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS2, nconss) );
@@ -2168,18 +2168,18 @@ SCIP_RETCODE SCIPwriteLp(
    {
       cons = conss[c];
       assert( cons != NULL);
-      
+
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
       if( transformed && !SCIPconsIsEnabled(cons) )
          continue;
-      
+
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
-      
+
       consname = SCIPconsGetName(cons);
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
-      
+
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_CALL( printLinearCons(scip, file, consname,  consnumber,
@@ -2190,7 +2190,7 @@ SCIP_RETCODE SCIPwriteLp(
       {
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
-         
+
          switch ( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
@@ -2313,7 +2313,7 @@ SCIP_RETCODE SCIPwriteLp(
          lb = SCIPvarGetLbOriginal(var);
          ub = SCIPvarGetUbOriginal(var);
       }
-      
+
       if ( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
       {
          /* print variable name */
