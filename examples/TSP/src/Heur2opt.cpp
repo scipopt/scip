@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.6 2007/08/22 13:22:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: Heur2opt.cpp,v 1.7 2007/11/12 15:15:13 bzfwolte Exp $"
 
 /**@file   heur2opt.cpp
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -129,6 +129,7 @@ SCIP_RETCODE Heur2opt::scip_exitsol(
 SCIP_RETCODE Heur2opt::scip_exec(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_HEUR*         heur,               /**< the primal heuristic itself */
+   SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
    SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
    )
 {  

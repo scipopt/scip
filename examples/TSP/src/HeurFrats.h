@@ -105,6 +105,7 @@ namespace tsp
       virtual SCIP_RETCODE scip_exec(
          SCIP*              scip,               /**< SCIP data structure */
          SCIP_HEUR*         heur,               /**< the primal heuristic itself */
+         SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
          SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
          );
    };

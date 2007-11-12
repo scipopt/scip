@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.8 2007/10/05 11:10:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: HeurFarthestInsert.cpp,v 1.9 2007/11/12 15:15:14 bzfwolte Exp $"
 
 /**@file   HeurFarthestInsert.cpp
  * @brief  farthest insert - combinatorial heuristic for TSP
@@ -154,6 +154,7 @@ SCIP_RETCODE HeurFarthestInsert::scip_exitsol(
 SCIP_RETCODE HeurFarthestInsert::scip_exec(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_HEUR*         heur,               /**< the primal heuristic itself */
+   SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
    SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
    )
 {   

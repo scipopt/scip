@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.22 2007/06/06 11:25:10 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.23 2007/11/12 15:15:14 bzfwolte Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -152,7 +152,7 @@ SCIP_DECL_HEUREXEC(heurExecObj)
    assert(heurdata->objheur != NULL);
 
    /* call virtual method of heur object */
-   SCIP_CALL( heurdata->objheur->scip_exec(scip, heur, result) );
+   SCIP_CALL( heurdata->objheur->scip_exec(scip, heur, heurtiming, result) );
 
    return SCIP_OKAY;
 }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.2 2007/10/16 13:11:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.3 2007/11/12 15:15:14 bzfwolte Exp $"
 
 /**@file   heur_frats.c
  * @brief  fractional travelling salesman heuristic
@@ -116,6 +116,7 @@ SCIP_RETCODE HeurFrats::scip_exitsol(
 SCIP_RETCODE HeurFrats::scip_exec(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_HEUR*         heur,               /**< the primal heuristic itself */
+   SCIP_HEURTIMING    heurtiming,         /**< current point in the node solving loop */
    SCIP_RESULT*       result              /**< pointer to store the result of the heuristic call */
    )
 {  /*lint --e{715}*/
