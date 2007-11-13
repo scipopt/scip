@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.3 2007/08/27 15:04:53 bzfberth Exp $
+# $Id: Makefile,v 1.4 2007/11/13 16:47:36 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ vehicle routing example using SCIP for branch-and-price
@@ -54,6 +54,7 @@ LIBEXT		=	a
 READLINE	=	true
 ZLIB		=	true
 ZIMPL		=	true
+ZIMPLOPT	=	opt
 
 CC		=	gcc
 CXX		=	g++
@@ -173,7 +174,7 @@ ifeq ($(ZLIB),false)
 $(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true.)
 endif
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/scip/lib/zimplinc
-LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP) -lgmp
+LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT) -lgmp
 endif
 
 
