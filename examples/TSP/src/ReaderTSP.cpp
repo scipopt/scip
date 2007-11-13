@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.10 2007/11/13 17:21:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.11 2007/11/13 17:50:44 bzfberth Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -150,8 +150,8 @@ SCIP_RETCODE ReaderTSP::scip_read(
    GRAPHEDGE* edgebackw;
    GRAPHEDGE* edge;
 
-   double*  x_coords = new double[0];                 // arrays of coordinates of the nodes
-   double*  y_coords = new double[0];
+   double*  x_coords = NULL;                 // arrays of coordinates of the nodes
+   double*  y_coords = NULL;
 
 #ifdef SCIP_DEBUG
    double** weights = new double* [0];
