@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.115 2007/06/15 10:06:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.116 2007/11/13 17:21:49 bzfheinz Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -381,6 +381,14 @@ extern
 void SCIPvarSetProbindex(
    SCIP_VAR*             var,                /**< problem variable */
    int                   probindex           /**< new problem index of variable */
+   );
+
+/** gives the variable a new name; ATTENTION: to old pointer is over written that might
+ *  result in a memory leakage */
+extern
+void SCIPvarSetNamePointer(
+   SCIP_VAR*             var,                /**< problem variable */
+   const char*           name                /**< new name of variable */
    );
 
 /** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the

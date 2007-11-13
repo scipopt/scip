@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.218 2007/06/15 10:06:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.219 2007/11/13 17:21:49 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3540,6 +3540,19 @@ void SCIPvarSetProbindex(
    assert(probindex >= 0);
 
    varSetProbindex(var, probindex);
+}
+
+/** gives the variable a new name; ATTENTION: to old pointer is over written that might
+ *  result in a memory leakage */
+void SCIPvarSetNamePointer(
+   SCIP_VAR*             var,                /**< problem variable */
+    const char*          name                /**< new name of variable */
+   )
+{
+   assert(var != NULL);
+   assert(name != NULL);
+   
+   var->name = (char*)name;
 }
 
 /** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_reader.h,v 1.14 2007/10/29 12:03:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_reader.h,v 1.15 2007/11/13 17:21:49 bzfheinz Exp $"
 
 /**@file   type_reader.h
  * @brief  type definitions for input file readers
@@ -55,7 +55,9 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  */
 #define SCIP_DECL_READERREAD(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, const char* filename, SCIP_RESULT* result)
 
-/** problem writing method of reader
+/** problem writing method of reader; NOTE: if the parameter "genericnames" is TRUE, then
+ *  SCIP already set all variable and constraint names to generic names; therefore, this
+ *  method should always use SCIPvarGetName() and SCIPconsGetName(); 
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -81,6 +83,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - nconss          : number of constraints in the problem
  *  - maxnconss       : maximum number of constraints existing at the same time 
  *  - startnconss     : number of constraints existing when problem solving started
+ *  - genericnames    : using generic variable and constraint names?
  *  - result          : pointer to store the result of the file reading call
  *
  *  possible return values for *result:
@@ -95,7 +98,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
       SCIP_VAR** vars, int nvars, int nbinvars, int nintvars, int nimplvars, int ncontvars, \
       SCIP_VAR** fixedvars, int nfixedvars, int startnvars, \
       SCIP_CONS** conss, int nconss, int maxnconss, int startnconss, \
-      SCIP_RESULT* result)
+      SCIP_Bool genericnames, SCIP_RESULT* result)
 
 
 #include "scip/def.h"

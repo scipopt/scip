@@ -3,21 +3,25 @@ current version
 
 interface:
 - new callback method SCIPconsGetPos()
-- new parameter "extension" in SCIPprintTransProblem() defining the requested format or NULL for default CIP format,
-  e.g, SCIPprintTransProblem(scip, NULL, NULL) displays the transformed problem in CIP format 
-- new parameter "extension" in SCIPprintOrigProblem() defining the requested format or NULL for default CIP format,
-  e.g., SCIPprintOrigProblem(scip, NULL, "lp") displays the original problem in LP format 
+- new parameters "extension" and "genericnames" in SCIPprintTransProblem() defining the 
+  requested format or NULL for default CIP format and using generic names for the variables and constraints
+  e.g, SCIPprintTransProblem(scip, NULL, NULL, TRUE) displays the transformed problem in CIP format with generic 
+  variables and constraint names 
+- new parameters "extension" and "genericnames" in SCIPprintOrigProblem() defining the 
+  requested format or NULL for default CIP format and using generic names for the variables and constraints
+  e.g, SCIPprintTransProblem(scip, NULL, "lp", FALSE) displays the transformed problem in LP format with original 
+  variables and constraint names 
 - new callback method SCIP_DECL_READERWRITE(x) in type_reader.h; this method is called  
   to write a problem to file stream in the format the reader stands for;
-   useful for writing the transformed problem in LP format
+  useful for writing the transformed problem in LP or MPS format
 - new parameter "conshdlrname" in SCIPincludeLinconsUpgrade() 
 
 features:
 - the MPS reader in now able to write a problem in MPS format
 - new callback method SCIPwriteOrigProblem(), e.g., 
-  SCIPwriteOrigProblem(scip, "orig.lp") prints the original problem in LP format in the file "orig.lp"
+  SCIPwriteOrigProblem(scip, "orig.lp", FALSE) prints the original problem in LP format in the file "orig.lp"
 - new callback method SCIPwriteTransProblem(), e.g.,
-  SCIPwriteOrigProblem(scip, NULL) displays the transformed problem in CIP format 
+  SCIPwriteOrigProblem(scip, NULL, FALSE) displays the transformed problem in CIP format 
 - new callback methed SCIPgetProbvarLinearSum()
 - added SOS2 example
 - extended TSP example

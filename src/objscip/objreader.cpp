@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.15 2007/10/29 12:03:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.16 2007/11/13 17:21:48 bzfheinz Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -104,7 +104,7 @@ SCIP_DECL_READERWRITE(readerWriteObj)
    SCIP_CALL( readerdata->objreader->scip_write(scip, reader, file, name, probdata, transformed, 
          objsense, objscale, objoffset, 
          vars, nvars, nbinvars, nintvars, nimplvars, ncontvars, fixedvars, nfixedvars, startnvars,
-         conss, nconss, maxnconss, startnconss, result) );
+         conss, nconss, maxnconss, startnconss, genericnames, result) );
    
    return SCIP_OKAY;
 }

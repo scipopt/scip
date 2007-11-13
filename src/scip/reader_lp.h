@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.h,v 1.5 2007/11/01 13:58:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.h,v 1.6 2007/11/13 17:21:48 bzfheinz Exp $"
 
 /**@file   reader_lp.h
  * @brief  LP file reader
@@ -52,7 +52,6 @@ extern
 SCIP_RETCODE SCIPwriteLp(
    SCIP*              scip,               /**< SCIP data structure */
    FILE*              file,               /**< output file, or NULL if standard output should be used */
-   SCIP_Bool          genericnames,       /**< use generic variable and row names? */
    const char*        name,               /**< problem name */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE      objsense,           /**< objective sense */

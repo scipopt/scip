@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.4 2007/10/29 12:03:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.5 2007/11/13 17:21:47 bzfheinz Exp $"
 
 /**@file   cmain.c
  * @brief  main file for healthcare pricer example
@@ -165,7 +165,7 @@ SCIP_RETCODE runSCIP(
       SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "healthcare")) );
    }
 
-   SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL) );
+   SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
    
 
    /***
@@ -178,7 +178,7 @@ SCIP_RETCODE runSCIP(
     ***/
    SCIP_CALL( SCIPprintStatistics(scip, NULL) );
 
-   SCIP_CALL( SCIPprintTransProblem(scip, NULL, NULL) );
+   SCIP_CALL( SCIPprintTransProblem(scip, NULL, NULL, FALSE) );
 
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
 

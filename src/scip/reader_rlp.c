@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_rlp.c,v 1.4 2007/11/01 13:58:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.5 2007/11/13 17:21:48 bzfheinz Exp $"
 
 /**@file   reader_rlp.h
  * @brief  RLP file reader (LP format with generic variables and row names)
@@ -54,9 +54,24 @@ SCIP_DECL_READERREAD(readerReadRlp)
 static
 SCIP_DECL_READERWRITE(readerWriteRlp)
 {  /*lint --e{715}*/
-   SCIP_CALL( SCIPwriteLp(scip, file, TRUE, name, transformed, objsense, objscale, objoffset, vars,
-			  nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
-
+   if( genericnames )
+   {
+      SCIP_CALL( SCIPwriteLp(scip, file, name, transformed, objsense, objscale, objoffset, vars,
+            nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+   }
+   else
+   {
+      SCIPwarningMessage("RLP format LP format with generic variable and constraint names\n");
+      
+      if( transformed )
+      {
+         SCIP_CALL( SCIPprintTransProblem(scip, file, "rlp", TRUE) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPprintOrigProblem(scip, file, "rlp", TRUE) );
+      }
+   }
    return SCIP_OKAY;
 }
 

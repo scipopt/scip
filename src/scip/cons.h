@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.114 2007/10/31 09:26:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.115 2007/11/13 17:21:48 bzfheinz Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -526,6 +526,14 @@ extern
 void SCIPconsSetStickingAtNode(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Bool             stickingatnode      /**< new value */
+   );
+
+/** gives the constraint a new name; ATTENTION: to old pointer is over written that might
+ *  result in a memory leakage */
+extern
+void SCIPconsSetNamePointer(
+   SCIP_CONS*            cons,               /**< constraint */
+   const char*           name                /**< new name of constraint */
    );
 
 /** gets associated transformed constraint of an original constraint, or NULL if no associated transformed constraint

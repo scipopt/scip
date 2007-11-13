@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.428 2007/11/01 16:07:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.429 2007/11/13 17:21:48 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2565,7 +2565,8 @@ static
 SCIP_RETCODE writeProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
-   SCIP_Bool             transformed         /**< output the transformed problem? */
+   SCIP_Bool             transformed,        /**< output the transformed problem? */
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
    SCIP_RETCODE retcode;
@@ -2591,11 +2592,11 @@ SCIP_RETCODE writeProblem(
    
    if( transformed )
    {
-      retcode = SCIPprintTransProblem(scip, file, extension);
+      retcode = SCIPprintTransProblem(scip, file, extension, genericnames);
    }
    else
    {
-      retcode =  SCIPprintOrigProblem(scip, file, extension);
+      retcode =  SCIPprintOrigProblem(scip, file, extension, genericnames);
    }
    
    if( filename != NULL &&  filename[0] != '\0' )
@@ -2617,7 +2618,8 @@ SCIP_RETCODE writeProblem(
 extern
 SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< output file (or NULL for standard output) */
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
    SCIP_RETCODE retcode;
@@ -2627,7 +2629,7 @@ SCIP_RETCODE SCIPwriteOrigProblem(
    assert( scip != NULL );
    assert( scip->origprob != NULL );
    
-   retcode = writeProblem(scip, filename, FALSE);
+   retcode = writeProblem(scip, filename, FALSE, genericnames);
 
    /* check for write errors */
    if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
@@ -2642,7 +2644,8 @@ SCIP_RETCODE SCIPwriteOrigProblem(
 extern 
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< output file (or NULL for standard output) */
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
    SCIP_RETCODE retcode;
@@ -2652,7 +2655,7 @@ SCIP_RETCODE SCIPwriteTransProblem(
    assert( scip != NULL );
    assert( scip->transprob != NULL );
 
-   retcode = writeProblem(scip, filename, TRUE);
+   retcode = writeProblem(scip, filename, TRUE, genericnames);
 
    /* check for write errors */
    if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
@@ -13714,13 +13717,17 @@ SCIP_RETCODE printProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROB*            prob,               /**< problem data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension           /**< file format (or NULL for defaul CIP format)*/
+   const char*           extension,          /**< file format (or NULL for defaul CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
    SCIP_RESULT result;
    int i;
    assert(scip != NULL);
    assert(prob != NULL);
+   
+   assert( scip != NULL );
+   assert( prob != NULL );
    
    /* try all readers until one could read the file */
    result = SCIP_DIDNOTRUN;
@@ -13730,16 +13737,17 @@ SCIP_RETCODE printProblem(
 
       if( extension != NULL )
       {
-         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, extension, &result);
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, extension, genericnames, &result);
       }
       else
       {
-         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, "cip", &result);
+         retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, "cip", genericnames, &result);
       }
       
       /* check for reader errors */
       if( retcode == SCIP_WRITEERROR )
          return retcode;
+      
       SCIP_CALL( retcode );
    }
 
@@ -13764,7 +13772,8 @@ SCIP_RETCODE printProblem(
 SCIP_RETCODE SCIPprintOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension           /**< file format (or NULL for default CIP format)*/
+   const char*           extension,          /**< file format (or NULL for default CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
    SCIP_RETCODE retcode;
@@ -13774,7 +13783,7 @@ SCIP_RETCODE SCIPprintOrigProblem(
    assert(scip != NULL);
    assert( scip->origprob != NULL );
    
-   retcode = printProblem(scip, scip->origprob, file, extension);
+   retcode = printProblem(scip, scip->origprob, file, extension, genericnames);
    
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR )
@@ -13789,7 +13798,8 @@ SCIP_RETCODE SCIPprintOrigProblem(
 SCIP_RETCODE SCIPprintTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension           /**< file format (or NULL for default CIP format)*/
+   const char*           extension,          /**< file format (or NULL for default CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 { 
    SCIP_RETCODE retcode;
@@ -13799,7 +13809,7 @@ SCIP_RETCODE SCIPprintTransProblem(
    assert(scip != NULL);
    assert(scip->transprob != NULL );
 
-   retcode = printProblem(scip, scip->transprob, file, extension);
+   retcode = printProblem(scip, scip->transprob, file, extension, genericnames);
    
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR )

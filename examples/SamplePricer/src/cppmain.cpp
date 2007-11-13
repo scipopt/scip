@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.6 2007/10/29 12:03:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.7 2007/11/13 17:21:47 bzfheinz Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for p-median pricer example
@@ -253,7 +253,7 @@ SCIP_RETCODE runSCIP(
       SCIP_CALL(SCIPactivatePricer(scip, SCIPfindPricer(scip, "Distance_Pricer")));
    }
 
-   SCIP_CALL(SCIPprintOrigProblem(scip, NULL, NULL));
+   SCIP_CALL(SCIPprintOrigProblem(scip, NULL, NULL, FALSE));
    
 
    /***
@@ -266,7 +266,7 @@ SCIP_RETCODE runSCIP(
     ***/
    SCIP_CALL(SCIPprintStatistics(scip, NULL));
 
-   SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL));
+   SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL, FALSE));
 
    SCIP_CALL(SCIPprintBestSol(scip, NULL, FALSE));
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.9 2007/10/29 12:03:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.10 2007/11/13 17:21:47 bzfheinz Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -425,13 +425,16 @@ SCIP_RETCODE ReaderTSP::scip_read(
    return SCIP_OKAY;
 }
 
-/** problem writing method of reader
+/** problem writing method of reader; NOTE: if the parameter "genericnames" is TRUE, then
+ *  SCIP already set all variable and constraint names to generic names; therefore, this
+ *  method should always use SCIPvarGetName() and SCIPconsGetName(); 
  *
  *  possible return values for *result:
  *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
- *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
+ *  If the reader detected an error in the writing to the file stream, it should return
+ *  with RETCODE SCIP_WRITEERROR.
  */
 SCIP_RETCODE ReaderTSP::scip_write(
    SCIP*              scip,               /**< SCIP data structure */
@@ -459,6 +462,7 @@ SCIP_RETCODE ReaderTSP::scip_write(
    int                nconss,             /**< number of constraints in the problem */
    int                maxnconss,          /**< maximum number of constraints existing at the same time */
    int                startnconss,        /**< number of constraints existing when problem solving started */
+   SCIP_Bool          genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
    )
 {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.77 2007/11/01 16:07:17 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.78 2007/11/13 17:21:48 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -141,7 +141,8 @@ SCIP_RETCODE writeProblem(
    SCIP_DIALOG*          dialog,             /**< dialog menu */
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG**         nextdialog,         /**< pointer to store next dialog to execute */
-   SCIP_Bool             transformed         /**< output the transformed problem? */
+   SCIP_Bool             transformed,        /**< output the transformed problem? */
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
    char* filename;
@@ -160,11 +161,11 @@ SCIP_RETCODE writeProblem(
       
       if( transformed )
       {
-         retcode = SCIPwriteTransProblem(scip, filename);
+         retcode = SCIPwriteTransProblem(scip, filename, genericnames);
       }
       else
       {
-         retcode = SCIPwriteOrigProblem(scip, filename);
+         retcode = SCIPwriteOrigProblem(scip, filename, genericnames);
       }
 
       if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
@@ -617,7 +618,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayProblem)
    
    if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
    {
-      SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip") );
+      SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
    }
    else
       SCIPdialogMessage(scip, NULL, "no problem available\n");
@@ -764,7 +765,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayTransproblem)
    SCIPdialogMessage(scip, NULL, "\n");
    if(SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED)
    {
-      SCIP_CALL( SCIPprintTransProblem(scip, NULL, "cip") );
+      SCIP_CALL( SCIPprintTransProblem(scip, NULL, "cip", FALSE) );
    }
    else
       SCIPdialogMessage(scip, NULL, "no transformed problem available\n");
@@ -1731,7 +1732,25 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteProblem)
 
    if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
    {
-      SCIP_CALL( writeProblem(scip, dialog, dialoghdlr, nextdialog, FALSE) );
+      SCIP_CALL( writeProblem(scip, dialog, dialoghdlr, nextdialog, FALSE, FALSE) );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no problem available\n");
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the write generic problem command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteGenProblem)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( writeProblem(scip, dialog, dialoghdlr, nextdialog, FALSE, TRUE) );
    }
    else
       SCIPdialogMessage(scip, NULL, "no problem available\n");
@@ -1836,7 +1855,25 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteTransproblem)
 
    if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
    {
-      SCIP_CALL( writeProblem(scip, dialog, dialoghdlr, nextdialog, TRUE) );
+      SCIP_CALL( writeProblem(scip, dialog, dialoghdlr, nextdialog, TRUE, FALSE) );
+   }
+   else
+      SCIPdialogMessage(scip, NULL, "no transformed problem available\n");
+   
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the write generic transproblem command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteGenTransproblem)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   
+   if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED )
+   {
+      SCIP_CALL( writeProblem(scip, dialog, dialoghdlr, nextdialog, TRUE, TRUE) );
    }
    else
       SCIPdialogMessage(scip, NULL, "no transformed problem available\n");
@@ -2172,7 +2209,19 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    if( !SCIPdialogHasEntry(submenu, "problem") )
    {
       SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteProblem, NULL, NULL,
-            "problem", "write original problem to file (format is given by file extension, e.g., orig.{lp,rlp,cip})", 
+            "problem", 
+            "write original problem to file (format is given by file extension, e.g., orig.{lp,rlp,cip})", 
+            FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* write generic problem */
+   if( !SCIPdialogHasEntry(submenu, "genproblem") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteGenProblem, NULL, NULL,
+            "genproblem", 
+            "write original problem with generic names to file (format is given by file extension, e.g., orig.{lp,rlp,cip})", 
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
@@ -2207,6 +2256,18 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
    
+   /* write transproblem */
+   if( !SCIPdialogHasEntry(submenu, "gentransproblem") )
+   {
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecWriteGenTransproblem, NULL, NULL,
+            "gentransproblem", 
+            "write currend node transformed problem with generic names to file (format is given by file extension, e.g., trans.{lp,rlp,cip})", 
+            FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+
    return SCIP_OKAY;
 }
 

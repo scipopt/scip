@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310 2007/10/31 09:26:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.311 2007/11/13 17:21:49 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1306,14 +1306,16 @@ SCIP_RETCODE SCIPreadProb(
 extern
 SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< output file (or NULL for standard output) */
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
 /** writes transformed problem to file  */
 extern 
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< output file (or NULL for standard output) */
+   const char*           filename,           /**< output file (or NULL for standard output) */
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
 /** frees problem and branch and bound data structures */
@@ -5344,7 +5346,8 @@ extern
 SCIP_RETCODE SCIPprintOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension           /**< file format (or NULL for default CIP format)*/
+   const char*           extension,          /**< file format (or NULL for default CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
 /** outputs transformed problem to file stream */
@@ -5352,7 +5355,8 @@ extern
 SCIP_RETCODE SCIPprintTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
-   const char*           extension           /**< file format (or NULL for default CIP format)*/
+   const char*           extension,          /**< file format (or NULL for default CIP format)*/
+   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
 /** outputs solving statistics */

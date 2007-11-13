@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.4 2007/10/29 12:03:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.5 2007/11/13 17:21:47 bzfheinz Exp $"
 
 /**@file   cmain.c
  * @brief  main file for linear ordering example
@@ -101,7 +101,7 @@ int main(
 
    /* print model */
    if ( LOPgetNElements(scip) <= 10 )
-      SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL) );
+      SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
 
    /* solve the model */
    SCIP_CALL( SCIPsolve(scip) );

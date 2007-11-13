@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.2 2007/10/31 09:26:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.3 2007/11/13 17:21:48 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @brief  CIP file reader
@@ -85,17 +85,13 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    SCIPinfoMessage(scip, file, "OBJECTIVE\n");
    SCIPinfoMessage(scip, file, "  Sense            : %s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    if( !SCIPisZero(scip, objoffset) )
-   {
       SCIPinfoMessage(scip, file, "  Offset           : %+g\n", objoffset);
-   }
+
    if( !SCIPisEQ(scip, objscale, 1.0) )
-   {
       SCIPinfoMessage(scip, file, "  Scale            : %g\n", objscale);
-   }
 
    if( nvars > 0 )
-   {
-      SCIPinfoMessage(scip, file, "VARIABLES\n");
+   {      SCIPinfoMessage(scip, file, "VARIABLES\n");
       for( i = 0; i < nvars; ++i )
          SCIPprintVar(scip, vars[i], file);
    }
@@ -110,8 +106,13 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    if( nconss > 0 )
    {
       SCIPinfoMessage(scip, file, "CONSTRAINTS\n");
+      
       for( i = 0; i < nconss; ++i )
       {
+         /* in case the transformed is written only constraint are posted which are enabled in the current node */
+         if( transformed && !SCIPconsIsEnabled(conss[i]) )
+            continue;
+         
          SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
       }
    }

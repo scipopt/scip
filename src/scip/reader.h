@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.28 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.29 2007/11/13 17:21:48 bzfheinz Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -74,6 +74,7 @@ SCIP_RETCODE SCIPreaderWrite(
    SCIP_SET*             set,                /**< global SCIP settings */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           format,             /**< file format (or NULL) */
+   SCIP_Bool             genericnames,       /**< using generic variable and constraint names? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

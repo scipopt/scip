@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.5 2007/10/29 12:03:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.6 2007/11/13 17:21:47 bzfheinz Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -90,7 +90,7 @@ public:
       )
    {
      cout << "Transformed Problem" << endl;
-     SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL));
+     SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL, FALSE));
      
      for (unsigned int i = 0; i < _setpart_consptr_vector.size(); ++i) {
        SCIP_CALL(SCIPgetTransformedCons(scip, _setpart_consptr_vector[i], &_setpart_consptr_vector[i]));
@@ -112,7 +112,7 @@ public:
 #ifdef SCIP_DEBUG
     cout << "Here is scip_redcost(SCIP* scip, SCIP_PRICER* pricer)" << endl;
     cout << "Current Solution:" << endl;
-    SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL));
+    SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL, FALSE));
     // int nofVars = SCIPgetNVars(scip);
 //     vector<SCIP_VAR*> varVec(nofVars);
 //     for (
