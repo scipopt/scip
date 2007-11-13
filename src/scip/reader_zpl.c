@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27 2007/10/30 15:17:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.28 2007/11/13 16:13:34 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -35,13 +35,11 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-//#include "scip/cons_polynomial.h"
 
 /* include the ZIMPL headers necessary to define the LP construction interface */
 #include "zimpl/bool.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
-#include "zimpl/mono.h"
 #include "zimpl/xlpglue.h"
 
 extern
@@ -180,90 +178,6 @@ Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs
    zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
                            destroyed by SCIPreleaseCons() */
    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-   SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
-
-   return zplcon;
-}
-
-Con* xlp_addcon_term(const char* name, ConType type, const Numb* lhs, const Numb* rhs, unsigned int flags, const Term* term)
-{
-   SCIP_CONS* cons;
-   SCIP_Real sciplhs;
-   SCIP_Real sciprhs;
-   SCIP_Bool initial;
-   SCIP_Bool separate;
-   SCIP_Bool enforce;
-   SCIP_Bool check;
-   SCIP_Bool propagate;
-   SCIP_Bool local;
-   SCIP_Bool modifiable;
-   SCIP_Bool dynamic;
-   SCIP_Bool removable;
-   Con* zplcon;
-   int  i;
-
-   switch( type )
-   {
-   case CON_FREE:
-      sciplhs = -SCIPinfinity(scip_);
-      sciprhs = SCIPinfinity(scip_);
-      break;
-   case CON_LHS:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = SCIPinfinity(scip_);
-      break;
-   case CON_RHS:
-      sciplhs = -SCIPinfinity(scip_);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      break;
-   case CON_RANGE:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      break;
-   case CON_EQUAL:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      assert(sciplhs == sciprhs);
-      break;
-   default:
-      SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      readerror_ = TRUE;
-      break;
-   }
-
-   initial = !((flags & LP_FLAG_CON_SEPAR) != 0);
-   separate = TRUE;
-   enforce = TRUE;
-   check = enforce;
-   propagate = TRUE;
-   local = FALSE;
-   modifiable = FALSE;
-   dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
-   removable = dynamic;
-
-   assert(term_is_linear(term));
-
-   SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-                       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-   zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
-                           destroyed by SCIPreleaseCons() */
-   SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-
-   for(i = 0; i < term_get_elements(term); i++)
-   {
-      SCIP_VAR* scipvar;
-      SCIP_Real scipval;
-
-      assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
-      assert(mono_is_linear(term_get_element(term, i)));
-
-      scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-      scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
-
-      SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
-   }
    SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
 
    return zplcon;
