@@ -14,13 +14,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.41 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.42 2007/11/14 11:02:17 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
  * @author Tobias Achterberg
  * @author Marc Pfetsch
  * @author Stefan Heinz
+ *
+ * @todo Test for uniqueness of variable names (after cutting down).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -50,13 +52,13 @@
 
 /*
  * Data structures
- */ 
+ */
 #define LP_MAX_LINELEN       65536
 #define LP_MAX_PUSHEDTOKENS  2
 #define LP_INIT_COEFSSIZE    8192
 #define LP_MAX_PRINTLEN      560       /**< the maximum length of any line is 560 */
-#define LP_MAX_NAMELEN           255       /**< the maximum length for any name is 255 */       
-#define LP_PRINTLEN          100      
+#define LP_MAX_NAMELEN       255       /**< the maximum length for any name is 255 */
+#define LP_PRINTLEN          100
 
 /** Section in LP File */
 enum LpSection
@@ -1721,7 +1723,7 @@ void clearLine(
 {
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
-   
+
    (*linecnt) = 0;
    linebuffer[0] = '\0';
 }
@@ -1762,14 +1764,14 @@ void appendLine(
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
    assert( extension != NULL );
-   
-   sprintf(linebuffer, "%s %s", linebuffer, extension);
+
+   sprintf(linebuffer, "%s%s", linebuffer, extension);
    (*linecnt) += strlen(extension) + 1;
-   
+
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
 }
-   
+
 
 
 /* print row in LP format to file stream */
@@ -1794,7 +1796,7 @@ void printRow(
    char varname[LP_MAX_NAMELEN + 1];
    char consname[LP_MAX_NAMELEN + 2]; /* an extra chararter for ':' */
    char buffer[LP_MAX_LINELEN];
-   
+
    assert( scip != NULL );
    assert( strcmp(type, "=") == 0 || strcmp(type, "<=") || strcmp(type, ">=") );
 
@@ -1802,7 +1804,7 @@ void printRow(
 
    /* start each line with a space */
    appendLine(scip, file, linebuffer, &linecnt, " ");
-   
+
    /* print row name */
    if ( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
    {
@@ -1810,30 +1812,34 @@ void printRow(
       sprintf(consname,"%s:", consname);
       appendLine(scip, file, linebuffer, &linecnt, consname);
    }
-   
+
    /* print coefficients */
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
       assert( var != NULL );
-      
-      if(linecnt == 0 )
-         /* we start a new line; therefore we tab this line */
+
+      /* we start a new line; therefore we tab this line */
+      if (linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
-      
+
       snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      sprintf(buffer, "%+.12g %s", vals[v], varname);
-      
+      sprintf(buffer, " %+.12g %s", vals[v], varname);
+
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
-   
+
    /* print left hand side */
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
 
-   sprintf(buffer, "%s %+.12g", type, rhs);
+   sprintf(buffer, " %s %+.12g", type, rhs);
+
+   /* we start a new line; therefore we tab this line */
+   if (linecnt == 0 )
+      appendLine(scip, file, linebuffer, &linecnt, " ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
-   
+
    endLine(scip, file, linebuffer, &linecnt);
 }
 
@@ -1937,31 +1943,37 @@ void printSosCons(
    assert( scip != NULL );
    assert( file != NULL );
    assert( type == 1 || type == 2 );
-   
+
    clearLine(linebuffer, &linecnt);
-   
+
    /* start each line with a space */
    appendLine(scip, file, linebuffer, &linecnt, " ");
-   
+   assert( strlen(rowname) <= LP_MAX_NAMELEN );
+
    if ( strlen(rowname) > 0 )
    {
-      sprintf(buffer, "%s:", buffer);
+      sprintf(buffer, "%s:", rowname);
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
-   
+
    /* SOS type */
-   sprintf(buffer, "S%d::", type);
+   sprintf(buffer, " S%d::", type);
    appendLine(scip, file, linebuffer, &linecnt, buffer);
-   
+
    for (v = 0; v < nvars; ++v)
    {
       snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[v]));
-      
-      if ( weights != NULL )
-         sprintf(buffer, "%s:%.12g", varname, weights[v]);
-      else
-         sprintf(buffer, "%s:%d", varname, v);
 
+      if ( weights != NULL )
+         sprintf(buffer, " %s:%.12g", varname, weights[v]);
+      else
+         sprintf(buffer, " %s:%d", varname, v);
+
+      if (linecnt == 0 )
+      {
+         /* we start a new line; therefore we tab this line */
+         appendLine(scip, file, linebuffer, &linecnt, " ");
+      }
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
@@ -2074,16 +2086,16 @@ void checkVarnames(
    )
 {
    int v;
-   
+
    assert( scip != NULL );
    assert( vars != NULL );
-   
+
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
    {
       if( strlen(SCIPvarGetName(vars[v])) > LP_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a variable names which has to be cut down to %d characters; LP might be corrupted\n", LP_MAX_NAMELEN);
+         SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", LP_MAX_NAMELEN);
          return;
       }
    }
@@ -2114,22 +2126,22 @@ void checkConsnames(
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
       if( transformed && !SCIPconsIsEnabled(cons) )
          continue;
-      
+
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
-      
+
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
-      
+
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
          SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
-         
-         if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN) 
+
+         if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN)
             || ( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN -  4) )
          {
-            SCIPwarningMessage("there is a constraint names which has to be cut down to %d characters;\n", LP_MAX_NAMELEN);
+            SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n", LP_MAX_NAMELEN);
             return;
          }
       }
@@ -2283,10 +2295,10 @@ SCIP_RETCODE SCIPwriteLp(
 
    int linecnt;
    char linebuffer[LP_MAX_LINELEN + 1];
-   
+
    char varname[LP_MAX_NAMELEN + 1];
    char buffer[LP_MAX_LINELEN];
-   
+
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    SCIP_CONS* cons;
@@ -2295,7 +2307,7 @@ SCIP_RETCODE SCIPwriteLp(
    int nConsSOS1 = 0;
    int nConsSOS2 = 0;
    char consname[LP_MAX_NAMELEN + 1];
-   
+
    SCIP_VAR** aggregatedVars;
    int nAggregatedVars = 0;
    SCIP_HASHTABLE* varAggregated;
@@ -2314,7 +2326,7 @@ SCIP_RETCODE SCIPwriteLp(
    checkVarnames(scip, vars, nvars);
    /* check if the constraint names are to long */
    checkConsnames(scip, conss, nconss, transformed);
-   
+
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "\\ SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "\\   Problem name     : %s\n", name);
@@ -2329,32 +2341,32 @@ SCIP_RETCODE SCIPwriteLp(
 
    clearLine(linebuffer, &linecnt);
    appendLine(scip, file, linebuffer, &linecnt, " Obj:");
-   
+
    for (v = 0; v < nvars; ++v)
    {
       var = vars[v];
-      
+
 #ifndef NDEBUG
       /* in case the original problem has to posted the variables have to be either "original" or "negated" */
       if ( !transformed )
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
             SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
-      
+
       if (SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
-      
+
       if(linecnt == 0 )
          /* we start a new line; therefore we tab this line */
          appendLine(scip, file, linebuffer, &linecnt, "     ");
-      
+
       snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      sprintf(buffer, "%+.12g %s", SCIPvarGetObj(var), varname );
-      
+      sprintf(buffer, " %+.12g %s", SCIPvarGetObj(var), varname );
+
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
    endLine(scip, file, linebuffer, &linecnt);
-   
+
    /* print "Subsect to" section */
    SCIPinfoMessage(scip, file, "Subject to\n");
 
@@ -2366,11 +2378,11 @@ SCIP_RETCODE SCIPwriteLp(
    {
       cons = conss[c];
       assert( cons != NULL);
-      
+
       /* in case the transformed is written only constraint are posted which are enabled in the current node */
       if( transformed && !SCIPconsIsEnabled(cons) )
          continue;
-      
+
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
 
@@ -2380,7 +2392,7 @@ SCIP_RETCODE SCIPwriteLp(
 
       if( strcmp(conshdlrname, "linear") == 0 )
       {
-         SCIP_CALL( printLinearCons(scip, file, consname, 
+         SCIP_CALL( printLinearCons(scip, file, consname,
                SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
                SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
       }
@@ -2534,7 +2546,7 @@ SCIP_RETCODE SCIPwriteLp(
          }
          /* print variable name */
          SCIPinfoMessage(scip, file, "%s", varname);
-         
+
          /* print upper bound as far this one is not infinity */
          if( !SCIPisInfinity(scip, ub) )
             SCIPinfoMessage(scip, file, " <= %.12g", ub);
@@ -2549,7 +2561,7 @@ SCIP_RETCODE SCIPwriteLp(
       var = aggregatedVars[v];
       assert( var != NULL );
       snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-      
+
       SCIPinfoMessage(scip, file, " %s free\n", varname);
    }
 
@@ -2572,10 +2584,11 @@ SCIP_RETCODE SCIPwriteLp(
 	 if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
 	 {
             snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            appendLine(scip, file, linebuffer, &linecnt, varname);
+            sprintf(buffer, " %s", varname);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
 	 }
       }
-      
+
       endLine(scip, file, linebuffer, &linecnt);
    }
 
@@ -2592,12 +2605,13 @@ SCIP_RETCODE SCIPwriteLp(
          if ( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
 	 {
             snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            appendLine(scip, file, linebuffer, &linecnt, varname);
+            sprintf(buffer, " %s", varname);
+            appendLine(scip, file, linebuffer, &linecnt, buffer);
 	 }
       }
       endLine(scip, file, linebuffer, &linecnt);
    }
-   
+
    /* print SOS section */
    if ( nConsSOS1 > 0 || nConsSOS2 > 0 )
    {
@@ -2611,7 +2625,7 @@ SCIP_RETCODE SCIPwriteLp(
 	 consvars = SCIPgetVarsSOS1(scip, cons);
 	 nconsvars = SCIPgetNVarsSOS1(scip, cons);
 	 weights = SCIPgetWeightsSOS1(scip, cons);
-         
+
          snprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
          printSosCons(scip, file, consname, consvars, weights, nconsvars, 1);
       }

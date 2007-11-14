@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.80 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.81 2007/11/14 11:02:18 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -22,6 +22,10 @@
  * @author Tobias Achterberg
  * @author Marc Pfetsch
  * @author Stefan Heinz
+ *
+ * @todo Test for uniqueness of variable and constraint names (after cutting down).
+ * @todo Check whether constructing the names for aggregated constraint yields name clashes (aggrXXX).
+ * @todo Check whether precision of coefficients suffices.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1639,7 +1643,7 @@ void printEntry(
    if( !SCIPisZero(scip, value) )
    {
       snprintf(valuestr, MPS_MAX_VALUELEN, "%.12g", value);
-      
+
       if ( *recordcnt == 0 )
       {
          /* finish last line which already contains two records */
@@ -1675,7 +1679,7 @@ void printRowType(
    assert( SCIPisGT(scip, rhs, lhs) || SCIPisEQ(scip, lhs, rhs) );
    assert( name != NULL );
 
-   
+
    if( SCIPisEQ(scip, lhs, rhs) )
       sprintf(rowtype, "%s", "E");
    else
@@ -1691,7 +1695,7 @@ void printRowType(
          sprintf(rowtype, "%s", "G");
       }
    }
-   
+
    printStart(scip, file, rowtype, name);
    SCIPinfoMessage(scip, file, "\n");
 }
@@ -1966,7 +1970,7 @@ SCIP_RETCODE printAggregatedConsVar(
       ++nactivevars;
 
       snprintf(consname, MPS_MAX_NAMELEN, "aggr%d", c);
-      
+
       /* check for variable */
       for (v = 0; v < nactivevars; ++v)
       {
@@ -1991,16 +1995,16 @@ void checkVarnames(
    )
 {
    int v;
-   
+
    assert( scip != NULL );
    assert( vars != NULL );
-   
+
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
    {
       if( strlen(SCIPvarGetName(vars[v])) > MPS_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a variable names which has to be cut down to %d characters; LP might be corrupted\n", MPS_MAX_NAMELEN);
+         SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", MPS_MAX_NAMELEN);
          return;
       }
    }
@@ -2021,10 +2025,10 @@ void checkConsnames(
    assert( conss != NULL );
 
    for( c = 0; c < nconss; ++c )
-   {         
-      if( strlen(SCIPconsGetName(conss[c])) > MPS_MAX_NAMELEN ) 
+   {
+      if( strlen(SCIPconsGetName(conss[c])) > MPS_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a constraint names which has to be cut down to %d characters;\n", MPS_MAX_NAMELEN);
+         SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters; LP might be corrupted\n", MPS_MAX_NAMELEN);
          return;
       }
    }
@@ -2114,7 +2118,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    checkVarnames(scip, vars, nvars);
    /* check if the constraint names are to long */
    checkConsnames(scip, conss, nconss, transformed);
-   
+
    /* before we start printing the problem in MPS format we sort the constraints by their type */
    SCIP_CALL( SCIPallocBufferArray(scip, &linears, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &setppcs, nconss) );
@@ -2218,7 +2222,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       cons = consSOS1[c];
       consvars = SCIPgetVarsSOS1(scip, cons);
       nconsvars = SCIPgetNVarsSOS1(scip, cons);
-      
+
       SCIP_CALL( collectAggregatedVars(scip, transformed, nconsvars, consvars, &nAggregatedVars, aggregatedVars,
 				       varAggregatedHash, aggregatedConstant) );
    }
@@ -2274,7 +2278,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    {
       cons = setppcs[c];
       snprintf(consname, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
-      
+
       switch ( SCIPgetTypeSetppc(scip, cons) )
       {
       case SCIP_SETPPCTYPE_PARTITIONING :
@@ -2311,7 +2315,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       cons = varbounds[c];
       lhs = SCIPgetLhsVarbound(scip, cons);
       rhs = SCIPgetRhsVarbound(scip, cons);
-      
+
       /* there nothing to do if the left hand side is minus infinity and the right side infinity */
       assert( !SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs) );
 
@@ -2326,7 +2330,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       snprintf(consname, MPS_MAX_NAMELEN, "aggr%d", c );
       printRowType(scip, file, aggregatedConstant[c], aggregatedConstant[c], consname );
    }
-   
+
    /* print COLUMNS section */
    SCIPinfoMessage(scip, file, "COLUMNS\n");
 
@@ -2345,14 +2349,14 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       var = vars[v];
       assert( var != NULL );
       assert( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && v < nint) ||
-         (v >= nint && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS) );
+	      (v >= nint && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS) );
 
       recordcnt = 0;
 
       SCIPdebugMessage("create entries for variable <%s>\n", SCIPvarGetName(var));
       /* create variable name */
       snprintf(varname, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-      
+
       /* first take care of the objective function */
       value = SCIPvarGetObj(var);
 
@@ -2368,7 +2372,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          cons = linears[c];
          value = 0.0;
          snprintf(consname, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
-         
+
          SCIP_CALL( getLinearCoeff(scip, var, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
 				   SCIPgetNVarsLinear(scip, cons), transformed, &value) );
 
@@ -2465,6 +2469,25 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          printRecord(scip, file, "'INTEND'", "");
          SCIPinfoMessage(scip, file, "\n");
       }
+   }
+
+   for (v = 0; v < nfixedvars; ++v)
+   {
+      var = fixedvars[v];
+      assert( var != NULL );
+
+      SCIPdebugMessage("create entries for variable <%s>\n", SCIPvarGetName(var));
+
+      recordcnt = 0;
+      /* create variable name */
+      snprintf(varname, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+
+      /* take care of the aggregated constraints needed for SOS constraints */
+      SCIP_CALL( printAggregatedConsVar(scip, file, var, varname, nvars, transformed, nConsSOS1, consSOS1, nConsSOS2, consSOS2,
+					nAggregatedVars, aggregatedVars, &recordcnt) );
+
+      if( recordcnt == 1 )
+         SCIPinfoMessage(scip, file, "\n");
    }
 
    /* print RHS section */
@@ -2578,7 +2601,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    for (c = 0; c < nAggregatedVars; ++c )
    {
       /* output rhs */
-      snprintf(consname, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
+      snprintf(consname, MPS_MAX_NAMELEN, "aggr%d", c);
       printEntry(scip, file, "RHS", consname, -aggregatedConstant[c], &recordcnt);
    }
 
@@ -2737,14 +2760,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
 	 for (v = 0; v < nconsvars; ++v)
 	 {
-            snprintf(varname, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            
+            snprintf(varname, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(consvars[v]) );
+
 	    SCIPinfoMessage(scip, file, "    %-8s", varname);
 	    if ( sosweights != NULL )
-               /* ????? */
 	       SCIPinfoMessage(scip, file, "  %-.12g ", sosweights[v]);
 	    else
-               /* ????? */
 	       SCIPinfoMessage(scip, file, "  %-12d ", v);
 	    SCIPinfoMessage(scip, file, "\n");
 	 }
@@ -2758,11 +2779,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 	 nconsvars = SCIPgetNVarsSOS2(scip, cons);
 	 sosweights = SCIPgetWeightsSOS2(scip, cons);
          snprintf(consname, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
-         
+
 	 SCIPinfoMessage(scip, file, " S2 ");
 	 if ( strlen(consname) > 0 )
 	    SCIPinfoMessage(scip, file, "%s", consname);
-         
+
 	 SCIPinfoMessage(scip, file, "\n");
 
 	 for (v = 0; v < nconsvars; ++v)
