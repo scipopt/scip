@@ -3,9 +3,9 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2006 Tobias Achterberg                              *
+#*    Copyright (C) 2002-2007 Tobias Achterberg                              *
 #*                                                                           *
-#*                  2002-2006 Konrad-Zuse-Zentrum                            *
+#*                  2002-2007 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.21 2007/11/13 16:40:44 bzfpfets Exp $
+# $Id: Makefile,v 1.22 2007/11/15 14:10:09 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
@@ -34,165 +34,17 @@ HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 
 
 #-----------------------------------------------------------------------------
-# default settings
+# paths
 #-----------------------------------------------------------------------------
 
-TIME     	=  	3600
-NODES           =       2100000000
-MEM		=	1024
-FEASTOL		=	default
-TEST		=	miplib
-SETTINGS        =       default
-
-VERBOSE		=	false
-OPT		=	opt
-LPS		=	spx
-COMP		=	gnu
-LIBEXT		=	a
-
-READLINE	=	true
-ZLIB		=	true
-ZIMPL		=	true
-ZIMPLOPT	=	opt
-
-CC		=	gcc
-CXX		=	g++
-DCC		=	gcc
-DCXX		=	g++
-AR		=	ar
-RANLIB		=	ranlib
-LINT		=	flexelint
-DOXY		=	doxygen
-CPLEX		=	cplex
-
-FLAGS		=	-I$(SRCDIR) -I$(LIBDIR)/scip/src
-OFLAGS		=
-CFLAGS		=	
-CXXFLAGS	=	
-LDFLAGS		=	-lpthread -lm
-ARFLAGS		=	cr
-DFLAGS		=	-MM
-
-GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter \
-			-Wredundant-decls -Wdisabled-optimization \
-			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes
-
-GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
-			-Wno-unknown-pragmas -Wno-unused-parameter \
-			-Wredundant-decls -Wdisabled-optimization \
-			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
-			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
-
-BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
-OBJDIR		=	obj/O.$(BASE)
-SRCDIR		=	src
-BINDIR		=	bin
-LIBDIR		=	lib
-EXEEXTENSION	=
-
-#-----------------------------------------------------------------------------
-include make/make.$(BASE)
-#-----------------------------------------------------------------------------
-
-FLAGS		+=	$(USRFLAGS)
-OFLAGS		+=	$(USROFLAGS)
-CFLAGS		+=	$(USRCFLAGS)
-CXXFLAGS	+=	$(USRCXXFLAGS)
-LDFLAGS		+=	$(USRLDFLAGS)
-ARFLAGS		+=	$(USRARFLAGS)
-DFLAGS		+=	$(USRDFLAGS)
+SCIPDIR		=	../..
 
 
 #-----------------------------------------------------------------------------
-# Memory Management
+# include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
 
-#FLAGS		+=	-DNOSAFEMEM
-#FLAGS		+=	-DNOBLOCKMEM
-
-
-#-----------------------------------------------------------------------------
-# LP Solver Interface
-#-----------------------------------------------------------------------------
-
-LPILIBNAME	=	lpi$(LPS)
-
-ifeq ($(LPS),cpx)
-LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP)
-endif
-
-ifeq ($(LPS),spx)
-LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP)
-endif
-
-ifeq ($(LPS),spxdbg)
-LPSLDFLAGS	=	-lsoplexdbg.$(OSTYPE).$(ARCH).$(COMP)
-endif
-
-ifeq ($(LPS),spx121)
-LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP)
-endif
-
-ifeq ($(LPS),clp)
-LPSLDFLAGS	=	-L$(LIBDIR)/clpinc/../lib -Wl,-rpath,$(LIBDIR)/clpinc/../lib -lClp -lCoin
-endif
-
-ifeq ($(LPS),clpdbg)
-LPSLDFLAGS	=	-lclpdbg.$(OSTYPE).$(ARCH).$(COMP) -lcoindbg.$(OSTYPE).$(ARCH).$(COMP)
-endif
-
-LPILIB		=	$(LPILIBNAME).$(BASE)
-LPILIBFILE	=	$(LIBDIR)/scip/lib/lib$(LPILIB).$(LIBEXT)
-
-
-#-----------------------------------------------------------------------------
-# External Libraries
-#-----------------------------------------------------------------------------
-
-ifeq ($(ZLIB_LDFLAGS),)
-ZLIB		=	false
-endif
-ifeq ($(ZLIB),true)
-FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
-LDFLAGS		+=	$(ZLIB_LDFLAGS)
-endif
-
-ifeq ($(READLINE_LDFLAGS),)
-READLINE	=	false
-endif
-ifeq ($(READLINE),true)
-FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
-LDFLAGS		+=	$(READLINE_LDFLAGS)
-endif
-
-ifeq ($(ZIMPL),true)
-ifeq ($(ZLIB),false)
-$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true.)
-endif
-FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/scip/lib/zimplinc
-LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT) -lgmp
-endif
-
-
-#-----------------------------------------------------------------------------
-# SCIP Library
-#-----------------------------------------------------------------------------
-
-SCIPLIBNAME	=	scip
-SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(SCIPLIB).$(LIBEXT)
-
-
-#-----------------------------------------------------------------------------
-# OBJSCIP Library
-#-----------------------------------------------------------------------------
-
-OBJSCIPLIBNAME	=	objscip
-OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
-OBJSCIPLIBFILE	=	$(LIBDIR)/scip/lib/lib$(OBJSCIPLIB).$(LIBEXT)
+include $(SCIPDIR)/make/make.project
 
 
 #-----------------------------------------------------------------------------
@@ -219,7 +71,7 @@ ifeq ($(VERBOSE),false)
 endif
 
 .PHONY: all
-all:            $(LIBDIR) $(LIBDIR)/scip $(MAINFILE) $(MAINSHORTLINK)
+all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(MAINSRC)
@@ -242,9 +94,6 @@ $(MAINSHORTLINK):	$(MAINFILE)
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
 
-$(LIBDIR):
-		@-mkdir -p $(LIBDIR)
-
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
@@ -253,7 +102,7 @@ clean:
 		-rm -rf $(OBJDIR)/* $(MAINFILE)
 
 .PHONY: depend
-depend:		$(LIBDIR)/scip
+depend:		$(SCIPDIR)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
 		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(MAINDEP)'
@@ -263,7 +112,7 @@ depend:		$(LIBDIR)/scip
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(CXX) $(MAINOBJFILES) \
-		-L$(LIBDIR)/scip/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
+		-L$(SCIPDIR)/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
@@ -273,23 +122,5 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
-
-$(LIBDIR)/scip: $(LIBDIR)
-		@$(SHELL) -ec 'if [ ! -e $@ ] ; \
-                        then \
-                                echo "** missing soft-link \"$@\"" ; \
-                                echo -n "** enter full path of SCIP installation: " ; \
-                                read TARGET ; \
-                                if [ "$$TARGET" != "" ] ; \
-                                then \
-                                        echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
-					rm -f $@ ; \
-                                        ln -s $$TARGET $@ ; \
-                                else \
-                                        echo "-> skipped creation of softlink \"$@\"." ; \
-                                fi ; \
-                                echo ; \
-                        fi'
-
 
 # --- EOF ---------------------------------------------------------------------

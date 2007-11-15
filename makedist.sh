@@ -26,16 +26,16 @@ $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
-$NAME/examples/MIPSolver/* $NAME/examples/MIPSolver/doc/* $NAME/examples/MIPSolver/lib \
+$NAME/examples/MIPSolver/* $NAME/examples/MIPSolver/doc/* \
 $NAME/examples/MIPSolver/make/make.* \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.c $NAME/examples/MIPSolver/src/*.cpp $NAME/examples/MIPSolver/src/*.h \
-$NAME/examples/TSP/* $NAME/examples/TSP/doc/* $NAME/examples/TSP/lib \
+$NAME/examples/TSP/* $NAME/examples/TSP/doc/* \
 $NAME/examples/TSP/make/make.* \
 $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.c $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
-$NAME/examples/SamplePricer/* $NAME/examples/SamplePricer/doc/* $NAME/examples/SamplePricer/lib \
+$NAME/examples/SamplePricer/* $NAME/examples/SamplePricer/doc/* \
 $NAME/examples/SamplePricer/make/make.* \
 $NAME/examples/SamplePricer/src/depend.* \
 $NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/examples/SamplePricer/src/*.h \

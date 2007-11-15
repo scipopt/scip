@@ -1,6 +1,11 @@
 current version
 ===============
 
+compiling:
+- modified makefiles to accept ZIMPLOPT and LPSOPT flags (with values "opt" or "dbg" and default being "opt"),
+  and removed LPS=spxdbg and LPS=clpdbg
+- added "make/make.project" as default make include for external projects using SCIP
+
 interface:
 - new callback method SCIPconsGetPos()
 - new parameters "extension" and "genericnames" in SCIPprintTransProblem() defining the 

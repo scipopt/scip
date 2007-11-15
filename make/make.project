@@ -1,0 +1,176 @@
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#*                                                                           *
+#*                  This file is part of the program and library             *
+#*         SCIP --- Solving Constraint Integer Programs                      *
+#*                                                                           *
+#*    Copyright (C) 2002-2006 Tobias Achterberg                              *
+#*                                                                           *
+#*                  2002-2006 Konrad-Zuse-Zentrum                            *
+#*                            fuer Informationstechnik Berlin                *
+#*                                                                           *
+#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*                                                                           *
+#*  You should have received a copy of the ZIB Academic License              *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*                                                                           *
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# $Id: make.project,v 1.1 2007/11/15 14:10:09 bzfpfend Exp $
+
+#@file    Makefile
+#@brief   Makefile to include in SCIP projects
+#@author  Thorsten Koch
+#@author  Tobias Achterberg
+
+#-----------------------------------------------------------------------------
+# default settings
+#-----------------------------------------------------------------------------
+
+TIME     	=  	3600
+NODES           =       2100000000
+MEM		=	1024
+FEASTOL		=	default
+TEST		=	miplib
+SETTINGS        =       default
+
+VERBOSE		=	false
+OPT		=	opt
+LPS		=	spx
+COMP		=	gnu
+LIBEXT		=	a
+
+READLINE	=	true
+ZLIB		=	true
+ZIMPL		=	true
+LPSOPT		=	opt
+ZIMPLOPT	=	opt
+
+CC		=	gcc
+CXX		=	g++
+DCC		=	gcc
+DCXX		=	g++
+AR		=	ar
+RANLIB		=	ranlib
+LINT		=	flexelint
+DOXY		=	doxygen
+CPLEX		=	cplex
+
+FLAGS		=	-I$(SRCDIR) -I$(SCIPDIR)/src
+OFLAGS		=
+CFLAGS		=	
+CXXFLAGS	=	
+LDFLAGS		=	-lpthread -lm
+ARFLAGS		=	cr
+DFLAGS		=	-MM
+
+GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
+			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wredundant-decls -Wdisabled-optimization \
+			-Wsign-compare -Wstrict-prototypes \
+			-Wmissing-declarations -Wmissing-prototypes
+
+GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
+			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wredundant-decls -Wdisabled-optimization \
+			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
+			-Woverloaded-virtual -Wsign-promo -Wsynth \
+			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
+
+BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
+OBJDIR		=	obj/O.$(BASE)
+SRCDIR		=	src
+BINDIR		=	bin
+LIBDIR		=	lib
+EXEEXTENSION	=
+
+#-----------------------------------------------------------------------------
+include make/make.$(BASE)
+#-----------------------------------------------------------------------------
+
+FLAGS		+=	$(USRFLAGS)
+OFLAGS		+=	$(USROFLAGS)
+CFLAGS		+=	$(USRCFLAGS)
+CXXFLAGS	+=	$(USRCXXFLAGS)
+LDFLAGS		+=	$(USRLDFLAGS)
+ARFLAGS		+=	$(USRARFLAGS)
+DFLAGS		+=	$(USRDFLAGS)
+
+
+#-----------------------------------------------------------------------------
+# Memory Management
+#-----------------------------------------------------------------------------
+
+#FLAGS		+=	-DNOSAFEMEM
+#FLAGS		+=	-DNOBLOCKMEM
+
+
+#-----------------------------------------------------------------------------
+# LP Solver Interface
+#-----------------------------------------------------------------------------
+
+LPILIBNAME	=	lpi$(LPS)
+
+ifeq ($(LPS),cpx)
+LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP)
+endif
+
+ifeq ($(LPS),spx)
+LPSLDFLAGS	=	-lsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+endif
+
+ifeq ($(LPS),spx121)
+LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+endif
+
+ifeq ($(LPS),clp)
+LPSLDFLAGS	=	-Wl,-rpath,$(LIBDIR) -lclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT) -lcoin.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+endif
+
+LPILIB		=	$(LPILIBNAME).$(BASE)
+LPILIBFILE	=	$(SCIPDIR)/lib/lib$(LPILIB).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
+# External Libraries
+#-----------------------------------------------------------------------------
+
+ifeq ($(ZLIB_LDFLAGS),)
+ZLIB		=	false
+endif
+ifeq ($(ZLIB),true)
+FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
+LDFLAGS		+=	$(ZLIB_LDFLAGS)
+endif
+
+ifeq ($(READLINE_LDFLAGS),)
+READLINE	=	false
+endif
+ifeq ($(READLINE),true)
+FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
+LDFLAGS		+=	$(READLINE_LDFLAGS)
+endif
+
+ifeq ($(ZIMPL),true)
+ifeq ($(ZLIB),false)
+$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true.)
+endif
+FLAGS		+=	-DWITH_ZIMPL -I$(SCIPDIR)/lib/zimplinc
+LDFLAGS		+=	-lzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT) -lgmp
+endif
+
+
+#-----------------------------------------------------------------------------
+# SCIP Library
+#-----------------------------------------------------------------------------
+
+SCIPLIBNAME	=	scip
+SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
+SCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(SCIPLIB).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
+# OBJSCIP Library
+#-----------------------------------------------------------------------------
+
+OBJSCIPLIBNAME	=	objscip
+OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
+OBJSCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
