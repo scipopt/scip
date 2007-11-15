@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.4 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.5 2007/11/15 10:53:19 bzfpfend Exp $"
 
 /**@file   reader_fix.c
  * @brief  file reader for variable fixings
@@ -139,7 +139,7 @@ SCIP_RETCODE readSol(
       SCIP_CALL( SCIPfixVar(scip, var, value, &infeasible, &fixed) );
       if( infeasible )
       {
-         SCIPwarningMessage("infeasible solution value of <%s>[%g,%g] to %g in line %d of solution file <%s>\n",
+         SCIPwarningMessage("infeasible solution value of <%s>[%.15g,%.15g] to %.15g in line %d of solution file <%s>\n",
             varname, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), value, lineno, filename);
          error = TRUE;
          break;

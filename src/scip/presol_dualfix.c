@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.27 2007/10/18 16:52:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.28 2007/11/15 10:53:18 bzfpfend Exp $"
 
 /**@file   presol_dualfix.c
  * @brief  fixing roundable variables to best bound
@@ -136,7 +136,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
       {
          SCIPdebugMessage(" -> unbounded fixing\n");
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-            "problem infeasible or unbounded: variable <%s> with objective %g can be made infinitely %s\n",
+            "problem infeasible or unbounded: variable <%s> with objective %.15g can be made infinitely %s\n",
             SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound < 0.0 ? "small" : "large");
          *result = SCIP_UNBOUNDED;
          return SCIP_OKAY;

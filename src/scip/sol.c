@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.81 2007/08/10 10:43:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.82 2007/11/15 10:53:19 bzfpfend Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -690,7 +690,7 @@ SCIP_RETCODE SCIPsolSetVal(
       oldval = SCIPvarGetLbGlobal(var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %g to different value %g\n",
+         SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), oldval, val);
          return SCIP_INVALIDDATA;
       }
@@ -1202,8 +1202,8 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.9g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+            SCIPmessageFPrintInfo(file, " % 20.15g", solval);
+         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -1220,8 +1220,8 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.9g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->vars[v]));
+            SCIPmessageFPrintInfo(file, " % 20.15g", solval);
+         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }
 
@@ -1246,8 +1246,8 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.9g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -1267,8 +1267,8 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.9g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->vars[v]));
+               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
          }
       }
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.219 2007/11/13 17:21:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.220 2007/11/15 10:53:19 bzfpfend Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2105,7 +2105,7 @@ void SCIPvarPrint(
    SCIPmessageFPrintInfo(file, " <%s>:", var->name);
 
    /* objective value */
-   SCIPmessageFPrintInfo(file, " obj=%g", var->obj);
+   SCIPmessageFPrintInfo(file, " obj=%.15g", var->obj);
 
    /* bounds (global bounds for transformed variables, original bounds for original variables) */
    if( SCIPvarIsTransformed(var) )
@@ -2124,13 +2124,13 @@ void SCIPvarPrint(
    else if( SCIPsetIsInfinity(set, -lb) )
       SCIPmessageFPrintInfo(file, "[-inf,");
    else
-      SCIPmessageFPrintInfo(file, "[%g,", lb);
+      SCIPmessageFPrintInfo(file, "[%.15g,", lb);
    if( SCIPsetIsInfinity(set, ub) )
       SCIPmessageFPrintInfo(file, "+inf]");
    else if( SCIPsetIsInfinity(set, -ub) )
       SCIPmessageFPrintInfo(file, "-inf]");
    else
-      SCIPmessageFPrintInfo(file, "%g]", ub);
+      SCIPmessageFPrintInfo(file, "%.15g]", ub);
 
    /* holes */
    /**@todo print holes */
@@ -2150,26 +2150,26 @@ void SCIPvarPrint(
       else if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
          SCIPmessageFPrintInfo(file, "-inf");
       else
-         SCIPmessageFPrintInfo(file, "%g", var->glbdom.lb);
+         SCIPmessageFPrintInfo(file, "%.15g", var->glbdom.lb);
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
       SCIPmessageFPrintInfo(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.aggregate.constant) )
-         SCIPmessageFPrintInfo(file, " %g", var->data.aggregate.constant);
-      SCIPmessageFPrintInfo(file, " %+g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
+         SCIPmessageFPrintInfo(file, " %.15g", var->data.aggregate.constant);
+      SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPmessageFPrintInfo(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
-         SCIPmessageFPrintInfo(file, " %g", var->data.multaggr.constant);
+         SCIPmessageFPrintInfo(file, " %.15g", var->data.multaggr.constant);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
-         SCIPmessageFPrintInfo(file, " %+g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
+         SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
       break;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIPmessageFPrintInfo(file, ", negated: %g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
+      SCIPmessageFPrintInfo(file, ", negated: %.15g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
       break;
 
    default:

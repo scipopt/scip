@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.3 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.4 2007/11/15 10:53:19 bzfpfend Exp $"
 
 /**@file   reader_cip.c
  * @brief  CIP file reader
@@ -85,13 +85,13 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    SCIPinfoMessage(scip, file, "OBJECTIVE\n");
    SCIPinfoMessage(scip, file, "  Sense            : %s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
    if( !SCIPisZero(scip, objoffset) )
-      SCIPinfoMessage(scip, file, "  Offset           : %+g\n", objoffset);
-
+      SCIPinfoMessage(scip, file, "  Offset           : %+.15g\n", objoffset);
    if( !SCIPisEQ(scip, objscale, 1.0) )
-      SCIPinfoMessage(scip, file, "  Scale            : %g\n", objscale);
+      SCIPinfoMessage(scip, file, "  Scale            : %.15g\n", objscale);
 
    if( nvars > 0 )
-   {      SCIPinfoMessage(scip, file, "VARIABLES\n");
+   {
+      SCIPinfoMessage(scip, file, "VARIABLES\n");
       for( i = 0; i < nvars; ++i )
          SCIPprintVar(scip, vars[i], file);
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.78 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.79 2007/11/15 10:53:18 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -824,7 +824,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
                SCIPdialogMessage(scip, NULL, " -infinity");
             else
                SCIPdialogMessage(scip, NULL, " %f", solval);
-            SCIPdialogMessage(scip, NULL, " \t(obj:%g)\n", SCIPvarGetObj(var));
+            SCIPdialogMessage(scip, NULL, " \t(obj:%.16g)\n", SCIPvarGetObj(var));
          }
       }
    }
@@ -1247,7 +1247,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_REAL:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %g, new value [%g,%g]: ",
+      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value [%.15g,%.15g]: ",
          SCIPparamGetReal(param), SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1270,7 +1270,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       {
          SCIP_CALL( retcode );
       }
-      SCIPdialogMessage(scip, NULL, "parameter <%s> set to %g\n", SCIPparamGetName(param), SCIPparamGetReal(param));
+      SCIPdialogMessage(scip, NULL, "parameter <%s> set to %.15g\n", SCIPparamGetName(param), SCIPparamGetReal(param));
       break;
 
    case SCIP_PARAMTYPE_CHAR:
@@ -1356,7 +1356,7 @@ SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam)
       break;
 
    case SCIP_PARAMTYPE_REAL:
-      sprintf(valuestr, "%g", SCIPparamGetReal(param));
+      sprintf(valuestr, "%.15g", SCIPparamGetReal(param));
       if( strchr(valuestr, '.') == NULL && strchr(valuestr, 'e') == NULL )
          sprintf(valuestr, "%.1f", SCIPparamGetReal(param));
       break;
@@ -1557,7 +1557,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    }
 
    /* get new objective limit from user */
-   snprintf(prompt, SCIP_MAXSTRLEN, "current value: %g, new value: ", SCIPgetObjlimit(scip));
+   snprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value: ", SCIPgetObjlimit(scip));
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
    if( endoffile )
    {
@@ -1579,14 +1579,14 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM
       && SCIPtransformObj(scip, objlim) > SCIPtransformObj(scip, SCIPgetObjlimit(scip)) )
    {
-      SCIPdialogMessage(scip, NULL, "\ncannot relax objective limit from %g to %g after problem was transformed\n\n",
+      SCIPdialogMessage(scip, NULL, "\ncannot relax objective limit from %.15g to %.15g after problem was transformed\n\n",
          SCIPgetObjlimit(scip), objlim);
       return SCIP_OKAY;
    }
 
    /* set new objective limit */
    SCIP_CALL( SCIPsetObjlimit(scip, objlim) );
-   SCIPdialogMessage(scip, NULL, "objective value limit set to %g\n", SCIPgetObjlimit(scip));
+   SCIPdialogMessage(scip, NULL, "objective value limit set to %.15g\n", SCIPgetObjlimit(scip));
 
    return SCIP_OKAY;
 }

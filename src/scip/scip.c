@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.429 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.430 2007/11/15 10:53:19 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2825,7 +2825,7 @@ SCIP_RETCODE SCIPsetObjlimit(
       assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
       if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->set, oldobjlimit) )
       {
-         SCIPerrorMessage("cannot relax objective limit from %g to %g after problem was transformed\n", oldobjlimit, objlimit);
+         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g after problem was transformed\n", oldobjlimit, objlimit);
          return SCIP_INVALIDDATA;
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
@@ -4956,7 +4956,7 @@ SCIP_RETCODE SCIPpresolve(
             if( SCIPprobIsObjIntegral(scip->transprob) )
             {
                SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                  "transformed objective value is always integral (scale: %g)\n", scip->transprob->objscale);
+                  "transformed objective value is always integral (scale: %.15g)\n", scip->transprob->objscale);
             }
          }
       }
@@ -11517,7 +11517,7 @@ SCIP_RETCODE SCIPbranchVar(
    }
    if( SCIPsetIsEQ(scip->set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
-      SCIPerrorMessage("cannot branch on variable <%s> with fixed domain [%g,%g]\n",
+      SCIPerrorMessage("cannot branch on variable <%s> with fixed domain [%.15g,%.15g]\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
       return SCIP_INVALIDDATA;
    }

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.92 2007/10/29 12:03:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.93 2007/11/15 10:53:18 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1439,7 +1439,7 @@ void SCIPprobPrintPseudoSol(
       assert(var != NULL);
       solval = SCIPvarGetPseudoSol(var);
       if( !SCIPsetIsZero(set, solval) )
-         SCIPmessagePrintInfo(" <%s>=%g", SCIPvarGetName(var), solval);
+         SCIPmessagePrintInfo(" <%s>=%.15g", SCIPvarGetName(var), solval);
    }
    SCIPmessagePrintInfo("\n");
 }

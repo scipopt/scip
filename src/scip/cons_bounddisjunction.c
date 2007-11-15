@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.14 2007/10/31 09:26:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.15 2007/11/15 10:53:18 bzfpfend Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -292,7 +292,7 @@ void consdataPrint(
       assert(consdata->vars[v] != NULL);
       if( v > 0 )
          SCIPinfoMessage(scip, file, ", ");
-      SCIPinfoMessage(scip, file, "<%s> %s %g", SCIPvarGetName(consdata->vars[v]),
+      SCIPinfoMessage(scip, file, "<%s> %s %.15g", SCIPvarGetName(consdata->vars[v]),
          consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", consdata->bounds[v]);
    }
    SCIPinfoMessage(scip, file, ")\n");

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.42 2007/11/14 11:02:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.43 2007/11/15 10:53:19 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1824,7 +1824,7 @@ void printRow(
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
       snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      sprintf(buffer, " %+.12g %s", vals[v], varname);
+      sprintf(buffer, " %+.15g %s", vals[v], varname);
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -1833,7 +1833,7 @@ void printRow(
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
 
-   sprintf(buffer, " %s %+.12g", type, rhs);
+   sprintf(buffer, " %s %+.15g", type, rhs);
 
    /* we start a new line; therefore we tab this line */
    if (linecnt == 0 )
@@ -1965,7 +1965,7 @@ void printSosCons(
       snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[v]));
 
       if ( weights != NULL )
-         sprintf(buffer, " %s:%.12g", varname, weights[v]);
+         sprintf(buffer, " %s:%.15g", varname, weights[v]);
       else
          sprintf(buffer, " %s:%d", varname, v);
 
@@ -2333,8 +2333,8 @@ SCIP_RETCODE SCIPwriteLp(
    SCIPinfoMessage(scip, file, "\\   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "\\   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "\\   Obj. scale       : %g\n", objscale);
-   SCIPinfoMessage(scip, file, "\\   Obj. offset      : %g\n", objoffset);
+   SCIPinfoMessage(scip, file, "\\   Obj. scale       : %.15g\n", objscale);
+   SCIPinfoMessage(scip, file, "\\   Obj. offset      : %.15g\n", objoffset);
 
    /* print objective sense */
    SCIPinfoMessage(scip, file, "%s\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "Minimize" : "Maximize");
@@ -2361,7 +2361,7 @@ SCIP_RETCODE SCIPwriteLp(
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      sprintf(buffer, " %+.12g %s", SCIPvarGetObj(var), varname );
+      sprintf(buffer, " %+.15g %s", SCIPvarGetObj(var), varname );
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -2542,14 +2542,14 @@ SCIP_RETCODE SCIPwriteLp(
                lb = 0.0;
 	    }
 
-            SCIPinfoMessage(scip, file, " %.12g <= ", lb);
+            SCIPinfoMessage(scip, file, " %.15g <= ", lb);
          }
          /* print variable name */
          SCIPinfoMessage(scip, file, "%s", varname);
 
          /* print upper bound as far this one is not infinity */
          if( !SCIPisInfinity(scip, ub) )
-            SCIPinfoMessage(scip, file, " <= %.12g", ub);
+            SCIPinfoMessage(scip, file, " <= %.15g", ub);
 
          SCIPinfoMessage(scip, file, "\n");
       }

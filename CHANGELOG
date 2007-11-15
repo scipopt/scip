@@ -28,6 +28,7 @@ features:
 - the ZIMPL reader now understands SOS type 1 and 2 constraints
 - the LP reader reads SOS constraints of type 1 and 2
 - the MPS reader reads the SOS section (but cannot yet handle 'MARKERS')
+- output of real values is now done with 15 digits after the decimal point
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos.{c,h})
@@ -57,6 +58,8 @@ fixed bugs:
   it was sorted by variable type as first criterion and index as second criterion.
 - Fixed bug with wrong objective sense output for transformed problem. The transformed problem is always a minimization
   problem!
+- fixed numerical issue in linear constraint propagation: need slightly more aggressive tightening such that probing does
+  not choose a wrong value for fixing inside an epsilon interval
 
 
 SCIP version 1.00

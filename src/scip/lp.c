@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.255 2007/11/02 08:17:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.256 2007/11/15 10:53:18 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3315,7 +3315,7 @@ void SCIPcolPrint(
    assert(col->var != NULL);
 
    /* print bounds */
-   SCIPmessageFPrintInfo(file, "(obj: %g) [%g,%g], ", col->obj, col->lb, col->ub);
+   SCIPmessageFPrintInfo(file, "(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
 
    /* print coefficients */
    if( col->len == 0 )
@@ -3324,7 +3324,7 @@ void SCIPcolPrint(
    {
       assert(col->rows[r] != NULL);
       assert(col->rows[r]->name != NULL);
-      SCIPmessageFPrintInfo(file, "%+g<%s> ", col->vals[r], col->rows[r]->name);
+      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", col->vals[r], col->rows[r]->name);
    }
    SCIPmessageFPrintInfo(file, "\n");
 }
@@ -5136,7 +5136,7 @@ void SCIProwPrint(
    }
 
    /* print left hand side */
-   SCIPmessageFPrintInfo(file, "%g <= ", row->lhs);
+   SCIPmessageFPrintInfo(file, "%.15g <= ", row->lhs);
 
    /* print coefficients */
    if( row->len == 0 )
@@ -5147,15 +5147,15 @@ void SCIProwPrint(
       assert(row->cols[i]->var != NULL);
       assert(SCIPvarGetName(row->cols[i]->var) != NULL);
       assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-      SCIPmessageFPrintInfo(file, "%+g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
    }
 
    /* print constant */
    if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
-      SCIPmessageFPrintInfo(file, "%+g ", row->constant);
+      SCIPmessageFPrintInfo(file, "%+.15g ", row->constant);
 
    /* print right hand side */
-   SCIPmessageFPrintInfo(file, "<= %g\n", row->rhs);
+   SCIPmessageFPrintInfo(file, "<= %.15g\n", row->rhs);
 }
 
 
@@ -9039,7 +9039,7 @@ SCIP_RETCODE lpPrimalSimplex(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -9140,7 +9140,7 @@ SCIP_RETCODE lpDualSimplex(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -9241,7 +9241,7 @@ SCIP_RETCODE lpBarrier(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, convtol=%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -12290,9 +12290,9 @@ SCIP_RETCODE SCIPlpWriteMip(
          }
 
          if( genericnames )
-            SCIPmessageFPrintInfo(file," %+g x_%d", coeff, lp->cols[i]->lppos);
+            SCIPmessageFPrintInfo(file," %+.15g x_%d", coeff, lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %+g %s", coeff, lp->cols[i]->var->name);
+            SCIPmessageFPrintInfo(file," %+.15g %s", coeff, lp->cols[i]->var->name);
          
          ++j;
          if( j % 10 == 0 )
@@ -12300,7 +12300,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       }
    }
    if( origobj && objoffset != 0.0 ) 
-      SCIPmessageFPrintInfo(file," %+gobjoffset", objoffset * objsense * objscale);
+      SCIPmessageFPrintInfo(file," %+.15g objoffset", objoffset * objsense * objscale);
 
    /* print constraint section */
    SCIPmessageFPrintInfo(file,"\n\nSubject to\n");
@@ -12357,9 +12357,9 @@ SCIP_RETCODE SCIPlpWriteMip(
       for( j = 0; j < lp->rows[i]->nlpcols; ++j )
       {
          if( genericnames )
-            SCIPmessageFPrintInfo(file," %+g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            SCIPmessageFPrintInfo(file," %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %+g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+            SCIPmessageFPrintInfo(file," %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
          
          if( (j+1) % 10 == 0 )
             SCIPmessageFPrintInfo(file,"\n          ");
@@ -12369,18 +12369,18 @@ SCIP_RETCODE SCIPlpWriteMip(
       switch( type )
       {
       case 'b':
-         SCIPmessageFPrintInfo(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
+         SCIPmessageFPrintInfo(file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
          type = 'B';
          goto WRITEROW;
       case 'l':
-         SCIPmessageFPrintInfo(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       case 'B':
       case 'r':
-         SCIPmessageFPrintInfo(file," <= %g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(file," <= %.15g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
          break;
       case 'e':
-         SCIPmessageFPrintInfo(file," = %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         SCIPmessageFPrintInfo(file," = %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -12397,7 +12397,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
-            SCIPmessageFPrintInfo(file," %g <=", lp->cols[i]->lb);
+            SCIPmessageFPrintInfo(file," %.15g <=", lp->cols[i]->lb);
          
          /* print variable name */
          if( genericnames )
@@ -12407,7 +12407,7 @@ SCIP_RETCODE SCIPlpWriteMip(
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
-            SCIPmessageFPrintInfo(file,"<= %g", lp->cols[i]->ub);
+            SCIPmessageFPrintInfo(file,"<= %.15g", lp->cols[i]->ub);
          SCIPmessageFPrintInfo(file,"\n");
       }
    }
