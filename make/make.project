@@ -14,12 +14,19 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.1 2007/11/15 14:10:09 bzfpfend Exp $
+# $Id: make.project,v 1.2 2007/11/15 14:25:19 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
+
+
+#-----------------------------------------------------------------------------
+# detect host architecture
+#-----------------------------------------------------------------------------
+include $(SCIPDIR)/make/make.detecthost
+
 
 #-----------------------------------------------------------------------------
 # default settings
@@ -83,7 +90,7 @@ LIBDIR		=	lib
 EXEEXTENSION	=
 
 #-----------------------------------------------------------------------------
-include make/make.$(BASE)
+include $(SCIPDIR)/make/make.$(BASE)
 #-----------------------------------------------------------------------------
 
 FLAGS		+=	$(USRFLAGS)

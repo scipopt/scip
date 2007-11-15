@@ -14,23 +14,12 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.22 2007/11/15 14:10:09 bzfpfend Exp $
+# $Id: Makefile,v 1.23 2007/11/15 14:25:17 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
-
-ARCH            :=      $(shell uname -m | \
-                        sed \
-			-e s/sun../sparc/ \
-			-e s/i.86/x86/ \
-			-e s/IP../mips/ \
-			-e s/9000..../hppa/ \
-			-e s/Power\ Macintosh/ppc/ \
-			-e s/00........../pwr4/)
-OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | sed -e s/cygwin.*/cygwin/ -e s/irix../irix/ )
-HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')
 
 
 #-----------------------------------------------------------------------------
@@ -43,7 +32,6 @@ SCIPDIR		=	../..
 #-----------------------------------------------------------------------------
 # include default project Makefile from SCIP
 #-----------------------------------------------------------------------------
-
 include $(SCIPDIR)/make/make.project
 
 
