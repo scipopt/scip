@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.15 2007/11/16 20:21:31 bzfpfets Exp $
+# $Id: Makefile,v 1.16 2007/11/16 21:05:51 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a very simple pricer
@@ -84,9 +84,6 @@ $(MAINSHORTLINK):	$(MAINFILE)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
-
-$(LIBDIR):
-		@-mkdir -p $(LIBDIR)
 
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
