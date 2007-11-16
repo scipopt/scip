@@ -59,7 +59,7 @@ using SCIP as a library running:
    directory, and make sure to create the necessary softlinks in SCIP's lib 
    directory
 
-2. In the directory LOP edit the variable SCIP_DIR if necessary - it should
+2. In the directory LOP edit the variable SCIPDIR if necessary - it should
    point to the directory that contains SCIP.
 
 3. Compile the linear ordering example project:
