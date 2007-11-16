@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.81 2007/11/14 11:02:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.82 2007/11/16 21:12:07 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -2246,8 +2246,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIPinfoMessage(scip, file, "*   Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
 		   nvars, nbinvars, nintvars, nimplvars, ncontvars);
    SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
-   SCIPinfoMessage(scip, file, "*   Obj. scale       : %g\n", objscale);
-   SCIPinfoMessage(scip, file, "*   Obj. offset      : %g\n", objoffset);
+   SCIPinfoMessage(scip, file, "*   Obj. scale       : %.15g\n", objscale);
+   SCIPinfoMessage(scip, file, "*   Obj. offset      : %.15g\n", objoffset);
 
    /* print NAME of the problem */
    SCIPinfoMessage(scip, file, "%-14s%s\n", "NAME", name);
