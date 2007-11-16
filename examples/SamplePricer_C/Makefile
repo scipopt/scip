@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.15 2007/11/16 20:26:26 bzfpfets Exp $
+# $Id: Makefile,v 1.16 2007/11/16 21:07:13 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a very simple pricer
@@ -61,7 +61,7 @@ ifeq ($(VERBOSE),false)
 endif
 
 .PHONY: all
-all:            $(SCIPDIR) $(LIBDIR) $(MAINFILE) $(MAINSHORTLINK)
+all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(MAINSRC)
@@ -83,9 +83,6 @@ $(MAINSHORTLINK):	$(MAINFILE)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
-
-$(LIBDIR):
-		@-mkdir -p $(LIBDIR)
 
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
