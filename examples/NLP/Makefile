@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.4 2007/11/16 20:58:34 bzfpfets Exp $
+# $Id: Makefile,v 1.5 2007/11/16 21:05:07 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ NLP example using SCIP as a callable library
@@ -64,7 +64,7 @@ ifeq ($(VERBOSE),false)
 endif
 
 .PHONY: all
-all:            $(LIBDIR) $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
+all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(MAINSRC)
@@ -86,9 +86,6 @@ $(MAINSHORTLINK):	$(MAINFILE)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
-
-$(LIBDIR):
-		@-mkdir -p $(LIBDIR)
 
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
