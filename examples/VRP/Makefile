@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.5 2007/11/16 20:38:04 bzfpfets Exp $
+# $Id: Makefile,v 1.6 2007/11/16 21:08:34 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ vehicle routing example using SCIP for branch-and-price
@@ -64,7 +64,7 @@ ifeq ($(VERBOSE),false)
 endif
 
 .PHONY: all
-all:            $(LIBDIR) $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
+all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
 .PHONY: lint
 lint:		$(MAINSRC)
@@ -86,9 +86,6 @@ $(MAINSHORTLINK):	$(MAINFILE)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
-
-$(LIBDIR):
-		@-mkdir -p $(LIBDIR)
 
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
