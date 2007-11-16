@@ -58,7 +58,10 @@ running:
    directory, and make sure to create the necessary softlinks in SCIP's lib 
    directory
 
-2. Compile the TSP example:
+2. In the directory TSP edit the variable SCIP_DIR if necessary - it should
+   point to the directory that contains SCIP.
+
+3. Compile the TSP example:
    In the example's main directory, enter "make OPT=<...> LPS=<...> COMP=<...>"
    with the following options:
    - "OPT=opt"       to use optimized compilation mode (default)
@@ -71,22 +74,7 @@ running:
    - "COMP=gnu"      to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
-   On the first call with a specific set of options, you will be asked to provide the
-   path to the SCIP installation. Here is an example output:
-
----
-** missing soft-link "lib/scip"
-** enter full path of SCIP installation: /sw/scip
--> creating softlink "lib/scip" -> "/sw/scip"
----
-
-   If this soft-link creation failed, you have to create the necessary softlink to SCIP's main
-   directory in example's lib/ subdirectory manually:
-   - mkdir lib
-   - ln -s <path to SCIP> lib/scip
-     (e.g. "ln -s /scip lib/scip")
-
-3. If you want to watch the generated solutions by using the Java Tour Viewer included in the
+4. If you want to watch the generated solutions by using the Java Tour Viewer included in the
    tspviewer subdirectory, compile and run the Java Tour Viewer before running sciptsp:
    - enter "cd tspviewer"
    - enter "javac TSPViewer.java"
@@ -95,10 +83,10 @@ running:
    (e.g. "bin/sciptsp.linux.x86.gnu.opt.spx")
    - enter "bin/sciptsp.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
 
-4. To generate the documentation, you need to have doxygen installed, and
+5. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"
 
-5. To check the code with lint, you need to have flexelint installed, and
+6. To check the code with lint, you need to have flexelint installed, and
    enter "make lint"
 
 On some machines, you should use gmake instead of make.
