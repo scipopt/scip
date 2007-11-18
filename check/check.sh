@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.45 2007/09/21 10:39:48 bzfpfend Exp $
+# $Id: check.sh,v 1.46 2007/11/18 18:46:30 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -112,8 +112,8 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-HARDTIMELIMIT=`echo $TIMELIMIT+60 | bc`
-HARDMEMLIMIT=`echo ($MEMLIMIT+10)*1024 | bc`
+HARDTIMELIMIT=`echo "($TIMELIMIT*1.1)+10" | bc`
+HARDMEMLIMIT=`echo "($MEMLIMIT+10)*1024" | bc`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
