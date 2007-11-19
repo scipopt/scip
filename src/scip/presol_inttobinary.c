@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.3 2007/06/06 11:25:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.4 2007/11/19 14:45:03 bzfheinz Exp $"
 
 /**@file   presol_inttobinary.c
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
@@ -31,7 +31,7 @@
 
 #define PRESOL_NAME            "inttobinary"
 #define PRESOL_DESC            "converts integer variables with domain [a,a+1] to binaries"
-#define PRESOL_PRIORITY        +8000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY        +7000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 

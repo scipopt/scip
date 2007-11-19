@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.37 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.38 2007/11/19 14:45:03 bzfheinz Exp $"
 
 /**@file   reader_cnf.c
  * @brief  CNF file reader
@@ -28,7 +28,9 @@
 #include <string.h>
 
 #include "scip/reader_cnf.h"
+#include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_setppc.h"
 
 
 #define READER_NAME             "cnfreader"
@@ -236,8 +238,38 @@ SCIP_RETCODE readCnf(
 
                clausenum++;
                sprintf(s, "c%d", clausenum);
-               SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
-                     !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+               
+               if( SCIPfindConshdlr(scip, "logicor") != NULL )
+               {   
+                  /* if the constraint handler logicor exit create a logicor constraint */
+                  SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, s, clauselen, clausevars, 
+                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+               }
+               else if( SCIPfindConshdlr(scip, "setppc") != NULL )
+               {
+                  /* if the constraint handler logicor does not exit but constraint
+                   *  handler setppc create a setppc constraint */
+                  SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, s, clauselen, clausevars, 
+                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+               }
+               else
+               {
+                  /* if none of the previous constraint handler exits create a linear
+                   * constraint */
+                  SCIP_Real* vals;
+                  int i;
+                  
+                  SCIP_CALL( SCIPallocBufferArray(scip, &vals, clauselen) );
+                  
+                  for( i = 0; i < clauselen; ++i )
+                     vals[i] = 1.0;
+                  
+                  SCIP_CALL( SCIPcreateConsLinear(scip, &cons, s, clauselen, clausevars, vals, 1.0, SCIPinfinity(scip),
+                        !dynamicrows, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, dynamicconss, dynamicrows, FALSE) );
+                  
+                  SCIPfreeBufferArray(scip, &vals);
+               }
+
                SCIP_CALL( SCIPaddCons(scip, cons) );
                SCIP_CALL( SCIPreleaseCons(scip, &cons) );
                clauselen = 0;
