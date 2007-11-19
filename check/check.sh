@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.46 2007/11/18 18:46:30 bzfheinz Exp $
+# $Id: check.sh,v 1.47 2007/11/19 13:24:32 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -152,15 +152,14 @@ do
 	    echo checksol                          >> $TMPFILE
 	    echo quit                              >> $TMPFILE
 
-#	    waitcplex.sh # ??????????????????
+	    waitcplex.sh # ??????????????????
 
 	    echo -----------------------------
 	    date
 	    date >>$ERRFILE
 	    echo -----------------------------
 	    date +"@03 %s"
-#	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT k; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
-	    bash -c "ulimit -t $HARDTIMELIMIT -v $HARDMEMLIMIT -f 200000; ../$2 < $TMPFILE" 2>>$ERRFILE
+	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT k; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
 	    date +"@04 %s"
 	    echo -----------------------------
 	    date
