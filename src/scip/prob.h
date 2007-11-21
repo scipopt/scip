@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.59 2007/10/29 12:03:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.60 2007/11/21 15:03:46 bzfpfend Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -244,7 +244,9 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );

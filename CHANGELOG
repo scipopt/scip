@@ -66,6 +66,7 @@ fixed bugs:
   problem!
 - fixed numerical issue in linear constraint propagation: need slightly more aggressive tightening such that probing does
   not choose a wrong value for fixing inside an epsilon interval
+- fixed bug with objective scaling after restart
 
 
 SCIP version 1.00

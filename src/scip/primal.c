@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.85 2007/06/06 11:25:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.86 2007/11/21 15:03:46 bzfpfend Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -361,6 +361,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    {
       SCIP_Real obj;
 
+      assert(SCIPsolGetOrigin(primal->sols[0]) == SCIP_SOLORIGIN_ORIGINAL);
       obj = SCIPsolGetObj(primal->sols[0], set, prob);
       upperbound = MIN(upperbound, obj);
    }

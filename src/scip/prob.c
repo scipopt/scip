@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.93 2007/11/15 10:53:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.94 2007/11/21 15:03:46 bzfpfend Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -35,6 +35,7 @@
 #include "scip/lp.h"
 #include "scip/var.h"
 #include "scip/prob.h"
+#include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
@@ -1084,7 +1085,9 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -1184,6 +1187,9 @@ SCIP_RETCODE SCIPprobScaleObj(
                   prob->objscale /= intscalar;
                   prob->objisintegral = TRUE;
                   SCIPdebugMessage("integral objective scalar: objscale=%g\n", prob->objscale);
+
+                  /* update upperbound and cutoffbound in primal data structure */
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
                }
             }
          }

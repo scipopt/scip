@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.430 2007/11/15 10:53:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.431 2007/11/21 15:03:46 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4231,7 +4231,8 @@ SCIP_RETCODE exitPresolve(
    assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
 
    /* if possible, scale objective function such that it becomes integral with gcd 1 */
-   SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->solvemem, scip->set, scip->primal, scip->lp, scip->eventqueue) );
+   SCIP_CALL( SCIPprobScaleObj(scip->transprob, scip->mem->solvemem, scip->set, scip->stat, scip->primal,
+         scip->tree, scip->lp, scip->eventqueue) );
 
    /* free temporary presolving root node */
    SCIP_CALL( SCIPtreeFreePresolvingRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
