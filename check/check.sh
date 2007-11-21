@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.47 2007/11/19 13:24:32 bzfheinz Exp $
+# $Id: check.sh,v 1.48 2007/11/21 14:13:30 bzfberth Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -113,7 +113,8 @@ date >>$OUTFILE
 date >>$ERRFILE
 
 HARDTIMELIMIT=`echo "($TIMELIMIT*1.1)+10" | bc`
-HARDMEMLIMIT=`echo "($MEMLIMIT+10)*1024" | bc`
+HARDMEMLIMIT=`echo "($MEMLIMIT*1.1+10)*1024" | bc`
+
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
@@ -152,7 +153,7 @@ do
 	    echo checksol                          >> $TMPFILE
 	    echo quit                              >> $TMPFILE
 
-	    waitcplex.sh # ??????????????????
+#	    waitcplex.sh # ??????????????????
 
 	    echo -----------------------------
 	    date
