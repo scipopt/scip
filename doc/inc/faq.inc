@@ -62,7 +62,7 @@
       An easy way is to use the SCIP-binaries and call SCIP from a shell. 
       For that, you just have to download one of the precompiled binaries from the 
       <a href="http://scip.zib.de/download.shtml">download section</a> or the zipped source code and compile it 
-      with your favorite settings.
+      with your favorite settings. This describe in detail in the <tt>INSTALL</tt> file in the SCIP main directory.
     </p>
     <p class="a">
       Another way is to use SCIP as a solver integrated into your own program source code. 
@@ -142,6 +142,29 @@
     <p class="a">
       Yes. There is a setting-file settings/emphasis/cpsolver.set. 
       Furthermore, you can compile SCIP without any LP-Solver by &quot;make LPS=none&quot;.
+    </p>    
+    <p class="q">
+       <a name="Q19">What is this business with .a and .so libraries in the directory <tt>lib/</tt>?</a>
+    </p>
+    <p class="a">
+       When SCIP builds the binary it needs to link with the
+       corresponding libraries of the LP-solver. There are usually two
+       ways to distribute a library. In the first (.a) the library is
+       linked <em>statically</em> to SCIP; this means that all of its
+       information is packed into the binary. In the second way (.so)
+       the library is a <em>shared</em> library. In this case, the
+       code of the library is not inserted into the binary itself, but
+       is loaded at runtime. This has the advantage that the binaries
+       are smaller, but it comes at the cost that you have to make
+       sure that the library is found at runtime (for most systems it
+       suffices to put the path of the library into the
+       <tt>LD_LIBRARY_PATH</tt> variable).<br/><br/>
+       <em>Note:</em> Depending on the system shared or static
+       libraries are standard. If both links are present in the
+       <tt>lib</tt> directory, the linker chooses which version to
+       take (on newer Linux systems this is usually the shared
+       version). If you do not want this to happen you have to delete
+       the version that is not intended.
     </p>
 <h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
     <p class="q">
