@@ -5,6 +5,8 @@ compiling:
 - modified makefiles to accept ZIMPLOPT and LPSOPT flags (with values "opt" or "dbg" and default being "opt"),
   and removed LPS=spxdbg and LPS=clpdbg
 - added "make/make.project" as default make include for external projects using SCIP
+- adapted all makefiles of the examples accordingly
+- added possibilty in makefile to compile shared libraries (and added make/make.linux.x86.gnu.opt-shared)
 
 interface:
 - new callback method SCIPconsGetPos()
