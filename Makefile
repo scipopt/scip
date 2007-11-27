@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.233 2007/11/27 10:36:01 bzfpfets Exp $
+# $Id: Makefile,v 1.234 2007/11/27 17:19:04 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -144,8 +144,8 @@ DFLAGS		+=	$(USRDFLAGS)
 # Memory Management
 #-----------------------------------------------------------------------------
 
-#FLAGS		+=	-DNOSAFEMEM
-#FLAGS		+=	-DNOBLOCKMEM
+#FLAGS		+=	-DBMS_NOSAFEMEM
+#FLAGS		+=	-DBMS_NOBLOCKMEM
 
 
 #-----------------------------------------------------------------------------
