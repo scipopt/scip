@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.431 2007/11/21 15:03:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.432 2007/11/27 10:34:24 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11497,8 +11497,12 @@ SCIP_RETCODE SCIPcreateChild(
    return SCIP_OKAY;
 }
 
-/** branches on a variable; if solution value x' is fractional, two child nodes are created
- *  (x <= floor(x'), x >= ceil(x')), if solution value is integral, three child nodes are created
+/** branches on a variable v; if solution value x' is fractional, two child nodes are created
+ *  (x <= floor(x'), x >= ceil(x')), 
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
+ *  variable and the bounds of v are finite, then two child nodes are created
+ *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
+ *  otherwise three child nodes are created
  *  (x <= x'-1, x == x', x >= x'+1)
  */
 SCIP_RETCODE SCIPbranchVar(

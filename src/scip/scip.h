@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.311 2007/11/13 17:21:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.312 2007/11/27 10:34:24 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4249,8 +4249,12 @@ SCIP_RETCODE SCIPcreateChild(
    SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
    );
 
-/** branches on a variable; if solution value x' is fractional, two child nodes are created
- *  (x <= floor(x'), x >= ceil(x')), if solution value is integral, three child nodes are created
+/** branches on a variable v; if solution value x' is fractional, two child nodes are created
+ *  (x <= floor(x'), x >= ceil(x')), 
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
+ *  variable and the bounds of v are finite, then two child nodes are created
+ *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
+ *  otherwise three child nodes are created
  *  (x <= x'-1, x == x', x >= x'+1)
  */
 extern
