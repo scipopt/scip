@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.43 2007/11/15 10:53:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.44 2007/11/27 17:15:07 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1338,9 +1338,9 @@ SCIP_RETCODE readSemicontinuous(
  *  The format is as follows:
  *
  *  SOS
- *  <constraint name>: [S1|S2]:: {<variable name>:<weight>}
+ *  \<constraint name\>: [S1|S2]:: {\<variable name\>:\<weight\>}
  *  ...
- *  <constraint name>: [S1|S2]:: {<variable name>:<weight>}
+ *  \<constraint name\>: [S1|S2]:: {\<variable name\>:\<weight\>}
  * */
 static
 SCIP_RETCODE readSos(
@@ -1728,7 +1728,7 @@ void clearLine(
    linebuffer[0] = '\0';
 }
 
-/** ends the given line with '\0' and prints it to the given file stream */
+/** ends the given line with '\\0' and prints it to the given file stream */
 static
 void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
