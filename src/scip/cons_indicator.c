@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.2 2007/11/27 16:31:40 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.3 2007/11/27 17:05:58 bzfpfets Exp $"
 #define SCIP_DEBUG
 /**@file   cons_indicator.c
  * @brief  constraint handler for indicator constraints
@@ -235,7 +235,7 @@ SCIP_RETCODE setAltLPObj(
 }
 
 
-/** Fix variable given by @S to 0 */
+/** Fix variable given by @a S to 0 */
 static
 SCIP_RETCODE fixAltLPVariables(
       SCIP* scip,               /**< SCIP pointer */
@@ -322,7 +322,7 @@ SCIP_RETCODE unfixAltLPVariable(
 }
 
 
-/** unfix variable given by @S to 0 */
+/** unfix variable given by @a S to 0 */
 static
 SCIP_RETCODE unfixAltLPVariables(
       SCIP* scip,               /**< SCIP pointer */
@@ -1178,7 +1178,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
-   
+
    if ( conshdlrdata->altLP != NULL )
    {
       assert( conshdlrdata->varHash != NULL );
