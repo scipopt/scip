@@ -14,18 +14,22 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.83 2007/11/28 15:19:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.84 2007/11/28 17:44:49 bzfpfets Exp $"
 
 /**@file   reader_mps.c
- * @brief  MPS file reader
+ * @brief  (extended) MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
  * @author Marc Pfetsch
  * @author Stefan Heinz
  *
+ * This reader/writer handles MPS files in extended MPS format, as it
+ * is used by CPLEX. In the extended format the limits on variable
+ * name lengths and coefficients are considerably relaxed. The columns
+ * in the format are then separated by whitespaces.
+ *
  * @todo Test for uniqueness of variable and constraint names (after cutting down).
  * @todo Check whether constructing the names for aggregated constraint yields name clashes (aggrXXX).
- * @todo Check whether precision of coefficients suffices.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -504,7 +508,7 @@ SCIP_Bool mpsinputReadLine(
        * If there is none (e.g. empty) f1 will be the first name field.
        * If there is one, f2 will be the first name field.
        *
-       * Initially comment marks '$' ar only allowed in the beginning
+       * Initially comment marks '$' are only allowed in the beginning
        * of the 2nd and 3rd name field. We test all fields but the first.
        * This makes no difference, since if the $ is at the start of a value
        * field, the line will be errornous anyway.
@@ -1599,7 +1603,7 @@ int computeFieldWidth(
 }
 
 
-/* output two strings in columns 1 (width 8) and 2 (width 12) */
+/* output two strings in columns 1 and 2 with computed widths */
 static
 void printRecord(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1618,7 +1622,6 @@ void printRecord(
    assert( strlen(col1) <= MPS_MAX_NAMELEN );
    assert( strlen(col2) <= MPS_MAX_VALUELEN );
    assert( maxnamelen > 0 );
-
 
    fieldwidth = computeFieldWidth(maxnamelen);
    sprintf(format, " %%-%ds %%%ds ", fieldwidth, MPS_MAX_VALUELEN);
@@ -1656,7 +1659,7 @@ void printStart(
       fieldwidth = computeFieldWidth(maxnamelen);
       sprintf(format, " %%-2.2s %%-%ds ", fieldwidth);
    }
-   
+
    SCIPinfoMessage(scip, file, format, col1, col2);
 }
 
@@ -2046,10 +2049,10 @@ void checkVarnames(
       if( strlen(SCIPvarGetName(vars[v])) > MPS_MAX_NAMELEN )
       {
          SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", MPS_MAX_NAMELEN);
-         (*maxnamelen) = MPS_MAX_NAMELEN; 
+         (*maxnamelen) = MPS_MAX_NAMELEN;
          return;
       }
-      
+
       (*maxnamelen) = MAX(*maxnamelen, strlen(SCIPvarGetName(vars[v])));
    }
 }
@@ -2074,13 +2077,13 @@ void checkConsnames(
    {
       if( strlen(SCIPconsGetName(conss[c])) > MPS_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters; LP might be corrupted\n", 
+         SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters; LP might be corrupted\n",
             MPS_MAX_NAMELEN);
 
-         (*maxnamelen) = MPS_MAX_NAMELEN; 
+         (*maxnamelen) = MPS_MAX_NAMELEN;
          return;
       }
-      
+
       (*maxnamelen) = MAX(*maxnamelen, strlen(SCIPconsGetName(conss[c])));
    }
 }
@@ -2166,9 +2169,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    assert(scip != NULL);
    assert(result != NULL);
 
-   /* check if the variable names are not to long */
+   /* check if the variable names are not too long */
    checkVarnames(scip, vars, nvars, &maxnamelen);
-   /* check if the constraint names are to long */
+   /* check if the constraint names are too long */
    checkConsnames(scip, conss, nconss, transformed, &maxnamelen);
 
    /* before we start printing the problem in MPS format we sort the constraints by their type */
@@ -2427,7 +2430,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          SCIP_CALL( getLinearCoeff(scip, var, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
 				   SCIPgetNVarsLinear(scip, cons), transformed, &value) );
-         
+
          printEntry( scip, file, varname, consname, value, &recordcnt, maxnamelen );
       }
 
@@ -2731,7 +2734,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       if ( SCIPisEQ(scip, lb, ub) )
       {
          /* variable is fixed */
-         snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
+         snprintf(valuestr, MPS_MAX_VALUELEN+1, "%25.15g", lb);
          printStart(scip, file, "FX", "Bound", maxnamelen);
          printRecord(scip, file, varname, valuestr, maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
@@ -2757,7 +2760,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          }
          else
          {
-            snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
+            snprintf(valuestr, MPS_MAX_VALUELEN+1, "%25.15g", lb);
             printStart(scip, file, "LO", "Bound", maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
             SCIPinfoMessage(scip, file, "\n");
@@ -2767,7 +2770,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       /* print upper bound as far this one is not infinity */
       if( !SCIPisInfinity(scip, ub) )
       {
-         snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", ub);
+         snprintf(valuestr, MPS_MAX_VALUELEN+1, "%25.15g", ub);
          printStart(scip, file, "UP", "Bound", maxnamelen);
          printRecord(scip, file, varname, valuestr, maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
@@ -2810,12 +2813,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 	 {
             snprintf(varname, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(consvars[v]) );
             printStart(scip, file, "", varname, maxnamelen);
-            
+
 	    if ( sosweights != NULL )
                sprintf(valuestr, "%25.15g", sosweights[v]);
 	    else
                sprintf(valuestr, "%25d ", v);
-            
+
             SCIPinfoMessage(scip, file, "%25s\n", valuestr);
 	 }
       }
@@ -2829,7 +2832,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 	 sosweights = SCIPgetWeightsSOS2(scip, cons);
          snprintf(consname, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
 
-         printStart(scip, file, "S1", consname, -1);
+         printStart(scip, file, "S2", consname, -1);
 	 SCIPinfoMessage(scip, file, "\n");
 
 	 for (v = 0; v < nconsvars; ++v)
@@ -2841,7 +2844,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                sprintf(valuestr, "%25.15g", sosweights[v]);
 	    else
                sprintf(valuestr, "%25d ", v);
-            
+
 	    SCIPinfoMessage(scip, file, "%25s\n", valuestr);
 	 }
       }
