@@ -14,10 +14,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.h,v 1.16 2007/06/06 11:25:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_mps.h,v 1.17 2007/11/28 17:44:58 bzfpfets Exp $"
 
 /**@file   reader_mps.h
- * @brief  MPS file reader
+ * @brief  (extended) MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg
  */
