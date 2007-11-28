@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.432 2007/11/27 10:34:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.433 2007/11/28 08:20:38 bzfkocht Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7342,7 +7342,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int                   nvars,              /**< number of variables in the clique */
    int*                  cliquepartition     /**< array of length nvars to store the clique partition */
-   )
+                                     )
 {
    SCIP_VAR** cliquevars;
    SCIP_Bool* cliquevalues;
@@ -7385,37 +7385,41 @@ SCIP_RETCODE SCIPcalcCliquePartition(
          cliquevalues[0] = ivalue;
          ncliquevars = 1;
 
-         /* greedily fill up the clique */
-         for( j = i+1; j < nvars; ++j )
+         /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+         if( SCIPvarIsActive(ivar) ) 
          {
-            if( cliquepartition[j] == -1 )
+            /* greedily fill up the clique */
+            for( j = i+1; j < nvars; ++j )
             {
-               SCIP_VAR* jvar;
-               SCIP_Bool jvalue;
-               int k;
-
-               /* get the corresponding active problem variable */
-               jvar = vars[j];
-               jvalue = TRUE;
-               SCIP_CALL( SCIPvarGetProbvarBinary(&jvar, &jvalue) );
-
-               /* check if the variable has an edge in the implication graph to all other variables in this clique */
-               for( k = 0; k < ncliquevars; ++k )
+               if( cliquepartition[j] == -1 )
                {
-                  if( !SCIPvarsHaveCommonClique(jvar, jvalue, cliquevars[k], cliquevalues[k], TRUE) )
-                     break;
-               }
-               if( k == ncliquevars )
-               {
-                  /* put the variable into the same clique */
-                  cliquepartition[j] = ncliques;
-                  cliquevars[ncliquevars] = jvar;
-                  cliquevalues[ncliquevars] = jvalue;
-                  ncliquevars++;
+                  SCIP_VAR* jvar;
+                  SCIP_Bool jvalue;
+                  int k;
+
+                  /* get the corresponding active problem variable */
+                  jvar = vars[j];
+                  jvalue = TRUE;
+                  SCIP_CALL( SCIPvarGetProbvarBinary(&jvar, &jvalue) );
+
+                  /* check if the variable has an edge in the implication graph to all other variables in this clique */
+                  for( k = 0; k < ncliquevars; ++k )
+                  {
+                     if( !SCIPvarsHaveCommonClique(jvar, jvalue, cliquevars[k], cliquevalues[k], TRUE) )
+                        break;
+                  }
+                  if( k == ncliquevars )
+                  {
+                     /* put the variable into the same clique */
+                     cliquepartition[j] = ncliques;
+                     cliquevars[ncliquevars] = jvar;
+                     cliquevalues[ncliquevars] = jvalue;
+                     ncliquevars++;
+                  }
                }
             }
          }
-
+         
          /* this clique is finished */
          ncliques++;
       }
