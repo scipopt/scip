@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.3 2007/11/27 17:05:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.4 2007/11/28 18:08:39 bzfpfets Exp $"
 #define SCIP_DEBUG
 /**@file   cons_indicator.c
  * @brief  constraint handler for indicator constraints
@@ -198,6 +198,7 @@ static
 SCIP_RETCODE setAltLPObj(
       SCIP* scip,               /**< SCIP pointer */
       SCIP_LPI* lp,             /**< alternative LP */
+      SCIP_SOL* sol,            /**< solution to be dealt with */
       int nconss,               /**< number of constraints */
       SCIP_CONS** conss         /**< indicator constraints */
       )
@@ -221,7 +222,7 @@ SCIP_RETCODE setAltLPObj(
       consdata = SCIPconsGetData(conss[j]);
       assert( consdata != NULL );
 
-      obj[j] = SCIPgetVarSol(scip, consdata->binvar);
+      obj[j] = SCIPgetSolVal(scip, sol, consdata->binvar);
       assert( consdata->colIndex >= 0 );
       indices[j] = consdata->colIndex;
    }
@@ -1030,7 +1031,7 @@ SCIP_RETCODE separateIISRounding(
 #endif
 
    /* set obj. func. to current solution */
-   SCIP_CALL( setAltLPObj(scip, lp, nconss, conss) );
+   SCIP_CALL( setAltLPObj(scip, lp, sol, nconss, conss) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &S, nconss) );
 
