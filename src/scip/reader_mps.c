@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.82 2007/11/16 21:12:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.83 2007/11/28 15:19:47 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @brief  MPS file reader
@@ -53,9 +53,10 @@
  * mps reader internal methods
  */
 
-#define MPS_MAX_LINELEN 256
-#define MPS_MAX_NAMELEN   8
-#define MPS_MAX_VALUELEN 12
+#define MPS_MAX_LINELEN  1024
+#define MPS_MAX_NAMELEN   255
+#define MPS_MAX_VALUELEN   25
+#define MPS_MAX_FIELDLEN   20
 
 #define PATCH_CHAR    '_'
 #define BLANK         ' '
@@ -1587,22 +1588,42 @@ SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 }
 
 
+/* computes the field width such that the output file is nicely arranged */
+static
+int computeFieldWidth(
+   int                   width              /**< required width */
+   )
+{
+   width = MAX(8, width);
+   return MIN(MPS_MAX_FIELDLEN, width);
+}
+
+
 /* output two strings in columns 1 (width 8) and 2 (width 12) */
 static
 void printRecord(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           col1,               /**< column 1 */
-   const char*           col2                /**< column 2 */
+   const char*           col2,               /**< column 2 */
+   int                   maxnamelen          /**< maximum name lenght */
    )
 {
+   int fieldwidth;
+   char format[16];
+
    assert( scip != NULL );
    assert( col1 != NULL );
    assert( col2 != NULL );
-   assert( strlen(col1) <= 8 );
-   assert( strlen(col2) <= 12 );
+   assert( strlen(col1) <= MPS_MAX_NAMELEN );
+   assert( strlen(col2) <= MPS_MAX_VALUELEN );
+   assert( maxnamelen > 0 );
 
-   SCIPinfoMessage(scip, file, " %-8.8s  %12.12s ", col1, col2);
+
+   fieldwidth = computeFieldWidth(maxnamelen);
+   sprintf(format, " %%-%ds %%%ds ", fieldwidth, MPS_MAX_VALUELEN);
+
+   SCIPinfoMessage(scip, file, format, col1, col2);
 }
 
 /* output two strings in columns 1 (width 2) and 2 (width 8) */
@@ -1611,16 +1632,32 @@ void printStart(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           col1,               /**< column 1 */
-   const char*           col2                /**< column 2 */
+   const char*           col2,               /**< column 2 */
+   int                   maxnamelen          /**< maximum name lenght */
    )
 {
+   int fieldwidth;
+   char format[16];
+
    assert( scip != NULL );
    assert( col1 != NULL );
    assert( col2 != NULL );
    assert( strlen(col1) <= 2 );
-   assert( strlen(col2) <= 8 );
+   assert( strlen(col2) <= MPS_MAX_NAMELEN );
+   assert( maxnamelen == -1 || maxnamelen > 0 );
 
-   SCIPinfoMessage(scip, file, " %-2.2s %-8.8s ", col1, col2);
+   if( maxnamelen == -1 )
+   {
+      /* format does not matter */
+      sprintf(format, " %%-2.2s %%-s ");
+   }
+   else
+   {
+      fieldwidth = computeFieldWidth(maxnamelen);
+      sprintf(format, " %%-2.2s %%-%ds ", fieldwidth);
+   }
+   
+   SCIPinfoMessage(scip, file, format, col1, col2);
 }
 
 /* prints the given data as column entry */
@@ -1631,10 +1668,11 @@ void printEntry(
    const char*        varname,            /**< variable name */
    const char*        consname,           /**< constraint name */
    SCIP_Real          value,              /**< value to display */
-   int*               recordcnt           /**< pointer to store the number of records per line */
+   int*               recordcnt,          /**< pointer to store the number of records per line */
+   int                maxnamelen          /**< maximum name lenght */
    )
 {
-   char valuestr[12];
+   char valuestr[MPS_MAX_VALUELEN + 1];
 
    assert( scip != NULL );
    assert( recordcnt != NULL );
@@ -1642,16 +1680,16 @@ void printEntry(
 
    if( !SCIPisZero(scip, value) )
    {
-      snprintf(valuestr, MPS_MAX_VALUELEN, "%.12g", value);
+      snprintf(valuestr, MPS_MAX_VALUELEN + 1, "%25.15g", value);
 
       if ( *recordcnt == 0 )
       {
          /* finish last line which already contains two records */
-         printStart(scip, file, "", varname);
+         printStart(scip, file, "", varname, maxnamelen);
          *recordcnt = 0;
       }
 
-      printRecord(scip, file, consname, valuestr);
+      printRecord(scip, file, consname, valuestr, maxnamelen);
       (*recordcnt)++;
 
       if ( *recordcnt == 2 )
@@ -1696,7 +1734,7 @@ void printRowType(
       }
    }
 
-   printStart(scip, file, rowtype, name);
+   printStart(scip, file, rowtype, name, -1);
    SCIPinfoMessage(scip, file, "\n");
 }
 
@@ -1934,7 +1972,8 @@ SCIP_RETCODE printAggregatedConsVar(
    SCIP_CONS**        consSOS2,           /**< array of SOS1 constraints */
    int                nAggregatedVars,    /**< number of aggregated variables */
    SCIP_VAR**         aggregatedVars,     /**< array storing the aggregated variables */
-   int*               recordcnt           /**< variable counter */
+   int*               recordcnt,          /**< variable counter */
+   int                maxnamelen          /**< pointer to store rhe maximum name lenght */
    )
 {
    int c, v;
@@ -1975,7 +2014,7 @@ SCIP_RETCODE printAggregatedConsVar(
       for (v = 0; v < nactivevars; ++v)
       {
 	 if ( activevars[v] == var )
-	    printEntry(scip, file, varname, consname, activevals[v], recordcnt);
+	    printEntry(scip, file, varname, consname, activevals[v], recordcnt, maxnamelen);
       }
    }
 
@@ -1991,13 +2030,15 @@ static
 void checkVarnames(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_VAR**         vars,               /**< array of variables */
-   int                nvars               /**< number of variables */
+   int                nvars,              /**< number of variables */
+   unsigned int*      maxnamelen          /**< pointer to store rhe maximum name lenght */
    )
 {
    int v;
 
    assert( scip != NULL );
    assert( vars != NULL );
+   assert( maxnamelen != NULL );
 
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
@@ -2005,8 +2046,11 @@ void checkVarnames(
       if( strlen(SCIPvarGetName(vars[v])) > MPS_MAX_NAMELEN )
       {
          SCIPwarningMessage("there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", MPS_MAX_NAMELEN);
+         (*maxnamelen) = MPS_MAX_NAMELEN; 
          return;
       }
+      
+      (*maxnamelen) = MAX(*maxnamelen, strlen(SCIPvarGetName(vars[v])));
    }
 }
 
@@ -2016,21 +2060,28 @@ void checkConsnames(
    SCIP*              scip,               /**< SCIP data structure */
    SCIP_CONS**        conss,              /**< array of constraints */
    int                nconss,             /**< number of constraints */
-   SCIP_Bool          transformed         /**< TRUE iff problem is the transformed problem */
+   SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
+   unsigned int*      maxnamelen          /**< pointer to store rhe maximum name lenght */
    )
 {
    int c;
 
    assert( scip != NULL );
    assert( conss != NULL );
+   assert( maxnamelen != NULL );
 
    for( c = 0; c < nconss; ++c )
    {
       if( strlen(SCIPconsGetName(conss[c])) > MPS_MAX_NAMELEN )
       {
-         SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters; LP might be corrupted\n", MPS_MAX_NAMELEN);
+         SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters; LP might be corrupted\n", 
+            MPS_MAX_NAMELEN);
+
+         (*maxnamelen) = MPS_MAX_NAMELEN; 
          return;
       }
+      
+      (*maxnamelen) = MAX(*maxnamelen, strlen(SCIPconsGetName(conss[c])));
    }
 }
 
@@ -2108,6 +2159,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_Longint* weights;
 
    SCIP_Bool needRANGES = FALSE;
+   unsigned int maxnamelen = 0;
 
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
@@ -2115,9 +2167,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    assert(result != NULL);
 
    /* check if the variable names are not to long */
-   checkVarnames(scip, vars, nvars);
+   checkVarnames(scip, vars, nvars, &maxnamelen);
    /* check if the constraint names are to long */
-   checkConsnames(scip, conss, nconss, transformed);
+   checkConsnames(scip, conss, nconss, transformed, &maxnamelen);
 
    /* before we start printing the problem in MPS format we sort the constraints by their type */
    SCIP_CALL( SCIPallocBufferArray(scip, &linears, nconss) );
@@ -2255,7 +2307,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* print ROWS section */
    SCIPinfoMessage(scip, file, "ROWS\n");
 
-   printStart(scip, file, "N", "Obj");
+   printStart(scip, file, "N", "Obj", -1);
    SCIPinfoMessage(scip, file, "\n");
 
    /* take care of the linear constraints */
@@ -2328,7 +2380,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    {
       /* output type */
       snprintf(consname, MPS_MAX_NAMELEN, "aggr%d", c );
-      printRowType(scip, file, aggregatedConstant[c], aggregatedConstant[c], consname );
+      printRowType(scip, file, aggregatedConstant[c], aggregatedConstant[c], consname);
    }
 
    /* print COLUMNS section */
@@ -2338,9 +2390,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    if ( nint > 0 )
    {
-      printStart(scip, file, "", "INTSTART");
-      printRecord(scip, file, "'MARKER'", "");
-      printRecord(scip, file, "'INTORG'", "");
+      printStart(scip, file, "", "INTSTART", maxnamelen);
+      printRecord(scip, file, "'MARKER'", "", maxnamelen);
+      printRecord(scip, file, "'INTORG'", "", maxnamelen);
       SCIPinfoMessage(scip, file, "\n");
    }
 
@@ -2364,7 +2416,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       if ( objsense == SCIP_OBJSENSE_MAXIMIZE )
          value *= -1.0;
 
-      printEntry( scip, file, varname, "Obj", value, &recordcnt );
+      printEntry( scip, file, varname, "Obj", value, &recordcnt, maxnamelen );
 
       /* take care of the linear constraints */
       for( c = 0; c < nlinears; ++c )
@@ -2375,8 +2427,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          SCIP_CALL( getLinearCoeff(scip, var, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
 				   SCIPgetNVarsLinear(scip, cons), transformed, &value) );
-
-         printEntry( scip, file, varname, consname, value, &recordcnt );
+         
+         printEntry( scip, file, varname, consname, value, &recordcnt, maxnamelen );
       }
 
       /* take care of the setppc constraints */
@@ -2389,7 +2441,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          SCIP_CALL( getLinearCoeff(scip, var, SCIPgetVarsSetppc(scip, cons), NULL,
 				   SCIPgetNVarsSetppc(scip, cons), transformed, &value) );
 
-         printEntry( scip, file, varname, consname, value, &recordcnt );
+         printEntry( scip, file, varname, consname, value, &recordcnt, maxnamelen );
       }
 
       /* take care of the logicor constraints */
@@ -2402,7 +2454,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          SCIP_CALL( getLinearCoeff(scip, var, SCIPgetVarsLogicor(scip, cons), NULL,
 				   SCIPgetNVarsLogicor(scip, cons), transformed, &value) );
 
-         printEntry( scip, file, varname, consname, value, &recordcnt );
+         printEntry( scip, file, varname, consname, value, &recordcnt, maxnamelen );
       }
 
       /* take care of the knapsack constraints */
@@ -2423,7 +2475,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          SCIP_CALL( getLinearCoeff(scip, var, SCIPgetVarsKnapsack(scip, cons), vals,
                nconsvars, transformed, &value) );
 
-         printEntry( scip, file, varname, consname, value, &recordcnt );
+         printEntry( scip, file, varname, consname, value, &recordcnt, maxnamelen );
 
          SCIPfreeBufferArray(scip, &vals);
       }
@@ -2447,7 +2499,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          SCIP_CALL( getLinearCoeff(scip, var, consvars, vals, 2, transformed, &value) );
 
-         printEntry( scip, file, varname, consname, value, &recordcnt );
+         printEntry( scip, file, varname, consname, value, &recordcnt, maxnamelen );
 
          /* free buffer array */
          SCIPfreeBufferArray(scip, &consvars);
@@ -2456,7 +2508,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
       /* take care of the aggregated constraints needed for SOS constraints */
       SCIP_CALL( printAggregatedConsVar(scip, file, var, varname, nvars, transformed, nConsSOS1, consSOS1, nConsSOS2, consSOS2,
-					nAggregatedVars, aggregatedVars, &recordcnt) );
+            nAggregatedVars, aggregatedVars, &recordcnt, maxnamelen) );
 
       if( recordcnt == 1 )
          SCIPinfoMessage(scip, file, "\n");
@@ -2464,10 +2516,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       /* print end of integer variables */
       if( v + 1 == nint )
       {
-         printStart(scip, file, "", "INTEND");
-         printRecord(scip, file, "'MARKER'", "");
-         printRecord(scip, file, "'INTEND'", "");
-         SCIPinfoMessage(scip, file, "\n");
+         printStart(scip, file, "", "INTEND", maxnamelen);
+         printRecord(scip, file, "'MARKER'", "", maxnamelen);
+         printRecord(scip, file, "'INTEND'", "", maxnamelen);
+         SCIPinfoMessage(scip, file, "\n", maxnamelen);
       }
    }
 
@@ -2484,7 +2536,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
       /* take care of the aggregated constraints needed for SOS constraints */
       SCIP_CALL( printAggregatedConsVar(scip, file, var, varname, nvars, transformed, nConsSOS1, consSOS1, nConsSOS2, consSOS2,
-					nAggregatedVars, aggregatedVars, &recordcnt) );
+            nAggregatedVars, aggregatedVars, &recordcnt, maxnamelen) );
 
       if( recordcnt == 1 )
          SCIPinfoMessage(scip, file, "\n");
@@ -2512,7 +2564,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( getLinearRhs(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
 			      SCIPgetNVarsLinear(scip, cons), transformed, &value) );
 
-      printEntry( scip, file, "RHS", consname, value, &recordcnt );
+      printEntry( scip, file, "RHS", consname, value, &recordcnt, maxnamelen );
    }
 
    /* take care of the setppc constraints */
@@ -2525,7 +2577,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( getLinearRhs(scip, SCIPgetVarsSetppc(scip, cons), NULL,
             SCIPgetNVarsSetppc(scip, cons), transformed, &value) );
 
-      printEntry( scip, file, "RHS", consname, value, &recordcnt );
+      printEntry( scip, file, "RHS", consname, value, &recordcnt, maxnamelen );
    }
 
    /* take care of the logicor constraints */
@@ -2538,7 +2590,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( getLinearRhs(scip, SCIPgetVarsLogicor(scip, cons), NULL,
             SCIPgetNVarsLogicor(scip, cons), transformed, &value) );
 
-      printEntry( scip, file, "RHS", consname, value, &recordcnt );
+      printEntry( scip, file, "RHS", consname, value, &recordcnt, maxnamelen );
    }
 
    /* take care of the knapsack constraints */
@@ -2559,7 +2611,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( getLinearRhs(scip, SCIPgetVarsKnapsack(scip, cons), vals,
             nconsvars, transformed, &value) );
 
-      printEntry( scip, file, "RHS", consname, value, &recordcnt );
+      printEntry( scip, file, "RHS", consname, value, &recordcnt, maxnamelen );
 
       SCIPfreeBufferArray(scip, &vals);
    }
@@ -2590,7 +2642,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
       SCIP_CALL( getLinearRhs(scip, consvars, vals, 2, transformed, &value) );
 
-      printEntry( scip, file, "RHS", consname, value, &recordcnt );
+      printEntry( scip, file, "RHS", consname, value, &recordcnt, maxnamelen );
 
       /* free buffer array */
       SCIPfreeBufferArray(scip, &consvars);
@@ -2602,7 +2654,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    {
       /* output rhs */
       snprintf(consname, MPS_MAX_NAMELEN, "aggr%d", c);
-      printEntry(scip, file, "RHS", consname, -aggregatedConstant[c], &recordcnt);
+      printEntry(scip, file, "RHS", consname, -aggregatedConstant[c], &recordcnt, maxnamelen);
    }
 
    if( recordcnt == 1 )
@@ -2626,7 +2678,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, rhs, lhs) )
          {
             assert( SCIPisGT(scip, rhs, lhs) );
-            printEntry( scip, file, "RANGE", consname, rhs - lhs, &recordcnt );
+            printEntry( scip, file, "RANGE", consname, rhs - lhs, &recordcnt, maxnamelen );
          }
       }
 
@@ -2659,8 +2711,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       /* take care of binary variables */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
-         printStart(scip, file, "BV", "Bound");
-         printRecord(scip, file, varname, "");
+         printStart(scip, file, "BV", "Bound", maxnamelen);
+         printRecord(scip, file, varname, "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
          continue;
       }
@@ -2669,8 +2721,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       if ( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
       {
          /* variable is free */
-         printStart(scip, file, "FR", "Bound");
-         printRecord(scip, file, varname, "");
+         printStart(scip, file, "FR", "Bound", maxnamelen);
+         printRecord(scip, file, varname, "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
          continue;
       }
@@ -2679,9 +2731,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       if ( SCIPisEQ(scip, lb, ub) )
       {
          /* variable is fixed */
-         snprintf(valuestr, MPS_MAX_VALUELEN, "%.12g", lb);
-         printStart(scip, file, "FX", "Bound");
-         printRecord(scip, file, varname, valuestr);
+         snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
+         printStart(scip, file, "FX", "Bound", maxnamelen);
+         printRecord(scip, file, varname, valuestr, maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
          continue;
       }
@@ -2690,8 +2742,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       if ( SCIPisInfinity(scip, -lb) )
       {
          assert( !SCIPisInfinity(scip, ub) );
-         printStart(scip, file, "MI", "Bound");
-         printRecord(scip, file, varname, "");
+         printStart(scip, file, "MI", "Bound", maxnamelen);
+         printRecord(scip, file, varname, "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
       }
       else
@@ -2705,9 +2757,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          }
          else
          {
-            snprintf(valuestr, MPS_MAX_VALUELEN, "%.12g", lb);
-            printStart(scip, file, "LO", "Bound");
-            printRecord(scip, file, varname, valuestr);
+            snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
+            printStart(scip, file, "LO", "Bound", maxnamelen);
+            printRecord(scip, file, varname, valuestr, maxnamelen);
             SCIPinfoMessage(scip, file, "\n");
          }
       }
@@ -2715,9 +2767,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       /* print upper bound as far this one is not infinity */
       if( !SCIPisInfinity(scip, ub) )
       {
-         snprintf(valuestr, MPS_MAX_VALUELEN, "%.12g", ub);
-         printStart(scip, file, "UP", "Bound");
-         printRecord(scip, file, varname, valuestr);
+         snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", ub);
+         printStart(scip, file, "UP", "Bound", maxnamelen);
+         printRecord(scip, file, varname, valuestr, maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
       }
    }
@@ -2729,8 +2781,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       snprintf(varname, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
 
       /* variable is free */
-      printStart(scip, file, "FR", "Bound");
-      printRecord(scip, file, varname, "");
+      printStart(scip, file, "FR", "Bound", maxnamelen);
+      printRecord(scip, file, varname, "", maxnamelen);
       SCIPinfoMessage(scip, file, "\n");
    }
 
@@ -2751,23 +2803,20 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 	 sosweights = SCIPgetWeightsSOS1(scip, cons);
          snprintf(consname, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
 
-	 SCIPinfoMessage(scip, file, " S1 ");
-	 if ( strlen(consname) > 0 )
-	 {
-	    SCIPinfoMessage(scip, file, "%s", SCIPconsGetName(cons));
-	 }
+         printStart(scip, file, "S1", consname, -1);
 	 SCIPinfoMessage(scip, file, "\n");
 
 	 for (v = 0; v < nconsvars; ++v)
 	 {
             snprintf(varname, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(consvars[v]) );
-
-	    SCIPinfoMessage(scip, file, "    %-8s", varname);
+            printStart(scip, file, "", varname, maxnamelen);
+            
 	    if ( sosweights != NULL )
-	       SCIPinfoMessage(scip, file, "  %-.12g ", sosweights[v]);
+               sprintf(valuestr, "%25.15g", sosweights[v]);
 	    else
-	       SCIPinfoMessage(scip, file, "  %-12d ", v);
-	    SCIPinfoMessage(scip, file, "\n");
+               sprintf(valuestr, "%25d ", v);
+            
+            SCIPinfoMessage(scip, file, "%25s\n", valuestr);
 	 }
       }
 
@@ -2780,22 +2829,20 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 	 sosweights = SCIPgetWeightsSOS2(scip, cons);
          snprintf(consname, MPS_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
 
-	 SCIPinfoMessage(scip, file, " S2 ");
-	 if ( strlen(consname) > 0 )
-	    SCIPinfoMessage(scip, file, "%s", consname);
-
+         printStart(scip, file, "S1", consname, -1);
 	 SCIPinfoMessage(scip, file, "\n");
 
 	 for (v = 0; v < nconsvars; ++v)
 	 {
             snprintf(varname, MPS_MAX_NAMELEN, "%s", SCIPvarGetName(consvars[v]) );
+            printStart(scip, file, "", varname, maxnamelen);
 
-	    SCIPinfoMessage(scip, file, "    %-8s", varname);
 	    if ( sosweights != NULL )
-	       SCIPinfoMessage(scip, file, "  %-.12g ", sosweights[v]);
+               sprintf(valuestr, "%25.15g", sosweights[v]);
 	    else
-	       SCIPinfoMessage(scip, file, "  %-12d ", v);
-	    SCIPinfoMessage(scip, file, "\n");
+               sprintf(valuestr, "%25d ", v);
+            
+	    SCIPinfoMessage(scip, file, "%25s\n", valuestr);
 	 }
       }
    }
