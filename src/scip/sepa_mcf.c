@@ -14,8 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.6 2007/10/29 12:03:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.7 2007/12/10 15:08:17 bzfpfend Exp $"
 
+#define SCIP_DEBUG
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
@@ -72,6 +73,11 @@ struct SCIP_SepaData
 /*
  * Local methods
  */
+
+#define LHSPOSSIBLE 1
+#define RHSPOSSIBLE 2
+#define LHSASSIGNED 4
+#define RHSASSIGNED 8
 
 /** creates an empty MCF network data structure */
 static
@@ -133,9 +139,227 @@ void mcfnetworkFree(
    }
 }
 
+/* generates a new commodity */
+static
+SCIP_RETCODE newCommodity(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int***                comcols,            /**< pointer to comcols[][] array */
+   int**                 ncomcols,           /**< pointer to ncomcols[] array */
+   int**                 comcolssize,        /**< pointer to comcolssize[] array */
+   int*                  ncommodities,       /**< pointer to number of commodities */
+   int*                  commoditiessize     /**< pointer to commoditiessize */
+   )
+{
+   assert(*ncommodities <= *commoditiessize);
+   if( *ncommodities == *commoditiessize )
+   {
+      *commoditiessize *= 2;
+      *commoditiessize = MAX(*commoditiessize, (*ncommodities)+1);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, comcols, *commoditiessize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, ncomcols, *commoditiessize) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, comcolssize, *commoditiessize) );
+   }
+   assert(*ncommodities < *commoditiessize);
+   (*ncomcols)[*ncommodities] = 0;
+   (*comcolssize)[*ncommodities] = 8;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(*comcols)[*ncommodities], (*comcolssize)[*ncommodities]) );
+   (*ncommodities)++;
+   
+   return SCIP_OKAY;
+}
 
-#define LHSPOSSIBLE 1
-#define RHSPOSSIBLE 2
+/* add column c to commodity k */
+static
+SCIP_RETCODE addCommodityCol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int**                 comcols,            /**< array to store columns for each commodity */
+   int*                  ncomcols,           /**< number of columns in each commodity */
+   int*                  comcolssize,        /**< size of comcols[k] arrays */
+   int                   k,                  /**< commodity to add column to */
+   int                   c                   /**< column to add */
+   )
+{
+   assert(ncomcols[k] <= comcolssize[k]);
+   if( ncomcols[k] == comcolssize[k] )
+   {
+      comcolssize[k] *= 2;
+      comcolssize[k] = MAX(comcolssize[k], ncomcols[k]+1);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &comcols[k], comcolssize[k]) );
+   }
+   assert(ncomcols[k] < comcolssize[k]);
+   comcols[k][ncomcols[k]] = c;
+   ncomcols[k]++;
+
+   return SCIP_OKAY;
+}
+
+/* adds a flow row to the given commodity */
+static
+SCIP_RETCODE addCommodityFlowRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned char*        flowrowsigns,       /**< marker whether rows are flow row candidates */
+   int*                  flowrowcom,         /**< commodities to which rows are assigned */
+   int*                  pluscom,            /**< commodities to which columns are assigned with positive entry */
+   int*                  minuscom,           /**< commodities to which columns are assigned with negative entry */
+   int**                 comcols,            /**< array to store columns for each commodity */
+   int*                  ncomcols,           /**< number of columns in each commodity */
+   int*                  comcolssize,        /**< size of comcols[k] arrays */
+   SCIP_ROW*             row,                /**< flow row to add to commodity */
+   unsigned char         flowrowsign,        /**< possible signs to use for the flow row */
+   int                   k                   /**< commodity number */
+   )
+{
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   int rowlen;
+   int scale;
+   int r;
+   int i;
+
+   r = SCIProwGetLPPos(row);
+   assert(r >= 0);
+   assert((flowrowsign & flowrowsigns[r]) == flowrowsign);
+   assert((flowrowsign & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0);
+
+   /* prefer lhs
+    * TODO: check if we can do something more clever.
+    */
+   if( (flowrowsign & LHSPOSSIBLE) != 0 )
+   {
+      flowrowsigns[r] |= LHSASSIGNED;
+      scale = +1;
+   }
+   else
+   {
+      assert(flowrowsign == RHSPOSSIBLE);
+      flowrowsigns[r] |= RHSASSIGNED;
+      scale = -1;
+   }
+   rowcols = SCIProwGetCols(row);
+   rowvals = SCIProwGetVals(row);
+   rowlen = SCIProwGetNNonz(row);
+   for( i = 0; i < rowlen; i++ )
+   {
+      int c;
+
+      c = SCIPcolGetLPPos(rowcols[i]);
+      if( c >= 0 )
+      {
+         /* if not yet existing, add column to commodity array */
+         if( pluscom[c] == -1 && minuscom[c] == -1 )
+         {
+            SCIP_CALL( addCommodityCol(scip, comcols, ncomcols, comcolssize, k, c) );
+         }
+
+         /* assign the sign of the column in the commodity */
+         if( scale * rowvals[i] > 0 )
+         {
+            assert(pluscom[c] == -1);
+            pluscom[c] = k;
+         }
+         else
+         {
+            assert(minuscom[c] == -1);
+            minuscom[c] = k;
+         }
+      }
+   }
+   flowrowcom[r] = k;
+
+   return SCIP_OKAY;
+}
+
+/* checks whether the given flow constraint candidate row fits into the given commodity, and returns
+ * the possible row signs
+ */
+static
+unsigned char getFlowRowCommodityFit(
+   unsigned char*        flowrowsigns,       /**< marker whether rows are flow row candidates */
+   int*                  flowrowcom,         /**< commodities to which rows are assigned */
+   SCIP_Bool*            iscapacity,         /**< marks whether column is identified as capacity variable */
+   int*                  pluscom,            /**< commodities to which columns are assigned with positive entry */
+   int*                  minuscom,           /**< commodities to which columns are assigned with negative entry */
+   SCIP_ROW*             row,                /**< row to check */
+   int                   k                   /**< commodity number */
+   )
+{
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   int rowlen;
+   unsigned char flowrowsign;
+   int r;
+   int i;
+
+   r = SCIProwGetLPPos(row);
+
+   /* ignore rows that are not in the current LP */
+   if( r < 0 )
+      return 0;
+
+   /* check if row is a flow conservation constraint candidate */
+   flowrowsign = flowrowsigns[r];
+   if( flowrowsign == 0 )
+      return 0;
+
+   /* check if row has already been assigned to some commodity */
+   if( flowrowcom[r] >= 0 )
+      return 0;
+
+   /* flowrowsign must be a combination of the POSSIBLE flags */
+   assert((flowrowsign & ~(LHSPOSSIBLE | RHSPOSSIBLE)) == 0);
+
+   /* go through the coefficients and check whether the columns fit into the commodity */
+   rowcols = SCIProwGetCols(row);
+   rowvals = SCIProwGetVals(row);
+   rowlen = SCIProwGetNNonz(row);
+   for( i = 0; i < rowlen && flowrowsign != 0; i++ )
+   {
+      int c;
+
+      c = SCIPcolGetLPPos(rowcols[i]);
+
+      /* ignore columns that are not in the current LP */
+      if( c < 0 )
+         continue;
+
+      /* capacity variables must not be member of a flow conservation constraint */
+      if( iscapacity[c] )
+      {
+         /* delete row from candidate set */
+         flowrowsigns[r] = 0;
+         return 0;
+      }
+
+      /* if column already belongs to a different commodity, the row cannot be a flow conservation constraint */
+      if( (pluscom[c] != k && pluscom[c] != -1)
+          || (minuscom[c] != k && minuscom[c] != -1) )
+      {
+         /* delete row from candidate set */
+         flowrowsigns[r] = 0;
+         return 0;
+      }
+
+      /* if column already belongs to the current commodity, it only fits if it is not yet present with the same sign */
+      if( pluscom[c] == k )
+      {
+         /* column must be included with negative sign */
+         if( rowvals[i] < 0.0 )
+            flowrowsign &= ~RHSPOSSIBLE;
+         else
+            flowrowsign &= ~LHSPOSSIBLE;
+      }
+      if( minuscom[c] == k )
+      {
+         /* column must be included with positive sign */
+         if( rowvals[i] > 0.0 )
+            flowrowsign &= ~RHSPOSSIBLE;
+         else
+            flowrowsign &= ~LHSPOSSIBLE;
+      }
+   }
+
+   return flowrowsign;
+}
 
 /** extracts a MCF network structure from the current LP */
 static
@@ -150,10 +374,12 @@ SCIP_RETCODE mcfnetworkExtract(
    unsigned char* flowrowsigns;
    SCIP_Real* flowrowscalars;
    unsigned char* capacityrowsigns;
-   int* pluscom;
-   int* minuscom;
+   int* flowcands;     /* possibly not needed??????????????????? */
+   int* capacitycands;
    int nrows;
    int ncols;
+   int nflowcands;
+   int ncapacitycands;
    int r;
    int c;
 
@@ -172,6 +398,10 @@ SCIP_RETCODE mcfnetworkExtract(
    SCIP_CALL( SCIPallocBufferArray(scip, &flowrowsigns, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &flowrowscalars, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &capacityrowsigns, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &flowcands, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &capacitycands, nrows) );
+   nflowcands = 0;
+   ncapacitycands = 0;
    for( r = 0; r < nrows; r++ )
    {
       SCIP_ROW* row;
@@ -210,11 +440,17 @@ SCIP_RETCODE mcfnetworkExtract(
       }
       if( i == rowlen )
       {
-         if( !SCIPisInfinity(scip, -rowlhs) )
+         /* Flow conservation constraints should always be a*x >= d with d >= 0.
+          * Depending on the sign of lhs and rhs, we can rule out some options.
+          * Only if lhs = 0 and rhs = 0, both sides are still valid candidates.
+          */
+         if( !SCIPisNegative(scip, rowlhs) )
             flowrowsigns[r] |= LHSPOSSIBLE;
-         if( !SCIPisInfinity(scip, rowrhs) )
+         if( !SCIPisPositive(scip, rowrhs) )
             flowrowsigns[r] |= RHSPOSSIBLE;
          flowrowscalars[r] = 1.0/coef;
+         flowcands[nflowcands] = r;
+         nflowcands++;
       }
 
       /* identify capacity constraints */
@@ -224,7 +460,7 @@ SCIP_RETCODE mcfnetworkExtract(
          rowsign |= LHSPOSSIBLE;
       if( !SCIPisInfinity(scip, rowrhs) )
          rowsign |= RHSPOSSIBLE;
-      for( i = 0; i < rowlen && rowsign > 0; i++ )
+      for( i = 0; i < rowlen && rowsign != 0; i++ )
       {
          if( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) == SCIP_VARTYPE_CONTINUOUS )
          {
@@ -245,8 +481,12 @@ SCIP_RETCODE mcfnetworkExtract(
             }
          }
       }
-      if( i == rowlen && hasinteger )
+      if( i == rowlen && hasinteger && rowsign != 0 )
+      {
          capacityrowsigns[r] = rowsign;
+         capacitycands[ncapacitycands] = r;
+         ncapacitycands++;
+      }
    }
 
    SCIPdebugMessage("flow conservation candidates:\n");
@@ -268,54 +508,198 @@ SCIP_RETCODE mcfnetworkExtract(
       }
    }
 
-   /* Algorithm to identify multi-commodity-flow network with capacity constraints
-    *
-    * 1. Initialize pluscom[c] = -1 and minuscom[c] = -1 for all columns c.
-    * 2. For all commodities k: Find next node flow conservation constraint for commodity k.
-    *    (a) For all columns already known in commodity k with only one entry:
-    *        (i) For all flow conservation rows in which this column appears:
-    *            - Check if it fits to this commodity. If yes, take it and goto 3.
-    *    (b) If nothing fits, exit.
-    * 3. For all newly introduced arc flow variables of commodity 0 due to the new row,
-    *    find capacity constraints.
-    * 4. For first new capacity constraint (just pick one, it is only used as search
-    *    criterion for new flow conservation constraints in other commodities):
-    *    (a) For all potential arc flow variables in the capacity constraint:
-    *        (i) For all flow conservation rows in which this column appears:
-    *            - Check if it fits to one of the known commodities.
-    *               * plus/minus pattern with overlap
-    *               * capacity constraints
-    *              If yes, add it to the commodity.
-    *            - Otherwise, check if it gives rise to a new commodity.
-    *               * plus/minus pattern without overlap
-    *               * capacity constraints
-    *              If yes, generate new commodity and add the row.
-    * 5. Goto 2.
-    */
-   SCIP_CALL( SCIPallocBufferArray(scip, &pluscom, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &minuscom, ncols) );
-
-   /* 1. Initialize pluscom[c] = -1 and minuscom[c] = -1 for all columns c. */
-   for( c = 0; c < ncols; c++ )
+   if( nflowcands > 0 && ncapacitycands > 0 )
    {
-      pluscom[c] = -1;
-      minuscom[c] = -1;
-   }
+      SCIP_Bool* iscapacity; /* marks if column is identified to be a capacity variable */
+      int* pluscom;     /* pluscom[c] = k: arc flow column c belongs to commodity k with +1 entry in flow constraint */
+      int* minuscom;    /* minuscom[c] = k: arc flow column c belongs to commodity k with -1 entry in flow constraint */
+      int* flowrowcom;  /* flowrowcom[r] = k: row r is a flow constraint of commodity k */
+      int** comcols;    /* comcols[k]: array of arc flow columns that belong to commodity k */
+      int* ncomcols;    /* ncolmcols[k]: number of arc flow columns in commodity k */
+      int* comcolssize; /* comcolssize[k]: space available for comcols[] array */
+      int ncommodities;
+      int commoditiessize;
+      int k;
 
-   while( TRUE )
-   {
-      /* 2. For all commodities k: Find next node flow conservation constraint for commodity k.
-       *    (a) For all columns already known in commodity k with only one entry:
-       *        (i) For all flow conservation rows in which this column appears:
-       *            - Check if it fits to this commodity. If yes, take it and goto 3.
-       *    (b) If nothing fits, exit.
+      /* Algorithm to identify multi-commodity-flow network with capacity constraints
+       *
+       * 1. Sort flow conservation and capacity constraint candidates by a ranking on
+       *    how sure we are that it is indeed a constraint of the desired type.
+       * 2. Initialize iscapacity[c] = FALSE, pluscom[c] = -1, and minuscom[c] = -1 for all columns c.
+       *    Initialize flowrowcom[r] = -1 for all rows r.
+       * 3. Put the first flow conservation constraint candidate to commodity 0, and
+       *    assign the included variables to commodity 0.
+       * 4. Find next node flow conservation constraint (usually in commodity 0).
+       *    For all commodities k:
+       *     (a) For all columns already known in commodity k with only one entry:
+       *          (i) For all flow conservation rows in which this column appears:
+       *              - Check if it fits to this commodity. If yes, take it and goto 5.
+       *    If nothing fits, exit.
+       * 5. For all newly introduced arc flow variables of commodity k due to the new row,
+       *    find a capacity constraint which is compatible to all commodities:
+       *     (i)   must have entry for arc flow variable
+       *     (ii)  must not have entry for other arc flow variables in the commodity k
+       *     (iii) must have at most (usually exactly) one entry for arc flow variables of each commodity
+       *     (iv)  each entry that belongs to an arc flow variable of a commodity must not have the opposite
+       *           sign in this commodity compared to commodity k
+       *    If no capacity constraint has been found, goto 4.
+       * 6. For the capacity constraint, identify corresponding columns in other commodities:
+       *    (a) For all potential arc flow variables in the capacity constraint that do not yet belong to a
+       *        commodity:
+       *        (i)  For all flow conservation rows in which this column appears:
+       *             - Check if it fits to the new node flow conservation constraint in commodity k:
+       *                * columns already assigned to a commodity must have the same sign as in new node flow conservation constraint
+       *                * number of positive and negative coefficients of unassigned columns must match new node flow conservation constraint
+       *               Otherwise, ignore constraint.
+       *               Note that if the constraint has overlap with some commodity, it will automatically fit due to the design of the algorithm.
+       *             - If found flow conservation constraint has columns which are already assigned to some commodity,
+       *               add it to the same commodity and exit this loop.
+       *               Otherwise, remember row.
+       *        (ii) If no constraint was added to an existing commodity, generate new commodity and add the remembered row.
+       * 7. Goto 4.
        */
-      
+
+      /* allocate memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &iscapacity, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &pluscom, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &minuscom, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &flowrowcom, nrows) );
+
+      ncommodities = 0;
+      commoditiessize = 8;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &comcols, commoditiessize) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &ncomcols, commoditiessize) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &comcolssize, commoditiessize) );
+
+      /* 1. Sort flow conservation and capacity constraint candidates by a ranking on
+       *    how sure we are that it is indeed a constraint of the desired type.
+       */
+      /* TODO: calculate ranking for flow conservation constraint candidates.
+       *       probably: give = 0 equations lower priority since they can be used
+       *       in both directions and are therefore more flexible. */
+      /* TODO: calculate ranking for capacity constraint candidates */
+
+      /* 2. Initialize iscapacity[c] = FALSE, pluscom[c] = -1, and minuscom[c] = -1 for all columns c.
+       *    Initialize flowrowcom[r] = -1 for all rows r.
+       */
+      for( c = 0; c < ncols; c++ )
+      {
+         iscapacity[c] = FALSE;
+         pluscom[c] = -1;
+         minuscom[c] = -1;
+      }
+      for( r = 0; r < nrows; r++ )
+         flowrowcom[r] = -1;
+
+      /* 3. Put the first flow conservation constraint candidate to commodity 0, and
+       *    assign the included variables to commodity 0.
+       */
+      SCIP_CALL( newCommodity(scip, &comcols, &ncomcols, &comcolssize, &ncommodities, &commoditiessize) );
+      assert(ncommodities == 1);
+      r = flowcands[0];
+      assert(flowrowsigns[r] != 0);
+      SCIP_CALL( addCommodityFlowRow(scip, flowrowsigns, flowrowcom, pluscom, minuscom, comcols, ncomcols, comcolssize,
+            rows[r], flowrowsigns[r], 0) );
+
+      /* big extraction loop */
+      while( TRUE )
+      {
+         SCIP_Bool foundfit;
+
+         /* 4. For all commodities k: Find next node flow conservation constraint for commodity k.
+          *    (a) For all columns already known in commodity k with only one entry:
+          *        (i) For all flow conservation rows in which this column appears:
+          *            - Check if it fits to this commodity. If yes, take it and goto 5.
+          *    (b) If nothing fits, exit.
+          *
+          * TODO: We do the extension of the commodities in a greedy fashion w.r.t. the order of the rows
+          *       in the column vectors. It may be better to use some predefined priority order.
+          */
+         foundfit = FALSE;
+         for( k = 0; k < ncommodities; k++ )
+         {
+            int i;
+
+            for( i = 0; i < ncomcols[k]; i++ )
+            {
+               c = comcols[k][i];
+               assert(!iscapacity[c]);
+               assert(pluscom[c] == k || minuscom[c] == k);
+
+               /* check if column is missing a +1 or -1 entry in the commodity */
+               if( pluscom[c] == -1 || minuscom[c] == -1 )
+               {
+                  SCIP_ROW** colrows;
+                  int collen;
+                  int j;
+
+                  /* loop through sparse column vector to find new flow conservation constraints */
+                  colrows = SCIPcolGetRows(cols[c]);
+                  collen = SCIPcolGetNNonz(cols[c]);
+                  for( j = 0; j < collen; j++ )
+                  {
+                     SCIP_ROW* row;
+                     int flowrowsign;
+
+                     row = colrows[j];
+
+                     /* check if row fits into commodity */
+                     flowrowsign = getFlowRowCommodityFit(flowrowsigns, flowrowcom, iscapacity, pluscom, minuscom, row, k);
+                     if( flowrowsign != 0 )
+                     {
+                        /* row fits: insert into commodity */
+                        SCIP_CALL( addCommodityFlowRow(scip, flowrowsigns, flowrowcom, pluscom, minuscom, comcols, ncomcols, comcolssize,
+                              row, flowrowsign, k) );
+                        foundfit = TRUE;
+                     }
+                  }
+               }
+            }
+         }
+
+         /* if we did not find any new flow conservation constraint, exit */
+         if( !foundfit )
+            break;
+      }
+
+#ifdef SCIP_DEBUG
+      /* output commodities */
+      for( k = 0; k < ncommodities; k++ )
+      {
+         printf("\n\nCommodity %d:\n\n", k);
+         for( r = 0; r < nrows; r++ )
+         {
+            if( flowrowcom[r] == k )
+            {
+               int sign;
+               if( (flowrowsigns[r] & LHSASSIGNED) != 0 )
+                  sign = +1;
+               else if ( (flowrowsigns[r] & RHSASSIGNED) != 0 )
+                  sign = -1;
+               else
+                  sign = 0;
+               printf("[%+d] ", sign);
+               SCIP_CALL( SCIPprintRow(scip, rows[r], NULL) );
+            }
+         }
+      }
+#endif
+
+      /* free memory */
+      for( k = 0; k < ncommodities; k++ )
+         SCIPfreeMemoryArray(scip, &comcols[k]);
+      SCIPfreeMemoryArray(scip, &comcols);
+      SCIPfreeMemoryArray(scip, &ncomcols);
+      SCIPfreeMemoryArray(scip, &comcolssize);
+
+      SCIPfreeBufferArray(scip, &minuscom);
+      SCIPfreeBufferArray(scip, &pluscom);
+      SCIPfreeBufferArray(scip, &iscapacity);
    }
 
    /* free memory */
-   SCIPfreeBufferArray(scip, &minuscom);
-   SCIPfreeBufferArray(scip, &pluscom);
+   SCIPfreeBufferArray(scip, &capacitycands);
+   SCIPfreeBufferArray(scip, &flowcands);
    SCIPfreeBufferArray(scip, &capacityrowsigns);
    SCIPfreeBufferArray(scip, &flowrowscalars);
    SCIPfreeBufferArray(scip, &flowrowsigns);
@@ -468,8 +852,10 @@ SCIP_RETCODE SCIPincludeSepaMcf(
 {
    SCIP_SEPADATA* sepadata;
 
+#if 1
    /* disabled, because separator is not yet finished */
    return SCIP_OKAY;
+#endif
 
    /* create cmir separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
