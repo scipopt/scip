@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.h,v 1.25 2007/08/21 14:39:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.h,v 1.26 2007/12/13 16:19:58 bzfheinz Exp $"
 
 /**@file   cons_and.h
  * @brief  constraint handler for and constraints
@@ -79,6 +79,13 @@ int SCIPgetNVarsAnd(
 /** gets array of variables in and constraint */
 extern
 SCIP_VAR** SCIPgetVarsAnd(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** gets the resultant variable in and constraint */
+extern
+SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );

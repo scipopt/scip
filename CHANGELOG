@@ -29,13 +29,14 @@ features:
   SCIPwriteOrigProblem(scip, "orig.lp", FALSE) prints the original problem in LP format in the file "orig.lp"
 - new method SCIPwriteTransProblem(), e.g.,
   SCIPwriteOrigProblem(scip, NULL, FALSE) displays the transformed problem in CIP format 
-- new methed SCIPgetProbvarLinearSum()
+- new method SCIPgetProbvarLinearSum()
 - added SOS2 example
 - extended TSP example
 - the ZIMPL reader now understands SOS type 1 and 2 constraints
 - the LP reader reads SOS constraints of type 1 and 2
 - the MPS reader reads the SOS section (but cannot yet handle 'MARKERS')
 - output of real values is now done with 15 digits after the decimal point
+- new method SCIPgetResultantAnd() which return the resultant variable of an "and" constraint 
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos.{c,h})
