@@ -1132,7 +1132,7 @@
  * underlying problem structure but use only the current LP relaxation and the integrality conditions. 
  *
  * In the following, we explain how the user can add an own separator.
- * Take the separator for the class of Gomory mixed inter inequalities (src/scip/sepa_gomory.c) as an example.
+ * Take the separator for the class of Gomory mixed integer inequalities (src/scip/sepa_gomory.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjSepa wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_SEPA... callback methods.
  *
