@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.44 2007/11/27 17:15:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.45 2008/01/07 11:41:17 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -2648,7 +2648,7 @@ SCIP_RETCODE SCIPwriteLp(
    SCIPfreeBufferArray(scip, &consSOS2);
 
    /* end of lp format */
-   SCIPmessageFPrintInfo(file, "End");
+   SCIPinfoMessage(scip, file, "%s\n", "End");
 
    *result = SCIP_SUCCESS;
 
