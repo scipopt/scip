@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.257 2007/11/15 10:53:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.258 2008/01/08 11:18:43 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3185,7 +3185,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newlb;
 
          newlb = (rhs - minresactivity)/val;
-         if( SCIPisLbBetter(scip, newlb, lb, ub) )
+         if( (SCIPvarIsIntegral(var) && SCIPisFeasGT(scip, newlb, lb))
+            || SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             /* adjust bound for numerical reasons */
             newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
@@ -3221,7 +3222,8 @@ SCIP_RETCODE tightenVarBounds(
          SCIP_Real newub;
 
          newub = (lhs - maxresactivity)/val;
-         if( SCIPisUbBetter(scip, newub, lb, ub) )
+         if( (SCIPvarIsIntegral(var) && SCIPisFeasLT(scip, newub, ub))
+            || SCIPisUbBetter(scip, newub, lb, ub) )
          {
             /* adjust bound for numerical reasons */
             newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
