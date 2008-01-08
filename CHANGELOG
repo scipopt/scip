@@ -44,6 +44,7 @@ plugins:
 - less aggressive scaling in linear constraint handler presolve to improve numerics
 
 parameters:
+- new parameter "constraints/linear/aggregatevariables" to search for aggregations in equations in the presolving step
 - changed parameter default values for the priority of presolver "dualfix" and "inttobinary"
 - new parameter "constraint/linear/upgrade/binpack" to enable or disable the linear upgrading process
 - new parameter "constraint/linear/upgrade/eqknapsack" to enable or disable the linear upgrading process
