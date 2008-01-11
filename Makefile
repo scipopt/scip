@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.235 2008/01/11 10:16:31 bzfheinz Exp $
+# $Id: Makefile,v 1.236 2008/01/11 17:02:37 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -408,6 +408,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/reader_fix.o \
 			scip/reader_lp.o \
 			scip/reader_mps.o \
+			scip/reader_opb.o \
 			scip/reader_rlp.o \
 			scip/reader_sol.o \
 			scip/reader_zpl.o \

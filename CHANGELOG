@@ -40,9 +40,10 @@ features:
 - new method SCIPgetResultantAnd() which return the resultant variable of an "and" constraint 
 
 plugins:
-- added first version of SOS type 1 constraint handler (cons_sos.{c,h})
-- added first version of SOS type 2 constraint handler (cons_sos.{c,h})
+- added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
+- added first version of SOS type 2 constraint handler (cons_sos2.{c,h})
 - less aggressive scaling in linear constraint handler presolve to improve numerics
+- added reader for pseudo-Boolean problems (reader_opb.{c,h})
 
 parameters:
 - new parameter "constraints/linear/aggregatevariables" to search for aggregations in equations in the presolving step
