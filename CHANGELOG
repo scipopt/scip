@@ -22,6 +22,7 @@ interface:
   to write a problem to file stream in the format the reader stands for;
   useful for writing the transformed problem in LP or MPS format
 - new parameter "conshdlrname" in SCIPincludeLinconsUpgrade() 
+- new method SCIPrepropagateNode() to mark a node for repropagation
 
 features:
 - the MPS reader is now able to write a problem in MPS format
