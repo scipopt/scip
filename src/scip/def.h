@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.135 2007/10/29 12:03:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.136 2008/01/11 10:16:31 bzfheinz Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -35,7 +35,7 @@
 
 
 #define SCIP_VERSION                100 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               3 /**< SCIP sub version number */
+#define SCIP_SUBVERSION               4 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2007 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
