@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.259 2008/01/08 14:50:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.260 2008/01/12 21:44:07 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3993,6 +3993,8 @@ SCIP_RETCODE tightenSides(
             if( !consdata->upgraded )
                (*nchgsides)++;
          }
+         SCIPdebugMessage("linear constraint <%s>: new integral sides: sides=[%.15g,%.15g]\n",
+            SCIPconsGetName(cons), consdata->lhs, consdata->rhs);
       }
    }
 
