@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.261 2008/01/14 14:38:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.262 2008/01/14 19:31:18 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4258,8 +4258,8 @@ SCIP_RETCODE consdataTightenCoefs(
                SCIP_CALL( delCoefPos(scip, cons, i) );
                i--;
 #ifndef NDEBUG
-               minleftactivity -= val *lb;
-               maxleftactivity -= val *ub;
+               minleftactivity -= val * lb;
+               maxleftactivity -= val * ub;
 #endif
             }
          }
@@ -4275,8 +4275,8 @@ SCIP_RETCODE consdataTightenCoefs(
                i--;
 
 #ifndef NDEBUG
-               minleftactivity -= val *ub;
-               maxleftactivity -= val *lb;
+               minleftactivity -= val * ub;
+               maxleftactivity -= val * lb;
 #endif
 
 #if 0
@@ -4696,10 +4696,9 @@ SCIP_RETCODE convertEquality(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(consdata->removedfixings);
-   
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->removedfixings);
 
    /* do nothing on inequalities */
    if( !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
