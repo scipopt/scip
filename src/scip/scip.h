@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.313 2008/01/11 15:44:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.314 2008/01/14 12:08:24 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4837,7 +4837,7 @@ SCIP_RETCODE SCIPcutoffNode(
 extern
 SCIP_RETCODE SCIPrepropagateNode(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODE*            node                /**< node that should be cut off */
+   SCIP_NODE*            node                /**< node that should be propagated again */
    );
 
 /**@} */

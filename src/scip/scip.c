@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.434 2008/01/11 15:44:34 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.435 2008/01/14 12:08:24 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12804,7 +12804,7 @@ SCIP_RETCODE SCIPcutoffNode(
 /** marks the given node to be propagated again the next time a node of its subtree is processed */
 SCIP_RETCODE SCIPrepropagateNode(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODE*            node                /**< node that should be cut off */
+   SCIP_NODE*            node                /**< node that should be propagated again */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPrepropagateNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
