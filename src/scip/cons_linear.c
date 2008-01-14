@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.260 2008/01/12 21:44:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.261 2008/01/14 14:38:57 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4696,6 +4696,8 @@ SCIP_RETCODE convertEquality(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(consdata->removedfixings);
+   
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -5122,6 +5124,7 @@ SCIP_RETCODE aggregateVariables(
    SCIP_Bool fixed;
    SCIP_Bool aggregated;
    SCIP_Bool redundant;
+   SCIP_Bool success;
 
    SCIP_VAR* var1;
    SCIP_VAR* var2;
@@ -5133,102 +5136,120 @@ SCIP_RETCODE aggregateVariables(
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   lhs = consdata->lhs;
-
    /* check if the linear constraint is an equation with integral right hand side */
-   if( !SCIPisEQ(scip, lhs, consdata->rhs) || !SCIPisIntegral(scip, lhs) )
+   if( !SCIPisEQ(scip, consdata->lhs, consdata->rhs) || !SCIPisIntegral(scip, consdata->lhs) )
       return SCIP_OKAY;
    
    assert( !SCIPisInfinity(scip, lhs) );
    
-   vars = consdata->vars;
-   nvars = consdata->nvars;
-
-   var1 = NULL;
-   var2 = NULL;
-   noddvars = 0;
-   vals = consdata->vals;
-
-   /* search for binary variables with an odd coefficient */
-   for( v = 0; v < nvars && noddvars < 3; ++v )
+   /* try to fix and aggregated variables until nothing is possible anymore */
+   do
    {
-      SCIP_Longint val;
+      success = FALSE;
+    
+      lhs = consdata->lhs;
+      vars = consdata->vars;
+      vals = consdata->vals;
+      nvars = consdata->nvars;
+    
+      var1 = NULL;
+      var2 = NULL;
+      noddvars = 0;
       
-      /* all coefficients and variables have to be integral */
-      if( !SCIPisIntegral(scip, vals[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-         return SCIP_OKAY;
-      
-      val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
-      if( val % 2)
+      /* search for binary variables with an odd coefficient */
+      for( v = 0; v < nvars && noddvars < 3; ++v )
       {
-         /* the odd valus have belong to binary variables */
-         if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
-            return SCIP_OKAY;
- 
-         if( noddvars == 0 )
-            var1 = vars[v];
-         else
-            var2 = vars[v];
+         SCIP_Longint val;
          
-         noddvars++;
+         /* all coefficients and variables have to be integral */
+         if( !SCIPisIntegral(scip, vals[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            return SCIP_OKAY;
+         
+         val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
+         if( val % 2)
+         {
+            /* the odd valus have belong to binary variables */
+            if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
+               return SCIP_OKAY;
+            
+            if( noddvars == 0 )
+               var1 = vars[v];
+            else
+               var2 = vars[v];
+            
+            noddvars++;
+         }
+      }
+    
+      /* check lhs is odd or even */
+      lhsodd = ((SCIP_Longint)SCIPfeasFloor(scip, lhs)) % 2;
+      
+      if( noddvars == 1 )
+      {
+         assert( var1 != NULL );
+         
+         SCIPdebugMessage("linear constraint <%s>: try fixing variable <%s> to <%g>\n", 
+            SCIPconsGetName(cons), SCIPvarGetName(var1), lhsodd ? 1.0 : 0.0);
+         
+         SCIP_CALL( SCIPfixVar(scip, var1, lhsodd? 1.0 : 0.0, &infeasible, &fixed) );
+         
+         /* check for infeasibility of fixing */
+         if( infeasible )
+         {
+            SCIPdebugMessage(" -> infeasible fixing\n");
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+         
+         if( fixed )
+         {
+            SCIPdebugMessage(" -> feasible fixing\n");
+            (*nfixedvars)++;
+            success = TRUE;
+         }
+      }
+      else if( noddvars == 2 )
+      {
+         assert( var1 != NULL );
+         assert( var2 != NULL );
+         
+         /* aggregate the two variables with odd coefficient 
+          * - lhs is odd -> exactly one of the variable has to be 1 -> var1 + var2 = 1
+          * - lhs is even -> both have to take the same value -> var1 - var2 = 0
+          */
+         SCIPdebugMessage("linear constraint <%s>: try aggregation of variables <%s> and <%s>\n", 
+            SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
+         
+         SCIP_CALL( SCIPaggregateVars(scip, var1, var2, 1.0, lhsodd ? 1.0 : -1.0,
+               lhsodd ? 1.0 : 0.0, &infeasible, &redundant, &aggregated) );
+      
+         /* check for infeasibility of aggregation */
+         if( infeasible )
+         {
+            SCIPdebugMessage(" -> infeasible aggregation\n");
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
+         
+         /* count the aggregation */
+         if( aggregated )
+         {
+            SCIPdebugMessage(" -> feasible aggregation\n");
+            (*naggrvars)++;
+            success = TRUE;
+         }
+      }
+      
+      if( success )
+      {
+         /* apply fixings and aggregation to successfully rerun this presolving step */
+         SCIP_CALL( applyFixings(scip, cons) );
+         
+         /* normalize constraint */
+         SCIP_CALL( normalizeCons(scip, cons) );
       }
    }
-   
-   lhsodd = ((SCIP_Longint)SCIPfeasFloor(scip, lhs)) % 2;
-   
-   if( noddvars == 1 )
-   {
-      assert( var1 != NULL );
-      
-      SCIPdebugMessage("linear constraint <%s>: try fixing variable <%s> to <%g>\n", 
-         SCIPconsGetName(cons), SCIPvarGetName(var1), lhsodd ? 1.0 : 0.0);
-      
-      SCIP_CALL( SCIPfixVar(scip, var1, lhsodd? 1.0 : 0.0, &infeasible, &fixed) );
-      
-      /* check for infeasibility of fixing */
-      if( infeasible )
-      {
-         SCIPdebugMessage(" -> infeasible fixing\n");
-         *cutoff = TRUE;
-         return SCIP_OKAY;
-      }
-      
-      if( fixed )
-      {
-         SCIPdebugMessage(" -> feasible fixing\n");
-         (*nfixedvars)++;
-      }
-   }
-   else if( noddvars == 2 )
-   {
-      assert( var1 != NULL );
-      assert( var2 != NULL );
-
-      /* aggregate the two variables with odd coefficient 
-       * - lhs is odd -> exactly one of the variable has to be 1 -> var1 + var2 = 1
-       * - lhs is even -> both have to take the same value -> var1 - var2 = 0
-       */
-      SCIPdebugMessage("linear constraint <%s>: try aggregation of variables <%s> and <%s>\n", 
-         SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
-      
-      SCIP_CALL( SCIPaggregateVars(scip, var1, var2, 1.0, lhsodd ? 1.0 : -1.0,
-            lhsodd ? 1.0 : 0.0, &infeasible, &redundant, &aggregated) );
-
-      /* check for infeasibility of aggregation */
-      if( infeasible )
-      {
-         SCIPdebugMessage(" -> infeasible aggregation\n");
-         *cutoff = TRUE;
-         return SCIP_OKAY;
-      }
-      
-      /* count the aggregation */
-      if( aggregated )
-      {
-         SCIPdebugMessage(" -> feasible aggregation\n");
-         (*naggrvars)++;
-      }
-   }
+   while( success );
    
    return SCIP_OKAY;
 }
@@ -6990,10 +7011,6 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       /* convert special equalities */
       if( !cutoff && SCIPconsIsActive(cons) )
       {
-         assert(consdata->propagated);
-         assert(consdata->boundstightened);
-         assert(consdata->presolved);
-
          SCIP_CALL( convertEquality(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
       }
 
