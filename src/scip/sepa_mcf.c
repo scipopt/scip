@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.8 2008/01/10 16:59:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.9 2008/01/15 15:13:10 bzfpfend Exp $"
 
 #define SCIP_DEBUG
 /**@file   sepa_mcf.c
@@ -384,7 +384,9 @@ SCIP_RETCODE addCommodityFlowRow(
    SCIP_ROW*             row,                /**< flow row to add to commodity */
    unsigned char         flowrowsign,        /**< possible signs to use for the flow row */
    int                   k,                  /**< commodity number */
-   int                   nodeid              /**< node id to which the flow row belongs */
+   int                   nodeid,             /**< node id to which the flow row belongs */
+   int*                  nplussigns,         /**< pointer to store number of plus signs in the flow row, or NULL */
+   int*                  nminussigns         /**< pointer to store number of minus signs in the flow row, or NULL */
    )
 {
    SCIP_COL** rowcols;
@@ -393,6 +395,11 @@ SCIP_RETCODE addCommodityFlowRow(
    int scale;
    int r;
    int i;
+
+   if( nplussigns != NULL )
+      *nplussigns = 0;
+   if( nminussigns != NULL )
+      *nminussigns = 0;
 
    r = SCIProwGetLPPos(row);
    assert(r >= 0);
@@ -449,11 +456,15 @@ SCIP_RETCODE addCommodityFlowRow(
          {
             assert(pluscom[c] == -1);
             pluscom[c] = k;
+            if( nplussigns != NULL )
+               (*nplussigns)++;
          }
          else
          {
             assert(minuscom[c] == -1);
             minuscom[c] = k;
+            if( nminussigns != NULL )
+               (*nminussigns)++;
          }
       }
    }
@@ -645,21 +656,30 @@ unsigned char getFlowRowCommodityFit(
    {
       int lhsdistance;
       int rhsdistance;
+      int nknownplussigns;
+      int nknownminussigns;
+      int nrowknownposcoefs;
+      int nrowknownnegcoefs;
+
+      nknownplussigns = nplussigns - nunknownplussigns;
+      nknownminussigns = nminussigns - nunknownminussigns;
+      nrowknownposcoefs = nrowposcoefs - nrowunknownposcoefs;
+      nrowknownnegcoefs = nrownegcoefs - nrowunknownnegcoefs;
 
       SCIPdebugMessage("  -> <%s> nsigns: +%d -%d (+%d -%d)  nrowcoefs: +%d -%d (+%d -%d)\n", SCIProwGetName(row), 
-                       nplussigns, nminussigns, nunknownplussigns, nunknownminussigns,
-                       nrowposcoefs, nrownegcoefs, nrowunknownposcoefs, nrowunknownnegcoefs);
+                       nknownplussigns, nknownminussigns, nunknownplussigns, nunknownminussigns,
+                       nrowknownposcoefs, nrowknownnegcoefs, nrowunknownposcoefs, nrowunknownnegcoefs);
       lhsdistance = 0;
       rhsdistance = 0;
       if( nplussigns >= 0 )
       {
-         lhsdistance += ABS(nplussigns - nrowposcoefs);
-         rhsdistance += ABS(nplussigns - nrownegcoefs);
+         lhsdistance += ABS(nknownplussigns - nrowknownposcoefs);
+         rhsdistance += ABS(nknownplussigns - nrowknownnegcoefs);
       }
       if( nminussigns >= 0 )
       {
-         lhsdistance += ABS(nminussigns - nrownegcoefs);
-         rhsdistance += ABS(nminussigns - nrowposcoefs);
+         lhsdistance += ABS(nknownminussigns - nrowknownnegcoefs);
+         rhsdistance += ABS(nknownminussigns - nrowknownposcoefs);
       }
       if( nunknownplussigns >= 0 )
       {
@@ -816,10 +836,10 @@ SCIP_RETCODE addCapacityRow(
    int*                  pluscom,            /**< commodities to which columns are assigned with positive entry */
    int*                  minuscom,           /**< commodities to which columns are assigned with negative entry */
    int                   newrowscale,        /**< scaling (+1 or -1) for new flow conservation constraint */
-   int                   nplussigns,         /**< number of plus signs in new flow conservation constraint */
-   int                   nminussigns,        /**< number of minus signs in new flow conservation constraint */
-   int                   nunknownplussigns,  /**< number of plus signs in reference flow constraint without assigned arc */
-   int                   nunknownminussigns, /**< number of minus signs in reference flow constraint without assigned arc */
+   int*                  nplussigns,         /**< pointer to number of plus signs in new flow conservation constraint */
+   int*                  nminussigns,        /**< pointer to number of minus signs in new flow conservation constraint */
+   int*                  nunknownplussigns,  /**< pointer to number of plus signs in reference flow constraint without assigned arc */
+   int*                  nunknownminussigns, /**< pointer to number of minus signs in reference flow constraint without assigned arc */
    int*                  arcpattern,         /**< sign pattern for known arc ids in new flow conservation constraint */
    int***                comcols,            /**< pointer to comcols[][] array */
    int**                 ncomcols,           /**< pointer to ncomcols[] array */
@@ -880,7 +900,7 @@ SCIP_RETCODE addCapacityRow(
          if( arcpattern[a] != 0 )
             printf(" %d:%+d", a, arcpattern[a]);
       }
-      printf(" [unknown: +%d -%d]\n", nunknownplussigns, nunknownminussigns);
+      printf(" [unknown: +%d -%d]\n", *nunknownplussigns, *nunknownminussigns);
    }   
 #endif
 
@@ -941,7 +961,7 @@ SCIP_RETCODE addCapacityRow(
           */
          k = -1;
          flowrowsign = getFlowRowCommodityFit(flowrowsigns, flowrowcom, colarcid, iscapacity, pluscom, minuscom,
-                                              nplussigns, nminussigns, nunknownplussigns, nunknownminussigns, arcpattern, c, sourcecsign,
+                                              *nplussigns, *nminussigns, *nunknownplussigns, *nunknownminussigns, arcpattern, c, sourcecsign,
                                               colrows[j], &k, &signdistance);
          if( flowrowsign != 0 && signdistance <= bestsigndistance )
          {
@@ -979,6 +999,9 @@ SCIP_RETCODE addCapacityRow(
 
       if( bestj != -1 )
       {
+         int nrowplussigns;
+         int nrowminussigns;
+
          /* check if we need to create a new commodity */
          if( bestk == -1 )
          {
@@ -991,7 +1014,24 @@ SCIP_RETCODE addCapacityRow(
          SCIPdebugMessage(" -> found flow row %d for column %d <%s> in commodity %d with sign distance %d\n",
                           SCIProwGetLPPos(colrows[bestj]), c, SCIPvarGetName(SCIPcolGetVar(rowcols[i])), bestk, bestsigndistance);
          SCIP_CALL( addCommodityFlowRow(scip, flowrowsigns, flowrowcom, rowarcnodeid, capacityrowsigns, pluscom, minuscom,
-                                        *comcols, *ncomcols, *comcolssize, *commerge, colrows[bestj], bestflowrowsign, bestk, nodeid) );
+                                        *comcols, *ncomcols, *comcolssize, *commerge, colrows[bestj], bestflowrowsign, bestk, nodeid,
+                                        &nrowplussigns, &nrowminussigns) );
+
+         /* if the node in the commodity has more incident arcs, they are missing in the previous commodities, and we have to update
+          * the sign pattern
+          */
+         if( nrowplussigns > *nplussigns )
+         {
+            (*nunknownplussigns) += nrowplussigns - *nplussigns;
+            *nplussigns = nrowplussigns;
+         }
+         if( nrowminussigns > *nminussigns )
+         {
+            (*nunknownminussigns) += nrowminussigns - *nminussigns;
+            *nminussigns = nrowminussigns;
+         }
+         SCIPdebugMessage("    -> nrowplussigns=%d nrowminussigns=%d  =>  nunknownplussigns=%d nunknownminussigns=%d\n",
+                          nrowplussigns, nrowminussigns, *nunknownplussigns, *nunknownminussigns);
       }
       else
       {
@@ -1264,7 +1304,7 @@ SCIP_RETCODE mcfnetworkExtract(
       nnodes++;
       SCIP_CALL( addCommodityFlowRow(scip, flowrowsigns, flowrowcom, rowarcnodeid, capacityrowsigns, pluscom, minuscom,
                                      comcols, ncomcols, comcolssize, commerge,
-                                     rows[r], flowrowsigns[r], 0, nnodes-1) );
+                                     rows[r], flowrowsigns[r], 0, nnodes-1, NULL, NULL) );
       newrow = rows[r];
       
       /* big extraction loop */
@@ -1403,9 +1443,27 @@ SCIP_RETCODE mcfnetworkExtract(
                      /* for the capacity constraint, identify corresponding columns in other commodities */
                      SCIP_CALL( addCapacityRow(scip, maxsigndistance, flowrowsigns, flowrowcom, colarcid, rowarcnodeid, capacityrowsigns, iscapacity,
                                                pluscom, minuscom, newrowscale,
-                                               nplussigns, nminussigns, nunknownplussigns, nunknownminussigns, arcpattern,
+                                               &nplussigns, &nminussigns, &nunknownplussigns, &nunknownminussigns, arcpattern,
                                                &comcols, &ncomcols, &comcolssize, &commerge, &ncommodities, &commoditiessize,
                                                c, row, capacityrowsign, nnodes-1, narcs-1) );
+
+                     /* now we have added the corresponding node to the commodities that are covered by the capacity constraint;
+                      * remove the arc from the sign pattern, because for any of the remaining or new commodities, the arc is
+                      * missing
+                      */
+                     if( pluscom[c] >= 0 )
+                     {
+                        assert(minuscom[c] == -1);
+                        nplussigns--;
+                        assert(nplussigns >= 0);
+                     }
+                     else
+                     {
+                        assert(minuscom[c] >= 0);
+                        nminussigns--;
+                        assert(nminussigns >= 0);
+                     }
+                     
                      break;
                   }
                }
@@ -1475,7 +1533,7 @@ SCIP_RETCODE mcfnetworkExtract(
 
                         /* row fits: insert into commodity */
                         SCIP_CALL( addCommodityFlowRow(scip, flowrowsigns, flowrowcom, rowarcnodeid, capacityrowsigns, pluscom, minuscom,
-                                                       comcols, ncomcols, comcolssize, commerge, row, flowrowsign, k, nnodes-1) );
+                                                       comcols, ncomcols, comcolssize, commerge, row, flowrowsign, k, nnodes-1, NULL, NULL) );
                         foundfit = TRUE;
                         newrow = row;
                      }
