@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.262 2008/01/14 19:31:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.263 2008/01/15 11:05:15 bzforlow Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4214,27 +4214,6 @@ SCIP_RETCODE consdataTightenCoefs(
    {
       assert( !SCIPisInfinity(scip, -consdata->lhs) || !SCIPisInfinity(scip, consdata->rhs) );
       
-      /* adjust lhs and right hand side */
-      newlhs = consdata->lhs - minleftactivity;
-      newrhs = consdata->rhs - maxleftactivity;
-      
-      if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
-      {
-         SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
-         
-         SCIP_CALL( chgLhs(scip, cons, newlhs) );
-         (*nchgsides)++;
-         assert(SCIPisEQ(scip, consdata->lhs, newlhs));
-      }
-      if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
-      {
-         SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
-         
-         SCIP_CALL( chgRhs(scip, cons, newrhs) );
-         (*nchgsides)++;
-         assert(SCIPisEQ(scip, consdata->rhs, newrhs));
-      }
-      
       /* try to remove redundant variables from constraint */
       for( i = 0; i < consdata->nvars; ++i )
       {
@@ -4303,6 +4282,27 @@ SCIP_RETCODE consdataTightenCoefs(
 #endif
             }
          }
+      }
+      
+      /* adjust lhs and right hand side */
+      newlhs = consdata->lhs - minleftactivity;
+      newrhs = consdata->rhs - maxleftactivity;
+      
+      if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
+      {
+         SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
+         
+         SCIP_CALL( chgLhs(scip, cons, newlhs) );
+         (*nchgsides)++;
+         assert(SCIPisEQ(scip, consdata->lhs, newlhs));
+      }
+      if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
+      {
+         SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
+         
+         SCIP_CALL( chgRhs(scip, cons, newrhs) );
+         (*nchgsides)++;
+         assert(SCIPisEQ(scip, consdata->rhs, newrhs));
       }
       
       /* check if we removed all redundant variables */
