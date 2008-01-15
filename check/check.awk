@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.63 2007/08/17 14:40:18 bzfpfend Exp $
+# $Id: check.awk,v 1.64 2008/01/15 11:09:57 bzfpfend Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -290,7 +290,7 @@ BEGIN {
 
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 || !feasible )
+      if( abs(pb - db) < 1e-06 )
       {
          gap = 0.0;
          optimal = 1;
