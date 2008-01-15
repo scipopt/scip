@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.263 2008/01/15 11:05:15 bzforlow Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.264 2008/01/15 15:28:17 bzforlow Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4037,8 +4037,12 @@ SCIP_RETCODE consdataTightenCoefs(
    SCIP_VAR* var;
    SCIP_Real minactivity;
    SCIP_Real maxactivity;
+   SCIP_Bool minleftactisinfinity;
+   SCIP_Bool maxleftactisinfinity;
    SCIP_Real minleftactivity;
    SCIP_Real maxleftactivity;
+   SCIP_Real aggrlhs;
+   SCIP_Real aggrrhs;
    SCIP_Real val;
    SCIP_Real newval;
    SCIP_Real newlhs;
@@ -4058,6 +4062,8 @@ SCIP_RETCODE consdataTightenCoefs(
 
    minleftactivity = 0.0;
    maxleftactivity = 0.0;
+   minleftactisinfinity = FALSE;
+   maxleftactisinfinity = FALSE;
  
    /* try to tighten each coefficient */
    for( i = 0; i < consdata->nvars; ++i )
@@ -4070,27 +4076,12 @@ SCIP_RETCODE consdataTightenCoefs(
       val = consdata->vals[i];
       assert(!SCIPisZero(scip, val));
 
-      /* ignore continuous variables for the coefficient reduction */
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-      {
-         if( val >= 0.0 )
-         {
-            minleftactivity += val * lb;
-            maxleftactivity += val * ub;
-         }
-         else
-         {
-            minleftactivity += val * ub;
-            maxleftactivity += val * lb;
-         }
-         continue;
-      }
-      
       /* check sign of coefficient */
       if( val >= 0.0 )
       {
          /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
-         if( SCIPisGE(scip, minactivity + val, consdata->lhs) && SCIPisLE(scip, maxactivity - val, consdata->rhs) )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && 
+             SCIPisGE(scip, minactivity + val, consdata->lhs) && SCIPisLE(scip, maxactivity - val, consdata->rhs) )
          {
             /* change coefficients:
              *   ai'  := max(lhs - minact, maxact - rhs)
@@ -4138,16 +4129,36 @@ SCIP_RETCODE consdataTightenCoefs(
                assert(SCIPisEQ(scip, consdata->rhs, newrhs));
             }
          }
-         else
+         else if (!minleftactisinfinity)
          {
-            minleftactivity += val * lb;
-            maxleftactivity += val * ub;
+            assert(!SCIPisInfinity(scip, val));
+            assert(!SCIPisInfinity(scip, lb));
+            if (SCIPisInfinity(scip,-lb))
+            {
+               minleftactivity = -SCIPinfinity(scip);
+               minleftactisinfinity = TRUE;
+            }
+            else
+               minleftactivity += val * lb;
+         }
+         else if (!maxleftactisinfinity)
+         {
+            assert(!SCIPisInfinity(scip, val));
+            assert(!SCIPisInfinity(scip, -ub));
+            if (SCIPisInfinity(scip,ub))
+            {
+               maxleftactivity = SCIPinfinity(scip);
+               maxleftactisinfinity = TRUE;
+            }
+            else
+               maxleftactivity += val * ub;
          }
       }
       else
       {
          /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
-         if( SCIPisGE(scip, minactivity - val, consdata->lhs) && SCIPisLE(scip, maxactivity + val, consdata->rhs) )
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && 
+             SCIPisGE(scip, minactivity - val, consdata->lhs) && SCIPisLE(scip, maxactivity + val, consdata->rhs) )
          {
             /* change coefficients:
              *   ai'  := min(rhs - maxact, minact - lhs)
@@ -4195,10 +4206,29 @@ SCIP_RETCODE consdataTightenCoefs(
                assert(SCIPisEQ(scip, consdata->rhs, newrhs));
             }
          }
-         else
+         else if (!minleftactisinfinity)
          {
-            minleftactivity += val * ub;
-            maxleftactivity += val * lb;
+            assert(!SCIPisInfinity(scip, -val));
+            assert(!SCIPisInfinity(scip, -ub));
+            if (SCIPisInfinity(scip,ub))
+            {
+               minleftactivity = -SCIPinfinity(scip);
+               minleftactisinfinity = TRUE;
+            }
+            else
+               minleftactivity += val * ub;
+         }
+         else if (!maxleftactisinfinity)
+         {
+            assert(!SCIPisInfinity(scip, -val));
+            assert(!SCIPisInfinity(scip, lb));
+            if (SCIPisInfinity(scip,-lb))
+            {
+               maxleftactivity = SCIPinfinity(scip);
+               maxleftactisinfinity = TRUE;
+            }
+            else
+               maxleftactivity += val * lb;
          }
       }
    }
@@ -4208,9 +4238,30 @@ SCIP_RETCODE consdataTightenCoefs(
    SCIPdebugMessage("maxleftactivity = %.15g, lhs = %.15g\n", 
       maxleftactivity, consdata->lhs);
    
+   assert(minleftactisinfinity == SCIPisInfinity(scip, minleftactivity));
+   assert(maxleftactisinfinity == SCIPisInfinity(scip, maxleftactivity));
+   /* minleft == \infty  ==>  minactivity == \infty */
+   assert(!minleftactisinfinity || SCIPisInfinity(scip, minactivity));
+   assert(!maxleftactisinfinity || SCIPisInfinity(scip, maxactivity));
+
+   /* otherwise aggrlhs is minus infinity in the following computation */
+   assert(!SCIPisInfinity(scip, minactivity));
+   if (!SCIPisInfinity(scip, -consdata->lhs && SCIPisInfinity(scip, -minactivity)))
+      return SCIP_OKAY;
+
+   /* otherwise aggrrhs is infinity in the following computation */
+   assert(!SCIPisInfinity(scip, -maxactivity));
+   if (!SCIPisInfinity(scip, consdata->rhs && SCIPisInfinity(scip, maxactivity)))
+      return SCIP_OKAY;
+
+   /* correct lhs and rhs by min/max activity of surely non-redundant variables */
+   aggrlhs = consdata->lhs - minactivity + minleftactivity;
+   aggrrhs = consdata->rhs - maxactivity + maxleftactivity;
+
    /* check if the constraint contains variables which are redundant */
-   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLT(scip, maxleftactivity, consdata->lhs))
-      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGT(scip, minleftactivity, consdata->rhs)) )
+   /* aggrrhs may contain some near-infinity value, but only if rhs is infinity. */
+   if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLT(scip, maxleftactivity, aggrlhs))
+      && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGT(scip, minleftactivity, aggrrhs)) )
    {
       assert( !SCIPisInfinity(scip, -consdata->lhs) || !SCIPisInfinity(scip, consdata->rhs) );
       
@@ -4227,15 +4278,20 @@ SCIP_RETCODE consdataTightenCoefs(
          
          /* check sign of coefficient */
          if( val >= 0.0 )
-         {
-            if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLT(scip, minactivity + val, consdata->lhs) ) 
-               && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGT(scip, maxactivity - val, consdata->rhs)) )
+         {     
+            /* negation of condition above in case of positive val */
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || 
+                SCIPisLT(scip, minactivity + val, consdata->lhs) || SCIPisGT(scip, maxactivity - val, consdata->rhs) )
             {
+               SCIPdebugMessage("minactivity = %g\tval = %g\tlhs = %g\n", minactivity, val, consdata->lhs);
                SCIPdebugMessage("linear constraint <%s>: remove variable <%s> with coefficient <%g> from constraint since it is redundant\n",
                   SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), val);
                
                SCIP_CALL( delCoefPos(scip, cons, i) );
                i--;
+
+               /* get the new minimal and maximal activity of the constraint */
+               consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
 #ifndef NDEBUG
                minleftactivity -= val * lb;
                maxleftactivity -= val * ub;
@@ -4244,8 +4300,9 @@ SCIP_RETCODE consdataTightenCoefs(
          }
          else 
          {
-            if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLT(scip, minactivity - val, consdata->lhs))
-               && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGT(scip, maxactivity + val, consdata->rhs)) )
+            /* negation of condition above in case of negative val */
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || 
+                SCIPisLT(scip, minactivity - val, consdata->lhs) || SCIPisGT(scip, maxactivity + val, consdata->rhs) )
             {               
                SCIPdebugMessage("linear constraint <%s>: remove variable <%s> with coefficient <%g> from constraint since it is redundant\n",
                   SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), val);
@@ -4253,32 +4310,11 @@ SCIP_RETCODE consdataTightenCoefs(
                SCIP_CALL( delCoefPos(scip, cons, i) );
                i--;
 
+               /* get the new minimal and maximal activity of the constraint */
+               consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
 #ifndef NDEBUG
                minleftactivity -= val * ub;
                maxleftactivity -= val * lb;
-#endif
-
-#if 0
-               /* compute new lhs and rhs */
-               newlhs = consdata->lhs - val * ub;
-               newrhs = consdata->rhs - val * lb;
-               
-               if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
-               {
-                  SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
-                  
-                  SCIP_CALL( chgLhs(scip, cons, newlhs) );
-                  (*nchgsides)++;
-                  assert(SCIPisEQ(scip, consdata->lhs, newlhs));
-               }
-               if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
-               {
-                  SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
-                  
-                  SCIP_CALL( chgRhs(scip, cons, newrhs) );
-                  (*nchgsides)++;
-                  assert(SCIPisEQ(scip, consdata->rhs, newrhs));
-               }
 #endif
             }
          }
