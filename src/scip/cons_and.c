@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.84 2007/12/13 16:19:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.85 2008/01/21 11:16:44 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "scip/cons_and.h"
+#include "scip/cons_linear.h"
 
 
 /* constraint handler properties */
@@ -50,6 +51,7 @@
 
 #define DEFAULT_MAXPRESOLPAIRROUNDS  -1 /**< maximal number of presolving rounds with pairwise constraint comparison
                                          *   (-1: no limit) */
+#define DEFAULT_LINEARIZE         FALSE /**< should constraint get linearize and removed? */
 
 
 
@@ -84,6 +86,7 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events on watched variables */
    int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
                                               *   (-1: no limit) */
+   SCIP_Bool             linearize;          /**< should constraint get linearize and removed? */
 };
 
 
@@ -1622,7 +1625,110 @@ SCIP_DECL_CONSFREE(consFreeAnd)
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreAnd NULL
+static
+SCIP_DECL_CONSINITPRE(consInitpreAnd)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( nconss == 0 || conss != NULL );
+   assert( result != NULL );
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   if( conshdlrdata->linearize )
+   {
+      /* linearize all "and" constraints  and remove the "and" constraints */
+      SCIP_CONS* newcons;
+      SCIP_CONS* cons;
+      SCIP_CONSDATA* consdata;
+      char consname[SCIP_MAXSTRLEN];
+      
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      
+      int nvars;
+      int c, v;
+      
+      /* alloc buffer array */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
+      
+      for( c = 0; c < nconss; ++c )
+      {
+         cons = conss[c];
+         assert( cons != NULL );
+         
+         consdata = SCIPconsGetData(cons);
+         assert( consdata != NULL );
+         assert( consdata->resvar != NULL );
+         
+         nvars = consdata->nvars;
+         
+         vars[0] = consdata->resvar;
+         vals[0] = 1.0;
+         vals[1] = -1.0;
+         
+         /* create operator linear constraints */
+         for( v = 0; v < nvars; ++v )
+         {
+            sprintf(consname, "%s_%d", SCIPconsGetName(cons), v);
+            vars[1] = consdata->vars[v];
+            
+            SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 2, vars, vals, -SCIPinfinity(scip), 0.0,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+                  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+                  SCIPconsIsStickingAtNode(cons)) );
+            
+            /* add constraint */
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         }
+         
+         /* realloc  buffer array */
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvars + 1) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvars + 1) );
+
+         /* create additional linear constraint */
+         sprintf(consname, "%s_add", SCIPconsGetName(cons));
+
+         for( v = 0; v < nvars; ++v )
+         {
+            vars[v] = consdata->vars[v];
+            vals[v] = -1.0;
+         }
+         
+         vars[nvars] = consdata->resvar;
+         vals[nvars] = 1.0;
+         
+         SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, nvars + 1, vars, vals, -nvars + 1.0, SCIPinfinity(scip),
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               SCIPconsIsStickingAtNode(cons)) );
+         
+         /* add constraint */
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         
+         /* delete constraint */
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         
+      }
+      
+      /* free buffer array */
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &vals);
+   }
+   
+   return SCIP_OKAY;
+}
+
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -2147,7 +2253,11 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "constraints/and/maxpresolpairrounds",
          "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
          &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
-
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/and/linearize",
+         "should the \"and\" constraint get linearized and removed (in presolving)?",
+         &conshdlrdata->linearize, TRUE, DEFAULT_LINEARIZE, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 
