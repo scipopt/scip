@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.45 2008/01/07 11:41:17 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.46 2008/01/21 16:09:04 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -2347,7 +2347,7 @@ SCIP_RETCODE SCIPwriteLp(
       var = vars[v];
 
 #ifndef NDEBUG
-      /* in case the original problem has to posted the variables have to be either "original" or "negated" */
+      /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
       if ( !transformed )
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
             SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );

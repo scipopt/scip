@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_rlp.c,v 1.5 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.6 2008/01/21 16:09:04 bzfheinz Exp $"
 
 /**@file   reader_rlp.h
  * @brief  RLP file reader (LP format with generic variables and row names)
@@ -61,16 +61,19 @@ SCIP_DECL_READERWRITE(readerWriteRlp)
    }
    else
    {
-      SCIPwarningMessage("RLP format LP format with generic variable and constraint names\n");
+      SCIPwarningMessage("RLP format is LP format with generic variable and constraint names\n");
       
       if( transformed )
       {
+         SCIPwarningMessage("wirte transformed problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintTransProblem(scip, file, "rlp", TRUE) );
       }
       else
       {
+         SCIPwarningMessage("wirte original problem with generic variable and constraint names\n");
          SCIP_CALL( SCIPprintOrigProblem(scip, file, "rlp", TRUE) );
       }
+      *result = SCIP_SUCCESS;
    }
    return SCIP_OKAY;
 }
