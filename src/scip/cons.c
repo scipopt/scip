@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.167 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.168 2008/01/23 11:01:24 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4418,6 +4418,8 @@ SCIP_RETCODE SCIPconsFree(
    {
       SCIP_CALL( (*cons)->conshdlr->consdelete(set->scip, (*cons)->conshdlr, *cons, &(*cons)->consdata) );
    }
+   else if ( !(*cons)->deleteconsdata )
+      (*cons)->consdata = NULL;
    assert((*cons)->consdata == NULL);
 
    /* unlink transformed and original constraint */
