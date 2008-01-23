@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.264 2008/01/15 15:28:17 bzforlow Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.265 2008/01/23 13:18:06 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5126,7 +5126,7 @@ int getVarWeight(
 
 /** tries to aggregate variables in equations a^Tx = lhs
  *  in case there are at most two binary variables with an odd coefficient and all other
- *  variables are not continuous and have a even coefficient then:
+ *  variables are not continuous and have an even coefficient then:
  *  - exactly one odd binary variables 
  *    this binary variables y can be fixed to 0 if the lhs is even and to 1 if the lhs is odd    
  *     - lhs is odd ->  y = 1
@@ -5146,24 +5146,8 @@ SCIP_RETCODE aggregateVariables(
    int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
 {
-   int v;
-   
    SCIP_CONSDATA* consdata;
-   int nvars;
-   SCIP_VAR** vars;
-   SCIP_Real* vals;
-   SCIP_Real lhs;
-   SCIP_Bool lhsodd;
-   
-   SCIP_Bool infeasible;
-   SCIP_Bool fixed;
-   SCIP_Bool aggregated;
-   SCIP_Bool redundant;
    SCIP_Bool success;
-
-   SCIP_VAR* var1;
-   SCIP_VAR* var2;
-   int noddvars;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -5175,11 +5159,25 @@ SCIP_RETCODE aggregateVariables(
    if( !SCIPisEQ(scip, consdata->lhs, consdata->rhs) || !SCIPisIntegral(scip, consdata->lhs) )
       return SCIP_OKAY;
    
-   assert( !SCIPisInfinity(scip, lhs) );
-   
    /* try to fix and aggregated variables until nothing is possible anymore */
    do
    {
+      int v;
+      int nvars;
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      SCIP_Real lhs;
+      SCIP_Bool lhsodd;
+   
+      SCIP_Bool infeasible;
+      SCIP_Bool fixed;
+      SCIP_Bool aggregated;
+      SCIP_Bool redundant;
+
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
+      int noddvars;
+
       success = FALSE;
     
       lhs = consdata->lhs;
@@ -5187,6 +5185,8 @@ SCIP_RETCODE aggregateVariables(
       vals = consdata->vals;
       nvars = consdata->nvars;
     
+      assert( !SCIPisInfinity(scip, ABS(lhs)) );
+   
       var1 = NULL;
       var2 = NULL;
       noddvars = 0;
