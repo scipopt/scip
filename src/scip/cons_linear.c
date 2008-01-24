@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.265 2008/01/23 13:18:06 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.266 2008/01/24 11:08:49 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4129,11 +4129,11 @@ SCIP_RETCODE consdataTightenCoefs(
                assert(SCIPisEQ(scip, consdata->rhs, newrhs));
             }
          }
-         else if (!minleftactisinfinity)
+         else if( !minleftactisinfinity )
          {
             assert(!SCIPisInfinity(scip, val));
             assert(!SCIPisInfinity(scip, lb));
-            if (SCIPisInfinity(scip,-lb))
+            if( SCIPisInfinity(scip, -lb) )
             {
                minleftactivity = -SCIPinfinity(scip);
                minleftactisinfinity = TRUE;
@@ -4141,11 +4141,11 @@ SCIP_RETCODE consdataTightenCoefs(
             else
                minleftactivity += val * lb;
          }
-         else if (!maxleftactisinfinity)
+         else if( !maxleftactisinfinity )
          {
             assert(!SCIPisInfinity(scip, val));
             assert(!SCIPisInfinity(scip, -ub));
-            if (SCIPisInfinity(scip,ub))
+            if( SCIPisInfinity(scip,ub) )
             {
                maxleftactivity = SCIPinfinity(scip);
                maxleftactisinfinity = TRUE;
@@ -4206,11 +4206,11 @@ SCIP_RETCODE consdataTightenCoefs(
                assert(SCIPisEQ(scip, consdata->rhs, newrhs));
             }
          }
-         else if (!minleftactisinfinity)
+         else if( !minleftactisinfinity )
          {
             assert(!SCIPisInfinity(scip, -val));
             assert(!SCIPisInfinity(scip, -ub));
-            if (SCIPisInfinity(scip,ub))
+            if( SCIPisInfinity(scip, ub) )
             {
                minleftactivity = -SCIPinfinity(scip);
                minleftactisinfinity = TRUE;
@@ -4218,11 +4218,11 @@ SCIP_RETCODE consdataTightenCoefs(
             else
                minleftactivity += val * ub;
          }
-         else if (!maxleftactisinfinity)
+         else if( !maxleftactisinfinity )
          {
             assert(!SCIPisInfinity(scip, -val));
             assert(!SCIPisInfinity(scip, lb));
-            if (SCIPisInfinity(scip,-lb))
+            if( SCIPisInfinity(scip, -lb) )
             {
                maxleftactivity = SCIPinfinity(scip);
                maxleftactisinfinity = TRUE;
@@ -4238,20 +4238,21 @@ SCIP_RETCODE consdataTightenCoefs(
    SCIPdebugMessage("maxleftactivity = %.15g, lhs = %.15g\n", 
       maxleftactivity, consdata->lhs);
    
-   assert(minleftactisinfinity == SCIPisInfinity(scip, minleftactivity));
+   assert(minleftactisinfinity == SCIPisInfinity(scip, -minleftactivity));
    assert(maxleftactisinfinity == SCIPisInfinity(scip, maxleftactivity));
+
    /* minleft == \infty  ==>  minactivity == \infty */
-   assert(!minleftactisinfinity || SCIPisInfinity(scip, minactivity));
+   assert(!minleftactisinfinity || SCIPisInfinity(scip, -minactivity));
    assert(!maxleftactisinfinity || SCIPisInfinity(scip, maxactivity));
 
    /* otherwise aggrlhs is minus infinity in the following computation */
    assert(!SCIPisInfinity(scip, minactivity));
-   if (!SCIPisInfinity(scip, -consdata->lhs && SCIPisInfinity(scip, -minactivity)))
+   if( !SCIPisInfinity(scip, -consdata->lhs && SCIPisInfinity(scip, -minactivity)) )
       return SCIP_OKAY;
 
    /* otherwise aggrrhs is infinity in the following computation */
    assert(!SCIPisInfinity(scip, -maxactivity));
-   if (!SCIPisInfinity(scip, consdata->rhs && SCIPisInfinity(scip, maxactivity)))
+   if( !SCIPisInfinity(scip, consdata->rhs && SCIPisInfinity(scip, maxactivity)) )
       return SCIP_OKAY;
 
    /* correct lhs and rhs by min/max activity of surely non-redundant variables */
@@ -4263,7 +4264,7 @@ SCIP_RETCODE consdataTightenCoefs(
    if( (SCIPisInfinity(scip, -consdata->lhs) || SCIPisLT(scip, maxleftactivity, aggrlhs))
       && (SCIPisInfinity(scip, consdata->rhs) || SCIPisGT(scip, minleftactivity, aggrrhs)) )
    {
-      assert( !SCIPisInfinity(scip, -consdata->lhs) || !SCIPisInfinity(scip, consdata->rhs) );
+      assert(!SCIPisInfinity(scip, -consdata->lhs) || !SCIPisInfinity(scip, consdata->rhs));
       
       /* try to remove redundant variables from constraint */
       for( i = 0; i < consdata->nvars; ++i )
