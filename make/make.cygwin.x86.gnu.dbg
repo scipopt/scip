@@ -1,4 +1,4 @@
-#--- $Id: make.cygwin.x86.gnu.dbg,v 1.1 2007/08/16 13:47:36 bzfpfend Exp $
+#--- $Id: make.cygwin.x86.gnu.dbg,v 1.2 2008/01/28 14:31:07 bzfheinz Exp $
 FLAGS		+=
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
@@ -7,5 +7,7 @@ ARFLAGS		=	crs
 LDFLAGS		+=
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline

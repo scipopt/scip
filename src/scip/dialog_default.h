@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.31 2007/08/07 12:22:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.32 2008/01/28 14:31:10 bzfheinz Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -186,6 +186,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
 /** dialog execution method for the set limits objective command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective);
+
+/** creates a root dialog */
+extern
+SCIP_RETCODE SCIPcreateRootDialog(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIALOG**         root                /**< pointer to store the root dialog */
+   );
 
 /** includes or updates the default dialog menus in SCIP */
 extern

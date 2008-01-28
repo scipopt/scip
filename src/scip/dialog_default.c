@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.80 2007/11/16 21:02:52 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.81 2008/01/28 14:31:10 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1883,6 +1883,23 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteGenTransproblem)
    return SCIP_OKAY;
 }
 
+/** creates a root dialog */
+SCIP_RETCODE SCIPcreateRootDialog(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIALOG**         root                /**< pointer to store the root dialog */
+   )
+{
+   SCIP_CALL( SCIPcreateDialog(scip, root, SCIPdialogExecMenuLazy, NULL, NULL,
+         "SCIP", "SCIP's main menu", TRUE, NULL) );
+   
+   SCIP_CALL( SCIPsetRootDialog(scip, *root) );
+   SCIP_CALL( SCIPreleaseDialog(scip, root) );
+   *root = SCIPgetRootDialog(scip);
+   
+   return SCIP_OKAY;
+}
+
+
 /** includes or updates the default dialog menus in SCIP */
 SCIP_RETCODE SCIPincludeDialogDefault(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1896,11 +1913,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    root = SCIPgetRootDialog(scip);
    if( root == NULL )
    {
-      SCIP_CALL( SCIPcreateDialog(scip, &root, SCIPdialogExecMenuLazy, NULL, NULL,
-            "SCIP", "SCIP's main menu", TRUE, NULL) );
-      SCIP_CALL( SCIPsetRootDialog(scip, root) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &root) );
-      root = SCIPgetRootDialog(scip);
+      SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
    }
 
    /* checksol */

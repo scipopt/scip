@@ -1,4 +1,4 @@
-#--- $Id: make.windows.x86.intel.dbg,v 1.1 2007/08/16 13:47:40 bzfpfend Exp $
+#--- $Id: make.windows.x86.intel.dbg,v 1.2 2008/01/28 14:31:09 bzfheinz Exp $
 CC		=	icl /nologo
 CC_o		=	/Fo
 CXX		=	icl /nologo
@@ -18,6 +18,8 @@ CXXFLAGS	+=	/Zi
 LDFLAGS		=	/debug /subsystem:console /incremental:no /fixed:no
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	
 READLINE_FLAGS	=
 #	/DREADLINE_STATIC
 READLINE_LDFLAGS=

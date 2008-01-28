@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.238 2008/01/28 14:15:24 bzfpfets Exp $
+# $Id: Makefile,v 1.239 2008/01/28 14:31:07 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -58,6 +58,7 @@ SOFTLINKS	=
 MAKESOFTLINKS	=	true
 READLINE	=	true
 ZLIB		=	true
+GMP             =       auto
 ZIMPL		=	true
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
@@ -268,6 +269,19 @@ FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
 LDFLAGS		+=	$(ZLIB_LDFLAGS)
 endif
 
+GMPDEP		:=	$(SRCDIR)/depend.gmp
+GMPSRC		:=	$(shell cat $(GMPDEP))
+ifeq ($(GMP),auto)
+GMP		=	$(ZIMPL)
+endif
+ifeq ($(GMP_LDFLAGS),)
+GMP		=	false
+endif
+ifeq ($(GMP),true)
+FLAGS		+=	-DWITH_GMP $(GMP_FLAGS)
+LDFLAGS		+=	$(GMP_LDFLAGS)
+endif
+
 READLINEDEP	:=	$(SRCDIR)/depend.readline
 READLINESRC	:=	$(shell cat $(READLINEDEP))
 ifeq ($(READLINE_LDFLAGS),)
@@ -284,8 +298,11 @@ ifeq ($(ZIMPL),true)
 ifeq ($(ZLIB),false)
 $(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
 endif
+ifeq ($(GMP),false)
+$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
+endif
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc $(ZIMPL_FLAGS)
-LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(LINKCC_l)gmp$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
 DIRECTORIES	+=	$(LIBDIR)/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/zimplinc/zimpl
 SOFTLINKS	+=	$(LIBDIR)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
@@ -353,6 +370,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/cons_binpack.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_conjunction.o \
+			scip/cons_countsols.o \
 			scip/cons_eqknapsack.o \
 			scip/cons_indicator.o \
 			scip/cons_integral.o \
@@ -618,6 +636,7 @@ depend:		lpidepend maindepend
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(OBJSCIPLIBDEP)'
 		@echo `grep -l "WITH_ZLIB" $(ALLSRC)` >$(ZLIBDEP)
+		@echo `grep -l "WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 
@@ -684,9 +703,12 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 -include $(LASTSETTINGS)
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(READLINEDEP) $(ZIMPLDEP)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP)
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
+endif
+ifneq ($(GMP),$(LAST_GMP))
+		@-touch $(GMPSRC)
 endif
 ifneq ($(READLINE),$(LAST_READLINE))
 		@-touch $(READLINESRC)
@@ -696,6 +718,7 @@ ifneq ($(ZIMPL),$(LAST_ZIMPL))
 endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
+		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
 

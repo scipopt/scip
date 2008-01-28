@@ -2,6 +2,9 @@ current version
 ===============
 
 compiling:
+- added in all make/make.* "GMP_FLAGS" and "GMP_LDFLAGS"
+- new flag GMP with values ("auto", "true, and "false"); in case of "auto" the library gmp is linked if 
+  ZIMPL is included
 - modified makefiles to accept ZIMPLOPT and LPSOPT flags (with values "opt" or "dbg" and default being "opt"),
   and removed LPS=spxdbg and LPS=clpdbg
 - added "make/make.project" as default make include for external projects using SCIP
@@ -23,6 +26,8 @@ interface:
   useful for writing the transformed problem in LP or MPS format
 - new parameter "conshdlrname" in SCIPincludeLinconsUpgrade() 
 - new method SCIPrepropagateNode() to mark a node for repropagation
+- new method SCIPcount() (in cons_countsols.h) for counting all feasible solution of a given CIP
+- new method SCIPcreateRootDialog() (in dialog_default.h) which creates a root dialog
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -38,12 +43,14 @@ features:
 - the MPS reader reads the SOS section (but cannot yet handle 'MARKERS')
 - output of real values is now done with 15 digits after the decimal point
 - new method SCIPgetResultantAnd() which return the resultant variable of an "and" constraint 
+- SCIP is now able to count all feasible solutions of give CIP (SCIPcount() in cons_countsols.h)
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
 - added first version of SOS type 2 constraint handler (cons_sos2.{c,h})
 - less aggressive scaling in linear constraint handler presolve to improve numerics
 - added reader for pseudo-Boolean problems (reader_opb.{c,h})
+- added first version of constraint handler cons_countsols.{c,h}
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),

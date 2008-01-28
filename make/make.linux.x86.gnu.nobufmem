@@ -1,4 +1,4 @@
-#--- $Id: make.linux.x86.gnu.nobufmem,v 1.1 2007/08/16 13:47:38 bzfpfend Exp $
+#--- $Id: make.linux.x86.gnu.nobufmem,v 1.2 2008/01/28 14:31:08 bzfheinz Exp $
 FLAGS		+=	-DNDEBUG -DSCIP_NOBUFFERMEM # -DROUNDING_FE
 OFLAGS		+=	-O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
@@ -7,5 +7,7 @@ ARFLAGS		=	crs
 LDFLAGS		+=
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
 READLINE_FLAGS	=
 READLINE_LDFLAGS=	-lreadline -lncurses
