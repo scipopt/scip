@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.2 2008/01/21 16:09:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.3 2008/01/28 14:18:49 bzfpfets Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -1705,7 +1705,7 @@ SCIP_DECL_READERWRITE(readerWriteOpb)
 {  /*lint --e{715}*/
    if( nvars != nbinvars )
    {
-      SCIPwarningMessage("OPB format is only capable for binary problems\n");
+      SCIPwarningMessage("OPB format is only capable for binary problems.\n");
       *result = SCIP_DIDNOTRUN;
    }
    else
@@ -1717,16 +1717,16 @@ SCIP_DECL_READERWRITE(readerWriteOpb)
       }
       else
       {
-         SCIPwarningMessage("OPB format needs generic variable names\n");
+         SCIPwarningMessage("OPB format needs generic variable names:\n");
          
          if( transformed )
          {
-            SCIPwarningMessage("wirte transformed problem with generic variable names\n");
+            SCIPwarningMessage("write transformed problem with generic variable names.\n");
             SCIP_CALL( SCIPprintTransProblem(scip, file, "opb", TRUE) );
          }
          else
          {
-            SCIPwarningMessage("wirte original problem with generic variable names\n");
+            SCIPwarningMessage("write original problem with generic variable names.\n");
             SCIP_CALL( SCIPprintOrigProblem(scip, file, "opb", TRUE) );
          }
       }
