@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.256 2007/11/15 10:53:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.257 2008/01/28 14:22:09 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10018,8 +10018,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             /* update ages and remove obsolete columns and rows from LP */
             SCIP_CALL( SCIPlpUpdateAges(lp, stat) );
-            SCIP_CALL( SCIPlpRemoveNewObsoletes(lp, blkmem, set, stat) );
-            
+	    if ( stat->nlps % ((set->lp_rowagelimit+1)/2 + 1) == 0 )
+	    {
+	       SCIP_CALL( SCIPlpRemoveNewObsoletes(lp, blkmem, set, stat) );
+            }
+
             if( !lp->solved )
             {
                /* resolve LP after removing obsolete columns and rows */
