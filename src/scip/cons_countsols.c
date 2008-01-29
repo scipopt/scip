@@ -1,20 +1,20 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  This file is part of the program                         */
-/*               IPcount -- Integer Point Counter                            */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2007      Stefan Heinz                                   */
+/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
 /*                                                                           */
-/*                  2007      Konrad-Zuse-Zentrum                            */
+/*                  2002-2007 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  IPcount is distributed under the terms of the ZIB Academic License.      */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with IPcount; see the file COPYING. If not email to heinz@zib.de.  */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.2 2008/01/29 14:34:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.3 2008/01/29 21:53:37 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
