@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.435 2008/01/14 12:08:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.436 2008/01/29 14:34:57 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3550,7 +3550,7 @@ SCIP_RETCODE SCIPaddCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -3559,8 +3559,9 @@ SCIP_RETCODE SCIPaddCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
-      assert(SCIPtreeGetCurrentDepth(scip->tree) >= 0);
+      assert( SCIPtreeGetCurrentDepth(scip->tree) >= 0 ||  scip->set->stage == SCIP_STAGE_PRESOLVED );
       if( SCIPtreeGetCurrentDepth(scip->tree) <= SCIPtreeGetEffectiveRootDepth(scip->tree) )
          SCIPconsSetLocal(cons, FALSE);
       if( SCIPconsIsGlobal(cons) )
@@ -5978,7 +5979,7 @@ SCIP_RETCODE SCIPaddVarLocks(
    int                   nlocksup            /**< modification in number of rounding up locks */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddVarLocks", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE) );
 
    switch( scip->set->stage )
    {
@@ -5989,6 +5990,7 @@ SCIP_RETCODE SCIPaddVarLocks(
 
    case SCIP_STAGE_TRANSFORMING:
    case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_FREESOLVE:

@@ -658,13 +658,13 @@ constraints/countsols/sparsetest = TRUE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/countsols/discardsols = TRUE
 
-# display activation status of display column <csols> (0: off, 1: auto, 2:on)
+# display activation status of display column <sols> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 0]
-display/csols/active = 2
+display/sols/active = 2
 
-# display activation status of display column <FeasUS> (0: off, 1: auto, 2:on)
+# display activation status of display column <feasUS> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 0]
-display/FeasUS/active = 2
+display/feasUS/active = 2
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -2816,7 +2816,7 @@ display/avgdualbound/active = 0
 
 # display activation status of display column <dualbound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]
-display/dualbound/active = 0
+display/dualbound/active = 1
 
 # display activation status of display column <primalbound> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 1]

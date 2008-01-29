@@ -14,7 +14,7 @@
 /*  along with IPcount; see the file COPYING. If not email to heinz@zib.de.  */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.1 2008/01/28 14:31:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.2 2008/01/29 14:34:57 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -63,17 +63,17 @@ typedef SCIP_Longint         Int;
 #define DEFAULT_DISCARDSOLS        TRUE /**< is it allowed to discard solutions */
 
 /* default column settings */
-#define DISP_SOLS_NAME             "csols"
-#define DISP_SOLS_DESC             "number of collected feasible solutions"
-#define DISP_SOLS_HEADER           "csols "
+#define DISP_SOLS_NAME             "sols"
+#define DISP_SOLS_DESC             "number of detected feasible solutions"
+#define DISP_SOLS_HEADER           " sols "
 #define DISP_SOLS_WIDTH            6
 #define DISP_SOLS_PRIORITY         110000
 #define DISP_SOLS_POSITION         100000
 #define DISP_SOLS_STRIPLINE        TRUE
 
-#define DISP_CUTS_NAME             "FeasUS"
-#define DISP_CUTS_DESC             "number of collected feasible unimodular subtrees"
-#define DISP_CUTS_HEADER           "FeasUS"
+#define DISP_CUTS_NAME             "feasUS"
+#define DISP_CUTS_DESC             "number of detected feasible unimodular subtrees"
+#define DISP_CUTS_HEADER           "feasUS"
 #define DISP_CUTS_WIDTH            6
 #define DISP_CUTS_PRIORITY         110000
 #define DISP_CUTS_POSITION         110000
@@ -277,6 +277,17 @@ SCIP_RETCODE checkParameters(
    
    valid = TRUE;
    
+   if( SCIPgetStage(scip) < SCIP_STAGE_PRESOLVED )
+   {
+      /* check if dual methods are turnred off */
+      SCIPgetIntParam(scip, "presolving/dualfix/maxrounds", &value);
+      if( value != 0 )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
+            "The presolver <dualfix> is not turned off! This might cause a wrong counting process.");
+      }
+   }
+
    /* check if all heuristics are turned off */
    heuristics = SCIPgetHeurs(scip);
    nheuristics = SCIPgetNHeurs(scip);
@@ -291,15 +302,7 @@ SCIP_RETCODE checkParameters(
             SCIPheurGetName(heuristics[h]));
       }
    }
-   
-   /* check if dual methods are turnred off */
-   SCIPgetIntParam(scip, "presolving/dualfix/maxrounds", &value);
-   if( value != 0 )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-         "The presolver <dualfix> is not turned off! This might cause a wrong counting process.");
-   }
-   
+  
    /* check if restart is turned off */
    SCIPgetIntParam(scip,  "presolving/maxrestarts", &value);
    if( value != 0 )
@@ -1172,7 +1175,7 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
       /* we only can count solution if there are no continues variables */
       if( SCIPgetNContVars(scip) != 0 )
       {
-         SCIPerrorMessage("invalid problem for counting; there are %d continuous variables (after presolving)\n", SCIPgetNContVars(scip));
+         SCIPwarningMessage("invalid problem for counting; there are continuous variables (after presolving)\n"); 
          return SCIP_INVALIDDATA;
       }
       
@@ -1222,7 +1225,7 @@ SCIP_DECL_CONSDELETE(consDeleteCountsols)
 static 
 SCIP_DECL_CONSENFOLP(consEnfolpCountsols)
 {  /*lint --e{715}*/
-   SCIPdebugMessage("method scip_enfolp\n");
+   SCIPdebugMessage("method SCIP_DECL_CONSENFOLP(consEnfolpCountsols)\n");
    
    assert( scip != NULL );
    assert( conshdlr != NULL );   
@@ -1282,7 +1285,6 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
 {  /*lint --e{715}*/  
    /**@todo solutions which come from scip_ckeck should be ignored since it is not clear who
     *       generated these solution; later we should analyze this problem */
-   
    SCIPdebugMessage("method SCIP_DECL_CONSCHECK(consCheckCountsols)\n");
    
    SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; right now these solutions are ignored\n");
@@ -1358,6 +1360,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
    SCIP_Bool valid;
    SCIP_Longint nsols;
+   int displayprimalbound;
+   int displaygap;
+   int displaysols;
+   int displayfeasUS;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1371,13 +1377,46 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
+      /* turn off dual methods */
+      if( SCIPfindPresol(scip, "dualfix") != NULL )
+      {
+         SCIP_CALL( SCIPgetIntParam(scip, "presolving/dualfix/maxrounds", &maxroundsdualfix) );
+         
+         if( maxroundsdualfix != 0 )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
+               "set parameter <presolving/dualfix/maxrounds> to 0\n");
+            SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualfix/maxrounds", 0) );
+         }
+      }
+
+      /* presolve problem */
+      SCIP_CALL( SCIPpresolve(scip) );
+      
+      /* reset parametername setting for dual methods */
+      if( SCIPfindPresol(scip, "dualfix") != NULL )
+      {
+         if( maxroundsdualfix != 0 )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
+               "reset parameter <presolving/dualfix/maxrounds> to %d\n", maxroundsdualfix);
+            SCIP_CALL( SCIPsetIntParam(scip,  "presolving/dualfix/maxrounds", maxroundsdualfix) );
+         }
+      }
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
+      /* check if the problem contains continuous variables */
+      if( SCIPgetNContVars(scip) != 0 )
+      {   
+         SCIPdialogMessage(scip, NULL, "invalid problem for counting; there are continuous variables (after presolving)\n"); 
+         break;
+      }
+      
       /* set parameter setting for a correct count and store the old setting */
       nheuristics = SCIPgetNHeurs(scip);
-      SCIP_CALL( SCIPallocMemoryArray(scip, &heuristicfreqs, nheuristics) );
          
-      heuristics = SCIPgetHeurs(scip);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &heuristicfreqs, nheuristics) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heuristics, SCIPgetHeurs(scip), nheuristics) );
       heuristicsoff = TRUE;
 
       for( h = 0; h < nheuristics; ++h )
@@ -1409,19 +1448,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
       }
 
-      /* turn off dual methods */
-      if( SCIPfindPresol(scip, "dualfix") != NULL )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "presolving/dualfix/maxrounds", &maxroundsdualfix) );
-         
-         if( maxroundsdualfix != 0 )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
-               "set parameter <presolving/dualfix/maxrounds> to 0\n");
-            SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualfix/maxrounds", 0) );
-         }
-      }
-
+      /* turn off primal bound and gap column */
+      SCIP_CALL( SCIPgetIntParam(scip, "display/primalbound/active", &displayprimalbound) );
+      if( displayprimalbound != 0 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", 0) );
+      SCIP_CALL( SCIPgetIntParam(scip, "display/gap/active", &displaygap) );
+      if( displaygap != 0 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", 0) );
+      
+      /* turn on sols feasUS column */
+      SCIP_CALL( SCIPgetIntParam(scip, "display/sols/active", &displaysols) );
+      if( displayprimalbound != 2 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", 2) );
+      SCIP_CALL( SCIPgetIntParam(scip, "display/feasUS/active", &displayfeasUS) );
+      if( displayprimalbound != 2 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/feasUS/active", 2) );
+      
       /* find the countsols constraint handler */
       assert( SCIPfindConshdlr(scip, CONSHDLR_NAME) != NULL );
       
@@ -1436,7 +1478,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       nsols = SCIPgetNCountedSols(scip, &valid);
       
       if( valid )
-         SCIPinfoMessage(scip, NULL, "Feasible Solutios  : %"SCIP_LONGINT_FORMAT"\n", nsols);
+         SCIPdialogMessage(scip, NULL, "Feasible Solutions : %"SCIP_LONGINT_FORMAT"\n", nsols);
       else
       {
          char* buffer;
@@ -1454,7 +1496,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          }
 
          assert( buffersize >= requiredsize );
-         SCIPinfoMessage(scip, NULL, "Feasible Solutios  : %s\n", buffer);
+         SCIPdialogMessage(scip, NULL, "Feasible Solutions  : %s\n", buffer);
          
          SCIPfreeBufferArray(scip, &buffer);
       }
@@ -1481,25 +1523,27 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
             "reset parameter <presolving/maxrestarts> to %d\n", maxrestarts);
          SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", maxrestarts) );
       }
-
-      /* reset parametername setting for dual methods */
-      if( SCIPfindPresol(scip, "dualfix") != NULL )
-      {
-         if( maxroundsdualfix != 0 )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
-               "reset parameter <presolving/dualfix/maxrounds> to %d\n", maxroundsdualfix);
-            SCIP_CALL( SCIPsetIntParam(scip,  "presolving/dualfix/maxrounds", maxroundsdualfix) );
-         }
-      }
       
+      /* reset display columns */
+      if( displayprimalbound != 0 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", displayprimalbound) );
+      if( displaygap != 0 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", displaygap) );
+      
+      /* reset sols and feasUS column */
+      if( displaysols != 2 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", displaysols) );
+      if( displayfeasUS != 2 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/feasUS/active", displayfeasUS) );
+
       /* free array */
       SCIPfreeMemoryArrayNull(scip, &heuristicfreqs);
+      SCIPfreeMemoryArrayNull(scip, &heuristics);
       
       /* evaluate retcode */
       SCIP_CALL( retcode );
       break;
-   
+      
    case SCIP_STAGE_SOLVED:
       SCIPdialogMessage(scip, NULL, "problem is already solved\n");
       break;
@@ -1627,7 +1671,6 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          "is it allowed to discard solutions?",
          &conshdlrdata->discardsols, FALSE, DEFAULT_DISCARDSOLS, NULL, NULL));
    
-
    /* add dialog entry for counting */
    root = SCIPgetRootDialog(scip);
    if( root == NULL )
@@ -1682,7 +1725,7 @@ SCIP_RETCODE SCIPcreateConsCountsols(
    SCIP_CALL( consdataCreate(scip, &consdata) );
    
    /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, TRUE, FALSE, TRUE, FALSE, FALSE,
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, TRUE, FALSE, TRUE, TRUE, FALSE,
          FALSE, FALSE, FALSE, FALSE, FALSE) );
    
    return SCIP_OKAY;
