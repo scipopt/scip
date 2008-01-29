@@ -14,8 +14,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.5 2008/01/29 13:49:32 bzfpfend Exp $"
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.6 2008/01/29 13:50:50 bzfpfend Exp $"
+
 /**@file   cons_indicator.c
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
