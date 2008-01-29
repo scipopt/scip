@@ -54,7 +54,6 @@ plugins:
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),
-to enasearch for aggregations in equations in the presolving step
 - new parameter "constraints/linear/aggregatevariables" to search for aggregations in equations in the presolving step
 - changed parameter default values for the priority of presolver "dualfix" and "inttobinary"
 - new parameter "constraint/linear/upgrade/binpack" to enable or disable the linear upgrading process
