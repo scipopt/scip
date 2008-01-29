@@ -9,7 +9,7 @@ compiling:
   and removed LPS=spxdbg and LPS=clpdbg
 - added "make/make.project" as default make include for external projects using SCIP
 - adapted all makefiles of the examples accordingly
-- added possibilty in makefile to compile shared libraries (and added make/make.linux.x86.gnu.opt-shared)
+- added possibility to compile shared libraries in makefiles (and added make/make.linux.x86.gnu.opt-shared)
 
 interface:
 - new method SCIPconsGetPos()
@@ -42,8 +42,8 @@ features:
 - the LP reader reads SOS constraints of type 1 and 2
 - the MPS reader reads the SOS section (but cannot yet handle 'MARKERS')
 - output of real values is now done with 15 digits after the decimal point
-- new method SCIPgetResultantAnd() which return the resultant variable of an "and" constraint 
-- SCIP is now able to count all feasible solutions of give CIP (SCIPcount() in cons_countsols.h)
+- new method SCIPgetResultantAnd() which returns the resultant variable of an "and" constraint 
+- SCIP is now able to count all feasible solutions of a given CIP (SCIPcount() in cons_countsols.h)
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -75,9 +75,9 @@ fixed bugs:
 - fixed bug with writing the MIP relaxation to a file concerning the objective function; in case the original 
   objective function is requested, the transformed objective function gets re-transformed (scaling, offset)  
 - added checks whether a plugin (handler) has already been included to avoid later complications e.g. with parameters.
-- Fixed obvious bug in linear constraint data sorting. Most part of the code assumed pure index sorting, but in fact,
+- fixed obvious bug in linear constraint data sorting. Most part of the code assumed pure index sorting, but in fact,
   it was sorted by variable type as first criterion and index as second criterion.
-- Fixed bug with wrong objective sense output for transformed problem. The transformed problem is always a minimization
+- fixed bug with wrong objective sense output for transformed problem. The transformed problem is always a minimization
   problem!
 - fixed numerical issue in linear constraint propagation: need slightly more aggressive tightening such that probing does
   not choose a wrong value for fixing inside an epsilon interval
@@ -154,7 +154,7 @@ plugins:
 - less aggressive in Gomory cut separation
 - strong CG cuts are now also separated for integral slack variables
 - default dialog menu now includes the commands "set default" and "display parameters"
-- new dummy LP interface "lpi_none.c"; usefull for running SCIP without a LP solver
+- new dummy LP interface "lpi_none.c"; useful for running SCIP without a LP solver
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
