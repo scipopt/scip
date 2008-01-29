@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.10 2008/01/24 11:08:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.11 2008/01/29 13:36:36 bzfpfend Exp $"
 
 #define SCIP_DEBUG
 /**@file   sepa_mcf.c
@@ -94,7 +94,7 @@ struct mcfdata
    int                   nnewcols;           /**< number of newcols */
    int                   narcs;              /**< number of arcs in the extracted graph */
    int                   nnodes;             /**< number of nodes in the extracted graph */
-   SCIP_ROW**            capacityrows;       /**< capacity rows for each arc */
+   SCIP_ROW**            capacityrows;       /**< capacity row for each arc */
    int                   capacityrowssize;   /**< size of array */
    SCIP_Bool*            colisincident;      /**< temporary memory for column collection */
 };
@@ -107,10 +107,11 @@ typedef struct mcfdata MCFDATA;              /**< internal MCF extraction data t
  * Local methods
  */
 
-#define LHSPOSSIBLE 1
-#define RHSPOSSIBLE 2
-#define LHSASSIGNED 4
-#define RHSASSIGNED 8
+#define LHSPOSSIBLE  1
+#define RHSPOSSIBLE  2
+#define LHSASSIGNED  4
+#define RHSASSIGNED  8
+#define DISCARDED   16
 
 /** creates an empty MCF network data structure */
 static
@@ -180,17 +181,23 @@ void printCommodities(
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
-   int  ncommodities   = mcfdata->ncommodities;
-   int* commoditysigns = mcfdata->commoditysigns;
-   int* colcommodity   = mcfdata->colcommodity;
-   int* rowcommodity   = mcfdata->rowcommodity;
-   int* colarcid       = mcfdata->colarcid;
+   unsigned char* capacityrowsigns = mcfdata->capacityrowsigns;
+   int            ncommodities     = mcfdata->ncommodities;
+   int*           commoditysigns   = mcfdata->commoditysigns;
+   int*           colcommodity     = mcfdata->colcommodity;
+   int*           rowcommodity     = mcfdata->rowcommodity;
+   int*           colarcid         = mcfdata->colarcid;
+   int*           rownodeid        = mcfdata->rownodeid;
+   SCIP_ROW**     capacityrows     = mcfdata->capacityrows;
 
    SCIP_COL** cols;
    SCIP_ROW** rows;
    int ncols;
    int nrows;
    int k;
+   int c;
+   int r;
+   int a;
 
    cols = SCIPgetLPCols(scip);
    ncols = SCIPgetNLPCols(scip);
@@ -199,23 +206,57 @@ void printCommodities(
 
    for( k = 0; k < ncommodities; k++ )
    {
-      int c;
-      int r;
-
       printf("commodity %d (sign: %+d):\n", k, commoditysigns[k]);
 
       for( c = 0; c < ncols; c++ )
       {
          if( colcommodity[c] == k )
-            printf(" col <%s>: arc %d\n", SCIPvarGetName(SCIPcolGetVar(cols[c])), colarcid[c]);
+            printf(" col <%s>: arc %d\n", SCIPvarGetName(SCIPcolGetVar(cols[c])), colarcid != NULL ? colarcid[c] : -1);
       }
       for( r = 0; r < nrows; r++ )
       {
          if( rowcommodity[r] == k )
-            printf(" row <%s>\n", SCIProwGetName(rows[r]));
+            printf(" row <%s>: node %d\n", SCIProwGetName(rows[r]), rownodeid != NULL ? rownodeid[r] : -1);
       }
       printf("\n");
    }
+
+   printf("capacities:\n");
+   for( a = 0; a < mcfdata->narcs; a++ )
+   {
+      printf("  arc %d: ", a);
+      if( capacityrows[a] != NULL )
+      {
+         r = SCIProwGetLPPos(capacityrows[a]);
+         assert(0 <= r && r < nrows);
+         if( (capacityrowsigns[r] & LHSASSIGNED) != 0 )
+            printf(" row <%s> [sign:-1]\n", SCIProwGetName(rows[r]));
+         else if( (capacityrowsigns[r] & RHSASSIGNED) != 0 )
+            printf(" row <%s> [sign:+1]\n", SCIProwGetName(rows[r]));
+      }
+      else
+         printf(" -\n");
+   }
+   printf("\n");
+
+   printf("unused columns:\n");
+   for( c = 0; c < ncols; c++ )
+   {
+      if( colcommodity[c] == -1 )
+      {
+         SCIP_VAR* var = SCIPcolGetVar(cols[c]);
+         printf(" col <%s> [%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      }
+   }
+   printf("\n");
+
+   printf("unused rows:\n");
+   for( r = 0; r < nrows; r++ )
+   {
+      if( rowcommodity[r] == -1 && (capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0 )
+         printf(" row <%s>\n", SCIProwGetName(rows[r]));
+   }
+   printf("\n");
 }
 #endif
 
@@ -430,6 +471,7 @@ void addFlowrowToCommodity(
    flowrowsigns[r] |= rowsign;
 
    SCIPdebugMessage("adding flow row %d <%s> with sign %d to commodity %d\n", r, SCIProwGetName(row), rowscale, k);
+   SCIPdebug( SCIPprintRow(scip, row, NULL); );
 
    /* add row to commodity */
    rowcommodity[r] = k;
@@ -451,6 +493,7 @@ void addFlowrowToCommodity(
          assert(!minusflow[c]);
          assert(mcfdata->nnewcols < SCIPgetNLPCols(scip));
          colcommodity[c] = k;
+         SCIPdebugMessage(" -> push x%d to stack at pos %d\n", c, mcfdata->nnewcols); /*??????????????????*/
          newcols[mcfdata->nnewcols] = c;
          mcfdata->nnewcols++;
       }
@@ -471,6 +514,95 @@ void addFlowrowToCommodity(
    }
 }
 
+/** checks whether the given row fits into the given commodity and returns the possible flow row signs */
+static
+void getFlowrowFit(
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
+   SCIP_ROW*             row,                /**< flow row to check */
+   int                   k,                  /**< commodity that the flow row should enter */
+   unsigned char*        rowsign             /**< pointer to store the possible flow row signs */
+   )
+{
+   unsigned char* flowrowsigns = mcfdata->flowrowsigns;
+   SCIP_Bool*     plusflow     = mcfdata->plusflow;
+   SCIP_Bool*     minusflow    = mcfdata->minusflow;
+   int*           colcommodity = mcfdata->colcommodity;
+   int*           rowcommodity = mcfdata->rowcommodity;
+
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   int rowlen;
+   int flowrowsign;
+   int r;
+   int j;
+
+   *rowsign = 0;
+
+   r = SCIProwGetLPPos(row);
+   assert(0 <= r && r < SCIPgetNLPRows(scip));
+
+   /* ignore rows that are already used */
+   if( rowcommodity[r] != -1 )
+      return;
+
+   /* check if row is an available flow row */
+   flowrowsign = flowrowsigns[r];
+   assert((flowrowsign & (LHSPOSSIBLE | RHSPOSSIBLE | DISCARDED)) == flowrowsign);
+   if( (flowrowsign & DISCARDED) != 0 )
+      return;
+   if( (flowrowsign & (LHSPOSSIBLE | RHSPOSSIBLE)) == 0 )
+      return;
+
+   /* check whether the row fits w.r.t. the signs of the coefficients */
+   rowcols = SCIProwGetCols(row);
+   rowvals = SCIProwGetVals(row);
+   rowlen = SCIProwGetNLPNonz(row);
+   for( j = 0; j < rowlen && flowrowsign != 0; j++ )
+   {
+      int rowc;
+
+      rowc = SCIPcolGetLPPos(rowcols[j]);
+      assert(0 <= rowc && rowc < SCIPgetNLPCols(scip));
+
+      /* check if column already belongs to the same commodity */
+      if( colcommodity[rowc] == k )
+      {
+         /* column only fits if it is not yet present with the same sign */
+         if( plusflow[rowc] )
+         {
+            /* column must not be included with positive sign */
+            if( rowvals[j] > 0.0 )
+               flowrowsign &= ~LHSPOSSIBLE;
+            else
+               flowrowsign &= ~RHSPOSSIBLE;
+         }
+         if( minusflow[rowc] )
+         {
+            /* column must not be included with negative sign */
+            if( rowvals[j] > 0.0 )
+               flowrowsign &= ~RHSPOSSIBLE;
+            else
+               flowrowsign &= ~LHSPOSSIBLE;
+         }
+      }
+      else if( colcommodity[rowc] != -1 )
+      {
+         /* column does not fit if it already belongs to a different commodity */
+         flowrowsign = 0;
+      }
+   }
+
+   if( flowrowsign == 0 )
+   {
+      /* we can discard the row, since it can also not be member of a different commodity */
+      SCIPdebugMessage(" -> discard flow row %d <%s>\n", r, SCIProwGetName(row));
+      flowrowsigns[r] |= DISCARDED;
+   }
+
+   *rowsign = flowrowsign;
+}
+
 /** returns a flow conservation row that fits into the current commodity, or NULL */
 static
 void getNextFlowrow(
@@ -480,19 +612,21 @@ void getNextFlowrow(
    unsigned char*        nextrowsign         /**< pointer to store possible signs of next row */
    )
 {
-   unsigned char* flowrowsigns = mcfdata->flowrowsigns;
-   SCIP_Bool*     plusflow     = mcfdata->plusflow;
-   SCIP_Bool*     minusflow    = mcfdata->minusflow;
-   int*           rowcommodity = mcfdata->rowcommodity;
-   int*           newcols      = mcfdata->newcols;
+   SCIP_Bool* plusflow     = mcfdata->plusflow;
+   SCIP_Bool* minusflow    = mcfdata->minusflow;
+   int*       newcols      = mcfdata->newcols;
+   int        ncommodities = mcfdata->ncommodities;
 
    SCIP_COL** cols;
+   int k;
 
    assert(nextrow != NULL);
    assert(nextrowsign != NULL);
 
    *nextrow = NULL;
    *nextrowsign = 0;
+
+   k = ncommodities-1;
 
    cols = SCIPgetLPCols(scip);
    assert(cols != NULL);
@@ -509,6 +643,7 @@ void getNextFlowrow(
       /* pop next new column from stack */
       c = newcols[mcfdata->nnewcols-1];
       mcfdata->nnewcols--;
+      SCIPdebugMessage(" -> pop x%d from stack at pos %d\n", c, mcfdata->nnewcols); /*??????????????????*/
       assert(0 <= c && c < SCIPgetNLPCols(scip));
 
       /* check if this columns already as both signs */
@@ -523,56 +658,12 @@ void getNextFlowrow(
       for( i = 0; i < collen; i++ )
       {
          SCIP_ROW* row;
-         SCIP_COL** rowcols;
-         SCIP_Real* rowvals;
-         int rowlen;
          unsigned char flowrowsign;
-         int r;
-         int j;
 
          row = colrows[i];
-         r = SCIProwGetLPPos(row);
-         assert(0 <= r && r < SCIPgetNLPRows(scip));
 
-         /* ignore rows that are already used */
-         if( rowcommodity[r] != -1 )
-            continue;
-         assert((flowrowsign & (LHSPOSSIBLE | RHSPOSSIBLE)) == flowrowsign);
-
-         /* check if row is an available flow row */
-         flowrowsign = flowrowsigns[r];
-         if( (flowrowsign & (LHSPOSSIBLE | RHSPOSSIBLE)) == 0 )
-            continue;
-
-         /* check whether the row fits w.r.t. the signs of the coefficients */
-         rowcols = SCIProwGetCols(row);
-         rowvals = SCIProwGetVals(row);
-         rowlen = SCIProwGetNLPNonz(row);
-         for( j = 0; j < rowlen && flowrowsign != 0; j++ )
-         {
-            int rowc;
-
-            rowc = SCIPcolGetLPPos(rowcols[j]);
-            assert(0 <= rowc && rowc < SCIPgetNLPCols(scip));
-
-            /* column only fits if it is not yet present with the same sign */
-            if( plusflow[rowc] )
-            {
-               /* column must not be included with positive sign */
-               if( rowvals[j] > 0.0 )
-                  flowrowsign &= ~LHSPOSSIBLE;
-               else
-                  flowrowsign &= ~RHSPOSSIBLE;
-            }
-            if( minusflow[rowc] )
-            {
-               /* column must not be included with negative sign */
-               if( rowvals[j] > 0.0 )
-                  flowrowsign &= ~RHSPOSSIBLE;
-               else
-                  flowrowsign &= ~LHSPOSSIBLE;
-            }
-         }
+         /* check if row fits into the current commodity */
+         getFlowrowFit(scip, mcfdata, row, k, &flowrowsign);
 
          /* do we have a winner? */
          if( flowrowsign != 0 )
@@ -592,8 +683,7 @@ SCIP_RETCODE extractFlow(
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
-   unsigned char* flowrowsigns = mcfdata->flowrowsigns;
-   int*           flowcands    = mcfdata->flowcands;
+   int* flowcands = mcfdata->flowcands;
 
    SCIP_Bool* plusflow;
    SCIP_Bool* minusflow;
@@ -646,21 +736,18 @@ SCIP_RETCODE extractFlow(
 
       r = flowcands[i];
       assert(0 <= r && r < nrows);
+      newrow = rows[r];
 
-      /* check if this row is still available */
-      if( rowcommodity[r] != -1 )
-         continue;
-      assert((flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == flowrowsigns[r]);
-      if( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == 0 )
+      /* check if row fits into a new commodity */
+      getFlowrowFit(scip, mcfdata, newrow, mcfdata->ncommodities, &newrowsign);
+      if( newrowsign == 0 )
          continue;
 
       /* start new commodity */
       SCIP_CALL( createNewCommodity(scip, mcfdata) );
-      newrow = rows[r];
-      newrowsign = flowrowsigns[r];
 
       /* fill commodity with flow conservation constraints */
-      while( newrow != NULL )
+      do
       {
          /* add new row to commodity */
          addFlowrowToCommodity(scip, mcfdata, newrow, newrowsign);
@@ -668,6 +755,7 @@ SCIP_RETCODE extractFlow(
          /* get next row to add */
          getNextFlowrow(scip, mcfdata, &newrow, &newrowsign);
       }
+      while( newrow != NULL );
    }
 
    return SCIP_OKAY;
@@ -682,6 +770,7 @@ SCIP_RETCODE extractCapacities(
 {
    unsigned char* capacityrowsigns = mcfdata->capacityrowsigns;
    int*           colcommodity     = mcfdata->colcommodity;
+   int*           rowcommodity     = mcfdata->rowcommodity;
 
    int* colarcid;
    int* rowarcid;
@@ -743,6 +832,10 @@ SCIP_RETCODE extractCapacities(
          if( (capacityrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == 0 )
             continue;
 
+         /* ignore rows that are already used as flow conservation constraints */
+         if( rowcommodity[r] != -1 )
+            continue;
+
          /**todo Use a scoring mechanism instead of first possible for capacity constraint selection. */
          capacityrow = colrows[i];
          break;
@@ -768,8 +861,18 @@ SCIP_RETCODE extractCapacities(
          r = SCIProwGetLPPos(capacityrow);
          assert(0 <= r && r < nrows);
          rowarcid[r] = mcfdata->narcs;
-      
-         SCIPdebugMessage("assigning capacity row %d <%s> to arc %d\n", r, SCIProwGetName(capacityrow), mcfdata->narcs);
+
+         /* decide which sign to use */
+         if( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 )
+            capacityrowsigns[r] |= RHSASSIGNED;
+         else
+         {
+            assert((capacityrowsigns[r] & LHSPOSSIBLE) != 0);
+            capacityrowsigns[r] |= LHSASSIGNED;
+         }
+
+         SCIPdebugMessage("assigning capacity row %d <%s> with sign %+d to arc %d\n",
+                          r, SCIProwGetName(capacityrow), (capacityrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1, mcfdata->narcs);
 
          /* assign all involved flow variables to the new arc id */
          SCIPdebugMessage(" -> flow:");
@@ -881,6 +984,110 @@ void collectIncidentFlowCols(
    }
 }
 
+/** compares given row against a base node flow row and calculates a similarity score;
+ *  score is 0.0 if the rows are incompatible
+ */
+static
+void getNodeSilimarityScore(
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
+   int                   baserowlen,         /**< length of base node flow row */
+   int*                  basearcpattern,     /**< arc patern of base node flow row */
+   SCIP_ROW*             row,                /**< row to compare against base node flow row */
+   SCIP_Real*            score,              /**< pointer to store the similarity score */
+   SCIP_Bool*            invertcommodity     /**< pointer to store whether the arcs in the commodity of the row have
+                                              *   to be inverted for the row to be compatible to the base row */
+   )
+{
+   int*           commoditysigns = mcfdata->commoditysigns;
+   int*           rowcommodity   = mcfdata->rowcommodity;
+   int*           colarcid       = mcfdata->colarcid;
+
+   SCIP_COL** rowcols;
+   SCIP_Real* rowvals;
+   int rowlen;
+   int rowcom;
+   int rowcomsign;
+   SCIP_Bool incompatable;
+   int overlap;
+   int r;
+   int i;
+
+   *score = 0.0;
+   *invertcommodity = FALSE;
+
+   r = SCIProwGetLPPos(row);
+   assert(0 <= r && r < SCIPgetNLPRows(scip));
+   rowcom = rowcommodity[r];
+   assert(0 <= rowcom && rowcom < mcfdata->ncommodities);
+   rowcomsign = commoditysigns[rowcom];
+   assert(-1 <= rowcomsign && rowcomsign <= +1);
+
+   rowcols = SCIProwGetCols(row);
+   rowvals = SCIProwGetVals(row);
+   rowlen = SCIProwGetNLPNonz(row);
+   incompatable = FALSE;
+   overlap = 0;
+   for( i = 0; i < rowlen; i++ )
+   {
+      int c;
+      int arcid;
+      int valsign;
+
+      c = SCIPcolGetLPPos(rowcols[i]);
+      assert(0 <= c && c < SCIPgetNLPCols(scip));
+
+      arcid = colarcid[c];
+      if( arcid == -1 )
+         continue;
+      assert(arcid < mcfdata->narcs);
+
+      valsign = (rowvals[i] > 0.0 ? +1 : -1);
+      if( basearcpattern[arcid] == valsign )
+      {
+         /* both rows have the same sign for this arc */
+         if( rowcomsign == -1 )
+         {
+            /* commodity is inverted, but we have the same sign: this is incompatible */
+            incompatable = TRUE;
+            break;
+         }
+         else
+         {
+            /* we must not invert arc directions in the commodity */
+            rowcomsign = +1;
+            overlap++;
+         }
+      }
+      else if( basearcpattern[arcid] == -valsign )
+      {
+         /* both rows have opposite sign for this arc */
+         if( rowcomsign == +1 )
+         {
+            /* commodity cannot be inverted, but we have opposite signs: this is incompatible */
+            incompatable = TRUE;
+            break;
+         }
+         else
+         {
+            /* we must invert arc directions in the commodity */
+            rowcomsign = -1;
+            overlap++;
+         }
+      }
+      else
+         assert(basearcpattern[arcid] == 0);
+   }
+
+   /* calculate the score: maximize overlap and use minimal number of non-overlapping entries as tie breaker */
+   if( !incompatable && overlap > 0 )
+   {
+      *score = overlap + ABS(rowlen - baserowlen)/(mcfdata->narcs+1.0);
+      *invertcommodity = (rowcomsign == -1);
+   }
+}
+
+
 /** assigns node ids to flow conservation constraints */
 static
 SCIP_RETCODE extractNodes(
@@ -888,12 +1095,13 @@ SCIP_RETCODE extractNodes(
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
-   unsigned char* flowrowsigns = mcfdata->flowrowsigns;
-   int*           colcommodity = mcfdata->colcommodity;
-   int*           rowcommodity = mcfdata->rowcommodity;
-   int*           colarcid     = mcfdata->colarcid;
-   int*           rowarcid     = mcfdata->rowarcid;
-   int*           newcols      = mcfdata->newcols;
+   unsigned char* flowrowsigns   = mcfdata->flowrowsigns;
+   int*           commoditysigns = mcfdata->commoditysigns;
+   int*           colcommodity   = mcfdata->colcommodity;
+   int*           rowcommodity   = mcfdata->rowcommodity;
+   int*           colarcid       = mcfdata->colarcid;
+   int*           rowarcid       = mcfdata->rowarcid;
+   int*           newcols        = mcfdata->newcols;
    int*           rownodeid;
    SCIP_Bool*     colisincident;
 
@@ -905,6 +1113,7 @@ SCIP_RETCODE extractNodes(
    int* arcpattern;
    SCIP_ROW** bestflowrows;
    SCIP_Real* bestscores;
+   SCIP_Bool* bestinverted;
    int r;
    int c;
 
@@ -924,6 +1133,7 @@ SCIP_RETCODE extractNodes(
    SCIP_CALL( SCIPallocMemoryArray(scip, &arcpattern, mcfdata->narcs) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &bestflowrows, mcfdata->ncommodities) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &bestscores, mcfdata->ncommodities) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &bestinverted, mcfdata->ncommodities) );
 
    /* initialize temporary memory */
    for( r = 0; r < nrows; r++ )
@@ -947,7 +1157,10 @@ SCIP_RETCODE extractNodes(
          continue;
       assert((flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
       assert(rowarcid[r] == -1);
-      assert(rownodeid[r] == -1);
+
+      /* skip rows that are already assigned to a node */
+      if( rownodeid[r] >= 0 )
+         continue;
 
       /* assign row to new node id */
       SCIPdebugMessage("assigning row %d <%s> of commodity %d to node %d\n", r, SCIProwGetName(rows[r]), basecommodity, mcfdata->nnodes);
@@ -982,6 +1195,7 @@ SCIP_RETCODE extractNodes(
       {
          bestflowrows[i] = NULL;
          bestscores[i] = 0.0;
+         bestinverted[i] = FALSE;
       }
 
       /* collect columns that are member of incident arc capacity constraints */
@@ -1011,16 +1225,19 @@ SCIP_RETCODE extractNodes(
          for( j = 0; j < collen; j++ )
          {
             int colr;
-            int overlap;
-            /*SCIP_Real score;*/
+            int rowcom;
+            SCIP_Real score;
+            SCIP_Bool invertcommodity;
 
             colr = SCIProwGetLPPos(colrows[j]);
             assert(0 <= colr && colr < nrows);
 
             /* ignore rows that are not flow conservation constraints in the network */
-            assert(rowcommodity[colr] != basecommodity);
-            if( rowcommodity[colr] == -1 )
+            rowcom = rowcommodity[colr];
+            assert(rowcom != basecommodity);
+            if( rowcom == -1 )
                continue;
+            assert(rowcom == colcommodity[c]);
             assert((flowrowsigns[colr] & (LHSASSIGNED | RHSASSIGNED)) != 0);
             assert(rowarcid[colr] == -1);
 
@@ -1029,16 +1246,53 @@ SCIP_RETCODE extractNodes(
                continue;
 
             /* compare row against arc pattern and calculate score */
-            overlap = 0;
-            
+            getNodeSilimarityScore(scip, mcfdata, rowlen, arcpattern, colrows[j], &score, &invertcommodity);
+            if( score > bestscores[rowcom] )
+            {
+               bestflowrows[rowcom] = colrows[j];
+               bestscores[rowcom] = score;
+               bestinverted[rowcom] = invertcommodity;
+            }
          }
       }
 
+      /* for each commodity, pick the best flow conservation constraint to define this node */
+      for( i = 0; i < mcfdata->ncommodities; i++ )
+      {
+         int comr;
+
+         if( bestflowrows[i] == NULL )
+            continue;
+
+         comr = SCIProwGetLPPos(bestflowrows[i]);
+         assert(0 <= comr && comr < nrows);
+         assert(rowcommodity[comr] == i);
+         assert((flowrowsigns[comr] & (LHSASSIGNED | RHSASSIGNED)) != 0);
+         assert(rownodeid[comr] == -1);
+
+         /* assign flow row to current node */
+         SCIPdebugMessage(" -> assigning row %d <%s> of commodity %d to node %d\n", comr, SCIProwGetName(rows[comr]), i, mcfdata->nnodes);
+         rownodeid[comr] = mcfdata->nnodes;
+
+         /* fix the direction of the arcs of the commodity */
+         if( bestinverted[i] )
+         {
+            assert(commoditysigns[i] != +1);
+            commoditysigns[i] = -1;
+         }
+         else
+         {
+            assert(commoditysigns[i] != -1);
+            commoditysigns[i] = +1;
+         }
+      }
+      
       /* increase number of nodes */
       mcfdata->nnodes++;
    }
 
    /* free local temporary memory */
+   SCIPfreeMemoryArray(scip, &bestinverted);
    SCIPfreeMemoryArray(scip, &bestscores);
    SCIPfreeMemoryArray(scip, &bestflowrows);
    SCIPfreeMemoryArray(scip, &arcpattern);
@@ -1154,12 +1408,18 @@ SCIP_RETCODE mcfnetworkExtract(
       /**@todo Sort flow conservation and capacity constraint candidates by a ranking. */
 
       /* 3. Extract network structure of flow conservation constraints. */
+      SCIPdebugMessage("****** extracting flow ******\n");
       SCIP_CALL( extractFlow(scip, &mcfdata) );
+#ifdef SCIP_DEBUG
+      printCommodities(scip, &mcfdata);
+#endif
       
       /* 4. Identify capacity constraints for the arcs and assign arc ids to columns and capacity constraints. */
+      SCIPdebugMessage("****** extracting capacities ******\n");
       SCIP_CALL( extractCapacities(scip, &mcfdata) );
 
       /* 5. Assign node ids to flow conservation constraints. */
+      SCIPdebugMessage("****** extracting nodes ******\n");
       SCIP_CALL( extractNodes(scip, &mcfdata) );
 
       /* if there are still undecided commodity signs, fix them to +1 */
