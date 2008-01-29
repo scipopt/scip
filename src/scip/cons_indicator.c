@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.4 2007/11/28 18:08:39 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.5 2008/01/29 13:49:32 bzfpfend Exp $"
 #define SCIP_DEBUG
 /**@file   cons_indicator.c
  * @brief  constraint handler for indicator constraints
@@ -474,14 +474,14 @@ SCIP_RETCODE addAltLPConstraint(
 	 if ( ! SCIPhashmapExists(conshdlrdata->varHash, var) )
 	 {
 	    /* add variable in map and array and remember to add a new row */
-	    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varHash, var, (void*) conshdlrdata->nvars) );
-	    assert( conshdlrdata->nvars == (int) SCIPhashmapGetImage(conshdlrdata->varHash, var) );
+	    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varHash, var, (void*) (size_t) conshdlrdata->nvars) );
+	    assert( conshdlrdata->nvars == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) );
 	    SCIPdebugMessage("inserted variable <%s> into hashmap (%d)\n", SCIPvarGetName(var), conshdlrdata->nvars);
 	    ++(conshdlrdata->nvars);
 	    ++nNewRows;
 	 }
 	 assert( SCIPhashmapExists(conshdlrdata->varHash, var) );
-	 matind[cnt] = (int) SCIPhashmapGetImage(conshdlrdata->varHash, var) + 1;
+	 matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) + 1;
 	 matval[cnt] = sign * linvals[v];
 	 ++cnt;
       }

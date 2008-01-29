@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.239 2008/01/28 14:31:07 bzfheinz Exp $
+# $Id: Makefile,v 1.240 2008/01/29 13:49:32 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -660,7 +660,6 @@ endif
 
 $(SCIPLIBFILE):	checklpsdefine $(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES) 
 		@echo "-> generating library $@"
-		@echo "$(LPSLDFLAGS)"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) 
 ifneq ($(RANLIB),)
