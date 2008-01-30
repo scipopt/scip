@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.h,v 1.2 2008/01/29 21:53:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.h,v 1.3 2008/01/30 14:19:23 bzfheinz Exp $"
 
 /**@file   cons_countsols.h
  * @brief  constraint handler for counting feasible solutions
@@ -39,27 +39,22 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates and captures a countsol constraint */
-extern
-SCIP_RETCODE SCIPcreateConsCountsols(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name                /**< name of constraint */
-   );
-
 /* execute counting */
 extern
 SCIP_RETCODE SCIPcount(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+#if 0
 /* returns TRUE if the counting process was correct; otherwise FALSE */
 extern
 SCIP_Bool SCIPisCountValid(
    SCIP*                 scip                /**< SCIP data structure */
    ); 
+#endif
 
-/** returns number of feasible solutions found  */
+/** returns number of feasible solutions found as SCIP_Longint; if the number does not fit into 
+ *  a SCIP_Longint the valid flag is set to FALSE */
 extern
 SCIP_Longint SCIPgetNCountedSols(
    SCIP*                 scip,              /**< SCIP data structure */
@@ -77,7 +72,7 @@ void SCIPgetNCountedSolsstr(
 
 /** returns number of counted feasible unimodular subtrees */
 extern
-SCIP_Longint SCIPgetNCountedFeasUnimodularSubtrees(
+SCIP_Longint SCIPgetNCountedFeasUS(
    SCIP*                 scip                /**< SCIP data structure */
    ); 
 
