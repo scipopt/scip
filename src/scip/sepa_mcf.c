@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.11 2008/01/29 13:36:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.12 2008/01/30 17:17:05 bzfpfend Exp $"
 
 #define SCIP_DEBUG
 /**@file   sepa_mcf.c
@@ -75,7 +75,9 @@ struct mcfdata
 {
    unsigned char*        flowrowsigns;       /**< potential or actual sides of rows to be used as flow conservation constraint */
    SCIP_Real*            flowrowscalars;     /**< scalar of rows to transform into +/-1 coefficients */
+   SCIP_Real*            flowrowscores;      /**< score value indicating how sure we are that this is indeed a flow conservation constraint */
    unsigned char*        capacityrowsigns;   /**< potential or actual sides of rows to be used as capacity constraint */
+   SCIP_Real*            capacityrowscores;  /**< score value indicating how sure we are that this is indeed a capacity constraint */
    int*                  flowcands;          /**< list of row indices that are candidates for flow conservation constraints */
    int                   nflowcands;         /**< number of elements in flow candidate list */
    int*                  capacitycands;      /**< list of row indices that are candidates for capacity constraints */
@@ -260,6 +262,14 @@ void printCommodities(
 }
 #endif
 
+/** comparator method for flow and capacity row candidates */
+static
+SCIP_DECL_SORTINDCOMP(compCands)
+{
+   SCIP_Real* rowscores = (SCIP_Real*)dataptr;
+
+   return rowscores[ind2] - rowscores[ind1];
+}
 
 /** extracts flow conservation and capacity rows from the LP */
 static
@@ -268,17 +278,35 @@ SCIP_RETCODE extractRows(
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
-   unsigned char* flowrowsigns     = mcfdata->flowrowsigns;
-   SCIP_Real*     flowrowscalars   = mcfdata->flowrowscalars;
-   unsigned char* capacityrowsigns = mcfdata->capacityrowsigns;
-   int*           flowcands        = mcfdata->flowcands;
-   int*           capacitycands    = mcfdata->capacitycands;
+   unsigned char* flowrowsigns;
+   SCIP_Real*     flowrowscalars;
+   SCIP_Real*     flowrowscores;
+   unsigned char* capacityrowsigns;
+   SCIP_Real*     capacityrowscores;
+   int*           flowcands;
+   int*           capacitycands;
 
    SCIP_ROW** rows;
    int nrows;
    int r;
 
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+
+   /* allocate temporary memory for extraction data */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowsigns, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowscalars, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowscores, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowsigns, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowscores, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowcands, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacitycands, nrows) );
+   flowrowsigns      = mcfdata->flowrowsigns;
+   flowrowscalars    = mcfdata->flowrowscalars;
+   flowrowscores     = mcfdata->flowrowscores;
+   capacityrowsigns  = mcfdata->capacityrowsigns;
+   capacityrowscores = mcfdata->capacityrowscores;
+   flowcands         = mcfdata->flowcands;
+   capacitycands     = mcfdata->capacitycands;
 
    for( r = 0; r < nrows; r++ )
    {
@@ -288,8 +316,19 @@ SCIP_RETCODE extractRows(
       SCIP_Real rowlhs;
       SCIP_Real rowrhs;
       int rowlen;
+      int nbinvars;
+      int nintvars;
+      int nimplintvars;
+      int ncontvars;
       SCIP_Real coef;
+      SCIP_Bool hasposcoef;
+      SCIP_Bool hasnegcoef;
+      SCIP_Bool hasposcontcoef;
+      SCIP_Bool hasnegcontcoef;
+      SCIP_Bool hasposintcoef;
+      SCIP_Bool hasnegintcoef;
       SCIP_Bool hasinteger;
+      SCIP_Real samecontcoef;
       unsigned int rowsign;
       int i;
 
@@ -298,7 +337,9 @@ SCIP_RETCODE extractRows(
 
       flowrowsigns[r] = 0;
       flowrowscalars[r] = 0.0;
+      flowrowscores[r] = 0.0;
       capacityrowsigns[r] = 0;
+      capacityrowscores[r] = 0.0;
 
       rowlen = SCIProwGetNNonz(row);
       if( rowlen == 0 )
@@ -310,11 +351,42 @@ SCIP_RETCODE extractRows(
 
       /* identify flow conservation constraints */
       coef = ABS(rowvals[0]);
-      for( i = 1; i < rowlen; i++ )
+      hasposcoef = FALSE;
+      hasnegcoef = FALSE;
+      nbinvars = 0;
+      nintvars = 0;
+      nimplintvars = 0;
+      ncontvars = 0;
+      for( i = 0; i < rowlen; i++ )
       {
          SCIP_Real absval = ABS(rowvals[i]);
          if( !SCIPisEQ(scip, absval, coef) )
             break;
+
+#if 0
+         if( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) != SCIP_VARTYPE_CONTINUOUS )
+            break; /*????????????????????*/
+#endif
+         hasposcoef = hasposcoef || (rowvals[i] > 0.0);
+         hasnegcoef = hasnegcoef || (rowvals[i] < 0.0);
+         switch( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) )
+         {
+         case SCIP_VARTYPE_BINARY:
+            nbinvars++;
+            break;
+         case SCIP_VARTYPE_INTEGER:
+            nintvars++;
+            break;
+         case SCIP_VARTYPE_IMPLINT:
+            nimplintvars++;
+            break;
+         case SCIP_VARTYPE_CONTINUOUS:
+            ncontvars++;
+            break;
+         default:
+            SCIPerrorMessage("unknown variable type\n");
+            SCIPABORT();
+         }
       }
       if( i == rowlen )
       {
@@ -331,7 +403,12 @@ SCIP_RETCODE extractRows(
       }
 
       /* identify capacity constraints */
+      hasposcontcoef = FALSE;
+      hasnegcontcoef = FALSE;
+      hasposintcoef = FALSE;
+      hasnegintcoef = FALSE;
       hasinteger = FALSE;
+      samecontcoef = 0.0;
       rowsign = 0;
       if( !SCIPisInfinity(scip, -rowlhs) )
          rowsign |= LHSPOSSIBLE;
@@ -341,21 +418,29 @@ SCIP_RETCODE extractRows(
       {
          if( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) == SCIP_VARTYPE_CONTINUOUS )
          {
+            if( samecontcoef == 0.0 )
+               samecontcoef = rowvals[i];
+            else if( !SCIPisEQ(scip, samecontcoef, rowvals[i]) )
+               samecontcoef = SCIP_REAL_MAX;
+            
             if( rowvals[i] > 0.0 )
+            {
                rowsign &= ~LHSPOSSIBLE;
+               hasposcontcoef = TRUE;
+            }
             else
+            {
                rowsign &= ~RHSPOSSIBLE;
+               hasnegcontcoef = TRUE;
+            }
          }
          else
          {
             hasinteger = TRUE;
-            if( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) != SCIP_VARTYPE_BINARY )
-            {
-               if( rowvals[i] < 0.0 )
-                  rowsign &= ~LHSPOSSIBLE;
-               else
-                  rowsign &= ~RHSPOSSIBLE;
-            }
+            if( rowvals[i] > 0.0 )
+               hasposintcoef = TRUE;
+            else
+               hasnegintcoef = TRUE;
          }
       }
       if( i == rowlen && hasinteger && rowsign != 0 )
@@ -364,25 +449,85 @@ SCIP_RETCODE extractRows(
          capacitycands[mcfdata->ncapacitycands] = r;
          mcfdata->ncapacitycands++;
       }
+
+      /* calculate flow row score */
+      if( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0 )
+      {
+         /* row is an equation: score +10 */
+         if( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == (LHSPOSSIBLE | RHSPOSSIBLE) )
+            flowrowscores[r] += 10.0;
+
+         /* row is not a capacity constraint: score +10 */
+         if( (capacityrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == 0 )
+            flowrowscores[r] += 10.0;
+
+         /* row does not need to be scaled: score +10 */
+         if( SCIPisEQ(scip, flowrowscalars[r], 1.0) )
+            flowrowscores[r] += 10.0;
+
+         /* row has positive and negative coefficients: score +5 */
+         if( hasposcoef && hasnegcoef )
+            flowrowscores[r] += 5.0;
+
+         /* all variables are of the same type:
+          *    continuous: score +10
+          *    integer:    score  +5
+          *    binary:     score  +1
+          */
+         if( ncontvars == rowlen )
+            flowrowscores[r] += 10.0;
+         else if( nintvars + nimplintvars == rowlen )
+            flowrowscores[r] += 5.0;
+         else if( nbinvars == rowlen )
+            flowrowscores[r] += 1.0;
+
+         /**@todo go through list of several model types, depending on the current model type throw away invalid constraints
+          *       instead of assigning a low score
+          */
+      }
+
+      /* calculate capacity row score */
+      if( (capacityrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0 )
+      {
+         /* row is of type f - c*x <= b: score +10 */
+         if( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 && hasposcontcoef && !hasnegcontcoef && !hasposintcoef && hasnegintcoef )
+            capacityrowscores[r] += 10.0;
+         if( (capacityrowsigns[r] & LHSPOSSIBLE) != 0 && !hasposcontcoef && hasnegcontcoef && hasposintcoef && !hasnegintcoef )
+            capacityrowscores[r] += 10.0;
+
+         /* all coefficients of continuous variables are +1 or all are -1: score +5 */
+         if( SCIPisEQ(scip, ABS(samecontcoef), 1.0) )
+            capacityrowscores[r] += 5.0;
+
+         /* all coefficients of continuous variables are equal: score +2 */
+         if( samecontcoef != 0.0 && samecontcoef != SCIP_REAL_MAX )
+            capacityrowscores[r] += 2.0;
+
+         /* row is a <= row with non-negative right hand side: score +1 */
+         if( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 && !SCIPisNegative(scip, rowrhs)  )
+            capacityrowscores[r] += 1.0;
+
+         /* row is an inequality: score +1 */
+         if( SCIPisInfinity(scip, -rowlhs) != SCIPisInfinity(scip, rowrhs) )
+            capacityrowscores[r] += 1.0;
+      }
    }
 
+   /* sort candidates by score */
+   SCIPbsortInd((void*)flowrowscores, mcfdata->flowcands, mcfdata->nflowcands, compCands);
+   SCIPbsortInd((void*)capacityrowscores, mcfdata->capacitycands, mcfdata->ncapacitycands, compCands);
+
    SCIPdebugMessage("flow conservation candidates:\n");
-   for( r = 0; r < nrows; r++ )
+   for( r = 0; r < mcfdata->nflowcands; r++ )
    {
-      if( flowrowsigns[r] != 0 )
-      {
-         //SCIPdebug(SCIPprintRow(scip, rows[r], NULL));
-         SCIPdebugMessage("%4d: %s\n", r, SCIProwGetName(rows[r]));
-      }
+      //SCIPdebug(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL));
+      SCIPdebugMessage("%4d [score: %2g]: %s\n", r, flowrowscores[mcfdata->flowcands[r]], SCIProwGetName(rows[mcfdata->flowcands[r]]));
    }
    SCIPdebugMessage("capacity candidates:\n");
-   for( r = 0; r < nrows; r++ )
+   for( r = 0; r < mcfdata->ncapacitycands; r++ )
    {
-      if( capacityrowsigns[r] != 0 )
-      {
-         //SCIPdebug(SCIPprintRow(scip, rows[r], NULL));
-         SCIPdebugMessage("%4d: %s\n", r, SCIProwGetName(rows[r]));
-      }
+      //SCIPdebug(SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL));
+      SCIPdebugMessage("%4d [score: %2g]: %s\n", r, capacityrowscores[mcfdata->capacitycands[r]], SCIProwGetName(rows[mcfdata->capacitycands[r]]));
    }
 
    return SCIP_OKAY;
@@ -768,9 +913,10 @@ SCIP_RETCODE extractCapacities(
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
-   unsigned char* capacityrowsigns = mcfdata->capacityrowsigns;
-   int*           colcommodity     = mcfdata->colcommodity;
-   int*           rowcommodity     = mcfdata->rowcommodity;
+   unsigned char* capacityrowsigns  = mcfdata->capacityrowsigns;
+   SCIP_Real*     capacityrowscores = mcfdata->capacityrowscores;
+   int*           colcommodity      = mcfdata->colcommodity;
+   int*           rowcommodity      = mcfdata->rowcommodity;
 
    int* colarcid;
    int* rowarcid;
@@ -803,7 +949,8 @@ SCIP_RETCODE extractCapacities(
    /* for each column, search for a capacity constraint */
    for( c = 0; c < ncols; c++ )
    {
-      SCIP_ROW* capacityrow;
+      SCIP_ROW* bestcapacityrow;
+      SCIP_Real bestscore;
       SCIP_ROW** colrows;
       int collen;
       int i;
@@ -817,7 +964,8 @@ SCIP_RETCODE extractCapacities(
          continue;
 
       /* scan the column to search for valid capacity constraints */
-      capacityrow = NULL;
+      bestcapacityrow = NULL;
+      bestscore = 0.0;
       colrows = SCIPcolGetRows(cols[c]);
       collen = SCIPcolGetNLPNonz(cols[c]);
       for( i = 0; i < collen; i++ )
@@ -836,13 +984,16 @@ SCIP_RETCODE extractCapacities(
          if( rowcommodity[r] != -1 )
             continue;
 
-         /**todo Use a scoring mechanism instead of first possible for capacity constraint selection. */
-         capacityrow = colrows[i];
-         break;
+         /* check if this capacity candidate has better score */
+         if( capacityrowscores[r] > bestscore )
+         {
+            bestcapacityrow = colrows[i];
+            bestscore = capacityrowscores[r];
+         }
       }
 
       /* if no capacity row has been found, leave the column unassigned */
-      if( capacityrow != NULL )
+      if( bestcapacityrow != NULL )
       {
          SCIP_COL** rowcols;
          int rowlen;
@@ -855,10 +1006,10 @@ SCIP_RETCODE extractCapacities(
             SCIP_CALL( SCIPreallocMemoryArray(scip, &mcfdata->capacityrows, mcfdata->capacityrowssize) );
          }
          assert(mcfdata->narcs < mcfdata->capacityrowssize);
-         mcfdata->capacityrows[mcfdata->narcs] = capacityrow;
+         mcfdata->capacityrows[mcfdata->narcs] = bestcapacityrow;
 
          /* assign the capacity row to a new arc id */
-         r = SCIProwGetLPPos(capacityrow);
+         r = SCIProwGetLPPos(bestcapacityrow);
          assert(0 <= r && r < nrows);
          rowarcid[r] = mcfdata->narcs;
 
@@ -872,12 +1023,12 @@ SCIP_RETCODE extractCapacities(
          }
 
          SCIPdebugMessage("assigning capacity row %d <%s> with sign %+d to arc %d\n",
-                          r, SCIProwGetName(capacityrow), (capacityrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1, mcfdata->narcs);
+                          r, SCIProwGetName(bestcapacityrow), (capacityrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1, mcfdata->narcs);
 
          /* assign all involved flow variables to the new arc id */
          SCIPdebugMessage(" -> flow:");
-         rowcols = SCIProwGetCols(capacityrow);
-         rowlen = SCIProwGetNLPNonz(capacityrow);
+         rowcols = SCIProwGetCols(bestcapacityrow);
+         rowlen = SCIProwGetNLPNonz(bestcapacityrow);
          for( i = 0; i < rowlen; i++ )
          {
             int rowc;
@@ -897,7 +1048,9 @@ SCIP_RETCODE extractCapacities(
          mcfdata->narcs++;
       }
       else
+      {
          SCIPdebugMessage("no capacity row found for column x%d <%s> in commodity %d\n", c, SCIPvarGetName(SCIPcolGetVar(cols[c])), colcommodity[c]);
+      }
    }
 
    return SCIP_OKAY;
@@ -999,9 +1152,9 @@ void getNodeSilimarityScore(
                                               *   to be inverted for the row to be compatible to the base row */
    )
 {
-   int*           commoditysigns = mcfdata->commoditysigns;
-   int*           rowcommodity   = mcfdata->rowcommodity;
-   int*           colarcid       = mcfdata->colarcid;
+   int* commoditysigns = mcfdata->commoditysigns;
+   int* rowcommodity   = mcfdata->rowcommodity;
+   int* colarcid       = mcfdata->colarcid;
 
    SCIP_COL** rowcols;
    SCIP_Real* rowvals;
@@ -1082,7 +1235,9 @@ void getNodeSilimarityScore(
    /* calculate the score: maximize overlap and use minimal number of non-overlapping entries as tie breaker */
    if( !incompatable && overlap > 0 )
    {
-      *score = overlap + ABS(rowlen - baserowlen)/(mcfdata->narcs+1.0);
+      assert(overlap <= rowlen);
+      assert(overlap <= baserowlen);
+      *score = overlap - (rowlen + baserowlen - 2*overlap)/(mcfdata->narcs+1.0);
       *invertcommodity = (rowcomsign == -1);
    }
 }
@@ -1104,6 +1259,7 @@ SCIP_RETCODE extractNodes(
    int*           newcols        = mcfdata->newcols;
    int*           rownodeid;
    SCIP_Bool*     colisincident;
+   SCIP_Bool*     rowprocessed;
 
    SCIP_ROW** rows;
    SCIP_COL** cols;
@@ -1134,6 +1290,7 @@ SCIP_RETCODE extractNodes(
    SCIP_CALL( SCIPallocMemoryArray(scip, &bestflowrows, mcfdata->ncommodities) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &bestscores, mcfdata->ncommodities) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &bestinverted, mcfdata->ncommodities) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &rowprocessed, nrows) );
 
    /* initialize temporary memory */
    for( r = 0; r < nrows; r++ )
@@ -1167,6 +1324,7 @@ SCIP_RETCODE extractNodes(
       rownodeid[r] = mcfdata->nnodes;
 
       /* get the arc pattern of the flow row */
+      BMSclearMemoryArray(arcpattern, mcfdata->narcs);
       rowcols = SCIProwGetCols(rows[r]);
       rowvals = SCIProwGetVals(rows[r]);
       rowlen = SCIProwGetNLPNonz(rows[r]);
@@ -1201,6 +1359,9 @@ SCIP_RETCODE extractNodes(
       /* collect columns that are member of incident arc capacity constraints */
       collectIncidentFlowCols(scip, mcfdata, rows[r], basecommodity);
 
+      /* initialize rowprocessed array */
+      BMSclearMemoryArray(rowprocessed, nrows);
+
       /* identify flow conservation constraints in other commodities that match this node;
        * search for flow rows in the column vectors of the indicent columns
        */
@@ -1231,6 +1392,11 @@ SCIP_RETCODE extractNodes(
 
             colr = SCIProwGetLPPos(colrows[j]);
             assert(0 <= colr && colr < nrows);
+
+            /* ignore rows that have already been processed */
+            if( rowprocessed[colr] )
+               continue;
+            rowprocessed[colr] = TRUE;
 
             /* ignore rows that are not flow conservation constraints in the network */
             rowcom = rowcommodity[colr];
@@ -1292,6 +1458,7 @@ SCIP_RETCODE extractNodes(
    }
 
    /* free local temporary memory */
+   SCIPfreeMemoryArray(scip, &rowprocessed);
    SCIPfreeMemoryArray(scip, &bestinverted);
    SCIPfreeMemoryArray(scip, &bestscores);
    SCIPfreeMemoryArray(scip, &bestflowrows);
@@ -1327,11 +1494,6 @@ SCIP_RETCODE mcfnetworkExtract(
 {
    SCIP_MCFNETWORK* mcf;
    MCFDATA mcfdata;
-   unsigned char* flowrowsigns;
-   SCIP_Real* flowrowscalars;
-   unsigned char* capacityrowsigns;
-   int* flowcands;
-   int* capacitycands;
 
    SCIP_ROW** rows;
    SCIP_COL** cols;
@@ -1365,13 +1527,15 @@ SCIP_RETCODE mcfnetworkExtract(
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
-   /* allocate temporary memory for extraction data */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata.flowrowsigns, nrows) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata.flowrowscalars, nrows) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata.capacityrowsigns, nrows) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata.flowcands, nrows) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata.capacitycands, nrows) );
+   /* initialize local extraction data */
+   mcfdata.flowrowsigns = NULL;
+   mcfdata.flowrowscalars = NULL;
+   mcfdata.flowrowscores = NULL;
+   mcfdata.capacityrowsigns = NULL;
+   mcfdata.capacityrowscores = NULL;
+   mcfdata.flowcands = NULL;
    mcfdata.nflowcands = 0;
+   mcfdata.capacitycands = NULL;
    mcfdata.ncapacitycands = 0;
    mcfdata.plusflow = NULL;
    mcfdata.minusflow = NULL;
@@ -1391,22 +1555,14 @@ SCIP_RETCODE mcfnetworkExtract(
    mcfdata.capacityrowssize = 0;
    mcfdata.colisincident = NULL;
 
-   flowrowsigns = mcfdata.flowrowsigns;
-   flowrowscalars = mcfdata.flowrowscalars;
-   capacityrowsigns = mcfdata.capacityrowsigns;
-   flowcands = mcfdata.flowcands;
-   capacitycands = mcfdata.capacitycands;
-
-   /* 1. Identify candidate rows for flow conservation constraints and capacity constraints in the LP. */
+   /* 1. Identify candidate rows for flow conservation constraints and capacity constraints in the LP.
+    * 2. Sort flow conservation and capacity constraint candidates by a ranking on
+    *    how sure we are that it is indeed a constraint of the desired type.
+    */
    SCIP_CALL( extractRows(scip, &mcfdata) );
 
    if( mcfdata.nflowcands > 0 && mcfdata.ncapacitycands > 0 )
    {
-      /* 2. Sort flow conservation and capacity constraint candidates by a ranking on
-       *    how sure we are that it is indeed a constraint of the desired type.
-       */
-      /**@todo Sort flow conservation and capacity constraint candidates by a ranking. */
-
       /* 3. Extract network structure of flow conservation constraints. */
       SCIPdebugMessage("****** extracting flow ******\n");
       SCIP_CALL( extractFlow(scip, &mcfdata) );
@@ -1442,11 +1598,13 @@ SCIP_RETCODE mcfnetworkExtract(
    SCIPfreeMemoryArrayNull(scip, &mcfdata.commoditysigns);
    SCIPfreeMemoryArrayNull(scip, &mcfdata.minusflow);
    SCIPfreeMemoryArrayNull(scip, &mcfdata.plusflow);
-   SCIPfreeMemoryArray(scip, &mcfdata.capacitycands);
-   SCIPfreeMemoryArray(scip, &mcfdata.flowcands);
-   SCIPfreeMemoryArray(scip, &mcfdata.capacityrowsigns);
-   SCIPfreeMemoryArray(scip, &mcfdata.flowrowscalars);
-   SCIPfreeMemoryArray(scip, &mcfdata.flowrowsigns);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.capacitycands);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.flowcands);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.capacityrowscores);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.capacityrowsigns);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.flowrowscores);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.flowrowscalars);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.flowrowsigns);
 
    return SCIP_OKAY;
 }

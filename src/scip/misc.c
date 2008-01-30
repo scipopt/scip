@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.64 2007/08/16 10:16:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.65 2008/01/30 17:17:05 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2385,7 +2385,27 @@ void SCIPbsort(
    void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
    int                   len,                /**< number of elements to be sorted (valid index range) */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
-   int*                  indarray            /**< pointer to store the sorted index array */
+   int*                  perm                /**< pointer to store the permutation */
+   )
+{
+   int pos;
+
+   assert(indcomp != NULL);
+   assert(len == 0 || perm != NULL);
+
+   /* create identity permutation */
+   for( pos = 0; pos < len; ++pos )
+      perm[pos] = pos;
+   
+   SCIPbsortInd(dataptr, perm, len, indcomp);
+}
+
+/** bubble sort an index array of an indexed element set */
+void SCIPbsortInd(
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int*                  indarray,           /**< pointer to the index array to be sorted */
+   int                   len,                /**< number of elements to be sorted (valid index range) */
+   SCIP_DECL_SORTINDCOMP((*indcomp))         /**< data element comparator */
    )
 {
    int firstpos;
@@ -2396,10 +2416,6 @@ void SCIPbsort(
 
    assert(indcomp != NULL);
    assert(len == 0 || indarray != NULL);
-
-   /* create identity permutation */
-   for( pos = 0; pos < len; ++pos )
-      indarray[pos] = pos;
 
    /* bubble sort index array */
    firstpos = 0;

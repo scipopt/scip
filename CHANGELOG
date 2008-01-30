@@ -28,6 +28,7 @@ interface:
 - new method SCIPrepropagateNode() to mark a node for repropagation
 - new method SCIPcount() (in cons_countsols.h) for counting all feasible solution of a given CIP
 - new method SCIPcreateRootDialog() (in dialog_default.h) which creates a root dialog
+- new method SCIPbsortInd()
 
 features:
 - the MPS reader is now able to write a problem in MPS format
