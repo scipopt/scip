@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.4 2008/01/30 14:19:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.5 2008/01/31 14:32:26 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -74,9 +74,9 @@ typedef SCIP_Longint         Int;
 #define DISP_SOLS_POSITION         100000
 #define DISP_SOLS_STRIPLINE        TRUE
 
-#define DISP_CUTS_NAME             "feasUS"
-#define DISP_CUTS_DESC             "number of detected feasible unimodular subtrees"
-#define DISP_CUTS_HEADER           "feasUS"
+#define DISP_CUTS_NAME             "feasST"
+#define DISP_CUTS_DESC             "number of detected non trivial feasible subtrees"
+#define DISP_CUTS_HEADER           "feasST"
 #define DISP_CUTS_WIDTH            6
 #define DISP_CUTS_PRIORITY         110000
 #define DISP_CUTS_POSITION         110000
@@ -96,7 +96,7 @@ typedef SCIP_Longint         Int;
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   int                   feasUS;             /**< number of non trivial feasible unimodular subtrees */
+   int                   feasST;             /**< number of non trivial feasible subtrees */
    int                   nDiscardSols ;      /**< number of discard solutions */
    int                   nNonSparseSols;     /**< number of non sparse solutions */
    Int                   nsols;              /**< number of solutions */
@@ -247,7 +247,7 @@ SCIP_RETCODE conshdlrdataCreate(
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
    
-   (*conshdlrdata)->feasUS = 0;
+   (*conshdlrdata)->feasST = 0;
    (*conshdlrdata)->nDiscardSols = 0;
    (*conshdlrdata)->nNonSparseSols = 0;
    
@@ -589,7 +589,7 @@ SCIP_RETCODE countSparsesol(
       }
       
       *result = SCIP_CUTOFF;
-      conshdlrdata->feasUS++;
+      conshdlrdata->feasST++;
       
       addInt(&conshdlrdata->nsols, &newsols);
       freeInt(&newsols);
@@ -914,9 +914,9 @@ SCIP_Bool checkVarbound(
 }
 
 
-/** check if the current node initializes a non trivial feasible unimodular subtree */
+/** check if the current node initializes a non trivial feasible subtree */
 static 
-SCIP_RETCODE checkFeasUS(
+SCIP_RETCODE checkFeasST(
    SCIP* scip,                         /**< SCIP main data structure */
    SCIP_SOL* sol,                      /**< solution to check */
    SCIP_Bool* feasible                 /**< pointer to store the result of the check */
@@ -1070,7 +1070,7 @@ SCIP_RETCODE checkSolution(
    }
    else if( conshdlrdata->sparsetest )
    {
-      SCIP_CALL( checkFeasUS(scip, sol, &feasible) ) ;
+      SCIP_CALL( checkFeasST(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
    }
    
@@ -1336,7 +1336,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int displayprimalbound;
    int displaygap;
    int displaysols;
-   int displayfeasUS;
+   int displayfeasST;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
@@ -1429,13 +1429,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       if( displaygap != 0 )
          SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", 0) );
       
-      /* turn on sols feasUS column */
+      /* turn on sols feasST column */
       SCIP_CALL( SCIPgetIntParam(scip, "display/sols/active", &displaysols) );
       if( displayprimalbound != 2 )
          SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", 2) );
-      SCIP_CALL( SCIPgetIntParam(scip, "display/feasUS/active", &displayfeasUS) );
+      SCIP_CALL( SCIPgetIntParam(scip, "display/feasST/active", &displayfeasST) );
       if( displayprimalbound != 2 )
-         SCIP_CALL( SCIPsetIntParam(scip, "display/feasUS/active", 2) );
+         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", 2) );
       
       /* find the countsols constraint handler */
       assert( SCIPfindConshdlr(scip, CONSHDLR_NAME) != NULL );
@@ -1498,11 +1498,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       if( displaygap != 0 )
          SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", displaygap) );
       
-      /* reset sols and feasUS column */
+      /* reset sols and feasST column */
       if( displaysols != 2 )
          SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", displaysols) );
-      if( displayfeasUS != 2 )
-         SCIP_CALL( SCIPsetIntParam(scip, "display/feasUS/active", displayfeasUS) );
+      if( displayfeasST != 2 )
+         SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", displayfeasST) );
 
       /* free array */
       SCIPfreeMemoryArrayNull(scip, &heuristicfreqs);
@@ -1565,7 +1565,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
 
 /** output method of display column to output file stream 'file' */
 static
-SCIP_DECL_DISPOUTPUT(dispOutputFeasUnimodularSubtrees)
+SCIP_DECL_DISPOUTPUT(dispOutputFeasSubtrees)
 { /*lint --e{715}*/
    SCIP_CONSHDLR* conshdlr;
    
@@ -1577,7 +1577,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputFeasUnimodularSubtrees)
    assert( conshdlr != NULL );
    assert( SCIPconshdlrGetNConss(conshdlr) == 0 );
    
-   SCIPdispInt(file, SCIPgetNCountedFeasUS(scip), DISP_CUTS_WIDTH);
+   SCIPdispInt(file, SCIPgetNCountedFeasSubtrees(scip), DISP_CUTS_WIDTH);
    
    return SCIP_OKAY;
 }
@@ -1646,7 +1646,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          NULL, NULL, NULL, NULL, NULL, dispOutputSols, 
          NULL, DISP_SOLS_WIDTH, DISP_SOLS_PRIORITY, DISP_SOLS_POSITION, DISP_SOLS_STRIPLINE) );
    SCIP_CALL( SCIPincludeDisp(scip, DISP_CUTS_NAME, DISP_CUTS_DESC, DISP_CUTS_HEADER, SCIP_DISPSTATUS_OFF, 
-         NULL, NULL, NULL, NULL, NULL, dispOutputFeasUnimodularSubtrees, 
+         NULL, NULL, NULL, NULL, NULL, dispOutputFeasSubtrees, 
          NULL, DISP_CUTS_WIDTH, DISP_CUTS_PRIORITY, DISP_CUTS_POSITION, DISP_CUTS_STRIPLINE) );
    
    return SCIP_OKAY;
@@ -1748,8 +1748,8 @@ void SCIPgetNCountedSolsstr(
 }
 
 
-/** returns number of counted non trivial feasible unimodular subtrees */
-SCIP_Longint SCIPgetNCountedFeasUS(
+/** returns number of counted non trivial feasible subtrees */
+SCIP_Longint SCIPgetNCountedFeasSubtrees(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1763,5 +1763,5 @@ SCIP_Longint SCIPgetNCountedFeasUS(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
    
-   return conshdlrdata->feasUS;
+   return conshdlrdata->feasST;
 }
