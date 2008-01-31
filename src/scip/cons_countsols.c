@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.5 2008/01/31 14:32:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.6 2008/01/31 14:34:06 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -916,7 +916,7 @@ SCIP_Bool checkVarbound(
 
 /** check if the current node initializes a non trivial feasible subtree */
 static 
-SCIP_RETCODE checkFeasST(
+SCIP_RETCODE checkFeasSubtree(
    SCIP* scip,                         /**< SCIP main data structure */
    SCIP_SOL* sol,                      /**< solution to check */
    SCIP_Bool* feasible                 /**< pointer to store the result of the check */
@@ -1070,7 +1070,7 @@ SCIP_RETCODE checkSolution(
    }
    else if( conshdlrdata->sparsetest )
    {
-      SCIP_CALL( checkFeasST(scip, sol, &feasible) ) ;
+      SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
    }
    
@@ -1429,7 +1429,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       if( displaygap != 0 )
          SCIP_CALL( SCIPsetIntParam(scip, "display/gap/active", 0) );
       
-      /* turn on sols feasST column */
+      /* turn on sols and feasST column */
       SCIP_CALL( SCIPgetIntParam(scip, "display/sols/active", &displaysols) );
       if( displayprimalbound != 2 )
          SCIP_CALL( SCIPsetIntParam(scip, "display/sols/active", 2) );
