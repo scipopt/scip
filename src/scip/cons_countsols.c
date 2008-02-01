@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.6 2008/01/31 14:34:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.7 2008/02/01 10:19:07 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -212,15 +212,6 @@ void toString(
 /*
  * Local methods
  */
-
-/** converts a SCIP_Real value to a SCIP_Longint value */
-static
-SCIP_Longint convertReal2Int(
-   SCIP_Real                  value             /**< real value to cast in longint */
-   )
-{
-   return (SCIP_Longint) (value < 0 ? value - .5 : value + .5);
-}
 
 
 /** returns whether a given integer variable is unfixed in the local domain */
@@ -447,9 +438,9 @@ CUTOFF_CONSTRAINT(addIntegerCons)
          assert( SCIPisIntegral(scip, SCIPvarGetUbLocal(var)) );
          assert( SCIPisIntegral(scip, SCIPgetSolVal(scip, sol, var)) );
             
-         lb = convertReal2Int(SCIPvarGetLbLocal(var));
-         ub = convertReal2Int(SCIPvarGetUbLocal(var));
-         valueInt = convertReal2Int(SCIPgetSolVal(scip, sol, var));
+         lb = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetLbLocal(var));
+         ub = (SCIP_Longint) SCIPfeasCeil(scip, SCIPvarGetUbLocal(var));
+         valueInt = (SCIP_Longint) SCIPfeasCeil(scip, SCIPgetSolVal(scip, sol, var));
          
          if (valueInt == lb)
          {
