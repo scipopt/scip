@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.13 2008/02/01 19:39:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.14 2008/02/01 19:41:59 bzfpfend Exp $"
 
-/*#define SCIP_DEBUG????????????????*/
+#define SCIP_DEBUG
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
@@ -2143,7 +2143,7 @@ SCIP_RETCODE SCIPincludeSepaMcf(
 {
    SCIP_SEPADATA* sepadata;
 
-#if 0
+#if 1
    /* disabled, because separator is not yet finished */
    return SCIP_OKAY;
 #endif
