@@ -662,9 +662,9 @@ constraints/countsols/discardsols = TRUE
 # [type: int, range: [0,2], default: 0]
 display/sols/active = 2
 
-# display activation status of display column <feasUS> (0: off, 1: auto, 2:on)
+# display activation status of display column <feasST> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 0]
-display/feasUS/active = 2
+display/feasST/active = 2
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
