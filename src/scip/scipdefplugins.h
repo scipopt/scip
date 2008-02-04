@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.18 2008/01/28 14:31:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.19 2008/02/04 11:00:02 bzfpfets Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -97,6 +97,7 @@
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_opb.h"
+#include "scip/reader_ppm.h"
 #include "scip/reader_rlp.h"
 #include "scip/reader_sol.h"
 #include "scip/reader_zpl.h"
