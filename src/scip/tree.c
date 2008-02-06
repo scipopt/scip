@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.202 2007/11/27 10:34:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.203 2008/02/06 09:41:06 bzfpfend Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4166,7 +4166,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
    downinfs = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_DOWNWARDS);
    upinfs = SCIPvarGetAvgInferences(var, stat, SCIP_BRANCHDIR_UPWARDS);
 
-   if( targetvalue < varsol )
+   if( SCIPsetIsLT(set, targetvalue, varsol) )
    {
       /* the branch is directed downwards */
       switch( SCIPvarGetBranchDirection(var) )
@@ -4216,7 +4216,7 @@ SCIP_Real SCIPtreeCalcNodeselPriority(
          break;
       }
    }
-   else if( targetvalue > varsol )
+   else if( SCIPsetIsGT(set, targetvalue, varsol) )
    {
       /* the branch is directed upwards */
       switch( SCIPvarGetBranchDirection(var) )
