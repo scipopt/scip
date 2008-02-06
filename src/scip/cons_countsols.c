@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.7 2008/02/01 10:19:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.8 2008/02/06 09:04:21 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -1437,7 +1437,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       nsols = SCIPgetNCountedSols(scip, &valid);
       
       if( valid )
-         SCIPdialogMessage(scip, NULL, "Feasible Solutions : %"SCIP_LONGINT_FORMAT"\n", nsols);
+         SCIPdialogMessage(scip, NULL, "Feasible Solutions : %"SCIP_LONGINT_FORMAT"", nsols);
       else
       {
          char* buffer;
@@ -1455,10 +1455,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          }
 
          assert( buffersize >= requiredsize );
-         SCIPdialogMessage(scip, NULL, "Feasible Solutions  : %s\n", buffer);
+         SCIPdialogMessage(scip, NULL, "Feasible Solutions  : %s", buffer);
          
          SCIPfreeBufferArray(scip, &buffer);
       }
+
+      SCIPdialogMessage(scip, NULL, " (%d non-trivial feasible subtrees)\n", SCIPgetNCountedFeasSubtrees(scip));
 
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
