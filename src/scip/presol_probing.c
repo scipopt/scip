@@ -14,8 +14,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.45 2007/08/24 16:02:19 bzfberth Exp $"
-
+#pragma ident "@(#) $Id: presol_probing.c,v 1.46 2008/02/08 17:42:39 bzfpfets Exp $"
+#define SCIP_DEBUG
 /**@file   presol_probing.c
  * @brief  probing presolver
  * @author Tobias Achterberg
@@ -332,12 +332,12 @@ SCIP_RETCODE applyProbing(
          if( SCIPisGT(scip, proplbs[i], SCIPvarGetLbGlobal(vars[i])) )
          {
             SCIPdebugMessage(" -> <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[i]), 
-               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), lbs[i]);
+               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), proplbs[i]);
          }
          if( SCIPisLT(scip, propubs[i], SCIPvarGetUbGlobal(vars[i])) )
          {
             SCIPdebugMessage(" -> <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[i]), 
-               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), ubs[i]);
+               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), propubs[i]);
          }
 #endif
 #endif
@@ -873,8 +873,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( zeroproplbs[j] > newlb + 0.5 && zeroproplbs[j] > zeroimpllbs[j] && !cutoff )
             {
                /* insert implication: x_i == 0  =>  x_j >= zeroproplbs[j] */
-               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroproplbs[j]);*/
+               SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroproplbs[j]);
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, zeroproplbs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -885,8 +885,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( onepropubs[j] < newub - 0.5 && onepropubs[j] < oneimplubs[j] && !cutoff )
             {
                /* insert implication: x_i == 1  =>  x_j <= onepropubs[j] */
-               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onepropubs[j]);*/
+               SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onepropubs[j]);
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, onepropubs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -897,8 +897,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( oneproplbs[j] > newlb + 0.5 && oneproplbs[j] > oneimpllbs[j] && !cutoff )
             {
                /* insert implication: x_i == 1  =>  x_j >= oneproplbs[j] */
-               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneproplbs[j]);*/
+               SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneproplbs[j]);
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, oneproplbs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
