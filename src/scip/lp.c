@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.257 2008/01/28 14:22:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.258 2008/02/12 20:16:33 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4851,7 +4851,7 @@ SCIP_Real SCIProwGetMaxval(
    if( row->nummaxval == 0 )
       rowCalcNorms(row, set);
    assert(row->nummaxval > 0);
-   assert(row->maxval >= 0.0);
+   assert(row->maxval >= 0.0 || row->len == 0);
 
    return row->maxval;
 }
@@ -4867,7 +4867,7 @@ SCIP_Real SCIProwGetMinval(
    if( row->numminval == 0 )
       rowCalcNorms(row, set);
    assert(row->numminval >= 0);
-   assert(row->minval >= 0.0);
+   assert(row->minval >= 0.0 || row->len == 0);
 
    return row->minval;
 }
@@ -4882,7 +4882,7 @@ int SCIProwGetMaxidx(
    
    if( row->validminmaxidx == 0 )
       rowCalcNorms(row, set);
-   assert(row->maxidx >= 0);
+   assert(row->maxidx >= 0 || row->len == 0);
    assert(row->validminmaxidx);
 
    return row->maxidx;
@@ -4898,7 +4898,7 @@ int SCIProwGetMinidx(
    
    if( row->validminmaxidx == 0 )
       rowCalcNorms(row, set);
-   assert(row->minidx >= 0);
+   assert(row->minidx >= 0 || row->len == 0);
    assert(row->validminmaxidx);
 
    return row->minidx;
