@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.15 2008/02/06 09:37:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.16 2008/02/12 20:39:37 bzfpfend Exp $"
 
-#define SCIP_DEBUG
+/*#define SCIP_DEBUG???????????????*/
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
@@ -52,6 +52,16 @@
 
 #define DEFAULT_MAXSIGNDISTANCE       1 /**< maximum Hamming distance of flow conservation constraint sign patterns of the same node */
 #define DEFAULT_NCLUSTERS             5 /**< number of clusters to generate in the shrunken network */
+#define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
+#define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
+#define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
+#define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
+
+#define BOUNDSWITCH                 0.5
+#define USEVBDS                    TRUE
+#define ALLOWLOCAL                 TRUE
+#define MINFRAC                    0.05
+#define MAXFRAC                    0.999
 
 
 
@@ -83,8 +93,12 @@ typedef struct SCIP_McfNetwork SCIP_MCFNETWORK;
 struct SCIP_SepaData
 {
    SCIP_MCFNETWORK*      mcfnetwork;         /**< multi-commodity-flow network structure */
+   SCIP_Real             maxrowfac;          /**< maximal row aggregation factor */
    int                   maxsigndistance;    /**< maximum Hamming distance of flow conservation constraint sign patterns of the same node */
    int                   nclusters;          /**< number of clusters to generate in the shrunken network */
+   int                   maxtestdelta;	     /**< maximal number of different deltas to try (-1: unlimited) */
+   SCIP_Bool             fixintegralrhs;     /**< should an additional variable be complemented if f0 = 0? */
+   SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
 /** internal MCF extraction data to pass to subroutines */
@@ -352,7 +366,11 @@ SCIP_RETCODE mcfnetworkFill(
       /* fill in existing arc data */
       for( a = 0; a < narcs; a++ )
       {
+         SCIP_COL** rowcols;
+         SCIP_Real* rowvals;
+         int rowlen;
          int r;
+         int j;
 
          r = SCIProwGetLPPos(capacityrows[a]);
          assert(0 <= r && r < nrows);
@@ -361,6 +379,28 @@ SCIP_RETCODE mcfnetworkFill(
 
          mcfnetwork->arccapacityrows[a] = capacityrows[a];
          mcfnetwork->arccapacityscales[a] = 1.0;
+
+         /* scale constraint such that the flow variables have +/-1 coefficients;
+          * in our model we expect all flow variables to have the same coefficient and can therefore take the first
+          */
+         rowcols = SCIProwGetCols(capacityrows[a]);
+         rowvals = SCIProwGetVals(capacityrows[a]);
+         rowlen = SCIProwGetNLPNonz(capacityrows[a]);
+         for( j = 0; j < rowlen; j++ )
+         {
+            int c;
+            int arc;
+
+            c = SCIPcolGetLPPos(rowcols[j]);
+            assert(0 <= c && c < SCIPgetNLPCols(scip));
+            arc = colarcid[c];
+            if( arc >= 0 )
+            {
+               mcfnetwork->arccapacityscales[arc] = 1.0/rowvals[j];
+               break;
+            }
+         }
+
          if( (capacityrowsigns[r] & LHSASSIGNED) != 0 )
             mcfnetwork->arccapacityscales[a] *= -1.0;
       }
@@ -2338,6 +2378,350 @@ void nodepartitionPrint(
 }
 #endif
 
+/** returns whether given node v is in a cluster that belongs to the partition S */
+static
+SCIP_Bool nodeInPartition(
+   NODEPARTITION*        nodepartition,      /**< node partition data structure */
+   unsigned int          partition,          /**< bit field to mark clusters in partition S */
+   int                   v                   /**< node to check */
+   )
+{
+   int cluster;
+   unsigned int clusterbit;
+
+   assert(nodepartition != NULL);
+
+   /* if the node does not exist, it is not in the partition */
+   if( v < 0 )
+      return FALSE;
+
+   cluster = nodepartition->nodeclusters[v];
+   assert(0 <= cluster && cluster < nodepartition->nclusters);
+   clusterbit = (1 << cluster);
+
+   return ((partition & clusterbit) != 0);
+}
+
+/** adds given cut to LP if violated */
+static
+SCIP_RETCODE addCut(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
+   SCIP_Real             cutrhs,             /**< right hand side of cut */
+   SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
+   int*                  ncuts               /**< pointer to count the number of added cuts */
+   )
+{
+   SCIP_ROW* cut;
+   char cutname[SCIP_MAXSTRLEN];
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+   
+   assert(scip != NULL);
+   assert(sepadata != NULL);      
+   assert(cutcoefs != NULL);
+   assert(ncuts != NULL);
+
+   /* get active problem variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   assert(nvars == 0 || vars != NULL);
+
+   /* create the cut */
+   sprintf(cutname, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
+   SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
+                                 cutislocal, FALSE, sepadata->dynamiccuts) );
+
+   /* add coefficients */
+   SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+   for( v = 0; v < nvars; v++ )
+   {
+      if( SCIPisZero(scip, cutcoefs[v]) )
+         continue;
+
+      SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[v], cutcoefs[v]) );
+   }
+   SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
+   SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, eff=%f\n", cutname, cutrhs, SCIPgetCutEfficacy(scip, sol, cut));
+   SCIPdebug(SCIPprintRow(scip, cut, NULL));
+   SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+   if( !cutislocal )
+   {
+      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+   }
+   (*ncuts)++;
+      
+   /* release the row */
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+   return SCIP_OKAY;   
+}
+
+/** enumerates cuts between subsets of the clusters */
+static
+SCIP_RETCODE generateClusterCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
+   NODEPARTITION*        nodepartition,      /**< node partition data structure */
+   int*                  ncuts               /**< pointer to count the number of added cuts */
+   )
+{
+   SCIP_ROW*** nodeflowrows      = mcfnetwork->nodeflowrows;
+   SCIP_Real** nodeflowscales    = mcfnetwork->nodeflowscales;
+   SCIP_ROW**  arccapacityrows   = mcfnetwork->arccapacityrows;
+   SCIP_Real*  arccapacityscales = mcfnetwork->arccapacityscales;
+   int*        arcsources        = mcfnetwork->arcsources;
+   int*        arctargets        = mcfnetwork->arctargets;
+   int         nnodes            = mcfnetwork->nnodes;
+   int         narcs             = mcfnetwork->narcs;
+   int         ncommodities      = mcfnetwork->ncommodities;
+
+   int nclusters = nodepartition->nclusters;
+
+   int maxtestdelta = sepadata->maxtestdelta;
+
+   int nrows;
+   int nvars;
+
+   SCIP_Real* cutcoefs;
+   SCIP_Real* deltas;
+   int deltassize;
+   int ndeltas;
+   SCIP_Real* cmirweights;
+   SCIP_Real* comdemands;
+   unsigned int partition;
+   unsigned int allpartitions;
+
+   assert((unsigned int)nclusters <= 8*sizeof(unsigned int));
+
+   if( maxtestdelta == -1 )
+      maxtestdelta = INT_MAX;
+
+   nrows = SCIPgetNLPRows(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* Our system has the following form:
+    *  (1)  \sum_{a \in \delta^+(v)} f_a^k  - \sum_{a \in \delta^-(v)} f_a^k  <=  -d_v^k   for all v \in V and k \in K
+    *  (2)  \sum_{k \in K} f_a^k - c_a x_a                                    <=  0        for all a \in A
+    *
+    * The partitioning yields two clusters:
+    *
+    *                A^+
+    *   cluster S  ------>  cluster T
+    *              <------
+    *                A^-
+    *
+    * Now we look at all commodities in which we have to route flow from T to S:
+    *   K^+ = {k : d^k_S := sum_{v \in S} d_v^k > 0}
+    *
+    * Then, the base constraint of the c-MIR cut is the sum of those flow conservation constraints and the
+    * capacity constraints for arcs A^-:
+    *
+    *   sum_{k \in K^+} sum_{v \in S} (sum_{a \in \delta^+(v)} f_a^k  - sum_{a \in \delta^-(v)} f_a^k)           <=  sum_{k \in K^+} sum_{v \in S} -d_v^k
+    *                                                           + sum_{a \in A^-} sum_{k \in K} f_a^k - c_a x_a  <=  0
+    */
+
+   deltassize = 16;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &deltas, deltassize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cmirweights, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comdemands, ncommodities) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+
+   /* loop over all possible partitions of the clusters;
+    * cluster i is in S iff bit i of 'partition' is 1
+    */
+   allpartitions = (1 << nclusters) - 1;
+   for( partition = 1; partition <= allpartitions-1; partition++ )
+   {
+      int v;
+      int a;
+      int d;
+
+      SCIPdebugMessage("generating cuts for partition %x\n", partition);
+
+      /* clear memory */
+      BMSclearMemoryArray(cmirweights, nrows);
+      BMSclearMemoryArray(comdemands, ncommodities);
+      ndeltas = 0;
+
+      /* Identify commodities with positive T -> S demand */
+      for( v = 0; v < nnodes; v++ )
+      {
+         int k;
+
+         /* check if node belongs to S */
+         if( !nodeInPartition(nodepartition, partition, v) )
+            continue;
+
+         /* update commodity demand */
+         for( k = 0; k < ncommodities; k++ )
+         {
+            SCIP_Real rhs;
+
+            if( nodeflowrows[v][k] == NULL )
+               continue;
+
+            if( nodeflowscales[v][k] > 0.0 )
+               rhs = SCIProwGetRhs(nodeflowrows[v][k]);
+            else
+               rhs = SCIProwGetLhs(nodeflowrows[v][k]);
+
+            comdemands[k] += rhs * nodeflowscales[v][k];
+         }
+      }
+
+      /* set weights of node flow conservation constraints in c-MIR aggregation */
+      for( v = 0; v < nnodes; v++ )
+      {
+         int k;
+
+         /* check if node belongs to S */
+         if( !nodeInPartition(nodepartition, partition, v) )
+            continue;
+
+         /* use rows of commodities with positive demand (negative -d_k) */
+         for( k = 0; k < ncommodities; k++ )
+         {
+            int r;
+
+            if( !SCIPisNegative(scip, comdemands[k]) )
+               continue;
+            if( nodeflowrows[v][k] == NULL )
+               continue;
+            
+            r = SCIProwGetLPPos(nodeflowrows[v][k]);
+            assert(0 <= r && r < nrows);
+            assert(cmirweights[r] == 0.0);
+
+            cmirweights[r] = nodeflowscales[v][k];
+            SCIPdebugMessage(" -> node %d, commodity %d, flow row <%s>: weight=%g\n", v, k, SCIProwGetName(nodeflowrows[v][k]), cmirweights[r]);
+            SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));
+         }
+      }
+
+      /* set weights of capacity rows that go from T to S, i.e., a \in A^- */
+      for( a = 0; a < narcs; a++ )
+      {
+         SCIP_Real* rowvals;
+         int rowlen;
+         int r;
+         int j;
+
+         assert(arccapacityrows[a] != NULL);
+
+         /* check if arc goes from T to S */
+         assert(arcsources[a] < nnodes);
+         assert(arctargets[a] < nnodes);
+         if( nodeInPartition(nodepartition, partition, arcsources[a]) || !nodeInPartition(nodepartition, partition, arctargets[a]) )
+            continue;
+
+         /* use capacity row in c-MIR cut */
+         r = SCIProwGetLPPos(arccapacityrows[a]);
+         assert(0 <= r && r < nrows);
+         assert(cmirweights[r] == 0.0);
+
+         cmirweights[r] = arccapacityscales[a];
+         SCIPdebugMessage(" -> arc %d, capacity row <%s>: weight=%g\n", a, SCIProwGetName(arccapacityrows[a]), cmirweights[r]);
+         SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));
+
+         /* extract useful deltas for c-MIR scaling */
+         rowvals = SCIProwGetVals(arccapacityrows[a]);
+         rowlen = SCIProwGetNLPNonz(arccapacityrows[a]);
+         for( j = 0; j < rowlen; j++ )
+         {
+            SCIP_Real coef;
+            SCIP_Bool exists;
+            int left;
+            int right;
+
+            coef = rowvals[j] * arccapacityscales[a];
+            coef = ABS(coef);
+            
+            /* binary search if we already know this coefficient */
+            exists = FALSE;
+            left = 0;
+            right = ndeltas-1;
+            while( left <= right )
+            {
+               int mid = (left+right)/2;
+               if( SCIPisEQ(scip, deltas[mid], coef) )
+               {
+                  exists = TRUE;
+                  break;
+               }
+               else if( coef < deltas[mid] )
+                  right = mid-1;
+               else
+                  left = mid+1;
+            }
+
+            /* insert new candidate value */
+            if( !exists )
+            {
+               assert(right == left-1);
+               assert(ndeltas <= deltassize);
+               if( ndeltas == deltassize )
+               {
+                  deltassize *= 2;
+                  SCIP_CALL( SCIPreallocMemoryArray(scip, &deltas, deltassize) );
+               }
+               if( left < ndeltas )
+                  BMScopyMemoryArray(&deltas[left+1], &deltas[left], ndeltas - left);
+               deltas[left] = coef;
+               ndeltas++;
+            }  
+         }
+      }
+
+      /* try out deltas to generate c-MIR cuts */
+      for( d = 0; d < maxtestdelta && d < ndeltas; d++ )
+      {
+         SCIP_Real cutrhs;
+         SCIP_Real cutact;
+         SCIP_Bool success;
+         SCIP_Bool cutislocal;
+
+         /* do not use too small deltas */
+         if( SCIPisFeasZero(scip, deltas[d]) )
+            continue;
+
+         SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL, 
+                                sepadata->maxrowfac, MINFRAC, MAXFRAC, cmirweights, 1.0/deltas[d], NULL, cutcoefs, &cutrhs, &cutact, 
+                                &success, &cutislocal) );
+         assert(ALLOWLOCAL || !cutislocal);
+         SCIPdebugMessage(" -> delta = %g  -> success: %d  (rhs: %g, act: %g)\n", deltas[d], success, cutrhs, cutact);
+
+#ifdef SCIP_DEBUG
+         SCIPdebugMessage("    =>");
+         for( a = 0; a < nvars; a++ )
+         {
+            if( !SCIPisZero(scip, cutcoefs[a]) )
+               printf(" %+g<%s>", cutcoefs[a], SCIPvarGetName(SCIPgetVars(scip)[a]));
+         }
+         printf(" <= %g  (act: %g)\n", cutrhs, cutact);
+#endif
+
+         if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
+         {
+            SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+         }
+      }
+   }
+
+   /* free local memory */
+   SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPfreeBufferArray(scip, &comdemands);
+   SCIPfreeBufferArray(scip, &cmirweights);
+   SCIPfreeMemoryArray(scip, &deltas);
+
+   return SCIP_OKAY;
+}
+
 /** searches and adds MCF network cuts that separate the given primal solution */
 static
 SCIP_RETCODE separateCuts(
@@ -2350,10 +2734,12 @@ SCIP_RETCODE separateCuts(
    SCIP_SEPADATA* sepadata;
    SCIP_MCFNETWORK* mcfnetwork;
    NODEPARTITION* nodepartition;
+   int ncuts;
 
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+   ncuts = 0;
 
    /* get separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -2381,12 +2767,19 @@ SCIP_RETCODE separateCuts(
 
    /* partition nodes into a small number of clusters */
    SCIP_CALL( nodepartitionCreate(scip, mcfnetwork, &nodepartition, sepadata->nclusters) );
-
    SCIPdebug( nodepartitionPrint(nodepartition) );
+
+   /* enumerate cuts between subsets of the clusters */
+   SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, nodepartition, &ncuts) );
 
    /* free node partition */
    nodepartitionFree(scip, &nodepartition);
 
+   /* adjust result code */
+   if( ncuts > 0 )
+      *result = SCIP_SEPARATED;
+
+   //abort(); /*???????????????????*/
    return SCIP_OKAY;
 }
 
@@ -2539,7 +2932,23 @@ SCIP_RETCODE SCIPincludeSepaMcf(
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/mcf/nclusters",
          "number of clusters to generate in the shrunken network",
-         &sepadata->nclusters, TRUE, DEFAULT_NCLUSTERS, 2, INT_MAX, NULL, NULL) );
+         &sepadata->nclusters, TRUE, DEFAULT_NCLUSTERS, 2, 8*sizeof(unsigned int), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "separating/mcf/maxrowfac",
+         "maximal row aggregation factor",
+         &sepadata->maxrowfac, TRUE, DEFAULT_MAXROWFAC, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/mcf/maxtestdelta",
+         "maximal number of different deltas to try (-1: unlimited)",
+         &sepadata->maxtestdelta, TRUE, DEFAULT_MAXTESTDELTA, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/mcf/fixintegralrhs",
+         "should an additional variable be complemented if f0 = 0?",
+         &sepadata->fixintegralrhs, TRUE, DEFAULT_FIXINTEGRALRHS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "separating/mcf/dynamiccuts",
+         "should generated cuts be removed from the LP if they are no longer tight?",
+         &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
