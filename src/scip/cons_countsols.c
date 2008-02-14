@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.8 2008/02/06 09:04:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.9 2008/02/14 10:02:49 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -1455,7 +1455,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          }
 
          assert( buffersize >= requiredsize );
-         SCIPdialogMessage(scip, NULL, "Feasible Solutions  : %s", buffer);
+         SCIPdialogMessage(scip, NULL, "Feasible Solutions : %s", buffer);
          
          SCIPfreeBufferArray(scip, &buffer);
       }
