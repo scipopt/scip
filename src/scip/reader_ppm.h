@@ -14,16 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.h,v 1.1 2008/02/04 12:32:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_ppm.h,v 1.2 2008/02/14 17:09:19 bzfwinkm Exp $"
 
 /**@file   reader_ppm.h
  * @brief  PPM file reader
  * @author Tobias Achterberg
  * @author Michael Winkler
- *
- * Note: This reader can only write a file.
- *
- * It produces a picture of the constraint matrix.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,6 +44,7 @@ SCIP_RETCODE SCIPwritePpm(
    SCIP*              scip,               /**< SCIP data structure */
    FILE*              file,               /**< output file, or NULL if standard output should be used */
    const char*        name,               /**< problem name */
+   SCIP_READERDATA*   readerdata,         /**< information for reader */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                nvars,              /**< number of mutable variables in the problem */
