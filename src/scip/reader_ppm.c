@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.2 2008/02/14 17:09:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.3 2008/02/15 13:54:43 bzfwinkm Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -51,11 +51,13 @@
 #define PPM_RGB_LIMIT        160
 #define PPM_COEF_LIMIT         3
 #define PPM_RGB_RELATIVE    TRUE
+#define PPM_RGB_ASCII       TRUE
 
 /** LP reading data */
 struct SCIP_ReaderData
 {
   SCIP_Bool              rgb_relativ;
+  SCIP_Bool              rgb_ascii;
   int                    rgb_limit;
   int                    coef_limit;
 };
@@ -73,6 +75,7 @@ void initReaderdata(
    assert(readerdata != NULL);
 
    readerdata->rgb_relativ = PPM_RGB_RELATIVE;
+   readerdata->rgb_ascii = PPM_RGB_ASCII;
    readerdata->rgb_limit = PPM_RGB_LIMIT;
    readerdata->coef_limit = PPM_COEF_LIMIT;
 }
@@ -140,6 +143,7 @@ static
 void endLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_READERDATA*      readerdata,         /**< information for reader */
    char*                 linebuffer,         /**< line */
    int*                  linecnt             /**< number of charaters in line */
    )
@@ -151,7 +155,10 @@ void endLine(
    if( (*linecnt) > 0 )
    {
       linebuffer[(*linecnt)] = '\0';
-      SCIPinfoMessage(scip, file, "%s\n", linebuffer);
+      if (readerdata->rgb_ascii)
+        SCIPinfoMessage(scip, file, "%s", linebuffer);
+      else
+        SCIPinfoMessage(scip, file, "%s\n", linebuffer);
       clearLine(linebuffer, linecnt);
    }
 }
@@ -162,6 +169,7 @@ static
 void appendLine(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_READERDATA*      readerdata,         /**< information for reader */
    char*                 linebuffer,         /**< line */
    int*                  linecnt,            /**< number of charaters in line */
    const char*           extension           /**< string to extent the line */
@@ -173,7 +181,7 @@ void appendLine(
    assert( extension != NULL );
 
    if( *linecnt + strlen(extension) + 1 > PPM_MAX_LINELEN )
-      endLine(scip, file, linebuffer, linecnt);
+     endLine(scip, file, readerdata, linebuffer, linecnt);
    
    sprintf(linebuffer, "%s%s", linebuffer, extension);
    (*linecnt) += strlen(extension) + 1;
@@ -270,7 +278,9 @@ void printRow(
    int indexvar = 0;
 
    char buffer[PPM_MAX_LINELEN];
-
+   char max = (char)255;
+   char white[4];
+   
    assert( scip != NULL );
    assert (nvars > 0);
    assert (readerdata != NULL);
@@ -279,6 +289,7 @@ void printRow(
    varindex = -1;
    maxvarindex = 0;
 
+   sprintf(white, "%c%c%c", max, max, max);  
    clearLine(linebuffer, &linecnt);
 
    /* calculate maximum index of the variables in this constraint */
@@ -306,20 +317,37 @@ void printRow(
 
       /* fillin white points since these variables indices do not exits in this constraint */ 
       for( ; i < varindex; ++i )
-         appendLine(scip, file, linebuffer, &linecnt, " 255 255 255 ");
+      {
+        if (readerdata->rgb_ascii)
+          appendLine(scip, file, readerdata, linebuffer, &linecnt, white);
+        else
+          appendLine(scip, file, readerdata, linebuffer, &linecnt, " 255 255 255 ");
+      }
 
       calcColorValue(scip, readerdata, SCIPvarGetType(vars[indexvar]), vals[indexvar], &red, &green, &blue, maxcoef);
-      sprintf(buffer, " %d %d %d ", red, green, blue);
+      if (readerdata->rgb_ascii)
+      {
+        if (red == 35 || red == 0) red++;
+        if (green==35 || green == 0) green++;
+        if (blue==35 || blue == 0) blue++;
+        sprintf(buffer, "%c%c%c", (char)red, (char)green, (char)blue);
+      }
+      else
+        sprintf(buffer, " %d %d %d ", red, green, blue);
 
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
+      appendLine(scip, file, readerdata, linebuffer, &linecnt, buffer);
       i++;
    }
 
    /* fillin white points since these variables indices do not exits in this constraint */ 
-   for( ; i < ntotalvars; ++i )
-      appendLine(scip, file, linebuffer, &linecnt, " 255 255 255 ");
+   for( ; i < ntotalvars; ++i ){
+        if (readerdata->rgb_ascii)
+          appendLine(scip, file, readerdata, linebuffer, &linecnt, white);
+        else
+          appendLine(scip, file, readerdata, linebuffer, &linecnt, " 255 255 255 ");
+   }
 
-   endLine(scip, file, linebuffer, &linecnt);
+   endLine(scip, file, readerdata, linebuffer, &linecnt);
 }
 
 
@@ -455,6 +483,9 @@ SCIP_RETCODE SCIPincludeReaderPpm(
    SCIP_CALL( SCIPaddBoolParam(scip,
        "reading/ppmreader/rgb_relativ", "should the coloring values be relativ or absolute",
        &readerdata->rgb_relativ, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+       "reading/ppmreader/rgb_ascii", "should the output format be binary(P6) or plain(P3) format",
+       &readerdata->rgb_ascii, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
        "reading/ppmreader/coefficient limit", 
        "splitting coefficients in this number of intervals",
@@ -505,7 +536,10 @@ SCIP_RETCODE SCIPwritePpm(
    assert(readerdata != NULL);
 
    /* print statistics as comment to file */
-   SCIPinfoMessage(scip, file, "P3\n");
+   if (readerdata->rgb_ascii)
+     SCIPinfoMessage(scip, file, "P6\n");
+   else
+     SCIPinfoMessage(scip, file, "P3\n");
    SCIPinfoMessage(scip, file, "# %s\n", name);
    SCIPinfoMessage(scip, file, "%d %d\n", nvars, nconss);
    SCIPinfoMessage(scip, file, "255\n");
