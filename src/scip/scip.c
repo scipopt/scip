@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.436 2008/01/29 14:34:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.437 2008/02/19 12:44:29 bzfkocht Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6461,7 +6461,7 @@ SCIP_RETCODE SCIPtightenVarLb(
       SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
@@ -6531,7 +6531,7 @@ SCIP_RETCODE SCIPtightenVarUb(
       SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
@@ -6602,7 +6602,7 @@ SCIP_RETCODE SCIPinferVarLbCons(
       SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
@@ -6674,7 +6674,7 @@ SCIP_RETCODE SCIPinferVarUbCons(
       SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
@@ -6839,7 +6839,7 @@ SCIP_RETCODE SCIPinferVarLbProp(
       SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
@@ -6911,7 +6911,7 @@ SCIP_RETCODE SCIPinferVarUbProp(
       SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
@@ -7074,18 +7074,18 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
       SCIP_CALL( SCIPvarChgLbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgLbOriginal(var, scip->set, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_TRANSFORMING:
       SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
             scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
-      return SCIP_OKAY;
+      break;
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
@@ -7148,18 +7148,18 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
       SCIP_CALL( SCIPvarChgUbLocal(var, scip->mem->probmem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       SCIP_CALL( SCIPvarChgUbOriginal(var, scip->set, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_TRANSFORMING:
       SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
-      return SCIP_OKAY;
+      break;
 
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
             scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
-      return SCIP_OKAY;
+      break;
 
    default:
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
