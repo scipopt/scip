@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.1 2007/11/11 17:29:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.2 2008/02/28 11:07:44 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -30,7 +30,7 @@
  * an equivalence, i.e., it does not ensure that z = 1 if ax <= b or
  * equivalently if s = 0.
  *
- * This constraint is quivalent to a linear constraint ax - s <=b and
+ * This constraint is quivalent to a linear constraint ax - s <= b and
  * an SOS1 constraint on z and s (at most one should be nonzero). In
  * this context we can, however, separate more inequalities.
  *

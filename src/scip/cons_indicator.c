@@ -14,13 +14,71 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.6 2008/01/29 13:50:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.7 2008/02/28 11:07:43 bzfpfets Exp $"
+//#define SCIP_DEBUG
+//#define SCIP_OUTPUT
 
 /**@file   cons_indicator.c
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
  * See also the comments in the .h file.
+ *
+ * We now explain the handling of indicator constraints in more
+ * detail.  The indicator constraint handler adds an inequality for
+ * each indicator constraint. We assume that this system (with added
+ * slack variables) is \f$ Ax z - s \leq b \f$, where \f$ x \f$ are
+ * the original variables and \f$ s \f$ are the slack variables added
+ * by the indicator constraint. Variables \f$ y \f$ are the binary
+ * variables corresponding to the indicator constraints.
+ *
+ * @note In the implementation, we assume that bounds on the original
+ * variables \f$x\f$ cannot be influenced by the indicator
+ * constraint. If it should be possible to relax these constraints as
+ * well, then additional indicator constraints need to be added.
+ *
+ * We separate inequalities by two methods:
+ * - The first uses the so-called alternative polyhedron.
+ * - The second uses SCIP's conflict analysis.
+ *
+ * Their basic approach is as follows.
+ *
+ * Consider the LP-relaxation of the current subproblem:
+ * \f[
+ * \begin{array}{ll}
+ *  min & c^T x + d^T y\\
+ *      & A x - s \leq b \\
+ *      & D x + C z \leq f \\
+ *      & l \leq x \leq u \\
+ *      & u \leq z \leq v \\
+ *      & 0 \leq s
+ * \end{array}
+ * \f]
+ * As above \f$Ax z - s \leq b\f$ contains all inequalities
+ * corresponding to indicator constraints, while the system \f$Dx + Cy
+ * \leq f\f$ contains all other inequalities (which are ignored in the
+ * following). Each variable can be fixed by the corresponding bounds.
+ *
+ *
+ * @b Alternative @b polyhedron
+ *
+ * To generate cuts, we construct the so-called @a alternative @a polyhedron:
+ * \f[
+ *      P = \{ y : w^T A - r + t = 0, w^T b - l^T r + u^T t = -1, w, r, t \geq 0 \}.
+ * \f]
+ * Here, \f$r\f$ corresponds to the lower bounds on \f$x\f$ and
+ * \f$t\f$ to the upper bounds.
+ *
+ * It turns out that the vertices of \f$P\f$ correspond to minimal
+ * infeasible subsystems of \f$A x \leq b\f$. If \f$I\f$ is the index
+ * set of such a system, it follows that not all \f$s_i\f$ for \f$i
+ * \in I\f$ can be zero. In other words the following cut is valid:
+ * \f[
+ *      \sum_{i \in I} y_i \geq 1.
+ * \f]
+ * We separate these inequalities by a heuristic described in @par
+ * Branch-And-Cut for the Maximum Feasible Subsystem Problem,@par
+ * Marc Pfetsch, SIAM Journal on Optimization 19, No.1, 21-38 (2008)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -72,8 +130,12 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR* eventhdlr;       /**< event handler for bound change events */
    SCIP_Bool   removable;           /**< whether the separated cuts should be removable */
    SCIP_LPI*   altLP;               /**< alternative LP for cut separation */
-   int         nvars;               /**< total number of linear constraint variable = number of rows in alt LP - 1 */
+   int         nvars;               /**< total number of linear constraint variables = number of rows in alt LP - 1 */
+   int         nLbBounds;           /**< number of lower bounds of original variables */
+   int         nUbBounds;           /**< number of upper bounds of original variables */
    SCIP_HASHMAP* varHash;           /**< hash map from variable to row index in alternative LP */
+   SCIP_HASHMAP* lbHash;            /**< hash map from variable to index of lower bound column in alternative LP */
+   SCIP_HASHMAP* ubHash;            /**< hash map from variable to index of upper bound column in alternative LP */
    int roundingRounds;              /**< number of rounds in separation */
    SCIP_Real roundingMinThreshold;  /**< minimal value for rounding in separation */
    SCIP_Real roundingMaxThreshold;  /**< maximal value for rounding in separation */
@@ -91,6 +153,7 @@ SCIP_RETCODE initAlternativeLP(
       )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_RETCODE retcode;
    SCIP_Real lhs;
    SCIP_Real rhs;
 
@@ -101,11 +164,15 @@ SCIP_RETCODE initAlternativeLP(
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->altLP == NULL );
    assert( conshdlrdata->varHash == NULL );
+   assert( conshdlrdata->lbHash == NULL );
+   assert( conshdlrdata->ubHash == NULL );
 
    SCIPdebugMessage("Initializing alternative LP ...\n");
 
    /* create hash map of variables */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->lbHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->ubHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
 
    /* create alternative LP */
    SCIP_CALL( SCIPlpiCreate(&conshdlrdata->altLP, "altLP", SCIP_OBJSEN_MINIMIZE) );
@@ -115,9 +182,27 @@ SCIP_RETCODE initAlternativeLP(
    rhs = -1.0;
    SCIP_CALL( SCIPlpiAddRows(conshdlrdata->altLP, 1, &lhs, &rhs, NULL, 0, NULL, NULL, NULL) );
 
-   SCIP_CALL( SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-   SCIP_CALL( SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_PRESOLVING, TRUE) );
-   SCIP_CALL( SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_SCALING, TRUE) );
+   /* set parameters */
+   retcode = SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_FROMSCRATCH, FALSE);
+   if ( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
+   {
+      SCIPerrorMessage("Error <%d> in function call\n", retcode);
+      return retcode;
+   }
+
+   retcode = SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_PRESOLVING, TRUE);
+   if ( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
+   {
+      SCIPerrorMessage("Error <%d> in function call\n", retcode);
+      return retcode;
+   }
+
+   retcode = SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_SCALING, TRUE);
+   if ( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
+   {
+      SCIPerrorMessage("Error <%d> in function call\n", retcode);
+      return retcode;
+   }
 
    /* set constraint handler data */
    SCIPconshdlrSetData(conshdlr, conshdlrdata);
@@ -174,12 +259,14 @@ SCIP_RETCODE checkLPBoundsClean(
 	 abort();
    }
 
+
    /* check other columns */
    for (j = 0; j < nCols; ++j)
    {
       if (! covered[j] )
       {
-	 if ( lb[j] != 0.0 || ub[j] != 0.0 )
+	 /* some columns can be fixed to 0, since they correspond to disabled constraints */
+	 if ( lb[j] != 0.0 || (ub[j] != SCIPlpiInfinity(lp) && ub[j] != 0.0) )
 	    abort();
       }
    }
@@ -193,7 +280,12 @@ SCIP_RETCODE checkLPBoundsClean(
 #endif
 
 
-/** Set the alternative system objective function */
+/** Set the alternative system objective function
+ *
+ *  We assume that the objective function coefficients of the
+ *  variables other than the binary indicators are always 0 and
+ *  hence do not have to be changed.
+ */
 static
 SCIP_RETCODE setAltLPObj(
       SCIP* scip,               /**< SCIP pointer */
@@ -395,13 +487,17 @@ SCIP_RETCODE addAltLPConstraint(
    SCIP_Real val;
    SCIP_Real sign = 1.0;
    int v;
-   SCIP_Real obj, lb, ub;
+   int* matbeg;
    int* matind;
    SCIP_Real* matval;
-   int matbeg;
    int nNewRows = 0;
+   SCIP_VAR** newVars;
+   SCIP_Real* obj;
+   SCIP_Real* lb;
+   SCIP_Real* ub;
    int nCols;
    int cnt = 0;
+   int nNewCols = 0;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -417,6 +513,8 @@ SCIP_RETCODE addAltLPConstraint(
    if ( conshdlrdata->altLP == NULL )
       SCIP_CALL( initAlternativeLP(scip, conshdlr) );
    assert( conshdlrdata->varHash != NULL );
+   assert( conshdlrdata->lbHash != NULL );
+   assert( conshdlrdata->ubHash != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -436,8 +534,13 @@ SCIP_RETCODE addAltLPConstraint(
    }
 #endif
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &matind, nlinvars+1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matval, nlinvars+1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matbeg, nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matind, 2*nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matval, 2*nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newVars, nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &obj, 2*nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lb, 2*nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ub, 2*nlinvars) );
 
    /* store index of column in constraint */
    SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altLP, &nCols) );
@@ -461,7 +564,7 @@ SCIP_RETCODE addAltLPConstraint(
       ++cnt;
    }
 
-   /* handle following columns */
+   /* set up column (recognize new original variables) */
    for (v = 0; v < nlinvars; ++v)
    {
       SCIP_VAR* var;
@@ -477,6 +580,9 @@ SCIP_RETCODE addAltLPConstraint(
 	    SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varHash, var, (void*) (size_t) conshdlrdata->nvars) );
 	    assert( conshdlrdata->nvars == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) );
 	    SCIPdebugMessage("inserted variable <%s> into hashmap (%d)\n", SCIPvarGetName(var), conshdlrdata->nvars);
+
+	    /* store new variables */
+	    newVars[nNewRows] = var;
 	    ++(conshdlrdata->nvars);
 	    ++nNewRows;
 	 }
@@ -509,17 +615,91 @@ SCIP_RETCODE addAltLPConstraint(
    }
 
    /* now add column */
-   obj = 1.0;
-   lb = 0.0;
-   ub = SCIPlpiInfinity(conshdlrdata->altLP);
-   matbeg = 0;
+   obj[0] = 1.0;
+   lb[0] = 0.0;
+   ub[0] = SCIPlpiInfinity(conshdlrdata->altLP);
+   matbeg[0] = 0;
 
-   SCIP_CALL( SCIPlpiAddCols(conshdlrdata->altLP, 1, &obj, &lb, &ub, NULL, cnt, &matbeg, matind, matval) );
+   SCIP_CALL( SCIPlpiAddCols(conshdlrdata->altLP, 1, obj, lb, ub, NULL, cnt, matbeg, matind, matval) );
 
+   /* add columns corresponding to bounds of original variables added */
+   cnt = 0;
+   nNewCols = 0;
+   for (v = 0; v < nNewRows; ++v)
+   {
+      SCIP_VAR* var = newVars[v];
+
+      /* if the lower bound is finite */
+      val  = SCIPvarGetLbLocal(var);
+      if ( SCIPisGT(scip, val, -SCIPinfinity(scip)) )
+      {
+	 matbeg[nNewCols] = cnt;
+	 if ( ! SCIPisEQ(scip, val, 0.0) )
+	 {
+	    matind[cnt] = 0;
+	    matval[cnt] = -val;
+	    ++cnt;
+	 }
+	 assert( SCIPhashmapExists(conshdlrdata->varHash, var) );
+	 matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) + 1;
+	 matval[cnt] = -1.0;
+	 ++cnt;
+	 obj[nNewCols] = 0.0;
+	 lb[nNewCols] = 0.0;
+	 ub[nNewCols] = SCIPlpiInfinity(conshdlrdata->altLP);
+	 ++conshdlrdata->nLbBounds;
+	 SCIP_CALL( SCIPhashmapInsert(conshdlrdata->lbHash, var, (void*) (size_t) (nCols + nNewCols)) );
+	 assert( SCIPhashmapExists(conshdlrdata->lbHash, var) );
+	 SCIPdebugMessage("added column corr. to lower bound of variable <%s> to alternative polyhedron\n", SCIPvarGetName(var));
+	 ++nNewCols;
+      }
+
+      /* if the upper bound is finite */
+      val = SCIPvarGetUbLocal(var);
+      if ( SCIPisLT(scip, val, SCIPinfinity(scip)) )
+      {
+	 matbeg[nNewCols] = cnt;
+	 if ( ! SCIPisEQ(scip, val, 0.0) )
+	 {
+	    matind[cnt] = 0;
+	    matval[cnt] = val;
+	    ++cnt;
+	 }
+	 assert( SCIPhashmapExists(conshdlrdata->varHash, var) );
+	 matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) + 1;
+	 matval[cnt] = 1.0;
+	 ++cnt;
+	 obj[nNewCols] = 0.0;
+	 lb[nNewCols] = 0.0;
+	 ub[nNewCols] = SCIPlpiInfinity(conshdlrdata->altLP);
+	 ++conshdlrdata->nUbBounds;
+	 SCIP_CALL( SCIPhashmapInsert(conshdlrdata->ubHash, var, (void*) (size_t) (nCols + nNewCols)) );
+	 assert( SCIPhashmapExists(conshdlrdata->ubHash, var) );
+	 SCIPdebugMessage("added column corr. to upper bound of variable <%s> to alternative polyhedron\n", SCIPvarGetName(var));
+	 ++nNewCols;
+      }
+   }
+
+   /* add columns if necessary */
+   if ( nNewCols > 0 )
+   {
+      SCIP_CALL( SCIPlpiAddCols(conshdlrdata->altLP, nNewCols, obj, lb, ub, NULL, cnt, matbeg, matind, matval) );
+   }
+
+#ifndef NDEBUG
+   SCIP_CALL( SCIPlpiGetNCols(conshdlrdata->altLP, &cnt) );
+   assert( cnt == nCols + nNewCols + 1 );
+#endif
+
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &obj);
+   SCIPfreeBufferArray(scip, &newVars);
    SCIPfreeBufferArray(scip, &matind);
    SCIPfreeBufferArray(scip, &matval);
+   SCIPfreeBufferArray(scip, &matbeg);
 
-   SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altLP, "alt.lp") );
+   /* SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altLP, "alt.lp") ); */
 
    return SCIP_OKAY;
 }
@@ -757,13 +937,10 @@ SCIP_RETCODE extendToCover(
       for (j = 0; j < nconss; ++j)
       {
 	 SCIP_CONSDATA* consdata;
-	 SCIP_VAR* binvar;
 	 int ind;
 
 	 consdata = SCIPconsGetData(conss[j]);
 	 assert( consdata != NULL );
-	 binvar = consdata->binvar;
-	 sum += SCIPgetSolVal(scip, sol, binvar);
 	 ind = consdata->colIndex;
 	 assert( 0 <= ind && ind < nCols );
 
@@ -772,6 +949,7 @@ SCIP_RETCODE extendToCover(
 	 {
 	    assert( ! S[j] );
 	    ++sizeIIS;
+	    sum += SCIPgetSolVal(scip, sol, consdata->binvar);
 	    /* take first element */
 	    if ( candidate < 0 )
 	    {
@@ -817,9 +995,13 @@ SCIP_RETCODE extendToCover(
 	       SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, 1.0) );
 	 }
 	 SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-#ifdef SCIP_DEBUG
-	 SCIPdebug( SCIProwPrint(row, NULL) );
+#ifdef SCIP_OUTPUT
+	 SCIProwPrint(row, NULL);
 #endif
+	 SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+	 /* add cuts to pool if we are in the root -> cuts are globally valid */
+	 if ( SCIPgetDepth(scip) == 0 )
+	    SCIP_CALL( SCIPaddPoolCut(scip, row) );
 	 SCIP_CALL( SCIPreleaseRow(scip, &row));
 	 ++(*nGen);
       }
@@ -1030,6 +1212,9 @@ SCIP_RETCODE separateIISRounding(
    SCIP_CALL( checkLPBoundsClean(scip, lp, nconss, conss) );
 #endif
 
+   /* ???????????????????????????????????????????????? */
+   /* TODO: change coefficients of bounds in alternative LP */
+
    /* set obj. func. to current solution */
    SCIP_CALL( setAltLPObj(scip, lp, sol, nconss, conss) );
 
@@ -1120,6 +1305,8 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->altLP == NULL );
    assert( conshdlrdata->varHash == NULL );
+   assert( conshdlrdata->lbHash == NULL );
+   assert( conshdlrdata->ubHash == NULL );
    SCIPfreeMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
@@ -1183,11 +1370,23 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
    if ( conshdlrdata->altLP != NULL )
    {
       assert( conshdlrdata->varHash != NULL );
+      assert( conshdlrdata->lbHash != NULL );
+      assert( conshdlrdata->ubHash != NULL );
       assert( conshdlrdata->altLP != NULL );
 
+#ifndef NDEBUG
+      SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
       SCIPhashmapPrintStatistics(conshdlrdata->varHash);
+      SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
+      SCIPhashmapPrintStatistics(conshdlrdata->lbHash);
+      SCIPinfoMessage(scip, NULL, "\nStatistics for upper bound hash:\n");
+      SCIPhashmapPrintStatistics(conshdlrdata->ubHash);
+#endif
 
       SCIPhashmapFree(&conshdlrdata->varHash);
+      SCIPhashmapFree(&conshdlrdata->lbHash);
+      SCIPhashmapFree(&conshdlrdata->ubHash);
+
       SCIP_CALL( SCIPlpiFree(&conshdlrdata->altLP) );
    }
 
@@ -1976,6 +2175,10 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->altLP = NULL;
    conshdlrdata->nvars = 0;
    conshdlrdata->varHash = NULL;
+   conshdlrdata->lbHash = NULL;
+   conshdlrdata->ubHash = NULL;
+   conshdlrdata->nLbBounds = 0;
+   conshdlrdata->nUbBounds = 0;
    conshdlrdata->roundingMinThreshold =	0.1;
    conshdlrdata->roundingMaxThreshold =	0.6;
    conshdlrdata->roundingRounds = 1;
