@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.27 2007/06/06 11:25:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.28 2008/02/28 10:19:20 bzfwinkm Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -314,5 +314,162 @@ int SCIPptrarrayGetMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
+/*
+  local methods
+*/
+
+/** shellsort an indexed element set(smaller 25 entries) fast, resulting in a permutation index array */
+void shellSort(
+  void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+  int*                  indarray            /**< pointer to store the sorted index array */
+  );
+
+/** quicksort an indexed element set fast, resulting in a permutation index array; pivot is the medial element */
+void qSort(
+  void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+  int*                  indarray            /**< pointer to store the sorted index array */
+  );
+
+/** shellsort an array of pointers; use it only for arrays smaller than 25 entries */
+void shellSortPtr(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** quicksort an array of pointers; pivot is the medial element */
+void qSortPtr(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** shellsort sort of two joint arrays of pointers/Reals, sorted by first array; use it only for arrays smaller than
+    25 entries */
+void shellSortPtrReal(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** quicksort sort of two joint arrays of pointers/Reals, sorted by first array; pivot is the medial element */
+void qSortPtrReal(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** shellsort sort of two joint arrays of pointers/ints, sorted by first array; use it only for arrays smaller than
+    25 entries */
+void shellSortPtrInt(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int*                  intarray,           /**< int array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** quicksort sort of two joint arrays of pointers/ints, sorted by first array; pivot is the medial element */
+void qSortPtrInt(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int*                  intarray,           /**< int array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** shellsort sort of three joint arrays of pointers/ints/ints, sorted by first array; use it only for arrays smaller than
+    25 entries */
+void shellSortPtrIntInt(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int*                  intarray1,          /**< first int array to be permuted in the same way */
+  int*                  intarray2,          /**< second int array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** quicksort sort of three joint arrays of pointers/ints/ints, sorted by first array; pivot is the medial element */
+void qSortPtrIntInt(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int*                  intarray1,          /**< first int array to be permuted in the same way */
+  int*                  intarray2,          /**< second int array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** shellsort sort of three joint arrays of pointers/Reals/ints, sorted by first array; use it only for arrays smaller
+    than 25 entries */
+void shellSortPtrRealInt(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+  int*                  intarray,           /**< int array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** quicksort sort of three joint arrays of pointers/Reals/ints, sorted by first array; pivot is the medial element */
+void qSortPtrRealInt(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+  int*                  intarray,           /**< int array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** shellsort sort of four joint arrays of pointers/Real/ints/ints, sorted by first array; use it only for arrays smaller
+    than 25 entries */
+void shellSortPtrRealIntInt(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+  int*                  intarray1,          /**< first int array to be permuted in the same way */
+  int*                  intarray2,          /**< second int array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** quicksort sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array; pivot is the medial element */
+void qSortPtrRealIntInt(
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+  int*                  intarray1,          /**< first int array to be permuted in the same way */
+  int*                  intarray2,          /**< second int array to be permuted in the same way */
+  int                   start,              /**< starting index */
+  int                   end,                /**< ending index */
+  SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+  );
+
+/** shellsort sort of two joint arrays of Reals/pointers, sorted by first array; use it only for arrays smaller than
+    25 entries */
+void shellSortRealPtr(
+  SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int                   start,              /**< starting index */
+  int                   end                 /**< ending index */
+  );
+
+/** quicksort sort of two joint arrays of Reals/pointers, sorted by first array; pivot is the medial element */
+void qSortRealPtr(
+  SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int                   start,              /**< starting index */
+  int                   end                 /**< ending index */
+  );
 
 #endif
