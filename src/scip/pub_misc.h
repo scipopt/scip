@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.29 2008/02/28 10:19:06 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.30 2008/02/28 18:09:58 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -244,6 +244,15 @@ void SCIPbsort(
    int                   len,                /**< number of elements to be sorted (valid index range) */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
    int*                  indarray            /**< pointer to store the sorted index array */
+   );
+
+/** bubble sort an index array of an indexed element set */
+extern
+void SCIPbsortInd(
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int*                  indarray,           /**< pointer to the index array to be sorted */
+   int                   len,                /**< number of elements to be sorted (valid index range) */
+   SCIP_DECL_SORTINDCOMP((*indcomp))         /**< data element comparator */
    );
 
 /** bubble sort of an array of pointers */
