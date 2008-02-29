@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.4 2008/02/29 09:53:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.5 2008/02/29 10:11:19 bzfheinz Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -481,17 +481,17 @@ SCIP_RETCODE SCIPincludeReaderPpm(
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-       "reading/ppmreader/rgb_relativ", "should the coloring values be relativ or absolute",
+       "reading/ppmreader/rgbrelativ", "should the coloring values be relativ or absolute",
        &readerdata->rgb_relativ, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-       "reading/ppmreader/rgb_ascii", "should the output format be binary(P6) or plain(P3) format",
+       "reading/ppmreader/rgbascii", "should the output format be binary(P6) or plain(P3) format",
        &readerdata->rgb_ascii, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-       "reading/ppmreader/coefficient_limit", 
+       "Reading/Ppmreader/Coefficientlimit", 
        "splitting coefficients in this number of intervals",
        &readerdata->coef_limit, FALSE, PPM_COEF_LIMIT, 3, 16, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-       "reading/ppmreader/rgb_limit", 
+       "reading/ppmreader/rgblimit", 
        "maximal color value",
        &readerdata->rgb_limit, FALSE, PPM_RGB_LIMIT, 0, 255, NULL, NULL) );
    
