@@ -85,6 +85,7 @@ fixed bugs:
 - fixed bug with objective scaling after restart
 - fixed bug with useless objective cutoff in LNS heuristics
 - fixed bug with wrong 'tightened' return value of some of the change bounds methods
+- fixed bug with non-conformal parameter name in reader_ppm
 
 
 SCIP version 1.00
