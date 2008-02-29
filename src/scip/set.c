@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194 2007/08/01 13:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.195 2008/02/29 14:18:42 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1596,7 +1596,7 @@ void SCIPsetSortPricers(
 
    if( !set->pricerssorted )
    {
-      SCIPbsortPtr((void**)set->pricers, set->npricers, SCIPpricerComp);
+      SCIPsortPtr((void**)set->pricers, SCIPpricerComp, set->npricers);
       set->pricerssorted = TRUE;
    }
 }
@@ -1726,7 +1726,7 @@ void SCIPsetSortConflicthdlrs(
 
    if( !set->conflicthdlrssorted )
    {
-      SCIPbsortPtr((void**)set->conflicthdlrs, set->nconflicthdlrs, SCIPconflicthdlrComp);
+      SCIPsortPtr((void**)set->conflicthdlrs, SCIPconflicthdlrComp, set->nconflicthdlrs);
       set->conflicthdlrssorted = TRUE;
    }
 }
@@ -1783,7 +1783,7 @@ void SCIPsetSortPresols(
 
    if( !set->presolssorted )
    {
-      SCIPbsortPtr((void**)set->presols, set->npresols, SCIPpresolComp);
+      SCIPsortPtr((void**)set->presols, SCIPpresolComp, set->npresols);
       set->presolssorted = TRUE;
    }
 }
@@ -1841,7 +1841,7 @@ void SCIPsetSortRelaxs(
 
    if( !set->relaxssorted )
    {
-      SCIPbsortPtr((void**)set->relaxs, set->nrelaxs, SCIPrelaxComp);
+      SCIPsortPtr((void**)set->relaxs, SCIPrelaxComp, set->nrelaxs);
       set->relaxssorted = TRUE;
    }
 }
@@ -1899,7 +1899,7 @@ void SCIPsetSortSepas(
 
    if( !set->sepassorted )
    {
-      SCIPbsortPtr((void**)set->sepas, set->nsepas, SCIPsepaComp);
+      SCIPsortPtr((void**)set->sepas, SCIPsepaComp, set->nsepas);
       set->sepassorted = TRUE;
    }
 }
@@ -1957,7 +1957,7 @@ void SCIPsetSortProps(
 
    if( !set->propssorted )
    {
-      SCIPbsortPtr((void**)set->props, set->nprops, SCIPpropComp);
+      SCIPsortPtr((void**)set->props, SCIPpropComp, set->nprops);
       set->propssorted = TRUE;
    }
 }
@@ -2015,7 +2015,7 @@ void SCIPsetSortHeurs(
 
    if( !set->heurssorted )
    {
-      SCIPbsortPtr((void**)set->heurs, set->nheurs, SCIPheurComp);
+      SCIPsortPtr((void**)set->heurs, SCIPheurComp, set->nheurs);
       set->heurssorted = TRUE;
    }
 }
@@ -2204,7 +2204,7 @@ void SCIPsetSortBranchrules(
 
    if( !set->branchrulessorted )
    {
-      SCIPbsortPtr((void**)set->branchrules, set->nbranchrules, SCIPbranchruleComp);
+      SCIPsortPtr((void**)set->branchrules, SCIPbranchruleComp, set->nbranchrules);
       set->branchrulessorted = TRUE;
    }
 }

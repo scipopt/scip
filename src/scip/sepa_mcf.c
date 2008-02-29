@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.18 2008/02/28 17:34:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.19 2008/02/29 14:18:42 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -1112,8 +1112,8 @@ SCIP_RETCODE extractRows(
    }
 
    /* sort candidates by score */
-   SCIPbsortInd((void*)flowrowscores, mcfdata->flowcands, mcfdata->nflowcands, compCands);
-   SCIPbsortInd((void*)capacityrowscores, mcfdata->capacitycands, mcfdata->ncapacitycands, compCands);
+   SCIPsortInd(mcfdata->flowcands, compCands, (void*)flowrowscores, mcfdata->nflowcands);
+   SCIPsortInd(mcfdata->capacitycands, compCands, (void*)capacityrowscores, mcfdata->ncapacitycands);
 
    SCIPdebugMessage("flow conservation candidates:\n");
    for( r = 0; r < mcfdata->nflowcands; r++ )

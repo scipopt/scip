@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.85 2008/01/21 11:16:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.86 2008/02/29 14:18:40 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -650,7 +650,7 @@ SCIP_RETCODE consdataSort(
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
       /* call bubble sort */
-      SCIPbsort((void*)consdata, consdata->nvars, consdataCompVar, perm);
+      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
 
       /* permute the variables in the constraint according to the resulting permutation */
       for( v = 0; v < consdata->nvars; ++v )

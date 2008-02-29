@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.1 2008/02/29 11:03:50 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.2 2008/02/29 14:18:42 bzfpfend Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -26,6 +26,10 @@
 
 /* template parameters that have to be passed in as #define's:
  * #define SORTTPL_METHOD       <name>     name of the SCIP method that should be generated
+ * #define SORTTPL_KEYNAME      <name>     arbitrary name for key array (used in local method name generation)
+ * #define SORTTPL_FIELD1NAME   <name>     arbitrary name for field1 array (used in local method name generation)
+ * #define SORTTPL_FIELD2NAME   <name>     arbitrary name for field2 array (used in local method name generation)
+ * #define SORTTPL_FIELD3NAME   <name>     arbitrary name for field3 array (used in local method name generation)
  * #define SORTTPL_KEYTYPE      <type>     data type of the key array
  * #define SORTTPL_FIELD1TYPE   <type>     data type of first additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD2TYPE   <type>     data type of second additional array which should be sorted in the same way (optional)
@@ -317,6 +321,7 @@ void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME
 }
 
 
+#ifndef NDEBUG
 /** verifies that an array is indeed sorted */
 static
 void SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
@@ -328,15 +333,14 @@ void SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2
    int                   len                 /**< length of the array */
    )
 {
-#ifndef NDEBUG
    int i;
 
    for( i = 0; i < len-1; i++ )
    {
       assert(!SORTTPL_ISSMALLER(key[i+1], key[i]));
    }
-#endif
 }
+#endif
 
 /** sorts array 'key' and performs the same permutations on the additional 'field' arrays */
 void SORTTPL_METHOD (
@@ -359,12 +363,15 @@ void SORTTPL_METHOD (
        SORTTPL_HASINDCOMPPAR(indcomp)
        SORTTPL_HASINDCOMPPAR(dataptr)
        0, len-1);
+
+#ifndef NDEBUG
    SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
       (key,
        SORTTPL_HASPTRCOMPPAR(ptrcomp)
        SORTTPL_HASINDCOMPPAR(indcomp)
        SORTTPL_HASINDCOMPPAR(dataptr)
        len);
+#endif
 }
 
 

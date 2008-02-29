@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.52 2007/06/12 10:48:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.53 2008/02/29 14:18:41 bzfpfend Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -435,7 +435,7 @@ SCIP_RETCODE SCIPdispAutoActivate(
 
    /* sort display columns w.r. to their priority */
    SCIP_ALLOC( BMSduplicateMemoryArray(&disps, set->disps, set->ndisps) );
-   SCIPbsortPtr((void**)disps, set->ndisps, dispComp);
+   SCIPsortPtr((void**)disps, dispComp, set->ndisps);
 
    totalwidth = 0;
 

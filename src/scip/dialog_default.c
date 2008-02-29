@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.81 2008/01/28 14:31:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.82 2008/02/29 14:18:41 bzfpfend Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -321,7 +321,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, branchrules, nbranchrules) );
 
    /* sort the branching rules */
-   SCIPbsortPtr((void**)sorted, nbranchrules, SCIPbranchruleComp);
+   SCIPsortPtr((void**)sorted, SCIPbranchruleComp, nbranchrules);
 
    /* display sorted list of branching rules */
    SCIPdialogMessage(scip, NULL, "\n");
@@ -364,7 +364,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict)
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, conflicthdlrs, nconflicthdlrs) );
 
    /* sort the conflict handlers */
-   SCIPbsortPtr((void**)sorted, nconflicthdlrs, SCIPconflicthdlrComp);
+   SCIPsortPtr((void**)sorted, SCIPconflicthdlrComp, nconflicthdlrs);
 
    /* display sorted list of conflict handlers */
    SCIPdialogMessage(scip, NULL, "\n");

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.119 2007/10/31 09:26:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.120 2008/02/29 14:18:41 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -525,7 +525,7 @@ SCIP_RETCODE consdataSort(
       consdata->sorted = TRUE;
    else if( !consdata->sorted )
    {
-      SCIPbsortPtr((void**)consdata->vars, consdata->nvars, SCIPvarComp);
+      SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
       consdata->sorted = TRUE;
    }
    assert(consdata->sorted);

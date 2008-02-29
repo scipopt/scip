@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.266 2008/01/24 11:08:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.267 2008/02/29 14:18:40 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -1874,7 +1874,7 @@ SCIP_RETCODE consdataSort(
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
       /* call bubble sort */
-      SCIPbsort((void*)consdata, consdata->nvars, consdataCompVar, perm);
+      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
 
       /* permute the variables in the linear constraint according to the resulting permutation */
       eventdatav = NULL;

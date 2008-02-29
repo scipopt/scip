@@ -29,6 +29,8 @@ interface:
 - new method SCIPcount() (in cons_countsols.h) for counting all feasible solution of a given CIP
 - new method SCIPcreateRootDialog() (in dialog_default.h) which creates a root dialog
 - new method SCIPbsortInd()
+- replaced sorting methods SCIPbsort...() by faster (quicksort/shellsort) algorithms SCIPsort...()
+  Note that the order of the paramters has been changed to simplify the template code in sorttpl.c!
 
 features:
 - the MPS reader is now able to write a problem in MPS format

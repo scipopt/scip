@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.57 2007/10/31 09:26:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.58 2008/02/29 14:18:41 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -562,8 +562,8 @@ SCIP_RETCODE consdataSort(
       /* get temporary memory to store the sorted permutation */
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
-      /* call bubble sort */
-      SCIPbsort((void*)consdata, consdata->nvars, consdataCompVar, perm);
+      /* calculate sorted permutation of coefficients */
+      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
 
       /* permute the variables in the constraint according to the resulting permutation */
       for( v = 0; v < consdata->nvars; ++v )

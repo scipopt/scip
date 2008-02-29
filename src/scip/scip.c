@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.437 2008/02/19 12:44:29 bzfkocht Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.438 2008/02/29 14:18:41 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5669,7 +5669,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    }
    
    /* sort variable and scalar array by variable index */
-   SCIPbsortPtrReal((void**)activevars, activescalars, nactivevars, SCIPvarComp);
+   SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
    
    /* eliminate duplicates and count required size */
    r = 0;
