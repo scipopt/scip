@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.30 2008/02/28 18:09:58 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.31 2008/02/29 11:03:11 bzfpfend Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -320,47 +320,30 @@ void SCIPbsortRealPtr(
    int                   len                 /**< length of arrays */
    );
 
-
-
-/* checks for correct sorting */
+/** sort an indexed element set, resulting in a permutation index array */
 extern
-SCIP_Bool SCIPcheckSorting(
-  void*                 dataptr,            /**< pointer to data field which should be sorted through the index array */
-  SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
-  int*                  indarray,           /**< pointer to store the sorted index array */
-  int                   len                 /**< number of elements */
-  );
-
-/* checks for correct sorting */
-extern
-SCIP_Bool SCIPcheckSortingPtr(
-   void**                ptrarray,           /**< pointer array which should be sorted */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
-   int                   len                 /**< length of array */
-   );
-
-/* checks for correct sorting */
-extern
-SCIP_Bool SCIPcheckSortingReal(
-   SCIP_Real*            realarray,          /**< SCIP_Real array which should be sorted */
-   int                   len                 /**< length of array */
+void SCIPsort(
+   int*                  perm,               /**< pointer to store the resulting permutation */
+   SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int                   len                 /**< number of elements to be sorted (valid index range) */
    );
 
 /** sort an indexed element set fast, resulting in a permutation index array */
 extern
-void SCIPsort(
-  void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
-  int                   len,                /**< number of elements to be sorted (valid index range) */
-  SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
-  int*                  indarray            /**< pointer to store the sorted index array */
-  );
+void SCIPsortInd(
+   int*                  indarray,           /**< pointer to the index array to be sorted */
+   SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int                   len                 /**< length of array */
+   );
 
 /** sort of an array of pointers */
 extern
 void SCIPsortPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
-   int                   len,                /**< length of array */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of array */
    );
 
 /** sort of two joint arrays of pointers/Reals, sorted by first array */
@@ -368,8 +351,8 @@ extern
 void SCIPsortPtrReal(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
    );
 
 /** sort of two joint arrays of pointers/ints, sorted by first array */
@@ -377,8 +360,8 @@ extern
 void SCIPsortPtrInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
    );
 
 /** sort of three joint arrays of pointers/ints/ints, sorted by first array */
@@ -387,8 +370,8 @@ void SCIPsortPtrIntInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
    );
 
 /** sort of three joint arrays of pointers/Reals/ints, sorted by first */
@@ -397,8 +380,8 @@ void SCIPsortPtrRealInt(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray,           /**< int array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
    );
 
 /** sort of four joint arrays of pointers/Reals/ints/ints, sorted by first */
@@ -408,8 +391,8 @@ void SCIPsortPtrRealIntInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
    int*                  intarray1,          /**< first int array to be permuted in the same way */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
    );
 
 /** sort of two joint arrays of Reals/pointers, sorted s.t. the SCIP_Real array is in non-decreasing order */
