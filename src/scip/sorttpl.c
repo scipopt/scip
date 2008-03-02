@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.2 2008/02/29 14:18:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.3 2008/03/02 23:58:29 bzfwinkm Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -163,7 +163,7 @@ void SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2
 
    assert(start <= end);
 
-   for( k = 3; k >= 0; --k )
+   for( k = 2; k >= 0; --k )
    {
       int h;
       int i;
@@ -354,7 +354,9 @@ void SORTTPL_METHOD (
    int                   len                 /**< length of arrays */
    )
 {
-   SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+  if (len <= 1) return;
+  
+  SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
       (key,
        SORTTPL_HASFIELD1PAR(field1)
        SORTTPL_HASFIELD2PAR(field2)
