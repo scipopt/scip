@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.220 2007/11/15 10:53:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.221 2008/03/05 17:23:19 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -627,8 +627,8 @@ SCIP_RETCODE SCIPboundchgUndo(
       var->nlbchginfos--;
       assert(var->nlbchginfos >= 0);
       assert(var->lbchginfos != NULL);
-      assert(var->lbchginfos[var->nlbchginfos].newbound == var->locdom.lb); /*lint !e777*/
-      assert(boundchg->newbound <= var->locdom.lb); /* current lb might be larger to intermediate global bound change */
+      assert( SCIPsetIsFeasEQ(set, var->lbchginfos[var->nlbchginfos].newbound, var->locdom.lb) ); /*lint !e777*/
+      assert( SCIPsetIsFeasLE(set, boundchg->newbound, var->locdom.lb) ); /* current lb might be larger to intermediate global bound change */
 
       SCIPdebugMessage("removed lower bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
          SCIPvarGetName(var), var->locdom.lb, var->locdom.ub,
@@ -644,8 +644,8 @@ SCIP_RETCODE SCIPboundchgUndo(
       var->nubchginfos--;
       assert(var->nubchginfos >= 0);
       assert(var->ubchginfos != NULL);
-      assert(var->ubchginfos[var->nubchginfos].newbound == var->locdom.ub); /*lint !e777*/
-      assert(boundchg->newbound >= var->locdom.ub); /* current ub might be smaller to intermediate global bound change */
+      assert( SCIPsetIsFeasEQ(set, var->ubchginfos[var->nubchginfos].newbound, var->locdom.ub) ); /*lint !e777*/
+      assert( SCIPsetIsFeasGE(set, boundchg->newbound, var->locdom.ub) ); /* current ub might be smaller to intermediate global bound change */
 
       SCIPdebugMessage("removed upper bound change info of var <%s>[%g,%g]: depth=%d, pos=%d, %g -> %g\n",
          SCIPvarGetName(var), var->locdom.lb, var->locdom.ub,
@@ -4144,8 +4144,8 @@ SCIP_RETCODE varProcessChgLbGlobal(
    /* change the bound */
    oldbound = var->glbdom.lb;
    var->glbdom.lb = newbound;
-   assert(var->glbdom.lb <= var->locdom.lb);
-   assert(var->locdom.ub <= var->glbdom.ub);
+   assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
+   assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
 
    /* update the root bound changes counters */
    varIncRootboundchgs(var, set, stat);
@@ -4294,8 +4294,8 @@ SCIP_RETCODE varProcessChgUbGlobal(
    /* change the bound */
    oldbound = var->glbdom.ub;
    var->glbdom.ub = newbound;
-   assert(var->glbdom.lb <= var->locdom.lb);
-   assert(var->locdom.ub <= var->glbdom.ub);
+   assert( SCIPsetIsFeasLE(set, var->glbdom.lb, var->locdom.lb) );
+   assert( SCIPsetIsFeasLE(set, var->locdom.ub, var->glbdom.ub) );
 
    /* update the root bound changes counters */
    varIncRootboundchgs(var, set, stat);
