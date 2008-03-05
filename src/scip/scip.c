@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.438 2008/02/29 14:18:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.439 2008/03/05 16:54:21 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7092,6 +7092,7 @@ SCIP_RETCODE SCIPtightenVarLbGlobal(
       return SCIP_ERROR;
    }  /*lint !e788*/
 
+   /* coverity: unreachable code */
    if( tightened != NULL )
       *tightened = TRUE;
 
@@ -7166,6 +7167,7 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
       return SCIP_ERROR;
    }  /*lint !e788*/
 
+   /* coverity: unreachable code */
    if( tightened != NULL )
       *tightened = TRUE;
 

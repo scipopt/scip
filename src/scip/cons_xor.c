@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.58 2008/02/29 14:18:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.59 2008/03/05 16:54:21 bzfwolte Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -1601,12 +1601,8 @@ SCIP_DECL_CONSDELETE(consDeleteXor)
 static
 SCIP_DECL_CONSTRANS(consTransXor)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -2099,7 +2095,6 @@ SCIP_RETCODE SCIPcreateConsXor(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    /* find the xor constraint handler */
@@ -2109,9 +2104,6 @@ SCIP_RETCODE SCIPcreateConsXor(
       SCIPerrorMessage("xor constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, rhs, nvars, vars) );

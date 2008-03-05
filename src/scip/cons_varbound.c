@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.68 2007/11/15 10:53:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.69 2008/03/05 16:54:21 bzfwolte Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -295,6 +295,7 @@ SCIP_RETCODE separateCons(
    {
       SCIP_CALL( createRelaxation(scip, cons) );
    }
+   assert(consdata->row != NULL);
 
    /* check non-LP rows for feasibility and add them as cut, if violated */
    if( sol != NULL || !SCIProwIsInLP(consdata->row) )

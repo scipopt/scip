@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.47 2008/02/11 15:44:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.48 2008/03/05 16:54:21 bzfwolte Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -462,7 +462,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    SCIP_Real* oneproplbs;
    SCIP_Real* onepropubs;
    int nvars;
-   int nbinvars;
+   int nbinvars; /* coverity: uninitalized */
    int maxfixings;
    int maxuseless;
    int maxtotaluseless;
