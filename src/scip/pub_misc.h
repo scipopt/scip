@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.33 2008/03/06 21:08:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.34 2008/03/06 21:30:56 bzfwinkm Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -329,6 +329,7 @@ void SCIPsortRealInt(
    );
 
 /** sort sort of two joint arrays of ints/pointers, sorted by first array; pivot is the medial element */
+/** this sorting function sorts downwards */
 extern
 void SCIPsortIntPtr(
   int*                  intarray,           /**< int array to be sorted */
@@ -337,6 +338,7 @@ void SCIPsortIntPtr(
   );
 
 /** sort sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array; pivot is the medial element */
+/** this sorting function sorts downwards */
 extern
 void SCIPsortRealLongRealInt(
   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
@@ -347,6 +349,7 @@ void SCIPsortRealLongRealInt(
   );
 
 /** sort sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array; pivot is the medial element */
+/** this sorting function sorts downwards */
 extern
 void SCIPsortRealRealRealInt(
   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
@@ -357,6 +360,7 @@ void SCIPsortRealRealRealInt(
   );
 
 /** sort sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array; pivot is the medial element */
+/** this sorting function sorts downwards */
 extern
 void SCIPsortRealRealRealBoolPtr(
   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */

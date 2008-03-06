@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.70 2008/03/06 21:08:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.71 2008/03/06 21:30:56 bzfwinkm Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2498,7 +2498,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1NAME  Ptr
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  void*
-#define SORTTPL_REALCOMP
+#define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
 
@@ -2512,7 +2512,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  SCIP_Longint
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
-#define SORTTPL_REALCOMP
+#define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
 /* SCIPsortRealRealRealInt() via sort template */
@@ -2525,7 +2525,7 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
-#define SORTTPL_REALCOMP
+#define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
 
@@ -2541,7 +2541,7 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  void*
-#define SORTTPL_REALCOMP
+#define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
 
