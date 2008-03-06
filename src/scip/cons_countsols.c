@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.10 2008/03/06 19:00:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.11 2008/03/06 21:21:37 bzfpfets Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -1137,8 +1137,6 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    
-   assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING );
-
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
