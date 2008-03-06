@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.9 2008/02/14 10:02:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.10 2008/03/06 19:00:03 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -104,6 +104,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             active;             /**< constraint handler active */
    SCIP_Bool             discardsols;        /**< allow to discard solutions */
    SCIP_Bool             sparsetest;         /**< allow to check for sparse solutions */
+
+   int                   nvars;              /**< number of variables in problem */
+   SCIP_VAR**            vars;               /**< array containing a copy of all variables before presolving */
 };
 
 
@@ -1100,10 +1103,62 @@ SCIP_DECL_CONSFREE(consFreeCountsols)
 }
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitCountsols NULL
+static
+SCIP_DECL_CONSINIT(consInitCountsols)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL );
+
+   if( conshdlrdata->active )
+   {
+      int v;
+      conshdlrdata->nvars = SCIPgetNVars(scip);
+
+      SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->vars, conshdlrdata->nvars) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &conshdlrdata->vars, SCIPgetVars(scip), conshdlrdata->nvars) );
+
+      for( v = 0; v < conshdlrdata->nvars; ++v )
+      {
+         SCIP_CALL( SCIPcaptureVar(scip, conshdlrdata->vars[v]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitCountsols NULL
+static
+SCIP_DECL_CONSEXIT(consExitCountsols)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   
+   assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING );
+
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL );
+   
+   if( conshdlrdata->vars != NULL )
+   {
+      int v;
+      for( v = 0; v < conshdlrdata->nvars; ++v )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->vars[v]) );
+      }
+            
+      SCIPfreeMemoryArrayNull(scip, &conshdlrdata->vars);
+      conshdlrdata->nvars = 0;
+   }      
+   
+   return SCIP_OKAY;
+}
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #define consInitpreCountsols NULL
@@ -1121,7 +1176,7 @@ static
 SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-
+   
    assert( SCIPgetStage(scip) == SCIP_STAGE_SOLVING );
 
    assert( conshdlr != NULL );
@@ -1272,16 +1327,22 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
 static
 SCIP_DECL_CONSLOCK(consLockCountsols)
 {  /*lint --e{715}*/
-   SCIP_VAR** origVarArray;
-   int nofOrigVars;
-   int v;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL );
    
-   origVarArray =  SCIPgetOrigVars(scip);
-   nofOrigVars = SCIPgetNOrigVars(scip);
-   
-   for( v = 0; v < nofOrigVars; ++v )
+   if( conshdlrdata->vars != NULL )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip,origVarArray[v], +1, +1) );
+      int v;
+      
+      for( v = 0; v < conshdlrdata->nvars; ++v )
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->vars[v], +1, +1) );
+      }
    }
    
    return SCIP_OKAY;
@@ -1315,6 +1376,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int* heuristicfreqs;    
    int nheuristics;        
    SCIP_Bool heuristicsoff;
+   SCIP_Bool active;
 
    int maxrestarts;        
    int maxroundsdualfix;
@@ -1339,6 +1401,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       break;
       
    case SCIP_STAGE_PROBLEM:
+      /* activate constraint handler cons_countsols */
+      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+      if( !active )
+      {
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+      }
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
       /* turn off dual methods */
@@ -1368,6 +1436,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          }
       }
    case SCIP_STAGE_PRESOLVED:
+      /* reset activity status of constraint handler cons_countsols */
+      if( !active )
+      {
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+      }
    case SCIP_STAGE_SOLVING:
       /* check if the problem contains continuous variables */
       if( SCIPgetNContVars(scip) != 0 )

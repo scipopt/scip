@@ -88,7 +88,8 @@ fixed bugs:
 - fixed bug with useless objective cutoff in LNS heuristics
 - fixed bug with wrong 'tightened' return value of some of the change bounds methods
 - fixed bug with non-conformal parameter name in reader_ppm
-- fixed bug in sorttpl.c, wrong fixed arraysize in shellsort and stop sorting arrays with no element or only one element
+- fixed bugs in sorttpl.c: fixed wrong arraysize in shellsort; in case an has at most one element, then no sorting is applied
+- fixed bug in cons_countsols.c concerning variable locking
 
 
 SCIP version 1.00
