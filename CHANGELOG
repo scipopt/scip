@@ -31,6 +31,7 @@ interface:
 - new method SCIPbsortInd()
 - replaced sorting methods SCIPbsort...() by faster (quicksort/shellsort) algorithms SCIPsort...()
   Note that the order of the paramters has been changed to simplify the template code in sorttpl.c!
+- expand sorttpl.c by some parameters
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -48,6 +49,8 @@ features:
 - new method SCIPgetResultantAnd() which returns the resultant variable of an "and" constraint 
 - SCIP is now able to count all feasible solutions of a given CIP (SCIPcount() in cons_countsols.h)
 - SCIP can now output a picture of the constraint matrix in PPM format.
+- replaced some old sorting methods in cons_knapsack.c, heur_octane.c, sepa_flowcover.c and presol_probing.c through SCIPsort... interfaces, adjusted misc.{c,h} and pub_misc.h for these changes
+- updated mmm.{test,solu}, mittelmann.{test,solu}, miplib3.solu, miplib.solu, shortmiplib.test and added mittelmann_current.test, mittelmann_old.test 
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})

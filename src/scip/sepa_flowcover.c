@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.5 2007/06/27 14:34:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.6 2008/03/06 21:08:25 bzfwinkm Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -971,160 +971,6 @@ SCIP_RETCODE constructSNFRelaxation(
    return SCIP_OKAY;
 }
 
-/** merge entries from index left to index middle, allready sorted such that 
- *  profits[left]/weights[left] >= ... >= profits[middle]/weights[middle], and index middle+1 to index right, allready 
- *  sorted such that profits[middle+1]/weights[middle+1] >= ... >=  profits[right]/weights[right] of given arrays such that
- *  profits[left]/weights[left] >= ... >= profits[right]/weights[right]
- */
-static
-SCIP_RETCODE mergeForSolveKnapsackLT(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            weights,            /**< item weights */
-   SCIP_Real*            profits,            /**< item profits */
-   int*                  items,              /**< item numbers */
-   int                   left,               /**< left index of the area, to be merged */
-   int                   middle,             /**< middle index of the area, to be merged  */ 
-   int                   right               /**< right index of the area, to be merged  */
-   )
-{
-   SCIP_Real* weights1;
-   SCIP_Real* weights2;
-   SCIP_Real* profits1;
-   SCIP_Real* profits2;
-   int* items1;
-   int* items2;
-   int i;
-   int j;
-   int k;
-   int m;
-   int n;
-
-   assert(scip != NULL);
-   assert(weights != NULL);
-   assert(profits != NULL);
-   assert(items != NULL);
-   assert(left >= 0);
-   assert(left <= middle && middle <= right); 
-
-   /* makes copy of first part */
-   m = middle - left + 1;
-   SCIP_CALL( SCIPallocBufferArray(scip, &items1, m) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &weights1, m) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &profits1, m) );
-   for( i = 0; i < m; i++ )
-   {
-      items1[i] = items[left + i];
-      weights1[i] = weights[left + i];
-      profits1[i] = profits[left + i];
-   }
-
-   /* makes copy of second part */
-   n = right - middle;
-   SCIP_CALL( SCIPallocBufferArray(scip, &items2, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &weights2, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &profits2, n) );
-   for( j = 0; j < n; j++ )
-   {
-      items2[j] = items[middle + 1 + j];
-      weights2[j] = weights[middle + 1 + j];
-      profits2[j] = profits[middle + 1 + j];
-   }
-
-   i = 0;
-   j = 0;
-   k = 0;
-   
-   /* merges both parts until i == m or j == n */
-   while( i < m && j < n )
-   {
-      if( SCIPisFeasGE(scip, profits1[i]/weights1[i], profits2[j]/weights2[j]) )
-      {
-         items[left + k] = items1[i];
-         weights[left + k] = weights1[i];
-         profits[left + k] = profits1[i];
-         assert(0 <= weights[left+k] && weights[left+k] < SCIP_REAL_MAX);
-         i++;
-         k++;
-         
-      }
-      else
-      {
-         items[left + k] = items2[j];
-         weights[left + k] = weights2[j];
-         profits[left + k] = profits2[j];
-         assert(0 <= weights[left+k] && weights[left+k] < SCIP_REAL_MAX);
-         j++;
-         k++;
-      }
-   }
-
-   /* copies rest of first part if necessary */
-   while( i < m )
-   {
-      items[left + k] = items1[i];
-      weights[left + k] = weights1[i];
-      profits[left + k] = profits1[i];
-      assert(0 <= weights[left+k] && weights[left+k] < SCIP_REAL_MAX);
-      i++;
-      k++;
-   }
-
-   /* copies rest of second part if necessary */
-   while( j < n )
-   {
-      items[left + k] = items2[j];
-      weights[left + k] = weights2[j];
-      profits[left + k] = profits2[j];
-      assert(0 <= weights[left+k] && weights[left+k] < SCIP_REAL_MAX);
-      j++;
-      k++;
-   }
-
-   /* frees temporary memory */
-   SCIPfreeBufferArray(scip, &profits2);
-   SCIPfreeBufferArray(scip, &weights2);
-   SCIPfreeBufferArray(scip, &items2);
-   SCIPfreeBufferArray(scip, &profits1);
-   SCIPfreeBufferArray(scip, &weights1);
-   SCIPfreeBufferArray(scip, &items1);
-
-   
-   return SCIP_OKAY;
-}
-
-/** sort all entries from index first to index last of given arrays such that 
- *  profits[first]/weights[first] >= ... >= profits[last]/weights[last]
- */
-static
-SCIP_RETCODE mergeSortForSolveKnapsackLT(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            weights,            /**< item weights */
-   SCIP_Real*            profits,            /**< item profits */
-   int*                  items,              /**< item numbers */
-   int                   first,              /**< first index of the area, to be sorted */        
-   int                   last                /**< last index of the area, to be sorted */        
-   )
-{
-   int middle;
-
-   assert(scip != NULL);
-   assert(weights != NULL);
-   assert(profits != NULL);
-   assert(items != NULL);
-   assert(first >= 0);
-   assert(last >= -1); 
-
-   if( first < last )
-   {
-      middle = (first + last)/2;
-      SCIP_CALL( mergeSortForSolveKnapsackLT(scip, weights, profits, items, first, middle) );
-      SCIP_CALL( mergeSortForSolveKnapsackLT(scip, weights, profits, items, middle + 1, last) );
-      SCIP_CALL( mergeForSolveKnapsackLT(scip, weights, profits, items, first, middle, last) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** solve knapsack problem in maximization form with "<" constraint approximately by greedy; if needed, one can provide 
  *  arrays to store all selected items and all not selected items
  */
@@ -1143,8 +989,10 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    ) 
 {
+   SCIP_Real* tempsort;
    SCIP_Real solitemsweight;
    int j;
+   int i;
    
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1161,9 +1009,20 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    if( solval != NULL )
       *solval = 0.0;
 
-   /* sort items such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
-   SCIP_CALL( mergeSortForSolveKnapsackLT(scip, weights, profits, items, 0, nitems-1) );
+   /* allocate memory for temporary array used for sorting; array should contain profits devided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
+   /* initialize temporary array */ 
+   for (i = nitems - 1; i >= 0; --i)
+   {
+      tempsort[i] = profits[i] / weights [i];
+   }
 
+   /* sort tempsort, items, weights and profits such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
+   SCIPsortRealRealRealInt ( tempsort, weights, profits, items, nitems);
+
+   /* free temporary array */
+   SCIPfreeBufferArray(scip, &tempsort);
+   
    /* select items as long as they fit into the knapsack */
    solitemsweight = 0.0;
    for( j = 0; j < nitems && SCIPisFeasLT(scip, solitemsweight + weights[j], capacity); j++ )

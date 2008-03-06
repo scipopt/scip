@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.48 2008/03/05 16:54:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.49 2008/03/06 21:08:25 bzfwinkm Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -144,68 +144,6 @@ SCIP_RETCODE freeSortedvars(
    return SCIP_OKAY;
 }
 
-/** boring method, only swapping two elements of an array */
-static 
-void swap(
-   int*                  scores,             /* array in which two elements should be swapped */
-   SCIP_VAR**            vars,               /* array in which two elements should be swapped */
-   int                   i,                  /* position of the first element                 */
-   int                   j                   /* position of the second element                */
-   ) 
-{
-   int tmp_score;
-   SCIP_VAR* tmp_var;
-
-   tmp_score = scores[i]; 
-   scores[i] = scores[j]; 
-   scores[j] = tmp_score;
-
-   tmp_var = vars[i]; 
-   vars[i] = vars[j]; 
-   vars[j] = tmp_var;
-}
-
-/** quicksort algorithm that sorts scores and vars by the values of scores */
-static 
-void quicksort(
-   int*                  scores,             /**< the array which should be sorted */
-   SCIP_VAR**            vars,               /**< array which is permuted          */
-   int                   l,                  /**< left end                         */
-   int                   r                   /**< right end                        */
-   )
-{
-   int i;
-   int j;
-
-   if( r <= l )
-      return;
-   
-   i = l;
-   j = r-1;
-  
-   /* quicksort with right most element as pivot */
-   while( i <= j )
-   {      
-      while( i <= r && scores[i] > scores[r] )
-         i++;
-      while( j >= l && scores[j] < scores[r] )
-         j--;
-      if( i >= j ) 
-         break;
-      else 
-         swap(scores,vars,i,j);
-      i++;
-      j--;
-   }
-
-   /* put in the pivot */
-   swap(scores,vars,i,r);
-    
-   /* recursion */
-   quicksort(scores, vars, l, i-1);
-   quicksort(scores, vars, i+1, r);
-}
-
 /** sorts the binary variables starting with the given index by rounding locks and implications */
 static
 SCIP_RETCODE sortVariables(
@@ -246,7 +184,7 @@ SCIP_RETCODE sortVariables(
          scores[i] = -1;
    }
 
-   quicksort(scores, vars, 0, nvars-1);
+   SCIPsortIntPtr(scores, (void*) vars, nvars);
 
    SCIPfreeBufferArray(scip, &scores);
 

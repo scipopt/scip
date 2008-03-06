@@ -2,7 +2,7 @@
 =opt= air03       3.4016000000e+05
 =opt= air04       5.6137000000e+04
 =opt= air05       2.6374000000e+04
-=opt= arki001     7580468.3336 Suboptimal
+=opt= arki001     7.5808130459e+06
 =opt= bell3a      8.7843031600e+05
 =opt= bell5       8.9664064915e+06
 =opt= blend2      7.5989850000e+00
@@ -60,7 +60,7 @@
 =opt= seymour     423 suboptimal
 =opt= stein27     1.8000000000e+01
 =opt= stein45     3.0000000000e+01
-=opt= swath       497 suboptimal
+=opt= swath       4.67407491e+02
 =opt= vpm1        2.0000000000e+01
 =opt= vpm2        1.3750000000e+01
 

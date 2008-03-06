@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.18 2007/06/06 11:25:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.19 2008/03/06 21:08:24 bzfwinkm Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -61,102 +61,6 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** boring method, only swapping two elements of a SCIP_Real array */
-static 
-void swapreal(
-   SCIP_Real*            arr,                /* array in which the two elements should be swapped */
-   int                   i,                  /* position of the first element                     */
-   int                   j                   /* position of the second element                    */
-   )
-{
-   SCIP_Real tmp;
-   tmp = arr[i]; 
-   arr[i] = arr[j]; 
-   arr[j] = tmp;
-}
-
-/** boring method, only swapping two elements of a SCIP_VAR* array */
-static 
-void swapvar(
-   SCIP_VAR**            arr,                /* array in which the two elements should be swapped */
-   int                   i,                  /* position of the first element                     */
-   int                   j                   /* position of the second element                    */
-   ) 
-{
-   SCIP_VAR* tmp;
-   tmp = arr[i]; 
-   arr[i] = arr[j]; 
-   arr[j] = tmp;
-}
-
-/** boring method, only swapping two elements of a SCIP_Bool array */
-static 
-void swapbool(
-   SCIP_Bool*            arr,                /**< array in which the two elements should be swapped */
-   int                   i,                  /**< position of the first element                     */
-   int                   j                   /**< position of the second element                    */
-   )  
-   
-{
-   SCIP_Bool tmp;
-   tmp = arr[i]; 
-   arr[i] = arr[j]; 
-   arr[j] = tmp;
-}
-
-/** quicksort for array v in range l..r using v[r] as pivot and sorting a, x, sign and subspacevars the same way as v */
-static 
-void resortCoords(
-   SCIP_Real*            v,                  /**< the array which should be sorted */
-   SCIP_Real*            a,                  /**< array which is permuted          */
-   SCIP_Real*            x,                  /**< array which is permuted          */ 
-   SCIP_Bool*            sign,               /**< array which is permuted          */ 
-   SCIP_VAR**            subspacevars,       /**< array which is permuted          */
-   int                   l,                  /**< left end                         */
-   int                   r                   /**< right end                        */
-   )
-{
-   int i;
-   int j;
-
-   if( r <= l )
-      return;
-   
-   i = l;
-   j = r-1;
-  
-   /* quicksort with right most element as pivot */
-   while( i <= j )
-   {      
-      while( i <= r && v[i] > v[r] )
-         i++;
-      while( j >= l && v[j] < v[r] )
-         j--;
-      if( i >= j ) 
-         break;
-      else 
-      {
-         swapreal(v,i,j);
-         swapreal(a,i,j);
-         swapreal(x,i,j);
-         swapbool(sign,i,j);
-         swapvar(subspacevars,i,j);
-      }
-      i++;
-      j--;
-   }
-
-   /* put in the pivot */
-   swapreal(v,i,r);
-   swapreal(a,i,r);
-   swapreal(x,i,r);
-   swapbool(sign,i,r);
-   swapvar(subspacevars,i,r);
-    
-   /* recursion */
-   resortCoords(v, a, x, sign, subspacevars, l, i-1);
-   resortCoords(v, a, x, sign, subspacevars, i+1, r);
-}
 
 /** tries to insert the facet obtained from facet i flipped in component j into the list of the fmax nearest facets */
 static 
@@ -917,8 +821,8 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       assert(SCIPisPositive(scip, q));
 
       /* resort the coordinates in nonincreasing order of v using a variant of quicksort */
-      resortCoords(v,a,x,sign,subspacevars,0,nsubspacevars-1);
-
+      SCIPsortRealRealRealBoolPtr( v, a, x, sign, (void*) subspacevars, nsubspacevars);
+      
 #ifndef NDEBUG
       for( i = 0; i < nsubspacevars; i++ )
          assert( a[i] >= 0 );

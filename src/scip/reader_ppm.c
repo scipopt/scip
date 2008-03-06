@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.5 2008/02/29 10:11:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.6 2008/03/06 21:08:25 bzfwinkm Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -487,7 +487,7 @@ SCIP_RETCODE SCIPincludeReaderPpm(
        "reading/ppmreader/rgbascii", "should the output format be binary(P6) or plain(P3) format",
        &readerdata->rgb_ascii, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-       "Reading/Ppmreader/Coefficientlimit", 
+       "reading/ppmreader/coefficientlimit", 
        "splitting coefficients in this number of intervals",
        &readerdata->coef_limit, FALSE, PPM_COEF_LIMIT, 3, 16, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.69 2008/02/29 14:18:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.70 2008/03/06 21:08:24 bzfwinkm Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2483,6 +2483,66 @@ void SCIPsort(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealInt
+#define SORTTPL_KEYNAME     Real
+#define SORTTPL_FIELD1NAME  Int
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortIntPtr
+#define SORTTPL_KEYNAME     Int
+#define SORTTPL_FIELD1NAME  Ptr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_REALCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealLongRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealLongRealInt
+#define SORTTPL_KEYNAME     Real
+#define SORTTPL_FIELD1NAME  Long
+#define SORTTPL_FIELD2NAME  Real
+#define SORTTPL_FIELD3NAME  Int
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Longint
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_REALCOMP
+#include "scip/sorttpl.c"
+
+/* SCIPsortRealRealRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealRealRealInt
+#define SORTTPL_KEYNAME     Real
+#define SORTTPL_FIELD1NAME  Real
+#define SORTTPL_FIELD2NAME  Real
+#define SORTTPL_FIELD3NAME  Int
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_REALCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealRealRealBoolPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealRealRealBoolPtr
+#define SORTTPL_KEYNAME     Real
+#define SORTTPL_FIELD1NAME  Real
+#define SORTTPL_FIELD2NAME  Real
+#define SORTTPL_FIELD3NAME  Bool
+#define SORTTPL_FIELD4NAME  Ptr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  void*
+#define SORTTPL_REALCOMP
+#include "scip/sorttpl.c"
 
 
 /*

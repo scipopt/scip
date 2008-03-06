@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.32 2008/02/29 14:18:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.33 2008/03/06 21:08:25 bzfwinkm Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -320,7 +320,52 @@ void SCIPsortRealPtr(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of two joint arrays of Reals/ints, sorted by first in non-decreasing order */
+extern
+void SCIPsortRealInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
 
+/** sort sort of two joint arrays of ints/pointers, sorted by first array; pivot is the medial element */
+extern
+void SCIPsortIntPtr(
+  int*                  intarray,           /**< int array to be sorted */
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array; pivot is the medial element */
+extern
+void SCIPsortRealLongRealInt(
+  SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+  SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
+  SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+  int*                  intarray,           /**< int array  to be permuted in the same way */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array; pivot is the medial element */
+extern
+void SCIPsortRealRealRealInt(
+  SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+  SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+  SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+  int*                  intarray,           /**< int array to be permuted in the same way */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array; pivot is the medial element */
+extern
+void SCIPsortRealRealRealBoolPtr(
+  SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+  SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+  SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+  SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int                   len                 /**< length of arrays */
+  );
 
 
 /*

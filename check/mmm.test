@@ -60,6 +60,7 @@ IP/miplib2003/markshare1.mps
 IP/mittelmann/markshare1_1.mps
 IP/miplib2003/markshare2.mps
 IP/mittelmann/markshare2_1.mps
+IP/mittelmann/markshare4_0.mps
 IP/miplib2003/mas74.mps
 IP/miplib2003/mas76.mps
 IP/mittelmann/mas284.mps
@@ -87,6 +88,8 @@ IP/miplib2003/mzzv42z.mps
 IP/mittelmann/neos1.mps
 IP/mittelmann/neos2.mps
 IP/mittelmann/neos3.mps
+IP/mittelmann/neos4.mps
+IP/mittelmann/neos5.mps
 IP/mittelmann/neos6.mps
 IP/mittelmann/neos7.mps
 IP/mittelmann/neos8.mps
@@ -95,6 +98,7 @@ IP/mittelmann/neos10.mps
 IP/mittelmann/neos11.mps
 IP/mittelmann/neos12.mps
 IP/mittelmann/neos13.mps
+IP/mittelmann/neos16.mps
 IP/mittelmann/neos20.mps
 IP/mittelmann/neos21.mps
 IP/mittelmann/neos22.mps
@@ -102,8 +106,10 @@ IP/mittelmann/neos23.mps
 IP/mittelmann/neos616206.mps
 IP/mittelmann/neos632659.mps
 IP/mittelmann/neos648910.mps
+IP/mittelmann/neos808444.mps
 IP/mittelmann/neos818918.mps
 IP/mittelmann/neos823206.mps
+IP/mittelmann/neos897005.mps
 IP/miplib2003/net12.mps
 IP/miplib2003/noswot.mps
 IP/miplib2003/nsrand-ipx.mps

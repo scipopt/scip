@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.3 2008/03/02 23:58:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.4 2008/03/06 21:08:25 bzfwinkm Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -30,12 +30,15 @@
  * #define SORTTPL_FIELD1NAME   <name>     arbitrary name for field1 array (used in local method name generation)
  * #define SORTTPL_FIELD2NAME   <name>     arbitrary name for field2 array (used in local method name generation)
  * #define SORTTPL_FIELD3NAME   <name>     arbitrary name for field3 array (used in local method name generation)
+ * #define SORTTPL_FIELD4NAME   <name>     arbitrary name for field4 array (used in local method name generation)
  * #define SORTTPL_KEYTYPE      <type>     data type of the key array
  * #define SORTTPL_FIELD1TYPE   <type>     data type of first additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD2TYPE   <type>     data type of second additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD3TYPE   <type>     data type of third additional array which should be sorted in the same way (optional)
+ * #define SORTTPL_FIELD4TYPE   <type>     data type of third additional array which should be sorted in the same way (optional)
  * #define SORTTPL_PTRCOMP                 ptrcomp method should be used for comparisons (optional)
  * #define SORTTPL_INDCOMP                 indcomp method should be used for comparisons (optional)
+ * #define SORTTPL_BACKWARDS               should the array be sorted other way around
  */
 
 #define SORTTPL_SHELLSORTMAX 25
@@ -79,6 +82,14 @@
 #define SORTTPL_HASFIELD3PAR(x) /**/
 #define SORTTPL_FIELD3NAME undef
 #endif
+#ifdef SORTTPL_FIELD4TYPE
+#define SORTTPL_HASFIELD4(x)    x
+#define SORTTPL_HASFIELD4PAR(x) x,
+#else
+#define SORTTPL_HASFIELD4(x)    /**/
+#define SORTTPL_HASFIELD4PAR(x) /**/
+#define SORTTPL_FIELD4NAME undef
+#endif
 #ifdef SORTTPL_PTRCOMP
 #define SORTTPL_HASPTRCOMP(x)    x
 #define SORTTPL_HASPTRCOMPPAR(x) x,
@@ -111,25 +122,40 @@
 #ifndef SORTTPL_FIELD3NAME
 #define SORTTPL_FIELD3NAME _ ## SORTTPL_FIELD3TYPE
 #endif
+#ifndef SORTTPL_FIELD4NAME
+#define SORTTPL_FIELD4NAME _ ## SORTTPL_FIELD4TYPE
+#endif
 
 
 /* the two-step macro definition is needed, such that macro arguments
  * get expanded by prescan of the C preprocessor (see "info cpp",
  * chapter 3.10.6: Argument Prescan)
  */
-#define SORTTPL_EXPANDNAME(method, keyname, field1name, field2name, field3name, ptrcomp, indcomp) \
-   sorttpl_ ## method ## _ ## keyname ## _ ## field1name ## _ ## field2name ## _ ## field3name ## _ ## ptrcomp
-#define SORTTPL_NAME(method, keyname, field1name, field2name, field3name, ptrcomp, indcomp) \
-   SORTTPL_EXPANDNAME(method, keyname, field1name, field2name, field3name, ptrcomp, indcomp)
+#define SORTTPL_EXPANDNAME(method, keyname, field1name, field2name, field3name, field4name, ptrcomp, indcomp) \
+   sorttpl_ ## method ## _ ## keyname ## _ ## field1name ## _ ## field2name ## _ ## field3name ## _ ## field4name ## _ ## ptrcomp
+#define SORTTPL_NAME(method, keyname, field1name, field2name, field3name, field4name, ptrcomp, indcomp) \
+  SORTTPL_EXPANDNAME(method, keyname, field1name, field2name, field3name, field4name, ptrcomp, indcomp)
 
 /* comparator method */
 #ifdef SORTTPL_PTRCOMP
-#define SORTTPL_ISSMALLER(x,y) (ptrcomp((x), (y)) < 0)
+#ifdef SORTTPL_BACKWARDS
+#define SORTTPL_ISBETTER(x,y) (ptrcomp((x), (y)) > 0)
+#else
+#define SORTTPL_ISBETTER(x,y) (ptrcomp((x), (y)) < 0)
+#endif
 #else
 #ifdef SORTTPL_INDCOMP
-#define SORTTPL_ISSMALLER(x,y) (indcomp(dataptr, (x), (y)) < 0)
+#ifdef SORTTPL_BACKWARDS
+#define SORTTPL_ISBETTER(x,y) (indcomp(dataptr, (x), (y)) > 0)
 #else
-#define SORTTPL_ISSMALLER(x,y) ((x) < (y))
+#define SORTTPL_ISBETTER(x,y) (indcomp(dataptr, (x), (y)) < 0)
+#endif
+#else
+#ifdef SORTTPL_BACKWARDS
+#define SORTTPL_ISBETTER(x,y) ((x) > (y))
+#else
+#define SORTTPL_ISBETTER(x,y) ((x) < (y))
+#endif
 #endif
 #endif
 
@@ -145,12 +171,13 @@
 
 /** shellsort an array of data elements; use it only for arrays smaller than 25 entries */
 static
-void SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+void SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
@@ -174,15 +201,17 @@ void SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2
          SORTTPL_HASFIELD1( SORTTPL_FIELD1TYPE tempfield1 = field1[i]; );
          SORTTPL_HASFIELD2( SORTTPL_FIELD2TYPE tempfield2 = field2[i]; );
          SORTTPL_HASFIELD3( SORTTPL_FIELD3TYPE tempfield3 = field3[i]; );
+         SORTTPL_HASFIELD4( SORTTPL_FIELD4TYPE tempfield4 = field4[i]; );
          int j;
 
          j = i;
-         while( j >= h && SORTTPL_ISSMALLER(tempkey, key[j-h]) )
+         while( j >= h && SORTTPL_ISBETTER(tempkey, key[j-h]) )
          {
             key[j] = key[j-h];
             SORTTPL_HASFIELD1( field1[j] = field1[j-h]; );
             SORTTPL_HASFIELD2( field2[j] = field2[j-h]; );
             SORTTPL_HASFIELD3( field3[j] = field3[j-h]; );
+            SORTTPL_HASFIELD4( field4[j] = field4[j-h]; );
             j -= h;
          }
           
@@ -190,6 +219,7 @@ void SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2
          SORTTPL_HASFIELD1( field1[j] = tempfield1; );
          SORTTPL_HASFIELD2( field2[j] = tempfield2; );
          SORTTPL_HASFIELD3( field3[j] = tempfield3; );
+         SORTTPL_HASFIELD4( field4[j] = tempfield4; );
       }
    }
 }
@@ -197,12 +227,13 @@ void SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2
 
 /** quicksort an array of pointers; pivot is the medial element */
 static
-void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
@@ -219,62 +250,65 @@ void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME
       int lo;
       int hi;
       int mid;
-
+      
       /* select pivot element */
       mid = (start+end)/2;
       pivotkey = key[mid];
-
+      
       /* partition the array into elements < pivot [start,hi] and elements >= pivot [lo,end] */
       lo = start;
       hi = end;
       for( ;; )
       {
-         while( lo <= end && SORTTPL_ISSMALLER(key[lo], pivotkey) )
+         while( lo < end && SORTTPL_ISBETTER(key[lo], pivotkey) )
             lo++;
-         while( hi >= start && !SORTTPL_ISSMALLER(key[hi], pivotkey) )
+         while( hi > start && !SORTTPL_ISBETTER(key[hi], pivotkey) )
             hi--;
-      
+         
          if( lo >= hi )
             break;
-
+         
          SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[hi]);
          SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[hi]) );
          SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[hi]) );
          SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[hi]) );
-
+         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[hi]) );
+         
          lo++;
          hi--;
       }
-      assert(hi == lo-1);
-
+      assert(hi == lo-1 || hi == start);
+      
       /* skip entries which are equal to the pivot element (three partitions, <, =, > than pivot)*/
-      while( lo <= end && !SORTTPL_ISSMALLER(pivotkey, key[lo]) )
+      while( lo < end && !SORTTPL_ISBETTER(pivotkey, key[lo]) )
          lo++;
-
+      
       /* make sure that we have at least one element in the smaller partition */
       if( lo == start )
       {
          /* everything is greater or equal than the pivot element: move pivot to the left (degenerate case) */
-         assert(!SORTTPL_ISSMALLER(key[mid], pivotkey)); /* the pivot element did not change its position */
-         assert(!SORTTPL_ISSMALLER(pivotkey, key[mid]));
+         assert(!SORTTPL_ISBETTER(key[mid], pivotkey)); /* the pivot element did not change its position */
+         assert(!SORTTPL_ISBETTER(pivotkey, key[mid]));
          SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[mid]);
          SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[mid]) );
          SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[mid]) );
          SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[mid]) );
+         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[mid]) );
          lo++;
       }
-
+         
       /* sort the smaller partition by a recursive call, sort the larger part without recursion */
       if( hi - start <= end - lo )
       {
          /* sort [start,hi] with a recursive call */
          if( start < hi )
          {
-            SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+            SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
                (key,
                 SORTTPL_HASFIELD1PAR(field1)
                 SORTTPL_HASFIELD2PAR(field2)
                 SORTTPL_HASFIELD3PAR(field3)
+                SORTTPL_HASFIELD4PAR(field4)
                 SORTTPL_HASPTRCOMPPAR(ptrcomp)
                 SORTTPL_HASINDCOMPPAR(indcomp)
                 SORTTPL_HASINDCOMPPAR(dataptr)
@@ -289,11 +323,12 @@ void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME
          if( lo < end )
          {
             /* sort [lo,end] with a recursive call */
-            SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+            SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
                (key,
                 SORTTPL_HASFIELD1PAR(field1)
                 SORTTPL_HASFIELD2PAR(field2)
                 SORTTPL_HASFIELD3PAR(field3)
+                SORTTPL_HASFIELD4PAR(field4)
                 SORTTPL_HASPTRCOMPPAR(ptrcomp)
                 SORTTPL_HASINDCOMPPAR(indcomp)
                 SORTTPL_HASINDCOMPPAR(dataptr)
@@ -304,27 +339,27 @@ void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME
          end = hi;
       }
    }
-
+   
    /* use shell sort on the remaining small list */
    if( end - start >= 1 )
    {
-      SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+      SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
          (key,
-          SORTTPL_HASFIELD1PAR(field1)
-          SORTTPL_HASFIELD2PAR(field2)
-          SORTTPL_HASFIELD3PAR(field3)
-          SORTTPL_HASPTRCOMPPAR(ptrcomp)
-          SORTTPL_HASINDCOMPPAR(indcomp)
-          SORTTPL_HASINDCOMPPAR(dataptr)
-          start, end);
+            SORTTPL_HASFIELD1PAR(field1)
+            SORTTPL_HASFIELD2PAR(field2)
+            SORTTPL_HASFIELD3PAR(field3)
+            SORTTPL_HASFIELD4PAR(field4)
+            SORTTPL_HASPTRCOMPPAR(ptrcomp)
+            SORTTPL_HASINDCOMPPAR(indcomp)
+            SORTTPL_HASINDCOMPPAR(dataptr)
+            start, end);
    }
 }
-
 
 #ifndef NDEBUG
 /** verifies that an array is indeed sorted */
 static
-void SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+void SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
@@ -337,7 +372,7 @@ void SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2
 
    for( i = 0; i < len-1; i++ )
    {
-      assert(!SORTTPL_ISSMALLER(key[i+1], key[i]));
+      assert(!SORTTPL_ISBETTER(key[i+1], key[i]));
    }
 }
 #endif
@@ -348,26 +383,43 @@ void SORTTPL_METHOD (
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
    int                   len                 /**< length of arrays */
    )
 {
-  if (len <= 1) return;
-  
-  SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
-      (key,
-       SORTTPL_HASFIELD1PAR(field1)
-       SORTTPL_HASFIELD2PAR(field2)
-       SORTTPL_HASFIELD3PAR(field3)
-       SORTTPL_HASPTRCOMPPAR(ptrcomp)
-       SORTTPL_HASINDCOMPPAR(indcomp)
-       SORTTPL_HASINDCOMPPAR(dataptr)
-       0, len-1);
-
+   if (len <= 1) return;
+   /* use shell sort on the remaining small list */
+   if( len >= SORTTPL_SHELLSORTMAX)
+   {
+      SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+         (key,
+            SORTTPL_HASFIELD1PAR(field1)
+               SORTTPL_HASFIELD2PAR(field2)
+            SORTTPL_HASFIELD3PAR(field3)
+            SORTTPL_HASFIELD4PAR(field4)
+            SORTTPL_HASPTRCOMPPAR(ptrcomp)
+            SORTTPL_HASINDCOMPPAR(indcomp)
+            SORTTPL_HASINDCOMPPAR(dataptr)
+            0, len-1);
+   }
+   else
+   {
+      SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+         (key,
+            SORTTPL_HASFIELD1PAR(field1)
+            SORTTPL_HASFIELD2PAR(field2)
+            SORTTPL_HASFIELD3PAR(field3)
+            SORTTPL_HASFIELD4PAR(field4)
+            SORTTPL_HASPTRCOMPPAR(ptrcomp)
+            SORTTPL_HASINDCOMPPAR(indcomp)
+            SORTTPL_HASINDCOMPPAR(dataptr)
+            0, len-1);
+   }
 #ifndef NDEBUG
-   SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+   SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
       (key,
        SORTTPL_HASPTRCOMPPAR(ptrcomp)
        SORTTPL_HASINDCOMPPAR(indcomp)
@@ -383,24 +435,29 @@ void SORTTPL_METHOD (
 #undef SORTTPL_FIELD1TYPE
 #undef SORTTPL_FIELD2TYPE
 #undef SORTTPL_FIELD3TYPE
+#undef SORTTPL_FIELD4TYPE
 #undef SORTTPL_PTRCOMP
 #undef SORTTPL_INDCOMP
 #undef SORTTPL_KEYNAME
 #undef SORTTPL_FIELD1NAME
 #undef SORTTPL_FIELD2NAME
 #undef SORTTPL_FIELD3NAME
+#undef SORTTPL_FIELD4NAME
 #undef SORTTPL_PTRCOMPNAME
 #undef SORTTPL_INDCOMPNAME
 #undef SORTTPL_HASFIELD1
 #undef SORTTPL_HASFIELD2
 #undef SORTTPL_HASFIELD3
+#undef SORTTPL_HASFIELD4
 #undef SORTTPL_HASPTRCOMP
 #undef SORTTPL_HASINDCOMP
 #undef SORTTPL_HASFIELD1PAR
 #undef SORTTPL_HASFIELD2PAR
 #undef SORTTPL_HASFIELD3PAR
+#undef SORTTPL_HASFIELD4PAR
 #undef SORTTPL_HASPTRCOMPPAR
 #undef SORTTPL_HASINDCOMPPAR
-#undef SORTTPL_ISSMALLER
+#undef SORTTPL_ISBETTER
 #undef SORTTPL_SWAP
 #undef SORTTPL_SHELLSORTMAX
+#undef SORTTPL_BACKWARDS
