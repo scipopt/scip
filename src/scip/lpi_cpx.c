@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.114 2007/10/29 11:23:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.115 2008/03/07 10:17:12 bzfwolte Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX >= 8.0
@@ -121,6 +121,10 @@ struct SCIP_LPi
    int                   iterations;         /**< number of iterations used in the last solving call */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             instabilityignored; /**< was the instability of the last LP ignored? */
+#if (CPX_VERSION <= 1100)
+   SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug 
+                                              *   in the scaling algo for ranged rows in CPLEX up to version 11.0 */
+#endif
 };
 
 /** LPi state stores basis information */
@@ -931,6 +935,9 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->solisbasic = TRUE;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
    (*lpi)->instabilityignored = FALSE;
+#if (CPX_VERSION <= 1100)
+   (*lpi)->rngfound = FALSE;
+#endif
    CHECK_ZERO( restat );
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
@@ -1165,6 +1172,13 @@ SCIP_RETCODE SCIPlpiAddRows(
    }
    if( rngcount > 0 )
    {
+#if (CPX_VERSION <= 1100)
+      if( lpi->rngfound == FALSE )
+      {
+         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, FALSE) );
+         lpi->rngfound = TRUE;
+      }
+#endif
       CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
    }
 
@@ -3159,6 +3173,10 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (getIntParam(lpi, CPX_PARAM_FASTMIP) == CPX_ON);
       break;
    case SCIP_LPPAR_SCALING:
+#if (CPX_VERSION <= 1100)
+      if( lpi->rngfound )
+         return SCIP_PARAMETERUNKNOWN;
+#endif
       *ival = (getIntParam(lpi, CPX_PARAM_SCAIND) == 0);
       break;
    case SCIP_LPPAR_PRESOLVING:
@@ -3229,6 +3247,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
+#if (CPX_VERSION <= 1100)
+      if( lpi->rngfound )
+         return SCIP_PARAMETERUNKNOWN;
+#endif
       setIntParam(lpi, CPX_PARAM_SCAIND, ival == TRUE ? 0 : -1);
       break;
    case SCIP_LPPAR_PRESOLVING:
