@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.152 2008/03/06 21:08:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.153 2008/03/07 17:14:51 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -652,7 +652,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    }
 
    /* sort tempsort, items, weights and profits such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
-   SCIPsortRealLongRealInt( tempsort, weights, profits, items, nitems);
+   SCIPsortDownRealLongRealInt( tempsort, weights, profits, items, nitems);
 
    /* free temporary array */
    SCIPfreeBufferArray(scip, &tempsort);

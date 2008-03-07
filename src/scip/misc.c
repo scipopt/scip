@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.71 2008/03/06 21:30:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.72 2008/03/07 17:14:52 bzfwinkm Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2380,6 +2380,8 @@ int SCIPptrarrayGetMaxIdx(
  * Sorting algorithms
  */
 
+/* first all downwards-sorting methods */
+
 /** sort an indexed element set, resulting in a permutation index array */
 void SCIPsort(
    int*                  perm,               /**< pointer to store the resulting permutation */
@@ -2402,7 +2404,6 @@ void SCIPsort(
 
 /* SCIPsortInd() via sort template */
 #define SORTTPL_METHOD      SCIPsortInd
-#define SORTTPL_KEYNAME     Ind
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_INDCOMP
 #include "scip/sorttpl.c"
@@ -2410,7 +2411,6 @@ void SCIPsort(
 
 /* SCIPsortPtr() via sort template */
 #define SORTTPL_METHOD      SCIPsortPtr
-#define SORTTPL_KEYNAME     Ptr
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c"
@@ -2418,8 +2418,6 @@ void SCIPsort(
 
 /* SCIPsortPtrReal() via sort template */
 #define SORTTPL_METHOD      SCIPsortPtrReal
-#define SORTTPL_KEYNAME     Ptr
-#define SORTTPL_FIELD1NAME  Real
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_PTRCOMP
@@ -2428,8 +2426,6 @@ void SCIPsort(
 
 /* SCIPsortPtrInt() via sort template */
 #define SORTTPL_METHOD      SCIPsortPtrInt
-#define SORTTPL_KEYNAME     Ptr
-#define SORTTPL_FIELD1NAME  Int
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_PTRCOMP
@@ -2438,9 +2434,6 @@ void SCIPsort(
 
 /* SCIPsortPtrIntInt() via sort template */
 #define SORTTPL_METHOD      SCIPsortPtrIntInt
-#define SORTTPL_KEYNAME     Ptr
-#define SORTTPL_FIELD1NAME  Int
-#define SORTTPL_FIELD2NAME  Int
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  int
 #define SORTTPL_FIELD2TYPE  int
@@ -2450,9 +2443,6 @@ void SCIPsort(
 
 /* SCIPsortPtrRealInt() via sort template */
 #define SORTTPL_METHOD      SCIPsortPtrRealInt
-#define SORTTPL_KEYNAME     Ptr
-#define SORTTPL_FIELD1NAME  Real
-#define SORTTPL_FIELD2NAME  Int
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  int
@@ -2462,10 +2452,6 @@ void SCIPsort(
 
 /* SCIPsortPtrRealIntInt() via sort template */
 #define SORTTPL_METHOD      SCIPsortPtrRealIntInt
-#define SORTTPL_KEYNAME     Ptr
-#define SORTTPL_FIELD1NAME  Real
-#define SORTTPL_FIELD2NAME  Int
-#define SORTTPL_FIELD3NAME  Int
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  int
@@ -2476,8 +2462,6 @@ void SCIPsort(
 
 /* SCIPsortRealPtr() via sort template */
 #define SORTTPL_METHOD      SCIPsortRealPtr
-#define SORTTPL_KEYNAME     Real
-#define SORTTPL_FIELD1NAME  Ptr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  void*
 #include "scip/sorttpl.c"
@@ -2485,8 +2469,6 @@ void SCIPsort(
 
 /* SCIPsortRealInt() via sort template */
 #define SORTTPL_METHOD      SCIPsortRealInt
-#define SORTTPL_KEYNAME     Real
-#define SORTTPL_FIELD1NAME  Int
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
 #include "scip/sorttpl.c"
@@ -2494,20 +2476,153 @@ void SCIPsort(
 
 /* SCIPsortIntPtr() via sort template */
 #define SORTTPL_METHOD      SCIPsortIntPtr
-#define SORTTPL_KEYNAME     Int
-#define SORTTPL_FIELD1NAME  Ptr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealLongRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealLongRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Longint
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c"
+
+/* SCIPsortRealRealRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealRealRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealRealRealBoolPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealRealRealBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  void*
+#include "scip/sorttpl.c"
+
+
+/* now all downwards-sorting methods */
+
+
+/** sort an indexed element set, resulting in a permutation index array */
+void SCIPsortDown(
+   int*                  perm,               /**< pointer to store the resulting permutation */
+   SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int                   len                 /**< number of elements to be sorted (valid index range) */
+   )
+{
+   int pos;
+
+   assert(indcomp != NULL);
+   assert(len == 0 || perm != NULL);
+
+   /* create identity permutation */
+   for( pos = 0; pos < len; ++pos )
+      perm[pos] = pos;
+   
+   SCIPsortDownInd(perm, indcomp, dataptr, len);
+}
+
+
+/* SCIPsortDownInd() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownInd
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_INDCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownPtr
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrReal() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownPtrReal
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownPtrInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrIntInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownPtrIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownPtrRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrRealIntInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownPtrRealIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownRealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownIntPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownIntPtr
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
 
-/* SCIPsortRealLongRealInt() via sort template */
-#define SORTTPL_METHOD      SCIPsortRealLongRealInt
-#define SORTTPL_KEYNAME     Real
-#define SORTTPL_FIELD1NAME  Long
-#define SORTTPL_FIELD2NAME  Real
-#define SORTTPL_FIELD3NAME  Int
+/* SCIPsortDownRealLongRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownRealLongRealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Longint
 #define SORTTPL_FIELD2TYPE  SCIP_Real
@@ -2515,12 +2630,8 @@ void SCIPsort(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
-/* SCIPsortRealRealRealInt() via sort template */
-#define SORTTPL_METHOD      SCIPsortRealRealRealInt
-#define SORTTPL_KEYNAME     Real
-#define SORTTPL_FIELD1NAME  Real
-#define SORTTPL_FIELD2NAME  Real
-#define SORTTPL_FIELD3NAME  Int
+/* SCIPsortDownRealRealRealInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownRealRealRealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  SCIP_Real
@@ -2529,13 +2640,8 @@ void SCIPsort(
 #include "scip/sorttpl.c"
 
 
-/* SCIPsortRealRealRealBoolPtr() via sort template */
-#define SORTTPL_METHOD      SCIPsortRealRealRealBoolPtr
-#define SORTTPL_KEYNAME     Real
-#define SORTTPL_FIELD1NAME  Real
-#define SORTTPL_FIELD2NAME  Real
-#define SORTTPL_FIELD3NAME  Bool
-#define SORTTPL_FIELD4NAME  Ptr
+/* SCIPsortDownRealRealRealBoolPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownRealRealRealBoolPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  SCIP_Real

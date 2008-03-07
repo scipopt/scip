@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.34 2008/03/06 21:30:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.35 2008/03/07 17:14:53 bzfwinkm Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -237,6 +237,8 @@ void SCIPhashmapPrintStatistics(
  * Sorting algorithms
  */
 
+/* first all upwards-sorting methods */
+
 /** sort an indexed element set, resulting in a permutation index array */
 extern
 void SCIPsort(
@@ -329,7 +331,6 @@ void SCIPsortRealInt(
    );
 
 /** sort sort of two joint arrays of ints/pointers, sorted by first array; pivot is the medial element */
-/** this sorting function sorts downwards */
 extern
 void SCIPsortIntPtr(
   int*                  intarray,           /**< int array to be sorted */
@@ -338,7 +339,6 @@ void SCIPsortIntPtr(
   );
 
 /** sort sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array; pivot is the medial element */
-/** this sorting function sorts downwards */
 extern
 void SCIPsortRealLongRealInt(
   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
@@ -349,7 +349,6 @@ void SCIPsortRealLongRealInt(
   );
 
 /** sort sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array; pivot is the medial element */
-/** this sorting function sorts downwards */
 extern
 void SCIPsortRealRealRealInt(
   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
@@ -360,9 +359,156 @@ void SCIPsortRealRealRealInt(
   );
 
 /** sort sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array; pivot is the medial element */
-/** this sorting function sorts downwards */
 extern
 void SCIPsortRealRealRealBoolPtr(
+  SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+  SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+  SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+  SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int                   len                 /**< length of arrays */
+  );
+
+/* now all downwards-sorting methods */
+
+
+/** sort an indexed element set, resulting in a permutation index array */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDown(
+   int*                  perm,               /**< pointer to store the resulting permutation */
+   SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int                   len                 /**< number of elements to be sorted (valid index range) */
+   );
+
+/** sort an index array */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownInd(
+   int*                  indarray,           /**< pointer to the index array to be sorted */
+   SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int                   len                 /**< length of array */
+   );
+
+/** sort of an array of pointers */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownPtr(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of array */
+   );
+
+/** sort of two joint arrays of pointers/Reals, sorted by first array */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownPtrReal(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of two joint arrays of pointers/ints, sorted by first array */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownPtrInt(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of pointers/ints/ints, sorted by first array */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownPtrIntInt(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   int*                  intarray1,          /**< first int array to be permuted in the same way */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of pointers/Reals/ints, sorted by first */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownPtrRealInt(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of four joint arrays of pointers/Reals/ints/ints, sorted by first */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownPtrRealIntInt(
+   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int*                  intarray1,          /**< first int array to be permuted in the same way */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of two joint arrays of Reals/ints, sorted by first in non-decreasing order */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownRealInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   int*                  intarray,           /**< int array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+
+/** sort of two joint arrays of Reals/pointers, sorted by first in non-decreasing order */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownRealPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   void**                ptrarray,           /**< pointer array to be sorted */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort sort of two joint arrays of ints/pointers, sorted by first array; pivot is the medial element */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownIntPtr(
+  int*                  intarray,           /**< int array to be sorted */
+  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array; pivot is the medial element */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownRealLongRealInt(
+  SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+  SCIP_Longint*         longarray,          /**< SCIP_Longint array to be permuted in the same way */
+  SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+  int*                  intarray,           /**< int array  to be permuted in the same way */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array; pivot is the medial element */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownRealRealRealInt(
+  SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
+  SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
+  SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
+  int*                  intarray,           /**< int array to be permuted in the same way */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort sort of five joint arrays of Reals/Reals/Reals/Bools/pointers, sorted by first array; pivot is the medial element */
+/** this sorting function sorts downwards */
+extern
+void SCIPsortDownRealRealRealBoolPtr(
   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.6 2008/03/06 21:08:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.7 2008/03/07 17:14:53 bzfwinkm Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -1018,7 +1018,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    }
 
    /* sort tempsort, items, weights and profits such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
-   SCIPsortRealRealRealInt ( tempsort, weights, profits, items, nitems);
+   SCIPsortDownRealRealRealInt ( tempsort, weights, profits, items, nitems);
 
    /* free temporary array */
    SCIPfreeBufferArray(scip, &tempsort);

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.4 2008/03/06 21:08:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.5 2008/03/07 17:14:53 bzfwinkm Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -26,11 +26,6 @@
 
 /* template parameters that have to be passed in as #define's:
  * #define SORTTPL_METHOD       <name>     name of the SCIP method that should be generated
- * #define SORTTPL_KEYNAME      <name>     arbitrary name for key array (used in local method name generation)
- * #define SORTTPL_FIELD1NAME   <name>     arbitrary name for field1 array (used in local method name generation)
- * #define SORTTPL_FIELD2NAME   <name>     arbitrary name for field2 array (used in local method name generation)
- * #define SORTTPL_FIELD3NAME   <name>     arbitrary name for field3 array (used in local method name generation)
- * #define SORTTPL_FIELD4NAME   <name>     arbitrary name for field4 array (used in local method name generation)
  * #define SORTTPL_KEYTYPE      <type>     data type of the key array
  * #define SORTTPL_FIELD1TYPE   <type>     data type of first additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD2TYPE   <type>     data type of second additional array which should be sorted in the same way (optional)
@@ -46,9 +41,6 @@
 #ifndef SORTTPL_METHOD
 #error You need to define the SORTTPL_METHOD name.
 #endif
-#ifndef SORTTPL_KEYTYPE
-#error You need to define the SORTTPL_KEYTYPE.
-#endif
 
 #ifdef SORTTPL_EXPANDNAME
 #undef SORTTPL_EXPANDNAME
@@ -58,13 +50,13 @@
 #endif
 
 /* enabling and disabling additional lines in the code */
+/* enabling and disabling additional lines in the code */
 #ifdef SORTTPL_FIELD1TYPE
 #define SORTTPL_HASFIELD1(x)    x
 #define SORTTPL_HASFIELD1PAR(x) x,
 #else
 #define SORTTPL_HASFIELD1(x)    /**/
 #define SORTTPL_HASFIELD1PAR(x) /**/
-#define SORTTPL_FIELD1NAME undef
 #endif
 #ifdef SORTTPL_FIELD2TYPE
 #define SORTTPL_HASFIELD2(x)    x
@@ -72,7 +64,6 @@
 #else
 #define SORTTPL_HASFIELD2(x)    /**/
 #define SORTTPL_HASFIELD2PAR(x) /**/
-#define SORTTPL_FIELD2NAME undef
 #endif
 #ifdef SORTTPL_FIELD3TYPE
 #define SORTTPL_HASFIELD3(x)    x
@@ -80,7 +71,6 @@
 #else
 #define SORTTPL_HASFIELD3(x)    /**/
 #define SORTTPL_HASFIELD3PAR(x) /**/
-#define SORTTPL_FIELD3NAME undef
 #endif
 #ifdef SORTTPL_FIELD4TYPE
 #define SORTTPL_HASFIELD4(x)    x
@@ -88,42 +78,25 @@
 #else
 #define SORTTPL_HASFIELD4(x)    /**/
 #define SORTTPL_HASFIELD4PAR(x) /**/
-#define SORTTPL_FIELD4NAME undef
 #endif
 #ifdef SORTTPL_PTRCOMP
 #define SORTTPL_HASPTRCOMP(x)    x
 #define SORTTPL_HASPTRCOMPPAR(x) x,
-#define SORTTPL_PTRCOMPNAME Yes
 #else
 #define SORTTPL_HASPTRCOMP(x)    /**/
 #define SORTTPL_HASPTRCOMPPAR(x) /**/
-#define SORTTPL_PTRCOMPNAME No
 #endif
 #ifdef SORTTPL_INDCOMP
 #define SORTTPL_HASINDCOMP(x)    x
 #define SORTTPL_HASINDCOMPPAR(x) x,
-#define SORTTPL_INDCOMPNAME Yes
 #else
 #define SORTTPL_HASINDCOMP(x)    /**/
 #define SORTTPL_HASINDCOMPPAR(x) /**/
-#define SORTTPL_INDCOMPNAME No
 #endif
-
-/* names of the fields for method names */
-#ifndef SORTTPL_KEYNAME
-#define SORTTPL_KEYNAME _ ## SORTTPL_KEYTYPE
-#endif
-#ifndef SORTTPL_FIELD1NAME
-#define SORTTPL_FIELD1NAME _ ## SORTTPL_FIELD1TYPE
-#endif
-#ifndef SORTTPL_FIELD2NAME
-#define SORTTPL_FIELD2NAME _ ## SORTTPL_FIELD2TYPE
-#endif
-#ifndef SORTTPL_FIELD3NAME
-#define SORTTPL_FIELD3NAME _ ## SORTTPL_FIELD3TYPE
-#endif
-#ifndef SORTTPL_FIELD4NAME
-#define SORTTPL_FIELD4NAME _ ## SORTTPL_FIELD4TYPE
+#ifdef SORTTPL_BACKWARDS
+#define SORTTPL_ISBACKWARDS Down
+#else
+#define SORTTPL_ISBACKWARDS Up
 #endif
 
 
@@ -131,10 +104,10 @@
  * get expanded by prescan of the C preprocessor (see "info cpp",
  * chapter 3.10.6: Argument Prescan)
  */
-#define SORTTPL_EXPANDNAME(method, keyname, field1name, field2name, field3name, field4name, ptrcomp, indcomp) \
-   sorttpl_ ## method ## _ ## keyname ## _ ## field1name ## _ ## field2name ## _ ## field3name ## _ ## field4name ## _ ## ptrcomp
-#define SORTTPL_NAME(method, keyname, field1name, field2name, field3name, field4name, ptrcomp, indcomp) \
-  SORTTPL_EXPANDNAME(method, keyname, field1name, field2name, field3name, field4name, ptrcomp, indcomp)
+#define SORTTPL_EXPANDNAME(method, methodname, isbackwards) \
+   sorttpl_ ## method ## _ ## methodname ## _ ## isbackwards
+#define SORTTPL_NAME(method, methodname, isbackwards) \
+  SORTTPL_EXPANDNAME(method, methodname, isbackwards)
 
 /* comparator method */
 #ifdef SORTTPL_PTRCOMP
@@ -171,7 +144,7 @@
 
 /** shellsort an array of data elements; use it only for arrays smaller than 25 entries */
 static
-void SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+void SORTTPL_NAME(shellSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
@@ -227,7 +200,7 @@ void SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2
 
 /** quicksort an array of pointers; pivot is the medial element */
 static
-void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+void SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
@@ -303,7 +276,7 @@ void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME
          /* sort [start,hi] with a recursive call */
          if( start < hi )
          {
-            SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+            SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
                (key,
                 SORTTPL_HASFIELD1PAR(field1)
                 SORTTPL_HASFIELD2PAR(field2)
@@ -323,7 +296,7 @@ void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME
          if( lo < end )
          {
             /* sort [lo,end] with a recursive call */
-            SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+            SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
                (key,
                 SORTTPL_HASFIELD1PAR(field1)
                 SORTTPL_HASFIELD2PAR(field2)
@@ -343,7 +316,7 @@ void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME
    /* use shell sort on the remaining small list */
    if( end - start >= 1 )
    {
-      SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+      SORTTPL_NAME(shellSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
@@ -359,7 +332,7 @@ void SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME
 #ifndef NDEBUG
 /** verifies that an array is indeed sorted */
 static
-void SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+void SORTTPL_NAME(checkSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
@@ -392,12 +365,12 @@ void SORTTPL_METHOD (
 {
    if (len <= 1) return;
    /* use shell sort on the remaining small list */
-   if( len >= SORTTPL_SHELLSORTMAX)
+   if( len <= SORTTPL_SHELLSORTMAX)
    {
-      SORTTPL_NAME(shellSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+      SORTTPL_NAME(shellSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
-               SORTTPL_HASFIELD2PAR(field2)
+            SORTTPL_HASFIELD2PAR(field2)
             SORTTPL_HASFIELD3PAR(field3)
             SORTTPL_HASFIELD4PAR(field4)
             SORTTPL_HASPTRCOMPPAR(ptrcomp)
@@ -407,7 +380,7 @@ void SORTTPL_METHOD (
    }
    else
    {
-      SORTTPL_NAME(qSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+      SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
@@ -419,7 +392,7 @@ void SORTTPL_METHOD (
             0, len-1);
    }
 #ifndef NDEBUG
-   SORTTPL_NAME(checkSort, SORTTPL_KEYNAME, SORTTPL_FIELD1NAME, SORTTPL_FIELD2NAME, SORTTPL_FIELD3NAME, SORTTPL_FIELD4NAME, SORTTPL_PTRCOMPNAME, SORTTPL_INDCOMPNAME)
+   SORTTPL_NAME(checkSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
       (key,
        SORTTPL_HASPTRCOMPPAR(ptrcomp)
        SORTTPL_HASINDCOMPPAR(indcomp)
@@ -438,13 +411,6 @@ void SORTTPL_METHOD (
 #undef SORTTPL_FIELD4TYPE
 #undef SORTTPL_PTRCOMP
 #undef SORTTPL_INDCOMP
-#undef SORTTPL_KEYNAME
-#undef SORTTPL_FIELD1NAME
-#undef SORTTPL_FIELD2NAME
-#undef SORTTPL_FIELD3NAME
-#undef SORTTPL_FIELD4NAME
-#undef SORTTPL_PTRCOMPNAME
-#undef SORTTPL_INDCOMPNAME
 #undef SORTTPL_HASFIELD1
 #undef SORTTPL_HASFIELD2
 #undef SORTTPL_HASFIELD3
@@ -461,3 +427,4 @@ void SORTTPL_METHOD (
 #undef SORTTPL_SWAP
 #undef SORTTPL_SHELLSORTMAX
 #undef SORTTPL_BACKWARDS
+#undef SORTTPL_ISBACKWARDS

@@ -32,6 +32,8 @@ interface:
 - replaced sorting methods SCIPbsort...() by faster (quicksort/shellsort) algorithms SCIPsort...()
   Note that the order of the paramters has been changed to simplify the template code in sorttpl.c!
 - expand sorttpl.c by some parameters
+- added some downwards-sorting methods
+- changed some names for sorting methods
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -93,6 +95,7 @@ fixed bugs:
 - fixed bug with non-conformal parameter name in reader_ppm
 - fixed bugs in sorttpl.c: fixed wrong arraysize in shellsort; in case an has at most one element, then no sorting is applied
 - fixed bug in cons_countsols.c concerning variable locking
+- fixed wrong if condition for function call in sorttpl.c 
 
 
 SCIP version 1.00

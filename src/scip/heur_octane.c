@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.19 2008/03/06 21:08:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.20 2008/03/07 17:14:51 bzfwinkm Exp $"
 
 /**@file   heur_octane.c
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
@@ -821,7 +821,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       assert(SCIPisPositive(scip, q));
 
       /* resort the coordinates in nonincreasing order of v using a variant of quicksort */
-      SCIPsortRealRealRealBoolPtr( v, a, x, sign, (void*) subspacevars, nsubspacevars);
+      SCIPsortDownRealRealRealBoolPtr( v, a, x, sign, (void*) subspacevars, nsubspacevars);
       
 #ifndef NDEBUG
       for( i = 0; i < nsubspacevars; i++ )
