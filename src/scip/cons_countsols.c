@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.11 2008/03/06 21:21:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.12 2008/03/07 11:02:35 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -248,7 +248,10 @@ SCIP_RETCODE conshdlrdataCreate(
    allocInt(&(*conshdlrdata)->nsols);
    
    (*conshdlrdata)->cutoffSolution = NULL;
-   
+
+   (*conshdlrdata)->nvars = 0;
+   (*conshdlrdata)->vars = NULL;
+
    return SCIP_OKAY;
 }
 
@@ -1122,6 +1125,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
       SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->vars, conshdlrdata->nvars) );
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &conshdlrdata->vars, SCIPgetVars(scip), conshdlrdata->nvars) );
 
+      /* capture all variables */
       for( v = 0; v < conshdlrdata->nvars; ++v )
       {
          SCIP_CALL( SCIPcaptureVar(scip, conshdlrdata->vars[v]) );
@@ -1146,6 +1150,8 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
    if( conshdlrdata->vars != NULL )
    {
       int v;
+
+      /* release all variables */
       for( v = 0; v < conshdlrdata->nvars; ++v )
       {
          SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->vars[v]) );
