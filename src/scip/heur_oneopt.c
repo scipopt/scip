@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.15 2007/08/10 10:43:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.16 2008/03/10 15:01:40 bzfpfets Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -86,21 +86,21 @@ SCIP_Real calcShiftVal(
    obj = SCIPvarGetObj(var);
    shiftval = 0.0;
    shiftdown = TRUE;
-   
+
    /* determine shifting direction and maximal possible shifting wrt. corresponding bound */
    if( obj > 0.0 && SCIPisFeasGE(scip, solval - 1.0, lb) )
       shiftval = SCIPfeasFloor(scip, solval - lb);
    else if ( obj < 0.0 && SCIPisFeasLE(scip, solval + 1.0, ub) )
-   { 
+   {
       shiftval = SCIPfeasFloor(scip, ub - solval);
       shiftdown = FALSE;
    }
-   else 
+   else
       return 0.0;
-   
-   
+
+
    SCIPdebugMessage("Try to shift %s variable <%s> with\n", shiftdown ? "down" : "up", SCIPvarGetName(var) );
-   SCIPdebugMessage("    lb:<%g> <= val:<%g> <= ub:<%g> and obj:<%g> by at most: <%g>\n", lb, solval, ub, obj, shiftval);   
+   SCIPdebugMessage("    lb:<%g> <= val:<%g> <= ub:<%g> and obj:<%g> by at most: <%g>\n", lb, solval, ub, obj, shiftval);
 
    /* get data of LP column */
    col = SCIPvarGetCol(var);
@@ -114,19 +114,19 @@ SCIP_Real calcShiftVal(
    {
       SCIP_ROW* row;
       int rowpos;
-      
+
       row = colrows[i];
       rowpos = SCIProwGetLPPos(row);
       assert(-1 <= rowpos && rowpos < SCIPgetNLPRows(scip) );
 
       /* only global rows need to be valid */
       if( rowpos >= 0 && !SCIProwIsLocal(row) )
-      {   
+      {
          SCIP_Real shiftvalrow;
-         
+
          assert(SCIProwIsInLP(row));
-         
-         if( shiftdown == (colvals[i] > 0) )  
+
+         if( shiftdown == (colvals[i] > 0) )
             shiftvalrow = SCIPfeasFloor(scip, (activities[rowpos] - SCIProwGetLhs(row)) / ABS(colvals[i]));
          else
             shiftvalrow = SCIPfeasFloor(scip, (SCIProwGetRhs(row) -  activities[rowpos]) / ABS(colvals[i]));
@@ -146,7 +146,7 @@ SCIP_Real calcShiftVal(
       shiftval *= -1.0;
 
    return shiftval;
-}   
+}
 
 /** insertion sort for small arrays */
 static
@@ -160,7 +160,7 @@ void sortByObj(
    int j;
    SCIP_Real tmp_real;
    SCIP_VAR* tmp_var;
-   
+
    /* simple insertion sort algorithm */
    for( i = 1; i < size; i++ )
    {
@@ -175,7 +175,7 @@ void sortByObj(
       }
       a[j+1] = tmp_real;
       b[j+1] = tmp_var;
-   } 
+   }
 }
 
 /** update row activities after a variable's solution value changed */
@@ -196,7 +196,7 @@ SCIP_RETCODE updateRowActivities(
 
    assert(activities != NULL);
 
-   /* get data of column associated to variable */   
+   /* get data of column associated to variable */
    col = SCIPvarGetCol(var);
    colrows = SCIPcolGetRows(col);
    colvals = SCIPcolGetVals(col);
@@ -208,15 +208,15 @@ SCIP_RETCODE updateRowActivities(
    {
       SCIP_ROW* row;
       int rowpos;
-      
+
       row = colrows[i];
       rowpos = SCIProwGetLPPos(row);
       assert(-1 <= rowpos && rowpos < SCIPgetNLPRows(scip) );
 
       /* update row activity, only regard global rows in the LP */
-      if( rowpos >= 0 && !SCIProwIsLocal(row) )         
+      if( rowpos >= 0 && !SCIProwIsLocal(row) )
          activities[rowpos] +=  shiftval * colvals[i];
-      
+
    }
 
    return SCIP_OKAY;
@@ -254,16 +254,16 @@ SCIP_DECL_HEURFREE(heurFreeOneopt)
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
-{ 
+{
    SCIP_HEURDATA* heurdata;
 
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-   
+
    /* create heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    heurdata->prevsol = NULL;
-   
+
    return SCIP_OKAY;
 }
 
@@ -275,7 +275,7 @@ static
 SCIP_DECL_HEUREXEC(heurExecOneopt)
 {  /*lint --e{715}*/
 
-   SCIP_HEURDATA* heurdata;                  
+   SCIP_HEURDATA* heurdata;
    SCIP_SOL* bestsol;                        /* incumbent solution */
    SCIP_SOL* worksol;                        /* heuristic's working solution */
 
@@ -317,14 +317,17 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       return SCIP_OKAY;
 
    /* get problem variables */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );  
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    nintvars = nbinvars + nintvars;
 
    /* we need to be able to start diving from current node in order to resolve the LP
     * with continuous or implicit integer variables
     */
-   if( nvars > nintvars && !SCIPhasCurrentNodeLP(scip) )
-      return SCIP_OKAY;
+   if( nvars > nintvars )
+   {
+      if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+	 return SCIP_OKAY;
+   }
 
    *result = SCIP_DIDNOTFIND;
 
@@ -345,10 +348,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    for( i = 0; i < nlprows; ++i )
    {
       SCIP_ROW* row;
-      
+
       row = lprows[i];
       assert(SCIProwGetLPPos(row) == i);
-      
+
       if( !SCIProwIsLocal(row) )
       {
          activities[i] = SCIPgetRowSolActivity(scip, row, bestsol);
@@ -356,25 +359,25 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       }
    }
 
-   SCIPdebugMessage("Starting 1-opt heuristic\n");   
+   SCIPdebugMessage("Starting 1-opt heuristic\n");
 
    /* enumerate all integer variables and find out which of them are shiftable */
    for( i = 0; i < nintvars; i++ )
-   { 
+   {
       if( SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
-      {         
+      {
          SCIP_Real shiftval;
          SCIP_Real solval;
-         
+
          /* find out whether the variable can be shifted */
          solval = SCIPgetSolVal(scip, bestsol,vars[i]);
          shiftval = calcShiftVal(scip, vars[i], solval, activities);
-         
+
          /* insert the variable into the list of shifting candidates */
          if( !SCIPisFeasZero(scip, shiftval) )
          {
             SCIPdebugMessage(" -> Variable <%s> can be shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
-            
+
             if( nshiftcands == shiftcandssize)
             {
                shiftcandssize *= 8;
@@ -387,7 +390,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
       }
    }
-   
+
    /* if at least one variable can be shifted, shift variables sorted by their objective */
    if( nshiftcands > 0 )
    {
@@ -397,13 +400,13 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       /* the case that exactly one variable can be shifted is slightly easier */
       if( nshiftcands == 1 )
-      {         
+      {
          var = shiftcands[0];
          assert(var != NULL);
          solval = SCIPgetSolVal(scip, bestsol, var);
          shiftval = shiftvals[0];
          assert(!SCIPisFeasZero(scip,shiftval));
-         SCIPdebugMessage(" Only one shiftcand found, var <%s>, which is now shifted by<%1.1f> \n", 
+         SCIPdebugMessage(" Only one shiftcand found, var <%s>, which is now shifted by<%1.1f> \n",
             SCIPvarGetName(var), shiftval);
          SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
       }
@@ -413,21 +416,21 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
          SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nshiftcands) );
 
-         SCIPdebugMessage(" %d shiftcands found \n", nshiftcands); 
+         SCIPdebugMessage(" %d shiftcands found \n", nshiftcands);
 
          /* sort the variables by their objective, optionally weighted with the shiftval */
          if( heurdata->weightedobj )
          {
             for( i = 0; i < nshiftcands; ++i )
-               objcoeffs[i] = SCIPvarGetObj(shiftcands[i])*shiftvals[i];         
+               objcoeffs[i] = SCIPvarGetObj(shiftcands[i])*shiftvals[i];
          }
          else
          {
             for( i = 0; i < nshiftcands; ++i )
-               objcoeffs[i] = SCIPvarGetObj(shiftcands[i]);         
+               objcoeffs[i] = SCIPvarGetObj(shiftcands[i]);
          }
          sortByObj(objcoeffs, shiftcands, nshiftcands);
-         
+
          /* try to shift each variable -> Activities have to be updated */
          for( i = 0; i < nshiftcands; ++i )
          {
@@ -440,10 +443,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
             SCIP_CALL( updateRowActivities(scip, activities, var, shiftval) );
          }
-         
+
          SCIPfreeBufferArray(scip, &objcoeffs);
       }
-      
+
       /* if the problem is a pure IP, try to install the solution, if it is a MIP, solve LP again to set the continuous
        * variables to the best possible value
        */
@@ -456,7 +459,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
             SCIPdebug(SCIPprintSol(scip, worksol, NULL, FALSE));
-            *result = SCIP_FOUNDSOL;  
+            *result = SCIP_FOUNDSOL;
          }
       }
       else
@@ -500,10 +503,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             SCIP_Bool success;
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-            
+
             /* check solution for feasibility */
             SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
-         
+
             if( success )
             {
                SCIPdebugMessage("found feasible shifted solution:\n");
@@ -516,7 +519,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIP_CALL( SCIPendDive(scip) );
       }
    }
-   SCIPdebugMessage("Finished 1-opt heuristic\n");   
+   SCIPdebugMessage("Finished 1-opt heuristic\n");
 
    SCIP_CALL( SCIPfreeSol(scip, &worksol) );
    SCIPfreeBufferArray(scip, &activities);
@@ -547,7 +550,7 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
-         heurFreeOneopt, heurInitOneopt, heurExitOneopt, 
+         heurFreeOneopt, heurInitOneopt, heurExitOneopt,
          heurInitsolOneopt, heurExitsolOneopt, heurExecOneopt,
          heurdata) );
 
