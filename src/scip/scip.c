@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.439 2008/03/05 16:54:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.440 2008/03/10 18:02:58 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2570,18 +2570,18 @@ SCIP_RETCODE writeProblem(
    )
 {
    SCIP_RETCODE retcode;
-   char* tmpfilename; 
+   char* tmpfilename;
    char* extension = NULL;
    FILE* file = NULL;
-   
+
    assert(scip != NULL );
-   
+
    if( filename != NULL &&  filename[0] != '\0' )
    {
       /* get extension from filename */
       SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
       SCIPsplitFilename(tmpfilename, NULL, NULL, &extension, NULL);
-   
+
       file = fopen(filename, "w");
       if( file == NULL )
       {
@@ -2589,7 +2589,7 @@ SCIP_RETCODE writeProblem(
          return SCIP_FILECREATEERROR;
       }
    }
-   
+
    if( transformed )
    {
       retcode = SCIPprintTransProblem(scip, file, extension, genericnames);
@@ -2598,7 +2598,7 @@ SCIP_RETCODE writeProblem(
    {
       retcode =  SCIPprintOrigProblem(scip, file, extension, genericnames);
    }
-   
+
    if( filename != NULL &&  filename[0] != '\0' )
    {
       BMSfreeMemoryArray(&tmpfilename);
@@ -2610,7 +2610,7 @@ SCIP_RETCODE writeProblem(
       return retcode;
    else
       SCIP_CALL( retcode );
-   
+
    return SCIP_OKAY;
 }
 
@@ -2623,12 +2623,12 @@ SCIP_RETCODE SCIPwriteOrigProblem(
    )
 {
    SCIP_RETCODE retcode;
-   
+
    SCIP_CALL( checkStage(scip, "SCIPwriteOrigProblem", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
+
    assert( scip != NULL );
    assert( scip->origprob != NULL );
-   
+
    retcode = writeProblem(scip, filename, FALSE, genericnames);
 
    /* check for write errors */
@@ -2636,12 +2636,12 @@ SCIP_RETCODE SCIPwriteOrigProblem(
       return retcode;
    else
       SCIP_CALL( retcode );
-   
+
    return SCIP_OKAY;
 }
 
 /** writes transformed problem which are valid in the current node to file */
-extern 
+extern
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
@@ -2649,9 +2649,9 @@ SCIP_RETCODE SCIPwriteTransProblem(
    )
 {
    SCIP_RETCODE retcode;
-   
+
    SCIP_CALL( checkStage(scip, "SCIPwriteTransProblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
+
    assert( scip != NULL );
    assert( scip->transprob != NULL );
 
@@ -5537,15 +5537,15 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
 
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant;
  *
- * if the number of needed active variables is greater than the available slots in the variable array, nothing happens except  
+ * if the number of needed active variables is greater than the available slots in the variable array, nothing happens except
  * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
- * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays 
+ * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays
  *
  */
 SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< vars array to get active variables for */
-   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */ 
+   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    int                   varssize,           /**< available slots in vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
@@ -5557,20 +5557,20 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    int nactivevars = 0;
    SCIP_Real activeconstant = 0.0;
    int activevarssize = (*nvars) * 2;
-   
+
    SCIP_VAR* var;
    SCIP_Real scalar;
    int v,r;
-   
+
    SCIP_VAR** multvars;
    SCIP_Real* multscalars;
    SCIP_Real multconstant;
    SCIP_Real multvarssize;
    int nmultvars;
    int multrequiredsize;
-   
+
    SCIP_CALL( checkStage(scip, "SCIPgetProbvarLinearSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
+
    assert( scip != NULL );
    assert( vars != NULL );
    assert( scalars != NULL );
@@ -5589,7 +5589,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
       scalar = scalars[v];
 
       assert( var != NULL );
-      
+
       /* transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
        * scalar and constant;
        * if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
@@ -5599,7 +5599,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
       assert( var != NULL );
 
       switch( SCIPvarGetStatus(var) )
-      { 
+      {
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
          /* x = a*y + c */
@@ -5619,24 +5619,24 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
          /* x = a_1*y_1 + ... + a_n*y_n + c */
          multconstant = SCIPvarGetMultaggrConstant(var);
          nmultvars = SCIPvarGetMultaggrNVars(var);
-         
+
          SCIP_CALL( SCIPduplicateBufferArray(scip, &multvars, SCIPvarGetMultaggrVars(var), nmultvars) );
          SCIP_CALL( SCIPduplicateBufferArray(scip, &multscalars, SCIPvarGetMultaggrScalars(var), nmultvars) );
          multvarssize = nmultvars;
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
-         
+
          if( multrequiredsize > multvarssize )
          {
             multvarssize = multrequiredsize;
             SCIP_CALL( SCIPreallocBufferArray(scip, &multvars, multvarssize) );
             SCIP_CALL( SCIPreallocBufferArray(scip, &multscalars, multvarssize) );
-            
+
             SCIP_CALL( SCIPgetProbvarLinearSum(scip, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
 
             assert(multrequiredsize <= multvarssize );
          }
-         
+
          if( nactivevars + nmultvars > activevarssize )
          {
             activevarssize += nactivevars + nmultvars;
@@ -5649,7 +5649,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
          {
             assert( SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_COLUMN );
             assert( nactivevars < activevarssize );
-            
+
             activevars[nactivevars] = multvars[r];
             activescalars[nactivevars] = scalar * multscalars[r];
          }
@@ -5660,17 +5660,17 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
          SCIPfreeBufferArray(scip, &multvars);
          SCIPfreeBufferArray(scip, &multscalars);
          break;
-      
+
       default:
          /* x = c */
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-         
+
       }
    }
-   
+
    /* sort variable and scalar array by variable index */
    SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
-   
+
    /* eliminate duplicates and count required size */
    r = 0;
    for( v = 1; v < nactivevars; ++v )
@@ -5692,9 +5692,9 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
          }
       }
    }
-   
+
    *requiredsize = r +  1;
-   
+
    if( *nvars >= *requiredsize )
    {
       *nvars = *requiredsize;
@@ -5713,7 +5713,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
 
    return SCIP_OKAY;
 }
-   
+
 
 
 /** returns the reduced costs of the variable in the current node's LP relaxation,
@@ -7390,7 +7390,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
          ncliquevars = 1;
 
          /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-         if( SCIPvarIsActive(ivar) ) 
+         if( SCIPvarIsActive(ivar) )
          {
             /* greedily fill up the clique */
             for( j = i+1; j < nvars; ++j )
@@ -7423,7 +7423,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
                }
             }
          }
-         
+
          /* this clique is finished */
          ncliques++;
       }
@@ -7931,7 +7931,6 @@ SCIP_RETCODE aggregateActiveVars(
       scalar = scalary;
       scalary = scalarx;
       scalarx = scalar;
-      agg = 0;
    }
    assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
 
@@ -7983,6 +7982,14 @@ SCIP_RETCODE aggregateActiveVars(
       {
          *infeasible = TRUE;
          return SCIP_OKAY;
+      }
+
+      /* if the aggregation scalar is fractional, we cannot (for technical reasons) and do not want to aggregate implicit integer variables,
+       * since then we would loose the corresponding divisibility property
+       */
+      if( SCIPvarGetType(varx) == SCIP_VARTYPE_IMPLINT && !SCIPsetIsFeasIntegral(scip->set, scalar) )
+      {
+	 return SCIP_OKAY;
       }
 
       /* aggregate the variable */
@@ -9237,9 +9244,9 @@ SCIP_RETCODE SCIPprintCons(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPprintCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
+
    SCIP_CALL( SCIPconsPrint(cons, scip->set, file) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -11506,8 +11513,8 @@ SCIP_RETCODE SCIPcreateChild(
 }
 
 /** branches on a variable v; if solution value x' is fractional, two child nodes are created
- *  (x <= floor(x'), x >= ceil(x')), 
- *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
+ *  (x <= floor(x'), x >= ceil(x')),
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching
  *  variable and the bounds of v are finite, then two child nodes are created
  *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
  *  otherwise three child nodes are created
@@ -13751,10 +13758,10 @@ SCIP_RETCODE printProblem(
    int i;
    assert(scip != NULL);
    assert(prob != NULL);
-   
+
    assert( scip != NULL );
    assert( prob != NULL );
-   
+
    /* try all readers until one could read the file */
    result = SCIP_DIDNOTRUN;
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
@@ -13769,11 +13776,11 @@ SCIP_RETCODE printProblem(
       {
          retcode = SCIPreaderWrite(scip->set->readers[i], prob, scip->set, file, "cip", genericnames, &result);
       }
-      
+
       /* check for reader errors */
       if( retcode == SCIP_WRITEERROR )
          return retcode;
-      
+
       SCIP_CALL( retcode );
    }
 
@@ -13782,10 +13789,10 @@ SCIP_RETCODE printProblem(
    case SCIP_DIDNOTRUN:
       SCIPwarningMessage("No reader for output in <%s> format available\n", extension);
       return SCIP_WRITEERROR;
-      
+
    case SCIP_SUCCESS:
       return SCIP_OKAY;
-      
+
    default:
       assert(i < scip->set->nreaders);
       SCIPerrorMessage("invalid result code <%d> from reader <%s> writing <%s> format\n",
@@ -13803,20 +13810,20 @@ SCIP_RETCODE SCIPprintOrigProblem(
    )
 {
    SCIP_RETCODE retcode;
-   
+
    SCIP_CALL( checkStage(scip, "SCIPprintOrigProblem", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-   
+
    assert(scip != NULL);
    assert( scip->origprob != NULL );
-   
+
    retcode = printProblem(scip, scip->origprob, file, extension, genericnames);
-   
+
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR )
       return retcode;
    else
       SCIP_CALL( retcode );
-   
+
    return SCIP_OKAY;
 }
 
@@ -13827,22 +13834,22 @@ SCIP_RETCODE SCIPprintTransProblem(
    const char*           extension,          /**< file format (or NULL for default CIP format)*/
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
-{ 
+{
    SCIP_RETCODE retcode;
-   
+
    SCIP_CALL( checkStage(scip, "SCIPprintTransProblem", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    assert(scip != NULL);
    assert(scip->transprob != NULL );
 
    retcode = printProblem(scip, scip->transprob, file, extension, genericnames);
-   
+
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR )
       return retcode;
    else
       SCIP_CALL( retcode );
-   
+
    return SCIP_OKAY;
 }
 
