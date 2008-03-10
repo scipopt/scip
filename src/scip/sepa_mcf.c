@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.19 2008/02/29 14:18:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.20 2008/03/10 19:50:48 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -104,7 +104,6 @@ struct SCIP_McfNetwork
    int                   nnodes;             /**< number of nodes in the graph */
    int                   narcs;              /**< number of arcs in the graph */
    int                   ncommodities;       /**< number of commodities */
-   int                   ninconsistencies;   /**< number of inconsistencies between the commodity graphs */
    SCIP_MCFMODELTYPE     modeltype;          /**< detected model type of the network */
    SCIP_MCFFLOWTYPE      flowtype;           /**< detected flow variable type of the network */
 };
@@ -113,7 +112,8 @@ typedef struct SCIP_McfNetwork SCIP_MCFNETWORK;
 /** separator data */
 struct SCIP_SepaData
 {
-   SCIP_MCFNETWORK*      mcfnetwork;         /**< multi-commodity-flow network structure */
+   SCIP_MCFNETWORK**     mcfnetworks;        /**< array of multi-commodity-flow network structures */
+   int                   nmcfnetworks;       /**< number of multi-commodity-flow networks (-1: extraction not yet done) */
    SCIP_Real             maxrowfac;          /**< maximal row aggregation factor */
    int                   nclusters;          /**< number of clusters to generate in the shrunken network */
    int                   maxtestdelta;	     /**< maximal number of different deltas to try (-1: unlimited) */
@@ -145,10 +145,17 @@ struct mcfdata
    int*                  colarcid;           /**< arc id of each flow column, or -1 */
    int*                  rowarcid;           /**< arc id of each capacity row, or -1 */
    int*                  rownodeid;          /**< node id of each flow conservation row, or -1 */
+   int*                  arcsources;         /**< source node ids of arcs */
+   int*                  arctargets;         /**< target node ids of arcs */
+   int*                  firstoutarcs;       /**< for each node the first arc id for which the node is the source node */
+   int*                  firstinarcs;        /**< for each node the first arc id for which the node is the target node */
+   int*                  nextoutarcs;        /**< for each arc the next outgoing arc in the adjacenty list */
+   int*                  nextinarcs;         /**< for each arc the next outgoing arc in the adjacenty list */
    int*                  newcols;            /**< columns of current commodity that have to be inspected for incident flow conservation rows */
    int                   nnewcols;           /**< number of newcols */
    int                   narcs;              /**< number of arcs in the extracted graph */
    int                   nnodes;             /**< number of nodes in the extracted graph */
+   int                   ninconsistencies;   /**< number of inconsistencies between the commodity graphs */
    SCIP_ROW**            capacityrows;       /**< capacity row for each arc */
    int                   capacityrowssize;   /**< size of array */
    SCIP_Bool*            colisincident;      /**< temporary memory for column collection */
@@ -207,7 +214,6 @@ SCIP_RETCODE mcfnetworkCreate(
    )
 {
    assert(mcfnetwork != NULL);
-   assert(*mcfnetwork == NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, mcfnetwork) );
    (*mcfnetwork)->nodeflowrows = NULL;
@@ -219,7 +225,6 @@ SCIP_RETCODE mcfnetworkCreate(
    (*mcfnetwork)->nnodes = 0;
    (*mcfnetwork)->narcs = 0;
    (*mcfnetwork)->ncommodities = 0;
-   (*mcfnetwork)->ninconsistencies = 0;
 
    return SCIP_OKAY;
 }
@@ -272,87 +277,17 @@ SCIP_RETCODE mcfnetworkFree(
    return SCIP_OKAY;
 }
 
-/** identifies the (at most) two nodes which contain the given flow variable */
-static
-void getIncidentNodes(
-   SCIP*                 scip,               /**< SCIP data structure */
-   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
-   SCIP_COL*             col,                /**< flow column */
-   int*                  sourcenode,         /**< pointer to store the source node of the flow column */
-   int*                  targetnode          /**< pointer to store the target node of the flow column */
-   )
-{
-   unsigned char*    flowrowsigns     = mcfdata->flowrowsigns;
-   int*              commoditysigns   = mcfdata->commoditysigns;
-   int*              rowcommodity     = mcfdata->rowcommodity;
-   int*              rownodeid        = mcfdata->rownodeid;
-
-   SCIP_ROW** colrows;
-   SCIP_Real* colvals;
-   int collen;
-   int i;
-
-   assert(sourcenode != NULL);
-   assert(targetnode != NULL);
-
-   *sourcenode = -1;
-   *targetnode = -1;
-
-   /* search for flow conservation rows in the column vector */
-   colrows = SCIPcolGetRows(col);
-   colvals = SCIPcolGetVals(col);
-   collen = SCIPcolGetNLPNonz(col);
-   for( i = 0; i < collen; i++ )
-   {
-      int r;
-
-      r = SCIProwGetLPPos(colrows[i]);
-      assert(0 <= r && r < SCIPgetNLPRows(scip));
-
-      if( rownodeid[r] >= 0 )
-      {
-         int v;
-         int k;
-         int scale;
-
-         v = rownodeid[r];
-         k = rowcommodity[r];
-         assert(0 <= v && v < mcfdata->nnodes);
-         assert(0 <= k && k < mcfdata->ncommodities);
-         assert((flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
-
-         /* check whether the flow row is inverted */
-         scale = +1;
-         if( (flowrowsigns[r] & LHSASSIGNED) != 0 )
-            scale *= -1;
-         if( commoditysigns[k] == -1 )
-            scale *= -1;
-
-         /* decide whether this node is source or target */
-         if( scale * colvals[i] > 0.0 )
-         {
-            assert(*sourcenode == -1);
-            *sourcenode = v;
-            if( *targetnode >= 0 )
-               break;
-         }
-         else
-         {
-            assert(*targetnode == -1);
-            *targetnode = v;
-            if( *sourcenode >= 0 )
-               break;
-         }
-      }
-   }
-}
-
 /** fills the MCF network structure with the MCF data */
 static
 SCIP_RETCODE mcfnetworkFill(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
-   MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
+   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
+   int*                  compnodeid,         /**< temporary storage for v -> compv mapping; must be set to -1 for all v */
+   int*                  compnodes,          /**< array of node ids of the component */
+   int                   ncompnodes,         /**< number of nodes in the component */
+   int*                  comparcs,           /**< array of arc ids of the component */
+   int                   ncomparcs           /**< number of arcs in the component */
    )
 {
    unsigned char*    flowrowsigns     = mcfdata->flowrowsigns;
@@ -365,261 +300,178 @@ SCIP_RETCODE mcfnetworkFill(
    int*              rowcommodity     = mcfdata->rowcommodity;
    int*              colarcid         = mcfdata->colarcid;
    int*              rownodeid        = mcfdata->rownodeid;
-   int               narcs            = mcfdata->narcs;
-   int               nnodes           = mcfdata->nnodes;
    SCIP_ROW**        capacityrows     = mcfdata->capacityrows;
    SCIP_MCFMODELTYPE modeltype        = mcfdata->modeltype;
    SCIP_MCFFLOWTYPE  flowtype         = mcfdata->flowtype;
 
+   SCIP_ROW** rows;
+   int nrows;
+   int v;
+   int a;
+   int i;
+
    assert(mcfnetwork != NULL);
    assert(modeltype != SCIP_MCFMODELTYPE_AUTO);
    assert(flowtype != SCIP_MCFFLOWTYPE_AUTO);
+   assert(2 <= ncompnodes && ncompnodes <= mcfdata->nnodes);
+   assert(1 <= ncomparcs && ncomparcs <= mcfdata->narcs);
+   assert(ncommodities > 0);
 
+#ifndef NDEBUG
+   /* v -> compv mapping must be all -1 */
+   for( v = 0; v < mcfdata->nnodes; v++ )
+      assert(compnodeid[v] == -1);
+#endif
+
+   /* generate v -> compv mapping */
+   for( i = 0; i < ncompnodes; i++ )
+   {
+      assert(0 <= compnodes[i] && compnodes[i] < mcfdata->nnodes);
+      compnodeid[compnodes[i]] = i;
+   }
+
+   /**@todo model type and flow type may be different for each component */
    /* record model and flow type */
    mcfnetwork->modeltype = modeltype;
    mcfnetwork->flowtype = flowtype;
 
    /* fill in nodes and arcs */
-   if( nnodes > 0 && narcs > 0 && ncommodities > 0 )
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+
+   mcfnetwork->nnodes = ncompnodes;
+   mcfnetwork->narcs = ncomparcs;
+   mcfnetwork->ncommodities = ncommodities; /**@todo number of commodities may vary for each component */
+
+   /* allocate memory for arrays and initialize with default values */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows, mcfnetwork->nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales, mcfnetwork->nnodes) );
+   for( v = 0; v < mcfnetwork->nnodes; v++ )
    {
-      int *sourcenodecnt;
-      int *targetnodecnt;
-      int *touchednodes;
-      int ntouchednodes;
+      int k;
 
-      SCIP_ROW** rows;
-      int nrows;
-      int v;
-      int a;
-      int i;
-
-      SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-      mcfnetwork->nnodes = nnodes;
-      mcfnetwork->narcs = narcs;
-      mcfnetwork->ncommodities = ncommodities;
-      mcfnetwork->ninconsistencies = 0;
-
-      /* allocate memory for arrays and initialize with default values */
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows, mcfnetwork->nnodes) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales, mcfnetwork->nnodes) );
-      for( v = 0; v < mcfnetwork->nnodes; v++ )
+      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows[v], mcfnetwork->ncommodities) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales[v], mcfnetwork->ncommodities) );
+      for( k = 0; k < mcfnetwork->ncommodities; k++ )
       {
+         mcfnetwork->nodeflowrows[v][k] = NULL;
+         mcfnetwork->nodeflowscales[v][k] = 0.0;
+      }
+   }
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arccapacityrows, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arccapacityscales, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arcsources, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arctargets, mcfnetwork->narcs) );
+   for( a = 0; a < mcfnetwork->narcs; a++ )
+   {
+      mcfnetwork->arccapacityrows[a] = NULL;
+      mcfnetwork->arccapacityscales[a] = 0.0;
+      mcfnetwork->arcsources[a] = -1;
+      mcfnetwork->arctargets[a] = -1;
+   }
+
+   /* fill in existing node data */
+   for( i = 0; i < nflowcands; i++ )
+   {
+      int r;
+      int rv;
+
+      r = flowcands[i];
+      assert(0 <= r && r < nrows);
+
+      rv = rownodeid[r];
+      if( rv >= 0 && compnodeid[rv] >= 0 )
+      {
+         SCIP_Real scale;
          int k;
 
-         SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows[v], mcfnetwork->ncommodities) );
-         SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales[v], mcfnetwork->ncommodities) );
-         for( k = 0; k < mcfnetwork->ncommodities; k++ )
-         {
-            mcfnetwork->nodeflowrows[v][k] = NULL;
-            mcfnetwork->nodeflowscales[v][k] = 0.0;
-         }
-      }
+         v = compnodeid[rv];
+         k = rowcommodity[r];
+         assert(v < mcfnetwork->nnodes);
+         assert(0 <= k && k < mcfnetwork->ncommodities);
+         assert((flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arccapacityrows, mcfnetwork->narcs) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arccapacityscales, mcfnetwork->narcs) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arcsources, mcfnetwork->narcs) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arctargets, mcfnetwork->narcs) );
-      for( a = 0; a < mcfnetwork->narcs; a++ )
+         /* fill in node -> row assignment */
+         SCIP_CALL( SCIPcaptureRow(scip, rows[r]) );
+         mcfnetwork->nodeflowrows[v][k] = rows[r];
+         scale = flowrowscalars[r];
+         if( (flowrowsigns[r] & LHSASSIGNED) != 0 )
+            scale *= -1.0;
+         if( commoditysigns[k] == -1 )
+            scale *= -1.0;
+         mcfnetwork->nodeflowscales[v][k] = scale;
+      }
+   }
+
+   /* fill in existing arc data */
+   for( a = 0; a < mcfnetwork->narcs; a++ )
+   {
+      SCIP_ROW* capacityrow;
+      SCIP_COL** rowcols;
+      SCIP_Real* rowvals;
+      int rowlen;
+      int globala;
+      int r;
+      int j;
+
+      globala = comparcs[a];
+      capacityrow = capacityrows[globala];
+      assert(capacityrow != NULL);
+
+      r = SCIProwGetLPPos(capacityrow);
+      assert(0 <= r && r < nrows);
+      assert((capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
+      assert(mcfdata->rowarcid[r] == globala);
+
+      SCIP_CALL( SCIPcaptureRow(scip, capacityrow) );
+      mcfnetwork->arccapacityrows[a] = capacityrow;
+      mcfnetwork->arccapacityscales[a] = 1.0;
+
+      /* scale constraint such that the flow variables have +/-1 coefficients and identify source and target nodes of arc;
+       * in our model we expect all flow variables to have the same coefficient and can therefore take any of them as scaling factor
+       */
+      rowcols = SCIProwGetCols(capacityrow);
+      rowvals = SCIProwGetVals(capacityrow);
+      rowlen = SCIProwGetNLPNonz(capacityrow);
+      for( j = 0; j < rowlen; j++ )
       {
-         mcfnetwork->arccapacityrows[a] = NULL;
-         mcfnetwork->arccapacityscales[a] = 0.0;
-         mcfnetwork->arcsources[a] = -1;
-         mcfnetwork->arctargets[a] = -1;
+         int c;
+
+         c = SCIPcolGetLPPos(rowcols[j]);
+         assert(0 <= c && c < SCIPgetNLPCols(scip));
+         if( colarcid[c] >= 0 )
+         {
+            /* store the scaling factor */
+            mcfnetwork->arccapacityscales[a] = 1.0/rowvals[j];
+            break;
+         }
       }
 
-      /* fill in existing node data */
-      for( i = 0; i < nflowcands; i++ )
+      /* multiply scaling by -1 if we use the left hand side instead of the right hand side */
+      if( (capacityrowsigns[r] & LHSASSIGNED) != 0 )
+         mcfnetwork->arccapacityscales[a] *= -1.0;
+
+      /* copy the source/target node assignment */
+      if( mcfdata->arcsources[globala] >= 0 )
       {
-         int r;
-
-         r = flowcands[i];
-         assert(0 <= r && r < nrows);
-
-         if( rownodeid[r] >= 0 )
-         {
-            SCIP_Real scale;
-            int k;
-
-            v = rownodeid[r];
-            k = rowcommodity[r];
-            assert(v < nnodes);
-            assert(0 <= k && k < ncommodities);
-            assert((flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
-
-            /* fill in node -> row assignment */
-            SCIP_CALL( SCIPcaptureRow(scip, rows[r]) );
-            mcfnetwork->nodeflowrows[v][k] = rows[r];
-            scale = flowrowscalars[r];
-            if( (flowrowsigns[r] & LHSASSIGNED) != 0 )
-               scale *= -1.0;
-            if( commoditysigns[k] == -1 )
-               scale *= -1.0;
-            mcfnetwork->nodeflowscales[v][k] = scale;
-         }
+         assert(mcfdata->arcsources[globala] < mcfdata->nnodes);
+         assert(0 <= compnodeid[mcfdata->arcsources[globala]] && compnodeid[mcfdata->arcsources[globala]] < mcfnetwork->nnodes);
+         mcfnetwork->arcsources[a] = compnodeid[mcfdata->arcsources[globala]];
       }
-
-      /* allocate temporary memory for source and target node identification */
-      SCIP_CALL( SCIPallocBufferArray(scip, &sourcenodecnt, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &targetnodecnt, nnodes) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &touchednodes, nnodes) );
-      BMSclearMemoryArray(sourcenodecnt, nnodes);
-      BMSclearMemoryArray(targetnodecnt, nnodes);
-
-      /* fill in existing arc data */
-      for( a = 0; a < narcs; a++ )
+      if( mcfdata->arctargets[globala] >= 0 )
       {
-         SCIP_COL** rowcols;
-         SCIP_Real* rowvals;
-         int rowlen;
-         int bestsourcev;
-         int besttargetv;
-         int bestsourcecnt;
-         int besttargetcnt;
-         int totalnodecnt;
-         int r;
-         int j;
-
-         r = SCIProwGetLPPos(capacityrows[a]);
-         assert(0 <= r && r < nrows);
-         assert((capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
-         assert(mcfdata->rowarcid[r] == a);
-
-         SCIP_CALL( SCIPcaptureRow(scip, capacityrows[a]) );
-         mcfnetwork->arccapacityrows[a] = capacityrows[a];
-         mcfnetwork->arccapacityscales[a] = 1.0;
-
-#ifndef NDEBUG
-         for( v = 0; v < nnodes; v++ )
-         {
-            assert(sourcenodecnt[v] == 0);
-            assert(targetnodecnt[v] == 0);
-         }
-#endif
-
-         /* scale constraint such that the flow variables have +/-1 coefficients and identify source and target nodes of arc;
-          * in our model we expect all flow variables to have the same coefficient and can therefore take any of them as scaling factor
-          */
-         rowcols = SCIProwGetCols(capacityrows[a]);
-         rowvals = SCIProwGetVals(capacityrows[a]);
-         rowlen = SCIProwGetNLPNonz(capacityrows[a]);
-         ntouchednodes = 0;
-         totalnodecnt = 0;
-         for( j = 0; j < rowlen; j++ )
-         {
-            int c;
-
-            c = SCIPcolGetLPPos(rowcols[j]);
-            assert(0 <= c && c < SCIPgetNLPCols(scip));
-            if( colarcid[c] >= 0 )
-            {
-               int sourcev;
-               int targetv;
-
-               /* store the scaling factor */
-               mcfnetwork->arccapacityscales[a] = 1.0/rowvals[j];
-
-               /* identify the (at most) two nodes which contain this flow variable */
-               getIncidentNodes(scip, mcfdata, rowcols[j], &sourcev, &targetv);
-
-               /* count the nodes */
-               if( sourcev >= 0 )
-               {
-                  if( sourcenodecnt[sourcev] == 0 && targetnodecnt[sourcev] == 0 )
-                  {
-                     touchednodes[ntouchednodes] = sourcev;
-                     ntouchednodes++;
-                  }
-                  sourcenodecnt[sourcev]++;
-                  totalnodecnt++;
-               }
-               if( targetv >= 0 )
-               {
-                  if( sourcenodecnt[targetv] == 0 && targetnodecnt[targetv] == 0 )
-                  {
-                     touchednodes[ntouchednodes] = targetv;
-                     ntouchednodes++;
-                  }
-                  targetnodecnt[targetv]++;
-                  totalnodecnt++;
-               }
-            }
-         }
-
-         /* multiply scaling by -1 if we use the left hand side instead of the right hand side */
-         if( (capacityrowsigns[r] & LHSASSIGNED) != 0 )
-            mcfnetwork->arccapacityscales[a] *= -1.0;
-
-         /* perform a majority vote on source and target node */
-         bestsourcev = -1;
-         besttargetv = -1;
-         bestsourcecnt = 0;
-         besttargetcnt = 0;
-         for( i = 0; i < ntouchednodes; i++ )
-         {
-            v = touchednodes[i];
-            assert(0 <= v && v < nnodes);
-            
-            if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
-            {
-               /* in the directed model, we distinguish between source and target */
-               if( sourcenodecnt[v] >= targetnodecnt[v] )
-               {
-                  if( sourcenodecnt[v] > bestsourcecnt )
-                  {
-                     bestsourcev = v;
-                     bestsourcecnt = sourcenodecnt[v];
-                  }
-               }
-               else
-               {
-                  if( targetnodecnt[v] > besttargetcnt )
-                  {
-                     besttargetv = v;
-                     besttargetcnt = targetnodecnt[v];
-                  }
-               }
-            }
-            else
-            {
-               int nodecnt = sourcenodecnt[v] + targetnodecnt[v];
-
-               /* in the undirected model, we use source for the maximum and target for the second largest number of total hits */
-               if( nodecnt > bestsourcecnt )
-               {
-                  besttargetv = bestsourcev;
-                  besttargetcnt = bestsourcecnt;
-                  bestsourcev = v;
-                  bestsourcecnt = nodecnt;
-               }
-               else if( nodecnt > besttargetcnt )
-               {
-                  besttargetv = v;
-                  besttargetcnt = nodecnt;
-               }
-            }
-
-            /* clear the nodecnt arrays */
-            sourcenodecnt[v] = 0;
-            targetnodecnt[v] = 0;
-         }
-
-         /* assign the incident nodes */
-         assert(bestsourcev == -1 || bestsourcev != besttargetv);
-         mcfnetwork->arcsources[a] = bestsourcev;
-         mcfnetwork->arctargets[a] = besttargetv;
-         SCIPdebugMessage("arc %d: %d -> %d (sourcecnt=%d, targetcnt=%d, %d inconsistencies)\n",
-                          a, bestsourcev, besttargetv, bestsourcecnt, besttargetcnt, totalnodecnt - bestsourcecnt - besttargetcnt);
-
-         /* update the number of inconsistencies */
-         assert(totalnodecnt >= bestsourcecnt + besttargetcnt);
-         mcfnetwork->ninconsistencies += totalnodecnt - bestsourcecnt - besttargetcnt;
+         assert(mcfdata->arctargets[globala] < mcfdata->nnodes);
+         assert(0 <= compnodeid[mcfdata->arctargets[globala]] && compnodeid[mcfdata->arctargets[globala]] < mcfnetwork->nnodes);
+         mcfnetwork->arctargets[a] = compnodeid[mcfdata->arctargets[globala]];
       }
+   }
 
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &touchednodes);
-      SCIPfreeBufferArray(scip, &targetnodecnt);
-      SCIPfreeBufferArray(scip, &sourcenodecnt);
+   /* reset v -> compv mapping */
+   for( i = 0; i < ncompnodes; i++ )
+   {
+      assert(0 <= compnodes[i] && compnodes[i] < mcfdata->nnodes);
+      assert(compnodeid[compnodes[i]] == i);
+      compnodeid[compnodes[i]] = -1;
    }
 
    return SCIP_OKAY;
@@ -668,9 +520,6 @@ void mcfnetworkPrint(
          else
             printf("-\n");
       }
-
-      if( mcfnetwork->ninconsistencies > 0 )
-         printf("**** Warning! There are %d inconsistencies in the network! ****\n", mcfnetwork->ninconsistencies);
    }
 }
 
@@ -819,6 +668,12 @@ SCIP_RETCODE extractRows(
    SCIP_Real maxdualcapacity;
 
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+
+   /**@todo Extract capacity rows after having performed the flow row selection and commodity detection
+    *       -> use the identified flow variables to adjust the scores of the capacity candidates
+    *       -> decide the model type (directed, undirected) in the capacity candidate extraction
+    *          and adjust the score accordingly
+    */
 
    /* allocate temporary memory for extraction data */
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowsigns, nrows) );
@@ -1238,7 +1093,7 @@ void addFlowrowToCommodity(
 
    SCIPdebugMessage("adding flow row %d <%s> with sign %+d to commodity %d [score:%g]\n",
                     r, SCIProwGetName(row), rowscale, k, mcfdata->flowrowscores[r]);
-   /*SCIPdebug( SCIPprintRow(scip, row, NULL); );*/
+   SCIPdebug( SCIPprintRow(scip, row, NULL); ); /*???????????????????*/
 
    /* add row to commodity */
    rowcommodity[r] = k;
@@ -1615,6 +1470,8 @@ SCIP_RETCODE extractFlow(
          getNextFlowrow(scip, mcfdata, &newrow, &newrowsign);
       }
       while( newrow != NULL );
+
+      SCIPdebugMessage(" -> finished commodity %d: identified %d nodes\n", i, nnodes);
 
       /* if the commodity has only one node, delete it again */
       if( nnodes == 1 )
@@ -2578,6 +2435,7 @@ SCIP_RETCODE cleanupNetwork(
       {
          if( colcommodity[c] >= 0 )
          {
+            assert(-1 <= colarcid[c] && colarcid[c] < narcs);
             assert(colcommodity[c] < mcfdata->ncommodities);
             colcommodity[c] = perm[colcommodity[c]];
             assert(colcommodity[c] < newncommodities);
@@ -2586,7 +2444,7 @@ SCIP_RETCODE cleanupNetwork(
                /* we are lazy and do not update plusflow and minusflow */
                colarcid[c] = -1;
             }
-            else
+            else if( colarcid[c] >= 0 )
                arcisused[colarcid[c]] = TRUE;
          }
       }
@@ -2599,7 +2457,7 @@ SCIP_RETCODE cleanupNetwork(
          assert((rownodeid[r] >= 0) == (rowcommodity[r] >= 0));
          if( rowcommodity[r] >= 0 )
          {
-            assert(rownodeid[r] >= 0);
+            assert(0 <= rownodeid[r] && rownodeid[r] < nnodes);
             assert(rowcommodity[r] < mcfdata->ncommodities);
             rowcommodity[r] = perm[rowcommodity[r]];
             assert(rowcommodity[r] < newncommodities);
@@ -2714,26 +2572,469 @@ SCIP_RETCODE cleanupNetwork(
    return SCIP_OKAY;
 }
 
+/** identifies the (at most) two nodes which contain the given flow variable */
+static
+void getIncidentNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
+   SCIP_COL*             col,                /**< flow column */
+   int*                  sourcenode,         /**< pointer to store the source node of the flow column */
+   int*                  targetnode          /**< pointer to store the target node of the flow column */
+   )
+{
+   unsigned char*    flowrowsigns     = mcfdata->flowrowsigns;
+   int*              commoditysigns   = mcfdata->commoditysigns;
+   int*              rowcommodity     = mcfdata->rowcommodity;
+   int*              rownodeid        = mcfdata->rownodeid;
+
+   SCIP_ROW** colrows;
+   SCIP_Real* colvals;
+   int collen;
+   int i;
+
+   assert(sourcenode != NULL);
+   assert(targetnode != NULL);
+
+   *sourcenode = -1;
+   *targetnode = -1;
+
+   /* search for flow conservation rows in the column vector */
+   colrows = SCIPcolGetRows(col);
+   colvals = SCIPcolGetVals(col);
+   collen = SCIPcolGetNLPNonz(col);
+   for( i = 0; i < collen; i++ )
+   {
+      int r;
+
+      r = SCIProwGetLPPos(colrows[i]);
+      assert(0 <= r && r < SCIPgetNLPRows(scip));
+
+      if( rownodeid[r] >= 0 )
+      {
+         int v;
+         int k;
+         int scale;
+
+         v = rownodeid[r];
+         k = rowcommodity[r];
+         assert(0 <= v && v < mcfdata->nnodes);
+         assert(0 <= k && k < mcfdata->ncommodities);
+         assert((flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
+
+         /* check whether the flow row is inverted */
+         scale = +1;
+         if( (flowrowsigns[r] & LHSASSIGNED) != 0 )
+            scale *= -1;
+         if( commoditysigns[k] == -1 )
+            scale *= -1;
+
+         /* decide whether this node is source or target */
+         if( scale * colvals[i] > 0.0 )
+         {
+            assert(*sourcenode == -1);
+            *sourcenode = v;
+            if( *targetnode >= 0 )
+               break;
+         }
+         else
+         {
+            assert(*targetnode == -1);
+            *targetnode = v;
+            if( *sourcenode >= 0 )
+               break;
+         }
+      }
+   }
+}
+
+/** for each arc identifies a source and target node */
+static
+SCIP_RETCODE identifySourcesTargets(
+   SCIP*                 scip,               /**< SCIP data structure */
+   MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
+   )
+{
+   int*              colarcid         = mcfdata->colarcid;
+   int               narcs            = mcfdata->narcs;
+   int               nnodes           = mcfdata->nnodes;
+   SCIP_ROW**        capacityrows     = mcfdata->capacityrows;
+   SCIP_MCFMODELTYPE modeltype        = mcfdata->modeltype;
+   int*              arcsources;
+   int*              arctargets;
+   int*              firstoutarcs;
+   int*              firstinarcs;
+   int*              nextoutarcs;
+   int*              nextinarcs;
+
+   int *sourcenodecnt;
+   int *targetnodecnt;
+   int *touchednodes;
+   int ntouchednodes;
+
+   int v;
+   int a;
+
+   /* allocate memory in mcfdata */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->arcsources, narcs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->arctargets, narcs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->firstoutarcs, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->firstinarcs, nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->nextoutarcs, narcs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->nextinarcs, narcs) );
+   arcsources   = mcfdata->arcsources;
+   arctargets   = mcfdata->arctargets;
+   firstoutarcs = mcfdata->firstoutarcs;
+   firstinarcs  = mcfdata->firstinarcs;
+   nextoutarcs  = mcfdata->nextoutarcs;
+   nextinarcs   = mcfdata->nextinarcs;
+
+   /* initialize adjacency lists */
+   for( v = 0; v < nnodes; v++ )
+   {
+      firstoutarcs[v] = -1;
+      firstinarcs[v] = -1;
+   }
+   for( a = 0; a < narcs; a++ )
+   {
+      nextoutarcs[a] = -1;
+      nextinarcs[a] = -1;
+   }
+
+   /* allocate temporary memory for source and target node identification */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sourcenodecnt, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &targetnodecnt, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &touchednodes, nnodes) );
+   BMSclearMemoryArray(sourcenodecnt, nnodes);
+   BMSclearMemoryArray(targetnodecnt, nnodes);
+
+   mcfdata->ninconsistencies = 0;
+
+   /* search for source and target nodes */
+   for( a = 0; a < narcs; a++ )
+   {
+      SCIP_COL** rowcols;
+      SCIP_Real* rowvals;
+      int rowlen;
+      int bestsourcev;
+      int besttargetv;
+      int bestsourcecnt;
+      int besttargetcnt;
+      int totalnodecnt;
+      int r;
+      int i;
+
+      r = SCIProwGetLPPos(capacityrows[a]);
+      assert(0 <= r && r < SCIPgetNLPRows(scip));
+      assert((mcfdata->capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
+      assert(mcfdata->rowarcid[r] == a);
+
+#ifndef NDEBUG
+      for( i = 0; i < nnodes; i++ )
+      {
+         assert(sourcenodecnt[i] == 0);
+         assert(targetnodecnt[i] == 0);
+      }
+#endif
+
+      /* check the flow variables of the capacity row for flow conservation constraints */
+      rowcols = SCIProwGetCols(capacityrows[a]);
+      rowvals = SCIProwGetVals(capacityrows[a]);
+      rowlen = SCIProwGetNLPNonz(capacityrows[a]);
+      ntouchednodes = 0;
+      totalnodecnt = 0;
+      for( i = 0; i < rowlen; i++ )
+      {
+         int c;
+
+         c = SCIPcolGetLPPos(rowcols[i]);
+         assert(0 <= c && c < SCIPgetNLPCols(scip));
+         if( colarcid[c] >= 0 )
+         {
+            int sourcev;
+            int targetv;
+
+            /* identify the (at most) two nodes which contain this flow variable */
+            getIncidentNodes(scip, mcfdata, rowcols[i], &sourcev, &targetv);
+
+            /* count the nodes */
+            if( sourcev >= 0 )
+            {
+               if( sourcenodecnt[sourcev] == 0 && targetnodecnt[sourcev] == 0 )
+               {
+                  touchednodes[ntouchednodes] = sourcev;
+                  ntouchednodes++;
+               }
+               sourcenodecnt[sourcev]++;
+               totalnodecnt++;
+            }
+            if( targetv >= 0 )
+            {
+               if( sourcenodecnt[targetv] == 0 && targetnodecnt[targetv] == 0 )
+               {
+                  touchednodes[ntouchednodes] = targetv;
+                  ntouchednodes++;
+               }
+               targetnodecnt[targetv]++;
+               totalnodecnt++;
+            }
+         }
+      }
+
+      /* perform a majority vote on source and target node */
+      bestsourcev = -1;
+      besttargetv = -1;
+      bestsourcecnt = 0;
+      besttargetcnt = 0;
+      for( i = 0; i < ntouchednodes; i++ )
+      {
+         v = touchednodes[i];
+         assert(0 <= v && v < nnodes);
+            
+         if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
+         {
+            /* in the directed model, we distinguish between source and target */
+            if( sourcenodecnt[v] >= targetnodecnt[v] )
+            {
+               if( sourcenodecnt[v] > bestsourcecnt )
+               {
+                  bestsourcev = v;
+                  bestsourcecnt = sourcenodecnt[v];
+               }
+            }
+            else
+            {
+               if( targetnodecnt[v] > besttargetcnt )
+               {
+                  besttargetv = v;
+                  besttargetcnt = targetnodecnt[v];
+               }
+            }
+         }
+         else
+         {
+            int nodecnt = sourcenodecnt[v] + targetnodecnt[v];
+
+            /* in the undirected model, we use source for the maximum and target for the second largest number of total hits */
+            if( nodecnt > bestsourcecnt )
+            {
+               besttargetv = bestsourcev;
+               besttargetcnt = bestsourcecnt;
+               bestsourcev = v;
+               bestsourcecnt = nodecnt;
+            }
+            else if( nodecnt > besttargetcnt )
+            {
+               besttargetv = v;
+               besttargetcnt = nodecnt;
+            }
+         }
+
+         /* clear the nodecnt arrays */
+         sourcenodecnt[v] = 0;
+         targetnodecnt[v] = 0;
+      }
+
+      /* assign the incident nodes */
+      assert(bestsourcev == -1 || bestsourcev != besttargetv);
+      arcsources[a] = bestsourcev;
+      arctargets[a] = besttargetv;
+      SCIPdebugMessage("arc %d: %d -> %d (sourcecnt=%d, targetcnt=%d, %d inconsistencies)\n",
+                       a, bestsourcev, besttargetv, bestsourcecnt, besttargetcnt, totalnodecnt - bestsourcecnt - besttargetcnt);
+
+      /* update adjacency lists */
+      if( bestsourcev != -1 )
+      {
+         nextoutarcs[a] = firstoutarcs[bestsourcev];
+         firstoutarcs[bestsourcev] = a;
+      }
+      if( besttargetv != -1 )
+      {
+         nextinarcs[a] = firstinarcs[besttargetv];
+         firstinarcs[besttargetv] = a;
+      }
+
+      /* update the number of inconsistencies */
+      assert(totalnodecnt >= bestsourcecnt + besttargetcnt);
+      mcfdata->ninconsistencies += totalnodecnt - bestsourcecnt - besttargetcnt;
+   }
+
+#ifdef SCIP_DEBUG
+   if( mcfdata->ninconsistencies > 0 )
+   {
+      SCIPdebugMessage("**** Warning! There are %d inconsistencies in the network! ****\n", mcfdata->ninconsistencies);
+   }
+#endif
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &touchednodes);
+   SCIPfreeBufferArray(scip, &targetnodecnt);
+   SCIPfreeBufferArray(scip, &sourcenodecnt);
+
+   return SCIP_OKAY;
+}
+
+#define UNKNOWN 0  /**< node has not yet been seen */
+#define ONSTACK 1  /**< node is currently on the processing stack */
+#define VISITED 2  /**< node has been visited and assigned to some component */
+
+/** returns lists of nodes and arcs in the connected component of the given startv */
+static
+SCIP_RETCODE identifyComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
+   int*                  nodevisited,        /**< array to mark visited nodes */
+   int                   startv,             /**< node for which the connected component should be generated */
+   int*                  compnodes,          /**< array to store node ids of the component */
+   int*                  ncompnodes,         /**< pointer to store the number of nodes in the component */
+   int*                  comparcs,           /**< array to store arc ids of the component */
+   int*                  ncomparcs           /**< pointer to store the number of arcs in the component */
+   )
+{
+   int* arcsources   = mcfdata->arcsources;
+   int* arctargets   = mcfdata->arctargets;
+   int* firstoutarcs = mcfdata->firstoutarcs;
+   int* firstinarcs  = mcfdata->firstinarcs;
+   int* nextoutarcs  = mcfdata->nextoutarcs;
+   int* nextinarcs   = mcfdata->nextinarcs;
+   int  nnodes       = mcfdata->nnodes;
+
+   int* stacknodes;
+   int nstacknodes;
+
+   assert(nodevisited != NULL);
+   assert(0 <= startv && startv < nnodes);
+   assert(nodevisited[startv] == UNKNOWN);
+   assert(compnodes != NULL);
+   assert(ncompnodes != NULL);
+   assert(comparcs != NULL);
+   assert(ncomparcs != NULL);
+
+   *ncompnodes = 0;
+   *ncomparcs = 0;
+
+   /* allocate temporary memory for node stack */
+   SCIP_CALL( SCIPallocBufferArray(scip, &stacknodes, nnodes) );
+
+   /* put startv on stack */
+   stacknodes[0] = startv;
+   nstacknodes = 1;
+   nodevisited[startv] = ONSTACK;
+
+   /* perform depth-first search */
+   while( nstacknodes > 0 )
+   {
+      int v;
+      int a;
+
+      /* pop first element from stack */
+      v = stacknodes[nstacknodes-1];
+      nstacknodes--;
+      assert(0 <= v && v < nnodes);
+      assert(nodevisited[v] == ONSTACK);
+      nodevisited[v] = VISITED;
+
+      /* put node into component */
+      assert(*ncompnodes < nnodes);
+      compnodes[*ncompnodes] = v;
+      (*ncompnodes)++;
+
+      /* go through the list of outgoing arcs */
+      for( a = firstoutarcs[v]; a != -1; a = nextoutarcs[a] )
+      {
+         int targetv;
+
+         assert(0 <= a && a < mcfdata->narcs);
+
+         targetv = arctargets[a];
+
+         /* check if we have already visited the target node */
+         if( targetv != -1 && nodevisited[targetv] == VISITED )
+            continue;
+
+         /* put arc to component */
+         assert(*ncomparcs < mcfdata->narcs);
+         comparcs[*ncomparcs] = a;
+         (*ncomparcs)++;
+
+         /* push target node to stack */
+         if( targetv != -1 && nodevisited[targetv] == UNKNOWN )
+         {
+            assert(nstacknodes < nnodes);
+            stacknodes[nstacknodes] = targetv;
+            nstacknodes++;
+            nodevisited[targetv] = ONSTACK;
+         }
+      }
+
+      /* go through the list of ingoing arcs */
+      for( a = firstinarcs[v]; a != -1; a = nextinarcs[a] )
+      {
+         int sourcev;
+
+         assert(0 <= a && a < mcfdata->narcs);
+
+         sourcev = arcsources[a];
+
+         /* check if we have already seen the source node */
+         if( sourcev != -1 && nodevisited[sourcev] == VISITED )
+            continue;
+
+         /* put arc to component */
+         assert(*ncomparcs < mcfdata->narcs);
+         comparcs[*ncomparcs] = a;
+         (*ncomparcs)++;
+
+         /* push source node to stack */
+         if( sourcev != -1 && nodevisited[sourcev] == UNKNOWN )
+         {
+            assert(nstacknodes < nnodes);
+            stacknodes[nstacknodes] = sourcev;
+            nstacknodes++;
+            nodevisited[sourcev] = ONSTACK;
+         }
+      }
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &stacknodes);
+
+   return SCIP_OKAY;
+}
+
 /** extracts a MCF network structure from the current LP */
 static
 SCIP_RETCODE mcfnetworkExtract(
    SCIP*                 scip,               /**< SCIP data structure */ 
    SCIP_SEPADATA*        sepadata,           /**< separator data */
-   SCIP_MCFNETWORK**     mcfnetwork          /**< MCF network structure */
+   SCIP_MCFNETWORK***    mcfnetworks,        /**< pointer to store array of MCF network structures */
+   int*                  nmcfnetworks        /**< pointer to store number of MCF networks */
    )
 {
-   SCIP_MCFNETWORK* mcf;
    MCFDATA mcfdata;
 
    SCIP_MCFMODELTYPE modeltype       = sepadata->modeltype;
    SCIP_MCFFLOWTYPE  flowtype        = sepadata->flowtype;
+
+   int* nodevisited;
+   int* compnodeid;
+   int* compnodes;
+   int* comparcs;
+   int ncompnodes;
+   int ncomparcs;
+   int mcfnetworkssize;
+   int v;
 
    SCIP_ROW** rows;
    SCIP_COL** cols;
    int nrows;
    int ncols;
 
-   assert(mcfnetwork != NULL);
+   assert(mcfnetworks != NULL);
+   assert(nmcfnetworks != NULL);
+
+   *mcfnetworks = NULL;
+   *nmcfnetworks = 0;
+   mcfnetworkssize = 0;
 
    /* Algorithm to identify multi-commodity-flow network with capacity constraints
     *
@@ -2750,11 +3051,6 @@ SCIP_RETCODE mcfnetworkExtract(
     * 4. Identify capacity constraints for the arcs and assign arc ids to columns and capacity constraints.
     * 5. Assign node ids to flow conservation constraints.
     */
-
-   /* create network data structure */
-   SCIP_CALL( mcfnetworkCreate(scip, mcfnetwork) );
-   assert(*mcfnetwork != NULL);
-   mcf = *mcfnetwork;
 
    /* get LP data */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
@@ -2780,10 +3076,17 @@ SCIP_RETCODE mcfnetworkExtract(
    mcfdata.colarcid = NULL;
    mcfdata.rowarcid = NULL;
    mcfdata.rownodeid = NULL;
+   mcfdata.arcsources = NULL;
+   mcfdata.arctargets = NULL;
+   mcfdata.firstoutarcs = NULL;
+   mcfdata.firstinarcs = NULL;
+   mcfdata.nextoutarcs = NULL;
+   mcfdata.nextinarcs = NULL;
    mcfdata.newcols = NULL;
    mcfdata.nnewcols = 0;
    mcfdata.narcs = 0;
    mcfdata.nnodes = 0;
+   mcfdata.ninconsistencies = 0;
    mcfdata.capacityrows = NULL;
    mcfdata.capacityrowssize = 0;
    mcfdata.colisincident = NULL;
@@ -2832,6 +3135,9 @@ SCIP_RETCODE mcfnetworkExtract(
       /* clean up the network: get rid of commodities without arcs or with at most one node */
       SCIP_CALL( cleanupNetwork(scip, &mcfdata) );
 
+      /* assign source and target nodes to arc */
+      SCIP_CALL( identifySourcesTargets(scip, &mcfdata) );
+
       /**@todo auto-detect type of flow variables */
       if( mcfdata.flowtype == SCIP_MCFFLOWTYPE_AUTO )
          mcfdata.flowtype = SCIP_MCFFLOWTYPE_CONTINUOUS;
@@ -2841,10 +3147,67 @@ SCIP_RETCODE mcfnetworkExtract(
    printCommodities(scip, &mcfdata);
 #endif
 
-   /* fill sparse network structure */
-   SCIP_CALL( mcfnetworkFill(scip, *mcfnetwork, &mcfdata) );
+   /* allocate temporary memory for component finding */
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, mcfdata.nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &compnodes, mcfdata.nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comparcs, mcfdata.narcs) );
+   BMSclearMemoryArray(nodevisited, mcfdata.nnodes);
+
+   /* allocate temporary memory for v -> compv mapping */
+   SCIP_CALL( SCIPallocBufferArray(scip, &compnodeid, mcfdata.nnodes) );
+   for( v = 0; v < mcfdata.nnodes; v++ )
+      compnodeid[v] = -1;
+
+   /* search components and create a network structure for each of them */
+   for( v = 0; v < mcfdata.nnodes; v++ )
+   {
+      /* ignore nodes that have been already assigned to a component */
+      assert(nodevisited[v] == UNKNOWN || nodevisited[v] == VISITED);
+      if( nodevisited[v] == VISITED )
+         continue;
+
+      /* identify nodes and arcs of this component */
+      SCIP_CALL( identifyComponent(scip, &mcfdata, nodevisited, v, compnodes, &ncompnodes, comparcs, &ncomparcs) );
+      assert(ncompnodes >= 1);
+      assert(compnodes[0] == v);
+      assert(nodevisited[v] == VISITED);
+
+      /* ignore network component if it is trivial */
+      if( ncompnodes >= 2 && ncomparcs >= 1 )
+      {
+         /* make sure that we have enough memory for the new network pointer */
+         assert(*nmcfnetworks <= mcfnetworkssize);
+         if( *nmcfnetworks == mcfnetworkssize )
+         {
+            mcfnetworkssize = MAX(2*mcfnetworkssize, *nmcfnetworks+1);
+            SCIP_CALL( SCIPreallocMemoryArray(scip, mcfnetworks, mcfnetworkssize) );
+         }
+         assert(*nmcfnetworks < mcfnetworkssize);
+
+         /* create network data structure */
+         SCIP_CALL( mcfnetworkCreate(scip, &(*mcfnetworks)[*nmcfnetworks]) );
+         assert((*mcfnetworks)[*nmcfnetworks] != NULL);
+         
+         /* fill sparse network structure */
+         SCIP_CALL( mcfnetworkFill(scip, (*mcfnetworks)[*nmcfnetworks], &mcfdata, compnodeid, compnodes, ncompnodes, comparcs, ncomparcs) );
+
+         (*nmcfnetworks)++;
+      }
+   }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &compnodeid);
+   SCIPfreeBufferArray(scip, &comparcs);
+   SCIPfreeBufferArray(scip, &compnodes);
+   SCIPfreeBufferArray(scip, &nodevisited);
 
    /* free memory */
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.arcsources);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.arctargets);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.firstoutarcs);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.firstinarcs);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.nextoutarcs);
+   SCIPfreeMemoryArrayNull(scip, &mcfdata.nextinarcs);
    SCIPfreeMemoryArrayNull(scip, &mcfdata.zeroarcarray);
    SCIPfreeMemoryArrayNull(scip, &mcfdata.colisincident);
    SCIPfreeMemoryArrayNull(scip, &mcfdata.capacityrows);
@@ -3390,7 +3753,7 @@ SCIP_RETCODE generateClusterCuts(
       int a;
       int d;
 
-      SCIPdebugMessage("generating cuts for partition %x\n", partition);
+      SCIPdebugMessage("generating cuts for partition 0x%x\n", partition);
 
       /* clear memory */
       BMSclearMemoryArray(cmirweights, nrows);
@@ -3422,6 +3785,13 @@ SCIP_RETCODE generateClusterCuts(
             comdemands[k] += rhs * nodeflowscales[v][k];
          }
       }
+
+#ifdef SCIP_DEBUG
+      for( v = 0; v < ncommodities; v++ )
+      {
+         SCIPdebugMessage(" -> commodity %d: demand=%g\n", v, comdemands[v]);
+      }
+#endif
 
       /* set weights of node flow conservation constraints in c-MIR aggregation */
       for( v = 0; v < nnodes; v++ )
@@ -3462,12 +3832,20 @@ SCIP_RETCODE generateClusterCuts(
             assert(r < nrows);
             if( r >= 0 ) /* row might have been removed from LP in the meantime */
             {
+               SCIP_Real feasibility;
+
                assert(cmirweights[r] == 0.0);
 
-               cmirweights[r] = scale * nodeflowscales[v][k];
-               SCIPdebugMessage(" -> node %d, commodity %d, flow row <%s>: scale=%d weight=%g\n",
-                                v, k, SCIProwGetName(nodeflowrows[v][k]), scale, cmirweights[r]);
-               /*SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));*/
+               /* ignore rows with slack */
+               feasibility = SCIPgetRowSolFeasibility(scip, nodeflowrows[v][k], sol);
+               if( !SCIPisFeasPositive(scip, feasibility) )
+               {
+                  cmirweights[r] = scale * nodeflowscales[v][k];
+                  SCIPdebugMessage(" -> node %d, commodity %d, flow row <%s>: scale=%d weight=%g slack=%g dual=%g\n",
+                                   v, k, SCIProwGetName(nodeflowrows[v][k]), scale, cmirweights[r], 
+                                   SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
+                  SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));
+               }
             }
          }
       }
@@ -3513,9 +3891,20 @@ SCIP_RETCODE generateClusterCuts(
             continue;
          assert(cmirweights[r] == 0.0);
 
+         /* if one of the arc nodes is unknown, we only use the capacity row if it does not have slack */
+         if( arcsources[a] == -1 || arctargets[a] == -1 )
+         {
+            SCIP_Real feasibility;
+
+            feasibility = SCIPgetRowSolFeasibility(scip, arccapacityrows[a], sol);
+            if( SCIPisFeasPositive(scip, feasibility) )
+               continue;
+         }
+         
          cmirweights[r] = arccapacityscales[a];
-         SCIPdebugMessage(" -> arc %d, capacity row <%s>: weight=%g\n", a, SCIProwGetName(arccapacityrows[a]), cmirweights[r]);
-         /*SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));*/
+         SCIPdebugMessage(" -> arc %d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, SCIProwGetName(arccapacityrows[a]), cmirweights[r],
+                          SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
+         SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));
 
          /* extract useful deltas for c-MIR scaling */
          rowvals = SCIProwGetVals(arccapacityrows[a]);
@@ -3567,6 +3956,7 @@ SCIP_RETCODE generateClusterCuts(
       }
 
       /* try out deltas to generate c-MIR cuts */
+      /**@todo use deltas as in the c-MIR separator from the mksetcoefs returned by SCIPcalcMIR() */
       for( d = 0; d < maxtestdelta && d < ndeltas; d++ )
       {
          SCIP_Real cutrhs;
@@ -3622,9 +4012,10 @@ SCIP_RETCODE separateCuts(
    )
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
-   SCIP_MCFNETWORK* mcfnetwork;
-   NODEPARTITION* nodepartition;
+   SCIP_MCFNETWORK** mcfnetworks;
+   int nmcfnetworks;
    int ncuts;
+   int i;
 
    assert(result != NULL);
 
@@ -3637,43 +4028,62 @@ SCIP_RETCODE separateCuts(
    assert(sepadata != NULL);
 
    /* get or extract network flow structure */
-   if( sepadata->mcfnetwork == NULL )
+   if( sepadata->nmcfnetworks == -1 )
    {
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( mcfnetworkExtract(scip, sepadata, &sepadata->mcfnetwork) );
-      printf/*??????????????SCIPdebugMessage*/("extracted network has %d nodes, %d arcs, and %d commodities (modeltype: %s, flowtype: %s)\n",
-                                               sepadata->mcfnetwork->nnodes, sepadata->mcfnetwork->narcs,
-                                               sepadata->mcfnetwork->ncommodities,
-                                               sepadata->mcfnetwork->modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected",
-                                               sepadata->mcfnetwork->flowtype == SCIP_MCFFLOWTYPE_CONTINUOUS ? "continuous" : "binary");
-      SCIPdebug( mcfnetworkPrint(sepadata->mcfnetwork) );
+      SCIP_CALL( mcfnetworkExtract(scip, sepadata, &sepadata->mcfnetworks, &sepadata->nmcfnetworks) );
+      /*?????????????#ifdef SCIP_DEBUG*/
+      printf/*??????????????SCIPdebugMessage*/("extracted %d networks\n", sepadata->nmcfnetworks);
+      for( i = 0; i < sepadata->nmcfnetworks; i++ )
+      {
+         printf/*??????????????SCIPdebugMessage*/(" -> extracted network %d has %d nodes, %d arcs, and %d commodities (modeltype: %s, flowtype: %s)\n",
+                                                  i, sepadata->mcfnetworks[i]->nnodes, sepadata->mcfnetworks[i]->narcs,
+                                                  sepadata->mcfnetworks[i]->ncommodities,
+                                                  sepadata->mcfnetworks[i]->modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected",
+                                                  sepadata->mcfnetworks[i]->flowtype == SCIP_MCFFLOWTYPE_CONTINUOUS ? "continuous" : "binary");
+         SCIPdebug( mcfnetworkPrint(sepadata->mcfnetworks[i]) );
+      }
+      /*?????????????#endif*/
    }
-   assert(sepadata->mcfnetwork != NULL);
-   mcfnetwork = sepadata->mcfnetwork;
+   assert(sepadata->nmcfnetworks >= 0);
+   assert(sepadata->mcfnetworks != NULL || sepadata->nmcfnetworks == 0);
+   mcfnetworks = sepadata->mcfnetworks;
+   nmcfnetworks = sepadata->nmcfnetworks;
 
-   /* if the network does not have at least 2 nodes and 1 arc, we can stop */
-   if( mcfnetwork->nnodes >= 2 && mcfnetwork->narcs >= 1 )
+   if( nmcfnetworks > 0 )
    {
       /* separate cuts */
       *result = SCIP_DIDNOTFIND;
 
-      printf("************** [%6.2f] MCF create node partition\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
-      /* partition nodes into a small number of clusters */
-      SCIP_CALL( nodepartitionCreate(scip, mcfnetwork, &nodepartition, sepadata->nclusters) );
-      SCIPdebug( nodepartitionPrint(nodepartition) );
+      for( i = 0; i < nmcfnetworks; i++ )
+      {
+         SCIP_MCFNETWORK* mcfnetwork;
+         NODEPARTITION* nodepartition;
 
-      printf("************** [%6.2f] MCF generate cuts\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
-      /* enumerate cuts between subsets of the clusters */
-      SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, nodepartition, &ncuts) );
-      printf/*?????????????SCIPdebugMessage*/("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
-                       mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts);
+         mcfnetwork = mcfnetworks[i];
 
-      /* free node partition */
-      nodepartitionFree(scip, &nodepartition);
+         /* if the network does not have at least 2 nodes and 1 arc, we did not create it */
+         assert(mcfnetwork->nnodes >= 2);
+         assert(mcfnetwork->narcs >= 1);
 
-      /* adjust result code */
-      if( ncuts > 0 )
-         *result = SCIP_SEPARATED;
+         printf("************** [%6.2f] MCF create node partition\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+         /* partition nodes into a small number of clusters */
+         SCIP_CALL( nodepartitionCreate(scip, mcfnetwork, &nodepartition, sepadata->nclusters) );
+         SCIPdebug( nodepartitionPrint(nodepartition) );
+
+         printf("************** [%6.2f] MCF generate cuts\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+         /* enumerate cuts between subsets of the clusters */
+         SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, nodepartition, &ncuts) );
+         printf/*?????????????SCIPdebugMessage*/("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
+                                                 mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts);
+
+         /* free node partition */
+         nodepartitionFree(scip, &nodepartition);
+
+         /* adjust result code */
+         if( ncuts > 0 )
+            *result = SCIP_SEPARATED;
+      }
    }
    else
       abort(); /*???????????????????*/
@@ -3700,7 +4110,8 @@ SCIP_DECL_SEPAFREE(sepaFreeMcf)
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   assert(sepadata->mcfnetwork == NULL);
+   assert(sepadata->mcfnetworks == NULL);
+   assert(sepadata->nmcfnetworks == -1);
 
    SCIPfreeMemory(scip, &sepadata);
 
@@ -3760,13 +4171,19 @@ static
 SCIP_DECL_SEPAEXITSOL(sepaExitsolMcf)
 {  /*lint --e{715}*/
    SCIP_SEPADATA* sepadata;
+   int i;
 
    /* get separator data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   /* free MCF network */
-   SCIP_CALL( mcfnetworkFree(scip, &sepadata->mcfnetwork) );
+   /* free MCF networks */
+   for( i = 0; i < sepadata->nmcfnetworks; i++ )
+   {
+      SCIP_CALL( mcfnetworkFree(scip, &sepadata->mcfnetworks[i]) );
+   }
+   SCIPfreeMemoryArrayNull(scip, &sepadata->mcfnetworks);
+   sepadata->nmcfnetworks = -1;
 
    return SCIP_OKAY;
 }
@@ -3814,7 +4231,8 @@ SCIP_RETCODE SCIPincludeSepaMcf(
 
    /* create cmir separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
-   sepadata->mcfnetwork = NULL;
+   sepadata->mcfnetworks = NULL;
+   sepadata->nmcfnetworks = -1;
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
