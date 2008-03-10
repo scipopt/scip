@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.69 2008/03/05 16:54:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.70 2008/03/10 18:06:07 bzfpfets Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -1331,6 +1331,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       if( consdata->presolved )
          continue;
       consdata->presolved = TRUE;
+
+      /* make sure that the constraint is propagated */
+      consdata->propagated = FALSE;
 
       /* incorporate fixings and aggregations in constraint */
       SCIP_CALL( applyFixings(scip, conss[i], &cutoff, nchgbds, ndelconss) );
