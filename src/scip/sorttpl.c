@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.5 2008/03/07 17:14:53 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.6 2008/03/11 20:56:19 bzfpfets Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -170,29 +170,30 @@ void SORTTPL_NAME(shellSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
 
       for( h = incs[k], i = h + start; i <= end; ++i )
       {
-         SORTTPL_KEYTYPE tempkey = key[i];
-         SORTTPL_HASFIELD1( SORTTPL_FIELD1TYPE tempfield1 = field1[i]; );
-         SORTTPL_HASFIELD2( SORTTPL_FIELD2TYPE tempfield2 = field2[i]; );
-         SORTTPL_HASFIELD3( SORTTPL_FIELD3TYPE tempfield3 = field3[i]; );
-         SORTTPL_HASFIELD4( SORTTPL_FIELD4TYPE tempfield4 = field4[i]; );
          int j;
+         SORTTPL_KEYTYPE tempkey = key[i];
+
+         SORTTPL_HASFIELD1( SORTTPL_FIELD1TYPE tempfield1 = field1[i]; )
+         SORTTPL_HASFIELD2( SORTTPL_FIELD2TYPE tempfield2 = field2[i]; )
+         SORTTPL_HASFIELD3( SORTTPL_FIELD3TYPE tempfield3 = field3[i]; )
+         SORTTPL_HASFIELD4( SORTTPL_FIELD4TYPE tempfield4 = field4[i]; )
 
          j = i;
          while( j >= h && SORTTPL_ISBETTER(tempkey, key[j-h]) )
          {
             key[j] = key[j-h];
-            SORTTPL_HASFIELD1( field1[j] = field1[j-h]; );
-            SORTTPL_HASFIELD2( field2[j] = field2[j-h]; );
-            SORTTPL_HASFIELD3( field3[j] = field3[j-h]; );
-            SORTTPL_HASFIELD4( field4[j] = field4[j-h]; );
+            SORTTPL_HASFIELD1( field1[j] = field1[j-h]; )
+            SORTTPL_HASFIELD2( field2[j] = field2[j-h]; )
+            SORTTPL_HASFIELD3( field3[j] = field3[j-h]; )
+            SORTTPL_HASFIELD4( field4[j] = field4[j-h]; )
             j -= h;
          }
           
          key[j] = tempkey;
-         SORTTPL_HASFIELD1( field1[j] = tempfield1; );
-         SORTTPL_HASFIELD2( field2[j] = tempfield2; );
-         SORTTPL_HASFIELD3( field3[j] = tempfield3; );
-         SORTTPL_HASFIELD4( field4[j] = tempfield4; );
+         SORTTPL_HASFIELD1( field1[j] = tempfield1; )
+         SORTTPL_HASFIELD2( field2[j] = tempfield2; )
+         SORTTPL_HASFIELD3( field3[j] = tempfield3; )
+         SORTTPL_HASFIELD4( field4[j] = tempfield4; )
       }
    }
 }
@@ -242,10 +243,10 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
             break;
          
          SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[hi]);
-         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[hi]) );
-         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[hi]) );
-         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[hi]) );
-         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[hi]) );
+         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[hi]); )
+         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[hi]); )
+         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[hi]); )
+         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[hi]); )
          
          lo++;
          hi--;
@@ -263,10 +264,10 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
          assert(!SORTTPL_ISBETTER(key[mid], pivotkey)); /* the pivot element did not change its position */
          assert(!SORTTPL_ISBETTER(pivotkey, key[mid]));
          SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[mid]);
-         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[mid]) );
-         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[mid]) );
-         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[mid]) );
-         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[mid]) );
+         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[mid]); )
+         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[mid]); )
+         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[mid]); )
+         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[mid]); )
          lo++;
       }
          
