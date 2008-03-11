@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.440 2008/03/10 18:02:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.441 2008/03/11 20:59:09 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9700,14 +9700,14 @@ SCIP_RETCODE SCIPreadSol(
    const char*           fname              /**< name of the input file */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
    SCIP_SOL* sol;
    SCIP_FILE* file;
    SCIP_Bool error;
    SCIP_Bool unknownvariablemessage;
    SCIP_Bool stored;
    int lineno;
+
+   SCIP_CALL( checkStage(scip, "SCIPreadSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    assert(scip != NULL);
    assert(fname != NULL);
