@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.258 2008/02/12 20:16:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.259 2008/03/11 20:59:46 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9318,12 +9318,12 @@ SCIP_RETCODE lpAlgorithm(
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
+   SCIP_Real timelimit;
+   SCIP_Bool success;
+
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lperror != NULL);
-
-   SCIP_Real timelimit;
-   SCIP_Bool success;
 
    timelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
    timelimit = MAX( timelimit, 0.0 );
@@ -12243,15 +12243,15 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_Real             objoffset           /**< objective offset, eg. caused by variable fixings in presolving */
    )
 {
-   assert(lp != NULL);
-   assert(lp->flushed);
-   assert(fname != NULL);
-
    FILE* file;
    int i;
    int j;
    char rowname[SCIP_MAXSTRLEN];
    SCIP_Real coeff;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(fname != NULL);
 
    SCIPdebugMessage("Start to write MIP to file <%s>\n", fname);
    file = fopen(fname, "w");
