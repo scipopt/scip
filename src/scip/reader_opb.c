@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.3 2008/01/28 14:18:49 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.4 2008/03/11 20:58:31 bzfpfets Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -1527,15 +1527,17 @@ SCIP_RETCODE writeOpb(
       var = vars[v];
       
 #ifndef NDEBUG
-      /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
-      int idx;
+      {
+	 /* in case the original problem has to be posted the variables have to be either "original" or "negated" */
+	 int idx;
+	 
+	 if ( !transformed )
+	    assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
+		    SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 
-      if ( !transformed )
-         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
-            SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
-
-      /* the variable name have to be of the form x%d */
-      assert( sscanf(SCIPvarGetName(var), "x%d", &idx) == 1 );
+	 /* the variable name have to be of the form x%d */
+	 assert( sscanf(SCIPvarGetName(var), "x%d", &idx) == 1 );
+      }
 #endif
       
       if ( !SCIPisZero(scip, SCIPvarGetObj(var)) )
