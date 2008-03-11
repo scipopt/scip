@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.12 2008/03/07 11:02:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.13 2008/03/11 20:59:01 bzfpfets Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -550,8 +550,9 @@ SCIP_RETCODE countSparsesol(
       
       if( SCIPgetNBinVars(scip) == SCIPgetNVars(scip) )
       {
-         assert( SCIPgetNPseudoBranchCands(scip) < 64 );
          SCIP_Longint factor = 1;
+
+         assert( SCIPgetNPseudoBranchCands(scip) < 64 );
          multInt(&newsols, (factor <<= SCIPgetNPseudoBranchCands(scip)) );
       }
       else
