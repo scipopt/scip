@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.34 2007/06/06 11:32:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.35 2008/03/12 21:31:47 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -469,15 +469,23 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || beg != 0);
    assert(nnonz == 0 || ind != 0);
    assert(nnonz == 0 || val != 0);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    invalidateSolution(lpi);
 
    // store number of columns for later
    int numCols = lpi->clp->getNumCols(); 
 
-   // copy beg-array
+   // copy beg-array (if not 0)
    int* mybeg = new int [ncols+1];
-   memcpy((void *) mybeg, beg, ncols * sizeof(int));
+   if ( nnonz == 0 )
+   {
+      for (int j = 0; j < ncols; ++j)
+	 mybeg[j] = 0;
+   }
+   else
+      memcpy((void *) mybeg, beg, ncols * sizeof(int));
    mybeg[ncols] = nnonz;   // add additional entry at end
 
    // add columns
@@ -639,7 +647,7 @@ SCIP_RETCODE SCIPlpiDelRows(
    int                   lastrow             /**< last row to be deleted */
    )
 {
-   SCIPdebugMessage("calling SCIPlpiDelRows()\n");
+   SCIPdebugMessage("calling SCIPlpiDelRows() (number: %d)\n", lastrow-firstrow+1);
 
    assert(lpi != 0);
    assert(lpi->clp != 0);
@@ -1722,7 +1730,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   return (! lpi->clp->primalFeasible() );
+   return ( lpi->clp->primalFeasible() );
 }
 
 
@@ -1843,6 +1851,7 @@ SCIP_Bool SCIPlpiIsStable(
        4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
        100 up - translation of enum from ClpEventHandler
    */
+   SCIPdebugMessage("status: %d   secondary: %d\n", lpi->clp->status(), lpi->clp->secondaryStatus());
    return( (lpi->clp->status() <= 2) && (! lpi->clp->isAbandoned()) && (lpi->clp->secondaryStatus() <= 1) );
 }
 
