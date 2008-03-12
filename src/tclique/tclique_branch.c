@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_branch.c,v 1.15 2007/08/01 13:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_branch.c,v 1.16 2008/03/12 21:09:16 bzfpfets Exp $"
 
 /**@file   tclique_branch.c
  * @brief  branch and bound part of algorithm for maximum cliques
@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "tclique/tclique.h"
 #include "tclique/tclique_def.h"
