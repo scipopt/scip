@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.6 2008/03/11 20:56:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.7 2008/03/13 18:03:33 bzfpfend Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -41,6 +41,9 @@
 #ifndef SORTTPL_METHOD
 #error You need to define the SORTTPL_METHOD name.
 #endif
+#ifndef SORTTPL_KEYTYPE
+#error You need to define SORTTPL_KEYTYPE.
+#endif
 
 #ifdef SORTTPL_EXPANDNAME
 #undef SORTTPL_EXPANDNAME
@@ -49,7 +52,6 @@
 #undef SORTTPL_NAME
 #endif
 
-/* enabling and disabling additional lines in the code */
 /* enabling and disabling additional lines in the code */
 #ifdef SORTTPL_FIELD1TYPE
 #define SORTTPL_HASFIELD1(x)    x
@@ -93,21 +95,16 @@
 #define SORTTPL_HASINDCOMP(x)    /**/
 #define SORTTPL_HASINDCOMPPAR(x) /**/
 #endif
-#ifdef SORTTPL_BACKWARDS
-#define SORTTPL_ISBACKWARDS Down
-#else
-#define SORTTPL_ISBACKWARDS Up
-#endif
 
 
 /* the two-step macro definition is needed, such that macro arguments
  * get expanded by prescan of the C preprocessor (see "info cpp",
  * chapter 3.10.6: Argument Prescan)
  */
-#define SORTTPL_EXPANDNAME(method, methodname, isbackwards) \
-   sorttpl_ ## method ## _ ## methodname ## _ ## isbackwards
-#define SORTTPL_NAME(method, methodname, isbackwards) \
-  SORTTPL_EXPANDNAME(method, methodname, isbackwards)
+#define SORTTPL_EXPANDNAME(method, methodname) \
+   sorttpl_ ## method ## _ ## methodname
+#define SORTTPL_NAME(method, methodname) \
+  SORTTPL_EXPANDNAME(method, methodname)
 
 /* comparator method */
 #ifdef SORTTPL_PTRCOMP
@@ -144,7 +141,7 @@
 
 /** shellsort an array of data elements; use it only for arrays smaller than 25 entries */
 static
-void SORTTPL_NAME(shellSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+void SORTTPL_NAME(shellSort, SORTTPL_METHOD)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
@@ -201,7 +198,7 @@ void SORTTPL_NAME(shellSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
 
 /** quicksort an array of pointers; pivot is the medial element */
 static
-void SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+void SORTTPL_NAME(qSort, SORTTPL_METHOD)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
@@ -277,7 +274,7 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
          /* sort [start,hi] with a recursive call */
          if( start < hi )
          {
-            SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+            SORTTPL_NAME(qSort, SORTTPL_METHOD)
                (key,
                 SORTTPL_HASFIELD1PAR(field1)
                 SORTTPL_HASFIELD2PAR(field2)
@@ -297,7 +294,7 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
          if( lo < end )
          {
             /* sort [lo,end] with a recursive call */
-            SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+            SORTTPL_NAME(qSort, SORTTPL_METHOD)
                (key,
                 SORTTPL_HASFIELD1PAR(field1)
                 SORTTPL_HASFIELD2PAR(field2)
@@ -317,7 +314,7 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
    /* use shell sort on the remaining small list */
    if( end - start >= 1 )
    {
-      SORTTPL_NAME(shellSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+      SORTTPL_NAME(shellSort, SORTTPL_METHOD)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
@@ -333,7 +330,7 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
 #ifndef NDEBUG
 /** verifies that an array is indeed sorted */
 static
-void SORTTPL_NAME(checkSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+void SORTTPL_NAME(checkSort, SORTTPL_METHOD)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
@@ -368,7 +365,7 @@ void SORTTPL_METHOD (
    /* use shell sort on the remaining small list */
    if( len <= SORTTPL_SHELLSORTMAX)
    {
-      SORTTPL_NAME(shellSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+      SORTTPL_NAME(shellSort, SORTTPL_METHOD)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
@@ -381,7 +378,7 @@ void SORTTPL_METHOD (
    }
    else
    {
-      SORTTPL_NAME(qSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+      SORTTPL_NAME(qSort, SORTTPL_METHOD)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
@@ -393,7 +390,7 @@ void SORTTPL_METHOD (
             0, len-1);
    }
 #ifndef NDEBUG
-   SORTTPL_NAME(checkSort, SORTTPL_METHOD, SORTTPL_ISBACKWARDS)
+   SORTTPL_NAME(checkSort, SORTTPL_METHOD)
       (key,
        SORTTPL_HASPTRCOMPPAR(ptrcomp)
        SORTTPL_HASINDCOMPPAR(indcomp)
@@ -428,4 +425,3 @@ void SORTTPL_METHOD (
 #undef SORTTPL_SWAP
 #undef SORTTPL_SHELLSORTMAX
 #undef SORTTPL_BACKWARDS
-#undef SORTTPL_ISBACKWARDS
