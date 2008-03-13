@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.21 2008/03/13 18:34:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.22 2008/03/13 19:03:36 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -62,7 +62,7 @@
 #define USEVBDS                    TRUE
 #define ALLOWLOCAL                 TRUE
 #define MINFRAC                    0.05
-#define MAXFRAC                    0.999
+#define MAXFRAC                    0.95
 
 #define MINNODES                      2 /**< minimal number of nodes in network to keep it for separation */
 #define MINARCS                       1 /**< minimal number of arcs in network to keep it for separation */
@@ -3749,8 +3749,8 @@ SCIP_RETCODE addCut(
    /* check efficacy */
    if( SCIPisCutEfficacious(scip, sol, cut) )
    {
-      SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, eff=%f\n", cutname, cutrhs, SCIPgetCutEfficacy(scip, sol, cut));
-      SCIPdebug(SCIPprintRow(scip, cut, NULL));
+      printf/*???????????????SCIPdebugMessage*/(" -> found MCF cut <%s>: rhs=%f, eff=%f\n", cutname, cutrhs, SCIPgetCutEfficacy(scip, sol, cut));
+      /*????????????????SCIPdebug*/(SCIPprintRow(scip, cut, NULL));
       SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
       if( !cutislocal )
       {

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.260 2008/03/13 18:34:42 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.261 2008/03/13 19:03:35 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7848,17 +7848,17 @@ void printMIR(
 
    assert(prob != NULL);
 
-   SCIPdebugPrintf("MIR:");
+   printf("MIR:");
    activity = 0.0;
    for( i = 0; i < prob->nvars; ++i )
    {
       if( mircoef[i] != 0.0 )
       {
-         SCIPdebugPrintf(" %+g<%s>", mircoef[i], SCIPvarGetName(prob->vars[i]));
+         printf(" %+g<%s>", mircoef[i], SCIPvarGetName(prob->vars[i]));
          activity += mircoef[i] * SCIPvarGetLPSol(prob->vars[i]);
       }
    }
-   SCIPdebugPrintf(" <= %g (activity: %g)\n", mirrhs, activity);
+   printf(" <= %.6f (activity: %g)\n", mirrhs, activity);
 }
 #endif
 
