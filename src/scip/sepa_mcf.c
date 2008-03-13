@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.20 2008/03/10 19:50:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.21 2008/03/13 18:34:42 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -50,7 +50,7 @@
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_NCLUSTERS             5 /**< number of clusters to generate in the shrunken network */
+#define DEFAULT_NCLUSTERS             8 /**< number of clusters to generate in the shrunken network */
 #define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
@@ -63,6 +63,9 @@
 #define ALLOWLOCAL                 TRUE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
+
+#define MINNODES                      2 /**< minimal number of nodes in network to keep it for separation */
+#define MINARCS                       1 /**< minimal number of arcs in network to keep it for separation */
 
 
 
@@ -306,8 +309,11 @@ SCIP_RETCODE mcfnetworkFill(
 
    SCIP_ROW** rows;
    int nrows;
+   int* compcommodity;
+   int ncompcommodities;
    int v;
    int a;
+   int k;
    int i;
 
    assert(mcfnetwork != NULL);
@@ -323,11 +329,45 @@ SCIP_RETCODE mcfnetworkFill(
       assert(compnodeid[v] == -1);
 #endif
 
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &compcommodity, ncommodities) );
+
+   /* initialize k -> compk mapping */
+   for( k = 0; k < ncommodities; k++ )
+      compcommodity[k] = -1;
+
+   /* get LP rows data */
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+
    /* generate v -> compv mapping */
    for( i = 0; i < ncompnodes; i++ )
    {
-      assert(0 <= compnodes[i] && compnodes[i] < mcfdata->nnodes);
-      compnodeid[compnodes[i]] = i;
+      v = compnodes[i];
+      assert(0 <= v && v < mcfdata->nnodes);
+      compnodeid[v] = i;
+   }
+
+   /* generate k -> compk mapping */
+   ncompcommodities = 0;
+   for( i = 0; i < nflowcands; i++ )
+   {
+      int r;
+      int rv;
+
+      r = flowcands[i];
+      assert(0 <= r && r < nrows);
+
+      rv = rownodeid[r];
+      if( rv >= 0 && compnodeid[rv] >= 0 )
+      {
+         k = rowcommodity[r];
+         assert(0 <= k && k < ncommodities);
+         if( compcommodity[k] == -1 )
+         {
+            compcommodity[k] = ncompcommodities;
+            ncompcommodities++;
+         }
+      }
    }
 
    /**@todo model type and flow type may be different for each component */
@@ -335,20 +375,16 @@ SCIP_RETCODE mcfnetworkFill(
    mcfnetwork->modeltype = modeltype;
    mcfnetwork->flowtype = flowtype;
 
-   /* fill in nodes and arcs */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
+   /* record network size */
    mcfnetwork->nnodes = ncompnodes;
    mcfnetwork->narcs = ncomparcs;
-   mcfnetwork->ncommodities = ncommodities; /**@todo number of commodities may vary for each component */
+   mcfnetwork->ncommodities = ncompcommodities;
 
    /* allocate memory for arrays and initialize with default values */
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows, mcfnetwork->nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales, mcfnetwork->nnodes) );
    for( v = 0; v < mcfnetwork->nnodes; v++ )
    {
-      int k;
-
       SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows[v], mcfnetwork->ncommodities) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales[v], mcfnetwork->ncommodities) );
       for( k = 0; k < mcfnetwork->ncommodities; k++ )
@@ -383,13 +419,16 @@ SCIP_RETCODE mcfnetworkFill(
       if( rv >= 0 && compnodeid[rv] >= 0 )
       {
          SCIP_Real scale;
-         int k;
+         int rk;
 
          v = compnodeid[rv];
-         k = rowcommodity[r];
+         rk = rowcommodity[r];
          assert(v < mcfnetwork->nnodes);
-         assert(0 <= k && k < mcfnetwork->ncommodities);
+         assert(0 <= rk && rk < ncommodities);
          assert((flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
+
+         k = compcommodity[rk];
+         assert(0 <= k && k < mcfnetwork->ncommodities);
 
          /* fill in node -> row assignment */
          SCIP_CALL( SCIPcaptureRow(scip, rows[r]) );
@@ -397,7 +436,7 @@ SCIP_RETCODE mcfnetworkFill(
          scale = flowrowscalars[r];
          if( (flowrowsigns[r] & LHSASSIGNED) != 0 )
             scale *= -1.0;
-         if( commoditysigns[k] == -1 )
+         if( commoditysigns[rk] == -1 )
             scale *= -1.0;
          mcfnetwork->nodeflowscales[v][k] = scale;
       }
@@ -473,6 +512,9 @@ SCIP_RETCODE mcfnetworkFill(
       assert(compnodeid[compnodes[i]] == i);
       compnodeid[compnodes[i]] = -1;
    }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &compcommodity);
 
    return SCIP_OKAY;
 }
@@ -621,7 +663,7 @@ void printCommodities(
    printf("unused rows:\n");
    for( r = 0; r < nrows; r++ )
    {
-      if( rowcommodity[r] == -1 && (capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0 )
+      if( rowcommodity[r] == -1 && (capacityrowsigns == NULL || (capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0) )
       {
          printf(" row <%s>\n", SCIProwGetName(rows[r]));
          SCIPdebug( SCIPprintRow(scip, rows[r], NULL) );
@@ -645,9 +687,9 @@ SCIP_DECL_SORTINDCOMP(compCands)
       return 0;
 }
 
-/** extracts flow conservation and capacity rows from the LP */
+/** extracts flow conservation from the LP */
 static
-SCIP_RETCODE extractRows(
+SCIP_RETCODE extractFlowRows(
    SCIP*                 scip,               /**< SCIP data structure */ 
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
@@ -655,44 +697,27 @@ SCIP_RETCODE extractRows(
    unsigned char* flowrowsigns;
    SCIP_Real*     flowrowscalars;
    SCIP_Real*     flowrowscores;
-   unsigned char* capacityrowsigns;
-   SCIP_Real*     capacityrowscores;
    int*           flowcands;
-   int*           capacitycands;
 
    SCIP_ROW** rows;
    int nrows;
    int r;
 
    SCIP_Real maxdualflow;
-   SCIP_Real maxdualcapacity;
 
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-   /**@todo Extract capacity rows after having performed the flow row selection and commodity detection
-    *       -> use the identified flow variables to adjust the scores of the capacity candidates
-    *       -> decide the model type (directed, undirected) in the capacity candidate extraction
-    *          and adjust the score accordingly
-    */
 
    /* allocate temporary memory for extraction data */
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowsigns, nrows) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowscalars, nrows) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowrowscores, nrows) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowsigns, nrows) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowscores, nrows) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->flowcands, nrows) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacitycands, nrows) );
    flowrowsigns      = mcfdata->flowrowsigns;
    flowrowscalars    = mcfdata->flowrowscalars;
    flowrowscores     = mcfdata->flowrowscores;
-   capacityrowsigns  = mcfdata->capacityrowsigns;
-   capacityrowscores = mcfdata->capacityrowscores;
    flowcands         = mcfdata->flowcands;
-   capacitycands     = mcfdata->capacitycands;
 
    maxdualflow = 0.0;
-   maxdualcapacity = 0.0;
    for( r = 0; r < nrows; r++ )
    {
       SCIP_ROW* row;
@@ -708,14 +733,7 @@ SCIP_RETCODE extractRows(
       SCIP_Real coef;
       SCIP_Bool hasposcoef;
       SCIP_Bool hasnegcoef;
-      SCIP_Bool hasposcontcoef;
-      SCIP_Bool hasnegcontcoef;
-      SCIP_Bool hasposintcoef;
-      SCIP_Bool hasnegintcoef;
-      SCIP_Bool hasinteger;
-      SCIP_Real samecontcoef;
       SCIP_Real absdualsol;
-      unsigned int rowsign;
       int i;
 
       row = rows[r];
@@ -730,8 +748,6 @@ SCIP_RETCODE extractRows(
       flowrowsigns[r] = 0;
       flowrowscalars[r] = 0.0;
       flowrowscores[r] = 0.0;
-      capacityrowsigns[r] = 0;
-      capacityrowscores[r] = 0.0;
 
       rowlen = SCIProwGetNNonz(row);
       if( rowlen == 0 )
@@ -794,54 +810,6 @@ SCIP_RETCODE extractRows(
          mcfdata->nflowcands++;
       }
 
-      /* identify capacity constraints */
-      hasposcontcoef = FALSE;
-      hasnegcontcoef = FALSE;
-      hasposintcoef = FALSE;
-      hasnegintcoef = FALSE;
-      hasinteger = FALSE;
-      samecontcoef = 0.0;
-      rowsign = 0;
-      if( !SCIPisInfinity(scip, -rowlhs) )
-         rowsign |= LHSPOSSIBLE;
-      if( !SCIPisInfinity(scip, rowrhs) )
-         rowsign |= RHSPOSSIBLE;
-      for( i = 0; i < rowlen && rowsign != 0; i++ )
-      {
-         if( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            if( samecontcoef == 0.0 )
-               samecontcoef = rowvals[i];
-            else if( !SCIPisEQ(scip, samecontcoef, rowvals[i]) )
-               samecontcoef = SCIP_REAL_MAX;
-            
-            if( rowvals[i] > 0.0 )
-            {
-               rowsign &= ~LHSPOSSIBLE;
-               hasposcontcoef = TRUE;
-            }
-            else
-            {
-               rowsign &= ~RHSPOSSIBLE;
-               hasnegcontcoef = TRUE;
-            }
-         }
-         else
-         {
-            hasinteger = TRUE;
-            if( rowvals[i] > 0.0 )
-               hasposintcoef = TRUE;
-            else
-               hasnegintcoef = TRUE;
-         }
-      }
-      if( i == rowlen && hasinteger && rowsign != 0 )
-      {
-         capacityrowsigns[r] = rowsign;
-         capacitycands[mcfdata->ncapacitycands] = r;
-         mcfdata->ncapacitycands++;
-      }
-
       /* calculate flow row score */
       if( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0 )
       {
@@ -849,10 +817,6 @@ SCIP_RETCODE extractRows(
 
          /* row is an equation: score +1000 */
          if( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == (LHSPOSSIBLE | RHSPOSSIBLE) )
-            flowrowscores[r] += 1000.0;
-
-         /* row is not a capacity constraint: score +1000 */
-         if( (capacityrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == 0 )
             flowrowscores[r] += 1000.0;
 
          /* row does not need to be scaled: score +1000 */
@@ -887,39 +851,6 @@ SCIP_RETCODE extractRows(
           *       instead of assigning a low score
           */
       }
-
-      /* calculate capacity row score */
-      if( (capacityrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0 )
-      {
-         capacityrowscores[r] = 1.0;
-
-         /* row is of type f - c*x <= b: score +10 */
-         if( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 && hasposcontcoef && !hasnegcontcoef && !hasposintcoef && hasnegintcoef )
-            capacityrowscores[r] += 10.0;
-         if( (capacityrowsigns[r] & LHSPOSSIBLE) != 0 && !hasposcontcoef && hasnegcontcoef && hasposintcoef && !hasnegintcoef )
-            capacityrowscores[r] += 10.0;
-
-         /* all coefficients of continuous variables are +1 or all are -1: score +5 */
-         if( SCIPisEQ(scip, ABS(samecontcoef), 1.0) )
-            capacityrowscores[r] += 5.0;
-
-         /* all coefficients of continuous variables are equal: score +2 */
-         if( samecontcoef != 0.0 && samecontcoef != SCIP_REAL_MAX )
-            capacityrowscores[r] += 2.0;
-
-         /* row is a <= row with non-negative right hand side: score +1 */
-         if( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 && !SCIPisNegative(scip, rowrhs)  )
-            capacityrowscores[r] += 1.0;
-
-         /* row is an inequality: score +1 */
-         if( SCIPisInfinity(scip, -rowlhs) != SCIPisInfinity(scip, rowrhs) )
-            capacityrowscores[r] += 1.0;
-
-         assert(capacityrowscores[r] > 0.0);
-
-         /* update maximum dual solution value for additional score tie breaking */
-         maxdualcapacity = MAX(maxdualcapacity, absdualsol);
-      }
    }
 
    /* apply additional score tie breaking using the dual solutions */
@@ -944,6 +875,291 @@ SCIP_RETCODE extractRows(
          assert(flowrowscores[r] > 0.0);
       }
    }
+
+   /* sort candidates by score */
+   SCIPsortInd(mcfdata->flowcands, compCands, (void*)flowrowscores, mcfdata->nflowcands);
+
+   SCIPdebugMessage("flow conservation candidates:\n");
+   for( r = 0; r < mcfdata->nflowcands; r++ )
+   {
+      //SCIPdebug(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL));
+      SCIPdebugMessage("%4d [score: %2g]: %s\n", r, flowrowscores[mcfdata->flowcands[r]], SCIProwGetName(rows[mcfdata->flowcands[r]]));
+   }
+
+   return SCIP_OKAY;
+}
+
+/** extracts flow conservation and capacity rows from the LP */
+static
+SCIP_RETCODE extractCapacityRows(
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
+   )
+{
+   int*              colcommodity = mcfdata->colcommodity;
+   int               ncommodities = mcfdata->ncommodities;
+   SCIP_MCFMODELTYPE modeltype    = mcfdata->modeltype;
+
+   unsigned char* capacityrowsigns;
+   SCIP_Real*     capacityrowscores;
+   int*           capacitycands;
+
+   SCIP_ROW** rows;
+   int nrows;
+   int r;
+
+   SCIP_Real maxdualcapacity;
+   int maxcolspercommodity;
+   int *ncolspercommodity;
+   int ndirectedcands;
+   int nundirectedcands;
+
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+
+   /* allocate temporary memory for extraction data */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowsigns, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacityrowscores, nrows) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->capacitycands, nrows) );
+   capacityrowsigns  = mcfdata->capacityrowsigns;
+   capacityrowscores = mcfdata->capacityrowscores;
+   capacitycands     = mcfdata->capacitycands;
+
+   /* allocate temporary memory for model type identification */
+   SCIP_CALL( SCIPallocBufferArray(scip, &ncolspercommodity, ncommodities) );
+
+   /* identify model type and set the maximal number of flow variables per capacity constraint and commodity */
+   switch( modeltype )
+   {
+   case SCIP_MCFMODELTYPE_AUTO:
+      maxcolspercommodity = 2; /* will be set to 1 later if we detect that the network is directed */
+      break;
+   case SCIP_MCFMODELTYPE_DIRECTED:
+      maxcolspercommodity = 1;
+      break;
+   case SCIP_MCFMODELTYPE_UNDIRECTED:
+      maxcolspercommodity = 2;
+      break;
+   default:
+      SCIPerrorMessage("invalid parameter value %d for model type\n", modeltype);
+      return SCIP_INVALIDDATA;
+   }
+
+   /**@todo instead of discarding rows with too many entries per commodity, decrease its score */
+   maxdualcapacity = 0.0;
+   ndirectedcands = 0;
+   nundirectedcands = 0;
+   for( r = 0; r < nrows; r++ )
+   {
+      SCIP_ROW* row;
+      SCIP_COL** rowcols;
+      SCIP_Real* rowvals;
+      SCIP_Real rowlhs;
+      SCIP_Real rowrhs;
+      int rowlen;
+      int nposflowcoefs;
+      int nnegflowcoefs;
+      int nposcapacitycoefs;
+      int nnegcapacitycoefs;
+      int nbadcoefs;
+      SCIP_Real sameflowcoef;
+      SCIP_Real sameabsflowcoef;
+      SCIP_Real absdualsol;
+      unsigned int rowsign;
+      int i;
+
+      row = rows[r];
+      assert(SCIProwGetLPPos(row) == r);
+
+      /* get dual solution, if available */
+      absdualsol = SCIProwGetDualsol(row);
+      if( absdualsol == SCIP_INVALID )
+         absdualsol = 0.0;
+      absdualsol = ABS(absdualsol);
+
+      capacityrowsigns[r] = 0;
+      capacityrowscores[r] = 0.0;
+
+      rowlen = SCIProwGetNNonz(row);
+      if( rowlen == 0 )
+         continue;
+      rowcols = SCIProwGetCols(row);
+      rowvals = SCIProwGetVals(row);
+      rowlhs = SCIProwGetLhs(row);
+      rowrhs = SCIProwGetRhs(row);
+
+      /* reset commodity counting array */
+      BMSclearMemoryArray(ncolspercommodity, ncommodities);
+
+      /* identify capacity constraints */
+      nposflowcoefs = 0;
+      nnegflowcoefs = 0;
+      nposcapacitycoefs = 0;
+      nnegcapacitycoefs = 0;
+      nbadcoefs = 0;
+      sameflowcoef = 0.0;
+      sameabsflowcoef = 0.0;
+      rowsign = 0;
+      if( !SCIPisInfinity(scip, -rowlhs) )
+         rowsign |= LHSPOSSIBLE;
+      if( !SCIPisInfinity(scip, rowrhs) )
+         rowsign |= RHSPOSSIBLE;
+      for( i = 0; i < rowlen; i++ )
+      {
+         int c;
+         int k;
+
+         c = SCIPcolGetLPPos(rowcols[i]);
+         assert(0 <= c && c < SCIPgetNLPCols(scip));
+
+         /* check if this is a flow variable */
+         k = colcommodity[c];
+         assert(-1 <= k && k < ncommodities);
+         if( k >= 0 )
+         {
+            SCIP_Real abscoef;
+
+            abscoef = ABS(rowvals[i]);
+            if( sameflowcoef == 0.0 )
+               sameflowcoef = rowvals[i];
+            else if( !SCIPisEQ(scip, sameflowcoef, rowvals[i]) )
+               sameflowcoef = SCIP_REAL_MAX;
+            if( sameabsflowcoef == 0.0 )
+               sameabsflowcoef = abscoef;
+            else if( !SCIPisEQ(scip, sameabsflowcoef, abscoef) )
+               sameabsflowcoef = SCIP_REAL_MAX;
+
+            if( rowvals[i] > 0.0 )
+               nposflowcoefs++;
+            else
+               nnegflowcoefs++;
+
+            ncolspercommodity[k]++;
+            if( ncolspercommodity[k] > maxcolspercommodity )
+            {
+               /* the row has too many entries in this commodities: discard capacity row */
+               break;
+            }
+            else if( ncolspercommodity[k] == 2 )
+               capacityrowsigns[r] |= UNDIRECTED;
+         }
+         else if( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            /* an integer variable which is not a flow variable can be used as capacity variable */
+            if( rowvals[i] > 0.0 )
+               nposcapacitycoefs++;
+            else
+               nnegcapacitycoefs++;
+         }
+         else
+         {
+            /* a continuous variable which is not a flow variable cannot be used for anything: this is bad! */
+            nbadcoefs++;
+         }
+      }
+
+      /* check if this is a valid capacity constraint */
+      if( i == rowlen && rowsign != 0 && nposflowcoefs + nnegflowcoefs > 0 )
+      {
+         capacityrowsigns[r] |= rowsign;
+         capacitycands[mcfdata->ncapacitycands] = r;
+         mcfdata->ncapacitycands++;
+
+         /* calculate capacity row score */
+         capacityrowscores[r] = 1.0;
+
+         /* row is of type f - c*x <= b: score +1000 */
+         if( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 && nnegflowcoefs == 0 && nposcapacitycoefs == 0 && nnegcapacitycoefs > 0 )
+            capacityrowscores[r] += 1000.0;
+         if( (capacityrowsigns[r] & LHSPOSSIBLE) != 0 && nposflowcoefs == 0 && nposcapacitycoefs > 0 && nnegcapacitycoefs == 0 )
+            capacityrowscores[r] += 1000.0;
+
+         /* row has no continuous variables that are not flow variables: score +1000 */
+         if( nbadcoefs == 0 )
+            capacityrowscores[r] += 1000.0;
+
+         /* almost all commodities are covered: score +500*(nposflow+nnegflow)/ncommodities */
+         capacityrowscores[r] += 500.0 * (nposflowcoefs+nnegflowcoefs)/(SCIP_Real)ncommodities;
+
+         /* all coefficients of flow variables are +1 or all are -1: score +500 */
+         if( SCIPisEQ(scip, ABS(sameflowcoef), 1.0) )
+            capacityrowscores[r] += 500.0;
+
+         /* all coefficients of flow variables are equal: score +200 */
+         if( sameflowcoef != 0.0 && sameflowcoef != SCIP_REAL_MAX )
+            capacityrowscores[r] += 200.0;
+
+         /* all coefficients of flow variables are +1 or -1: score +100 */
+         if( SCIPisEQ(scip, sameabsflowcoef, 1.0) )
+            capacityrowscores[r] += 100.0;
+
+         /* all coefficients of flow variables are equal in their absolute values: score +50 */
+         if( sameflowcoef != 0.0 && sameflowcoef != SCIP_REAL_MAX )
+            capacityrowscores[r] += 50.0;
+
+         /* flow coefficients are mostly of the same sign: score +20*max(npos,nneg)/(npos+nneg) */
+         capacityrowscores[r] += 20.0 * MAX(nposflowcoefs, nnegflowcoefs)/(SCIP_Real)(nposflowcoefs+nnegflowcoefs);
+
+         /* capacity coefficients are mostly of the same sign: score +10*max(npos,nneg)/(npos+nneg+1) */
+         capacityrowscores[r] += 10.0 * MAX(nposcapacitycoefs, nnegcapacitycoefs)/(SCIP_Real)(nposcapacitycoefs+nnegcapacitycoefs+1.0);
+
+         /* row is a <= row with non-negative right hand side: score +10 */
+         if( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 && !SCIPisNegative(scip, rowrhs)  )
+            capacityrowscores[r] += 10.0;
+
+         /* row is an inequality: score +10 */
+         if( SCIPisInfinity(scip, -rowlhs) != SCIPisInfinity(scip, rowrhs) )
+            capacityrowscores[r] += 10.0;
+
+         assert(capacityrowscores[r] > 0.0);
+
+         /* update maximum dual solution value for additional score tie breaking */
+         maxdualcapacity = MAX(maxdualcapacity, absdualsol);
+
+         /* if the model type should be detected automatically, count the number of directed and undirected capacity candidates */
+         if( modeltype == SCIP_MCFMODELTYPE_AUTO )
+         {
+            assert(maxcolspercommodity == 2);
+            if( (capacityrowsigns[r] & UNDIRECTED) != 0 )
+               nundirectedcands++;
+            else
+               ndirectedcands++;
+         }
+      }
+   }
+
+   /* if the model type should be detected automatically, decide it by a majority vote */
+   if( modeltype == SCIP_MCFMODELTYPE_AUTO )
+   {
+      if( ndirectedcands > nundirectedcands )
+         modeltype = SCIP_MCFMODELTYPE_DIRECTED;
+      else
+         modeltype = SCIP_MCFMODELTYPE_UNDIRECTED;
+
+      SCIPdebugMessage("detected model type: %s (%d directed candidates, %d undirected candidates)\n",
+                       modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected", ndirectedcands, nundirectedcands);
+
+      if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
+      {
+         int i;
+
+         /* discard all undirected arcs */
+         for( i = 0; i < mcfdata->ncapacitycands; i++ )
+         {
+            r = capacitycands[i];
+            assert(0 <= r && r < nrows);
+            if( (capacityrowsigns[r] & UNDIRECTED) != 0 )
+            {
+               SCIPdebugMessage(" -> discarded capacity row %d <%s>: undirected flow\n", r, SCIProwGetName(rows[r]));
+               capacityrowsigns[r] |= DISCARDED;
+            }
+         }
+      }
+
+      /* record the detected model type */
+      mcfdata->modeltype = modeltype;
+   }
+
+   /* apply additional score tie breaking using the dual solutions */
    if( SCIPisPositive(scip, maxdualcapacity) )
    {
       int i;
@@ -967,21 +1183,17 @@ SCIP_RETCODE extractRows(
    }
 
    /* sort candidates by score */
-   SCIPsortInd(mcfdata->flowcands, compCands, (void*)flowrowscores, mcfdata->nflowcands);
    SCIPsortInd(mcfdata->capacitycands, compCands, (void*)capacityrowscores, mcfdata->ncapacitycands);
 
-   SCIPdebugMessage("flow conservation candidates:\n");
-   for( r = 0; r < mcfdata->nflowcands; r++ )
-   {
-      //SCIPdebug(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL));
-      SCIPdebugMessage("%4d [score: %2g]: %s\n", r, flowrowscores[mcfdata->flowcands[r]], SCIProwGetName(rows[mcfdata->flowcands[r]]));
-   }
    SCIPdebugMessage("capacity candidates:\n");
    for( r = 0; r < mcfdata->ncapacitycands; r++ )
    {
       //SCIPdebug(SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL));
       SCIPdebugMessage("%4d [score: %2g]: %s\n", r, capacityrowscores[mcfdata->capacitycands[r]], SCIProwGetName(rows[mcfdata->capacitycands[r]]));
    }
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &ncolspercommodity);
 
    return SCIP_OKAY;
 }
@@ -1471,7 +1683,7 @@ SCIP_RETCODE extractFlow(
       }
       while( newrow != NULL );
 
-      SCIPdebugMessage(" -> finished commodity %d: identified %d nodes\n", i, nnodes);
+      SCIPdebugMessage(" -> finished commodity %d: identified %d nodes\n", mcfdata->ncommodities-1, nnodes);
 
       /* if the commodity has only one node, delete it again */
       if( nnodes == 1 )
@@ -1490,12 +1702,8 @@ SCIP_RETCODE extractCapacities(
 {
    unsigned char*    capacityrowsigns  = mcfdata->capacityrowsigns;
    SCIP_Real*        capacityrowscores = mcfdata->capacityrowscores;
-   int*              capacitycands     = mcfdata->capacitycands;
-   int               ncapacitycands    = mcfdata->ncapacitycands;
-   int               ncommodities      = mcfdata->ncommodities;
    int*              colcommodity      = mcfdata->colcommodity;
    int*              rowcommodity      = mcfdata->rowcommodity;
-   SCIP_MCFMODELTYPE modeltype         = mcfdata->modeltype;
 
    int* colarcid;
    int* rowarcid;
@@ -1505,10 +1713,6 @@ SCIP_RETCODE extractCapacities(
    int nrows;
    int ncols;
 
-   int* ncolspercommodity;
-   int maxcolspercommodity;
-   int ndirectedcands;
-   int nundirectedcands;
    int r;
    int c;
    int i;
@@ -1531,119 +1735,9 @@ SCIP_RETCODE extractCapacities(
    for( r = 0; r < nrows; r++ )
       rowarcid[r] = -1;
 
-   /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &ncolspercommodity, ncommodities) );
-
-   /* identify model type and set the maximal number of flow variables per capacity constraint and commodity */
-   switch( modeltype )
-   {
-   case SCIP_MCFMODELTYPE_AUTO:
-      maxcolspercommodity = 2; /* will be set to 1 later if we detect that the network is directed */
-      break;
-   case SCIP_MCFMODELTYPE_DIRECTED:
-      maxcolspercommodity = 1;
-      break;
-   case SCIP_MCFMODELTYPE_UNDIRECTED:
-      maxcolspercommodity = 2;
-      break;
-   default:
-      SCIPerrorMessage("invalid parameter value %d for model type\n", modeltype);
-      return SCIP_INVALIDDATA;
-   }
-
-   /* discard capacity constraints that have multiple entries in the same commodity */
-   /**@todo decrease score instead? */
    /**@todo use capacity candidates in their score order
     *       instead of looping through the used flow columns and their column vectors
     */
-   ndirectedcands = 0;
-   nundirectedcands = 0;
-   for( i = 0; i < ncapacitycands; i++ )
-   {
-      SCIP_COL** rowcols;
-      int rowlen;
-      int j;
-      int k;
-      int maxcols;
-
-      r = capacitycands[i];
-      assert(0 <= r && r < nrows);
-
-      BMSclearMemoryArray(ncolspercommodity, ncommodities);
-      rowcols = SCIProwGetCols(rows[r]);
-      rowlen = SCIProwGetNLPNonz(rows[r]);
-      maxcols = 0;
-      for( j = 0; j < rowlen; j++ )
-      {
-         c = SCIPcolGetLPPos(rowcols[j]);
-         assert(0 <= c && c < ncols);
-         k = colcommodity[c];
-         if( k >= 0 )
-         {
-            ncolspercommodity[k]++;
-            maxcols = MAX(maxcols, ncolspercommodity[k]);
-            if( ncolspercommodity[k] > maxcolspercommodity )
-            {
-               /* discard capacity row */
-               SCIPdebugMessage(" -> discarded capacity row %d <%s>: %d entries in commodity %d (max: %d)\n",
-                                r, SCIProwGetName(rows[r]), ncolspercommodity[k], k, maxcolspercommodity);
-               capacityrowsigns[r] |= DISCARDED;
-               break;
-            }
-            else if( ncolspercommodity[k] == 2 )
-               capacityrowsigns[r] |= UNDIRECTED;
-         }
-      }
-
-      /* if the capacity candidate does not involve any flow variable, discard it */
-      if( maxcols == 0 )
-      {
-         SCIPdebugMessage(" -> discarded capacity row %d <%s>: no flow variable entries\n", r, SCIProwGetName(rows[r]));
-         capacityrowsigns[r] |= DISCARDED;
-      }
-
-      /* if the model type should be detected automatically, count the number of directed and undirected capacity candidates */
-      if( maxcols >= 1 && j == rowlen && modeltype == SCIP_MCFMODELTYPE_AUTO )
-      {
-         assert(maxcolspercommodity == 2);
-         assert(maxcols <= maxcolspercommodity);
-         if( maxcols == 1 )
-            ndirectedcands++;
-         else
-            nundirectedcands++;
-      }
-   }
-
-   /* if the model type should be detected automatically, decide it by a majority vote */
-   if( modeltype == SCIP_MCFMODELTYPE_AUTO )
-   {
-      if( ndirectedcands > nundirectedcands )
-         modeltype = SCIP_MCFMODELTYPE_DIRECTED;
-      else
-         modeltype = SCIP_MCFMODELTYPE_UNDIRECTED;
-
-      SCIPdebugMessage("detected model type: %s (%d directed candidates, %d undirected candidates)\n",
-                       modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected", ndirectedcands, nundirectedcands);
-
-      if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
-      {
-         /* discard all undirected arcs */
-         for( i = 0; i < ncapacitycands; i++ )
-         {
-            r = capacitycands[i];
-            assert(0 <= r && r < nrows);
-            if( (capacityrowsigns[r] & UNDIRECTED) != 0 )
-            {
-               SCIPdebugMessage(" -> discarded capacity row %d <%s>: undirected flow\n", r, SCIProwGetName(rows[r]));
-               capacityrowsigns[r] |= DISCARDED;
-            }
-         }
-      }
-
-      /* record the detected model type */
-      mcfdata->modeltype = modeltype;
-   }
-
    /* for each column, search for a capacity constraint */
    for( c = 0; c < ncols; c++ )
    {
@@ -1761,9 +1855,6 @@ SCIP_RETCODE extractCapacities(
          SCIPdebugMessage("no capacity row found for column x%d <%s> in commodity %d\n", c, SCIPvarGetName(SCIPcolGetVar(cols[c])), colcommodity[c]);
       }
    }
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &ncolspercommodity);
 
    return SCIP_OKAY;
 }
@@ -2372,7 +2463,7 @@ SCIP_RETCODE cleanupNetwork(
 
          c = SCIPcolGetLPPos(rowcols[j]);
          assert(0 <= c && c < ncols);
-         if( colcommodity[c] >= 0 )
+         if( colcommodity[c] >= 0 && colarcid[c] == a )
          {
             assert(colcommodity[c] < ncommodities);
             arcisincom[colcommodity[c]] = TRUE;
@@ -2397,6 +2488,8 @@ SCIP_RETCODE cleanupNetwork(
     */
    nnodesthreshold = 0.2 * maxnnodes;
    nnodesthreshold = MAX(nnodesthreshold, 1);
+   nnodesthreshold = MIN(nnodesthreshold, 10);
+   printf/*?????????????SCIPdebugMessage*/(" -> node threshold: %d\n", nnodesthreshold);
 
    /* discard trivial commodities */
    newncommodities = 0;
@@ -2424,6 +2517,8 @@ SCIP_RETCODE cleanupNetwork(
       int newnnodes;
       int c;
       int v;
+
+      printf/*?????????????SCIPdebugMessage*/(" -> discarding %d of %d commodities\n", ncommodities - newncommodities, ncommodities);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &arcisused, narcs) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nodeisused, nnodes) );
@@ -2500,6 +2595,8 @@ SCIP_RETCODE cleanupNetwork(
       /* update remaining data structures to new arc ids */
       if( newnarcs < narcs )
       {
+         printf/*?????????????SCIPdebugMessage*/(" -> discarding %d of %d arcs\n", narcs - newnarcs, narcs);
+
          for( c = 0; c < ncols; c++ )
          {
             if( colarcid[c] >= 0 )
@@ -2538,6 +2635,8 @@ SCIP_RETCODE cleanupNetwork(
       /* update data structures to new node ids */
       if( newnnodes < nnodes )
       {
+         printf/*?????????????SCIPdebugMessage*/(" -> discarding %d of %d nodes\n", nnodes - newnnodes, nnodes);
+
          for( i = 0; i < nflowcands; i++ )
          {
             int r;
@@ -2858,12 +2957,7 @@ SCIP_RETCODE identifySourcesTargets(
       mcfdata->ninconsistencies += totalnodecnt - bestsourcecnt - besttargetcnt;
    }
 
-#ifdef SCIP_DEBUG
-   if( mcfdata->ninconsistencies > 0 )
-   {
-      SCIPdebugMessage("**** Warning! There are %d inconsistencies in the network! ****\n", mcfdata->ninconsistencies);
-   }
-#endif
+   printf/*???????????????SCIPdebugMessage*/("extracted network has %d inconsistencies\n", mcfdata->ninconsistencies);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &touchednodes);
@@ -3001,7 +3095,7 @@ SCIP_RETCODE identifyComponent(
    return SCIP_OKAY;
 }
 
-/** extracts a MCF network structure from the current LP */
+/** extracts MCF network structures from the current LP */
 static
 SCIP_RETCODE mcfnetworkExtract(
    SCIP*                 scip,               /**< SCIP data structure */ 
@@ -3012,8 +3106,8 @@ SCIP_RETCODE mcfnetworkExtract(
 {
    MCFDATA mcfdata;
 
-   SCIP_MCFMODELTYPE modeltype       = sepadata->modeltype;
-   SCIP_MCFFLOWTYPE  flowtype        = sepadata->flowtype;
+   SCIP_MCFMODELTYPE modeltype = sepadata->modeltype;
+   SCIP_MCFFLOWTYPE  flowtype  = sepadata->flowtype;
 
    int* nodevisited;
    int* compnodeid;
@@ -3038,9 +3132,8 @@ SCIP_RETCODE mcfnetworkExtract(
 
    /* Algorithm to identify multi-commodity-flow network with capacity constraints
     *
-    * 1. Identify candidate rows for flow conservation constraints and capacity constraints in the LP.
-    * 2. Sort flow conservation and capacity constraint candidates by a ranking on
-    *    how sure we are that it is indeed a constraint of the desired type.
+    * 1. Identify candidate rows for flow conservation constraints in the LP.
+    * 2. Sort flow conservation candidates by a ranking on how sure we are that it is indeed a constraint of the desired type.
     * 3. Extract network structure of flow conservation constraints:
     *    (a) Initialize plusflow[c] = minusflow[c] = FALSE for all columns c and other local data.
     *    (b) As long as there are flow conservation candidates left:
@@ -3048,8 +3141,11 @@ SCIP_RETCODE mcfnetworkExtract(
     *       (ii) Add newrow to commodity, update pluscom/minuscom accordingly.
     *      (iii) For the newly added columns search for an incident flow conservation constraint. Pick the one of highest ranking.
     *       (iv) If found, set newrow to this row and goto (ii).
-    * 4. Identify capacity constraints for the arcs and assign arc ids to columns and capacity constraints.
-    * 5. Assign node ids to flow conservation constraints.
+    *        (v) If only very few flow rows have been used, discard the commodity immediately.
+    * 4. Identify candidate rows for capacity constraints in the LP.
+    * 5. Sort capacity constraint candidates by a ranking on how sure we are that it is indeed a constraint of the desired type.
+    * 6. Identify capacity constraints for the arcs and assign arc ids to columns and capacity constraints.
+    * 7. Assign node ids to flow conservation constraints.
     */
 
    /* get LP data */
@@ -3094,13 +3190,12 @@ SCIP_RETCODE mcfnetworkExtract(
    mcfdata.modeltype = modeltype;
    mcfdata.flowtype = flowtype;
 
-   /* 1. Identify candidate rows for flow conservation constraints and capacity constraints in the LP.
-    * 2. Sort flow conservation and capacity constraint candidates by a ranking on
-    *    how sure we are that it is indeed a constraint of the desired type.
+   /* 1. Identify candidate rows for flow conservation constraints in the LP.
+    * 2. Sort flow conservation candidates by a ranking on how sure we are that it is indeed a constraint of the desired type.
     */
-   SCIP_CALL( extractRows(scip, &mcfdata) );
+   SCIP_CALL( extractFlowRows(scip, &mcfdata) );
 
-   if( mcfdata.nflowcands > 0 && mcfdata.ncapacitycands > 0 )
+   if( mcfdata.nflowcands > 0 )
    {
       /* 3. Extract network structure of flow conservation constraints. */
       SCIPdebugMessage("****** extracting flow ******\n");
@@ -3109,38 +3204,46 @@ SCIP_RETCODE mcfnetworkExtract(
       printCommodities(scip, &mcfdata);
 #endif
       
-      /* 4. Identify capacity constraints for the arcs and assign arc ids to columns and capacity constraints. */
-      SCIPdebugMessage("****** extracting capacities ******\n");
-      SCIP_CALL( extractCapacities(scip, &mcfdata) );
-
-      /* 5. Assign node ids to flow conservation constraints. */
-      SCIPdebugMessage("****** extracting nodes ******\n");
-      SCIP_CALL( extractNodes(scip, &mcfdata) );
-
-      /* if there are still undecided commodity signs, fix them to +1 */
-      fixCommoditySigns(scip, &mcfdata);
-
-      /**@todo It happens frequently that due to presolving the capacity constraints are mixed up. Often, we have
-       *       the aggregation x + y == 1, which substitutes the +1x in a capacity constraint by -1y. This leads
-       *       to a mix of +1 and -1 signs for the flow variables and we reject the constraint.
-       *       At this point, we may want to postprocess the network and search for capacity constraints of this
-       *       presolved type for the flow variables that do not yet have an associated arc.
+      /* 4. Identify candidate rows for capacity constraints in the LP.
+       * 5. Sort capacity constraint candidates by a ranking on how sure we are that it is indeed a constraint of the desired type.
        */
-      /**@todo Now we need to assign arcids to flow variables that have not yet been assigned to an arc because
-       *       there was no valid capacity constraint.
-       *       Go through the list of nodes and generate uncapacitated arcs in the network for the flow variables
-       *       that do not yet have an arc assigned, such that the commodities still match.
-       */
+      SCIP_CALL( extractCapacityRows(scip, &mcfdata) );
 
-      /* clean up the network: get rid of commodities without arcs or with at most one node */
-      SCIP_CALL( cleanupNetwork(scip, &mcfdata) );
+      if( mcfdata.ncapacitycands > 0 )
+      {
+         /* 6. Identify capacity constraints for the arcs and assign arc ids to columns and capacity constraints. */
+         SCIPdebugMessage("****** extracting capacities ******\n");
+         SCIP_CALL( extractCapacities(scip, &mcfdata) );
 
-      /* assign source and target nodes to arc */
-      SCIP_CALL( identifySourcesTargets(scip, &mcfdata) );
+         /* 7. Assign node ids to flow conservation constraints. */
+         SCIPdebugMessage("****** extracting nodes ******\n");
+         SCIP_CALL( extractNodes(scip, &mcfdata) );
 
-      /**@todo auto-detect type of flow variables */
-      if( mcfdata.flowtype == SCIP_MCFFLOWTYPE_AUTO )
-         mcfdata.flowtype = SCIP_MCFFLOWTYPE_CONTINUOUS;
+         /* if there are still undecided commodity signs, fix them to +1 */
+         fixCommoditySigns(scip, &mcfdata);
+
+         /**@todo It happens frequently that due to presolving the capacity constraints are mixed up. Often, we have
+          *       the aggregation x + y == 1, which substitutes the +1x in a capacity constraint by -1y. This leads
+          *       to a mix of +1 and -1 signs for the flow variables and we reject the constraint.
+          *       At this point, we may want to postprocess the network and search for capacity constraints of this
+          *       presolved type for the flow variables that do not yet have an associated arc.
+          */
+         /**@todo Now we need to assign arcids to flow variables that have not yet been assigned to an arc because
+          *       there was no valid capacity constraint.
+          *       Go through the list of nodes and generate uncapacitated arcs in the network for the flow variables
+          *       that do not yet have an arc assigned, such that the commodities still match.
+          */
+
+         /* clean up the network: get rid of commodities without arcs or with at most one node */
+         SCIP_CALL( cleanupNetwork(scip, &mcfdata) );
+
+         /* assign source and target nodes to arc */
+         SCIP_CALL( identifySourcesTargets(scip, &mcfdata) );
+
+         /**@todo auto-detect type of flow variables */
+         if( mcfdata.flowtype == SCIP_MCFFLOWTYPE_AUTO )
+            mcfdata.flowtype = SCIP_MCFFLOWTYPE_CONTINUOUS;
+      }
    }
 
 #ifdef SCIP_DEBUG
@@ -3173,7 +3276,7 @@ SCIP_RETCODE mcfnetworkExtract(
       assert(nodevisited[v] == VISITED);
 
       /* ignore network component if it is trivial */
-      if( ncompnodes >= 2 && ncomparcs >= 1 )
+      if( ncompnodes >= MINNODES && ncomparcs >= MINARCS )
       {
          /* make sure that we have enough memory for the new network pointer */
          assert(*nmcfnetworks <= mcfnetworkssize);
@@ -3192,6 +3295,10 @@ SCIP_RETCODE mcfnetworkExtract(
          SCIP_CALL( mcfnetworkFill(scip, (*mcfnetworks)[*nmcfnetworks], &mcfdata, compnodeid, compnodes, ncompnodes, comparcs, ncomparcs) );
 
          (*nmcfnetworks)++;
+      }
+      else
+      {
+         SCIPdebugMessage(" -> discarded component with %d nodes and %d arcs\n", ncompnodes, ncomparcs);
       }
    }
 
@@ -4074,11 +4181,12 @@ SCIP_RETCODE separateCuts(
          printf("************** [%6.2f] MCF generate cuts\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
          /* enumerate cuts between subsets of the clusters */
          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, nodepartition, &ncuts) );
-         printf/*?????????????SCIPdebugMessage*/("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
-                                                 mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts);
 
          /* free node partition */
          nodepartitionFree(scip, &nodepartition);
+
+         printf/*?????????????SCIPdebugMessage*/("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
+                                                 mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts);
 
          /* adjust result code */
          if( ncuts > 0 )

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.56 2007/06/27 10:17:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.57 2008/03/13 18:34:42 bzfpfend Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -283,8 +283,8 @@ SCIP_RETCODE sepastoreAddCut(
       assert(!SCIPsetIsInfinity(set, cutscore));
    }
 
-   SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
-      SCIProwGetName(cut), sepastore->ncuts, forcecut, cutefficacy, cutobjparallelism, cutscore);
+   SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%d, len=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
+      SCIProwGetName(cut), sepastore->ncuts, forcecut, SCIProwGetNNonz(cut), cutefficacy, cutobjparallelism, cutscore);
    /*SCIPdebug(SCIProwPrint(cut, NULL));*/
 
    /* capture the cut */
@@ -569,8 +569,8 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
          if( thisortho < mincutorthogonality )
          {
             /* cut is too parallel: release the row and delete the cut */
-            SCIPdebugMessage("    -> deleting parallel cut <%s> after adding <%s> (pos=%d, orthogonality=%g, score=%g)\n",
-               SCIProwGetName(sepastore->cuts[pos]), SCIProwGetName(cut), pos, thisortho, sepastore->scores[pos]);
+            SCIPdebugMessage("    -> deleting parallel cut <%s> after adding <%s> (pos=%d, len=%d, orthogonality=%g, score=%g)\n",
+               SCIProwGetName(sepastore->cuts[pos]), SCIProwGetName(cut), pos, SCIProwGetNNonz(cut), thisortho, sepastore->scores[pos]);
             SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, lp, pos) );
             continue;
          }
@@ -745,8 +745,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       assert(SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1); /* bound changes are forced cuts */
       assert(!SCIPsetIsInfinity(set, sepastore->scores[bestpos]));
       
-      SCIPdebugMessage(" -> applying cut <%s> (pos=%d/%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
-         SCIProwGetName(cut), bestpos, sepastore->ncuts, sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
+      SCIPdebugMessage(" -> applying cut <%s> (pos=%d/%d, len=%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
+         SCIProwGetName(cut), bestpos, sepastore->ncuts, SCIProwGetNNonz(cut), sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
          sepastore->orthogonalities[bestpos], sepastore->scores[bestpos]);
       /*SCIPdebug(SCIProwPrint(cut, NULL));*/
 
