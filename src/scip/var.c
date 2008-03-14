@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.221 2008/03/05 17:23:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.222 2008/03/14 10:29:27 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2642,8 +2642,6 @@ SCIP_RETCODE SCIPvarFix(
    assert(var != NULL);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
-   assert(SCIPsetIsLE(set, var->glbdom.lb, fixedval));
-   assert(SCIPsetIsLE(set, fixedval, var->glbdom.ub));
    assert(infeasible != NULL);
    assert(fixed != NULL);
 
