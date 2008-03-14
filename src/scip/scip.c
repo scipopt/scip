@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.441 2008/03/11 20:59:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.442 2008/03/14 14:57:32 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7996,7 +7996,7 @@ SCIP_RETCODE aggregateActiveVars(
       SCIP_CALL( SCIPvarAggregate(varx, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
             scip->primal, scip->tree, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue,
             vary, scalar, constant, infeasible, aggregated) );
-      assert(*aggregated);
+      assert(*aggregated || *infeasible); 
    }
    else if( SCIPvarGetType(varx) == SCIP_VARTYPE_INTEGER && SCIPvarGetType(vary) == SCIP_VARTYPE_INTEGER )
    {

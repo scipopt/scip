@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.267 2008/02/29 14:18:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.268 2008/03/14 14:57:32 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -7041,6 +7041,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          if( conshdlrdata->aggregatevariables )
          {
             SCIP_CALL( aggregateVariables(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+            if( cutoff )
+               break;
          }
       }
 
