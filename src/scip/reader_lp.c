@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.46 2008/01/21 16:09:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.47 2008/03/18 16:15:58 bzfpfend Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1560,7 +1560,7 @@ SCIP_RETCODE readLPFile(
 
    /* parse the file */
    lpinput->section = LP_START;
-   while( lpinput->section != LP_END )
+   while( lpinput->section != LP_END && !hasError(lpinput) )
    {
       switch( lpinput->section )
       {

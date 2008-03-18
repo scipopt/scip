@@ -99,6 +99,7 @@ fixed bugs:
 - fixed wrong if condition for function call in sorttpl.c 
 - forced full propagation in presolving -> this fixes a bug that implied that variable locks became inconsistent
 - avoid aggregation of implicit integers with fractional aggregation scalars
+- fixed infinite loop in LP file reader if a line exceeds the character limit
 
 
 SCIP version 1.00
