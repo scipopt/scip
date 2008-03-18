@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.153 2008/03/07 17:14:51 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.154 2008/03/18 14:00:16 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -55,7 +55,7 @@
 
 #define MAX_DYNPROG_CAPACITY      10000 /**< maximal capacity of knapsack to apply dynamic programming */
 #define MAX_USECLIQUES_SIZE        1000 /**< maximal number of items in knapsack where clique information is used */
-#define MAX_ZEROITEMS_SIZE      1000000 /**< maximal number of items to store in the zero list in preprocessing */
+#define MAX_ZEROITEMS_SIZE        10000 /**< maximal number of items to store in the zero list in preprocessing */
 
 #define DEFAULT_SEPACARDFREQ          1 /**< multiplier on separation frequency, how often cardinality cuts are separated */
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
@@ -2692,7 +2692,7 @@ SCIP_RETCODE tightenWeightsLift(
    assert(nbinvars > 0);
 
    /* allocate temporary memory for the list of implied to zero variables */
-   zeroitemssize = nbinvars; /* initial size of zeroitems buffer */
+   zeroitemssize = MIN(nbinvars, MAX_ZEROITEMS_SIZE); /* initial size of zeroitems buffer */
    SCIP_CALL( SCIPallocBufferArray(scip, &liftcands[0], nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &liftcands[1], nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &firstidxs[0], nbinvars) );

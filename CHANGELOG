@@ -60,6 +60,7 @@ plugins:
 - less aggressive scaling in linear constraint handler presolve to improve numerics
 - added reader for pseudo-Boolean problems (reader_opb.{c,h})
 - added first version of constraint handler cons_countsols.{c,h}
+- tighter memory limits in knapsack presolve lifting procedure to avoid overly expensive presolving
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),
