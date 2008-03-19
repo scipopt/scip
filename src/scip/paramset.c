@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.43 2007/11/15 10:53:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.44 2008/03/19 19:04:04 bzfpfets Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
 #include <strings.h>
@@ -2035,7 +2036,7 @@ SCIP_RETCODE SCIPparamsetRead(
    if( file == NULL )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      perror(filename);
+      SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
       return SCIP_NOFILE;
    }
 
@@ -2078,7 +2079,7 @@ SCIP_RETCODE SCIPparamsetWrite(
       if( file == NULL )
       {
          SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
-         perror(filename);
+	 SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
          return SCIP_FILECREATEERROR;
       }
    }

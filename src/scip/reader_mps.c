@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.84 2007/11/28 17:44:49 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.85 2008/03/19 19:04:03 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @brief  (extended) MPS file reader
@@ -36,6 +36,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
 #include <ctype.h>
 
 #include "scip/reader_mps.h"
@@ -1499,7 +1500,7 @@ SCIP_RETCODE readMps(
    if (NULL == (fp = SCIPfopen(filename, "r")))
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      perror(filename);
+      SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
       return SCIP_NOFILE;
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.5 2007/11/15 10:53:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.6 2008/03/19 19:04:03 bzfpfets Exp $"
 
 /**@file   reader_fix.c
  * @brief  file reader for variable fixings
@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
 #include <strings.h>
@@ -64,7 +65,7 @@ SCIP_RETCODE readSol(
    if( file == NULL )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      perror(filename);
+      SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
       return SCIP_NOFILE;
    }   
 

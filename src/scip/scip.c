@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.442 2008/03/14 14:57:32 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.443 2008/03/19 19:04:04 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
 
 #include "scip/def.h"
 #include "scip/retcode.h"
@@ -9717,7 +9718,7 @@ SCIP_RETCODE SCIPreadSol(
    if( file == NULL )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", fname);
-      perror(fname);
+      SCIPerrorMessage("%s: %s\n", fname, strerror(errno));
       return SCIP_NOFILE;
    }
 
