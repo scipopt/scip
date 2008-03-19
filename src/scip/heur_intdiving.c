@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.16 2007/06/06 11:25:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.17 2008/03/19 17:52:06 bzfwolte Exp $"
 
 /**@file   heur_intdiving.c
  * @brief  LP diving heuristic that fixes variables with integral LP value
@@ -488,6 +488,17 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       backtracked = FALSE;
       do
       {
+         /* if the variable is already fixed, numerical troubles may have occured or 
+          * variable was fixed by propagation while backtracking => Abort diving! 
+          */
+         if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
+         {
+            SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g], diving aborted \n",
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            cutoff = TRUE;
+            break;
+         }
+
          /* apply fixing of best candidate */
          SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", %d unfixed: var <%s>, sol=%g, oldbounds=[%g,%g], fixed to %g\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations, SCIPgetNPseudoBranchCands(scip),

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.7 2007/06/06 11:25:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.8 2008/03/19 17:52:05 bzfwolte Exp $"
 
 /**@file   heur_actconsdiving.c
  * @brief  LP diving heuristic that chooses fixings w.r.t. the active constraints the variable appear in
@@ -526,17 +526,20 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
       assert(bestcand != -1);
       var = lpcands[bestcand];
 
-      /* if the variable is already fixed, abort diving due to numerical troubles */
-      if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
-      {
-         SCIPdebugMessage("numerical troubles: selected variable <%s> already fixed to [%g,%g] (solval: %.9f)\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
-         break;
-      }
-
       backtracked = FALSE;
       do
       {
+         /* if the variable is already fixed, numerical troubles may have occured or 
+          * variable was fixed by propagation while backtracking => Abort diving! 
+          */
+         if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
+         {
+            SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
+            cutoff = TRUE;
+            break;
+         }
+
          /* apply rounding of best candidate */
          if( bestcandroundup == !backtracked )
          {
