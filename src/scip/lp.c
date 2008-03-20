@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.261 2008/03/13 19:03:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.262 2008/03/20 13:05:16 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6805,10 +6805,122 @@ SCIP_RETCODE SCIPlpSumRows(
       }
    }
 
-   *sumlhs = -SCIPsetInfinity(set);
-   *sumrhs = SCIPsetInfinity(set);
+   if( lhsinfinite )
+      *sumlhs = -SCIPsetInfinity(set);
+   if( rhsinfinite )
+      *sumrhs = SCIPsetInfinity(set);
 
    return SCIP_OKAY;
+}
+
+/** returns the maximum absolute row weight in the given weight vector, and calculates the sparsity pattern of the weights */
+static
+SCIP_Real getMaxAbsWeightCalcSparsity(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
+   int*                  nrowinds            /**< pointer to store number of used rows */
+   )
+{
+   SCIP_Real maxabsweight;
+   int r;
+
+   assert(lp != NULL);
+   assert(weights != NULL);
+   assert(rowinds != NULL);
+   assert(nrowinds != NULL);
+
+   *nrowinds = 0;
+
+   maxabsweight = 0.0;
+   for( r = 0; r < lp->nrows; ++r )
+   {
+      SCIP_Real absweight;
+
+      /* skip unused rows */
+      if( weights[r] == 0.0 )
+         continue;
+      
+      /* record the row in the sparsity pattern */
+      rowinds[*nrowinds] = r;
+      (*nrowinds)++;
+
+      absweight = REALABS(weights[r]);
+      maxabsweight = MAX(maxabsweight, absweight);
+   }
+
+   return maxabsweight;
+}
+
+/** adds a single row to an aggregation */
+static
+void addRowToAggregation(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real*            mircoef,            /**< array of aggregation coefficients: must be of size prob->nvars */
+   SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint; size prob->nvars */
+   int*                  varinds,            /**< array to store sparsity pattern of non-zero MIR coefficients; size prob->nvars */
+   int*                  nvarinds,           /**< pointer to store number of non-zero MIR coefficients */
+   SCIP_ROW*             row,                /**< row to add to the aggregation */
+   SCIP_Real             weight,             /**< weight of row in aggregation */
+   SCIP_Bool             uselhs              /**< TRUE if lhs should be used, FALSE if rhs should be used */
+   )
+{
+   SCIP_Real sideval;
+   int r;
+   int i;
+
+   assert(mircoef != NULL);
+   assert(mirrhs != NULL);
+   assert(slacksign != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
+   assert(row != NULL);
+   assert(weight != 0.0);
+
+   r = row->lppos;
+   assert(r >= 0);
+
+   /* update the right hand side */
+   if( uselhs )
+   {
+      slacksign[r] = -1;
+      sideval = row->lhs - row->constant;
+      if( row->integral )
+         sideval = SCIPsetFeasCeil(set, sideval); /* row is integral: round left hand side up */
+   }
+   else
+   {
+      slacksign[r] = +1;
+      sideval = row->rhs - row->constant;
+      if( row->integral )
+         sideval = SCIPsetFeasFloor(set, sideval); /* row is integral: round right hand side up */
+   }
+   (*mirrhs) += weight * sideval;
+
+   /* add the row coefficients to the sum */
+   for( i = 0; i < row->len; ++i )
+   {
+      int idx;
+      
+      assert(row->cols[i] != NULL);
+      assert(row->cols[i]->var != NULL);
+      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+      assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
+      assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
+      idx = row->cols[i]->var_probindex;
+      mircoef[idx] += weight * row->vals[i];
+      
+      /* record the variable in the sparsity pattern */
+      if( !varused[idx] )
+      {
+         varused[idx] = TRUE;
+         varinds[*nvarinds] = idx;
+         (*nvarinds)++;
+      }
+   }
 }
 
 /** builds a weighted sum of rows, and decides whether to use the left or right hand side of the rows in summation */
@@ -6824,16 +6936,16 @@ void sumMIRRow(
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size prob->nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint; size prob->nvars */
+   int*                  varinds,            /**< array to store sparsity pattern of non-zero MIR coefficients; size prob->nvars */
+   int*                  nvarinds,           /**< pointer to store number of non-zero MIR coefficients */
+   int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
+   int*                  nrowinds,           /**< pointer to store number of used rows */
    SCIP_Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
    SCIP_Bool*            localrowsused       /**< pointer to store whether local rows were used in summation */
    )
 {
-   SCIP_ROW* row;
-   SCIP_Real weight;
-   SCIP_Real absweight;
    SCIP_Real maxweight;
-   int idx;
-   int r;
    int i;
 
    assert(prob != NULL);
@@ -6844,25 +6956,40 @@ void sumMIRRow(
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
    assert(slacksign != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
+   assert(rowinds != NULL);
+   assert(nrowinds != NULL);
    assert(emptyrow != NULL);
    assert(localrowsused != NULL);
 
-   /* search the maximal absolute weight */
-   maxweight = 0.0;
-   for( r = 0; r < lp->nrows; ++r )
-   {
-      weight = scale * weights[r];
-      absweight = REALABS(weight);
-      maxweight = MAX(maxweight, absweight);
-   }
+   *nvarinds = 0;
+   *nrowinds = 0;
+
+   /* initialize varused array */
+   BMSclearMemoryArray(varused, prob->nvars);
+
+   /* search the maximal absolute weight and calculate the row sparsity pattern */
+   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds);
+   maxweight *= ABS(scale);
 
    /* calculate the row summation */
    BMSclearMemoryArray(mircoef, prob->nvars);
    *mirrhs = 0.0;
    *emptyrow = TRUE;
    *localrowsused = FALSE;
-   for( r = 0; r < lp->nrows; ++r )
+   for( i = 0; i < *nrowinds; i++ )
    {
+      SCIP_ROW* row;
+      SCIP_Real weight;
+      SCIP_Real absweight;
+      int r;
+
+      r = rowinds[i];
+      assert(0 <= i && i < lp->nrows);
+      assert(weights[r] != 0.0);
+
       row = lp->rows[r];
       assert(row != NULL);
       assert(row->len == 0 || row->cols != NULL);
@@ -6878,35 +7005,20 @@ void sumMIRRow(
       if( !row->modifiable && (allowlocal || !row->local)
          && absweight * maxweightrange >= maxweight && !SCIPsetIsSumZero(set, weight) )
       {
-         *emptyrow = FALSE;
-         *localrowsused = *localrowsused || row->local;
+         SCIP_Bool uselhs;
 
          /* Decide, if we want to use the left or the right hand side of the row in the summation.
           * If possible, use the side that leads to a positive slack value in the summation.
           */
          if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
-         {
-            slacksign[r] = -1;
-            (*mirrhs) += weight * (row->lhs - row->constant);
-         }
+            uselhs = TRUE;
          else
-         {
-            slacksign[r] = +1;
-            (*mirrhs) += weight * (row->rhs - row->constant);
-         }
+            uselhs = FALSE;
 
-         /* add the row coefficients to the sum */
-         for( i = 0; i < row->len; ++i )
-         {
-            assert(row->cols[i] != NULL);
-            assert(row->cols[i]->var != NULL);
-            assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-            assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-            assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
-            idx = row->cols[i]->var_probindex;
-            assert(0 <= idx && idx < prob->nvars);
-            mircoef[idx] += weight * row->vals[i];
-         }
+         /* add the row to the aggregation */
+         addRowToAggregation(set, mircoef, mirrhs, slacksign, varused, varinds, nvarinds, row, weight, uselhs);
+         *emptyrow = FALSE;
+         *localrowsused = *localrowsused || row->local;
 
          SCIPdebugMessage("MIR: %d: row <%s>, lhs = %g, rhs = %g, scale = %g, weight = %g, slacksign = %d -> rhs = %g\n",
             r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
@@ -6914,7 +7026,15 @@ void sumMIRRow(
          SCIPdebug(SCIProwPrint(row, NULL));
       }
       else
+      {
+         /* remove row from sparsity pattern */
+         rowinds[i] = rowinds[(*nrowinds)-1];
+         (*nrowinds)--;
+         i--;
+#ifndef NDEBUG
          slacksign[r] = 0;
+#endif
+      }
    }
 }
 
@@ -6927,26 +7047,39 @@ void cleanupMIRRow(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    SCIP_Bool             cutislocal          /**< is the cut only valid locally? */
    )
 {
    SCIP_Bool rhsinf;
-   int v;
+   int i;
 
    assert(prob != NULL);
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
 
    rhsinf = SCIPsetIsInfinity(set, *mirrhs);
-   for( v = 0; v < prob->nvars && !rhsinf; ++v )
+   for( i = 0; i < *nvarinds; i++ )
    {
-      if( mircoef[v] != 0.0 && SCIPsetIsSumZero(set, mircoef[v]) )
+      int v;
+
+      v = varinds[i];
+      assert(0 <= v && v < prob->nvars);
+      assert(varused[v]);
+
+      if( SCIPsetIsSumZero(set, mircoef[v]) )
       {
          SCIP_Real bd;
 
          SCIPdebugMessage("coefficient of <%s> in transformed MIR row is too small: %.12f\n",
             SCIPvarGetName(prob->vars[v]), mircoef[v]);
 
+         /* relax the constraint such that the coefficient becomes exact 0.0 */
          if( SCIPsetIsPositive(set, mircoef[v]) )
          {
             bd = cutislocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]);
@@ -6961,6 +7094,12 @@ void cleanupMIRRow(
             bd = 0.0;
          *mirrhs -= bd * mircoef[v];
          mircoef[v] = 0.0;
+
+         /* remove variable from sparsity pattern */
+         varused[v] = FALSE;
+         varinds[i] = varinds[(*nvarinds)-1];
+         (*nvarinds)--;
+         i--;
       }
    }
    if( rhsinf )
@@ -7000,6 +7139,9 @@ SCIP_RETCODE transformMIRRow(
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable:
                                               *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
@@ -7011,11 +7153,14 @@ SCIP_RETCODE transformMIRRow(
    SCIP_Real* bestubs;
    int* bestlbtypes;
    int* bestubtypes;
-   int v;
+   int i;
 
    assert(prob != NULL);
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
    assert(varsign != NULL);
    assert(boundtype != NULL);
    assert(freevariable != NULL);
@@ -7024,18 +7169,31 @@ SCIP_RETCODE transformMIRRow(
    *freevariable = FALSE;
    *localbdsused = FALSE;
 
+#ifndef NDEBUG
+   /* in debug mode, make sure that the whole array is initialized with invalid values */
+   for( i = 0; i < prob->nvars; i++ )
+   {
+      varsign[i] = 0;
+      boundtype[i] = -1;
+   }
+#endif
+
    /* allocate temporary memory to store best bounds and bound types */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &bestlbs, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &bestubs, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &bestlbtypes, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &bestubtypes, prob->nvars) );
 
-   /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
-    * substitute integral variables with best standard bound (lb, ub);
-    * start with continuous variables, because using variable bounds can affect the untransformed integral
+   /* start with continuous variables, because using variable bounds can affect the untransformed integral
     * variables, and these changes have to be incorporated in the transformation of the integral variables
+    * (continuous variables have largest problem indices!)
     */
-   for( v = prob->nvars-1; v >= 0; --v )
+   SCIPsortDownInt(varinds, *nvarinds);
+
+   /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
+    * substitute integral variables with best standard bound (lb, ub)
+    */
+   for( i = 0; i < *nvarinds; i++ )
    {
       SCIP_VAR* var;
       SCIP_Real bestlb;
@@ -7043,17 +7201,25 @@ SCIP_RETCODE transformMIRRow(
       SCIP_Bool uselb;
       int bestlbtype;
       int bestubtype;
+      int v;
+
+      v = varinds[i];
+      assert(0 <= v && v < prob->nvars);
+      assert(varused[v]);
 
       var = prob->vars[v];
       assert(v == SCIPvarGetProbindex(var));
-      uselb = FALSE;
 
-      /* ignore variables that don't exist in the MIR row */
+      /* due to variable bound usage cancellation may occur */
       if( SCIPsetIsZero(set, mircoef[v]) )
       {
          varsign[v] = +1;
          boundtype[v] = -1;
          mircoef[v] = 0.0;
+         varused[v] = FALSE;
+         varinds[i] = varinds[(*nvarinds)-1];
+         (*nvarinds)--;
+         i--;
          continue;
       }
 
@@ -7257,32 +7423,16 @@ SCIP_RETCODE transformMIRRow(
             uselb = TRUE;
          else if( SCIPsetIsGT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
             uselb = FALSE;
+         else if( bestlbtype == -1 )  /* prefer global standard bounds */
+            uselb = TRUE;
+         else if( bestubtype == -1 )  /* prefer global standard bounds */
+            uselb = FALSE;
+         else if( bestlbtype >= 0 )   /* prefer variable bounds over local bounds */
+            uselb = TRUE;
+         else if( bestubtype >= 0 )   /* prefer variable bounds over local bounds */
+            uselb = FALSE;
          else
-         {
-#if 0 /*???????????????????*/
-            if( bestlbtype >= 0 )       /* prefer variable bounds */
-               uselb = TRUE;
-            else if( bestubtype >= 0 )  /* prefer variable bounds */
-               uselb = FALSE;
-            else if( bestlbtype >= -1 ) /* prefer global bounds over local bounds */
-               uselb = TRUE;
-            else if( bestubtype >= -1 ) /* prefer global bounds over local bounds */
-               uselb = FALSE;
-            else
-               uselb = TRUE;            /* no decision yet? just use lower bound */
-#else
-            if( bestlbtype == -1 )       /* prefer global standard bounds */
-               uselb = TRUE;
-            else if( bestubtype == -1 )  /* prefer global standard bounds */
-               uselb = FALSE;
-            else if( bestlbtype >= 0 )   /* prefer variable bounds over local bounds */
-               uselb = TRUE;
-            else if( bestubtype >= 0 )   /* prefer variable bounds over local bounds */
-               uselb = FALSE;
-            else
-               uselb = TRUE;             /* no decision yet? just use lower bound */
-#endif
-         }
+            uselb = TRUE;             /* no decision yet? just use lower bound */
       }
 
       /* remember given/best bounds and types */
@@ -7320,6 +7470,15 @@ SCIP_RETCODE transformMIRRow(
                
             (*mirrhs) -= mircoef[v] * vlbconsts[bestlbtype];
             mircoef[zidx] += mircoef[v] * vlbcoefs[bestlbtype];
+
+            /* update sparsity pattern */
+            if( !varused[zidx] )
+            {
+               assert(*nvarinds < prob->nvars);
+               varused[zidx] = TRUE;
+               varinds[*nvarinds] = zidx;
+               (*nvarinds)++;
+            }
          }
       }
       else
@@ -7350,6 +7509,15 @@ SCIP_RETCODE transformMIRRow(
 
             (*mirrhs) -= mircoef[v] * vubconsts[bestubtype];
             mircoef[zidx] += mircoef[v] * vubcoefs[bestubtype];
+
+            /* update sparsity pattern */
+            if( !varused[zidx] )
+            {
+               assert(*nvarinds < prob->nvars);
+               varused[zidx] = TRUE;
+               varinds[*nvarinds] = zidx;
+               (*nvarinds)++;
+            }
          }
       }
 
@@ -7382,9 +7550,16 @@ SCIP_RETCODE transformMIRRow(
          bestv = -1;
          bestviolgain = -1e+100;
          bestnewf0 = 1.0;
-         for( v = 0; v < prob->nvars; ++v )
+         for( i = 0; i < *nvarinds; i++ )
          {
-            if( mircoef[v] != 0.0 && boundtype[v] < 0
+            int v;
+
+            v = varinds[i];
+            assert(0 <= v && v < prob->nvars);
+            assert(varused[v]);
+            assert(!SCIPsetIsZero(set, mircoef[v]));
+
+            if( boundtype[v] < 0
                && ((varsign[v] == +1 && !SCIPsetIsInfinity(set, bestubs[v]) && bestubtypes[v] < 0)
                   || (varsign[v] == -1 && !SCIPsetIsInfinity(set, -bestlbs[v]) && bestlbtypes[v] < 0)) )
             {
@@ -7510,36 +7685,60 @@ void roundMIRRow(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
    SCIP_Real             f0,                 /**< fracional value of rhs */
    SCIP_Real*            cutactivity         /**< pointer to store the activity of the resulting cut */
    )
 {
-   SCIP_VAR* var;
    SCIP_Real onedivoneminusf0;
-   SCIP_Real aj;
-   SCIP_Real downaj;
-   SCIP_Real cutaj;
-   SCIP_Real fj;
    int nintvars;
-   int v;
+   int i;
 
    assert(prob != NULL);
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
    assert(varsign != NULL);
    assert(0.0 < f0 && f0 < 1.0);
    assert(cutactivity != NULL);
 
    *cutactivity = 0.0;
    onedivoneminusf0 = 1.0 / (1.0 - f0);
-
    nintvars = prob->nvars - prob->ncontvars;
 
+   /* start with integer variables, since the variable bound substitutions can add up to the integer cut coefficients;
+    * loop backwards to be able to delete coefficients from the sparsity pattern
+    */
+   SCIPsortDownInt(varinds, *nvarinds);
+
    /* integer variables */
-   for( v = 0; v < nintvars; ++v )
+   for( i = *nvarinds-1; i >= 0; i-- )
    {
+      SCIP_VAR* var;
+      SCIP_Real aj;
+      SCIP_Real downaj;
+      SCIP_Real cutaj;
+      SCIP_Real fj;
+      int v;
+
+      v = varinds[i];
+      assert(0 <= v && v < prob->nvars);
+      assert(varused[v]);
+
+      /* stop this loop if we reached the continuous variables */
+      if( v >= nintvars )
+      {
+         assert(!SCIPvarIsIntegral(prob->vars[v]));
+         assert(SCIPvarGetType(prob->vars[v]) == SCIP_VARTYPE_CONTINUOUS);
+         break;
+      }
+
       var = prob->vars[v];
       assert(var != NULL);
       assert(SCIPvarIsIntegral(var));
@@ -7557,48 +7756,61 @@ void roundMIRRow(
       else
          cutaj = varsign[v] * (downaj + (fj - f0) * onedivoneminusf0); /* a起j */
 
+      /* remove zero cut coefficients from sparsity pattern */
       if( SCIPsetIsZero(set, cutaj) )
-         mircoef[v] = 0.0;
-      else
       {
-         mircoef[v] = cutaj;
-         (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
+         mircoef[v] = 0.0;
+         varused[v] = FALSE;
+         varinds[i] = varinds[(*nvarinds)-1];
+         (*nvarinds)--;
+         continue;
+      }
 
-         /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
-         if( varsign[v] == +1 )
+      mircoef[v] = cutaj;
+      (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
+      
+      /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
+      if( varsign[v] == +1 )
+      {
+         /* lower bound was used */
+         if( boundtype[v] == -1 )
          {
-            /* lower bound was used */
-            if( boundtype[v] == -1 )
-            {
-               assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
-               (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
-            }
-            else
-            {
-               assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
-               (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
-            }
+            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
+            (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
          }
          else
          {
-            /* upper bound was used */
-            if( boundtype[v] == -1 )
-            {
-               assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
-               (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
-            }
-            else
-            {
-               assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
-               (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
-            }
+            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
+            (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
+         }
+      }
+      else
+      {
+         /* upper bound was used */
+         if( boundtype[v] == -1 )
+         {
+            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
+            (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
+         }
+         else
+         {
+            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
+            (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
          }
       }
    }
 
    /* continuous variables */
-   for( v = nintvars; v < prob->nvars; ++v )
+   for( ; i >= 0; i-- )
    {
+      SCIP_VAR* var;
+      SCIP_Real aj;
+      int v;
+
+      v = varinds[i];
+      assert(0 <= v && v < prob->nvars);
+      assert(varused[v]);
+
       var = prob->vars[v];
       assert(var != NULL);
       assert(!SCIPvarIsIntegral(var));
@@ -7608,19 +7820,30 @@ void roundMIRRow(
       /* calculate the coefficient in the retransformed cut */
       aj = varsign[v] * mircoef[v]; /* a'_j */
       if( aj >= 0.0 )
-      {
          mircoef[v] = 0.0;
+      else
+      {
+         SCIP_Real cutaj;
+
+         cutaj = varsign[v] * aj * onedivoneminusf0; /* a起j */
+         if( SCIPsetIsZero(set, cutaj) )
+            mircoef[v] = 0.0;
+         else
+         {
+            mircoef[v] = cutaj;
+            (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
+         }
+      }
+
+      /* remove zero cut coefficients from sparsity pattern */
+      if( mircoef[v] == 0.0 )
+      {
+         varused[v] = FALSE;
+         varinds[i] = varinds[(*nvarinds)-1];
+         (*nvarinds)--;
          continue;
       }
-      cutaj = varsign[v] * aj * onedivoneminusf0; /* a起j */
-      if( SCIPsetIsZero(set, cutaj) )
-      {
-         mircoef[v] = 0.0;
-         continue;
-      }
-      mircoef[v] = cutaj;
-      (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
-         
+
       /* check for variable bound use */
       if( boundtype[v] < 0 )
       {
@@ -7633,12 +7856,12 @@ void roundMIRRow(
             if( boundtype[v] == -1 )
             {
                assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
-               (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
+               (*mirrhs) += mircoef[v] * SCIPvarGetLbGlobal(var);
             }
             else
             {
                assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
-               (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
+               (*mirrhs) += mircoef[v] * SCIPvarGetLbLocal(var);
             }
          }
          else
@@ -7647,12 +7870,12 @@ void roundMIRRow(
             if( boundtype[v] == -1 )
             {
                assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
-               (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
+               (*mirrhs) += mircoef[v] * SCIPvarGetUbGlobal(var);
             }
             else
             {
                assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
-               (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
+               (*mirrhs) += mircoef[v] * SCIPvarGetUbLocal(var);
             }
          }
       }
@@ -7688,9 +7911,18 @@ void roundMIRRow(
          zidx =  SCIPvarGetProbindex(vbz[vbidx]);
          assert(0 <= zidx && zidx < v);
 
-         (*mirrhs) += cutaj * vbd[vbidx];
-         mircoef[zidx] -= cutaj * vbb[vbidx];
-         (*cutactivity) -= cutaj * vbb[vbidx] * SCIPvarGetLPSol(vbz[vbidx]);
+         (*mirrhs) += mircoef[v] * vbd[vbidx];
+         mircoef[zidx] -= mircoef[v] * vbb[vbidx];
+         (*cutactivity) -= mircoef[v] * vbb[vbidx] * SCIPvarGetLPSol(vbz[vbidx]);
+
+         /* add variable to sparsity pattern */
+         if( !varused[zidx] )
+         {
+            assert(*nvarinds < prob->nvars);
+            varused[zidx] = TRUE;
+            varinds[*nvarinds] = zidx;
+            (*nvarinds)++;
+         }
       }
    }
 }
@@ -7719,19 +7951,16 @@ void substituteMIRRow(
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
+   int*                  rowinds,            /**< sparsity pattern of used rows */
+   int                   nrowinds,           /**< number of used rows */
    SCIP_Real             f0,                 /**< fracional value of rhs */
    SCIP_Real*            cutactivity         /**< pointer to update the activity of the resulting cut */
    )
 {
-   SCIP_ROW* row;
    SCIP_Real onedivoneminusf0;
-   SCIP_Real ar;
-   SCIP_Real downar;
-   SCIP_Real cutar;
-   SCIP_Real fr;
-   SCIP_Real mul;
-   int idx;
-   int r;
    int i;
 
    assert(lp != NULL);
@@ -7740,16 +7969,28 @@ void substituteMIRRow(
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
    assert(slacksign != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
+   assert(rowinds != NULL);
    assert(0.0 < f0 && f0 < 1.0);
    assert(cutactivity != NULL);
 
    onedivoneminusf0 = 1.0 / (1.0 - f0);
-   for( r = 0; r < lp->nrows; ++r )
+   for( i = 0; i < nrowinds; i++ )
    {
-      /* unused slacks can be ignored */
-      if( slacksign[r] == 0 )
-         continue;
+      SCIP_ROW* row;
+      SCIP_Real ar;
+      SCIP_Real downar;
+      SCIP_Real cutar;
+      SCIP_Real fr;
+      SCIP_Real mul;
+      int idx;
+      int r;
+      int j;
 
+      r = rowinds[i];
+      assert(0 <= r && r < lp->nrows);
       assert(slacksign[r] == -1 || slacksign[r] == +1);
       assert(!SCIPsetIsZero(set, weights[r]));
 
@@ -7801,15 +8042,23 @@ void substituteMIRRow(
       mul = -slacksign[r] * cutar;
 
       /* add the slack's definition multiplied with a起j to the cut */
-      for( i = 0; i < row->len; ++i )
+      for( j = 0; j < row->len; ++j )
       {
-         assert(row->cols[i] != NULL);
-         assert(row->cols[i]->var != NULL);
-         assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-         assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-         assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
-         idx = row->cols[i]->var_probindex;
-         mircoef[idx] += mul * row->vals[i];
+         assert(row->cols[j] != NULL);
+         assert(row->cols[j]->var != NULL);
+         assert(SCIPvarGetStatus(row->cols[j]->var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetCol(row->cols[j]->var) == row->cols[j]);
+         assert(SCIPvarGetProbindex(row->cols[j]->var) == row->cols[j]->var_probindex);
+         idx = row->cols[j]->var_probindex;
+         mircoef[idx] += mul * row->vals[j];
+
+         /* update sparsity pattern */
+         if( !varused[idx] )
+         {
+            varused[idx] = TRUE;
+            varinds[*nvarinds] = idx;
+            (*nvarinds)++;
+         }
       }
 
       /* update the activity: we have to add  mul * a*x^  to the cut's activity (row activity = a*x^ + c) */
@@ -7818,15 +8067,31 @@ void substituteMIRRow(
       /* move slack's constant to the right hand side */
       if( slacksign[r] == +1 )
       {
+ 	 SCIP_Real rhs;
+
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a起r * (rhs - c) to the right hand side */
          assert(!SCIPsetIsInfinity(set, row->rhs));
-         (*mirrhs) -= cutar * (row->rhs - row->constant);
+	 rhs = row->rhs - row->constant;
+	 if( row->integral )
+	 {
+	    /* the right hand side was implicitly rounded down in row aggregation */
+	    rhs = SCIPsetFeasFloor(set, rhs);
+	 }
+         *mirrhs -= cutar * rhs;
       }
       else
       {
+ 	 SCIP_Real lhs;
+
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a起r * (c - lhs) to the right hand side */
          assert(!SCIPsetIsInfinity(set, -row->lhs));
-         (*mirrhs) -= cutar * (row->constant - row->lhs);
+	 lhs = row->lhs - row->constant;
+         if( row->integral )
+	 {
+	    /* the left hand side was implicitly rounded up in row aggregation */
+	    lhs = SCIPsetFeasCeil(set, lhs);
+	 }
+	 *mirrhs += cutar * lhs;
       }
    }
 
@@ -7895,6 +8160,11 @@ SCIP_RETCODE SCIPlpCalcMIR(
    int* slacksign;
    int* varsign;
    int* boundtype;
+   SCIP_Bool* varused;
+   int* varinds;
+   int* rowinds;
+   int nvarinds;
+   int nrowinds;
    SCIP_Real rhs;
    SCIP_Real downrhs;
    SCIP_Real f0;
@@ -7924,20 +8194,24 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &slacksign, lp->nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varsign, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &varused, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &varinds, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
 
    /* calculate the row summation */
    sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
-      maxweightrange, mircoef, &rhs, slacksign, &emptyrow, &localrowsused);
+      maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
+      &emptyrow, &localrowsused);
    assert(allowlocal || !localrowsused);
    *cutislocal = localrowsused;
    if( emptyrow )
       goto TERMINATE;
    SCIPdebug(printMIR(prob, mircoef, rhs));
-   
-   /* remove all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
+
+   /* remove all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
     */
-   cleanupMIRRow(set, prob, mircoef, &rhs, *cutislocal);
+   cleanupMIRRow(set, prob, mircoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
    SCIPdebug(printMIR(prob, mircoef, rhs));
 
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
@@ -7956,7 +8230,8 @@ SCIP_RETCODE SCIPlpCalcMIR(
     *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
    SCIP_CALL( transformMIRRow(set, stat, prob, boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, 
-         boundtypesfortrans, minfrac, maxfrac, mircoef, &rhs, varsign, boundtype, &freevariable, &localbdsused) );
+         boundtypesfortrans, minfrac, maxfrac, mircoef, &rhs, varused, varinds, &nvarinds, varsign, boundtype,
+         &freevariable, &localbdsused) );
    assert(allowlocal || !localbdsused);
    *cutislocal = *cutislocal || localbdsused;
 
@@ -8001,7 +8276,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
       goto TERMINATE;
 
    *mirrhs = downrhs;
-   roundMIRRow(set, prob, mircoef, mirrhs, varsign, boundtype, f0, cutactivity);
+   roundMIRRow(set, prob, mircoef, mirrhs, varused, varinds, &nvarinds, varsign, boundtype, f0, cutactivity);
    SCIPdebug(printMIR(prob, mircoef, *mirrhs));
 
    /* substitute aggregated slack variables:
@@ -8018,8 +8293,15 @@ SCIP_RETCODE SCIPlpCalcMIR(
     *
     * Substitute a起r * s_r by adding a起r times the slack's definition to the cut.
     */
-   substituteMIRRow(set, stat, lp, weights, scale, mircoef, mirrhs, slacksign, f0, cutactivity);
+   substituteMIRRow(set, stat, lp, weights, scale, mircoef, mirrhs, slacksign,
+                    varused, varinds, &nvarinds, rowinds, nrowinds, f0, cutactivity);
    SCIPdebug(printMIR(prob, mircoef, *mirrhs));
+
+   /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
+    * prevent numerical rounding errors
+    */
+   cleanupMIRRow(set, prob, mircoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
+   SCIPdebug(printMIR(prob, mircoef, rhs));
 
    *success = TRUE;
 
@@ -8037,9 +8319,14 @@ SCIP_RETCODE SCIPlpCalcMIR(
 
  TERMINATE:
    /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &rowinds);
+   SCIPsetFreeBufferArray(set, &varinds);
+   SCIPsetFreeBufferArray(set, &varused);
    SCIPsetFreeBufferArray(set, &boundtype);
    SCIPsetFreeBufferArray(set, &varsign);
    SCIPsetFreeBufferArray(set, &slacksign);
+
+   /**@todo pass the sparsity pattern to the calling method in order to speed up the calling method's loops */
 
    return SCIP_OKAY;
 }
@@ -8057,16 +8344,16 @@ void sumStrongCGRow(
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size prob->nvars */
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint; size prob->nvars */
+   int*                  varinds,            /**< array to store sparsity pattern of non-zero MIR coefficients; size prob->nvars */
+   int*                  nvarinds,           /**< pointer to store number of non-zero MIR coefficients */
+   int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
+   int*                  nrowinds,           /**< pointer to store number of used rows */
    SCIP_Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
    SCIP_Bool*            localrowsused       /**< pointer to store whether local rows were used in summation */
    )
 {
-   SCIP_ROW* row;
-   SCIP_Real weight;
-   SCIP_Real absweight;
    SCIP_Real maxweight;
-   int idx;
-   int r;
    int i;
 
    assert(prob != NULL);
@@ -8077,25 +8364,41 @@ void sumStrongCGRow(
    assert(strongcgcoef != NULL);
    assert(strongcgrhs != NULL);
    assert(slacksign != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
+   assert(rowinds != NULL);
+   assert(nrowinds != NULL);
    assert(emptyrow != NULL);
    assert(localrowsused != NULL);
 
-   /* search the maximal absolute weight */
-   maxweight = 0.0;
-   for( r = 0; r < lp->nrows; ++r )
-   {
-      weight = scale * weights[r];
-      absweight = ABS(weight);
-      maxweight = MAX(maxweight, absweight);
-   }
+   *nvarinds = 0;
+   *nrowinds = 0;
+
+   /* initialize varused array */
+   BMSclearMemoryArray(varused, prob->nvars);
+
+   /* search the maximal absolute weight and calculate the row sparsity pattern */
+   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds);
+   maxweight *= ABS(scale);
 
    /* calculate the row summation */
    BMSclearMemoryArray(strongcgcoef, prob->nvars);
    *strongcgrhs = 0.0;
    *emptyrow = TRUE;
    *localrowsused = FALSE;
-   for( r = 0; r < lp->nrows; ++r )
+   for( i = 0; i < *nrowinds; i++ )
    {
+      SCIP_ROW* row;
+      SCIP_Real weight;
+      SCIP_Real absweight;
+      SCIP_Bool skiprow;
+      int r;
+
+      r = rowinds[i];
+      assert(0 <= i && i < lp->nrows);
+      assert(weights[r] != 0.0);
+
       row = lp->rows[r];
       assert(row != NULL);
       assert(row->len == 0 || row->cols != NULL);
@@ -8108,11 +8411,11 @@ void sumStrongCGRow(
        */
       weight = scale * weights[r];
       absweight = ABS(weight);
+      skiprow = FALSE;
       if( !row->modifiable && (allowlocal || !row->local)
          && absweight * maxweightrange >= maxweight && !SCIPsetIsSumZero(set, weight) )
       {
-         *emptyrow = FALSE;
-         *localrowsused = *localrowsused || row->local;
+         SCIP_Bool uselhs;
 
          if( row->integral )
          { 
@@ -8121,15 +8424,9 @@ void sumStrongCGRow(
              * If possible, use the side that leads to a positive slack value in the summation. 
              */
             if( SCIPsetIsInfinity(set, row->rhs) || (!SCIPsetIsInfinity(set, -row->lhs) && weight < 0.0) )
-            {
-               slacksign[r] = -1;
-               (*strongcgrhs) += weight * SCIPsetFeasCeil(set, row->lhs - row->constant); /* row is integral: round left hand side up */
-            }
+               uselhs = TRUE;
             else
-            {
-               slacksign[r] = +1;
-               (*strongcgrhs) += weight * SCIPsetFeasFloor(set, row->rhs - row->constant); /* row is integral: round right hand side down */
-            }
+               uselhs = FALSE;
          }
          else
          {
@@ -8138,43 +8435,40 @@ void sumStrongCGRow(
              * in order to get a positive slack variable in the summation.
              * If not possible, ignore row in summation.
              */
-            if( weight > 0.0 && !SCIPsetIsInfinity(set, row->rhs) )
-            {
-               slacksign[r] = +1;
-               (*strongcgrhs) += weight * (row->rhs - row->constant);
-            }
-            else if( weight < 0.0 && !SCIPsetIsInfinity(set, -row->lhs) )
-            {
-               slacksign[r] = -1;
-               (*strongcgrhs) += weight * (row->lhs - row->constant);
-            }
+            if( weight < 0.0 && !SCIPsetIsInfinity(set, -row->lhs) )
+               uselhs = TRUE;
+            else if( weight > 0.0 && !SCIPsetIsInfinity(set, row->rhs) )
+               uselhs = FALSE;
             else
-            {
-               slacksign[r] = 0;
-               continue;
-            }
+               skiprow = TRUE;
          }
 
-         /* add the row coefficients to the sum */
-         for( i = 0; i < row->len; ++i )
+         if( !skiprow )
          {
-            assert(row->cols[i] != NULL);
-            assert(row->cols[i]->var != NULL);
-            assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-            assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-            assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
-            idx = row->cols[i]->var_probindex;
-            assert(0 <= idx && idx < prob->nvars);
-            strongcgcoef[idx] += weight * row->vals[i];
-         }
+            /* add the row to the aggregation */
+            addRowToAggregation(set, strongcgcoef, strongcgrhs, slacksign, varused, varinds, nvarinds, row, weight, uselhs);
+            *emptyrow = FALSE;
+            *localrowsused = *localrowsused || row->local;
 
-         SCIPdebugMessage("strong CG: %d: row <%s>, lhs = %g, rhs = %g, scale = %g, weight = %g, slacksign = %d -> rhs = %g\n",
-            r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
-            scale, weights[r], slacksign[r], *strongcgrhs);
-         SCIPdebug(SCIProwPrint(row, NULL));
+            SCIPdebugMessage("strong CG: %d: row <%s>, lhs = %g, rhs = %g, scale = %g, weight = %g, slacksign = %d -> rhs = %g\n",
+                             r, SCIProwGetName(row), row->lhs - row->constant, row->rhs - row->constant, 
+                             scale, weights[r], slacksign[r], *strongcgrhs);
+            SCIPdebug(SCIProwPrint(row, NULL));
+         }
       }
       else
+         skiprow = TRUE;
+
+      if( skiprow )
+      {
+         /* remove row from sparsity pattern */
+         rowinds[i] = rowinds[(*nrowinds)-1];
+         (*nrowinds)--;
+         i--;
+#ifndef NDEBUG
          slacksign[r] = 0;
+#endif
+      }
    }
 }
 
@@ -8203,6 +8497,9 @@ void transformStrongCGRow(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable:
                                               *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
@@ -8210,17 +8507,14 @@ void transformStrongCGRow(
    SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
    )
 {
-   SCIP_VAR* var;
-   SCIP_Real varsol;
-   SCIP_Real bestlb;
-   SCIP_Real bestub;
-   int bestlbtype;
-   int bestubtype;
-   int v;
+   int i;
 
    assert(prob != NULL);
    assert(strongcgcoef != NULL);
    assert(strongcgrhs != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
    assert(varsign != NULL);
    assert(boundtype != NULL);
    assert(freevariable != NULL);
@@ -8229,23 +8523,52 @@ void transformStrongCGRow(
    *freevariable = FALSE;
    *localbdsused = FALSE;
    
-   /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
-    * substitute integral variables with best standard bound (lb, ub);
-    * start with continuous variables, because using variable bounds can affect the untransformed integral
-    * variables, and these changes have to be incorporated in the transformation of the integral variables
-    */
-   for( v = prob->nvars-1; v >= 0; --v )
+#ifndef NDEBUG
+   /* in debug mode, make sure that the whole array is initialized with invalid values */
+   for( i = 0; i < prob->nvars; i++ )
    {
+      varsign[i] = 0;
+      boundtype[i] = -1;
+   }
+#endif
+
+   /* start with continuous variables, because using variable bounds can affect the untransformed integral
+    * variables, and these changes have to be incorporated in the transformation of the integral variables
+    * (continuous variables have largest problem indices!)
+    */
+   SCIPsortDownInt(varinds, *nvarinds);
+
+   /* substitute continuous variables with best standard or variable bound (lb, ub, vlb or vub),
+    * substitute integral variables with best standard bound (lb, ub)
+    */
+   for( i = 0; i < *nvarinds; i++ )
+   {
+      SCIP_VAR* var;
+      SCIP_Real varsol;
+      SCIP_Real bestlb;
+      SCIP_Real bestub;
       SCIP_Bool uselb;
+      int bestlbtype;
+      int bestubtype;
+      int v;
+
+      v = varinds[i];
+      assert(0 <= v && v < prob->nvars);
+      assert(varused[v]);
 
       var = prob->vars[v];
       assert(v == SCIPvarGetProbindex(var));
 
-      /* ignore variables that don't exist in the strong CG row */
+      /* due to variable bound usage cancellation may occur */
       if( SCIPsetIsZero(set, strongcgcoef[v]) )
       {
          varsign[v] = +1;
          boundtype[v] = -1;
+         strongcgcoef[v] = 0.0;
+         varused[v] = FALSE;
+         varinds[i] = varinds[(*nvarinds)-1];
+         (*nvarinds)--;
+         i--;
          continue;
       }
 
@@ -8332,22 +8655,22 @@ void transformStrongCGRow(
          uselb = TRUE;
       else if( SCIPsetIsGT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
          uselb = FALSE;
+      else if( bestlbtype == -1 )  /* prefer global standard bounds */
+         uselb = TRUE;
+      else if( bestubtype == -1 )  /* prefer global standard bounds */
+         uselb = FALSE;
+      else if( bestlbtype >= 0 )   /* prefer variable bounds over local bounds */
+         uselb = TRUE;
+      else if( bestubtype >= 0 )   /* prefer variable bounds over local bounds */
+         uselb = FALSE;
       else
-      {
-         if( bestlbtype >= 0 )       /* prefer variable bounds */
-            uselb = TRUE;
-         else if( bestubtype >= 0 )  /* prefer variable bounds */
-            uselb = FALSE;
-         else if( bestlbtype >= -1 ) /* prefer global bounds over local bounds */
-            uselb = TRUE;
-         else if( bestubtype >= -1 ) /* prefer global bounds over local bounds */
-            uselb = FALSE;
-         else
-            uselb = TRUE;            /* no decision yet? just use lower bound */
-      }
+         uselb = TRUE;             /* no decision yet? just use lower bound */
 
+      /* perform bound substitution */
       if( uselb )
       {
+         assert(!SCIPsetIsInfinity(set, -bestlb));
+            
          /* use lower bound as transformation bound: x'_j := x_j - lb_j */
          boundtype[v] = bestlbtype;
          varsign[v] = +1;
@@ -8372,10 +8695,21 @@ void transformStrongCGRow(
                
             (*strongcgrhs) -= strongcgcoef[v] * vlbconsts[bestlbtype];
             strongcgcoef[zidx] += strongcgcoef[v] * vlbcoefs[bestlbtype];
+
+            /* update sparsity pattern */
+            if( !varused[zidx] )
+            {
+               assert(*nvarinds < prob->nvars);
+               varused[zidx] = TRUE;
+               varinds[*nvarinds] = zidx;
+               (*nvarinds)++;
+            }
          }
       }
       else
       {
+         assert(!SCIPsetIsInfinity(set, bestub));
+
          /* use upper bound as transformation bound: x'_j := ub_j - x_j */
          boundtype[v] = bestubtype;
          varsign[v] = -1;
@@ -8400,11 +8734,22 @@ void transformStrongCGRow(
                
             (*strongcgrhs) -= strongcgcoef[v] * vubconsts[bestubtype];
             strongcgcoef[zidx] += strongcgcoef[v] * vubcoefs[bestubtype];
+
+            /* update sparsity pattern */
+            if( !varused[zidx] )
+            {
+               assert(*nvarinds < prob->nvars);
+               varused[zidx] = TRUE;
+               varinds[*nvarinds] = zidx;
+               (*nvarinds)++;
+            }
          }
       }
 
+#ifndef NDEBUG
       if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
          assert(strongcgcoef[v]*varsign[v] > 0.0);
+#endif
 
       SCIPdebugMessage("strong CG var <%s>: varsign=%d, boundtype=%d, strongcgcoef=%g, lb=%g, ub=%g -> rhs=%g\n", 
          SCIPvarGetName(var), varsign[v], boundtype[v], strongcgcoef[v], bestlb, bestub, *strongcgrhs);
@@ -8450,6 +8795,9 @@ void roundStrongCGRow(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
    SCIP_Real             f0,                 /**< fracional value of rhs */
@@ -8457,19 +8805,16 @@ void roundStrongCGRow(
    SCIP_Real*            cutactivity         /**< pointer to store the activity of the resulting cut */
    )
 {
-   SCIP_VAR* var;
    SCIP_Real onedivoneminusf0;
-   SCIP_Real pj;
-   SCIP_Real aj;
-   SCIP_Real downaj;
-   SCIP_Real cutaj;
-   SCIP_Real fj;
    int nintvars;
-   int v;
+   int i;
 
    assert(prob != NULL);
    assert(strongcgcoef != NULL);
    assert(strongcgrhs != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
    assert(varsign != NULL);
    assert(0.0 < f0 && f0 < 1.0);
    assert(cutactivity != NULL);
@@ -8478,9 +8823,33 @@ void roundStrongCGRow(
    onedivoneminusf0 = 1.0 / (1.0 - f0);
    nintvars = prob->nvars - prob->ncontvars;
 
+   /* start with integer variables, since the variable bound substitutions can add up to the integer cut coefficients;
+    * loop backwards to be able to delete coefficients from the sparsity pattern
+    */
+   SCIPsortDownInt(varinds, *nvarinds);
+
    /* integer variables */
-   for( v = 0; v < nintvars; ++v )
+   for( i = *nvarinds-1; i >= 0; i-- )
    {
+      SCIP_VAR* var;
+      SCIP_Real aj;
+      SCIP_Real downaj;
+      SCIP_Real cutaj;
+      SCIP_Real fj;
+      int v;
+
+      v = varinds[i];
+      assert(0 <= v && v < prob->nvars);
+      assert(varused[v]);
+
+      /* stop this loop if we reached the continuous variables */
+      if( v >= nintvars )
+      {
+         assert(!SCIPvarIsIntegral(prob->vars[v]));
+         assert(SCIPvarGetType(prob->vars[v]) == SCIP_VARTYPE_CONTINUOUS);
+         break;
+      }
+
       var = prob->vars[v];
       assert(var != NULL);
       assert(SCIPvarIsIntegral(var));
@@ -8497,64 +8866,92 @@ void roundStrongCGRow(
          cutaj = varsign[v] * downaj; /* a起j */
       else
       {
+         SCIP_Real pj;
+
          pj = SCIPsetCeil(set, k * (fj - f0) * onedivoneminusf0);
          assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj almost equal to f0 */ 
          assert(pj <= k);
          cutaj = varsign[v] * (downaj + pj / (k + 1)); /* a起j */
       }
-      if( SCIPsetIsZero(set, cutaj) )
-         strongcgcoef[v] = 0.0;
-      else
-      {
-         strongcgcoef[v] = cutaj;
-         (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
 
-         /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
-         if( varsign[v] == +1 )
+
+      /* remove zero cut coefficients from sparsity pattern */
+      if( SCIPsetIsZero(set, cutaj) )
+      {
+         strongcgcoef[v] = 0.0;
+         varused[v] = FALSE;
+         varinds[i] = varinds[(*nvarinds)-1];
+         (*nvarinds)--;
+         continue;
+      }
+
+      strongcgcoef[v] = cutaj;
+      (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
+
+      /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
+      if( varsign[v] == +1 )
+      {
+         /* lower bound was used */
+         if( boundtype[v] == -1 )
          {
-            /* lower bound was used */
-            if( boundtype[v] == -1 )
-            {
-               assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
-               (*strongcgrhs) += cutaj * SCIPvarGetLbGlobal(var);
-            }
-            else
-            {
-               assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
-               (*strongcgrhs) += cutaj * SCIPvarGetLbLocal(var);
-            }
+            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
+            (*strongcgrhs) += cutaj * SCIPvarGetLbGlobal(var);
          }
          else
          {
-            /* upper bound was used */
-            if( boundtype[v] == -1 )
-            {
-               assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
-               (*strongcgrhs) += cutaj * SCIPvarGetUbGlobal(var);
-            }
-            else
-            {
-               assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
-               (*strongcgrhs) += cutaj * SCIPvarGetUbLocal(var);
-            }
+            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
+            (*strongcgrhs) += cutaj * SCIPvarGetLbLocal(var);
+         }
+      }
+      else
+      {
+         /* upper bound was used */
+         if( boundtype[v] == -1 )
+         {
+            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
+            (*strongcgrhs) += cutaj * SCIPvarGetUbGlobal(var);
+         }
+         else
+         {
+            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
+            (*strongcgrhs) += cutaj * SCIPvarGetUbLocal(var);
          }
       }
    }
 
    /* continuous variables */
-   for( v = nintvars; v < prob->nvars; ++v )
+   for( ; i >= 0; i-- )
    {
-      var = prob->vars[v];
-      assert(var != NULL);
-      assert(!SCIPvarIsIntegral(var));
-      assert(SCIPvarGetProbindex(var) == v);
-      assert(varsign[v] == +1 || varsign[v] == -1);
+      int v;
 
-      /* calculate the coefficient in the retransformed cut */
-      aj = varsign[v] * strongcgcoef[v]; /* a'_j */
+      v = varinds[i];
+      assert(0 <= v && v < prob->nvars);
+      assert(varused[v]);
 
-      assert( aj >= 0.0 );
+#ifndef NDEBUG
+      /* in a strong CG cut, cut coefficients of continuous variables are always zero; check this in debug mode */
+      {
+         SCIP_VAR* var;
+         SCIP_Real aj;
+
+         var = prob->vars[v];
+         assert(var != NULL);
+         assert(!SCIPvarIsIntegral(var));
+         assert(SCIPvarGetProbindex(var) == v);
+         assert(varsign[v] == +1 || varsign[v] == -1);
+
+         /* calculate the coefficient in the retransformed cut */
+         aj = varsign[v] * strongcgcoef[v]; /* a'_j */
+         assert(aj >= 0.0);
+      }
+#endif
+
       strongcgcoef[v] = 0.0;
+
+      /* remove zero cut coefficients from sparsity pattern */
+      varused[v] = FALSE;
+      varinds[i] = varinds[(*nvarinds)-1];
+      (*nvarinds)--;
    }
 }
 
@@ -8582,21 +8979,17 @@ void substituteStrongCGRow(
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
+   SCIP_Bool*            varused,            /**< array to flag variables that appear in the MIR constraint */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
+   int*                  rowinds,            /**< sparsity pattern of used rows */
+   int                   nrowinds,           /**< number of used rows */
    SCIP_Real             f0,                 /**< fracional value of rhs */
    SCIP_Real             k,                  /**< factor to strengthen strongcg cut */
    SCIP_Real*            cutactivity         /**< pointer to update the activity of the resulting cut */
    )
 {
-   SCIP_ROW* row;
    SCIP_Real onedivoneminusf0;
-   SCIP_Real pr;
-   SCIP_Real ar;
-   SCIP_Real downar;
-   SCIP_Real cutar;
-   SCIP_Real fr;
-   SCIP_Real mul;
-   int idx;
-   int r;
    int i;
 
    assert(lp != NULL);
@@ -8605,17 +8998,30 @@ void substituteStrongCGRow(
    assert(strongcgcoef != NULL);
    assert(strongcgrhs != NULL);
    assert(slacksign != NULL);
+   assert(varused != NULL);
+   assert(varinds != NULL);
+   assert(nvarinds != NULL);
+   assert(rowinds != NULL);
    assert(0.0 < f0 && f0 < 1.0);
    assert(cutactivity != NULL);
  
    onedivoneminusf0 = 1.0 / (1.0 - f0);
   
-   for( r = 0; r < lp->nrows; ++r )
+   for( i = 0; i < nrowinds; i++ )
    {
-      /* unused slacks can be ignored */
-      if( slacksign[r] == 0 )
-         continue;
+      SCIP_ROW* row;
+      SCIP_Real pr;
+      SCIP_Real ar;
+      SCIP_Real downar;
+      SCIP_Real cutar;
+      SCIP_Real fr;
+      SCIP_Real mul;
+      int idx;
+      int r;
+      int j;
 
+      r = rowinds[i];
+      assert(0 <= r && r < lp->nrows);
       assert(slacksign[r] == -1 || slacksign[r] == +1);
       assert(!SCIPsetIsZero(set, weights[r]));
 
@@ -8663,15 +9069,23 @@ void substituteStrongCGRow(
       mul = -slacksign[r] * cutar;
 
       /* add the slack's definition multiplied with a起j to the cut */
-      for( i = 0; i < row->len; ++i )
+      for( j = 0; j < row->len; ++j )
       {
-         assert(row->cols[i] != NULL);
-         assert(row->cols[i]->var != NULL);
-         assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-         assert(SCIPvarGetCol(row->cols[i]->var) == row->cols[i]);
-         assert(SCIPvarGetProbindex(row->cols[i]->var) == row->cols[i]->var_probindex);
-         idx = row->cols[i]->var_probindex;
-         strongcgcoef[idx] += mul * row->vals[i];
+         assert(row->cols[j] != NULL);
+         assert(row->cols[j]->var != NULL);
+         assert(SCIPvarGetStatus(row->cols[j]->var) == SCIP_VARSTATUS_COLUMN);
+         assert(SCIPvarGetCol(row->cols[j]->var) == row->cols[j]);
+         assert(SCIPvarGetProbindex(row->cols[j]->var) == row->cols[j]->var_probindex);
+         idx = row->cols[j]->var_probindex;
+         strongcgcoef[idx] += mul * row->vals[j];
+
+         /* update sparsity pattern */
+         if( !varused[idx] )
+         {
+            varused[idx] = TRUE;
+            varinds[*nvarinds] = idx;
+            (*nvarinds)++;
+         }
       }
 
       /* update the activity: we have to add  mul * a*x^  to the cut's activity (row activity = a*x^ + c) */
@@ -8691,7 +9105,6 @@ void substituteStrongCGRow(
 	    rhs = SCIPsetFeasFloor(set, rhs);
 	 }
          *strongcgrhs -= cutar * rhs;
-	 
       }
       else
       {
@@ -8727,6 +9140,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
@@ -8739,6 +9153,11 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    int* slacksign;
    int* varsign;
    int* boundtype;
+   SCIP_Bool* varused;
+   int* varinds;
+   int* rowinds;
+   int nvarinds;
+   int nrowinds;
    SCIP_Real rhs;
    SCIP_Real downrhs;
    SCIP_Real f0;
@@ -8770,10 +9189,14 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_CALL( SCIPsetAllocBufferArray(set, &slacksign, lp->nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varsign, prob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtype, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &varused, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &varinds, prob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &rowinds, lp->nrows) );
 
    /* calculate the row summation */
    sumStrongCGRow(set, prob, lp, weights, scale, allowlocal, 
-      maxweightrange, strongcgcoef, &rhs, slacksign, &emptyrow, &localrowsused);
+      maxweightrange, strongcgcoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
+      &emptyrow, &localrowsused);
    assert(allowlocal || !localrowsused);
    *cutislocal = *cutislocal || localrowsused;
    if( emptyrow )
@@ -8783,7 +9206,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    /* remove all nearly-zero coefficients from strong CG row and relaxes the right hand side correspondingly in order to
     *  prevent numerical rounding errors
     */
-   cleanupMIRRow(set, prob, strongcgcoef, &rhs, *cutislocal);
+   cleanupMIRRow(set, prob, strongcgcoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
    SCIPdebug(printMIR(prob, strongcgcoef, rhs));
 
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
@@ -8802,19 +9225,19 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     *   a_{zu_j} := a_{zu_j} + a_j * bu_j
     */
    transformStrongCGRow(set, stat, prob, boundswitch, usevbds, allowlocal, 
-      strongcgcoef, &rhs, varsign, boundtype, &freevariable, &localbdsused);
+      strongcgcoef, &rhs, varused, varinds, &nvarinds, varsign, boundtype, &freevariable, &localbdsused);
    assert(allowlocal || !localbdsused);
    *cutislocal = *cutislocal || localbdsused;
    if( freevariable )
       goto TERMINATE;
    SCIPdebug(printMIR(prob, strongcgcoef, rhs));
 
-   /* Calculate 
-    *   fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j)  
-    *   integer k >= 1 with 1/(k + 1) <= f_0 < 1/k  
-    *   (=> k = up(1/f_0) + 1)
-    *   integer 1 <= p_j <= k with f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k) 
-    *   (=> p_j = up( (f_j - f_0)/((1 - f_0)/k) ))
+   /* Calculate
+    *  - fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j)  
+    *  - integer k >= 1 with 1/(k + 1) <= f_0 < 1/k  
+    *    (=> k = up(1/f_0) + 1)
+    *  - integer 1 <= p_j <= k with f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k) 
+    *    (=> p_j = up( (f_j - f_0)/((1 - f_0)/k) ))
     * and derive strong CG cut 
     *   a~*x' <= (k+1) * down(b)
     * integers :  a~_j = down(a'_j)                , if f_j <= f_0
@@ -8842,14 +9265,14 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     *   a起{zl_j} := a起{zl_j} - a~_j * bl_j == a起{zl_j} - a起j * bl_j, or
     *   a起{zu_j} := a起{zu_j} + a~_j * bu_j == a起{zu_j} - a起j * bu_j
     */
-   downrhs = SCIPsetFloor(set, rhs);
+   downrhs = SCIPsetSumFloor(set, rhs);
    f0 = rhs - downrhs;
-   if( f0 < minfrac )
+   if( f0 < minfrac || f0 > maxfrac )
       goto TERMINATE;
    k = SCIPsetCeil(set, 1.0 / f0) - 1;
 
    *strongcgrhs = downrhs;
-   roundStrongCGRow(set, prob, strongcgcoef, strongcgrhs, varsign, boundtype, f0, k, cutactivity);
+   roundStrongCGRow(set, prob, strongcgcoef, strongcgrhs, varused, varinds, &nvarinds, varsign, boundtype, f0, k, cutactivity);
    SCIPdebug(printMIR(prob, strongcgcoef, *strongcgrhs));
 
    /* substitute aggregated slack variables:
@@ -8866,8 +9289,15 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     *
     * Substitute a起r * s_r by adding a起r times the slack's definition to the cut.
     */
-   substituteStrongCGRow(set, stat, lp, weights, scale, strongcgcoef, strongcgrhs, slacksign, f0, k, cutactivity);
+   substituteStrongCGRow(set, stat, lp, weights, scale, strongcgcoef, strongcgrhs, slacksign,
+                         varused, varinds, &nvarinds, rowinds, nrowinds, f0, k, cutactivity);
    SCIPdebug(printMIR(prob, strongcgcoef, *strongcgrhs));
+
+   /* remove again all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
+    * prevent numerical rounding errors
+    */
+   cleanupMIRRow(set, prob, strongcgcoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
+   SCIPdebug(printMIR(prob, strongcgcoef, rhs));
 
    *success = TRUE;
    

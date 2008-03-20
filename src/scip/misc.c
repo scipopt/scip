@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.72 2008/03/07 17:14:52 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.73 2008/03/20 13:05:17 bzfpfend Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2474,6 +2474,12 @@ void SCIPsort(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortInt
+#define SORTTPL_KEYTYPE     int
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortIntPtr() via sort template */
 #define SORTTPL_METHOD      SCIPsortIntPtr
 #define SORTTPL_KEYTYPE     int
@@ -2609,6 +2615,13 @@ void SCIPsortDown(
 #define SORTTPL_METHOD      SCIPsortDownRealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownInt() via sort template */
+#define SORTTPL_METHOD      SCIPsortDownInt
+#define SORTTPL_KEYTYPE     int
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 

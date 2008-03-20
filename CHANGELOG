@@ -34,6 +34,7 @@ interface:
 - expand sorttpl.c by some parameters
 - added some downwards-sorting methods
 - changed some names for sorting methods
+- new parameter 'maxfrac' for SCIPcalcStrongCG()
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -55,6 +56,7 @@ features:
 - updated mmm.{test,solu}, mittelmann.{test,solu}, miplib3.solu, miplib.solu, shortmiplib.test and added mittelmann_current.test, mittelmann_old.test 
 - LPI now has a function SCIPgetSolverPointer() that returns a solver dependent pointer. This can be used to directly access the LP solver. 
   This should, of course, only be used by people that know exactly what they are doing.
+- improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})

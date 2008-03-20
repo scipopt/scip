@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.26 2007/06/27 14:34:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.27 2008/03/20 13:05:17 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -54,6 +54,7 @@
 #define ALLOWLOCAL                 TRUE
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
+#define MAXFRAC                    0.95
 
 
 /** separator data */
@@ -393,7 +394,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
          /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
-         SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC,
+         SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
