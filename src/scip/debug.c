@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.27 2007/11/15 10:53:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.28 2008/03/20 14:48:40 bzfpfets Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -73,7 +73,10 @@ SCIP_RETCODE readSolfile(
    file = fopen(solfilename, "r");
    if( file == NULL )
    {
+      char buf[1024];
       SCIPerrorMessage("cannot open solution file <%s> specified in scip/debug.h\n", solfilename);
+      strerror_r(errno, buf, 1024);
+      SCIPerrorMessage("%s: %s\n", solfilename, buf);
       return SCIP_NOFILE;
    }
 
