@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.264 2008/03/20 14:49:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.265 2008/03/20 14:54:27 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -36,6 +36,7 @@
 #include <math.h>
 #include <limits.h>
 #include <string.h>
+#include <errno.h>
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -12698,7 +12699,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for writing\n", fname);
       strerror_r(errno, buf, 1024);
-      SCIPerrorMessage("%s: %s\n", filename, buf);
+      SCIPerrorMessage("%s: %s\n", fname, buf);
       return SCIP_FILECREATEERROR;
    }
 
