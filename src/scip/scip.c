@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.444 2008/03/20 13:05:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.445 2008/03/20 14:56:54 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2586,7 +2586,10 @@ SCIP_RETCODE writeProblem(
       file = fopen(filename, "w");
       if( file == NULL )
       {
+	 char buf[1024];
          SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
+	 strerror_r(errno, buf, 1024);
+	 SCIPerrorMessage("%s: %s\n", filename, buf);
          return SCIP_FILECREATEERROR;
       }
    }
@@ -9718,8 +9721,10 @@ SCIP_RETCODE SCIPreadSol(
    file = SCIPfopen(fname, "r");
    if( file == NULL )
    {
+      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", fname);
-      SCIPerrorMessage("%s: %s\n", fname, strerror(errno));
+      strerror_r(errno, buf, 1024);
+      SCIPerrorMessage("%s: %s\n", fname, buf);
       return SCIP_NOFILE;
    }
 
@@ -9818,6 +9823,7 @@ SCIP_RETCODE SCIPreadSol(
       return SCIP_READERROR;
    }
 }
+
 /** writes current LP to a file */
 SCIP_RETCODE SCIPwriteLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -14631,7 +14637,10 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
       file = fopen(filename, "w");
       if( file == NULL )
       {
+	 char buf[1024];
          SCIPerrorMessage("cannot create file <%s>\n", filename);
+	 strerror_r(errno, buf, 1024);
+	 SCIPerrorMessage("%s: %s\n", filename, buf);
          return SCIP_FILECREATEERROR;
       }
    }
