@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.16 2007/06/06 11:25:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.17 2008/03/20 16:48:39 bzfberth Exp $"
 
 /**@file   branch_pscost.c
  * @brief  pseudo costs branching rule
@@ -68,7 +68,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
 {  /*lint --e{715}*/
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
-   SCIP_Real* lpcandsfrac;
    SCIP_Real bestscore;
    SCIP_Real bestrootdiff;
    int nlpcands;
@@ -83,7 +82,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    SCIPdebugMessage("Execlp method of pscost branching\n");
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands) );
    assert(nlpcands > 0);
 
    bestcand = -1;
