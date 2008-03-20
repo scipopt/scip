@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.262 2008/03/20 13:05:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.263 2008/03/20 14:29:43 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9315,6 +9315,9 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
 
  TERMINATE:
    /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &rowinds);
+   SCIPsetFreeBufferArray(set, &varinds);
+   SCIPsetFreeBufferArray(set, &varused);
    SCIPsetFreeBufferArray(set, &boundtype);
    SCIPsetFreeBufferArray(set, &varsign);
    SCIPsetFreeBufferArray(set, &slacksign);
