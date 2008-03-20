@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.265 2008/03/20 14:54:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.266 2008/03/20 16:47:15 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7691,8 +7691,7 @@ void roundMIRRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
-   SCIP_Real             f0,                 /**< fracional value of rhs */
-   SCIP_Real*            cutactivity         /**< pointer to store the activity of the resulting cut */
+   SCIP_Real             f0                  /**< fracional value of rhs */
    )
 {
    SCIP_Real onedivoneminusf0;
@@ -7707,9 +7706,7 @@ void roundMIRRow(
    assert(nvarinds != NULL);
    assert(varsign != NULL);
    assert(0.0 < f0 && f0 < 1.0);
-   assert(cutactivity != NULL);
 
-   *cutactivity = 0.0;
    onedivoneminusf0 = 1.0 / (1.0 - f0);
    nintvars = prob->nvars - prob->ncontvars;
 
@@ -7768,7 +7765,6 @@ void roundMIRRow(
       }
 
       mircoef[v] = cutaj;
-      (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
       
       /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
       if( varsign[v] == +1 )
@@ -7830,10 +7826,7 @@ void roundMIRRow(
          if( SCIPsetIsZero(set, cutaj) )
             mircoef[v] = 0.0;
          else
-         {
             mircoef[v] = cutaj;
-            (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
-         }
       }
 
       /* remove zero cut coefficients from sparsity pattern */
@@ -7914,7 +7907,6 @@ void roundMIRRow(
 
          (*mirrhs) += mircoef[v] * vbd[vbidx];
          mircoef[zidx] -= mircoef[v] * vbb[vbidx];
-         (*cutactivity) -= mircoef[v] * vbb[vbidx] * SCIPvarGetLPSol(vbz[vbidx]);
 
          /* add variable to sparsity pattern */
          if( !varused[zidx] )
@@ -7957,8 +7949,7 @@ void substituteMIRRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  rowinds,            /**< sparsity pattern of used rows */
    int                   nrowinds,           /**< number of used rows */
-   SCIP_Real             f0,                 /**< fracional value of rhs */
-   SCIP_Real*            cutactivity         /**< pointer to update the activity of the resulting cut */
+   SCIP_Real             f0                  /**< fracional value of rhs */
    )
 {
    SCIP_Real onedivoneminusf0;
@@ -7975,7 +7966,6 @@ void substituteMIRRow(
    assert(nvarinds != NULL);
    assert(rowinds != NULL);
    assert(0.0 < f0 && f0 < 1.0);
-   assert(cutactivity != NULL);
 
    onedivoneminusf0 = 1.0 / (1.0 - f0);
    for( i = 0; i < nrowinds; i++ )
@@ -8062,9 +8052,6 @@ void substituteMIRRow(
          }
       }
 
-      /* update the activity: we have to add  mul * a*x^  to the cut's activity (row activity = a*x^ + c) */
-      (*cutactivity) += mul * (SCIProwGetLPActivity(row, stat, lp) - row->constant);
-
       /* move slack's constant to the right hand side */
       if( slacksign[r] == +1 )
       {
@@ -8127,6 +8114,33 @@ void printMIR(
    printf(" <= %.6f (activity: %g)\n", mirrhs, activity);
 }
 #endif
+
+/** calculates the activity of the given MIR cut */
+static
+SCIP_Real getMIRRowActivity(
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
+   int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
+   int                   nvarinds            /**< number of non-zero MIR coefficients */
+   )
+{
+   SCIP_Real act;
+   int i;
+   
+   act = 0.0;
+   for( i = 0; i < nvarinds; i++ )
+   {
+      int v;
+
+      v = varinds[i];
+      assert(0 <= v && v < prob->nvars);
+      assert(mircoef[v] != 0.0);
+
+      act += mircoef[v] * SCIPvarGetLPSol(prob->vars[v]);
+   }
+
+   return act;
+}
 
 /* calculates a MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because these
  * rows cannot participate in a MIR cut.
@@ -8277,7 +8291,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
       goto TERMINATE;
 
    *mirrhs = downrhs;
-   roundMIRRow(set, prob, mircoef, mirrhs, varused, varinds, &nvarinds, varsign, boundtype, f0, cutactivity);
+   roundMIRRow(set, prob, mircoef, mirrhs, varused, varinds, &nvarinds, varsign, boundtype, f0);
    SCIPdebug(printMIR(prob, mircoef, *mirrhs));
 
    /* substitute aggregated slack variables:
@@ -8295,7 +8309,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
     * Substitute a起r * s_r by adding a起r times the slack's definition to the cut.
     */
    substituteMIRRow(set, stat, lp, weights, scale, mircoef, mirrhs, slacksign,
-                    varused, varinds, &nvarinds, rowinds, nrowinds, f0, cutactivity);
+                    varused, varinds, &nvarinds, rowinds, nrowinds, f0);
    SCIPdebug(printMIR(prob, mircoef, *mirrhs));
 
    /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
@@ -8304,19 +8318,9 @@ SCIP_RETCODE SCIPlpCalcMIR(
    cleanupMIRRow(set, prob, mircoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
    SCIPdebug(printMIR(prob, mircoef, rhs));
 
+   /* calculate cut activity */
+   *cutactivity = getMIRRowActivity(prob, mircoef, varinds, nvarinds);
    *success = TRUE;
-
-#ifndef NDEBUG
-   {
-      SCIP_Real act;
-      int i;
-
-      act = 0.0;
-      for( i = 0; i < prob->nvars; ++i )
-         act += mircoef[i] * SCIPvarGetLPSol(prob->vars[i]);
-      assert(EPSZ(SCIPrelDiff(act, *cutactivity), 1e-04)); /* the values only have to be roughly equal */
-   }
-#endif
 
  TERMINATE:
    /* free temporary memory */
@@ -8802,8 +8806,7 @@ void roundStrongCGRow(
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
    SCIP_Real             f0,                 /**< fracional value of rhs */
-   SCIP_Real             k,                  /**< factor to strengthen strongcg cut */
-   SCIP_Real*            cutactivity         /**< pointer to store the activity of the resulting cut */
+   SCIP_Real             k                   /**< factor to strengthen strongcg cut */
    )
 {
    SCIP_Real onedivoneminusf0;
@@ -8818,9 +8821,7 @@ void roundStrongCGRow(
    assert(nvarinds != NULL);
    assert(varsign != NULL);
    assert(0.0 < f0 && f0 < 1.0);
-   assert(cutactivity != NULL);
  
-   *cutactivity = 0.0;
    onedivoneminusf0 = 1.0 / (1.0 - f0);
    nintvars = prob->nvars - prob->ncontvars;
 
@@ -8887,7 +8888,6 @@ void roundStrongCGRow(
       }
 
       strongcgcoef[v] = cutaj;
-      (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
 
       /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
       if( varsign[v] == +1 )
@@ -8986,8 +8986,7 @@ void substituteStrongCGRow(
    int*                  rowinds,            /**< sparsity pattern of used rows */
    int                   nrowinds,           /**< number of used rows */
    SCIP_Real             f0,                 /**< fracional value of rhs */
-   SCIP_Real             k,                  /**< factor to strengthen strongcg cut */
-   SCIP_Real*            cutactivity         /**< pointer to update the activity of the resulting cut */
+   SCIP_Real             k                   /**< factor to strengthen strongcg cut */
    )
 {
    SCIP_Real onedivoneminusf0;
@@ -9004,7 +9003,6 @@ void substituteStrongCGRow(
    assert(nvarinds != NULL);
    assert(rowinds != NULL);
    assert(0.0 < f0 && f0 < 1.0);
-   assert(cutactivity != NULL);
  
    onedivoneminusf0 = 1.0 / (1.0 - f0);
   
@@ -9088,9 +9086,6 @@ void substituteStrongCGRow(
             (*nvarinds)++;
          }
       }
-
-      /* update the activity: we have to add  mul * a*x^  to the cut's activity (row activity = a*x^ + c) */
-      *cutactivity += mul * (SCIProwGetLPActivity(row, stat, lp) - row->constant);
 
       /* move slack's constant to the right hand side */
       if( slacksign[r] == +1 )
@@ -9273,7 +9268,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    k = SCIPsetCeil(set, 1.0 / f0) - 1;
 
    *strongcgrhs = downrhs;
-   roundStrongCGRow(set, prob, strongcgcoef, strongcgrhs, varused, varinds, &nvarinds, varsign, boundtype, f0, k, cutactivity);
+   roundStrongCGRow(set, prob, strongcgcoef, strongcgrhs, varused, varinds, &nvarinds, varsign, boundtype, f0, k);
    SCIPdebug(printMIR(prob, strongcgcoef, *strongcgrhs));
 
    /* substitute aggregated slack variables:
@@ -9291,7 +9286,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     * Substitute a起r * s_r by adding a起r times the slack's definition to the cut.
     */
    substituteStrongCGRow(set, stat, lp, weights, scale, strongcgcoef, strongcgrhs, slacksign,
-                         varused, varinds, &nvarinds, rowinds, nrowinds, f0, k, cutactivity);
+                         varused, varinds, &nvarinds, rowinds, nrowinds, f0, k);
    SCIPdebug(printMIR(prob, strongcgcoef, *strongcgrhs));
 
    /* remove again all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
@@ -9300,20 +9295,10 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    cleanupMIRRow(set, prob, strongcgcoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
    SCIPdebug(printMIR(prob, strongcgcoef, rhs));
 
+   /* calculate cut activity */
+   *cutactivity = getMIRRowActivity(prob, strongcgcoef, varinds, nvarinds);
    *success = TRUE;
    
-#ifndef NDEBUG
-   {
-      SCIP_Real act;
-      int i;
-
-      act = 0.0;
-      for( i = 0; i < prob->nvars; ++i )
-         act += strongcgcoef[i] * SCIPvarGetLPSol(prob->vars[i]);
-      assert(SCIPsetIsFeasEQ(set, act, *cutactivity));
-   }
-#endif
-
  TERMINATE:
    /* free temporary memory */
    SCIPsetFreeBufferArray(set, &rowinds);
