@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.3 2008/03/19 19:04:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.4 2008/03/20 15:00:36 bzfpfets Exp $"
 
 /**@file   reader_sos.c
  * @brief  SOS file reader
@@ -592,10 +592,13 @@ SCIP_RETCODE readSOSFile(
    assert(scip != NULL);
    assert(filename != NULL);
 
-   if (NULL == (fp = SCIPfopen(filename, "r")))
+   fp = SCIPfopen(filename, "r");
+   if (fp == NULL)
    {
+      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
+      strerror_r(errno, buf, 1024);
+      SCIPerrorMessage("%s: %s\n", filename, buf);
       return SCIP_NOFILE;
    }
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.5 2008/03/19 19:04:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.6 2008/03/20 15:00:36 bzfpfets Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -1098,8 +1098,10 @@ SCIP_RETCODE readOPBFile(
    opbinput->file = SCIPfopen(filename, "r");
    if( opbinput->file == NULL )
    {
+      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
+      strerror_r(errno, buf, 1024);
+      SCIPerrorMessage("%s: %s\n", filename, buf);
       return SCIP_NOFILE;
    }
 

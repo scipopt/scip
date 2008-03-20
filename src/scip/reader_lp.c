@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.48 2008/03/19 19:04:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.49 2008/03/20 15:00:36 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1551,8 +1551,10 @@ SCIP_RETCODE readLPFile(
    lpinput->file = SCIPfopen(filename, "r");
    if( lpinput->file == NULL )
    {
+      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
+      strerror_r(errno, buf, 1024);
+      SCIPerrorMessage("%s: %s\n", filename, buf);
       return SCIP_NOFILE;
    }
 

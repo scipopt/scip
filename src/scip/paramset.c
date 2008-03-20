@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.44 2008/03/19 19:04:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.45 2008/03/20 15:00:36 bzfpfets Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2035,8 +2035,10 @@ SCIP_RETCODE SCIPparamsetRead(
    file = fopen(filename, "r");
    if( file == NULL )
    {
+      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
+      strerror_r(errno, buf, 1024);
+      SCIPerrorMessage("%s: %s\n", filename, buf);
       return SCIP_NOFILE;
    }
 
@@ -2078,8 +2080,10 @@ SCIP_RETCODE SCIPparamsetWrite(
       file = fopen(filename, "w");
       if( file == NULL )
       {
-         SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
-	 SCIPerrorMessage("%s: %s\n", filename, strerror(errno));
+	 char buf[1024];
+	 SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
+	 strerror_r(errno, buf, 1024);
+	 SCIPerrorMessage("%s: %s\n", filename, buf);
          return SCIP_FILECREATEERROR;
       }
    }
