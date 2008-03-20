@@ -638,6 +638,16 @@ const char* SCIPlpiGetSolverName(void)
     return mosekname;
 }
 
+
+/** gets pointer for LP solver - use only with great care */
+void* SCIPgetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->task;
+}
+
+
 /*
  * LPI Creation and Destruction Methods
  */

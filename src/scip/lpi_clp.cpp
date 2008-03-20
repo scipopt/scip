@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.35 2008/03/12 21:31:47 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.36 2008/03/20 14:33:14 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -275,6 +275,13 @@ const char* SCIPlpiGetSolverName(
    return clpname;
 }
 
+/** gets pointer for LP solver - use only with great care */
+void* SCIPgetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->clp;
+}
 /**@} */
 
 
@@ -1849,10 +1856,11 @@ SCIP_Bool SCIPlpiIsStable(
        2 - scaled problem optimal - unscaled problem has primal infeasibilities
        3 - scaled problem optimal - unscaled problem has dual infeasibilities
        4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
+       6 - failed due to empty problem check 
        100 up - translation of enum from ClpEventHandler
    */
    SCIPdebugMessage("status: %d   secondary: %d\n", lpi->clp->status(), lpi->clp->secondaryStatus());
-   return( (lpi->clp->status() <= 2) && (! lpi->clp->isAbandoned()) && (lpi->clp->secondaryStatus() <= 1) );
+   return( (lpi->clp->status() <= 2) && (! lpi->clp->isAbandoned()) && (lpi->clp->secondaryStatus() <= 1 || lpi->clp->secondaryStatus() == 6) );
 }
 
 

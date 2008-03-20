@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.65 2007/08/27 09:56:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.66 2008/03/20 14:33:14 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -565,6 +565,13 @@ const char* SCIPlpiGetSolverName(
    return spxname;
 }
 
+/** gets pointer for LP solver - use only with great care */
+void* SCIPgetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->spx;
+}
 /**@} */
 
 

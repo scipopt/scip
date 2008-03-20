@@ -635,6 +635,16 @@ const char* SCIPlpiGetSolverName(
    return xprsname;
 }
 
+/** gets pointer for LP solver - use only with great care 
+ *
+ *  Here we return the pointer to the LP environment.
+ */
+void* SCIPgetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->xprslp;
+}
 /**@} */
 
 
