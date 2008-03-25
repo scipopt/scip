@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.2 2008/02/28 11:07:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.3 2008/03/25 21:13:53 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -97,6 +97,26 @@ extern
 SCIP_CONS* SCIPgetLinearConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** gets binary variable corresponding to indicator constraint */
+extern
+SCIP_VAR* SCIPgetBinaryVarIndicator(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** gets slack variable corresponding to indicator constraint */
+extern
+SCIP_VAR* SCIPgetSlackVarIndicator(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** checks whether indicator constraint is violated w.r.t. sol */
+extern
+SCIP_Bool SCIPisViolatedIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
 #endif
