@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.7 2008/02/28 11:07:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.8 2008/03/25 21:13:27 bzfpfets Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -1108,69 +1108,109 @@ SCIP_RETCODE propIndicator(
  *  we fix binvar = 0 and leave slackvar unchanged.
  */
 static
-SCIP_RETCODE enforceIndicator(
-	 SCIP* scip,               /**< SCIP pointer */
-	 SCIP_CONS* cons,          /**< constraint */
-	 SCIP_CONSDATA* consdata,  /**< constraint data */
-	 SCIP_RESULT* result       /**< result */
-	 )
+SCIP_RETCODE enforceIndicators(
+      SCIP* scip,               /**< SCIP pointer */
+      SCIP_CONSHDLR* conshdlr,  /**< constraint handler */
+      int nconss,               /**< number of constraints */
+      SCIP_CONS** conss,        /**< indicator constraints */
+      SCIP_RESULT* result       /**< result */
+      )
 {
-   SCIP_Bool cutoff;
+   SCIP_CONSDATA* consdata;
    SCIP_NODE* node1;
    SCIP_NODE* node2;
    SCIP_VAR* slackvar;
    SCIP_VAR* binvar;
-   int cnt = 0;
+   SCIP_CONS* branchCons = NULL;
+   SCIP_Real maxSlack = -1.0;
+   int c;
 
    assert( scip != NULL );
-   assert( cons != NULL );
-   assert( consdata != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
    assert( result != NULL );
 
-   /* first perform propagation (it might happen that standard propagation is turned off) */
-   SCIP_CALL( propIndicator(scip, cons, consdata, &cutoff, &cnt) );
-   SCIPdebugMessage("propagation in enforcing (cutoff: %d, domain reductions: %d).\n", cutoff, cnt);
-   if ( cutoff )
+   *result = SCIP_FEASIBLE;
+
+   SCIPdebugMessage("Enforcing indicator constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
+
+   /* check each constraint */
+   for (c = 0; c < nconss; ++c)
    {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
+      SCIP_Bool cutoff;
+      SCIP_Real valSlack = 0.0;
+      int cnt = 0;
+
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* first perform propagation (it might happen that standard propagation is turned off) */
+      SCIP_CALL( propIndicator(scip, conss[c], consdata, &cutoff, &cnt) );
+      SCIPdebugMessage("propagation in enforcing <%s> (cutoff: %d, domain reductions: %d).\n", SCIPconsGetName(conss[c]), cutoff, cnt);
+      if ( cutoff )
+      {
+	 *result = SCIP_CUTOFF;
+	 return SCIP_OKAY;
+      }
+      if ( cnt > 0 )
+      {
+	 *result = SCIP_REDUCEDDOM;
+	 return SCIP_OKAY;
+      }
+
+      /* check whether constraint is infeasible */
+      binvar = consdata->binvar;
+      valSlack = SCIPgetSolVal(scip, NULL, consdata->slackvar);
+      assert( ! SCIPisFeasNegative(scip, valSlack) );
+      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, binvar)) &&
+	   ! SCIPisFeasZero(scip, valSlack) )
+      {
+	 /* binary variable is not fixed - otherwise we would not be infeasible */
+	 assert( SCIPvarGetLbLocal(binvar) < 0.5 && SCIPvarGetUbLocal(binvar) > 0.5 );
+
+	 if ( valSlack > maxSlack )
+	 {
+	    maxSlack = valSlack;
+	    branchCons = conss[c];
+	 }
+      }
    }
-   if ( cnt > 0 )
+
+   /* if all constraints are feasible */
+   if ( branchCons == NULL )
    {
-      *result = SCIP_REDUCEDDOM;
+      SCIPdebugMessage("All indicator constraints are feasible.\n");
       return SCIP_OKAY;
    }
 
-   /* if constraint is infeasible */
+   *result = SCIP_INFEASIBLE;
+   return SCIP_OKAY;
+
+   /* otherwise create branches */
+   SCIPdebugMessage("Branching on constraint <%s> (slack value: %f).\n", SCIPconsGetName(branchCons), maxSlack);
+   consdata = SCIPconsGetData(branchCons);
+   assert( consdata != NULL );
    binvar = consdata->binvar;
    slackvar = consdata->slackvar;
-   if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, binvar)) &&
-	! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, slackvar)) )
-   {
-      /* binary variable is not fixed - otherwise we would not be infeasible */
-      assert( SCIPvarGetLbLocal(binvar) < 0.5 && SCIPvarGetUbLocal(binvar) > 0.5 );
 
-      /* create branches */
-      SCIPdebugMessage("Creating two branches.\n");
+   /* node1: binvar = 1, slackvar = 0 */
+   SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPcalcChildEstimate(scip, binvar, 1.0) ) );
 
-      /* node1: binvar = 1, slackvar = 0 */
-      SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPcalcChildEstimate(scip, binvar, 1.0) ) );
+   if ( ! SCIPisFeasEQ(scip, SCIPvarGetLbLocal(binvar), 1.0) )
+      SCIP_CALL( SCIPchgVarLbNode(scip, node1, binvar, 1.0) );
 
-      if ( ! SCIPisFeasEQ(scip, SCIPvarGetLbLocal(binvar), 1.0) )
-	 SCIP_CALL( SCIPchgVarLbNode(scip, node1, binvar, 1.0) );
+   if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(slackvar)) )
+      SCIP_CALL( SCIPchgVarUbNode(scip, node1, slackvar, 0.0) );
 
-      if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(slackvar)) )
-	 SCIP_CALL( SCIPchgVarUbNode(scip, node1, slackvar, 0.0) );
+   /* node2: binvar = 0, no restriction on slackvar */
+   SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPcalcChildEstimate(scip, binvar, 0.0) ) );
 
-      /* node2: binvar = 0, no restriction on slackvar */
-      SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPcalcChildEstimate(scip, binvar, 0.0) ) );
+   if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(binvar)) )
+      SCIP_CALL( SCIPchgVarUbNode(scip, node2, binvar, 0.0) );
 
-      if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(binvar)) )
-	 SCIP_CALL( SCIPchgVarUbNode(scip, node2, binvar, 0.0) );
-
-      SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      *result = SCIP_BRANCHED;
-   }
+   SCIP_CALL( SCIPresetConsAge(scip, branchCons) );
+   *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
 }
@@ -1503,7 +1543,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    /* add corresponding column to alternative LP if the constraint is new */
    if ( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE )
    {
-      //SCIP_CALL( addAltLPConstraint(scip, conshdlr, *targetcons) );
+      SCIP_CALL( addAltLPConstraint(scip, conshdlr, *targetcons) );
    }
 
 #ifdef SCIP_DEBUG
@@ -1741,32 +1781,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpIndicator)
 {  /*lint --e{715}*/
-   int c;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_FEASIBLE;
-
-   /* check each constraint */
-   for (c = 0; c < nconss; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-      SCIPdebugMessage("Enforcing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) );
-
-      SCIP_CALL( enforceIndicator(scip, conss[c], consdata, result) );
-
-      if ( *result != SCIP_FEASIBLE )
-	 return SCIP_OKAY;
-   }
-   SCIPdebugMessage("All indicator constraints are feasible.\n");
+   SCIP_CALL( enforceIndicators(scip, conshdlr, nconss, conss, result) );
 
    return SCIP_OKAY;
 }
@@ -1777,32 +1798,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpIndicator)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsIndicator)
 {  /*lint --e{715}*/
-   int c;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_FEASIBLE;
-
-   /* check each constraint */
-   for (c = 0; c < nconss; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-      SCIPdebugMessage("Enforcing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) );
-
-      SCIP_CALL( enforceIndicator(scip, conss[c], consdata, result) );
-
-      if ( *result != SCIP_FEASIBLE )
-	 return SCIP_OKAY;
-   }
-   SCIPdebugMessage("All indicator constraints are feasible.\n");
+   SCIP_CALL( enforceIndicators(scip, conshdlr, nconss, conss, result) );
 
    return SCIP_OKAY;
 }
@@ -2292,4 +2294,54 @@ SCIP_RETCODE SCIPcreateConsIndicator(
 			     local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
+}
+
+
+
+/** gets binary variable corresponding to indicator constraint */
+SCIP_VAR* SCIPgetBinaryVarIndicator(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   return consdata->binvar;
+}
+
+
+/** gets slack variable corresponding to indicator constraint */
+SCIP_VAR* SCIPgetSlackVarIndicator(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   return consdata->slackvar;
+}
+
+
+/** checks whether indicator constraint is violated w.r.t. sol */
+SCIP_Bool SCIPisViolatedIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   return(
+      SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) &&
+      SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
 }
