@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.10 2008/03/26 18:56:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.11 2008/03/26 19:18:10 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
@@ -978,8 +978,8 @@ SCIP_DECL_CONSDELETE(consDeleteSOS2)
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxVars);
 
    /* free row - if still necessary */
-   if ( consdata->row != NULL )
-      SCIP_CALL( SCIPreleaseRow(scip, &consdata->row) );
+   if ( (*consdata)->row != NULL )
+      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
    assert( (*consdata)->row == NULL );
 
    SCIPfreeBlockMemory(scip, consdata);
