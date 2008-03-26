@@ -54,9 +54,10 @@ features:
 - SCIP can now output a picture of the constraint matrix in PPM format.
 - replaced some old sorting methods in cons_knapsack.c, heur_octane.c, sepa_flowcover.c and presol_probing.c through SCIPsort... interfaces, adjusted misc.{c,h} and pub_misc.h for these changes
 - updated mmm.{test,solu}, mittelmann.{test,solu}, miplib3.solu, miplib.solu, shortmiplib.test and added mittelmann_current.test, mittelmann_old.test 
-- LPI now has a function SCIPgetSolverPointer() that returns a solver dependent pointer. This can be used to directly access the LP solver. 
+- LPI now has a function SCIPlpiGetSolverPointer() that returns a solver dependent pointer. This can be used to directly access the LP solver. 
   This should, of course, only be used by people that know exactly what they are doing.
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
+- better branching in SOS1/SOS2 constraints
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -77,6 +78,8 @@ parameters:
 - new parameter "constraint/linear/upgrade/logicor" to enable or disable the linear upgrading process
 - new parameter "constraint/linear/upgrade/setppc" to enable or disable the linear upgrading process
 - new parameter "constraint/linear/upgrade/varbound" to enable or disable the linear upgrading process
+- new parameter "constraints/SOS1/branchSOS" to enable or disable branching on SOS1 constraints
+- new parameter "constraints/SOS1/branchNonzeros" to decide whether SOS1 constraint with largest number of nonzero variables is picked for branching
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
