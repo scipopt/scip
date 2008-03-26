@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.116 2008/03/20 14:33:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.117 2008/03/26 19:09:26 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX >= 8.0
@@ -867,7 +867,7 @@ const char* SCIPlpiGetSolverName(
  *
  *  Here we return the pointer to the LP environment.
  */
-void* SCIPgetSolverPointer(
+void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {

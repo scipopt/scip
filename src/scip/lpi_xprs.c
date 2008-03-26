@@ -639,7 +639,7 @@ const char* SCIPlpiGetSolverName(
  *
  *  Here we return the pointer to the LP environment.
  */
-void* SCIPgetSolverPointer(
+void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {

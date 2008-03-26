@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.63 2008/03/20 14:33:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.64 2008/03/26 19:09:26 bzfpfets Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -54,7 +54,7 @@ const char* SCIPlpiGetSolverName(
  *  doing. In general, it returns a pointer to the LP solver object.
  */
 extern
-void* SCIPgetSolverPointer(
+void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    );
 

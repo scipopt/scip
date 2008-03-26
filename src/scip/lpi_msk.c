@@ -640,7 +640,7 @@ const char* SCIPlpiGetSolverName(void)
 
 
 /** gets pointer for LP solver - use only with great care */
-void* SCIPgetSolverPointer(
+void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {

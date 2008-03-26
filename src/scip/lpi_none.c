@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_none.c,v 1.2 2008/03/20 14:33:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_none.c,v 1.3 2008/03/26 19:09:27 bzfpfets Exp $"
 
 /**@file   lpi_none.c
  * @brief  dummy interface for the case no LP solver is needed
@@ -65,7 +65,7 @@ const char* SCIPlpiGetSolverName(
 }
 
 /** gets pointer for LP solver - use only with great care */
-void* SCIPgetSolverPointer(
+void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    )
 {
