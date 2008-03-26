@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.445 2008/03/20 14:56:54 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.446 2008/03/26 11:48:45 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5548,7 +5548,7 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
  */
 SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< vars array to get active variables for */
+   SCIP_VAR**            vars,               /**< variable array to get active variables */
    SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    int                   varssize,           /**< available slots in vars and scalars array */
@@ -5691,8 +5691,9 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
          r++;
          if( r != v )
          {
+            /* remove empty slots */
             activevars[r] = activevars[v];
-            activescalars[r] += activescalars[v];
+            activescalars[r] = activescalars[v];
          }
       }
    }

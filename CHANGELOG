@@ -105,6 +105,7 @@ fixed bugs:
 - avoid aggregation of implicit integers with fractional aggregation scalars
 - fixed infinite loop in LP file reader if a line exceeds the character limit
 - replaced calls to perror() by SCIP error message using strerror(errno); this avoids problems with the error output stream
+- fixed bug in method SCIPgetProbvarLinearSum() 
 
 SCIP version 1.00
 =================
