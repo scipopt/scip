@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.37 2008/03/26 19:09:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.38 2008/03/26 19:32:18 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1995,6 +1995,8 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(ray != 0);
 
    const double* clpray = lpi->clp->unboundedRay();
+   if ( clpray == 0 )
+      return SCIP_LPERROR;
    memcpy((void *) ray, clpray, lpi->clp->numberColumns() * sizeof(double));
    delete [] clpray;
    
@@ -2014,6 +2016,8 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(dualfarkas != 0);
 
    const double* dualray = lpi->clp->infeasibilityRay();
+   if ( dualray == 0 )
+      return SCIP_LPERROR;
    memcpy((void *) dualfarkas, dualray, lpi->clp->numberRows() * sizeof(double));
    delete [] dualray;
    
