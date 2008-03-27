@@ -80,6 +80,9 @@ parameters:
 - new parameter "constraint/linear/upgrade/varbound" to enable or disable the linear upgrading process
 - new parameter "constraints/SOS1/branchSOS" to enable or disable branching on SOS1 constraints
 - new parameter "constraints/SOS1/branchNonzeros" to decide whether SOS1 constraint with largest number of nonzero variables is picked for branching
+- new parameter "constraints/indicator/branchIndicators"  to decide whether it is branched on indicator constraints in enforcing
+- new parameter "constraints/indicator/genLogicor" to decide whether logicor constraints instead of cuts are generated
+- new parameter "constraints/indicator/sepaAlternativeLP" to decide whether separation takes place using the alternative LP
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
