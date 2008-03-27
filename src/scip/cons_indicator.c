@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.9 2008/03/27 16:58:42 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.10 2008/03/27 19:56:09 bzfpfets Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -1068,8 +1068,6 @@ SCIP_RETCODE extendToCover(
 
 
 
-
-
 /* ---------------------------- constraint handler local methods ----------------------*/
 
 /** propagate indicator constraint */
@@ -1272,6 +1270,173 @@ SCIP_RETCODE enforceIndicators(
 
    return SCIP_OKAY;
 }
+
+
+
+
+/** separate cuts via conflict analysis */
+static
+SCIP_RETCODE separateConflicts(
+      SCIP* scip,               /**< SCIP pointer */
+      SCIP_CONSHDLR* conshdlr,  /**< constraint handler */
+      SCIP_SOL* sol,            /**< solution to be separated */
+      int nconss,               /**< number of constraints */
+      SCIP_CONS** conss,        /**< indicator constraints */
+      int* nGen                 /**< number of domain changes */
+      )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool cutoff;
+   SCIP_VAR** vars;
+   int oldNConfs = 0;
+   int c;
+   int cnt = 0;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+   assert( nGen != NULL );
+
+   SCIPdebugMessage("Separating conflicts ...\n");
+   *nGen = 0;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   oldNConfs = SCIPgetNConflictConssFoundNode(scip);
+
+   /* collect variables to be fixed to 1, since LP solution will be lost in probing */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nconss) );
+
+   /* find variables */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* store binary variables for which the slack variable is positive */
+      if ( SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) )
+	 vars[cnt++] = consdata->binvar;
+   }
+
+   /* start probing */
+   SCIP_CALL( SCIPstartProbing(scip) );
+   SCIP_CALL( SCIPnewProbingNode(scip) );
+
+   /* round variables */
+   for (c = 0; c < cnt; ++c)
+      SCIP_CALL( SCIPfixVarProbing(scip, vars[c], 1.0) );
+   SCIPdebugMessage("Fixed %d binary variables to 1.\n", cnt);
+
+   /* loop until we reach an infeasible state */
+   do
+   {
+      /* apply domain propagation */
+      SCIP_CALL( SCIPpropagateProbing(scip, 1, &cutoff, NULL) );
+      if ( cutoff )
+      {
+	 SCIPdebugMessage("Propagation found cutoff.\n");
+      }
+      else
+      {
+	 SCIP_Bool lperror;
+
+	 SCIPdebugMessage("Propagation found no cutoff.\n");
+
+	 /* solve the LP */
+	 SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror) );
+	 if ( lperror )
+	    break;
+	 else
+	 {
+	    SCIP_LPSOLSTAT lpsolstat;
+	    SCIP_Real objval;
+	    SCIP_SOL* heursol;
+	    SCIP_Bool success;
+	    SCIP_VAR* changeVar = NULL;
+
+            lpsolstat = SCIPgetLPSolstat(scip);
+            cutoff = (lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT || lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE);
+
+	    if ( cutoff )
+	    {
+	       SCIPdebugMessage("LP infeasible!\n");
+	       break;
+	    }
+
+	    /* get objective value */
+	    objval = SCIPgetLPObjval(scip);
+	    SCIPdebugMessage("LP value: %f  (primal bound: %f)\n", objval, SCIPgetUpperbound(scip));
+
+	    /* find variable to change to 1 */
+	    for (c = 0; c < nconss; ++c)
+	    {
+	       SCIP_CONSDATA* consdata;
+
+	       assert( conss[c] != NULL );
+	       consdata = SCIPconsGetData(conss[c]);
+	       assert( consdata != NULL );
+
+	       /* take binary variable that is not fixed for which slack variable is positive */
+	       if ( SCIPvarGetLbLocal(consdata->binvar) < 0.5 && SCIPvarGetUbLocal(consdata->binvar) > 0.5 &&
+		    SCIPisFeasPositive(scip, SCIPgetSolVal(scip, NULL, consdata->slackvar)) )
+	       {
+		  changeVar = consdata->binvar;
+		  break;
+	       }
+	    }
+
+	    if ( changeVar == NULL )
+	    {
+	       /* try solution */
+	       if ( SCIPisFeasLT(scip, objval, SCIPgetUpperbound(scip) ) )
+	       {
+		  SCIP_CALL( SCIPcreateSol(scip, &heursol, NULL) );
+		  SCIP_CALL( SCIPlinkLPSol(scip, heursol) );
+		  SCIP_CALL( SCIPtrySol(scip, heursol, FALSE, FALSE, FALSE, &success) );
+		  SCIP_CALL( SCIPfreeSol(scip, &heursol) );
+
+		  /* check, if solution was feasible and good enough */
+		  if ( success )
+		  {
+		     SCIPdebugMessage(" Found feasible solution.\n");
+		  }
+		  else
+		  {
+		     SCIPdebugMessage(" Found infeasible solution.\n");
+		  }
+	       }
+	    }
+	    else
+	    {
+	       SCIP_CALL( SCIPnewProbingNode(scip) );
+	       SCIPdebugMessage("Fixing variable <%s> to 1 (lb: %f, ub: %f)\n", SCIPvarGetName(changeVar),
+				SCIPvarGetLbLocal(changeVar), SCIPvarGetUbLocal(changeVar));
+	       SCIP_CALL( SCIPfixVarProbing(scip, changeVar, 1.0) );
+	    }
+	 }
+      }
+   }
+   while ( ! cutoff );
+
+   SCIPdebugMessage("End probing.\n");
+
+   /* end probing */
+   SCIP_CALL( SCIPendProbing(scip) );
+
+   *nGen = SCIPgetNConflictConssFoundNode(scip) - oldNConfs;
+
+   SCIPfreeBufferArray(scip, &vars);
+
+   SCIPdebugMessage("Found %d conflicts.\n", *nGen);
+
+   return SCIP_OKAY;
+}
+
+
 
 
 
@@ -1802,7 +1967,7 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 	 /* start separation */
 	 SCIP_CALL( separateIISRounding(scip, conshdlr, NULL, nconss, conss, &nGen) );
 	 SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
-	 
+
 	 if ( nGen > 0 )
 	 {
 	    if ( conshdlrdata->genLogicor )
@@ -1810,6 +1975,17 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 	    else
 	       *result = SCIP_SEPARATED;
 	 }
+      }
+      else
+      {
+	 *result = SCIP_DIDNOTFIND;
+
+	 /* start separation */
+	 SCIP_CALL( separateConflicts(scip, conshdlr, NULL, nconss, conss, &nGen) );
+	 SCIPdebugMessage("Separated %d cuts from conflicts.\n", nGen);
+
+	 if ( nGen > 0 )
+	    *result = SCIP_CONSADDED;
       }
    }
 
@@ -1843,7 +2019,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
 	 /* start separation */
 	 SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, &nGen) );
 	 SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
-	 
+
 	 if ( nGen > 0 )
 	 {
 	    if ( conshdlrdata->genLogicor )
@@ -1851,6 +2027,17 @@ SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
 	    else
 	       *result = SCIP_SEPARATED;
 	 }
+      }
+      else
+      {
+	 *result = SCIP_DIDNOTFIND;
+
+	 /* start separation */
+	 SCIP_CALL( separateConflicts(scip, conshdlr, NULL, nconss, conss, &nGen) );
+	 SCIPdebugMessage("Separated %d cuts from conflicts.\n", nGen);
+
+	 if ( nGen > 0 )
+	    *result = SCIP_CONSADDED;
       }
    }
 
