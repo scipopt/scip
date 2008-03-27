@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.8 2008/03/25 21:13:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.9 2008/03/27 16:58:42 bzfpfets Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -35,7 +35,8 @@
  * @note In the implementation, we assume that bounds on the original
  * variables \f$x\f$ cannot be influenced by the indicator
  * constraint. If it should be possible to relax these constraints as
- * well, then additional indicator constraints need to be added.
+ * well, then these constraints have to be added as indicator
+ * constraints.
  *
  * We separate inequalities by two methods:
  * - The first uses the so-called alternative polyhedron.
@@ -87,6 +88,7 @@
 
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_logicor.h"
 #include <string.h>
 
 
@@ -140,6 +142,9 @@ struct SCIP_ConshdlrData
    SCIP_Real roundingMinThreshold;  /**< minimal value for rounding in separation */
    SCIP_Real roundingMaxThreshold;  /**< maximal value for rounding in separation */
    SCIP_Real roundingOffset;        /**< offset for rounding in separation */
+   SCIP_Bool branchIndicators;      /**< Branch on indicator constraints in enforcing? */
+   SCIP_Bool genLogicor;            /**< Generate logicor constraints instead of cuts? */
+   SCIP_Bool sepaAlternativeLP;     /**< Separate using the alternative LP? */
 };
 
 
@@ -879,6 +884,7 @@ SCIP_RETCODE extendToCover(
       SCIP_LPI* lp,             /**< LP */
       SCIP_SOL* sol,            /**< solution to be separated */
       SCIP_Bool removable,      /**< whether cuts should be removable */
+      SCIP_Bool genLogicor,     /**< should logicor constraints be generated? */
       int nconss,               /**< number of constraints */
       SCIP_CONS** conss,        /**< indicator constraints */
       SCIP_Bool* S,             /**< bitset of variables */
@@ -974,36 +980,79 @@ SCIP_RETCODE extendToCover(
       /* if cut is violated, i.e., sum - sizeIIS + 1 > 0 */
       if ( SCIPisEfficacious(scip, sum - (SCIP_Real) sizeIIS + 1.0) )
       {
-	 SCIP_ROW* row;
-
-	 /* create row */
-	 SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "iis", -SCIPinfinity(scip), (SCIP_Real) sizeIIS - 1.0, FALSE, FALSE, removable) );
-	 SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-
-	 /* add variables corresponding to support to cut */
-	 for (j = 0; j < nconss; ++j)
+	 if ( genLogicor )
 	 {
-	    int ind;
-	    SCIP_CONSDATA* consdata;
-	    consdata = SCIPconsGetData(conss[j]);
-	    ind = consdata->colIndex;
-	    assert( 0 <= ind && ind < nCols );
-	    assert( consdata->binvar != NULL );
+	    SCIP_CONS* cons;
+	    SCIP_VAR** vars;
+	    int cnt =0;
 
-	    /* check support of the solution, i.e., the corresponding IIS */
-	    if ( ! SCIPisFeasZero(scip, primsol[ind]) )
-	       SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, 1.0) );
-	 }
-	 SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+	    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nconss) );
+
+	    /* collect variables corresponding to support to cut */
+	    for (j = 0; j < nconss; ++j)
+	    {
+	       int ind;
+	       SCIP_CONSDATA* consdata;
+	       consdata = SCIPconsGetData(conss[j]);
+	       ind = consdata->colIndex;
+	       assert( 0 <= ind && ind < nCols );
+	       assert( consdata->binvar != NULL );
+
+	       /* check support of the solution, i.e., the corresponding IIS */
+	       if ( ! SCIPisFeasZero(scip, primsol[ind]) )
+	       {
+		  SCIP_VAR* var;
+		  SCIP_CALL( SCIPgetNegatedVar(scip, consdata->binvar, &var) );
+		  vars[cnt++] = var;
+	       }
+	    }
+	    assert( cnt == sizeIIS );
+
+	    SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, "iis", cnt, vars, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, removable, FALSE) );
+
 #ifdef SCIP_OUTPUT
-	 SCIProwPrint(row, NULL);
+	    SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 #endif
-	 SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-	 /* add cuts to pool if we are in the root -> cuts are globally valid */
-	 if ( SCIPgetDepth(scip) == 0 )
-	    SCIP_CALL( SCIPaddPoolCut(scip, row) );
-	 SCIP_CALL( SCIPreleaseRow(scip, &row));
-	 ++(*nGen);
+
+	    SCIP_CALL( SCIPaddCons(scip, cons) );
+	    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+	    SCIPfreeBufferArray(scip, &vars);
+	    ++(*nGen);
+	 }
+	 else
+	 {
+	    SCIP_ROW* row;
+
+	    /* create row */
+	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, "iis", -SCIPinfinity(scip), (SCIP_Real) sizeIIS - 1.0, FALSE, FALSE, removable) );
+	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+
+	    /* add variables corresponding to support to cut */
+	    for (j = 0; j < nconss; ++j)
+	    {
+	       int ind;
+	       SCIP_CONSDATA* consdata;
+	       consdata = SCIPconsGetData(conss[j]);
+	       ind = consdata->colIndex;
+	       assert( 0 <= ind && ind < nCols );
+	       assert( consdata->binvar != NULL );
+
+	       /* check support of the solution, i.e., the corresponding IIS */
+	       if ( ! SCIPisFeasZero(scip, primsol[ind]) )
+		  SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, 1.0) );
+	    }
+	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+#ifdef SCIP_OUTPUT
+	    SCIProwPrint(row, NULL);
+#endif
+	    SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+	    /* add cuts to pool if we are in the root -> cuts are globally valid */
+	    if ( SCIPgetDepth(scip) == 0 )
+	       SCIP_CALL( SCIPaddPoolCut(scip, row) );
+	    SCIP_CALL( SCIPreleaseRow(scip, &row));
+	    ++(*nGen);
+	 }
       }
       ++step;
    }
@@ -1117,6 +1166,7 @@ SCIP_RETCODE enforceIndicators(
       )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_NODE* node1;
    SCIP_NODE* node2;
    SCIP_VAR* slackvar;
@@ -1184,8 +1234,16 @@ SCIP_RETCODE enforceIndicators(
       return SCIP_OKAY;
    }
 
-   *result = SCIP_INFEASIBLE;
-   return SCIP_OKAY;
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* skip branching if required */
+   if ( ! conshdlrdata->branchIndicators )
+   {
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
 
    /* otherwise create branches */
    SCIPdebugMessage("Branching on constraint <%s> (slack value: %f).\n", SCIPconsGetName(branchCons), maxSlack);
@@ -1244,6 +1302,7 @@ SCIP_RETCODE separateIISRounding(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
    lp = conshdlrdata->altLP;
+   assert( lp != NULL );
 
    nGenOld = *nGen;
    SCIPdebugMessage("Separating IIS-cuts by rounding ...\n");
@@ -1300,7 +1359,7 @@ SCIP_RETCODE separateIISRounding(
       SCIP_CALL( fixAltLPVariables(scip, lp, nconss, conss, S) );
 
       /* extend set S to a cover and generate cuts */
-      SCIP_CALL( extendToCover(scip, lp, sol, conshdlrdata->removable, nconss, conss, S, &size, &value, &nCuts) );
+      SCIP_CALL( extendToCover(scip, lp, sol, conshdlrdata->removable, conshdlrdata->genLogicor, nconss, conss, S, &size, &value, &nCuts) );
 
       if ( nCuts > 0 )
       {
@@ -1358,11 +1417,15 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
 static
 SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
@@ -1386,7 +1449,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       }
 
       /* add constraint to alternative LP if not already done */
-      if ( consdata->colIndex < 0 )
+      if ( conshdlrdata->sepaAlternativeLP && consdata->colIndex < 0 )
 	 SCIP_CALL( addAltLPConstraint(scip, conshdlr, conss[c]) );
    }
 
@@ -1414,7 +1477,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
       assert( conshdlrdata->ubHash != NULL );
       assert( conshdlrdata->altLP != NULL );
 
-#ifndef NDEBUG
+#ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
       SCIPhashmapPrintStatistics(conshdlrdata->varHash);
       SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
@@ -1462,7 +1525,8 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
       SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->slackvar, SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
 				  (SCIP_EVENTDATA*)*consdata, -1) );
 
-      SCIP_CALL( deleteAltLPConstraint(scip, conshdlr, cons) );
+      if ( conshdlrdata->sepaAlternativeLP )
+	 SCIP_CALL( deleteAltLPConstraint(scip, conshdlr, cons) );
    }
    else
    {
@@ -1541,7 +1605,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
 				(SCIP_EVENTDATA*)consdata, NULL) );
 
    /* add corresponding column to alternative LP if the constraint is new */
-   if ( SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE )
+   if ( conshdlrdata->sepaAlternativeLP && SCIPgetStage(scip) >= SCIP_STAGE_INITSOLVE )
    {
       SCIP_CALL( addAltLPConstraint(scip, conshdlr, *targetcons) );
    }
@@ -1713,8 +1777,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 static
 SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 {  /*lint --e{715}*/
-   int nGen = 0;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
@@ -1725,15 +1787,30 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 
    if ( nconss > 0 )
    {
-      *result = SCIP_DIDNOTFIND;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int nGen = 0;
+
       SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
 
-      /* start separation */
-      SCIP_CALL( separateIISRounding(scip, conshdlr, NULL, nconss, conss, &nGen) );
-      SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
 
-      if ( nGen > 0 )
-	 *result = SCIP_SEPARATED;
+      if ( conshdlrdata->sepaAlternativeLP )
+      {
+	 *result = SCIP_DIDNOTFIND;
+
+	 /* start separation */
+	 SCIP_CALL( separateIISRounding(scip, conshdlr, NULL, nconss, conss, &nGen) );
+	 SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
+	 
+	 if ( nGen > 0 )
+	 {
+	    if ( conshdlrdata->genLogicor )
+	       *result = SCIP_CONSADDED;
+	    else
+	       *result = SCIP_SEPARATED;
+	 }
+      }
    }
 
    return SCIP_OKAY;
@@ -1744,33 +1821,38 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
 {  /*lint --e{715}*/
-   int c;
-   int nGen = 0;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_DIDNOTRUN;
-
-   /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   if ( nconss > 0 )
    {
-      SCIP_CONSDATA* consdata;
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      int nGen = 0;
 
-      *result = SCIP_DIDNOTFIND;
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-      SCIPdebugMessage("Separating solution for indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+      SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
 
-      /* start separation */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
+      if ( conshdlrdata->sepaAlternativeLP )
+      {
+	 *result = SCIP_DIDNOTFIND;
+	 /* start separation */
+	 SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, &nGen) );
+	 SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
+	 
+	 if ( nGen > 0 )
+	 {
+	    if ( conshdlrdata->genLogicor )
+	       *result = SCIP_CONSADDED;
+	    else
+	       *result = SCIP_SEPARATED;
+	 }
+      }
    }
-   SCIPdebugMessage("Separated %d indicator constraints.\n", nGen);
-   if ( nGen > 0 )
-      *result = SCIP_SEPARATED;
 
    return SCIP_OKAY;
 }
@@ -2027,6 +2109,7 @@ SCIP_DECL_CONSENABLE(consEnableIndicator)
       SCIP_CONSDATA* consdata;
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
+      assert( conshdlrdata->sepaAlternativeLP );
 
       unfixAltLPVariable(conshdlrdata->altLP, consdata->colIndex);
    }
@@ -2056,6 +2139,7 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
       SCIP_CONSDATA* consdata;
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
+      assert( conshdlrdata->sepaAlternativeLP );
 
       fixAltLPVariable(conshdlrdata->altLP, consdata->colIndex);
    }
@@ -2185,6 +2269,9 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->roundingMaxThreshold =	0.6;
    conshdlrdata->roundingRounds = 1;
    conshdlrdata->roundingOffset = 0.1;
+   conshdlrdata->branchIndicators = TRUE;
+   conshdlrdata->genLogicor = TRUE;
+   conshdlrdata->sepaAlternativeLP = TRUE;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -2198,6 +2285,16 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 			  consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
 			  consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
 			  consPrintIndicator, conshdlrdata) );
+
+   /* add indicator constraint handler parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/indicator/branchIndicators", "Branch on indicator constraints in enforcing?",
+			       &conshdlrdata->branchIndicators, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/indicator/genLogicor", "Generate logicor constraints instead of cuts?",
+			       &conshdlrdata->genLogicor, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/indicator/sepaAlternativeLP", "Separate using the alternative LP?",
+			       &conshdlrdata->sepaAlternativeLP, FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2257,11 +2354,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    {
       SCIPerrorMessage("indicator variable is not binary.\n");
       return SCIP_ERROR;
-   }
-
-   if ( ! removable )
-   {
-      SCIPwarningMessage("setting of constraint <%s> to be non-removable replaced by removable global cuts.\n", name);
    }
 
    /* create constraint data */
