@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.7 2008/03/13 18:03:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.8 2008/03/31 10:26:14 bzfheinz Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -30,7 +30,7 @@
  * #define SORTTPL_FIELD1TYPE   <type>     data type of first additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD2TYPE   <type>     data type of second additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD3TYPE   <type>     data type of third additional array which should be sorted in the same way (optional)
- * #define SORTTPL_FIELD4TYPE   <type>     data type of third additional array which should be sorted in the same way (optional)
+ * #define SORTTPL_FIELD4TYPE   <type>     data type of fourth additional array which should be sorted in the same way (optional)
  * #define SORTTPL_PTRCOMP                 ptrcomp method should be used for comparisons (optional)
  * #define SORTTPL_INDCOMP                 indcomp method should be used for comparisons (optional)
  * #define SORTTPL_BACKWARDS               should the array be sorted other way around
