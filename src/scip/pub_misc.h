@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.36 2008/03/20 13:05:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.37 2008/03/31 10:37:31 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -303,6 +303,16 @@ void SCIPsortPtrRealInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of three joint arrays of pointers/pointers/Reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortPtrPtrReal(
+   void**                ptrarray1,          /**< pointer array to be sorted */
+   void**                ptrarray2,          /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of four joint arrays of pointers/Reals/ints/ints, sorted by first array in non-decreasing order */
 extern
 void SCIPsortPtrRealIntInt(
@@ -317,8 +327,8 @@ void SCIPsortPtrRealIntInt(
 /** sort of two joint arrays of Reals/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortRealPtr(
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 

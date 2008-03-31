@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.446 2008/03/26 11:48:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.447 2008/03/31 10:37:31 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5680,13 +5680,13 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    for( v = 1; v < nactivevars; ++v )
    {
       assert( r <= v );
-      if( SCIPvarGetIndex(activevars[r]) == SCIPvarGetIndex(activevars[v]) )
+      if( SCIPvarCompare(activevars[r], activevars[v]) == 0 )
       {
          /* combine both variable since they are the same */
          activevars[r] = activevars[v];
          activescalars[r] += activescalars[v];
       }
-      else if( SCIPvarGetIndex(activevars[r]) < SCIPvarGetIndex(activevars[v]) )
+      else if( SCIPvarCompare(activevars[r], activevars[v]) == -1 )
       {
          r++;
          if( r != v )
