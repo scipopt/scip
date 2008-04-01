@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.269 2008/04/01 09:56:57 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.270 2008/04/01 13:36:31 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4872,7 +4872,7 @@ SCIP_RETCODE dualPresolve(
 
          /* calculate bounds for \sum_{j \neq i} a_j * x_j */
          consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
-         assert(minresactivity <= maxresactivity);
+         assert(SCIPisLE(scip, minresactivity, maxresactivity));
 
          if( agglhs )
          {
