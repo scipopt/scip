@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.447 2008/03/31 10:37:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.448 2008/04/01 09:56:57 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7830,7 +7830,16 @@ SCIP_RETCODE aggregateActiveIntVars(
     *    - if equivalence class 0 is visited, we are done: y' equals the number of steps taken
     *    - because a and b don't have a common divisor, each class is visited at most once, and at most a-1 steps are needed
     *  - calculate x' with x' = (c - b*y')/a (which must be integral)
+    *
+    * Algorithm works for a > 0 only.
     */
+   if( a < 0 )
+   {
+      a = -a;
+      b = -b;
+      c = -c;
+   }
+   assert(0 <= a);
 
    /* search upwards from ysol = 0 */
    ysol = 0;

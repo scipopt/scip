@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.268 2008/03/14 14:57:32 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.269 2008/04/01 09:56:57 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4037,8 +4037,6 @@ SCIP_RETCODE consdataTightenCoefs(
    SCIP_VAR* var;
    SCIP_Real minactivity;
    SCIP_Real maxactivity;
-   SCIP_Bool minleftactisinfinity;
-   SCIP_Bool maxleftactisinfinity;
    SCIP_Real minleftactivity;
    SCIP_Real maxleftactivity;
    SCIP_Real aggrlhs;
@@ -4062,8 +4060,6 @@ SCIP_RETCODE consdataTightenCoefs(
 
    minleftactivity = 0.0;
    maxleftactivity = 0.0;
-   minleftactisinfinity = FALSE;
-   maxleftactisinfinity = FALSE;
  
    /* try to tighten each coefficient */
    for( i = 0; i < consdata->nvars; ++i )
@@ -4129,29 +4125,27 @@ SCIP_RETCODE consdataTightenCoefs(
                assert(SCIPisEQ(scip, consdata->rhs, newrhs));
             }
          }
-         else if( !minleftactisinfinity )
+         else
          {
-            assert(!SCIPisInfinity(scip, val));
-            assert(!SCIPisInfinity(scip, lb));
-            if( SCIPisInfinity(scip, -lb) )
+            if( !SCIPisInfinity(scip, -minleftactivity) )
             {
-               minleftactivity = -SCIPinfinity(scip);
-               minleftactisinfinity = TRUE;
+               assert(!SCIPisInfinity(scip, val));
+               assert(!SCIPisInfinity(scip, lb));
+               if( SCIPisInfinity(scip, -lb) )
+                  minleftactivity = -SCIPinfinity(scip);
+               else
+                  minleftactivity += val * lb;
             }
-            else
-               minleftactivity += val * lb;
-         }
-         else if( !maxleftactisinfinity )
-         {
-            assert(!SCIPisInfinity(scip, val));
-            assert(!SCIPisInfinity(scip, -ub));
-            if( SCIPisInfinity(scip,ub) )
+
+            if( !SCIPisInfinity(scip, maxleftactivity) )
             {
-               maxleftactivity = SCIPinfinity(scip);
-               maxleftactisinfinity = TRUE;
+               assert(!SCIPisInfinity(scip, val));
+               assert(!SCIPisInfinity(scip, -ub));
+               if( SCIPisInfinity(scip,ub) )
+                  maxleftactivity = SCIPinfinity(scip);
+               else
+                  maxleftactivity += val * ub;
             }
-            else
-               maxleftactivity += val * ub;
          }
       }
       else
@@ -4206,29 +4200,27 @@ SCIP_RETCODE consdataTightenCoefs(
                assert(SCIPisEQ(scip, consdata->rhs, newrhs));
             }
          }
-         else if( !minleftactisinfinity )
-         {
-            assert(!SCIPisInfinity(scip, -val));
-            assert(!SCIPisInfinity(scip, -ub));
-            if( SCIPisInfinity(scip, ub) )
+         else
+         { 
+            if( !SCIPisInfinity(scip, -minleftactivity) )
             {
-               minleftactivity = -SCIPinfinity(scip);
-               minleftactisinfinity = TRUE;
+               assert(!SCIPisInfinity(scip, -val));
+               assert(!SCIPisInfinity(scip, -ub));
+               if( SCIPisInfinity(scip, ub) )
+                  minleftactivity = -SCIPinfinity(scip);
+               else
+                  minleftactivity += val * ub;
             }
-            else
-               minleftactivity += val * ub;
-         }
-         else if( !maxleftactisinfinity )
-         {
-            assert(!SCIPisInfinity(scip, -val));
-            assert(!SCIPisInfinity(scip, lb));
-            if( SCIPisInfinity(scip, -lb) )
+
+            if( !SCIPisInfinity(scip, maxleftactivity) )
             {
-               maxleftactivity = SCIPinfinity(scip);
-               maxleftactisinfinity = TRUE;
+               assert(!SCIPisInfinity(scip, -val));
+               assert(!SCIPisInfinity(scip, lb));
+               if( SCIPisInfinity(scip, -lb) )
+                  maxleftactivity = SCIPinfinity(scip);
+               else
+                  maxleftactivity += val * lb;
             }
-            else
-               maxleftactivity += val * lb;
          }
       }
    }
@@ -4238,12 +4230,9 @@ SCIP_RETCODE consdataTightenCoefs(
    SCIPdebugMessage("maxleftactivity = %.15g, lhs = %.15g\n", 
       maxleftactivity, consdata->lhs);
    
-   assert(minleftactisinfinity == SCIPisInfinity(scip, -minleftactivity));
-   assert(maxleftactisinfinity == SCIPisInfinity(scip, maxleftactivity));
-
    /* minleft == \infty  ==>  minactivity == \infty */
-   assert(!minleftactisinfinity || SCIPisInfinity(scip, -minactivity));
-   assert(!maxleftactisinfinity || SCIPisInfinity(scip, maxactivity));
+   assert(!SCIPisInfinity(scip, -minleftactivity) || SCIPisInfinity(scip, -minactivity));
+   assert(!SCIPisInfinity(scip, maxleftactivity) || SCIPisInfinity(scip, maxactivity));
 
    /* otherwise aggrlhs is minus infinity in the following computation */
    assert(!SCIPisInfinity(scip, minactivity));
@@ -4293,10 +4282,6 @@ SCIP_RETCODE consdataTightenCoefs(
 
                /* get the new minimal and maximal activity of the constraint */
                consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
-#ifndef NDEBUG
-               minleftactivity -= val * lb;
-               maxleftactivity -= val * ub;
-#endif
             }
          }
          else 
@@ -4313,10 +4298,6 @@ SCIP_RETCODE consdataTightenCoefs(
 
                /* get the new minimal and maximal activity of the constraint */
                consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
-#ifndef NDEBUG
-               minleftactivity -= val * ub;
-               maxleftactivity -= val * lb;
-#endif
             }
          }
       }
@@ -4341,10 +4322,6 @@ SCIP_RETCODE consdataTightenCoefs(
          (*nchgsides)++;
          assert(SCIPisEQ(scip, consdata->rhs, newrhs));
       }
-      
-      /* check if we removed all redundant variables */
-      assert( SCIPisZero(scip, minleftactivity) );
-      assert( SCIPisZero(scip, maxleftactivity) );
    }
    
    return SCIP_OKAY;
