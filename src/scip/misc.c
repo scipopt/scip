@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.74 2008/03/31 10:37:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.75 2008/04/02 10:33:36 bzfheinz Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2482,6 +2482,14 @@ void SCIPsort(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortRealRealPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealRealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortInt() via sort template */
 #define SORTTPL_METHOD      SCIPsortInt
 #define SORTTPL_KEYTYPE     int
@@ -2600,6 +2608,16 @@ void SCIPsortDown(
 #include "scip/sorttpl.c"
 
 
+/* SCIPsortDownPtrPtrReal() via sort template */
+#define SORTTPL_METHOD      SCIPsortPtrPtrReal
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortDownPtrRealIntInt() via sort template */
 #define SORTTPL_METHOD      SCIPsortDownPtrRealIntInt
 #define SORTTPL_KEYTYPE     void*
@@ -2623,6 +2641,15 @@ void SCIPsortDown(
 #define SORTTPL_METHOD      SCIPsortDownRealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealRealPtr() via sort template */
+#define SORTTPL_METHOD      SCIPsortRealRealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
