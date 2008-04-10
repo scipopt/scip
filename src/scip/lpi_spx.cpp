@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.67 2008/03/26 19:09:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.68 2008/04/10 14:59:36 bzfheinz Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -182,6 +182,13 @@ public:
       {
          std::string s = x.what();      
          SCIPwarningMessage("SoPlex threw an exception: %s\n",s.c_str());
+         m_stat = SPxSolver::status();
+
+         /* since it is not clear if the status in SoPlex are set correctly
+          * we want to make sure that if an error is thrown the status is
+          * not OPTIMAL anymore.
+          */
+         assert( m_stat != SPxSolver::OPTIMAL );
       }
 #endif
       catch(...)
