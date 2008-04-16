@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.10 2008/03/27 19:56:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.11 2008/04/16 10:55:54 bzfheinz Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -627,7 +627,7 @@ SCIP_RETCODE addAltLPConstraint(
 
    SCIP_CALL( SCIPlpiAddCols(conshdlrdata->altLP, 1, obj, lb, ub, NULL, cnt, matbeg, matind, matval) );
 
-   /* add columns corresponding to bounds of original variables added */
+   /* add columns corresponding to bounds of original variables */
    cnt = 0;
    nNewCols = 0;
    for (v = 0; v < nNewRows; ++v)
@@ -2033,7 +2033,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
 	 *result = SCIP_DIDNOTFIND;
 
 	 /* start separation */
-	 SCIP_CALL( separateConflicts(scip, conshdlr, NULL, nconss, conss, &nGen) );
+	 SCIP_CALL( separateConflicts(scip, conshdlr, sol, nconss, conss, &nGen) );
 	 SCIPdebugMessage("Separated %d cuts from conflicts.\n", nGen);
 
 	 if ( nGen > 0 )
@@ -2462,27 +2462,33 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-			  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-			  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-			  CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-			  consFreeIndicator, consInitIndicator, consExitIndicator,
-			  consInitpreIndicator, consExitpreIndicator, consInitsolIndicator, consExitsolIndicator,
-			  consDeleteIndicator, consTransIndicator, consInitlpIndicator, consSepalpIndicator,
-			  consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
-			  consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
-			  consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
-			  consPrintIndicator, conshdlrdata) );
-
+         CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+         CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         consFreeIndicator, consInitIndicator, consExitIndicator,
+         consInitpreIndicator, consExitpreIndicator, consInitsolIndicator, consExitsolIndicator,
+         consDeleteIndicator, consTransIndicator, consInitlpIndicator, consSepalpIndicator,
+         consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
+         consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
+         consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
+         consPrintIndicator, conshdlrdata) );
+   
    /* add indicator constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/indicator/branchIndicators", "Branch on indicator constraints in enforcing?",
-			       &conshdlrdata->branchIndicators, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, 
+         "constraints/indicator/branchIndicators", 
+         "Branch on indicator constraints in enforcing?",
+         &conshdlrdata->branchIndicators, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/indicator/genLogicor", "Generate logicor constraints instead of cuts?",
-			       &conshdlrdata->genLogicor, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, 
+         "constraints/indicator/genLogicor", 
+         "Generate logicor constraints instead of cuts?",
+         &conshdlrdata->genLogicor, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/indicator/sepaAlternativeLP", "Separate using the alternative LP?",
-			       &conshdlrdata->sepaAlternativeLP, FALSE, TRUE, NULL, NULL) );
-
+   SCIP_CALL( SCIPaddBoolParam(scip, 
+         "constraints/indicator/sepaAlternativeLP", 
+         "Separate using the alternative LP?",
+         &conshdlrdata->sepaAlternativeLP, FALSE, TRUE, NULL, NULL) );
+   
    return SCIP_OKAY;
 }
 
