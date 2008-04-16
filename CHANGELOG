@@ -10,6 +10,7 @@ compiling:
 - added "make/make.project" as default make include for external projects using SCIP
 - adapted all makefiles of the examples accordingly
 - added possibility to compile shared libraries in makefiles (and added make/make.linux.x86.gnu.opt-shared)
+- replaced <string> by <cstring> in all C++-interfaces to get 'strlen()' included (gcc-4.3 gave an error)
 
 interface:
 - new method SCIPconsGetPos()
@@ -117,6 +118,7 @@ fixed bugs:
 - fixed bugs in second part of consdataTightenCoefs(): Removed min/maxleftactisinfinity (definition was not
   correct), fixed calculation of min/maxleftactivity, and removed asserts concerning whether all redundant vars
   were deleted (led to different behavior in debug and opt mod).
+- corrected invalid memory access in tcliqueIsEdge: added check whether node1 has no neighbors (tclique_graph.c)
 
 SCIP version 1.00
 =================
