@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.6 2008/03/06 21:08:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.7 2008/04/16 12:40:20 bzfheinz Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -47,11 +47,11 @@
 /*
  * Data structures
  */
-#define PPM_MAX_LINELEN       70
-#define PPM_RGB_LIMIT        160
-#define PPM_COEF_LIMIT         3
-#define PPM_RGB_RELATIVE    TRUE
-#define PPM_RGB_ASCII       TRUE
+#define PPM_MAX_LINELEN               71      /**< the maximum length of any line is 70 + '\0' = 71*/
+#define DEFAULT_PPM_RGB_LIMIT        160
+#define DEFAULT_PPM_COEF_LIMIT         3
+#define DEFAULT_PPM_RGB_RELATIVE    TRUE
+#define DEFAULT_PPM_RGB_ASCII       TRUE
 
 /** LP reading data */
 struct SCIP_ReaderData
@@ -74,10 +74,10 @@ void initReaderdata(
 {
    assert(readerdata != NULL);
 
-   readerdata->rgb_relativ = PPM_RGB_RELATIVE;
-   readerdata->rgb_ascii = PPM_RGB_ASCII;
-   readerdata->rgb_limit = PPM_RGB_LIMIT;
-   readerdata->coef_limit = PPM_COEF_LIMIT;
+   readerdata->rgb_relativ = DEFAULT_PPM_RGB_RELATIVE;
+   readerdata->rgb_ascii = DEFAULT_PPM_RGB_ASCII;
+   readerdata->rgb_limit = DEFAULT_PPM_RGB_LIMIT;
+   readerdata->coef_limit = DEFAULT_PPM_COEF_LIMIT;
 }
 
   
@@ -180,10 +180,10 @@ void appendLine(
    assert( linecnt != NULL );
    assert( extension != NULL );
 
-   if( *linecnt + strlen(extension) + 1 > PPM_MAX_LINELEN )
-     endLine(scip, file, readerdata, linebuffer, linecnt);
+   if( *linecnt + strlen(extension) > PPM_MAX_LINELEN )
+      endLine(scip, file, readerdata, linebuffer, linecnt);
    
-   sprintf(linebuffer, "%s%s", linebuffer, extension);
+   snprintf(linebuffer, PPM_MAX_LINELEN, "%s%s", linebuffer, extension);
    (*linecnt) += strlen(extension) + 1;
 }
 
@@ -270,7 +270,7 @@ void printRow(
    int green;
    int blue;
 
-   char linebuffer[PPM_MAX_LINELEN + 1];
+   char linebuffer[PPM_MAX_LINELEN];
    int linecnt;
    int varindex;
    int actvarindex;
@@ -289,7 +289,7 @@ void printRow(
    varindex = -1;
    maxvarindex = 0;
 
-   sprintf(white, "%c%c%c", max, max, max);  
+   snprintf(white, 4, "%c%c%c", max, max, max);  
    clearLine(linebuffer, &linecnt);
 
    /* calculate maximum index of the variables in this constraint */
@@ -330,10 +330,10 @@ void printRow(
         if (red == 35 || red == 0) red++;
         if (green==35 || green == 0) green++;
         if (blue==35 || blue == 0) blue++;
-        sprintf(buffer, "%c%c%c", (char)red, (char)green, (char)blue);
+        snprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (char)red, (char)green, (char)blue);
       }
       else
-        sprintf(buffer, " %d %d %d ", red, green, blue);
+         snprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
 
       appendLine(scip, file, readerdata, linebuffer, &linecnt, buffer);
       i++;
@@ -481,19 +481,19 @@ SCIP_RETCODE SCIPincludeReaderPpm(
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-       "reading/ppmreader/rgbrelativ", "should the coloring values be relativ or absolute",
-       &readerdata->rgb_relativ, FALSE, TRUE, NULL, NULL) );
+         "reading/ppmreader/rgbrelativ", "should the coloring values be relativ or absolute",
+         &readerdata->rgb_relativ, FALSE, DEFAULT_PPM_RGB_RELATIVE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-       "reading/ppmreader/rgbascii", "should the output format be binary(P6) or plain(P3) format",
-       &readerdata->rgb_ascii, FALSE, TRUE, NULL, NULL) );
+         "reading/ppmreader/rgbascii", "should the output format be binary(P6) or plain(P3) format",
+         &readerdata->rgb_ascii, FALSE, DEFAULT_PPM_RGB_ASCII, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-       "reading/ppmreader/coefficientlimit", 
-       "splitting coefficients in this number of intervals",
-       &readerdata->coef_limit, FALSE, PPM_COEF_LIMIT, 3, 16, NULL, NULL) );
+         "reading/ppmreader/coefficientlimit", 
+         "splitting coefficients in this number of intervals",
+         &readerdata->coef_limit, FALSE, DEFAULT_PPM_COEF_LIMIT, 3, 16, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-       "reading/ppmreader/rgblimit", 
-       "maximal color value",
-       &readerdata->rgb_limit, FALSE, PPM_RGB_LIMIT, 0, 255, NULL, NULL) );
+         "reading/ppmreader/rgblimit", 
+         "maximal color value",
+         &readerdata->rgb_limit, FALSE, DEFAULT_PPM_RGB_LIMIT, 0, 255, NULL, NULL) );
    
    return SCIP_OKAY;
 }
@@ -519,7 +519,7 @@ SCIP_RETCODE SCIPwritePpm(
    int i;
 
    int linecnt;
-   char linebuffer[PPM_MAX_LINELEN + 1];
+   char linebuffer[PPM_MAX_LINELEN];
 
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;

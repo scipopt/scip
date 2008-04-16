@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.28 2007/11/13 16:13:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.29 2008/04/16 12:40:21 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -383,7 +383,7 @@ Bound* xlp_getlower(const Var* var)
 
    scipvar = (SCIP_VAR*)var;
    lb = SCIPvarGetLbGlobal(scipvar);
-   sprintf(s, "%.20f", lb);
+   snprintf(s, SCIP_MAXSTRLEN, "%.20f", lb);
    numb = numb_new_ascii(s); /* ????? isn't there a method numb_new_dbl()? */
    if( SCIPisInfinity(scip_, -lb) )
       boundtype = BOUND_MINUS_INFTY;
@@ -415,7 +415,7 @@ Bound* xlp_getupper(const Var* var)
    else
    {
       boundtype = BOUND_VALUE;
-      sprintf(s, "%.20f", ub);
+      snprintf(s, SCIP_MAXSTRLEN, "%.20f", ub);
       numb = numb_new_ascii(s); /* ????? isn't there a method numb_new_dbl()? */
    }
    bound = bound_new(boundtype, numb);
@@ -517,10 +517,10 @@ SCIP_DECL_READERREAD(readerReadZpl)
       buffer[SCIP_MAXSTRLEN-1] = '\0';
       SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
       if( compression != NULL )
-         sprintf(compextension, ".%s", compression);
+         snprintf(compextension, SCIP_MAXSTRLEN, ".%s", compression);
       else
          *compextension = '\0';
-      sprintf(namewithoutpath, "%s.%s%s", name, extension, compextension);
+      snprintf(namewithoutpath, SCIP_MAXSTRLEN, "%s.%s%s", name, extension, compextension);
       if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
