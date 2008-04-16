@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.3 2007/06/06 11:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.4 2008/04/16 18:07:33 bzfpfets Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -99,7 +99,7 @@ TCLIQUE_ISEDGE(tcliqueIsEdge)
    currentadjedge = tcliqueGetFirstAdjedge(tcliquegraph, node1);
    lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, node1);
    
-   if( *lastadjedge < node2 )
+   if( tcliquegraph->degrees[node1] == 0 || *lastadjedge < node2 )
       return FALSE;
 
    /* checks if node2 is contained in adjacency list of node1 
@@ -750,13 +750,13 @@ void tcliquePrintGraph(
    degrees = tcliqueGetDegrees(tcliquegraph);
    weights = tcliqueGetWeights(tcliquegraph);
 
-  infoMessage("nnodes=%d, nedges=%d\n", tcliqueGetNNodes(tcliquegraph), tcliqueGetNEdges(tcliquegraph));
+   infoMessage("nnodes=%d, nedges=%d\n", tcliqueGetNNodes(tcliquegraph), tcliqueGetNEdges(tcliquegraph));
    for( i = 0; i < tcliqueGetNNodes(tcliquegraph); i++ )
    {
       int* currentadjedge;
       int* lastadjedge;
 
-     infoMessage("node %d: weight=%d, degree=%d, adjnodes=\n[ ", i, weights[i], degrees[i]);  
+      infoMessage("node %d: weight=%d, degree=%d, adjnodes=\n[ ", i, weights[i], degrees[i]);  
 
       currentadjedge = tcliqueGetFirstAdjedge(tcliquegraph, i);
       lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, i);
@@ -764,8 +764,8 @@ void tcliquePrintGraph(
 
       for( ; currentadjedge <= lastadjedge; currentadjedge++ )
       {
-        infoMessage("%d, ", *currentadjedge);
+	 infoMessage("%d, ", *currentadjedge);
       }
-     infoMessage("]\n");
+      infoMessage("]\n");
    }
 }
