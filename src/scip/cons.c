@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.168 2008/01/23 11:01:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.169 2008/04/16 10:53:03 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1627,7 +1627,8 @@ void conshdlrDelayUpdates(
 {
    assert(conshdlr != NULL);
    
-   SCIPdebugMessage("constraint updates of constraint handler <%s> will be delayed\n", conshdlr->name);
+   SCIPdebugMessage("constraint updates of constraint handler <%s> will be delayed (count:%d)\n",
+      conshdlr->name, conshdlr->delayupdatecount+1);
 
    conshdlr->delayupdatecount++;
 }
@@ -1646,7 +1647,8 @@ SCIP_RETCODE conshdlrForceUpdates(
    assert(conshdlr != NULL);
    assert(conshdlrAreUpdatesDelayed(conshdlr));
    
-   SCIPdebugMessage("constraint updates of constraint handler <%s> will be processed immediately\n", conshdlr->name);
+   SCIPdebugMessage("constraint updates of constraint handler <%s> will be processed immediately (count:%d)\n",
+      conshdlr->name, conshdlr->delayupdatecount);
    conshdlr->delayupdatecount--;
 
    if( !conshdlrAreUpdatesDelayed(conshdlr) )
