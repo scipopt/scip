@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.23 2007/06/06 11:25:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.24 2008/04/16 18:25:26 bzfpfets Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -26,7 +26,7 @@
 #ifndef __SCIP_OBJPRICER_H__
 #define __SCIP_OBJPRICER_H__
 
-#include <string>
+#include <cstring>
 
 extern "C" 
 {

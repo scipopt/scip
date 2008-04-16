@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.18 2007/06/06 11:25:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.19 2008/04/16 18:25:26 bzfpfets Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -26,7 +26,7 @@
 #ifndef __SCIP_OBJRELAX_H__
 #define __SCIP_OBJRELAX_H__
 
-#include <string>
+#include <cstring>
 
 extern "C" 
 {

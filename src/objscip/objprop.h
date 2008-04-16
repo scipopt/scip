@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.h,v 1.16 2007/06/06 11:25:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objprop.h,v 1.17 2008/04/16 18:25:26 bzfpfets Exp $"
 
 /**@file   objprop.h
  * @brief  C++ wrapper for propagators
@@ -26,7 +26,7 @@
 #ifndef __SCIP_OBJPROP_H__
 #define __SCIP_OBJPROP_H__
 
-#include <string>
+#include <cstring>
 
 extern "C" 
 {

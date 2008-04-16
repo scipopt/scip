@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.h,v 1.1 2007/08/20 12:42:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objdialog.h,v 1.2 2008/04/16 18:25:25 bzfpfets Exp $"
 
 /**@file   objdialog.h
  * @brief  C++ wrapper for dialogs
@@ -26,7 +26,7 @@
 #ifndef __SCIP_OBJDIALOG_H__
 #define __SCIP_OBJDIALOG_H__
 
-#include <string>
+#include <cstring>
 
 extern "C" 
 {

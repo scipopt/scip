@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.20 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.21 2008/04/16 18:25:26 bzfpfets Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -26,7 +26,7 @@
 #ifndef __SCIP_OBJREADER_H__
 #define __SCIP_OBJREADER_H__
 
-#include <string>
+#include <cstring>
 
 extern "C" 
 {
