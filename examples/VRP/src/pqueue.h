@@ -2,6 +2,7 @@
 #define _PQUEUE_H
 
 #include <algorithm>
+#include <functional>
 
 namespace std
 {
