@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.5 2008/04/17 18:00:24 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.6 2008/04/17 19:12:32 bzfpfets Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -99,7 +99,7 @@ TCLIQUE_ISEDGE(tcliqueIsEdge)
    currentadjedge = tcliqueGetFirstAdjedge(tcliquegraph, node1);
    lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, node1);
    
-   if( tcliquegraph->degrees[node1] == 0 || *lastadjedge < node2 )
+   if( currentadjedge > lastadjedge || *lastadjedge < node2 )
       return FALSE;
 
    /* checks if node2 is contained in adjacency list of node1 
