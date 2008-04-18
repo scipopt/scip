@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.4 2008/04/17 19:07:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.5 2008/04/18 15:14:01 bzfheinz Exp $"
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
 
@@ -615,6 +615,13 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	    {
 	       SCIPdebugMessage("constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
 	       *result = SCIP_INFEASIBLE;
+               if( printreason )
+               {
+                  SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+                  SCIPinfoMessage(scip, NULL, "violation: symmetry equation violated <%s> = %.15g and <%s> = %.15g\n",
+                     SCIPvarGetName(Vars[i][j]), SCIPgetSolVal(scip, sol, Vars[i][j]), 0.5,
+                     SCIPvarGetName(Vars[j][i]), SCIPgetSolVal(scip, sol, Vars[j][i]), 0.5);
+               }
 	       return SCIP_OKAY;
 	    }
 
@@ -634,6 +641,15 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	       {
 		  SCIPdebugMessage("constraint <%s> infeasible (violated triangle ineq.).\n", SCIPconsGetName(cons));
 		  *result = SCIP_INFEASIBLE;
+                  if( printreason )
+                  {
+                     SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+                     SCIPinfoMessage(scip, NULL, 
+                        "violation: triangle inequality violated <%s> = %.15g, <%s> = %.15g, <%s> = %.15g\n",
+                        SCIPvarGetName(Vars[i][j]), SCIPgetSolVal(scip, sol, Vars[i][j]), 0.5,
+                        SCIPvarGetName(Vars[j][k]), SCIPgetSolVal(scip, sol, Vars[j][k]), 0.5,
+                        SCIPvarGetName(Vars[k][i]), SCIPgetSolVal(scip, sol, Vars[k][i]), 0.5);
+                  }
 		  return SCIP_OKAY;
 	       }
 	    }

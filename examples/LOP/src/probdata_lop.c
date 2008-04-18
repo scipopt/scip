@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.3 2007/10/12 17:52:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.4 2008/04/18 15:14:01 bzfheinz Exp $"
 
 #include "probdata_lop.h"
 
@@ -324,7 +324,7 @@ SCIP_RETCODE LOPevalSolution(
       }
 
       /* sort such that degrees are non-decreasing */
-      SCIPbsortRealPtr(outDegree, (void**) indices, n);
+      SCIPsortRealPtr(outDegree, (void**) indices, n);
 
       /* output */
       printf("\nFinal order:\n");

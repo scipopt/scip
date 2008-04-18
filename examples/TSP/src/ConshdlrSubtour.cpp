@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.15 2007/10/31 09:26:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.16 2008/04/18 15:14:01 bzfheinz Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -541,6 +541,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_check(
    SCIP_SOL*          sol,                /**< the solution to check feasibility for */
    SCIP_Bool          checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool          checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool          printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*       result              /**< pointer to store the result of the feasibility checking call */
    )
 {
@@ -562,6 +563,11 @@ SCIP_RETCODE ConshdlrSubtour::scip_check(
       if( found )
       {
          *result = SCIP_INFEASIBLE;
+         if( printreason )
+         {
+            SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
+            SCIPinfoMessage(scip, NULL, "violation: graph has a subtour\n");
+         }
       }
    }   
 
