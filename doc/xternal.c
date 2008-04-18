@@ -27,11 +27,16 @@
  * @version  1.00.6
  * @author   Tobias Achterberg
  * @author   Timo Berthold
+ * @author   Stefan Heinz
  * @author   Thorsten Koch
  * @author   Alexander Martin
+ * @author   Marc Pfetsch
+ * @author   Michael Winkler
  * @author   Kati Wolter
  *
  * SCIP is a program and library to solve constraint integer programs (CIPs).
+ *
+ * The main developer of SCIP is Tobias Achterberg (2002-2007). SCIP is based on SIP (Solving Integer Programs) by Alexander Martin.
  *
  * - \ref CODE    "Coding style guidelines"
  * - \ref DOC     "How to search the documentation for interface methods"
