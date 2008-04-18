@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.271 2008/04/17 17:49:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.272 2008/04/18 14:02:45 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -71,27 +71,28 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating linear constraints"
 #define CONFLICTHDLR_PRIORITY  -1000000
 
-#define DEFAULT_TIGHTENBOUNDSFREQ     1 /**< multiplier on propagation frequency, how often the bounds are tightened */
-#define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
-#define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in root node */
-#define DEFAULT_MAXPRESOLPAIRROUNDS  -1 /**< maximal number of presolving rounds with pairwise constraint comparison
-                                         *   (-1: no limit) */
-#define DEFAULT_MAXAGGRNORMSCALE    0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
-                                         *   (0.0: disable constraint aggregation) */
-#define DEFAULT_MAXCARDBOUNDDIST    0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
-                                         *   to best node's dual bound for separating knapsack cardinality cuts */
-#define DEFAULT_SEPARATEALL       FALSE /**< should all constraints be subject to cardinality cut generation instead of only
-                                         *   the ones with non-zero dual value? */
-#define DEFAULT_AGGREGATEVARIABLES TRUE /**< should presolving search for redundant variables in equations */
+#define DEFAULT_TIGHTENBOUNDSFREQ       1 /**< multiplier on propagation frequency, how often the bounds are tightened */
+#define DEFAULT_MAXROUNDS               5 /**< maximal number of separation rounds per node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT          -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXSEPACUTS            50 /**< maximal number of cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
+#define DEFAULT_MAXPRESOLPAIRROUNDS    -1 /**< maximal number of presolving rounds with pairwise constraint comparison
+                                           *   (-1: no limit) */
+#define DEFAULT_MAXAGGRNORMSCALE      0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
+                                           *   (0.0: disable constraint aggregation) */
+#define DEFAULT_MAXCARDBOUNDDIST      0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
+                                           *   to best node's dual bound for separating knapsack cardinality cuts */
+#define DEFAULT_SEPARATEALL         FALSE /**< should all constraints be subject to cardinality cut generation instead of only
+                                           *   the ones with non-zero dual value? */
+#define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
+#define DEFAULT_SIMPLIFYINEQUALITIES FALSE /**< should presolving try to simplify inequalities */
 
-#define KNAPSACKRELAX_MAXDELTA      0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
-#define KNAPSACKRELAX_MAXDNOM    1000LL /**< maximal allowed denominator in knapsack rational relaxation */
-#define KNAPSACKRELAX_MAXSCALE   1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
+#define KNAPSACKRELAX_MAXDELTA        0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
+#define KNAPSACKRELAX_MAXDNOM      1000LL /**< maximal allowed denominator in knapsack rational relaxation */
+#define KNAPSACKRELAX_MAXSCALE     1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
 
-#define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
-#define MAXSCALEDCOEF             1e+03 /**< maximal coefficient value after scaling */
+#define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
+#define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
 
 
 /** constraint data for linear constraints */
@@ -170,6 +171,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
+   SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
+
 };
 
 /** linear constraint update method */
@@ -3346,12 +3349,12 @@ SCIP_RETCODE checkCons(
    }
    else
       activity = consdataGetActivity(scip, consdata, sol);
-
+   
    SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hascurrentnodelp=%d)\n",
       activity, consdata->lhs, consdata->rhs, consdata->row, checklprows,
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
-
+   
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
       *violated = TRUE;
@@ -5265,6 +5268,163 @@ SCIP_RETCODE aggregateVariables(
    return SCIP_OKAY;
 }
 
+
+
+/*  tries to simplify coefficients and delete variables in inequalities lhs <= a^Tx <= rhs
+ *  in case there is only one binary variable with an odd coefficient, all other
+ *  variables are not continuous and have an even coefficient, and only one of the left and right 
+ *  hand-sides is odd, then:
+ *  1. the left hand-side is odd and the right hand-side is even or infinity then:
+ *    - if the odd coefficient is equal to 1, delete the variable and decrease rhs by 1
+ *    - otherwise, decrease coefficient and rhs by 1
+ *  2. the right hand-side is odd and the left hand-side is even or minus infinity then:
+ *    - if the odd coefficient equal to -1, delete the variable and increase lhs by 1
+ *    - otherwise, increase coefficient and lhs by 1
+ *  Afterwards we us the normalize method to further simplify the inequality 
+ */
+
+static
+SCIP_RETCODE simplifyInequalities(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
+   int*                  nchgsides           /**< pointer to store the amount of changed sides */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool success;
+   int v;
+   int nvars;
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real oddbinval;
+   SCIP_Bool lhsodd;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   SCIP_Longint val;
+   
+   SCIP_VAR* oddbinvar;
+   int noddvars = 0;
+   int pos = 0;
+   
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( nchgcoefs != NULL );
+   assert( nchgsides != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   /* try to delete variables and simplify constraint */
+   do
+   {
+      success = FALSE;
+      noddvars = 0;
+
+      lhs = consdata->lhs;
+      rhs = consdata->rhs;
+      vars = consdata->vars;
+      vals = consdata->vals;
+      nvars = consdata->nvars;
+
+      assert( !SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs) );
+      
+      /* check if right and left hand-side are both integral */
+      if( !SCIPisIntegral(scip, rhs) || !SCIPisIntegral(scip, lhs) )
+         return SCIP_OKAY;
+
+      /* check if both sides are not even or odd together */
+      if( SCIPisIntegral(scip, rhs / 2.0) == SCIPisIntegral(scip, lhs / 2.0))    
+         return SCIP_OKAY;
+
+      /* in case the left hand side is minus infinity and the right hand side is even, then there nothing to simplify */
+      if( SCIPisInfinity(scip, -lhs) && SCIPisIntegral(scip, rhs / 2.0))    
+         return SCIP_OKAY;
+      
+      /* in case the right hand side is infinity and the left hand side is even, then there nothing to simplify */
+      if( SCIPisInfinity(scip, rhs) && SCIPisIntegral(scip, lhs / 2.0))    
+         return SCIP_OKAY;
+
+      oddbinvar = NULL;
+      oddbinval = 0;
+      noddvars = 0;
+      
+      /* search for binary variables with an odd coefficient */
+      for( v = 0; v < nvars; ++v )
+      {
+         /* all coefficients have to be integral and all variables not of continuous type */
+         if( !SCIPisIntegral(scip, vals[v]) || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+            return SCIP_OKAY;
+         
+         /* check if the coefficient is odd */
+         val = vals[v] / 2.0;
+         if( !SCIPisIntegral(scip, val) )
+         {
+            /* the odd values have belong to binary variables */
+            if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
+               return SCIP_OKAY;
+            
+            oddbinvar = vars[v];
+            oddbinval = vals[v];
+            pos = v;
+            noddvars++;
+            if (noddvars >= 2)
+               return SCIP_OKAY;
+         }
+      }
+      
+      /* now we found exactly one binary variables with an odd coefficient and all other variables have even
+       * coefficients and are not of continuous type; furthermore, only one side is odd */
+      if( noddvars == 1 )
+      {
+         assert( oddbinvar != NULL );
+         lhsodd = FALSE;
+         
+         /* check if lhs is odd or even */
+         if ( !SCIPisInfinity(scip, -lhs) )
+         {
+            lhsodd = !SCIPisIntegral(scip, lhs / 2.0);
+         }
+         
+         if ( lhsodd )
+         {
+            oddbinval++;
+            SCIP_CALL( chgLhs(scip, cons, lhs + 1) );
+            SCIPdebugMessage("linear constraint <%s>: decreasing coefficient for variable <%s> to <%g> and lhs to <%g>\n",
+               SCIPconsGetName(cons), SCIPvarGetName(oddbinvar), oddbinval, lhs + 1);
+         }
+         else
+         {
+            oddbinval--;
+            SCIP_CALL( chgRhs(scip, cons, rhs - 1) );
+            SCIPdebugMessage("linear constraint <%s>: reducing coefficient for variable <%s> to <%g> and rhs to <%g>\n", 
+               SCIPconsGetName(cons), SCIPvarGetName(oddbinvar), oddbinval , rhs - 1);
+         }
+         
+         if ( SCIPisZero(scip, oddbinval) )
+         {
+            SCIP_CALL( delCoefPos( scip, cons, pos ) );
+         }
+         else
+         {
+            SCIP_CALL( chgCoefPos(scip, cons, pos, oddbinval) );
+         }
+
+         (*nchgcoefs)++;
+         (*nchgsides)++;
+
+         /* normalize constraint */
+         SCIP_CALL( normalizeCons(scip, cons) );
+         success = TRUE;
+         SCIPprintCons(scip,cons,NULL);
+      }
+   }
+   while( success );
+   
+   return SCIP_OKAY;
+}
+
+
 /* tries to aggregate an (in)equality and an equality in order to decrease the number of variables in the (in)equality:
  *   cons0 := a * cons0 + b * cons1,
  * where a = val1[v] and b = -val0[v] for common variable v which removes most variable weight;
@@ -6780,7 +6940,27 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
    }
 
    if( violated )
+   {
       *result = SCIP_INFEASIBLE;
+
+      if( printreason )
+      {
+         SCIP_Real activity;
+         SCIP_CONSDATA* consdata;
+         
+         consdata = SCIPconsGetData(conss[c-1]);
+         assert( consdata != NULL);
+
+         activity = consdataGetActivity(scip, consdata, sol);
+         
+         SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
+         if( SCIPisFeasLT(scip, activity, consdata->lhs) )
+            SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g", activity - consdata->lhs);
+         
+         if( SCIPisFeasGT(scip, activity, consdata->rhs) )
+            SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g", consdata->rhs - activity);
+      }
+   }
    else
       *result = SCIP_FEASIBLE;
 
@@ -7012,6 +7192,12 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          /* reduce big-M coefficients, that make the constraint redundant if the variable is on a bound */
          SCIP_CALL( consdataTightenCoefs(scip, cons, nchgcoefs, nchgsides) );
 
+         /* try to simplify inequalities */
+         if( conshdlrdata->simplifyinequalities )
+         {
+           SCIP_CALL( simplifyInequalities(scip, cons, nchgcoefs, nchgsides) );
+         }
+         
          /* aggregation variable in equations */
          if( conshdlrdata->aggregatevariables )
          {
@@ -7532,6 +7718,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/aggregatevariables",
          "should presolving search for aggregations in equations",
          &conshdlrdata->aggregatevariables, TRUE, DEFAULT_AGGREGATEVARIABLES, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/linear/simplifyinequalities",
+         "should presolving try to simplify inequalities",
+         &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.112 2008/04/17 17:49:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.113 2008/04/18 14:02:45 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -1267,6 +1267,22 @@ SCIP_DECL_CONSCHECK(consCheckLogicor)
          {
             /* constraint is violated */
             *result = SCIP_INFEASIBLE;
+            
+            if( printreason )
+            {
+#ifndef NDEBUG
+               int v;
+               for( v = 0; v < consdata->nvars; ++v )
+               {
+                  assert( consdata->vars[v] != NULL);
+                  assert( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY );
+                  assert( SCIPisZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[v])) );
+               }
+#endif
+               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+               SCIPinfoMessage(scip, NULL, "violation: all variables are set to zero\n");
+            }
+            
             return SCIP_OKAY;
          }
       }

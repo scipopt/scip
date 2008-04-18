@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.121 2008/04/17 17:49:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.122 2008/04/18 14:02:46 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2496,6 +2496,21 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
             /* constraint is violated */
             SCIP_CALL( SCIPresetConsAge(scip, cons) );
             *result = SCIP_INFEASIBLE;
+            
+            if( printreason )
+            {
+               int v;
+               SCIP_Real sum;
+
+               SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+               
+               for( v = 0; v < consdata->nvars; ++v )
+               {
+                  assert(SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY);
+                  sum += SCIPgetSolVal(scip, sol, consdata->vars[v]);
+               }
+               SCIPinfoMessage(scip, NULL, "violation: the right hand side is violated by by %.15g\n", ABS(sum - 1));
+            }
             return SCIP_OKAY;
          }
          else

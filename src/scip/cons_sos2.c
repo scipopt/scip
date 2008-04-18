@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.12 2008/04/17 17:49:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.13 2008/04/18 14:02:46 bzfheinz Exp $"
 
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
@@ -1439,7 +1439,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS2)
 
 /** feasibility check method of constraint handler for integral solutions
  *
- *  We simply check whether at most one variable is nonzero in the given solution.
+ *  We simply check whether at most two variable are nonzero and in the
+ *  case there are exactly two nonzero, then they have to be direct
+ *  neighbors in the given solution.
  */
 static
 SCIP_DECL_CONSCHECK(consCheckSOS2)
@@ -1479,6 +1481,17 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
 	       if ( j > firstNonzero+1 )
 	       {
 		  *result = SCIP_INFEASIBLE;
+                  
+                  if( printreason )
+                  {
+                     SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+
+                     SCIPinfoMessage(scip, NULL, "violation: <%s> = %.15g and  <%s> = %.15g\n", 
+                        SCIPvarGetName(consdata->Vars[firstNonzero]), 
+                        SCIPgetSolVal(scip, sol, consdata->Vars[firstNonzero]),
+                        SCIPvarGetName(consdata->Vars[j]), 
+                        SCIPgetSolVal(scip, sol, consdata->Vars[j]));
+                  }
 		  return SCIP_OKAY;
 	       }
 	    }

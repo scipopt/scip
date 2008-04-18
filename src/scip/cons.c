@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.170 2008/04/17 17:49:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.171 2008/04/18 14:02:44 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2875,6 +2875,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -2900,7 +2901,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
 
       /* call external method */
       SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss, 
-                     sol, checkintegrality, checklprows, result) );
+            sol, checkintegrality, checklprows, printreason, result) );
       SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
       
       /* perform the cached constraint updates */
@@ -5296,6 +5297,7 @@ SCIP_RETCODE SCIPconsCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -5308,7 +5310,7 @@ SCIP_RETCODE SCIPconsCheck(
    assert(conshdlr != NULL);
    
    /* call external method */
-   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, result) );
+   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason, result) );
    SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
    
    if( *result != SCIP_INFEASIBLE

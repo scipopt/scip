@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.12 2008/04/17 17:49:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.13 2008/04/18 14:02:46 bzfheinz Exp $"
 
 /**@file   cons_sos1.c
  * @brief  constraint handler for SOS type 1 constraints
@@ -1398,12 +1398,32 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
 	 {
 	    ++cnt;
 	    /* if more than one variable is nonzero */
-	    if ( cnt > 1 )
-	    {
-	       SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-	       *result = SCIP_INFEASIBLE;
-	       return SCIP_OKAY;
-	    }
+            if ( cnt > 1 )
+            {
+               SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+               *result = SCIP_INFEASIBLE;
+               
+               if( printreason )
+               {
+                  SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+                  SCIPinfoMessage(scip, NULL, "violation: ");
+                  cnt = 0;
+
+                  for( j = 0; j < consdata->nVars && cnt < 2; ++j )
+                  {
+                     /* if variable is nonzero */
+                     if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->Vars[j])) )
+                     {
+                        SCIPinfoMessage(scip, NULL, "<%s> = %.15g ", 
+                           SCIPvarGetName(consdata->Vars[j]), SCIPgetSolVal(scip, sol, consdata->Vars[j]));
+                        if( cnt == 0 )
+                           SCIPinfoMessage(scip, NULL, "and ");
+                        cnt++;
+                     }  
+                  }
+               }
+               return SCIP_OKAY;
+            }
 	 }
       }
    }

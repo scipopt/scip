@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.48 2008/04/17 17:49:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.49 2008/04/18 14:02:45 bzfheinz Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -152,7 +152,15 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
          if( !SCIPisFeasIntegral(scip, solval) )
+         {
             *result = SCIP_INFEASIBLE;
+
+            if( printreason )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
+                  SCIPvarGetName(vars[v]), solval);
+            }
+         }
       }
    }
 #ifndef NDEBUG

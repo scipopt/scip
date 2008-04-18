@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.12 2008/04/17 17:49:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.13 2008/04/18 14:02:44 bzfheinz Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -1068,6 +1068,7 @@ SCIP_RETCODE extendToCover(
 
 /* ---------------------------- constraint handler local methods ----------------------*/
 
+
 /** propagate indicator constraint */
 static
 SCIP_RETCODE propIndicator(
@@ -2109,6 +2110,15 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       {
 	 SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
 	 *result = SCIP_INFEASIBLE;
+         
+         if( printreason )
+         {
+            SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+            SCIPinfoMessage(scip, NULL, "violation:  <%s> = %g and <%s> = %.15g\n", 
+               SCIPvarGetName(consdata->binvar), SCIPgetSolVal(scip, sol, consdata->binvar), 
+               SCIPvarGetName(consdata->slackvar), SCIPgetSolVal(scip, sol, consdata->slackvar));
+         }
+         
 	 return SCIP_OKAY;
       }
    }
@@ -2253,22 +2263,22 @@ static
 SCIP_DECL_CONSPRINT(consPrintIndicator)
 {
    SCIP_CONSDATA* consdata;
-
+   
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( cons != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-
+   
    consdata = SCIPconsGetData(cons);
+   
    assert( consdata != NULL );
    assert( consdata->binvar != NULL );
    assert( consdata->slackvar != NULL );
    assert( consdata->lincons != NULL );
-
-   SCIPinfoMessage(scip, file, "[%s] <%s>: Indicator(", CONSHDLR_NAME, SCIPconsGetName(cons));
-   SCIPinfoMessage(scip, file, "%s = 1", SCIPvarGetName(consdata->binvar));
-   SCIPinfoMessage(scip, file, " -> %s = 0)\n", SCIPvarGetName(consdata->slackvar));
-
+   
+   SCIPinfoMessage(scip, file, "<%s> = 1", SCIPvarGetName(consdata->binvar));
+   SCIPinfoMessage(scip, file, " -> <%s> = 0)\n", SCIPvarGetName(consdata->slackvar));
+   
    return SCIP_OKAY;
 }
 

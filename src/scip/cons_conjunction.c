@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.33 2008/04/17 17:49:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.34 2008/04/18 14:02:44 bzfheinz Exp $"
 
 /**@file   cons_conjunction.c
  * @brief  constraint handler for conjunction constraints
@@ -212,6 +212,7 @@ SCIP_RETCODE checkAllConss(
    SCIP_SOL*             sol,                /**< solution to check */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -229,7 +230,7 @@ SCIP_RETCODE checkAllConss(
       /* check all constraints */
       for( i = 0; i < consdata->nconss && *result == SCIP_FEASIBLE; ++i )
       {
-         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, result) );
+         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, printreason, result) );
       }
 
       /* disable conjunction constraint, if it is unmodifiable */
@@ -238,7 +239,7 @@ SCIP_RETCODE checkAllConss(
          SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
       }
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -374,7 +375,7 @@ SCIP_DECL_CONSCHECK(consCheckConjunction)
    *result = SCIP_FEASIBLE;
 
    /* check all constraints of the conjunction */
-   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, result) );
+   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, printreason, result) );
 
    return SCIP_OKAY;
 }

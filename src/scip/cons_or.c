@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.67 2008/04/17 17:52:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.68 2008/04/18 14:02:45 bzfheinz Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -735,6 +735,7 @@ SCIP_RETCODE checkCons(
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
    SCIP_Bool             checklprows,        /**< should LP rows be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -789,9 +790,25 @@ SCIP_RETCODE checkCons(
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
+
+         if( printreason )
+         {
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, "violation:\n");
+            if( i == consdata->nvars )
+            {
+               SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
+                  SCIPvarGetName(consdata->resvar)); 
+            }
+            else
+            {
+               SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
+                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar)); 
+            }
+         }
       }
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -1469,7 +1486,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOr)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
       if( violated )
       {
          SCIP_Bool separated;
@@ -1496,7 +1513,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOr)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, TRUE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, TRUE, FALSE, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -1519,7 +1536,7 @@ SCIP_DECL_CONSCHECK(consCheckOr)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;

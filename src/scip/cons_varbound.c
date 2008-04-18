@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.71 2008/04/17 17:49:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.72 2008/04/18 14:02:46 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -1261,11 +1261,26 @@ SCIP_DECL_CONSCHECK(consCheckVarbound)
       if( !checkCons(scip, conss[i], sol, checklprows) )
       {
          *result = SCIP_INFEASIBLE;
+
+         if( printreason )
+         {
+            SCIP_Real sum;
+            SCIP_CONSDATA* consdata;
+
+            consdata = SCIPconsGetData(conss[i]);
+            assert( consdata != NULL );
+            
+            sum = SCIPgetSolVal(scip, sol, consdata->var);
+            sum += consdata->vbdcoef * SCIPgetSolVal(scip, sol, consdata->vbdvar);   
+            
+            SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
+            SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", sum - consdata->rhs);
+         }
          return SCIP_OKAY;
       }
    } 
    *result = SCIP_FEASIBLE;
-
+   
    return SCIP_OKAY;
 }
 

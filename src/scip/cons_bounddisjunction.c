@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.16 2008/04/17 17:49:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.17 2008/04/18 14:02:44 bzfheinz Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -836,7 +836,6 @@ SCIP_RETCODE checkCons(
          break;
       }
    }
-
    return SCIP_OKAY;
 }
 
@@ -1111,6 +1110,23 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
       SCIP_CALL( checkCons(scip, cons, sol, &violated) );
       if( violated )
       {
+         if( printreason )
+         {
+            int v;
+
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, "violation: ");
+            for( v = 0; v < consdata->nvars; ++v )
+            {
+               assert(consdata->vars[v] != NULL);
+               if( v > 0 )
+                  SCIPinfoMessage(scip, NULL, ", ");
+               SCIPinfoMessage(scip, NULL, "<%s> = %.15g", 
+                  SCIPvarGetName(consdata->vars[v]), SCIPgetSolVal(scip, sol, consdata->vars[v]));
+            }
+            SCIPinfoMessage(scip, NULL, ")\n");
+         }
+
          /* constraint is violated */
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.8 2008/04/17 17:52:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.9 2008/04/18 14:02:48 bzfheinz Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -139,7 +139,7 @@ SCIP_RETCODE getClosestVlb(
    nvlbs = SCIPvarGetNVlbs(var);
 
    *closestvlbidx = -1;
-   *closestvlb = SCIP_REAL_MIN;
+   *closestvlb = -SCIPinfinity(scip); 
    if( nvlbs > 0 )
    {
       SCIP_VAR** vlbvars;
@@ -252,7 +252,7 @@ SCIP_RETCODE getClosestVub(
    nvubs = SCIPvarGetNVubs(var);
 
    *closestvubidx = -1;
-   *closestvub = SCIP_REAL_MAX;
+   *closestvub = SCIPinfinity(scip);
    if( nvubs > 0 )
    {
       SCIP_VAR** vubvars;
@@ -549,8 +549,8 @@ SCIP_RETCODE constructSNFRelaxation(
       int bestsubtype;
       int probidx;
       
-      bestlb = SCIP_REAL_MIN;
-      bestub = SCIP_REAL_MAX;
+      bestlb = -SCIPinfinity(scip);
+      bestub = SCIPinfinity(scip);
       bestlbtype = -3;
       bestubtype = -3;
 
@@ -592,7 +592,7 @@ SCIP_RETCODE constructSNFRelaxation(
             int bestvlbidx;
             
             getClosestVlb(scip, var, bestsub, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvlb, &bestvlbidx);
-            if( SCIPisGE(scip, bestvlb, bestlb) )
+            if( SCIPisGT(scip, bestvlb, bestlb) )
             {
                bestlb = bestvlb;
                bestlbtype = bestvlbidx;
@@ -613,7 +613,7 @@ SCIP_RETCODE constructSNFRelaxation(
             int bestvubidx;
          
             getClosestVub(scip, var, bestslb, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvub, &bestvubidx);
-            if( SCIPisLE(scip, bestvub, bestub) )
+            if( SCIPisLT(scip, bestvub, bestub) )
             {
                bestub = bestvub;
                bestubtype = bestvubidx;

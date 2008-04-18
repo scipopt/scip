@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.61 2008/04/17 17:52:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.62 2008/04/18 14:02:47 bzfheinz Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -1749,6 +1749,26 @@ SCIP_DECL_CONSCHECK(consCheckXor)
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
+         
+         if( printreason )
+         {
+            int v;
+            int sum = 0;
+            SCIP_CONSDATA* consdata;
+
+            consdata = SCIPconsGetData(conss[i]);
+            assert( consdata != NULL );
+
+            SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
+            
+            for( v = 0; v < consdata->nvars; ++v )
+            {
+               if( SCIPgetSolVal(scip, sol, consdata->vars[i]) > 0.5 )
+                  sum++;
+            }
+            SCIPinfoMessage(scip, NULL, "violation: %d operands are set to TRUE\n", sum );
+         }
+
          return SCIP_OKAY;
       }
    } 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.316 2008/04/17 17:49:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.317 2008/04/18 14:02:48 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3154,6 +3154,7 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -4644,11 +4645,8 @@ SCIP_RETCODE SCIPcheckSolOrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
-   SCIP_CONSHDLR**       infeasconshdlr,     /**< pointer to store constraint handler of first infeasible constraint,
-                                              *   or NULL if not needed */
-   SCIP_CONS**           infeascons          /**< pointer to store first infeasible constraint, or NULL if not needed;
-                                              *   stores NULL, if a constraint handler that doesn't need constraints
-                                              *   rejected the solution */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             completely          /**< should all violation be checked? */
    );
 
 /**@} */

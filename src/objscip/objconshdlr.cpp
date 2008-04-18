@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.36 2008/04/17 18:00:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.37 2008/04/18 14:02:43 bzfheinz Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -305,7 +305,7 @@ SCIP_DECL_CONSCHECK(consCheckObj)
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol, 
-         checkintegrality, checklprows, result) );
+         checkintegrality, checklprows, printreason, result) );
 
    return SCIP_OKAY;
 }

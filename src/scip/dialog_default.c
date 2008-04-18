@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.84 2008/04/17 17:49:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.85 2008/04/18 14:02:47 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -216,8 +216,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 {  /*lint --e{715}*/
    SCIP_SOL* sol;
-   SCIP_CONSHDLR* infeasconshdlr;
-   SCIP_CONS* infeascons;
    SCIP_Bool feasible;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -232,25 +230,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       SCIPdialogMessage(scip, NULL, "no feasible solution available\n");
    else
    {
-      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, &infeasconshdlr, &infeascons) );
+      SCIPmessagePrintInfo("check best solution\n");
+      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
 
       if( feasible )
-         SCIPdialogMessage(scip, NULL, "best solution is feasible in original problem\n");
-      else if( infeasconshdlr == NULL )
-      {
-         SCIPdialogMessage(scip, NULL, "best solution violates bounds\n");
-      }
-      else if( infeascons == NULL )
-      {
-         SCIPdialogMessage(scip, NULL, "best solution violates constraint handler [%s]\n",
-            SCIPconshdlrGetName(infeasconshdlr));
-      }
-      else
-      {
-         SCIPdialogMessage(scip, NULL, "best solution violates constraint <%s> [%s] of original problem:\n",
-            SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
-         SCIP_CALL( SCIPprintCons(scip, infeascons, NULL) );
-      }
+         SCIPdialogMessage(scip, NULL, "solution is feasible in original problem\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
 

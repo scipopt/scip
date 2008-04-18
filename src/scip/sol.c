@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.83 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.84 2008/04/18 14:02:48 bzfheinz Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -967,7 +967,7 @@ SCIP_RETCODE SCIPsolCheck(
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
       SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol, 
-            checkintegrality, checklprows, &result) );
+            checkintegrality, checklprows, FALSE, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
 #ifdef SCIP_DEBUG

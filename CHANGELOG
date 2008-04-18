@@ -36,6 +36,14 @@ interface:
 - added some downwards-sorting methods
 - changed some names for sorting methods
 - new parameter 'maxfrac' for SCIPcalcStrongCG()
+- the parameter list of the method SCIPcheckSolOrig() (scip.h) has changed; the new advatage is,
+  that SCIP can print the reason for a violation as for as the violated component supports this
+- the parameter list of the method SCIPcheckCons() (scip.h) has changed; the new advatage is,
+  that SCIP can print the reason for the violation of a constraint as for as the constraint handler supports that
+- the interface method SCIP_DECL_CONSCHECK() has a new parameter "printreason"; if this comes in TRUE the constraint
+  handler is ask to print for violated constraint a reason;
+- the parameter list of the method scip_check() (objconshdlr.h) has an additional parameter "printreason" 
+  see for explanation the previous point
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -84,6 +92,7 @@ parameters:
 - new parameter "constraints/indicator/branchIndicators"  to decide whether it is branched on indicator constraints in enforcing
 - new parameter "constraints/indicator/genLogicor" to decide whether logicor constraints instead of cuts are generated
 - new parameter "constraints/indicator/sepaAlternativeLP" to decide whether separation takes place using the alternative LP
+- new parameter "constraints/linear/simplifyinequalities" to enable a simplification step for inequalities; default value is set to FALSE = disabled
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
