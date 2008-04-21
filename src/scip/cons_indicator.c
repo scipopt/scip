@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.13 2008/04/18 14:02:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.14 2008/04/21 18:51:35 bzfberth Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -2528,7 +2528,9 @@ SCIP_RETCODE SCIPcreateConsIndicator(
                                               *   Usually set to TRUE. */
    SCIP_Bool             local,              /**< is constraint only valid locally?
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging? Usually set to FALSE. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

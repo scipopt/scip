@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.113 2008/04/18 14:02:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.114 2008/04/21 18:51:36 bzfberth Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -67,6 +67,7 @@
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
+   SCIP_CONSHDLR*        conshdlrlinear;     /**< pointer to linear constraint handler or NULL if not included */
 };
 
 /** logic or constraint data */
@@ -939,7 +940,23 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitLogicor NULL
+static 
+SCIP_DECL_CONSINIT(consInitLogicor)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+
+   /* free constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
+
+   return SCIP_OKAY;
+}
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
@@ -1404,20 +1421,49 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
             assert(SCIPisEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
             
-            SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
-            if( infeasible )
+            if( SCIPvarGetStatus(consdata->vars[0]) != SCIP_VARSTATUS_MULTAGGR )
             {
-               SCIPdebugMessage(" -> infeasible fixing\n");
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            assert(fixed);
-            (*nfixedvars)++;
+               SCIPdebugMessage(" -> fix variable and delete constraint\n");
 
-            SCIP_CALL( SCIPdelCons(scip, cons) );
-            (*ndelconss)++;
-            *result = SCIP_SUCCESS;
-            continue;
+               SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], 1.0, &infeasible, &fixed) );
+               if( infeasible )
+               {
+                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
+               assert(fixed);
+               (*nfixedvars)++;
+               
+               SCIP_CALL( SCIPdelCons(scip, cons) );
+               (*ndelconss)++;
+               *result = SCIP_SUCCESS;
+            }
+            else if( conshdlrdata->conshdlrlinear != NULL )
+            {
+               SCIP_Real coef;
+               SCIP_CONS* conslinear;
+               char consname[SCIP_MAXSTRLEN];
+
+               SCIPdebugMessage(" -> variable is multi-aggregated, upgrade to linear constraint <%s> == 1 \n",
+                  SCIPvarGetName(consdata->vars[0]));
+
+               coef = 1.0;
+               sprintf(consname, "fixmaggr_%s_%s", SCIPconsGetName(cons),SCIPvarGetName(consdata->vars[0]) );
+               SCIP_CALL( SCIPcreateConsLinear(scip,&conslinear,consname,1,consdata->vars,&coef,1.0,1.0,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+                     SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+                     SCIPconsIsStickingAtNode(cons)) );
+
+               /* add constraint */
+               SCIP_CALL( SCIPaddCons(scip, conslinear) );
+               SCIP_CALL( SCIPreleaseCons(scip, &conslinear) );
+               SCIP_CALL( SCIPdelCons(scip, cons) );       
+
+               (*nupgdconss)++;
+               *result = SCIP_SUCCESS;        
+            }
          }
          else if( consdata->nvars == 2 && !consdata->impladded )
          {
@@ -1630,17 +1676,29 @@ SCIP_RETCODE createNormalizedLogicor(
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    SCIP_Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
    int                   mult,               /**< multiplier on the coefficients(+1 or -1) */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
-   SCIP_Bool             local,              /**< is constraint only valid locally? */
-   SCIP_Bool             modifiable,         /**< is row modifiable during node processing (subject to column generation)? */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? 
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? 
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? 
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? 
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? 
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally? 
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? 
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node? */
+                                              *   if it may be moved to a more global node? 
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
    SCIP_VAR** transvars;
@@ -1883,7 +1941,8 @@ SCIP_RETCODE SCIPcreateConsLogicor(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

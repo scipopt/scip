@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.273 2008/04/21 10:36:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.274 2008/04/21 18:51:35 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4879,17 +4879,33 @@ SCIP_RETCODE dualPresolve(
 
          if( agglhs )
          {
+
             /* check if lhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i */
             if( val > 0.0 )
             {
-               minval = (consdata->lhs - maxresactivity)/val;
-               maxval = (consdata->lhs - minresactivity)/val;
+               if( SCIPisInfinity(scip, ABS(maxresactivity)) )
+                  minval = -maxresactivity;
+               else
+                  minval = (consdata->lhs - maxresactivity)/val;
+               
+               if( SCIPisInfinity(scip, ABS(minresactivity)) )
+                  maxval = -minresactivity;
+               else
+                  maxval = (consdata->lhs - minresactivity)/val;
             }
             else
             {
-               minval = (consdata->lhs - minresactivity)/val;
-               maxval = (consdata->lhs - maxresactivity)/val;
+               if( SCIPisInfinity(scip, ABS(minresactivity)) )
+                  minval = minresactivity;
+               else
+                  minval = (consdata->lhs - minresactivity)/val;
+               
+               if( SCIPisInfinity(scip, ABS(maxresactivity)) )
+                  maxval = maxresactivity;
+               else
+                  maxval = (consdata->lhs - maxresactivity)/val;
             }
+            assert(SCIPisLE(scip,minval,maxval));
             if( SCIPisFeasGE(scip, minval, lb) && SCIPisFeasLE(scip, maxval, ub) )
             {
                /* if the variable is integer, we have to check whether the integrality condition would always be satisfied
@@ -4910,14 +4926,30 @@ SCIP_RETCODE dualPresolve(
             /* check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i */
             if( val > 0.0 )
             {
-               minval = (consdata->rhs - maxresactivity)/val;
-               maxval = (consdata->rhs - minresactivity)/val;
+               if( SCIPisInfinity(scip,ABS(maxresactivity)) )
+                  minval = -maxresactivity;
+               else
+                  minval = (consdata->rhs - maxresactivity)/val;
+               
+               if( SCIPisInfinity(scip,ABS(minresactivity)) )
+                  maxval = -minresactivity;
+               else
+                  maxval = (consdata->rhs - minresactivity)/val;
             }
             else
             {
-               minval = (consdata->rhs - minresactivity)/val;
-               maxval = (consdata->rhs - maxresactivity)/val;
+               if( SCIPisInfinity(scip,ABS(minresactivity)) )
+                  minval = minresactivity;
+               else
+                  minval = (consdata->rhs - minresactivity)/val;
+
+               if( SCIPisInfinity(scip,ABS(maxresactivity)) )
+                  maxval = maxresactivity;
+               else
+                  maxval = (consdata->rhs - maxresactivity)/val;
             }
+            
+            assert(SCIPisLE(scip,minval,maxval));
             if( SCIPisFeasGE(scip, minval, lb) && SCIPisFeasLE(scip, maxval, ub) )
             {
                /* if the variable is integer, we have to check whether the integrality condition would always be satisfied
@@ -7804,8 +7836,9 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+   SCIP_Bool             dynamic,            /**< Is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

@@ -129,6 +129,9 @@ fixed bugs:
   correct), fixed calculation of min/maxleftactivity, and removed asserts concerning whether all redundant vars
   were deleted (led to different behavior in debug and opt mod).
 - corrected invalid memory access in tcliqueIsEdge: added check whether node1 has no neighbors (tclique_graph.c)
+- fixed numerical bug in dual presolving of linear constraint handler
+- fixed typo in documentation: default value for "dynamic" parameter is FALSE for all constraint handlers!
+- fixed bug with multi-aggregated variables in cons_logicor: instead of fixing them, a linear constraint will be created
 
 SCIP version 1.00
 =================
