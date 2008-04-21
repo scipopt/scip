@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.29 2008/04/17 17:49:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.30 2008/04/21 14:33:40 bzfpfets Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -23,6 +23,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <assert.h>
 
 #include "scip/def.h"
