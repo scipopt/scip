@@ -526,6 +526,14 @@ constraints/linear/separateall = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/linear/aggregatevariables = TRUE
 
+# should presolving try to simplify inequalities
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/linear/simplifyinequalities = FALSE
+
+# should dual presolving steps be preformed?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/dualpresolving = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/and/sepafreq = 0
@@ -657,6 +665,10 @@ constraints/countsols/sparsetest = TRUE
 # is it allowed to discard solutions?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/countsols/discardsols = TRUE
+
+# is the constraint handler active?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/countsols/active = FALSE
 
 # display activation status of display column <sols> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 0]
@@ -890,6 +902,14 @@ constraints/SOS1/delayprop = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/SOS1/delaypresol = FALSE
 
+# Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/SOS1/branchSOS = TRUE
+
+# Choose SOS constraint with most number of nonzeros as branching constraint?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/SOS1/branchNonzeros = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/SOS2/sepafreq = 0
@@ -1045,6 +1065,22 @@ reading/opbreader/nlcpropagate = TRUE
 # should the non linear constraints be removable?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 reading/opbreader/nlcremovable = TRUE
+
+# should the coloring values be relativ or absolute
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+reading/ppmreader/rgbrelativ = TRUE
+
+# should the output format be binary(P6) or plain(P3) format
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+reading/ppmreader/rgbascii = TRUE
+
+# splitting coefficients in this number of intervals
+# [type: int, range: [3,16], default: 3]
+reading/ppmreader/coefficientlimit = 3
+
+# maximal color value
+# [type: int, range: [0,255], default: 160]
+reading/ppmreader/rgblimit = 160
 
 # should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.272 2008/04/18 14:02:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.273 2008/04/21 10:36:30 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -86,6 +86,7 @@
                                            *   the ones with non-zero dual value? */
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
 #define DEFAULT_SIMPLIFYINEQUALITIES FALSE /**< should presolving try to simplify inequalities */
+#define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be preformed? */
 
 #define KNAPSACKRELAX_MAXDELTA        0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
 #define KNAPSACKRELAX_MAXDNOM      1000LL /**< maximal allowed denominator in knapsack rational relaxation */
@@ -172,6 +173,7 @@ struct SCIP_ConshdlrData
                                               *   the ones with non-zero dual value? */
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
+   SCIP_Bool             dualpresolving;      /**< should dual presolving steps be preformed? */
 
 };
 
@@ -191,13 +193,13 @@ struct SCIP_LinConsUpgrade
  */
 
 enum Proprule
-{
-   PROPRULE_1_RHS        = 1,                /**< activity residuals of all other variables tighten bounds of single
-                                              *   variable due to the right hand side of the inequality */
-   PROPRULE_1_LHS        = 2,                /**< activity residuals of all other variables tighten bounds of single
-                                              *   variable due to the left hand side of the inequality */
-   PROPRULE_INVALID      = 0                 /**< propagation was applied without a specific propagation rule */
-};
+   {
+      PROPRULE_1_RHS        = 1,                /**< activity residuals of all other variables tighten bounds of single
+                                                 *   variable due to the right hand side of the inequality */
+      PROPRULE_1_LHS        = 2,                /**< activity residuals of all other variables tighten bounds of single
+                                                 *   variable due to the left hand side of the inequality */
+      PROPRULE_INVALID      = 0                 /**< propagation was applied without a specific propagation rule */
+   };
 typedef enum Proprule PROPRULE;
 
 /** inference information */
@@ -3182,7 +3184,7 @@ SCIP_RETCODE tightenVarBounds(
    }
    else
    {
-       /* check, if we can tighten the variable's bounds */
+      /* check, if we can tighten the variable's bounds */
       if( !SCIPisInfinity(scip, -minresactivity) && !SCIPisInfinity(scip, rhs) )
       {
          SCIP_Real newlb;
@@ -3976,7 +3978,7 @@ SCIP_RETCODE tightenSides(
       for( i = 0; i < consdata->nvars && integral; ++i )
       {
          integral = SCIPisIntegral(scip, consdata->vals[i])
-                    && (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
+            && (SCIPvarGetType(consdata->vars[i]) != SCIP_VARTYPE_CONTINUOUS);
       }
       if( integral )
       {
@@ -4078,7 +4080,7 @@ SCIP_RETCODE consdataTightenCoefs(
       {
          /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && 
-             SCIPisGE(scip, minactivity + val, consdata->lhs) && SCIPisLE(scip, maxactivity - val, consdata->rhs) )
+            SCIPisGE(scip, minactivity + val, consdata->lhs) && SCIPisLE(scip, maxactivity - val, consdata->rhs) )
          {
             /* change coefficients:
              *   ai'  := max(lhs - minact, maxact - rhs)
@@ -4153,7 +4155,7 @@ SCIP_RETCODE consdataTightenCoefs(
       {
          /* check, if a deviation from lower/upper bound would make lhs/rhs redundant */
          if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && 
-             SCIPisGE(scip, minactivity - val, consdata->lhs) && SCIPisLE(scip, maxactivity + val, consdata->rhs) )
+            SCIPisGE(scip, minactivity - val, consdata->lhs) && SCIPisLE(scip, maxactivity + val, consdata->rhs) )
          {
             /* change coefficients:
              *   ai'  := min(rhs - maxact, minact - lhs)
@@ -4272,7 +4274,7 @@ SCIP_RETCODE consdataTightenCoefs(
          {     
             /* negation of condition above in case of positive val */
             if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || 
-                SCIPisLT(scip, minactivity + val, consdata->lhs) || SCIPisGT(scip, maxactivity - val, consdata->rhs) )
+               SCIPisLT(scip, minactivity + val, consdata->lhs) || SCIPisGT(scip, maxactivity - val, consdata->rhs) )
             {
                SCIPdebugMessage("minactivity = %g\tval = %g\tlhs = %g\n", minactivity, val, consdata->lhs);
                SCIPdebugMessage("linear constraint <%s>: remove variable <%s> with coefficient <%g> from constraint since it is redundant\n",
@@ -4289,7 +4291,7 @@ SCIP_RETCODE consdataTightenCoefs(
          {
             /* negation of condition above in case of negative val */
             if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || 
-                SCIPisLT(scip, minactivity - val, consdata->lhs) || SCIPisGT(scip, maxactivity + val, consdata->rhs) )
+               SCIPisLT(scip, minactivity - val, consdata->lhs) || SCIPisGT(scip, maxactivity + val, consdata->rhs) )
             {               
                SCIPdebugMessage("linear constraint <%s>: remove variable <%s> with coefficient <%g> from constraint since it is redundant\n",
                   SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]), val);
@@ -7195,7 +7197,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          /* try to simplify inequalities */
          if( conshdlrdata->simplifyinequalities )
          {
-           SCIP_CALL( simplifyInequalities(scip, cons, nchgcoefs, nchgsides) );
+            SCIP_CALL( simplifyInequalities(scip, cons, nchgcoefs, nchgsides) );
          }
          
          /* aggregation variable in equations */
@@ -7214,7 +7216,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       }
 
       /* apply dual presolving for variables that appear in only one constraint */
-      if( !cutoff && SCIPconsIsActive(cons) )
+      if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving )
       {
          SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
       }
@@ -7259,7 +7261,10 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
        )
    {
-      SCIP_CALL( fullDualPresolve(scip, conss, nconss, nchgbds) );
+      if( conshdlrdata->dualpresolving )
+      {
+         SCIP_CALL( fullDualPresolve(scip, conss, nconss, nchgbds) );
+      }
    }
 
    /* try to upgrade constraints into a more specific constraint type;
@@ -7704,7 +7709,6 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/linear/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
-
          &conshdlrdata->maxaggrnormscale, TRUE, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/linear/maxcardbounddist",
@@ -7722,6 +7726,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/simplifyinequalities",
          "should presolving try to simplify inequalities",
          &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/linear/dualpresolving",
+         "should dual presolving steps be preformed?",
+         &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
 
    return SCIP_OKAY;
 }

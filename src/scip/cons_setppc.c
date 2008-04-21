@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.122 2008/04/18 14:02:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.123 2008/04/21 10:36:30 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -2500,8 +2500,8 @@ SCIP_DECL_CONSCHECK(consCheckSetppc)
             if( printreason )
             {
                int v;
-               SCIP_Real sum;
-
+               SCIP_Real sum = 0.0;
+               
                SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
                
                for( v = 0; v < consdata->nvars; ++v )
