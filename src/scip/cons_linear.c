@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.274 2008/04/21 18:51:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.275 2008/04/22 14:01:09 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -85,7 +85,7 @@
 #define DEFAULT_SEPARATEALL         FALSE /**< should all constraints be subject to cardinality cut generation instead of only
                                            *   the ones with non-zero dual value? */
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
-#define DEFAULT_SIMPLIFYINEQUALITIES FALSE /**< should presolving try to simplify inequalities */
+#define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify inequalities */
 #define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be preformed? */
 
 #define KNAPSACKRELAX_MAXDELTA        0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
@@ -5335,12 +5335,12 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Bool lhsodd;
    SCIP_Real lhs;
    SCIP_Real rhs;
-   SCIP_Longint val;
+   SCIP_Real val;
    
    SCIP_VAR* oddbinvar;
    int noddvars = 0;
    int pos = 0;
-   
+         assert(0);   
    assert( scip != NULL );
    assert( cons != NULL );
    assert( nchgcoefs != NULL );
@@ -5450,7 +5450,6 @@ SCIP_RETCODE simplifyInequalities(
          /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons) );
          success = TRUE;
-         SCIPprintCons(scip,cons,NULL);
       }
    }
    while( success );
