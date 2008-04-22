@@ -132,6 +132,7 @@ fixed bugs:
 - fixed numerical bug in dual presolving of linear constraint handler
 - fixed typo in documentation: default value for "dynamic" parameter is FALSE for all constraint handlers!
 - fixed bug with multi-aggregated variables in cons_logicor: instead of fixing them, a linear constraint will be created
+- fixed bug with uncatched LPSOLSTAT after hitting a time or iteration limit
 
 SCIP version 1.00
 =================

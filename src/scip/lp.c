@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.267 2008/04/17 17:49:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.268 2008/04/22 13:31:47 bzfberth Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10268,7 +10268,7 @@ SCIP_RETCODE lpSolve(
    }
 
    lp->solved = TRUE;
-
+   
    SCIPdebugMessage("solving LP with %s returned solstat=%d (internal status: %d, pfeas=%d, dfeas=%d)\n",
       lpalgoName(lp->lastlpalgo), lp->lpsolstat, SCIPlpiGetInternalStatus(lp->lpi),
       SCIPlpiIsPrimalFeasible(lp->lpi), SCIPlpiIsDualFeasible(lp->lpi));

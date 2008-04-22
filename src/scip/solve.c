@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.255 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.256 2008/04/22 13:31:48 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -813,6 +813,7 @@ SCIP_RETCODE separationRoundResolveLP(
    {
       /* solve LP (with dual simplex) */
       SCIPdebugMessage("separation: resolve LP\n");
+
       SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
       assert(lp->flushed);
       assert(lp->solved || *lperror);
@@ -1591,10 +1592,13 @@ SCIP_RETCODE priceAndCutLoop(
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY
             || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE
-            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT);
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT);
 
          if( *cutoff || *lperror
-            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT 
+            || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT  || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT )
          {
             /* the found cuts are of no use, because the node is infeasible anyway (or we have an error in the LP) */
             SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, lp) );
@@ -2415,7 +2419,7 @@ SCIP_RETCODE solveNode(
                stat->nnodes, stat->nlps, nlperrors);
          }
          
-         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT )
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT )
             SCIPtreeSetFocusNodeLP(tree, FALSE);
 
          /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
