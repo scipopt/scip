@@ -3386,10 +3386,7 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
   src/scip/type_primal.h src/scip/type_pricestore.h \
   src/scip/type_sepastore.h src/scip/set.h src/scip/buffer.h \
   src/scip/type_buffer.h src/scip/struct_set.h src/scip/misc.h \
-  src/scip/tree.h src/scip/cons_linear.h src/scip/cons_setppc.h \
-  src/scip/cons_sos1.h src/scip/cons_sos2.h lib/zimplinc/zimpl/bool.h \
-  lib/zimplinc/zimpl/ratlptypes.h lib/zimplinc/zimpl/mme.h \
-  lib/zimplinc/zimpl/xlpglue.h
+  src/scip/tree.h
 $(LIBOBJDIR)/scip/sepa_clique.o: src/scip/sepa_clique.c src/scip/sepa_clique.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
