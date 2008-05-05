@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.38 2008/04/17 17:49:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.39 2008/05/05 09:34:20 bzfpfets Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -230,9 +230,9 @@ SCIP_RETCODE SCIPreaderWrite(
          /* save variable and constraint names and replace these names by generic names */
 
          /* alloac memory for saving the original variable and constraint names */
-         SCIP_ALLOC( BMSallocMemoryArray(&varnames, nvars ) );
-         SCIP_ALLOC( BMSallocMemoryArray(&fixedvarnames, nfixedvars ) );
-         SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss ) );
+         SCIP_ALLOC( BMSallocMemoryArray(&varnames, nvars) );
+         SCIP_ALLOC( BMSallocMemoryArray(&fixedvarnames, nfixedvars) );
+         SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss) );
 
          /* compute length of the generic variable names */
          size = nvars % 10 + 2;
@@ -242,7 +242,7 @@ SCIP_RETCODE SCIPreaderWrite(
             var = vars[i];
             varnames[i] = SCIPvarGetName(var);
             
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size ) );
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
             sprintf(name, "x%d", i);
             SCIPvarSetNamePointer(var, name);
          }  
@@ -255,7 +255,7 @@ SCIP_RETCODE SCIPreaderWrite(
             var = fixedvars[i];
             fixedvarnames[i] = SCIPvarGetName(var);
             
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size ) );
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
             sprintf(name, "y%d", i);
             SCIPvarSetNamePointer(var, name);
          }
@@ -268,7 +268,7 @@ SCIP_RETCODE SCIPreaderWrite(
             cons = conss[i];
             consnames[i] = SCIPconsGetName(cons);
 
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size ) );
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
             sprintf(name, "c%d", i);
             SCIPconsSetNamePointer(cons, name);
          }
@@ -282,7 +282,7 @@ SCIP_RETCODE SCIPreaderWrite(
          conss, nconss, prob->maxnconss, prob->startnconss, genericnames, result);
          
       if( genericnames )
-      {
+      {  /*lint --e{644}  suppress not initialized for varnames and fixedvarnames */
          /* reset variable and constraint names to original names */
          
          for( i = 0; i < nvars; ++i )
