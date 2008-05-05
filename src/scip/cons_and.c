@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.90 2008/04/21 18:51:33 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.91 2008/05/05 09:58:25 bzfpfets Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -2377,7 +2377,6 @@ SCIP_VAR** SCIPgetVarsAnd(
 
 
 /** gets the resultant variable in and constraint */
-extern
 SCIP_VAR* SCIPgetResultantAnd(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
