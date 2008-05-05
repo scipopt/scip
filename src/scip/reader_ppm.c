@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.9 2008/05/05 13:55:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.10 2008/05/05 13:56:42 bzfpfets Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -504,7 +504,7 @@ SCIP_RETCODE SCIPwritePpm(
    int                nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    )
-{
+{  /*lint --e{715}*/
    int c;
    int v;
    int i;
@@ -582,7 +582,7 @@ SCIP_RETCODE SCIPwritePpm(
 	{
 	   SCIP_CALL( printLinearCons(scip, file, readerdata, SCIPgetVarsLogicor(scip, cons), NULL,
 				      SCIPgetNVarsLogicor(scip, cons), nvars, transformed, &maxcoef, printbool) );
-       }
+	}
 	else if ( strcmp(conshdlrname, "knapsack") == 0 )
 	{
 	   SCIP_Longint* weights;
