@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.89 2008/05/05 09:10:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.90 2008/05/05 13:38:03 bzfpfets Exp $"
 
 //#define SCIP_DEBUG
 
@@ -361,7 +361,7 @@ void mpsinputEntryIgnored(
    const char*           what_name,
    const char*           entity,
    const char*           entity_name,
-   int                   verblevel
+   SCIP_VERBLEVEL        verblevel
    )
 {
    assert(mpsi        != NULL);
@@ -1604,14 +1604,15 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValVar)
 {
-   return SCIPvarGetIndex((SCIP_VAR*) key);
+   assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
+   return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
 }
 
 
 /* computes the field width such that the output file is nicely arranged */
 static
-int computeFieldWidth(
-   int                   width              /**< required width */
+unsigned int computeFieldWidth(
+   unsigned int             width              /**< required width */
    )
 {
    width = MAX(8, width);
@@ -1626,10 +1627,10 @@ void printRecord(
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           col1,               /**< column 1 */
    const char*           col2,               /**< column 2 */
-   int                   maxnamelen          /**< maximum name lenght */
+   unsigned int          maxnamelen          /**< maximum name length */
    )
 {
-   int fieldwidth;
+   unsigned int fieldwidth;
    char format[32];
 
    assert( scip != NULL );
@@ -1652,10 +1653,10 @@ void printStart(
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           col1,               /**< column 1 */
    const char*           col2,               /**< column 2 */
-   int                   maxnamelen          /**< maximum name lenght */
+   int                   maxnamelen          /**< maximum name length (-1 if irrelevant) */
    )
 {
-   int fieldwidth;
+   unsigned int fieldwidth;
    char format[32];
 
    assert( scip != NULL );
@@ -1665,14 +1666,14 @@ void printStart(
    assert( strlen(col2) < MPS_MAX_NAMELEN );
    assert( maxnamelen == -1 || maxnamelen > 0 );
 
-   if( maxnamelen == -1 )
+   if( maxnamelen < 0 )
    {
       /* format does not matter */
       snprintf(format, 32, " %%-2.2s %%-s ");
    }
    else
    {
-      fieldwidth = computeFieldWidth(maxnamelen);
+      fieldwidth = computeFieldWidth((unsigned int) maxnamelen);
       snprintf(format, 32, " %%-2.2s %%-%ds ", fieldwidth);
    }
 
@@ -1688,7 +1689,7 @@ void printEntry(
    const char*        consname,           /**< constraint name */
    SCIP_Real          value,              /**< value to display */
    int*               recordcnt,          /**< pointer to store the number of records per line */
-   int                maxnamelen          /**< maximum name lenght */
+   unsigned int       maxnamelen          /**< maximum name length */
    )
 {
    char valuestr[MPS_MAX_VALUELEN] = { '\0' };
@@ -1704,7 +1705,7 @@ void printEntry(
       if ( *recordcnt == 0 )
       {
          /* start new line with an empty first column and the variable name in the second column */
-         printStart(scip, file, "", varname, maxnamelen);
+         printStart(scip, file, "", varname, (int) maxnamelen);
          *recordcnt = 0;
       }
 
@@ -1887,10 +1888,10 @@ SCIP_RETCODE getLinearCoeffs(
 
    /* duplicate variable and value array */
    nactivevars = nvars;
-   SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
 
    if( vals != NULL )
-      SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
@@ -1967,7 +1968,7 @@ SCIP_RETCODE collectAggregatedVars(
                (*saggvars) *= 2;
                SCIP_CALL( SCIPreallocBufferArray(scip, aggvars, (*saggvars)) );
             }
-            assert( (*saggvars) < (*naggvars) );
+            assert( (*saggvars) > (*naggvars) );
 
 	    (*aggvars)[*naggvars] = var;
 	    (*naggvars)++;
@@ -2019,7 +2020,7 @@ SCIP_RETCODE checkVarnames(
       else
          (*maxnamelen) = MAX(*maxnamelen, strlen(SCIPvarGetName(var)));
  
-      SCIP_CALL( SCIPallocBufferArray(scip, &varname, *maxnamelen + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varname, (int) *maxnamelen + 1) );
       snprintf(varname, (*maxnamelen) + 1, "%s", SCIPvarGetName(var) );
       
       /* insert variable with variable name into hash map */
@@ -2085,7 +2086,7 @@ SCIP_RETCODE checkConsnames(
       
       (*maxnamelen) = MAX(*maxnamelen, strlen(SCIPconsGetName(cons)));
       
-      SCIP_CALL( SCIPallocBufferArray(scip, &consname, *maxnamelen + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) *maxnamelen + 1) );
       snprintf(consname, (*maxnamelen) + 1, "%s", SCIPconsGetName(cons) );
       
       (*consnames)[c] = consname;
@@ -2138,7 +2139,7 @@ void printColumnSection(
       if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && intSection)
       {
          /* end integer section in MPS format */
-         printStart(scip, file, "", "INTEND", maxnamelen);
+         printStart(scip, file, "", "INTEND", (int) maxnamelen);
          printRecord(scip, file, "'MARKER'", "", maxnamelen);
          printRecord(scip, file, "'INTEND'", "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n", maxnamelen);
@@ -2147,7 +2148,7 @@ void printColumnSection(
       else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !intSection )
       {
          /* start integer section in MPS format */
-         printStart(scip, file, "", "INTSTART", maxnamelen);
+         printStart(scip, file, "", "INTSTART", (int) maxnamelen);
          printRecord(scip, file, "'MARKER'", "", maxnamelen);
          printRecord(scip, file, "'INTORG'", "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
@@ -2197,6 +2198,8 @@ void printRhsSection(
    int c;
    int recordcnt;
    SCIP_CONS* cons;
+
+   assert( rhss != NULL );
 
    SCIPinfoMessage(scip, file, "RHS\n");
    SCIPdebugMessage("start printing RHS section\n");
@@ -2350,7 +2353,7 @@ void printBoundSection(
       /* take care of binary variables */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
-         printStart(scip, file, "BV", "Bound", maxnamelen);
+         printStart(scip, file, "BV", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
          continue;
@@ -2360,7 +2363,7 @@ void printBoundSection(
       if ( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
       {
          /* variable is free */
-         printStart(scip, file, "FR", "Bound", maxnamelen);
+         printStart(scip, file, "FR", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
          continue;
@@ -2371,7 +2374,7 @@ void printBoundSection(
       {
          /* variable is fixed */
          snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
-         printStart(scip, file, "FX", "Bound", maxnamelen);
+         printStart(scip, file, "FX", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, valuestr, maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
          continue;
@@ -2381,7 +2384,7 @@ void printBoundSection(
       if ( SCIPisInfinity(scip, -lb) )
       {
          assert( !SCIPisInfinity(scip, ub) );
-         printStart(scip, file, "MI", "Bound", maxnamelen);
+         printStart(scip, file, "MI", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
       }
@@ -2397,7 +2400,7 @@ void printBoundSection(
          else
          {
             snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
-            printStart(scip, file, "LO", "Bound", maxnamelen);
+            printStart(scip, file, "LO", "Bound", (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
             SCIPinfoMessage(scip, file, "\n");
          }
@@ -2407,7 +2410,7 @@ void printBoundSection(
       if( !SCIPisInfinity(scip, ub) )
       {
          snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", ub);
-         printStart(scip, file, "UP", "Bound", maxnamelen);
+         printStart(scip, file, "UP", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, valuestr, maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
       }
@@ -2424,7 +2427,7 @@ void printBoundSection(
       assert( strncmp(varname, SCIPvarGetName(var), maxnamelen) == 0 );   
       
       /* variable is free */
-      printStart(scip, file, "FR", "Bound", maxnamelen);
+      printStart(scip, file, "FR", "Bound", (int) maxnamelen);
       printRecord(scip, file, varname, "", maxnamelen);
       SCIPinfoMessage(scip, file, "\n");
    }
@@ -2662,7 +2665,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       else if( strcmp(conshdlrname, "knapsack") == 0 )
       {
          /* print row entry */
-         printRowType(scip, file, -SCIPinfinity(scip), SCIPgetCapacityKnapsack(scip, cons), consname);
+         printRowType(scip, file, -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), consname);
 
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
          weights = SCIPgetWeightsKnapsack(scip, cons);
@@ -2728,8 +2731,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          consvars = SCIPgetVarsSOS1(scip, cons);
          nconsvars = SCIPgetNVarsSOS1(scip, cons);
          
-         SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, 
-               &aggvars, &naggvars, &saggvars, varAggregatedHash) );
+         SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregatedHash) );
       }
       else if ( strcmp(conshdlrname, "SOS2") == 0 )
       {
@@ -2741,8 +2743,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          consvars = SCIPgetVarsSOS2(scip, cons);
          nconsvars = SCIPgetNVarsSOS2(scip, cons);
          
-         SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, 
-               &aggvars, &naggvars, &saggvars, varAggregatedHash) );
+         SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregatedHash) );
       }
       else
       {
@@ -2762,6 +2763,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( SCIPreallocBufferArray(scip, &consnames, nconss + naggvars) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &rhss, nconss + naggvars) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &varnames, nvars + naggvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 1) );
 
       for (c = 0; c < naggvars; ++c )
       {
@@ -2791,8 +2793,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          consnames[nconss + c] = namestr;
 
          consvars[0] = aggvars[c];
-         vals[0] = 1.0;
-         
          rhss[nconss + c] = 0.0;
          
          /* compute column entries */
@@ -2805,6 +2805,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          matrix->rows[matrix->nentries] = namestr;
          matrix->nentries++;
       }
+      SCIPfreeBufferArray(scip, &consvars);
    }
    
    /* output COLUMNS section */
@@ -2851,7 +2852,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
             varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
             
-            printStart(scip, file, "", varname, maxnamelen);
+            printStart(scip, file, "", varname, (int) maxnamelen);
             
 	    if ( sosweights != NULL )
                snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", sosweights[v]);
@@ -2880,7 +2881,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
             varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, consvars[v]);
 
-            printStart(scip, file, "", varname, maxnamelen);
+            printStart(scip, file, "", varname, (int) maxnamelen);
 
 	    if ( sosweights != NULL )
                snprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", sosweights[v]);
