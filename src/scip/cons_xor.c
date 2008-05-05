@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.63 2008/04/21 18:51:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.64 2008/05/05 10:46:17 bzfpfets Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -397,7 +397,7 @@ SCIP_RETCODE addCoef(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_VAR*             var                 /**< variable to add to the constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_Bool transformed;
 
