@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.55 2008/04/17 17:49:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.56 2008/05/05 09:24:56 bzfpfets Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPnodepqCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    )
-{
+{  /*lint --e{715}*/
    assert(nodepq != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nodepq) );
