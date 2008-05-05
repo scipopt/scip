@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.275 2008/04/22 14:01:09 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.276 2008/05/05 10:37:33 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4239,12 +4239,12 @@ SCIP_RETCODE consdataTightenCoefs(
 
    /* otherwise aggrlhs is minus infinity in the following computation */
    assert(!SCIPisInfinity(scip, minactivity));
-   if( !SCIPisInfinity(scip, -consdata->lhs && SCIPisInfinity(scip, -minactivity)) )
+   if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, -minactivity) )
       return SCIP_OKAY;
 
    /* otherwise aggrrhs is infinity in the following computation */
    assert(!SCIPisInfinity(scip, -maxactivity));
-   if( !SCIPisInfinity(scip, consdata->rhs && SCIPisInfinity(scip, maxactivity)) )
+   if( !SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, maxactivity) )
       return SCIP_OKAY;
 
    /* correct lhs and rhs by min/max activity of surely non-redundant variables */
@@ -4778,7 +4778,7 @@ SCIP_RETCODE dualPresolve(
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
    int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_Bool lhsexists;
    SCIP_Bool rhsexists;
@@ -5158,7 +5158,7 @@ SCIP_RETCODE aggregateVariables(
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
    int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_Bool success;
 
@@ -5316,7 +5316,6 @@ SCIP_RETCODE aggregateVariables(
  *    - otherwise, increase coefficient and lhs by 1
  *  Afterwards we us the normalize method to further simplify the inequality 
  */
-
 static
 SCIP_RETCODE simplifyInequalities(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5340,7 +5339,6 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_VAR* oddbinvar;
    int noddvars = 0;
    int pos = 0;
-         assert(0);   
    assert( scip != NULL );
    assert( cons != NULL );
    assert( nchgcoefs != NULL );
