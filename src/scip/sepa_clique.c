@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.34 2008/04/17 17:49:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.35 2008/05/05 11:01:31 bzfpfets Exp $"
 
 /**@file   sepa_clique.c
  * @brief  clique separator
@@ -822,7 +822,7 @@ SCIP_RETCODE loadTcliquegraph(
    SCIPfreeBufferArray(scip, &cliquegraphidx[1]);
    SCIPfreeBufferArray(scip, &cliquegraphidx[0]);
    if( SCIPisStopped(scip) && sepadata->tcliquegraph != NULL )
-      tcliquegraphFree(scip,&sepadata->tcliquegraph);      
+      SCIP_CALL( tcliquegraphFree(scip,&sepadata->tcliquegraph) );
    return SCIP_OKAY;
 }
 
