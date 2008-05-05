@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.85 2008/04/18 14:02:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.86 2008/05/05 11:06:58 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -806,8 +806,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
             else if( SCIPisInfinity(scip, -solval) )
                SCIPdialogMessage(scip, NULL, " -infinity");
             else
-               SCIPdialogMessage(scip, NULL, " %f", solval);
-            SCIPdialogMessage(scip, NULL, " \t(obj:%.16g)\n", SCIPvarGetObj(var));
+               SCIPdialogMessage(scip, NULL, " %20.15g", solval);
+            SCIPdialogMessage(scip, NULL, " \t(obj:%.15g)\n", SCIPvarGetObj(var));
          }
       }
    }

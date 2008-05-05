@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.85 2008/05/05 09:50:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.86 2008/05/05 11:06:58 bzfheinz Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1218,7 +1218,7 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(file, " %20.15g", solval);
          SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }

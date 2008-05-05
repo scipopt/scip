@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.451 2008/04/21 18:51:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.452 2008/05/05 11:06:58 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5618,7 +5618,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
             SCIP_CALL( SCIPreallocBufferArray(scip, &multscalars, multvarssize) );
 
             SCIP_CALL( SCIPgetProbvarLinearSum(scip, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
-
+            
             assert(multrequiredsize <= multvarssize );
          }
 
@@ -12098,7 +12098,7 @@ SCIP_RETCODE SCIPprintSol(
 
    SCIPmessageFPrintInfo(file, "objective value:                 ");
    SCIPprintReal(scip, file,
-      SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob)), 20, 9);
+      SCIPprobExternObjval(scip->transprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob)), 20, 15);
    SCIPmessageFPrintInfo(file, "\n");
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->stat, scip->origprob, scip->transprob, file, printzeros) );
