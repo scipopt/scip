@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.69 2008/04/17 17:49:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.70 2008/05/05 15:42:33 bzfpfets Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -486,7 +486,7 @@ SCIP_RETCODE cutGenerationHeuristic(
    char                  normtype,           /**< type of norm to use for efficacy norm calculation */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
 )
-{
+{  /*lint --e{715}*/
    SCIP_Real* cutcoefs;        
    SCIP_Real* mksetcoefs;
    SCIP_Real* testeddeltas;
@@ -1159,16 +1159,13 @@ SCIP_RETCODE separateCuts(
       int bestvlbidx;
       int bestvubidx;
 
-      if( ALLOWLOCAL )
-      {
-         bestlb = SCIPvarGetLbLocal(vars[v]);
-         bestub = SCIPvarGetUbLocal(vars[v]);
-      }
-      else
-      {
-         bestlb = SCIPvarGetLbGlobal(vars[v]);
-         bestub = SCIPvarGetUbGlobal(vars[v]);
-      }
+#if ALLOWLOCAL == 1
+      bestlb = SCIPvarGetLbLocal(vars[v]);
+      bestub = SCIPvarGetUbLocal(vars[v]);
+#else
+      bestlb = SCIPvarGetLbGlobal(vars[v]);
+      bestub = SCIPvarGetUbGlobal(vars[v]);
+#endif
       SCIP_CALL( SCIPgetVarClosestVlb(scip, vars[v], &bestvlb, &bestvlbidx) );
       SCIP_CALL( SCIPgetVarClosestVub(scip, vars[v], &bestvub, &bestvubidx) );
       if( bestvlbidx >= 0 )
