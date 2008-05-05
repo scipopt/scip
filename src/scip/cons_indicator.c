@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.15 2008/05/05 10:10:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.16 2008/05/05 11:02:44 bzfpfets Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -269,7 +269,7 @@ SCIP_RETCODE checkLPBoundsClean(
       if (! covered[j] )
       {
 	 /* some columns can be fixed to 0, since they correspond to disabled constraints */
-	 if ( ! SCIPisZero(scip, lb[j]) || ! SCIPlpiIsInfinity(lp, ub[j]) && ! SCIPisZero(scip, ub[j]) )
+	 if ( ! SCIPisZero(scip, lb[j]) || (! SCIPlpiIsInfinity(lp, ub[j]) && ! SCIPisZero(scip, ub[j])) )
 	    abort();
       }
    }
