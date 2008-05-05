@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.90 2008/05/05 13:38:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.91 2008/05/05 14:25:54 bzfheinz Exp $"
 
 //#define SCIP_DEBUG
 
@@ -2212,7 +2212,11 @@ void printRhsSection(
       cons = conss[c];
       assert( cons != NULL );
 
-      /* in case the transformed problems is written only constraint are
+      /* skip all contraints which have a right hand side of infinity */
+      if( SCIPisInfinity(scip, rhss[c]) )
+         continue;
+         
+         /* in case the transformed problems is written only constraint are
        * posted which are enabled in the current node; the conss array
        * should only contain relevant constraints since these are collected
        * in the beginning in the methode checkConsnames()  */
@@ -2730,7 +2734,10 @@ SCIP_DECL_READERWRITE(readerWriteMps)
           * of aggregations as linear constraints */
          consvars = SCIPgetVarsSOS1(scip, cons);
          nconsvars = SCIPgetNVarsSOS1(scip, cons);
-         
+
+         /* SOS constraint do not have a right hand side; mark this with SCIPinfinity(scip) */
+         rhss[c] = SCIPinfinity(scip); 
+
          SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregatedHash) );
       }
       else if ( strcmp(conshdlrname, "SOS2") == 0 )
@@ -2743,10 +2750,16 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          consvars = SCIPgetVarsSOS2(scip, cons);
          nconsvars = SCIPgetNVarsSOS2(scip, cons);
          
+         /* SOS constraint do not have a right hand side; mark this with SCIPinfinity(scip) */
+         rhss[c] = SCIPinfinity(scip); 
+         
          SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregatedHash) );
       }
       else
       {
+         /* unknown constraint type; mark this with SCIPinfinity(scip) */
+         rhss[c] = SCIPinfinity(scip); 
+         
          SCIPwarningMessage("constraint handler <%s> cannot print requested format\n", conshdlrname );
       }
    }
