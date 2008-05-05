@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.14 2008/04/21 18:51:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.15 2008/05/05 10:10:37 bzfpfets Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -258,7 +258,7 @@ SCIP_RETCODE checkLPBoundsClean(
       ind = consdata->colIndex;
       assert( 0 <= ind && ind < nCols );
       covered[ind] = TRUE;
-      if ( lb[ind] != 0.0 || ub[ind] != SCIPlpiInfinity(lp) )
+      if ( ! SCIPisZero(scip, lb[ind]) || ! SCIPlpiIsInfinity(lp, ub[ind]) )
 	 abort();
    }
 
@@ -269,7 +269,7 @@ SCIP_RETCODE checkLPBoundsClean(
       if (! covered[j] )
       {
 	 /* some columns can be fixed to 0, since they correspond to disabled constraints */
-	 if ( lb[j] != 0.0 || (ub[j] != SCIPlpiInfinity(lp) && ub[j] != 0.0) )
+	 if ( ! SCIPisZero(scip, lb[j]) || ! SCIPlpiIsInfinity(lp, ub[j]) && ! SCIPisZero(scip, ub[j]) )
 	    abort();
       }
    }
@@ -552,7 +552,7 @@ SCIP_RETCODE addAltLPConstraint(
 
    /* adapt rhs of linear constraint */
    val = SCIPgetRhsLinear(scip, lincons);
-   if ( val == SCIPinfinity(scip) )
+   if ( SCIPisInfinity(scip, val) )
    {
       val = SCIPgetLhsLinear(scip, lincons);
       assert( val > -SCIPinfinity(scip) );
@@ -738,7 +738,7 @@ SCIP_RETCODE deleteAltLPConstraint(
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
 
-      fixAltLPVariable(conshdlrdata->altLP, consdata->colIndex);
+      SCIP_CALL( fixAltLPVariable(conshdlrdata->altLP, consdata->colIndex) );
       consdata->colIndex = -1;
    }
 
@@ -1750,7 +1750,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
       ++(consdata->nFixedNonzero);
 
    /* if slack variable is fixed to be nonzero */
-   if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar) > 0.5 ) )
+   if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
       ++(consdata->nFixedNonzero);
 
    /* create transformed constraint with the same flags */
@@ -2306,7 +2306,7 @@ SCIP_DECL_CONSENABLE(consEnableIndicator)
       assert( consdata != NULL );
       assert( conshdlrdata->sepaAlternativeLP );
 
-      unfixAltLPVariable(conshdlrdata->altLP, consdata->colIndex);
+      SCIP_CALL( unfixAltLPVariable(conshdlrdata->altLP, consdata->colIndex) );
    }
 
    return SCIP_OKAY;
@@ -2336,7 +2336,7 @@ SCIP_DECL_CONSDISABLE(consDisableIndicator)
       assert( consdata != NULL );
       assert( conshdlrdata->sepaAlternativeLP );
 
-      fixAltLPVariable(conshdlrdata->altLP, consdata->colIndex);
+      SCIP_CALL( fixAltLPVariable(conshdlrdata->altLP, consdata->colIndex) );
    }
 
    return SCIP_OKAY;
