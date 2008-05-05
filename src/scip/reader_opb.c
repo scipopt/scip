@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.8 2008/04/17 17:49:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.9 2008/05/05 13:46:43 bzfpfets Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -95,14 +95,8 @@
 #define OPB_MAX_PUSHEDTOKENS  2
 #define OPB_INIT_COEFSSIZE    8192
 #define OPB_MAX_PRINTLEN      560       /**< the maximum length of any line is 560 */
-#define OPB_MAX_NAMELEN       255       /**< the maximum length for any name is 255 */
 
 /** Section in OPB File */
-enum OpbSection {
-   OPB_OBJECTIVE, OPB_CONSTRAINTS, OPB_END
-};
-typedef enum OpbSection OPBSECTION;
-
 enum OpbExpType {
    OPB_EXP_NONE, OPB_EXP_UNSIGNED, OPB_EXP_SIGNED
 };
@@ -278,8 +272,8 @@ SCIP_Bool getNextLine(
    {
       /* buffer is full; erase last token since it might be incomplete */
       opbinput->endline = FALSE;
-      last = strrchr( opbinput->linebuf, ' ');
-      SCIPfseek(opbinput->file, -strlen(last), SEEK_CUR);
+      last = strrchr(opbinput->linebuf, ' ');
+      SCIPfseek(opbinput->file, -(long) strlen(last), SEEK_CUR);
       *last = '\0';
       SCIPdebugMessage("correct buffer\n");
    }
@@ -661,7 +655,6 @@ SCIP_RETCODE getVariable(
    int nvars;
    int svars;
 
-   assert(name != NULL);
    assert(var != NULL);
    
    nvars = 0;
@@ -669,6 +662,7 @@ SCIP_RETCODE getVariable(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, svars) );
    
    name = opbinput->token; 
+   assert(name != NULL);
    
    while(!isdigit( *name ) && !isTokenChar(*name) && !opbinput->haserror )
    {
@@ -1128,7 +1122,7 @@ SCIP_RETCODE readFile(
    const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
    )
-{
+{  /*lint --e{715}*/
    OPBINPUT opbinput;
    int i;
 
@@ -1319,11 +1313,11 @@ void appendBuffer(
    assert( linecnt != NULL );
    assert( extension != NULL );
    
-   if( (*linecnt) += strlen(extension) >= OPB_MAX_LINELEN )
+   if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN )
       writeBuffer(scip, file, linebuffer, linecnt);
    
    snprintf(linebuffer, OPB_MAX_LINELEN, "%s%s", linebuffer, extension);
-   (*linecnt) += strlen(extension) + 1;
+   (*linecnt) += (int) strlen(extension) + 1;
 }
 
 
@@ -1420,9 +1414,9 @@ SCIP_RETCODE printLinearCons(
    
    /* duplicate variable and value array */
    nactivevars = nvars;
-   SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
    if( vals != NULL )
-      SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
@@ -1649,9 +1643,8 @@ SCIP_RETCODE writeOpb(
          for( v = 0; v < nconsvars; ++v )
             consvals[v] = weights[v];
 
-         SCIP_CALL( printLinearCons(scip, file,
-               consvars, consvals, nconsvars,
-               -SCIPinfinity(scip), SCIPgetCapacityKnapsack(scip, cons), transformed) );
+         SCIP_CALL( printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip), 
+				    (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }
