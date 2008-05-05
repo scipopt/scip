@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.12 2008/04/17 17:49:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.13 2008/05/05 10:51:18 bzfpfets Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -113,23 +113,23 @@ SCIP_RETCODE createSubproblem(
 
    if( minfixingrate > 0.5 )
    {
-      nmarkers = nbinvars+nintvars - SCIPfloor(scip,minfixingrate*(nbinvars+nintvars));
+      nmarkers = nbinvars + nintvars - (int) SCIPfloor(scip, minfixingrate*(nbinvars+nintvars));
       fixingmarker = FALSE;
    }
    else
    {
-      nmarkers = SCIPceil(scip,minfixingrate*(nbinvars+nintvars));
+      nmarkers = (int) SCIPceil(scip, minfixingrate*(nbinvars+nintvars));
       fixingmarker = TRUE;
    }
    assert( 0 <= nmarkers && nmarkers <=  SCIPceil(scip,(nbinvars+nintvars)/2.0 ) );
    
    j = 0;
-   BMSclearMemoryArray(marked,nbinvars+nintvars);
+   BMSclearMemoryArray(marked, nbinvars+nintvars);
    while( j < nmarkers )
    {
       do
       {
-         i = SCIPgetRandomInt(0,nbinvars+nintvars-1, randseed);
+         i = SCIPgetRandomInt(0, nbinvars+nintvars-1, randseed);
       }
       while( marked[i] ); 
       marked[i] = TRUE;
@@ -358,7 +358,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    *result = SCIP_DIDNOTRUN;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
-   maxnnodes = heurdata->nodesquot * SCIPgetNNodes(scip);
+   maxnnodes = (int) (heurdata->nodesquot * SCIPgetNNodes(scip));
 
    /* reward mutation if it succeeded often */
    maxnnodes *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0);
@@ -394,7 +394,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
  
    success = FALSE;
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed);
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed) );
    
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
