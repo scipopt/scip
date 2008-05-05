@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.88 2008/04/17 17:49:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.89 2008/05/05 09:10:47 bzfheinz Exp $"
 
 //#define SCIP_DEBUG
 
@@ -2111,7 +2111,6 @@ void printColumnSection(
    FILE*              file,               /**<  output file, or NULL if standard output should be used */
    SPARSEMATRIX*      matrix,             /**< sparse matrix containing the entries */
    SCIP_HASHMAP*      varnameHashmap,     /**< map from SCIP_VAR* to variable name */
-   SCIP_OBJSENSE      objsense,           /**< objective sense */
    unsigned int       maxnamelen          /**< maximum name lenght */
    )
 {
@@ -2163,20 +2162,6 @@ void printColumnSection(
       /* get variable name */
       assert ( SCIPhashmapExists(varnameHashmap, var) );
       varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, var);
-
-      /* take care of the objective entry */
-      value = SCIPvarGetObj(var);
-      if( !SCIPisZero(scip, value) )
-      { 
-         /* convert maximization problem into minimization since MPS format the objective is to minimize */
-         if( objsense == SCIP_OBJSENSE_MAXIMIZE )
-            value *= -1.0;
-       
-         /* print record to file */
-         printEntry( scip, file, varname, "Obj", value, &recordcnt, maxnamelen );
-         
-      }
-
 
       /* output all entries of the same variable */
       do {
@@ -2491,6 +2476,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_Real lhs;
    SCIP_Real rhs;
    SCIP_Real* rhss;
+   SCIP_Real value;
 
    SCIP_VAR* var = NULL;
    const char* varname;
@@ -2568,6 +2554,28 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* print row type for the objective function */
    printStart(scip, file, "N", "Obj", -1);
    SCIPinfoMessage(scip, file, "\n");
+
+   /* first fill the matrix with the objective coefficients */
+   for( v = 0; v < nvars; ++v )
+   {
+      /* take care of the objective entry */
+      var = vars[v];
+      value = SCIPvarGetObj(var);
+
+      if( !SCIPisZero(scip, value) )
+      { 
+         /* convert maximization problem into minimization since MPS format the objective is to minimize */
+         if( objsense == SCIP_OBJSENSE_MAXIMIZE )
+            value *= -1.0;
+       
+         assert( matrix->nentries < matrix->sentries );
+         
+         matrix->values[matrix->nentries] = value;
+         matrix->columns[matrix->nentries] = var;
+         matrix->rows[matrix->nentries] = "Obj";
+         matrix->nentries++;
+      }
+   }
 
    /* loop over all constraints */
    for( c = 0; c < nconss; ++c )
@@ -2800,7 +2808,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    }
    
    /* output COLUMNS section */
-   printColumnSection(scip, file, matrix, varnameHashmap, objsense, maxnamelen);
+   printColumnSection(scip, file, matrix, varnameHashmap, maxnamelen);
    
    /* output RHS section */
    printRhsSection(scip, file, conss, nconss, consnames, rhss, transformed, maxnamelen);

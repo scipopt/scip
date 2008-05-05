@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.51 2008/04/17 17:49:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.52 2008/05/05 09:10:47 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1766,9 +1766,14 @@ void appendLine(
    assert( linecnt != NULL );
    assert( extension != NULL );
    assert( strlen(linebuffer) + strlen(extension) < LP_MAX_PRINTLEN );
-   
-   snprintf(linebuffer, LP_MAX_PRINTLEN, "%s%s", linebuffer, extension);
+
+   /* NOTE: the following line does not work:
+    *    snprintf(linebuffer, LP_MAX_PRINTLEN, "%s%s", linebuffer, extension);
+    */
+   sprintf(linebuffer, "%s%s", linebuffer, extension);
    (*linecnt) += strlen(extension);
+
+   SCIPdebugMessage("linebuffer <%s>, length = %d\n", linebuffer, strlen(linebuffer));
    
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
@@ -2374,7 +2379,7 @@ SCIP_RETCODE SCIPwriteLp(
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
             SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
-
+      
       if (SCIPisZero(scip, SCIPvarGetObj(var)) )
          continue;
 
@@ -2387,6 +2392,7 @@ SCIP_RETCODE SCIPwriteLp(
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
+
    endLine(scip, file, linebuffer, &linecnt);
 
    /* print "Subsect to" section */
