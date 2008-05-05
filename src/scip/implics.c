@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.25 2008/04/17 17:49:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.26 2008/05/05 09:08:00 bzfpfets Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -400,6 +400,7 @@ SCIP_DECL_SORTPTRCOMP(compVars)
       else
       {
          SCIPABORT();
+	 /*lint --e{527}*/
          return 0;
       }
    }
