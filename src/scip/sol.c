@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.84 2008/04/18 14:02:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.85 2008/05/05 09:50:12 bzfpfets Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -1390,7 +1390,6 @@ int SCIPsolGetIndex(
 }
 
 /** informs the solution that it now belongs to the given primal heuristic */
-extern
 void SCIPsolSetHeur(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
