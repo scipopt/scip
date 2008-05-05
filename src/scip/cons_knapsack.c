@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.157 2008/04/21 18:51:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.158 2008/05/05 10:14:34 bzfpfets Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -377,7 +377,7 @@ SCIP_RETCODE consdataCreate(
          /* all weight have to be not negative */
          assert( weights[v] >= 0 );
 
-         if( !SCIPisZero(scip, weights[v]) )
+         if( weights[v] != 0 )
          {
             vars[k] = vars[v];
             weights[k] = weights[v];
@@ -392,7 +392,7 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->weights = NULL;
    }
 
-   /* capacity has to be greater or eqaul to zero */
+   /* capacity has to be greater or equal to zero */
    assert( capacity >= 0 );
 
    (*consdata)->nvars = nvars;
