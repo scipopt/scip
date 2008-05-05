@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.14 2008/04/21 18:51:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.15 2008/05/05 10:45:25 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
@@ -672,7 +672,7 @@ SCIP_RETCODE enforceSOS2(
 	 *result = SCIP_CUTOFF;
 	 return SCIP_OKAY;
       }
-      if ( cnt > 0 )
+      if ( nGen > 0 )
       {
 	 *result = SCIP_REDUCEDDOM;
 	 return SCIP_OKAY;
@@ -729,12 +729,13 @@ SCIP_RETCODE enforceSOS2(
    }
 
    /* create branches */
-   SCIPdebugMessage("Branching on variable <%s> in constraint <%s> (nonzeros: %d).\n", SCIPvarGetName(Vars[maxInd]),
-		    SCIPconsGetName(branchCons), maxNonzeros);
    consdata = SCIPconsGetData(branchCons);
    assert( consdata != NULL );
    nVars = consdata->nVars;
    Vars = consdata->Vars;
+
+   SCIPdebugMessage("Branching on variable <%s> in constraint <%s> (nonzeros: %d).\n", SCIPvarGetName(Vars[maxInd]),
+		    SCIPconsGetName(branchCons), maxNonzeros);
 
    /* branch on variable ind: either all variables before ind or all variables after ind are zero */
    SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPgetLocalTransEstimate(scip) ) );
