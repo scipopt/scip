@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.67 2008/04/17 17:49:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.68 2008/05/05 10:46:58 bzfpfets Exp $"
 
 /**@file   disp_default.c
  * @brief  default display columns
@@ -701,7 +701,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputGap)
 /** output method of display column to output file stream 'file' */
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNsols)
-{
+{  /*lint --e{715}*/
    SCIPinfoMessage(scip, file, "%5"SCIP_LONGINT_FORMAT, SCIPgetNSolsFound(scip));
 
    return SCIP_OKAY;
