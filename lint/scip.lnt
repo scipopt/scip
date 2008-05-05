@@ -14,7 +14,7 @@
 //*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 //*                                                                           */
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-// $Id: scip.lnt,v 1.16 2006/05/15 13:30:33 bzfpfend Exp $
+// $Id: scip.lnt,v 1.17 2008/05/05 09:55:46 bzfpfets Exp $
 
 -passes(1)
 // esoteric size settings to find erros.
@@ -84,6 +84,7 @@
 -e773  // Expression-like macro not parenthesized
 -e793  // ANSI limit of 31 'function parameters' exceeded / ANSI limit of 8 '#include levels' exceeded
 -e834  // Operator followed by operator ist confusing
+-e655  // bit-wise operation uses (compatible) enum's
 
 // temporary
 -e818  // Pointer parameter could be declared as pointing to const
