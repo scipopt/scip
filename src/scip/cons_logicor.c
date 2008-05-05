@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.114 2008/04/21 18:51:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.115 2008/05/05 10:39:36 bzfpfets Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -942,7 +942,7 @@ SCIP_DECL_CONSFREE(consFreeLogicor)
 /** initialization method of constraint handler (called after problem was transformed) */
 static 
 SCIP_DECL_CONSINIT(consInitLogicor)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(conshdlr != NULL);
