@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.5 2008/04/17 17:49:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.6 2008/05/05 10:56:06 bzfpfets Exp $"
 
 /**@file   reader_cip.c
  * @brief  CIP file reader
@@ -91,14 +91,14 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    {
       SCIPinfoMessage(scip, file, "VARIABLES\n");
       for( i = 0; i < nvars; ++i )
-         SCIPprintVar(scip, vars[i], file);
+         SCIP_CALL( SCIPprintVar(scip, vars[i], file) );
    }
 
    if( nfixedvars > 0 )
    {
       SCIPinfoMessage(scip, file, "FIXED\n");
       for( i = 0; i < nfixedvars; ++i )
-         SCIPprintVar(scip, fixedvars[i], file);
+         SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
    }
 
    if( nconss > 0 )
