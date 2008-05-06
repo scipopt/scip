@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.269 2008/05/06 10:19:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.270 2008/05/06 13:27:16 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -12682,7 +12682,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    {
       char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for writing\n", fname);
-      strerror_r(errno, buf, 1024);
+      (void) strerror_r(errno, buf, 1024);
       SCIPerrorMessage("%s: %s\n", fname, buf);
       return SCIP_FILECREATEERROR;
    }
