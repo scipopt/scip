@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.27 2008/04/17 17:49:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.28 2008/05/06 13:33:59 bzfpfets Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -114,7 +114,7 @@ SCIP_RETCODE SCIPvbcInit(
    {
       char buf[1024];
       SCIPerrorMessage("error creating file <%s>\n", set->vbc_filename);
-      strerror_r(errno, buf, 1024);
+      (void) strerror_r(errno, buf, 1024);
       SCIPerrorMessage("%s: %s\n", set->vbc_filename, buf);
       return SCIP_FILECREATEERROR;
    }
