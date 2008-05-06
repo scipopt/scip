@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.268 2008/04/22 13:31:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.269 2008/05/06 10:19:10 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -48,7 +48,7 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
-#include "scip/pub_fileio.h"
+
 
 /*
  * memory growing methods for dynamically allocated arrays
@@ -7949,7 +7949,7 @@ void substituteMIRRow(
    int                   nrowinds,           /**< number of used rows */
    SCIP_Real             f0                  /**< fracional value of rhs */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real onedivoneminusf0;
    int i;
 
@@ -8418,6 +8418,7 @@ void sumStrongCGRow(
       if( !row->modifiable && (allowlocal || !row->local)
          && absweight * maxweightrange >= maxweight && !SCIPsetIsSumZero(set, weight) )
       {
+	 /*lint --e{644}*/
          SCIP_Bool uselhs;
 
          if( row->integral )
@@ -8986,7 +8987,7 @@ void substituteStrongCGRow(
    SCIP_Real             f0,                 /**< fracional value of rhs */
    SCIP_Real             k                   /**< factor to strengthen strongcg cut */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Real onedivoneminusf0;
    int i;
 
@@ -9750,7 +9751,7 @@ SCIP_RETCODE lpAlgorithm(
    timelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
    timelimit = MAX( timelimit, 0.0 );
 
-   lpSetRealpar(lp,SCIP_LPPAR_LPTILIM,timelimit,&success);
+   SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, timelimit, &success) );
    if( !success )
    {
       *lperror =  FALSE;
@@ -12718,7 +12719,7 @@ SCIP_RETCODE SCIPlpWriteMip(
          coeff = lp->cols[i]->obj;
          if( origobj )
          {
-            coeff *= objsense;
+            coeff *= (SCIP_Real) objsense;
             coeff *= objscale;
          }
 
@@ -12733,7 +12734,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       }
    }
    if( origobj && objoffset != 0.0 ) 
-      SCIPmessageFPrintInfo(file," %+.15g objoffset", objoffset * objsense * objscale);
+      SCIPmessageFPrintInfo(file," %+.15g objoffset", objoffset * (SCIP_Real) objsense * objscale);
 
    /* print constraint section */
    SCIPmessageFPrintInfo(file,"\n\nSubject to\n");
@@ -12746,13 +12747,13 @@ SCIP_RETCODE SCIPlpWriteMip(
        * equal, 'b' and 'B' mean: both sides exist, if the type is 'b', the lhs will be written, if the type is 'B', 
        * the rhs will be written. Ergo: set type to b first, change it to 'B' afterwards and go back to WRITEROW.
        * type 'i' means: lhs and rhs are both infinite */      
-      if( SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+      if( SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
          type = 'r';
-      else if( !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
          type = 'l';
-      else if( lp->rows[i]->lhs == lp->rows[i]->rhs && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) )
+      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && SCIPsetIsEQ(set, lp->rows[i]->lhs, lp->rows[i]->rhs) )
          type = 'e';
-      else if( !SCIPsetIsInfinity(set,ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set,ABS(lp->rows[i]->rhs)) )
+      else if( !SCIPsetIsInfinity(set, ABS(lp->rows[i]->lhs)) && !SCIPsetIsInfinity(set, ABS(lp->rows[i]->rhs)) )
          type = 'b';
 
       /* print name of row */
