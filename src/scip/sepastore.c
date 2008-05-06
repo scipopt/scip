@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.58 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.59 2008/05/06 10:37:16 bzfpfets Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -762,7 +762,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    }
 
    /* clear the separation storage and reset statistics for separation round */
-   SCIPsepastoreClearCuts(sepastore, blkmem, set, lp);
+   SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, lp) );
 
    return SCIP_OKAY;
 }
