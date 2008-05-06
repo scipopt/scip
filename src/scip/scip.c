@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.454 2008/05/06 13:27:30 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.455 2008/05/06 13:33:02 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9714,7 +9714,7 @@ SCIP_RETCODE SCIPreadSol(
    {
       char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", fname);
-      strerror_r(errno, buf, 1024);
+      (void) strerror_r(errno, buf, 1024);
       SCIPerrorMessage("%s: %s\n", fname, buf);
       return SCIP_NOFILE;
    }
@@ -14624,7 +14624,7 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
       {
 	 char buf[1024];
          SCIPerrorMessage("cannot create file <%s>\n", filename);
-	 strerror_r(errno, buf, 1024);
+	 (void) strerror_r(errno, buf, 1024);
 	 SCIPerrorMessage("%s: %s\n", filename, buf);
          return SCIP_FILECREATEERROR;
       }
