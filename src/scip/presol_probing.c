@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.51 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.52 2008/05/06 10:20:25 bzfpfets Exp $"
 
 /**@file   presol_probing.c
  * @brief  probing presolver
@@ -398,7 +398,7 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
    SCIP_Real* oneproplbs;
    SCIP_Real* onepropubs;
    int nvars;
-   int nbinvars; /* coverity: uninitalized */
+   int nbinvars;
    int maxfixings;
    int maxuseless;
    int maxtotaluseless;
@@ -456,6 +456,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          SCIP_CALL( SCIPcaptureVar(scip, presoldata->sortedvars[i]) );
       }
    }
+   else
+      nbinvars = SCIPgetNBinVars(scip);
 
    /* if we probed all binary variables in previous runs, start again with the first one */
    if( !presoldata->called && presoldata->startidx >= nbinvars )
