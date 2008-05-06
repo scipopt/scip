@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.46 2008/04/17 17:49:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.47 2008/05/06 13:27:06 bzfpfets Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2035,7 +2035,7 @@ SCIP_RETCODE SCIPparamsetRead(
    {
       char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      strerror_r(errno, buf, 1024);
+      (void) strerror_r(errno, buf, 1024);
       SCIPerrorMessage("%s: %s\n", filename, buf);
       return SCIP_NOFILE;
    }
@@ -2080,7 +2080,7 @@ SCIP_RETCODE SCIPparamsetWrite(
       {
 	 char buf[1024];
 	 SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
-	 strerror_r(errno, buf, 1024);
+	 (void) strerror_r(errno, buf, 1024);
 	 SCIPerrorMessage("%s: %s\n", filename, buf);
          return SCIP_FILECREATEERROR;
       }
