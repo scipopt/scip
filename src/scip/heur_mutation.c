@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.13 2008/05/05 10:51:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.14 2008/05/06 10:02:55 bzfpfets Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -39,10 +39,9 @@
 #define DEFAULT_NODESOFS      500       /* number of nodes added to the contingent of the total nodes    */
 #define DEFAULT_MAXNODES      5000      /* maximum number of nodes to regard in the subproblem           */
 #define DEFAULT_MINNODES      500       /* minimum number of nodes to regard in the subproblem           */
-#define DEFAULT_MINFIXINGRATE    0.8       /* minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_MINFIXINGRATE 0.8       /* minimum percentage of integer variables that have to be fixed */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_NWAITINGNODES 200       /* number of nodes without incumbent change that heuristic should wait */
-#define DEFAULT_RANDOMIZATION FALSE     /* should the choice which sols to take be randomized? */ 
 
 
 
@@ -56,13 +55,13 @@ struct SCIP_HeurData
    int                   nodesofs;          /**< number of nodes added to the contingent of the total nodes          */
    int                   maxnodes;          /**< maximum number of nodes to regard in the subproblem                 */
    int                   minnodes;          /**< minimum number of nodes to regard in the subproblem                 */
-   SCIP_Real             minfixingrate;        /**< minimum percentage of integer variables that have to be fixed       */
+   SCIP_Real             minfixingrate;     /**< minimum percentage of integer variables that have to be fixed       */
    int                   nwaitingnodes;     /**< number of nodes without incumbent change that heuristic should wait */
-   SCIP_Real             minimprove;        /**< factor by which Mutation should at least improve the incumbent          */
-   SCIP_Longint          usednodes;         /**< nodes already used by Mutation in earlier calls                         */
+   SCIP_Real             minimprove;        /**< factor by which Mutation should at least improve the incumbent      */
+   SCIP_Longint          usednodes;         /**< nodes already used by Mutation in earlier calls                     */
    SCIP_Real             nodesquot;         /**< subproblem nodes in relation to nodes of the original problem       */
-   SCIP_Real             nsuccesses;        /**< number of Mutation-calls, where a real improvement was achieved         */
-   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_Real             nsuccesses;        /**< number of Mutation-calls, where a real improvement was achieved     */
+   unsigned int          randseed;          /**< seed value for random number generator */
 };
 
 
@@ -330,6 +329,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_Bool success;
    int i;   
    SCIP_Longint maxnnodes;                  
+   SCIP_Real maxnnodesr;
    SCIP_Longint nsubnodes;                   /* node limit for the subproblem                       */
      
    assert( heur != NULL );
@@ -358,11 +358,11 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    *result = SCIP_DIDNOTRUN;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
-   maxnnodes = (int) (heurdata->nodesquot * SCIPgetNNodes(scip));
+   maxnnodesr = heurdata->nodesquot * SCIPgetNNodes(scip);
 
    /* reward mutation if it succeeded often */
-   maxnnodes *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0);
-   maxnnodes -= 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
+   maxnnodesr *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0);
+   maxnnodes = (SCIP_Longint) maxnnodesr - 100 * SCIPheurGetNCalls(heur);  /* count the setup costs for the sub-MIP as 100 nodes */
    maxnnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
