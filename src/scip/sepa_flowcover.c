@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.9 2008/04/18 14:02:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.10 2008/05/06 10:36:28 bzfpfets Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -591,7 +591,7 @@ SCIP_RETCODE constructSNFRelaxation(
             SCIP_Real bestvlb;
             int bestvlbidx;
             
-            getClosestVlb(scip, var, bestsub, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvlb, &bestvlbidx);
+            SCIP_CALL( getClosestVlb(scip, var, bestsub, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvlb, &bestvlbidx) );
             if( SCIPisGT(scip, bestvlb, bestlb) )
             {
                bestlb = bestvlb;
@@ -612,7 +612,7 @@ SCIP_RETCODE constructSNFRelaxation(
             SCIP_Real bestvub;
             int bestvubidx;
          
-            getClosestVub(scip, var, bestslb, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvub, &bestvubidx);
+            SCIP_CALL( getClosestVub(scip, var, bestslb, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvub, &bestvubidx) );
             if( SCIPisLT(scip, bestvub, bestub) )
             {
                bestub = bestvub;
