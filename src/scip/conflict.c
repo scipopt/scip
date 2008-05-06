@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.134 2008/04/17 17:49:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.135 2008/05/06 08:59:15 bzfpfets Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -4299,6 +4299,7 @@ SCIP_RETCODE conflictAnalyzeLP(
    lastnbdchgs = 0;
 
    /* undo as many bound changes as possible with the current LP solution */
+   resolve = FALSE;
    if( valid )
    {
       int currentdepth;
