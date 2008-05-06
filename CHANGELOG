@@ -94,6 +94,7 @@ parameters:
 - new parameter "constraints/indicator/sepaAlternativeLP" to decide whether separation takes place using the alternative LP
 - new parameter "constraints/linear/simplifyinequalities" to enable a simplification step for inequalities; default value is set to FALSE = disabled
 - new parameter "constraints/linear/dualpresolving" to disable dual presolving step in the linear constraint handler; default value is TRUE
+- new parameter "heuristics/mutation/minimprove"
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
