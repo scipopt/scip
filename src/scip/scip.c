@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.453 2008/05/06 10:35:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.454 2008/05/06 13:27:30 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2586,7 +2586,7 @@ SCIP_RETCODE writeProblem(
       {
 	 char buf[1024];
          SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
-	 strerror_r(errno, buf, 1024);
+	 (void) strerror_r(errno, buf, 1024);
 	 SCIPerrorMessage("%s: %s\n", filename, buf);
          return SCIP_FILECREATEERROR;
       }
