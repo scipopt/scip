@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.452 2008/05/05 11:06:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.453 2008/05/06 10:35:37 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2617,7 +2617,6 @@ SCIP_RETCODE writeProblem(
 }
 
 /** writes original problem to file  */
-extern
 SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
@@ -2643,7 +2642,6 @@ SCIP_RETCODE SCIPwriteOrigProblem(
 }
 
 /** writes transformed problem which are valid in the current node to file */
-extern
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
@@ -5550,7 +5548,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP_VAR** multvars;
    SCIP_Real* multscalars;
    SCIP_Real multconstant;
-   SCIP_Real multvarssize;
+   int multvarssize;
    int nmultvars;
    int multrequiredsize;
 
@@ -10741,7 +10739,7 @@ SCIP_RETCODE SCIPendDive(
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
    if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL )
    {
-      SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->lp);
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->primal->cutoffbound) );
@@ -10752,8 +10750,7 @@ SCIP_RETCODE SCIPendDive(
     */
    if( scip->tree->cutoffdelayed )
    {
-      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
-            scip->primal->cutoffbound) );
+      SCIP_CALL( SCIPtreeCutoff(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->primal->cutoffbound) );
    }
 
    return SCIP_OKAY;
@@ -15297,9 +15294,9 @@ SCIP_Bool SCIPisEQ(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2)) 
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	   && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
    
    return SCIPsetIsEQ(scip->set, val1, val2);
 }
@@ -15316,9 +15313,9 @@ SCIP_Bool SCIPisLT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsLT(scip->set, val1, val2);
 }
@@ -15335,9 +15332,9 @@ SCIP_Bool SCIPisLE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsLE(scip->set, val1, val2);
 }
@@ -15354,9 +15351,9 @@ SCIP_Bool SCIPisGT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsGT(scip->set, val1, val2);
 }
@@ -15373,9 +15370,9 @@ SCIP_Bool SCIPisGE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsGE(scip->set, val1, val2);
 }
@@ -15513,9 +15510,9 @@ SCIP_Bool SCIPisSumEQ(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	   && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
    
    return SCIPsetIsSumEQ(scip->set, val1, val2);
 }
@@ -15532,9 +15529,9 @@ SCIP_Bool SCIPisSumLT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumLT(scip->set, val1, val2);
 }
@@ -15550,9 +15547,9 @@ SCIP_Bool SCIPisSumLE(
    assert(scip->set != NULL);
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumLE(scip->set, val1, val2);
 }
@@ -15569,9 +15566,9 @@ SCIP_Bool SCIPisSumGT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumGT(scip->set, val1, val2);
 }
@@ -15588,9 +15585,9 @@ SCIP_Bool SCIPisSumGE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumGE(scip->set, val1, val2);
 }
@@ -15643,9 +15640,9 @@ SCIP_Bool SCIPisFeasEQ(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasEQ(scip->set, val1, val2);
 }
@@ -15662,9 +15659,9 @@ SCIP_Bool SCIPisFeasLT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasLT(scip->set, val1, val2);
 }
@@ -15681,9 +15678,9 @@ SCIP_Bool SCIPisFeasLE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasLE(scip->set, val1, val2);
 }
@@ -15700,9 +15697,9 @@ SCIP_Bool SCIPisFeasGT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasGT(scip->set, val1, val2);
 }
@@ -15719,9 +15716,9 @@ SCIP_Bool SCIPisFeasGE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsFeasGE(scip->set, val1, val2);
 }
@@ -15860,9 +15857,9 @@ SCIP_Bool SCIPisRelEQ(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelEQ(scip->set, val1, val2);
 }
@@ -15879,9 +15876,9 @@ SCIP_Bool SCIPisRelLT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelLT(scip->set, val1, val2);
 }
@@ -15898,9 +15895,9 @@ SCIP_Bool SCIPisRelLE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelLE(scip->set, val1, val2);
 }
@@ -15917,9 +15914,9 @@ SCIP_Bool SCIPisRelGT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelGT(scip->set, val1, val2);
 }
@@ -15936,9 +15933,9 @@ SCIP_Bool SCIPisRelGE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsRelGE(scip->set, val1, val2);
 }
@@ -15955,9 +15952,9 @@ SCIP_Bool SCIPisSumRelEQ(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelEQ(scip->set, val1, val2);
 }
@@ -15974,9 +15971,9 @@ SCIP_Bool SCIPisSumRelLT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelLT(scip->set, val1, val2);
 }
@@ -15993,9 +15990,9 @@ SCIP_Bool SCIPisSumRelLE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelLE(scip->set, val1, val2);
 }
@@ -16012,9 +16009,9 @@ SCIP_Bool SCIPisSumRelGT(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelGT(scip->set, val1, val2);
 }
@@ -16031,9 +16028,9 @@ SCIP_Bool SCIPisSumRelGE(
 
    /* avoid to compare two different infinities; the reason for that is
     * that such a comparison can lead to unexpected results */
-   assert(((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
-         && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
-      || val1 == val2 );
+   assert( ((!SCIPisInfinity(scip, val1) || !SCIPisInfinity(scip, val2))
+	    && (!SCIPisInfinity(scip, -val1) || !SCIPisInfinity(scip, -val2)))
+	   || val1 == val2 );    /*lint !e777*/
 
    return SCIPsetIsSumRelGE(scip->set, val1, val2);
 }
