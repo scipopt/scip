@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.276 2008/05/05 10:37:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.277 2008/05/06 10:00:23 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5214,7 +5214,7 @@ SCIP_RETCODE aggregateVariables(
             return SCIP_OKAY;
          
          val = (SCIP_Longint)SCIPfeasFloor(scip, vals[v]);
-         if( val % 2)
+         if( val % 2 != 0 )
          {
             /* the odd valus have belong to binary variables */
             if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
@@ -5230,7 +5230,7 @@ SCIP_RETCODE aggregateVariables(
       }
     
       /* check lhs is odd or even */
-      lhsodd = ((SCIP_Longint)SCIPfeasFloor(scip, lhs)) % 2;
+      lhsodd = (((SCIP_Longint)SCIPfeasFloor(scip, lhs)) % 2 != 0);
       
       if( noddvars == 1 )
       {
@@ -6411,6 +6411,8 @@ SCIP_RETCODE fullDualPresolve(
           */
          if( SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars] && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
          {
+	    SCIP_Real ub;
+
             /* if x_v >= redlb[v], we can always round x_v down to x_v == redlb[v] without violating any constraint
              *  -> tighten upper bound to x_v <= redlb[v]
              */
@@ -6419,7 +6421,9 @@ SCIP_RETCODE fullDualPresolve(
                redlb[v - nbinvars]);
             SCIP_CALL( SCIPtightenVarUb(scip, var, redlb[v - nbinvars], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
-            redub[v - nbinvars] = MIN(redub[v - nbinvars],SCIPvarGetUbGlobal(var));
+
+	    ub = SCIPvarGetUbGlobal(var);
+            redub[v - nbinvars] = MIN(redub[v - nbinvars], ub);
             if( tightened )
                (*nchgbds)++;
          }
@@ -6431,6 +6435,8 @@ SCIP_RETCODE fullDualPresolve(
           */
          if( SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars] && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
          {
+	    SCIP_Real lb;
+
             /* if x_v <= redub[v], we can always round x_v up to x_v == redub[v] without violating any constraint
              *  -> tighten lower bound to x_v >= redub[v]
              */
@@ -6439,7 +6445,9 @@ SCIP_RETCODE fullDualPresolve(
                redub[v - nbinvars]);
             SCIP_CALL( SCIPtightenVarLb(scip, var, redub[v - nbinvars], FALSE, &infeasible, &tightened) );
             assert(!infeasible);
-            redlb[v - nbinvars] = MAX(redlb[v - nbinvars],SCIPvarGetLbGlobal(var));
+
+	    lb = SCIPvarGetLbGlobal(var);
+            redlb[v - nbinvars] = MAX(redlb[v - nbinvars], lb);
             if( tightened )
                (*nchgbds)++;
          }
