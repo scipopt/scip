@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.13 2008/04/17 18:00:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.14 2008/05/06 13:59:32 bzfpfets Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1241,7 +1241,7 @@ BMS_CHKMEM* BMScreateChunkMemory_call(
    BMS_CHKMEM* chkmem;
 
    alignSize(&size);
-   chkmem = createChkmem(size, initchunksize, garbagefactor);
+   chkmem = createChkmem((int) size, initchunksize, garbagefactor);
    if( chkmem == NULL )
    {
       printErrorHeader(filename, line);
