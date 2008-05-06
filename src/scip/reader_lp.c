@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.56 2008/05/06 14:04:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.57 2008/05/06 14:38:38 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1774,7 +1774,7 @@ void appendLine(
    sprintf(linebuffer, "%s%s", linebuffer, extension);
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %u\n", linebuffer, (unsigned int) strlen(linebuffer));
+   SCIPdebugMessage("linebuffer <%s>, length = %zd\n", linebuffer, strlen(linebuffer));
    
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
