@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.54 2008/04/17 17:49:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.55 2008/05/06 10:01:28 bzfpfets Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -363,7 +363,6 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    )
 {
    SCIP_CUT* cut;
-   int maxidx;
 
    assert(cutpool != NULL);
    assert(row != NULL);
@@ -381,7 +380,7 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    }
 
    /* only called to ensure that minidx and maxidx are up-to-date */
-   maxidx = SCIProwGetMaxidx(row, set);    
+   (void) SCIProwGetMaxidx(row, set);    
    assert(row->validminmaxidx);   
 
    /* create the cut */
