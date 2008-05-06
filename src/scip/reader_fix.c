@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.8 2008/04/17 17:49:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.9 2008/05/06 13:59:12 bzfpfets Exp $"
 
 /**@file   reader_fix.c
  * @brief  file reader for variable fixings
@@ -64,7 +64,7 @@ SCIP_RETCODE readSol(
    {
       char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      strerror_r(errno, buf, 1024);
+      (void) strerror_r(errno, buf, 1024);
       SCIPerrorMessage("%s: %s\n", filename, buf);
       return SCIP_NOFILE;
    }   

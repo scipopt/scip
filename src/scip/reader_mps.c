@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.92 2008/05/06 10:26:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.93 2008/05/06 13:59:12 bzfpfets Exp $"
 
 //#define SCIP_DEBUG
 
@@ -1514,7 +1514,7 @@ SCIP_RETCODE readMps(
    {
       char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      strerror_r(errno, buf, 1024);
+      (void) strerror_r(errno, buf, 1024);
       SCIPerrorMessage("%s: %s\n", filename, buf);
       return SCIP_NOFILE;
    }

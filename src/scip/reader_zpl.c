@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.30 2008/04/17 17:49:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.31 2008/05/06 13:59:12 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -151,7 +151,7 @@ Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs
    case CON_EQUAL:
       sciplhs = (SCIP_Real)numb_todbl(lhs);
       sciprhs = (SCIP_Real)numb_todbl(rhs);
-      assert(sciplhs == sciprhs);
+      assert(sciplhs == sciprhs);/*lint !e777 */
       break;
    default:
       SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
@@ -206,6 +206,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
    case BOUND_MINUS_INFTY:
       lb = -SCIPinfinity(scip_);
       break;
+   case BOUND_ERROR:
    default:
       SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
       lb = 0.0;
@@ -223,6 +224,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
    case BOUND_MINUS_INFTY:
       ub = -SCIPinfinity(scip_);
       break;
+   case BOUND_ERROR:
    default:
       SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
       ub = 0.0;
@@ -569,7 +571,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       int len;
       int i;
 
-      len = strlen(paramstr);
+      len = (int) strlen(paramstr);
       SCIP_CALL( SCIPallocBufferArray(scip, &argv, len+1) );
       argv[0] = dummy; /* argument 0 is irrelevant */
       argc = 1;
@@ -628,7 +630,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* append file name as last argument */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &argv[argc], filename, strlen(filename)+1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &argv[argc], filename, (int) strlen(filename)+1) );
       argc++;
 
       /* display parsed arguments */
