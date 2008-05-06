@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.70 2008/05/05 15:42:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.71 2008/05/06 10:58:50 bzfpfets Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -284,7 +284,7 @@ SCIP_RETCODE addCut(
 
       /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
-            30, 100.0, MAKECONTINTEGRAL, &success) );
+				     (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
       if( success && !SCIPisCutEfficacious(scip, sol, cut) )
       {
          SCIPdebugMessage(" -> c-mir cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
