@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.204 2008/04/17 17:49:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.205 2008/05/06 10:39:37 bzfpfets Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4441,7 +4441,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
     * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
     * as the deviation from the variable's root solution
     */
-   if( downub != SCIP_INVALID )
+   if( downub != SCIP_INVALID )    /*lint !e777*/
    {
       /* create child node x <= downub */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, downub);
@@ -4455,7 +4455,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          *downchild = node;
    }
    
-   if( fixval != SCIP_INVALID )
+   if( fixval != SCIP_INVALID )    /*lint !e777*/
    {
       /* create child node with x = fixval */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, fixval);
@@ -4477,7 +4477,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          *eqchild = node;
    }
    
-   if( uplb != SCIP_INVALID )
+   if( uplb != SCIP_INVALID )    /*lint !e777*/
    {
       /* create child node with x >= uplb */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, uplb);
@@ -4904,7 +4904,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else
          {
-            SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp);
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp) );
          }
       }
    }
