@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.91 2008/05/05 14:25:54 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.92 2008/05/06 10:26:28 bzfpfets Exp $"
 
 //#define SCIP_DEBUG
 
@@ -2018,7 +2018,10 @@ SCIP_RETCODE checkVarnames(
          (*maxnamelen) = MPS_MAX_NAMELEN - 1;
       }
       else
-         (*maxnamelen) = MAX(*maxnamelen, strlen(SCIPvarGetName(var)));
+      {
+	 size_t l = strlen(SCIPvarGetName(var));
+         (*maxnamelen) = MAX(*maxnamelen, l);
+      }
  
       SCIP_CALL( SCIPallocBufferArray(scip, &varname, (int) *maxnamelen + 1) );
       snprintf(varname, (*maxnamelen) + 1, "%s", SCIPvarGetName(var) );
@@ -2068,6 +2071,8 @@ SCIP_RETCODE checkConsnames(
 
    for( i = 0, c = 0; i < norigconss; ++i )
    {
+      size_t l;
+
       cons = origconss[i];
       assert( cons != NULL );
 
@@ -2083,8 +2088,9 @@ SCIP_RETCODE checkConsnames(
          faulty++;
          (*maxnamelen) = MPS_MAX_NAMELEN - 1;
       }
-      
-      (*maxnamelen) = MAX(*maxnamelen, strlen(SCIPconsGetName(cons)));
+
+      l = strlen(SCIPconsGetName(cons));
+      (*maxnamelen) = MAX(*maxnamelen, l);
       
       SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) *maxnamelen + 1) );
       snprintf(consname, (*maxnamelen) + 1, "%s", SCIPconsGetName(cons) );
@@ -2780,13 +2786,18 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
       for (c = 0; c < naggvars; ++c )
       {
+	 size_t l;
+
          /* create variable name */
          var = aggvars[c];
          
          if( strlen(SCIPvarGetName(var)) >= MPS_MAX_NAMELEN )
             maxnamelen = MPS_MAX_NAMELEN - 1;
          else
-            maxnamelen = MAX(maxnamelen, strlen(SCIPvarGetName(var)));
+	 {
+	    l = strlen(SCIPvarGetName(var));
+            maxnamelen = MAX(maxnamelen, l);
+	 }
          
          SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
          snprintf(namestr,  MPS_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
@@ -2801,7 +2812,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          snprintf(namestr, MPS_MAX_VALUELEN, "aggr%d", c );
          printRowType(scip, file, 1.0, 1.0, namestr);
 
-         maxnamelen = MAX(maxnamelen, strlen(namestr));
+	 l = strlen(namestr);
+         maxnamelen = MAX(maxnamelen, l);
          
          consnames[nconss + c] = namestr;
 
