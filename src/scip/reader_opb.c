@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.10 2008/05/06 13:59:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.11 2008/05/07 09:55:37 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -94,7 +94,6 @@
 #define OPB_MAX_LINELEN       65536     /**< size of the line buffer for reading or writing */
 #define OPB_MAX_PUSHEDTOKENS  2
 #define OPB_INIT_COEFSSIZE    8192
-#define OPB_MAX_PRINTLEN      560       /**< the maximum length of any line is 560 */
 
 /** Section in OPB File */
 enum OpbExpType {
@@ -273,9 +272,19 @@ SCIP_Bool getNextLine(
       /* buffer is full; erase last token since it might be incomplete */
       opbinput->endline = FALSE;
       last = strrchr(opbinput->linebuf, ' ');
-      SCIPfseek(opbinput->file, -(long) strlen(last), SEEK_CUR);
-      *last = '\0';
-      SCIPdebugMessage("correct buffer\n");
+
+      if( last == NULL )
+      {
+         SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", OPB_MAX_LINELEN - 2);
+         opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
+         SCIPdebugMessage("the buffer might be currented\n");
+      }
+      else
+      {
+         SCIPfseek(opbinput->file, -(long) strlen(last), SEEK_CUR);
+         *last = '\0';
+         SCIPdebugMessage("correct buffer\n");
+      }
    }
    else 
    {

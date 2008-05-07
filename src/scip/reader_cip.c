@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.6 2008/05/05 10:56:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.7 2008/05/07 09:55:37 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @brief  CIP file reader
@@ -21,7 +21,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
 
 #include "scip/reader_cip.h"
 

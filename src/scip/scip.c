@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.456 2008/05/06 14:16:00 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.457 2008/05/07 09:55:37 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5582,6 +5582,11 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
       assert( var != NULL );
 
+      assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+
       switch( SCIPvarGetStatus(var) )
       {
       case SCIP_VARSTATUS_LOOSE:
@@ -5645,10 +5650,14 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
          SCIPfreeBufferArray(scip, &multscalars);
          break;
 
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_ORIGINAL:
+      case SCIP_VARSTATUS_AGGREGATED:
+      case SCIP_VARSTATUS_NEGATED:
       default:
          /* x = c */
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-
+         
       }
    }
 
