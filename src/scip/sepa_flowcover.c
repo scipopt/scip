@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.10 2008/05/06 10:36:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.11 2008/05/09 12:31:14 bzfwolte Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -58,7 +58,7 @@
 #define BOUNDSWITCH                 0.5
 #define ALLOWLOCAL                 TRUE 
 #define DENSSCORE                 1e-04
-#define MAKECONTINTEGRAL          FALSE
+/*#define MAKECONTINTEGRAL          FALSE*/
 #define MINFRAC                    0.01
 #define MAXFRAC                    0.95
 #define FIXINTEGRALRHS            FALSE
@@ -127,7 +127,7 @@ SCIP_RETCODE getClosestVlb(
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(bestsub == SCIPvarGetUbGlobal(var) || bestsub == SCIPvarGetUbLocal(var));
+   assert(bestsub == SCIPvarGetUbGlobal(var) || bestsub == SCIPvarGetUbLocal(var)); /*lint !e777*/
    assert(!SCIPisInfinity(scip, bestsub));
    assert(!SCIPisZero(scip, rowcoef));
    assert(rowcoefsbinary != NULL);
@@ -240,7 +240,7 @@ SCIP_RETCODE getClosestVub(
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(bestslb == SCIPvarGetLbGlobal(var) || bestslb == SCIPvarGetLbLocal(var));
+   assert(bestslb == SCIPvarGetLbGlobal(var) || bestslb == SCIPvarGetLbLocal(var)); /*lint !e777*/
    assert(!SCIPisInfinity(scip, - bestslb));
    assert(!SCIPisZero(scip, rowcoef));
    assert(rowcoefsbinary != NULL);
@@ -635,15 +635,16 @@ SCIP_RETCODE constructSNFRelaxation(
        * to define the real variable y'_j with 0 <= y'_j <= u'_j x_j in the 0-1 single node flow relaxation; 
        * prefer variable bounds 
        */
-      if( varsolvals[probidx] == (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub && bestlbtype >= 0 )
+      if( SCIPisEQ(scip, varsolvals[probidx], (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub) && bestlbtype >= 0 )
          uselb = TRUE;
-      else if( varsolvals[probidx] == (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub && bestubtype >= 0 )
+      else if( SCIPisEQ(scip, varsolvals[probidx], (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub) 
+         && bestubtype >= 0 )
          uselb = FALSE;
-      else if( varsolvals[probidx] <= (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub ) 
+      else if( SCIPisLE(scip, varsolvals[probidx], (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub) )
          uselb = TRUE;
       else
       {
-         assert(varsolvals[probidx] > (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub);
+         assert(SCIPisGT(scip, varsolvals[probidx], (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub));
          uselb = FALSE;
       }
       if( uselb )
@@ -887,7 +888,7 @@ SCIP_RETCODE constructSNFRelaxation(
       probidx = SCIPvarGetProbindex(var);
       rowcoef = rowweight * scale * nonzcoefs[nonzcolsbinary[c]];
 
-      assert(rowcoefsbinary[probidx] == rowcoef);
+      assert(rowcoefsbinary[probidx] == rowcoef); /*lint !e777*/
       assert(!SCIPisZero(scip, rowcoef));
 
       SCIPdebugMessage("  %d: %g <%s, idx=%d, lp=%g, [%g, %g]>:\n", c, rowcoef, SCIPvarGetName(var), probidx, varsolvals[probidx], 
@@ -1444,7 +1445,7 @@ SCIP_RETCODE getFlowCover(
 
       tmp1 = (SCIP_Real) (nitems + 1);
       tmp2 = (SCIP_Real) ((transcapacityint) + 1);
-      if( transcapacityint * nitems <= MAXDYNPROGSPACE && tmp1 * tmp2 <= INT_MAX / 8)
+      if( transcapacityint * nitems <= MAXDYNPROGSPACE && tmp1 * tmp2 <= INT_MAX / 8.0)
       {
          /* solve KP^SNF_int by dynamic programming */
          SCIP_CALL(SCIPsolveKnapsackExactly(scip, nitems, transweightsint, transprofitsint,transcapacityint, 
