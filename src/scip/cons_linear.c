@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.277 2008/05/06 10:00:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.278 2008/05/13 19:11:43 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -6994,10 +6994,10 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
          
          SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
          if( SCIPisFeasLT(scip, activity, consdata->lhs) )
-            SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g", activity - consdata->lhs);
+            SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", activity - consdata->lhs);
          
          if( SCIPisFeasGT(scip, activity, consdata->rhs) )
-            SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g", consdata->rhs - activity);
+            SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhs - activity);
       }
    }
    else
