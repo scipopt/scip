@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.278 2008/05/13 19:11:43 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.279 2008/05/14 14:31:21 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4926,24 +4926,24 @@ SCIP_RETCODE dualPresolve(
             /* check if rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j is always inside the bounds of x_i */
             if( val > 0.0 )
             {
-               if( SCIPisInfinity(scip,ABS(maxresactivity)) )
+               if( SCIPisInfinity(scip, ABS(maxresactivity)) )
                   minval = -maxresactivity;
                else
                   minval = (consdata->rhs - maxresactivity)/val;
                
-               if( SCIPisInfinity(scip,ABS(minresactivity)) )
+               if( SCIPisInfinity(scip, ABS(minresactivity)) )
                   maxval = -minresactivity;
                else
                   maxval = (consdata->rhs - minresactivity)/val;
             }
             else
             {
-               if( SCIPisInfinity(scip,ABS(minresactivity)) )
+               if( SCIPisInfinity(scip, ABS(minresactivity)) )
                   minval = minresactivity;
                else
                   minval = (consdata->rhs - minresactivity)/val;
 
-               if( SCIPisInfinity(scip,ABS(maxresactivity)) )
+               if( SCIPisInfinity(scip, ABS(maxresactivity)) )
                   maxval = maxresactivity;
                else
                   maxval = (consdata->rhs - maxresactivity)/val;
@@ -6305,7 +6305,7 @@ SCIP_RETCODE fullDualPresolve(
          /* get number of times the constraint was locked */
          nlockspos = SCIPconsGetNLocksPos(conss[c]);
 
-         /* we do not want to include constraints with locked negation (this would be to weird) */
+         /* we do not want to include constraints with locked negation (this would be too weird) */
          if( SCIPconsGetNLocksNeg(conss[c]) > 0 )
             continue;
 
@@ -6332,7 +6332,6 @@ SCIP_RETCODE fullDualPresolve(
             /* calculate residual activity bounds if variable would be fixed to zero */
             val = consdata->vals[i];
             consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
-
             arrayindex = SCIPvarGetProbindex(consdata->vars[i]) - nbinvars;
             assert(0 <= arrayindex && arrayindex < nvars - nbinvars); /* variable should be active due to applyFixings() */
 
@@ -6407,9 +6406,12 @@ SCIP_RETCODE fullDualPresolve(
       if( obj >= 0.0 )
       {
          /* making the variable as small as possible does not increase the objective:
-          * check if all down locks of the variables are due to linear constraints
+          * check if all down locks of the variables are due to linear constraints;
+          * if largest bound to make constraints redundant is -infinity, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars] && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
+         if( SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars]
+             && !SCIPisInfinity(scip, -redlb[v - nbinvars])
+             && redlb[v - nbinvars] < SCIPvarGetUbGlobal(var) )
          {
 	    SCIP_Real ub;
 
@@ -6431,9 +6433,12 @@ SCIP_RETCODE fullDualPresolve(
       if( obj <= 0.0 )
       {
          /* making the variable as large as possible does not increase the objective:
-          * check if all up locks of the variables are due to linear constraints
+          * check if all up locks of the variables are due to linear constraints;
+          * if smallest bound to make constraints redundant is +infinity, we better do nothing for numerical reasons
           */
-         if( SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars] && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
+         if( SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars]
+             && !SCIPisInfinity(scip, redub[v - nbinvars])
+             && redub[v - nbinvars] > SCIPvarGetLbGlobal(var) )
          {
 	    SCIP_Real lb;
 
@@ -7561,7 +7566,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       consdata->presolved = FALSE;
    }
 
-   if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
+   if( (eventtype & SCIP_EVENTTYPE_GBDCHANGED) != 0 )
    {
       SCIP_Real oldbound;
       SCIP_Real newbound;
