@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.10 2008/05/05 13:56:42 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.11 2008/05/15 14:43:57 bzfwinkm Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -168,6 +168,8 @@ void appendLine(
    const char*           extension           /**< string to extent the line */
    )
 {
+   char tmp[PPM_MAX_LINELEN];
+   
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
@@ -176,7 +178,8 @@ void appendLine(
    if( *linecnt + strlen(extension) > PPM_MAX_LINELEN )
       endLine(scip, file, readerdata, linebuffer, linecnt);
 
-   snprintf(linebuffer, PPM_MAX_LINELEN, "%s%s", linebuffer, extension);
+   snprintf(tmp, PPM_MAX_LINELEN, "%s", linebuffer);
+   snprintf(linebuffer, PPM_MAX_LINELEN, "%s%s", tmp, extension);
    (*linecnt) += (int) strlen(extension) + 1;
 }
 
@@ -316,6 +319,7 @@ void printRow(
 	    appendLine(scip, file, readerdata, linebuffer, &linecnt, " 255 255 255 ");
       }
 
+
       calcColorValue(scip, readerdata, vals[indexvar], &red, &green, &blue, maxcoef);
       if (readerdata->rgb_ascii)
       {
@@ -326,7 +330,7 @@ void printRow(
       }
       else
          snprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
-
+      
       appendLine(scip, file, readerdata, linebuffer, &linecnt, buffer);
       i++;
    }
@@ -475,7 +479,7 @@ SCIP_RETCODE SCIPincludeReaderPpm(
          "reading/ppmreader/rgbrelativ", "should the coloring values be relativ or absolute",
          &readerdata->rgb_relativ, FALSE, DEFAULT_PPM_RGB_RELATIVE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/ppmreader/rgbascii", "should the output format be binary(P6) or plain(P3) format",
+         "reading/ppmreader/rgbascii", "should the output format be binary(P6) (otherwise plain(P3) format)",
          &readerdata->rgb_ascii, FALSE, DEFAULT_PPM_RGB_ASCII, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "reading/ppmreader/coefficientlimit",
