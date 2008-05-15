@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.457 2008/05/07 09:55:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.458 2008/05/15 16:20:54 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5519,12 +5519,14 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    return SCIP_OKAY;
 }
 
-/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant;
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
  *
- * if the number of needed active variables is greater than the available slots in the variable array, nothing happens except
+ * If the number of needed active variables is greater than the available slots in the variable array, nothing happens except
  * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
- * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays
+ * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays.
  *
+ * The reason for this approach is that we cannot reallocate memory, since we do not know how the
+ * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
  */
 SCIP_RETCODE SCIPgetProbvarLinearSum(
    SCIP*                 scip,               /**< SCIP data structure */
