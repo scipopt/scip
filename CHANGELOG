@@ -67,6 +67,7 @@ features:
   This should, of course, only be used by people that know exactly what they are doing.
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
 - better branching in SOS1/SOS2 constraints
+- added ccg-reader (weighted column connectivity graph)
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
