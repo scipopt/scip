@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.92 2008/05/16 15:11:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.93 2008/05/16 16:28:33 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -1766,7 +1766,7 @@ SCIP_DECL_CONSINITSOL(consInitsolAnd)
    assert( scip != NULL );
    assert( nconss > 0 || conss == NULL );
    
-   if( nconss == 0 )
+   if( conss == NULL )
       return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
