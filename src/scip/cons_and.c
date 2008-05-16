@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.91 2008/05/05 09:58:25 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.92 2008/05/16 15:11:19 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -50,7 +50,7 @@
 #define DEFAULT_MAXPRESOLPAIRROUNDS  -1 /**< maximal number of presolving rounds with pairwise constraint comparison
                                          *   (-1: no limit) */
 #define DEFAULT_LINEARIZE         FALSE /**< should constraint get linearize and removed? */
-
+#define DEFAULT_INITIALLP             1 /**< should lp relaxation be in the initial LP? (0: FALSE, 1: auto, 2: TRUE) */
 
 
 /*
@@ -84,6 +84,7 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events on watched variables */
    int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
                                               *   (-1: no limit) */
+   int                   initiallp;          /**< should lp relaxation be in the initial LP? (0: FALSE, 1: auto, 2: TRUE) */
    SCIP_Bool             linearize;          /**< should constraint get linearize and removed? */
 };
 
@@ -1751,8 +1752,72 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 #define consExitpreAnd NULL
 
 
+#define MAX_INITIALSIZE 10000
+
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
-#define consInitsolAnd NULL
+static
+SCIP_DECL_CONSINITSOL(consInitsolAnd)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
+   int notherconss;
+   SCIP_Bool initial;
+   
+   assert( scip != NULL );
+   assert( nconss > 0 || conss == NULL );
+   
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert( conshdlrdata->initiallp == 0 || conshdlrdata->initiallp == 1 || conshdlrdata->initiallp == 2 );
+
+   /* the parameter conshdlrdata->initiallp has the values  0: FALSE, 1: auto, 2: TRUE */
+   if ( conshdlrdata->initiallp == 0 )
+      initial = FALSE;
+   else if( conshdlrdata->initiallp == 1 )
+   {
+      /* compute the size of the LP relaxation in case the initiallp parameter is set to 1: auto */
+      initial = FALSE;
+      notherconss = SCIPgetNConss(scip) - nconss;
+
+      if( notherconss >= nconss )
+      {
+         /* in case we have more other constraint (usually linear constraints)
+          * than AND constraints we put the LP relaxation of the AND
+          * constraint in the root LP */
+         initial = TRUE;
+      }
+      else
+      {
+         /* in case we have less other constraint (usually linear
+          * constraints) than AND constraints we compute the approximately
+          * size of the LP relaxation if the AND constraint are added; And
+          * if this size is smaller than MAX_INITIALSIZE then the LP
+          * relaxation of the AND constraints are added */
+         
+         for( c = 0; c < nconss; ++c )
+            notherconss += 2 + SCIPgetNVarsAnd(scip, conss[c]);
+         
+         if( notherconss <= MAX_INITIALSIZE )
+            initial = TRUE;
+      }
+   }
+   else 
+   {
+      assert( conshdlrdata->initiallp == 2 );
+      initial = TRUE;
+   }
+   
+   /* set the initial flag of the AND constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( SCIPsetConsInitial(scip, conss[c], initial) ); 
+   }
+   
+   return SCIP_OKAY;
+}
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -2269,6 +2334,10 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "constraints/and/maxpresolpairrounds",
          "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
          &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/and/initiallp",
+         "should the lp relaxation be in the initial LP (0: FALSE, 1: auto, 2: TRUE)",
+         &conshdlrdata->initiallp, TRUE, DEFAULT_INITIALLP, 0, 2, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/and/linearize",
          "should the \"and\" constraint get linearized and removed (in presolving)?",

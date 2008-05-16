@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.12 2008/05/16 14:14:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.13 2008/05/16 15:11:19 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -722,7 +722,6 @@ SCIP_RETCODE getVariable(
       
       if( created || *var == NULL )
       {
-         SCIP_Bool initial;
          SCIP_Bool separate;
          SCIP_Bool propagate;
          SCIP_Bool removable;
@@ -734,13 +733,12 @@ SCIP_RETCODE getVariable(
          SCIP_CALL( createVariable(scip, var, varname) );
          assert( var != NULL );
         
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcrelaxinlp", &initial) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcseparate", &separate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcpropagate", &propagate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcremovable", &removable) );
          
          SCIP_CALL( SCIPcreateConsAnd(scip, &cons, "", *var, nvars, vars,
-               initial, separate, TRUE, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
+               TRUE, separate, TRUE, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
          
          if(opbinput->nandconss == opbinput->sandconss)
          {
@@ -1742,9 +1740,6 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/opbreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
          NULL, FALSE, FALSE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/nlcrelaxinlp", "should the LP relaxation of the non linear constraints be in the initial LP?",
-         NULL, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/opbreader/nlcseparate", "should the non linear constraint be separated during LP processing?",
          NULL, TRUE, TRUE, NULL, NULL) );
