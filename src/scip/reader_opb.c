@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.11 2008/05/07 09:55:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.12 2008/05/16 14:14:34 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -750,6 +750,9 @@ SCIP_RETCODE getVariable(
          
          opbinput->andconss[opbinput->nandconss] = cons;
          opbinput->nandconss++;
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
    }
    
@@ -832,8 +835,8 @@ SCIP_RETCODE readCoefficients(
 
    /* initialize buffers for storing the coefficients */
    coefssize = OPB_INIT_COEFSSIZE;
-   SCIP_CALL( SCIPallocMemoryArray(scip, vars, coefssize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, coefs, coefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, vars, coefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, coefs, coefssize) );
 
    /* read the coefficients */
    coefsign = +1;
@@ -899,8 +902,8 @@ SCIP_RETCODE readCoefficients(
          {
             coefssize *= 2;
             coefssize = MAX(coefssize, (*ncoefs)+1);
-            SCIP_CALL( SCIPreallocMemoryArray(scip, vars, coefssize) );
-            SCIP_CALL( SCIPreallocMemoryArray(scip, coefs, coefssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, vars, coefssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, coefs, coefssize) );
          }
          assert(*ncoefs < coefssize);
 
@@ -1079,8 +1082,8 @@ SCIP_RETCODE readConstraints(
 
  TERMINATE:
    /* free memory */
-   SCIPfreeMemoryArrayNull(scip, &vars);
-   SCIPfreeMemoryArrayNull(scip, &coefs);
+   SCIPfreeBufferArrayNull(scip, &vars);
+   SCIPfreeBufferArrayNull(scip, &coefs);
 
    return SCIP_OKAY;
 }
@@ -1113,8 +1116,6 @@ SCIP_RETCODE readOPBFile(
    {
       SCIP_CALL( readConstraints(scip, opbinput) );
    }
-   //   if ( strcmp(opbinput->linebuf,"") )
-   //      SCIP_CALL( readConstraints(scip, opbinput) );
 
    /* close file */
    SCIPfclose(opbinput->file);
@@ -1135,19 +1136,16 @@ SCIP_RETCODE readFile(
    OPBINPUT opbinput;
    int i;
 
-   SCIP_Bool large;
-   int nlinear;
-
    /* initialize OPB input data */
    opbinput.file = NULL;
    opbinput.linebuf[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &opbinput.token, OPB_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.token, OPB_MAX_LINELEN) );
    opbinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.tokenbuf, OPB_MAX_LINELEN) );
    opbinput.tokenbuf[0] = '\0';
    for( i = 0; i < OPB_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &opbinput.pushedtokens[i], OPB_MAX_LINELEN) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &opbinput.pushedtokens[i], OPB_MAX_LINELEN) );
    }
 
    opbinput.npushedtokens = 0;
@@ -1169,41 +1167,14 @@ SCIP_RETCODE readFile(
    SCIP_CALL( readOPBFile(scip, &opbinput, filename) );
    
    /* free dynamically allocated memory */
-   SCIPfreeMemoryArray(scip, &opbinput.token);
-   SCIPfreeMemoryArray(scip, &opbinput.tokenbuf);
+   SCIPfreeBufferArrayNull(scip, &(opbinput.andconss) );
+   SCIPfreeBufferArrayNull(scip, &opbinput.token);
+   SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
    for( i = 0; i < OPB_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIPfreeMemoryArray(scip, &opbinput.pushedtokens[i]);
+      SCIPfreeBufferArrayNull(scip, &opbinput.pushedtokens[i]);
    }
 
-   /* check if the problem is "large" */
-   large = TRUE;
-   nlinear = SCIPgetNConss(scip);
-   if( opbinput.nandconss <= nlinear )
-      large = FALSE;
-   else 
-   {
-      for( i = 0; i < opbinput.nandconss; ++i )
-         nlinear += 2 + SCIPgetNVarsAnd(scip, opbinput.andconss[i]);
-      
-      if( nlinear <= 10000 )
-         large = FALSE;
-   }
-   
-   /* add all and constraints */
-   for( i = 0; i < opbinput.nandconss; ++i )
-   {
-      if( large )
-      {
-         SCIP_CALL( SCIPsetConsInitial(scip, opbinput.andconss[i], FALSE) );
-      }
-      
-      SCIP_CALL( SCIPaddCons(scip, opbinput.andconss[i]) );
-      SCIP_CALL( SCIPreleaseCons(scip, &(opbinput.andconss[i])) );
-   }
-
-   SCIPfreeBufferArray(scip, &(opbinput.andconss) );
-   
    if( opbinput.nproblemcoeffs > 0 )
    {
       SCIPwarningMessage("there might be <%d> coefficients out of range!\n", opbinput.nproblemcoeffs); 
