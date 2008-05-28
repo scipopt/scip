@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.1 2008/05/23 23:16:21 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.2 2008/05/28 14:43:49 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -26,8 +26,18 @@ DISPFREQ=$9
 CONTINUE=${10}
 LOCK=${11}
 VERSION=${12}
+OPT=${13}
+
 
 SETDIR=../settings
+
+# choose a queue for the cluster run 
+if test "$OPT" == "opt"
+    then
+    QUEUE="gbe"
+else
+    QUEUE="ib"
+fi
 
 if test ! -e results
 then
@@ -101,5 +111,5 @@ do
   export TMPFILE=$TMPFILE
   export FILENAME=$i
 
-  qsub -l walltime=$HARDTIMELIMIT -N SCIP$SHORTFILENAME -V -o $OUTFILE -e $ERRFILE -q gbe runcluster.sh
+  qsub -l walltime=$HARDTIMELIMIT -N SCIP$SHORTFILENAME -V -o $OUTFILE -e $ERRFILE -q $QUEUE runcluster.sh
 done
