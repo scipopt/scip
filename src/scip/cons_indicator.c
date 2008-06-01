@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.16 2008/05/05 11:02:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.17 2008/06/01 12:25:56 bzfpfets Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -20,27 +20,40 @@
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
- * See also the comments in the .h file.
+ * An indicator constraint is given by a binary variable \f$z\f$ and an inequality \f$ax \leq
+ * b\f$. It states that if \f$z = 1\f$ then \f$ax \leq b\f$ holds.
  *
- * We now explain the handling of indicator constraints in more
- * detail.  The indicator constraint handler adds an inequality for
- * each indicator constraint. We assume that this system (with added
- * slack variables) is \f$ Ax z - s \leq b \f$, where \f$ x \f$ are
- * the original variables and \f$ s \f$ are the slack variables added
- * by the indicator constraint. Variables \f$ y \f$ are the binary
+ * This constraint is handled by adding a slack variable \f$s\f$: \f$ax - s \leq b\f$ with \f$s \leq
+ * 0\f$. The constraint is enforced by fixing \f$s\f$ to 0 if \f$z = 1\f$.
+ *
+ * @note: The constraint only implements an implication not an equivalence, i.e., it does not ensure
+ * that \f$z = 1\f$ if \f$ax \leq b\f$ or equivalently if \f$s = 0\f$.
+ *
+ * This constraint is quivalent to a linear constraint \f$ax - s \leq b\f$ and an SOS1 constraint on
+ * \f$z\f$ and \f$s\f$ (at most one should be nonzero). In this context we can, however, separate
+ * more inequalities.
+ *
+ * The name indicator apparently comes from ILOG CPLEX.
+ *
+ * @section SEPARATION Separation Methods
+ *
+ * We now explain the handling of indicator constraints in more detail.  The indicator constraint
+ * handler adds an inequality for each indicator constraint. We assume that this system (with added
+ * slack variables) is \f$ Ax - s \leq b \f$, where \f$ x \f$ are the original variables and \f$ s
+ * \f$ are the slack variables added by the indicator constraint. Variables \f$ y \f$ are the binary
  * variables corresponding to the indicator constraints.
  *
- * @note In the implementation, we assume that bounds on the original
- * variables \f$x\f$ cannot be influenced by the indicator
- * constraint. If it should be possible to relax these constraints as
- * well, then these constraints have to be added as indicator
- * constraints.
+ * @note In the implementation, we assume that bounds on the original variables \f$x\f$ cannot be
+ * influenced by the indicator constraint. If it should be possible to relax these constraints as
+ * well, then these constraints have to be added as indicator constraints.
  *
  * We separate inequalities by two methods:
  * - The first uses the so-called alternative polyhedron.
  * - The second uses SCIP's conflict analysis.
  *
- * Their basic approach is as follows.
+ * @section ALTERNATIVEPOLYHEDRON Separation via the Alternative Polyhedron
+ *
+ * We now describe the separation method of the first method in more detail.
  *
  * Consider the LP-relaxation of the current subproblem:
  * \f[
@@ -53,31 +66,49 @@
  *      & 0 \leq s
  * \end{array}
  * \f]
- * As above \f$Ax z - s \leq b\f$ contains all inequalities
- * corresponding to indicator constraints, while the system \f$Dx + Cy
- * \leq f\f$ contains all other inequalities (which are ignored in the
- * following). Each variable can be fixed by the corresponding bounds.
- *
- *
- * @b Alternative @b polyhedron
+ * As above \f$Ax - s \leq b\f$ contains all inequalities corresponding to indicator constraints,
+ * while the system \f$Dx + Cy \leq f\f$ contains all other inequalities (which are ignored in the
+ * following). Additional bounds for each variable can be given, in particular, variables can be
+ * fixed.
  *
  * To generate cuts, we construct the so-called @a alternative @a polyhedron:
  * \f[
- *      P = \{ y : w^T A - r + t = 0, w^T b - l^T r + u^T t = -1, w, r, t \geq 0 \}.
+ * \begin{array}{ll}
+ *      P = \{ y : & w^T A - r + t = 0,\\
+ *                 & w^T b - l^T r + u^T t = -1,\\
+ *                 & w, r, t \geq 0 \}.
+ * \end{array}
  * \f]
- * Here, \f$r\f$ corresponds to the lower bounds on \f$x\f$ and
- * \f$t\f$ to the upper bounds.
+ * Here, \f$r\f$ and \f$t\f$ correspond to the lower and upper bounds on \f$x\f$, respectively.
  *
- * It turns out that the vertices of \f$P\f$ correspond to minimal
- * infeasible subsystems of \f$A x \leq b\f$. If \f$I\f$ is the index
- * set of such a system, it follows that not all \f$s_i\f$ for \f$i
- * \in I\f$ can be zero. In other words the following cut is valid:
+ * It turns out that the vertices of \f$P\f$ correspond to minimal infeasible subsystems of \f$A x
+ * \leq b\f$. If \f$I\f$ is the index set of such a system, it follows that not all \f$s_i\f$ for
+ * \f$i \in I\f$ can be 1. In other words, the following cut is valid:
  * \f[
- *      \sum_{i \in I} y_i \geq 1.
+ *      \sum_{i \in I} y_i \leq |I| - 1.
  * \f]
- * We separate these inequalities by a heuristic described in @par
- * Branch-And-Cut for the Maximum Feasible Subsystem Problem,@par
+ *
+ * @subsection DETAIL Separation heuristic
+ *
+ * We separate the above inequalities by a heuristic described in
+ *
+ * Branch-And-Cut for the Maximum Feasible Subsystem Problem,@n
  * Marc Pfetsch, SIAM Journal on Optimization 19, No.1, 21-38 (2008)
+ *
+ * The first step in the separation heuristic is to apply the transformation \f$y' = 1 - y\f$, which
+ * transforms the above inequality into the set covering constraint
+ * \f[
+ *      \sum_{i \in I} y_i' \geq 1,
+ * \f]
+ * that is, it is a set covering constraint on the negated variables.
+ *
+ * The basic idea is to use the current solution to the LP relaxation and use it as the objective,
+ * when optimizing of the alternative polyhedron. Since any vertex corresponds to such an
+ * inequality, we can check whether it is violated. To enlarge the chance that we find a @em
+ * violated inequality, we perform a fixing procedure, in which the variable corresponding to an
+ * arbitrary element of the last IIS \f$I\f$ is fixed to zero, i.e., cannot be used in the next
+ * IISs. This is repeated until the corresponding alternative polyhedron is infeasible, i.e., we
+ * have obtained an IIS-cover. For more details see the paper above.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -96,7 +127,7 @@
 #define CONSHDLR_SEPAPRIORITY        10 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY       100 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY      -10 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ             5 /**< frequency for separating cuts; zero means to separate only in the root node */
+#define CONSHDLR_SEPAFREQ             0 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
@@ -117,11 +148,11 @@
 /** constraint data for indicator constraints */
 struct SCIP_ConsData
 {
-   SCIP_VAR*   binvar;             /**< binary variable for indicator constraint */
-   SCIP_VAR*   slackvar;           /**< slack variable of inequality of indicator constraint */
-   SCIP_CONS*  lincons;            /**< linear constraint corresponding to indicator constraint */
-   int         nFixedNonzero;      /**< number of variables among binvar and slackvar fixed to be nonzero */
-   int         colIndex;           /**< column index in alternative LP */
+   SCIP_VAR*   binvar;              /**< binary variable for indicator constraint */
+   SCIP_VAR*   slackvar;            /**< slack variable of inequality of indicator constraint */
+   SCIP_CONS*  lincons;             /**< linear constraint corresponding to indicator constraint */
+   int         nFixedNonzero;       /**< number of variables among binvar and slackvar fixed to be nonzero */
+   int         colIndex;            /**< column index in alternative LP */
 };
 
 /** indicator constraint handler data */
@@ -259,9 +290,8 @@ SCIP_RETCODE checkLPBoundsClean(
       assert( 0 <= ind && ind < nCols );
       covered[ind] = TRUE;
       if ( ! SCIPisZero(scip, lb[ind]) || ! SCIPlpiIsInfinity(lp, ub[ind]) )
-	 abort();
+	 SCIPABORT();
    }
-
 
    /* check other columns */
    for (j = 0; j < nCols; ++j)
@@ -270,7 +300,7 @@ SCIP_RETCODE checkLPBoundsClean(
       {
 	 /* some columns can be fixed to 0, since they correspond to disabled constraints */
 	 if ( ! SCIPisZero(scip, lb[j]) || (! SCIPlpiIsInfinity(lp, ub[j]) && ! SCIPisZero(scip, ub[j])) )
-	    abort();
+	    SCIPABORT();
       }
    }
 
@@ -288,6 +318,8 @@ SCIP_RETCODE checkLPBoundsClean(
  *  We assume that the objective function coefficients of the
  *  variables other than the binary indicators are always 0 and
  *  hence do not have to be changed.
+ *
+ *  We already use the tranformation \f$y' = 1 - y$.
  */
 static
 SCIP_RETCODE setAltLPObj(
@@ -317,7 +349,7 @@ SCIP_RETCODE setAltLPObj(
       consdata = SCIPconsGetData(conss[j]);
       assert( consdata != NULL );
 
-      obj[j] = SCIPgetSolVal(scip, sol, consdata->binvar);
+      obj[j] = 1.0 - SCIPgetSolVal(scip, sol, consdata->binvar);
       assert( consdata->colIndex >= 0 );
       indices[j] = consdata->colIndex;
    }
@@ -584,13 +616,17 @@ SCIP_RETCODE addAltLPConstraint(
 	    assert( conshdlrdata->nvars == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) );
 	    SCIPdebugMessage("inserted variable <%s> into hashmap (%d)\n", SCIPvarGetName(var), conshdlrdata->nvars);
 
+	    matind[cnt] = conshdlrdata->nvars + 1;
+
 	    /* store new variables */
 	    newVars[nNewRows] = var;
 	    ++(conshdlrdata->nvars);
 	    ++nNewRows;
 	 }
+	 else
+	    matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) + 1;
+
 	 assert( SCIPhashmapExists(conshdlrdata->varHash, var) );
-	 matind[cnt] = (int) (size_t) SCIPhashmapGetImage(conshdlrdata->varHash, var) + 1;
 	 matval[cnt] = sign * linvals[v];
 	 ++cnt;
       }
@@ -634,10 +670,10 @@ SCIP_RETCODE addAltLPConstraint(
 
       /* if the lower bound is finite */
       val  = SCIPvarGetLbLocal(var);
-      if ( SCIPisGT(scip, val, -SCIPinfinity(scip)) )
+      if ( ! SCIPisInfinity(scip, -val) )
       {
 	 matbeg[nNewCols] = cnt;
-	 if ( ! SCIPisEQ(scip, val, 0.0) )
+	 if ( ! SCIPisZero(scip, val) )
 	 {
 	    matind[cnt] = 0;
 	    matval[cnt] = -val;
@@ -659,10 +695,10 @@ SCIP_RETCODE addAltLPConstraint(
 
       /* if the upper bound is finite */
       val = SCIPvarGetUbLocal(var);
-      if ( SCIPisLT(scip, val, SCIPinfinity(scip)) )
+      if ( ! SCIPisInfinity(scip, val) )
       {
 	 matbeg[nNewCols] = cnt;
-	 if ( ! SCIPisEQ(scip, val, 0.0) )
+	 if ( ! SCIPisZero(scip, val) )
 	 {
 	    matind[cnt] = 0;
 	    matval[cnt] = val;
@@ -702,7 +738,7 @@ SCIP_RETCODE addAltLPConstraint(
    SCIPfreeBufferArray(scip, &matval);
    SCIPfreeBufferArray(scip, &matbeg);
 
-   /* SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altLP, "alt.lp") ); */
+   SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altLP, "alt.lp") );
 
    return SCIP_OKAY;
 }
@@ -710,7 +746,10 @@ SCIP_RETCODE addAltLPConstraint(
 
 
 
-/** delete column corresponding to constraint in alternative LP */
+/** delete column corresponding to constraint in alternative LP 
+ *
+ *  We currently just fix the corresponding variable to 0.
+ */
 static
 SCIP_RETCODE deleteAltLPConstraint(
       SCIP* scip,               /**< SCIP pointer */
@@ -761,8 +800,7 @@ SCIP_RETCODE deleteAltLPConstraint(
  * This is the workhorse for all methods that have to solve the alternative LP.
  * We try in several ways to recover from possible stability problems.
  *
- * @pre It is assumed that all parameters for the alternative LP
- * are set and that the variables corresponding to @a S are fixed.
+ * @pre It is assumed that all parameters for the alternative LP are set.
  */
 static
 SCIP_RETCODE checkAltLPInfeasible(
@@ -1045,6 +1083,10 @@ SCIP_RETCODE extendToCover(
 	    SCIProwPrint(row, NULL);
 #endif
 	    SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+
+            /* cut should be violated: */
+            assert( SCIPisFeasNegative(scip, SCIPgetRowLPFeasibility(scip, row)) );
+
 	    /* add cuts to pool if we are in the root -> cuts are globally valid */
 	    if ( SCIPgetDepth(scip) == 0 )
 	       SCIP_CALL( SCIPaddPoolCut(scip, row) );
@@ -1252,7 +1294,7 @@ SCIP_RETCODE enforceIndicators(
    /* node1: binvar = 1, slackvar = 0 */
    SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPcalcChildEstimate(scip, binvar, 1.0) ) );
 
-   if ( ! SCIPisFeasEQ(scip, SCIPvarGetLbLocal(binvar), 1.0) )
+   if ( SCIPvarGetLbLocal(binvar) < 0.5 )
       SCIP_CALL( SCIPchgVarLbNode(scip, node1, binvar, 1.0) );
 
    if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(slackvar)) )
@@ -1261,7 +1303,7 @@ SCIP_RETCODE enforceIndicators(
    /* node2: binvar = 0, no restriction on slackvar */
    SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPcalcChildEstimate(scip, binvar, 0.0) ) );
 
-   if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(binvar)) )
+   if ( SCIPvarGetUbLocal(binvar) > 0.5 )
       SCIP_CALL( SCIPchgVarUbNode(scip, node2, binvar, 0.0) );
 
    SCIP_CALL( SCIPresetConsAge(scip, branchCons) );
