@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.14 2008/04/17 17:49:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.15 2008/06/02 13:37:17 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -1109,7 +1109,7 @@ static
 SCIP_DECL_CONSINIT(consInitCountsols)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-
+   
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
@@ -1129,6 +1129,13 @@ SCIP_DECL_CONSINIT(consInitCountsols)
       {
          SCIP_CALL( SCIPcaptureVar(scip, conshdlrdata->vars[v]) );
       }
+      
+      /* reset counting variables */
+      conshdlrdata->feasST = 0;             /** number of non trivial feasible subtrees */
+      conshdlrdata->nDiscardSols = 0;       /** number of discard solutions */
+      conshdlrdata->nNonSparseSols = 0;     /** number of non sparse solutions */
+      setInt(&conshdlrdata->nsols, 0);      /** number of solutions */
+
    }
 
    return SCIP_OKAY;
