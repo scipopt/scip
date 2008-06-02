@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.30 2008/04/17 17:49:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.31 2008/06/02 13:39:38 bzfheinz Exp $"
 
 /**@file   nodesel_dfs.c
  * @brief  node selector for depth first search
@@ -74,8 +74,11 @@ SCIP_DECL_NODESELSELECT(nodeselSelectDfs)
       *selnode = SCIPgetPrioSibling(scip);
       if( *selnode == NULL )
       {
+         SCIPdebugMessage("select best leaf");
          *selnode = SCIPgetBestLeaf(scip);
       }
+
+      SCIPdebugMessage("select best sibling leaf");
    }
 
    return SCIP_OKAY;
