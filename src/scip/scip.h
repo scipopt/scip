@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.318 2008/04/21 18:51:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.319 2008/06/02 13:42:55 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1757,6 +1757,14 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to update lower bound for */
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
+   );
+
+/** change the node selection priority of the given child */
+extern 
+SCIP_RETCODE SCIPchgChildPrio(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            child,              /**< child to update the node selection priority */
+   SCIP_Real             priority            /**< node selection priority value */
    );
 
 /**@} */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.205 2008/05/06 10:39:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.206 2008/06/02 13:42:56 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1863,6 +1863,25 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
 
    return SCIP_OKAY;
 }
+
+
+/** change the node selection priority of the given child */
+void SCIPchildChgNodeselPrio(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NODE*            child,              /**< child to update the node selection priority */
+   SCIP_Real             priority            /**< node selection priority value */
+   )
+{
+   int pos;
+   
+   assert( SCIPnodeGetType(child) == SCIP_NODETYPE_CHILD );
+
+   pos = child->data.child.arraypos;
+   assert( pos >= 0 );
+
+   tree->childrenprio[pos] = priority;
+}
+
 
 /** sets the node's estimated bound to the new value */
 void SCIPnodeSetEstimate(

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.458 2008/05/15 16:20:54 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.459 2008/06/02 13:42:55 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4025,6 +4025,23 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
 
    SCIPnodeUpdateLowerbound(node, scip->stat, newbound);
 
+   return SCIP_OKAY;
+}
+
+/** change the node selection priority of the given child */
+SCIP_RETCODE SCIPchgChildPrio(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            child,              /**< child to update the node selection priority */
+   SCIP_Real             priority            /**< node selection priority value */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPchgChildPrio", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( SCIPnodeGetType(child) != SCIP_NODETYPE_CHILD )
+      return SCIP_INVALIDDATA;
+   
+   SCIPchildChgNodeselPrio(scip->tree, child, priority);
+   
    return SCIP_OKAY;
 }
 
@@ -11539,7 +11556,7 @@ SCIP_RETCODE SCIPbranchVar(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
+   
    if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
       SCIPerrorMessage("cannot branch on continuous variable <%s>\n", SCIPvarGetName(var));

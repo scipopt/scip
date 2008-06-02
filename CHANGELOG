@@ -13,6 +13,7 @@ compiling:
 - replaced <string> by <cstring> in all C++-interfaces to get 'strlen()' included (gcc-4.3 gave an error)
 
 interface:
+- new method SCIPchgChildPrio() to change the node selection priority of the given child
 - new method SCIPconsGetPos()
 - new parameters "extension" and "genericnames" in SCIPprintTransProblem() defining the 
   requested format or NULL for default CIP format and using generic names for the variables and constraints
