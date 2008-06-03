@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.2 2008/05/28 14:43:49 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.3 2008/06/03 11:02:11 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -28,6 +28,8 @@ LOCK=${11}
 VERSION=${12}
 OPT=${13}
 
+# get cuurent SCIP path
+SCIPPATH='pwd'
 
 SETDIR=../settings
 
@@ -107,6 +109,7 @@ do
   echo $i                                >> $ERRFILE
   date                                   >> $ERRFILE
 
+  export SCIPPATH=$SCIPPATH
   export BINNAME=$BINNAME
   export TMPFILE=$TMPFILE
   export FILENAME=$i

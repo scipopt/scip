@@ -8,7 +8,7 @@ date
 date >&2
 echo -----------------------------
 date +"@03 %s"
-/home/bzfberth/projects/scip/$BINNAME < $TMPFILE
+$SCIPPATH/../$BINNAME < $TMPFILE
 date +"@04 %s"
 echo -----------------------------
 date
