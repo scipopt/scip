@@ -12,14 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.69 2008/04/17 17:49:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.70 2008/06/04 13:02:38 bzfberth Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
  * @author Tobias Achterberg
  * @author Timo Berthold
  */
-
+//#define SCIP_DEBUG
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /* turn off asserts; otherwise there is an assert(ptr == 0) failure at OneSpin Solutions */
@@ -1594,11 +1594,13 @@ SCIP_RETCODE SCIPlpiStrongbranch(
       spx->changeUpper(col, newub);
 
       status = spx->solve();
+      SCIPdebugMessage(" --> Terminate with status %d\n",status);
       switch( status )
       {
       case SPxSolver::OPTIMAL:
          *down = spx->value();
          *downvalid = TRUE;
+         SCIPdebugMessage(" --> Terminate with value %f\n",spx->value());
          break;
       case SPxSolver::ABORT_TIME: /* Soplex does not return a proven dual bound, if it is aborted */
       case SPxSolver::ABORT_ITER:
@@ -1636,11 +1638,13 @@ SCIP_RETCODE SCIPlpiStrongbranch(
          spx->changeLower(col, newlb);
       
          status = spx->solve();
+         SCIPdebugMessage(" --> Terminate with status %d\n",status);
          switch( status )
          {
          case SPxSolver::OPTIMAL:
             *up = spx->value();
             *upvalid = TRUE;
+            SCIPdebugMessage(" --> Terminate with value %f\n",spx->value());
             break;
          case SPxSolver::ABORT_TIME: /* Soplex does not return a proven dual bound, if it is aborted */
          case SPxSolver::ABORT_ITER:
