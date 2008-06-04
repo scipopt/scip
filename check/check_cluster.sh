@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.10 2008/06/04 16:45:11 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.11 2008/06/04 17:03:34 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -30,8 +30,6 @@ OPT=${13}
 
 # get cuurent SCIP path
 SCIPPATH=`pwd`
-
-echo $SCIPPATH
 
 SETDIR=../settings
 
