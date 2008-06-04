@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.7 2008/06/04 15:23:23 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.8 2008/06/04 15:42:01 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -60,7 +60,7 @@ HARDMEMLIMIT=`echo "($MEMLIMIT+100)*1024" | bc`
 USRPATH=`pwd`
 
 EVALFILE=$USRPATH/results/check.$TSTNAME.$BINID.$SETNAME.eval
-echo > $EVALFILE
+# echo > $EVALFILE
 
 for i in `cat $TSTNAME.test` DONE
 do
