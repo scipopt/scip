@@ -3,7 +3,7 @@ OUTFILE=$BASENAME.out
 ERRFILE=$BASENAME.err
 TMPFILE=$BASENAME.tmp
 
-uname -a                            >> $OUTFILE
+uname -a                            > $OUTFILE
 uname -a                            >> $ERRFILE
 echo @01 $FILENAME ===========      >> $OUTFILE 
 echo @01 $FILENAME ===========      >> $ERRFILE

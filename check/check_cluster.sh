@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.9 2008/06/04 16:17:56 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.10 2008/06/04 16:45:11 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -32,7 +32,6 @@ OPT=${13}
 SCIPPATH=`pwd`
 
 echo $SCIPPATH
-
 
 SETDIR=../settings
 
@@ -60,10 +59,7 @@ HARDMEMLIMIT=`echo "($MEMLIMIT+100)*1024" | bc`
 USRPATH=`pwd`
 
 EVALFILE=$USRPATH/results/check.$TSTNAME.$BINID.$SETNAME.eval
-if test -e $EVALFILE
-   then
-    rm -f $EVALFILE
-fi
+echo > $EVALFILE
 
 for i in `cat $TSTNAME.test` DONE
 do
@@ -111,9 +107,8 @@ do
   echo checksol                          >> $TMPFILE
   echo quit                              >> $TMPFILE
 
-  echo $i                                >> $ERRFILE
+  echo $i                                > $ERRFILE
   date                                   >> $ERRFILE
 
-
-  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -N SCIP$SHORTFILENAME -v SCIPPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$BASENAME -q $QUEUE runcluster.sh
+  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -N SCIP$SHORTFILENAME -v SCIPPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$BASENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
 done

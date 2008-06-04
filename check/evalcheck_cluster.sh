@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.1 2008/05/23 23:16:21 bzfheinz Exp $
+# $Id: evalcheck_cluster.sh,v 1.2 2008/06/04 16:45:11 bzfheinz Exp $
 export LANG=C
 
 AWKARGS=""
@@ -26,11 +26,7 @@ RESFILE=$DIR/$EVALFILE.res
 TEXFILE=$DIR/$EVALFILE.tex
 PAVFILE=$DIR/$EVALFILE.pav
 
-if test -e $OUTFILE
-    then
-    rm -f $OUTFILE
-fi
-
+echo > $OUTFILE
 echo create overall output file
 for i in `cat $DIR/$EVALFILE.eval` DONE
   do
