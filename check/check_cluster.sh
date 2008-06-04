@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.8 2008/06/04 15:42:01 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.9 2008/06/04 16:17:56 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -60,7 +60,10 @@ HARDMEMLIMIT=`echo "($MEMLIMIT+100)*1024" | bc`
 USRPATH=`pwd`
 
 EVALFILE=$USRPATH/results/check.$TSTNAME.$BINID.$SETNAME.eval
-# echo > $EVALFILE
+if test -e $EVALFILE
+   then
+    rm -f $EVALFILE
+fi
 
 for i in `cat $TSTNAME.test` DONE
 do
@@ -78,12 +81,11 @@ do
 
   BASENAME=$USRPATH/results/check.$TSTNAME.$DIR"_"$SHORTFILENAME.$BINID.$SETNAME
 
-  OUTFILE=$BASENAME.out
-  ERRFILE=$BASENAME.err
   TMPFILE=$BASENAME.tmp
+  ERRFILE=$BASENAME.err
   SETFILE=$BASENAME.set
   
-  echo $OUTFILE >> $EVALFILE
+  echo $BASENAME.out >> $EVALFILE
   
   echo > $TMPFILE
   if test $SETTINGS != "default"
@@ -112,14 +114,6 @@ do
   echo $i                                >> $ERRFILE
   date                                   >> $ERRFILE
 
-  export SCIPPATH=$SCIPPATH
-  export BINNAME=$BINNAME
-  export TMPFILE=$TMPFILE
-  export FILENAME=$i
-  export OUTFILE=$OUTFILE
-  export ERRFILE=$ERRFILE
-  export SETFILE=$SETFILE
 
-  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -N SCIP$SHORTFILENAME -V -o $OUTFILE -e $ERRFILE -q $QUEUE runcluster.sh
-
+  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -N SCIP$SHORTFILENAME -v SCIPPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$BASENAME -q $QUEUE runcluster.sh
 done
