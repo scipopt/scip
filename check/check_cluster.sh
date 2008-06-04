@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.4 2008/06/03 12:14:31 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.5 2008/06/04 13:32:11 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -118,4 +118,8 @@ do
   export FILENAME=$i
 
   qsub -l walltime=$HARDTIMELIMIT -N SCIP$SHORTFILENAME -V -o $OUTFILE -e $ERRFILE -q $QUEUE runcluster.sh
+
+  chmod g+r $OUTFILE
+  chmod g+r $ERRFILE
+  chmod g+r $SETFILE
 done
