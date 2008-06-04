@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.6 2008/06/04 15:19:40 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.7 2008/06/04 15:23:23 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -116,10 +116,10 @@ do
   export BINNAME=$BINNAME
   export TMPFILE=$TMPFILE
   export FILENAME=$i
+  export OUTFILE=$OUTFILE
+  export ERRFILE=$ERRFILE
+  export SETFILE=$SETFILE
 
   qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -N SCIP$SHORTFILENAME -V -o $OUTFILE -e $ERRFILE -q $QUEUE runcluster.sh
 
-  chmod g+r $OUTFILE
-  chmod g+r $ERRFILE
-  chmod g+r $SETFILE
 done

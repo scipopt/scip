@@ -17,3 +17,6 @@ date >&2
 echo
 echo =ready=
 rm -f $TMPFILE
+chmod g+r $OUTFILE
+chmod g+r $ERRFILE
+chmod g+r $SETFILE
