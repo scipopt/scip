@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.22 2008/04/17 17:49:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.23 2008/06/04 17:00:19 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -335,19 +335,26 @@ SCIP_DECL_HEURINIT(heurInitLocalbranching)
 static
 SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 {  /*lint --e{715}*/
+   SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
+   SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
+
    SCIP_HEURDATA* heurdata;
    SCIP* subscip;                            /* the subproblem created by localbranching              */
    SCIP_VAR** subvars;                       /* subproblem's variables                                */
    SCIP_SOL* bestsol;                        /* best solution so far                                  */
+
    SCIP_Real timelimit;                      /* timelimit for subscip (equals remaining time of scip) */
-   SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
-   SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
    SCIP_Real upperbound;
    SCIP_Real memorylimit;
+
    int nvars;
    int i;
-   
+ 
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
+  
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
@@ -503,9 +510,21 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* solve the subproblem */  
    SCIPdebugMessage("solving local branching sub-MIP with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n",
       heurdata->curneighborhoodsize, nsubnodes);
-   SCIP_CALL( SCIPsolve(subscip) ); 
+
+#ifdef NDEBUG
+      retstat = SCIPsolve(subscip);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving subMIP in localbranching heuristic; subSCIP terminated with code <%d>\n",
+            retstat);
+      }
+#else
+      SCIP_CALL( SCIPsolve(subscip) );
+#endif
+
    heurdata->usednodes += SCIPgetNNodes(subscip);
-   SCIPdebugMessage("local branching used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes\n", SCIPgetNNodes(subscip), nsubnodes);
+   SCIPdebugMessage("local branching used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes\n", 
+      SCIPgetNNodes(subscip), nsubnodes);
 
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )

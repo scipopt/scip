@@ -140,7 +140,7 @@ fixed bugs:
 - fixed bug with wrong update of activities in linear constraints after global upper bound changes
 - avoid fixing variables to infinity in order to get rid of numerical inconsistencies in the original model
 - fixed bug in reader_ppm while appending strings for output file
-
+- fixed bug with errors occurring in sub-MIPs. Search is only aborted in dbg mode, in opt mode a warning will be printed
 
 SCIP version 1.00
 =================

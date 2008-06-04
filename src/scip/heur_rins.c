@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.24 2008/04/17 17:49:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.25 2008/06/04 17:00:20 bzfberth Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -304,6 +304,8 @@ SCIP_DECL_HEURINIT(heurInitRins)
 static
 SCIP_DECL_HEUREXEC(heurExecRins)
 {  /*lint --e{715}*/
+   SCIP_Longint nstallnodes;  
+
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                    */
    SCIP* subscip;                            /* the subproblem created by RINS      */
    SCIP_VAR** vars;                          /* original problem's variables        */
@@ -317,8 +319,11 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    int nvars;                     
    int i;   
 
-   SCIP_Longint nstallnodes;  
    SCIP_Bool success;
+
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
 
    assert( heur != NULL );
    assert( scip != NULL );
@@ -464,7 +469,18 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
    
    /* solve the subproblem */
-   SCIP_CALL( SCIPsolve(subscip) );
+
+#ifdef NDEBUG
+      retstat = SCIPsolve(subscip);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving subMIP in RINS heuristic; subSCIP terminated with code <%d>\n",retstat);
+      }
+#else
+      SCIP_CALL( SCIPsolve(subscip) );
+#endif
+
+
    heurdata->usednodes += SCIPgetNNodes(subscip);
 
    /* check, whether a solution was found */

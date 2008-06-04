@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.13 2008/04/17 17:49:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.14 2008/06/04 17:00:19 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -282,6 +282,10 @@ SCIP_RETCODE SCIPapplyRens(
    int nvars;                     
    int i;   
 
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
+
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* initializing the subproblem */  
@@ -389,7 +393,18 @@ SCIP_RETCODE SCIPapplyRens(
    }
 
    /* solve the subproblem */
-   SCIP_CALL( SCIPpresolve(subscip) );
+#ifdef NDEBUG
+      retstat = SCIPpresolve(subscip);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while presolving subMIP in RENS heuristic; subSCIP terminated with code <%d>\n",retstat);
+      }
+#else
+      SCIP_CALL( SCIPpresolve(subscip) );
+#endif
+
+
+
    SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
 
 #if 0
@@ -413,7 +428,17 @@ SCIP_RETCODE SCIPapplyRens(
       int nsubsols;
 
       SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, maxnodes);
+
+#ifdef NDEBUG
+      retstat = SCIPsolve(subscip);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving subMIP in RENS heuristic; subSCIP terminated with code <%d>\n",retstat);
+      }
+#else
       SCIP_CALL( SCIPsolve(subscip) );
+#endif
+
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted

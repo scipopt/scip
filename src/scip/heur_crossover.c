@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.26 2008/04/17 17:49:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.27 2008/06/04 17:00:19 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -687,6 +687,10 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    int nvars;                                /* number of original problem's variables              */
    int nusedsols;
    int i;   
+
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
   
    assert(heur != NULL);
    assert(scip != NULL);
@@ -866,7 +870,17 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    
    /* solve the subproblem */
    SCIPdebugMessage("Solve Crossover subMIP\n");
+ 
+#ifdef NDEBUG
+   retstat = SCIPsolve(subscip);
+   if( retstat != SCIP_OKAY )
+   { 
+      SCIPwarningMessage("Error while solving subMIP in crossover heuristic; subSCIP terminated with code <%d>\n",
+         retstat);
+   }
+#else
    SCIP_CALL( SCIPsolve(subscip) );
+#endif
    
    heurdata->usednodes += SCIPgetNNodes(subscip);
 

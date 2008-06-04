@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.15 2008/05/06 16:43:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.16 2008/06/04 17:00:19 bzfberth Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -318,6 +318,9 @@ SCIP_DECL_HEURINIT(heurInitMutation)
 static
 SCIP_DECL_HEUREXEC(heurExecMutation)
 {  /*lint --e{715}*/
+   SCIP_Longint maxnnodes;                  
+   SCIP_Longint nsubnodes;                   /* node limit for the subproblem                       */
+
    SCIP_HEURDATA* heurdata;                  /* heuristic's data                                    */
    SCIP* subscip;                            /* the subproblem created by mutation                  */
    SCIP_VAR** vars;                          /* original problem's variables                        */
@@ -329,13 +332,14 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_Real timelimit;                      /* timelimit for the subproblem                        */
    SCIP_Real upperbound;
 
-   SCIP_Longint maxnnodes;                  
-   SCIP_Longint nsubnodes;                   /* node limit for the subproblem                       */
-
    int nvars;                                /* number of original problem's variables              */
    int i;   
 
    SCIP_Bool success;     
+
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
 
    assert( heur != NULL );
    assert( scip != NULL );
@@ -463,7 +467,16 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* solve the subproblem */
+#ifdef NDEBUG
+   retstat = SCIPsolve(subscip);
+   if( retstat != SCIP_OKAY )
+   { 
+      SCIPwarningMessage("Error while solving subMIP in mutation heuristic; subSCIP terminated with code <%d>\n",
+         retstat);
+   }
+#else
    SCIP_CALL( SCIPsolve(subscip) );
+#endif
    
    heurdata->usednodes += SCIPgetNNodes(subscip);
 
