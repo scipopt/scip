@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.5 2008/06/04 13:32:11 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.6 2008/06/04 15:19:40 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -55,7 +55,7 @@ SETTINGS=$SETDIR/$SETNAME.set
 # jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPU
 # available 
 HARDTIMELIMIT=`echo "($TIMELIMIT*1.1)+600" | bc` 
-HARDMEMLIMIT=`echo "($MEMLIMIT*1.1+10)*1024" | bc`
+HARDMEMLIMIT=`echo "($MEMLIMIT+100)*1024" | bc`
 
 USRPATH=`pwd`
 
@@ -117,7 +117,7 @@ do
   export TMPFILE=$TMPFILE
   export FILENAME=$i
 
-  qsub -l walltime=$HARDTIMELIMIT -N SCIP$SHORTFILENAME -V -o $OUTFILE -e $ERRFILE -q $QUEUE runcluster.sh
+  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -N SCIP$SHORTFILENAME -V -o $OUTFILE -e $ERRFILE -q $QUEUE runcluster.sh
 
   chmod g+r $OUTFILE
   chmod g+r $ERRFILE
