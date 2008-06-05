@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.6 2008/04/17 19:12:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.7 2008/06/05 12:55:09 bzfgamra Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -443,7 +443,7 @@ TCLIQUE_Bool tcliqueFlush(
          for( i = tcliquegraph->adjedges[n].last - 1; i >= tcliquegraph->adjedges[n].first; --i, --pos )
          {
             assert(0 <= i && i < pos && pos < tcliquegraph->nedges + tcliquegraph->ncachededges);
-            tcliquegraph->adjedges[pos] = tcliquegraph->adjedges[i];
+            tcliquegraph->adjnodes[pos] = tcliquegraph->adjnodes[i];
          }
 
          /* adjust the first and last edge pointers of the node */
@@ -453,7 +453,7 @@ TCLIQUE_Bool tcliqueFlush(
          assert(n == tcliquegraph->nnodes-1
             || tcliquegraph->adjedges[n].first + tcliquegraph->degrees[n] == tcliquegraph->adjedges[n+1].first);
       }
-      assert(ninsertedholes == tcliquegraph->ncachededges - tcliquegraph->nedges);
+      assert(ninsertedholes == tcliquegraph->ncachededges);
       assert(tcliquegraph->adjedges[n].last == pos+1);
 #ifndef NDEBUG
       for( --n; n >= 0; --n )
