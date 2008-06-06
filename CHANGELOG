@@ -69,6 +69,7 @@ features:
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
 - better branching in SOS1/SOS2 constraints
 - added ccg-reader (weighted column connectivity graph)
+- cons_countsols.c is now able to store the collected solution if required
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -98,6 +99,7 @@ parameters:
 - new parameter "constraints/linear/dualpresolving" to disable dual presolving step in the linear constraint handler; default value is TRUE
 - new parameter "heuristics/mutation/minimprove"
 - new parameter "constraints/and/initiallp" to turn on, off, or 'auto' that the LP relaxation of the AND constraints are in the initial LP;
+- new parameter "constraints/countsols/collect" to enable the storing of the solutions; default value FALSE;
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
