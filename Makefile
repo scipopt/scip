@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.248 2008/05/15 17:51:14 bzfpfets Exp $
+# $Id: Makefile,v 1.249 2008/06/06 09:58:08 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -561,6 +561,11 @@ testcplex:
 testcbc:		
 		cd check; \
 		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testcluster
+testcluster:		
+		cd check; \
+		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(OPT);
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
