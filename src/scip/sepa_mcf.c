@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.23 2008/04/17 17:49:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.24 2008/06/09 15:58:32 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -2487,7 +2487,7 @@ SCIP_RETCODE cleanupNetwork(
    nnodesthreshold = 0.2 * maxnnodes;
    nnodesthreshold = MAX(nnodesthreshold, 1);
    nnodesthreshold = MIN(nnodesthreshold, 10);
-   printf/*?????????????SCIPdebugMessage*/(" -> node threshold: %d\n", nnodesthreshold);
+   SCIPdebugMessage(" -> node threshold: %d\n", nnodesthreshold);
 
    /* discard trivial commodities */
    newncommodities = 0;
@@ -3747,8 +3747,9 @@ SCIP_RETCODE addCut(
    /* check efficacy */
    if( SCIPisCutEfficacious(scip, sol, cut) )
    {
-      printf/*???????????????SCIPdebugMessage*/(" -> found MCF cut <%s>: rhs=%f, eff=%f\n", cutname, cutrhs, SCIPgetCutEfficacy(scip, sol, cut));
-      /*????????????????SCIPdebug*/(SCIPprintRow(scip, cut, NULL));
+      SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f\n",
+                       cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut));
+      SCIPdebug(SCIPprintRow(scip, cut, NULL));
       SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
       if( !cutislocal )
       {
@@ -4191,8 +4192,6 @@ SCIP_RETCODE separateCuts(
             *result = SCIP_SEPARATED;
       }
    }
-   else
-      abort(); /*???????????????????*/
    printf("************** [%6.2f] MCF end\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
 
    return SCIP_OKAY;
@@ -4204,8 +4203,6 @@ SCIP_RETCODE separateCuts(
 /*
  * Callback methods of separator
  */
-
-/* TODO: Implement all necessary separator methods. The methods with an #if 0 ... #else #define ... are optional */
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
