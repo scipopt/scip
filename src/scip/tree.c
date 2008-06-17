@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.206 2008/06/02 13:42:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.207 2008/06/17 17:58:30 bzfpfets Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4407,8 +4407,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
       lb = SCIPvarGetLbLocal(var);
       ub = SCIPvarGetUbLocal(var);
 
-      if( !SCIPsetIsInfinity(set, lb) && !SCIPsetIsInfinity(set, ub) && 
-         (  SCIPsetIsEQ(set, solval, lb) || SCIPsetIsEQ(set, solval, ub) ) )
+      if( !SCIPsetIsInfinity(set, lb) && !SCIPsetIsInfinity(set, ub) 
+	 && (SCIPsetIsFeasEQ(set, solval, lb) || SCIPsetIsFeasEQ(set, solval, ub)) )
       {
          SCIP_Real center;
 
@@ -4436,11 +4436,11 @@ SCIP_RETCODE SCIPtreeBranchVar(
          fixval = solval;
          
          /* create child node with x <= x'-1, if this would be feasible */
-         if( SCIPsetIsGE(set, fixval-1.0, lb) )
+         if( SCIPsetIsFeasGE(set, fixval-1.0, lb) )
             downub = fixval - 1.0;
          
          /* create child node with x >= x'+1, if this would be feasible */
-         if( SCIPsetIsLE(set, fixval+1.0, ub) )
+         if( SCIPsetIsFeasLE(set, fixval+1.0, ub) )
             uplb = fixval + 1.0;
       }
       SCIPdebugMessage("integral branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
@@ -4482,12 +4482,12 @@ SCIP_RETCODE SCIPtreeBranchVar(
       SCIPdebugMessage(" -> creating child: <%s> == %g (priority: %g, estimate: %g)\n",
          SCIPvarGetName(var), fixval, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-      if( !SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), fixval) )
+      if( !SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), fixval) )
       {
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue, 
                var, fixval, SCIP_BOUNDTYPE_LOWER, FALSE) );
       }
-      if( !SCIPsetIsEQ(set, SCIPvarGetUbLocal(var), fixval) )
+      if( !SCIPsetIsFeasEQ(set, SCIPvarGetUbLocal(var), fixval) )
       {
          SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue, 
                var, fixval, SCIP_BOUNDTYPE_UPPER, FALSE) );
