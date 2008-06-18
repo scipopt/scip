@@ -145,6 +145,7 @@ fixed bugs:
 - fixed bug with errors occurring in sub-MIPs. Search is only aborted in dbg mode, in opt mode a warning will be printed
 - fixed bug in tclique-graph datastructure concerning insertion of edges into nonempty graph
 - corrected bug in SCIPtreeBranchVar() (tree.c) - several comparison functions needed a 'feas'.
+- corrected bug in SCIPlpGetState if the LP is empty
 
 SCIP version 1.00
 =================
