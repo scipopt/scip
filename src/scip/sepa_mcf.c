@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.24 2008/06/09 15:58:32 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.25 2008/06/18 18:35:13 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -102,6 +102,7 @@ struct SCIP_McfNetwork
                                               *   positive entries for the flow variables */
    int*                  arcsources;         /**< source node ids of arcs */
    int*                  arctargets;         /**< target node ids of arcs */
+   int*                  colcommodity;       /**< commodity number of each column, or -1 */
    int                   nnodes;             /**< number of nodes in the graph */
    int                   narcs;              /**< number of arcs in the graph */
    int                   ncommodities;       /**< number of commodities */
@@ -223,6 +224,7 @@ SCIP_RETCODE mcfnetworkCreate(
    (*mcfnetwork)->arccapacityscales = NULL;
    (*mcfnetwork)->arcsources = NULL;
    (*mcfnetwork)->arctargets = NULL;
+   (*mcfnetwork)->colcommodity = NULL;
    (*mcfnetwork)->nnodes = 0;
    (*mcfnetwork)->narcs = 0;
    (*mcfnetwork)->ncommodities = 0;
@@ -271,6 +273,7 @@ SCIP_RETCODE mcfnetworkFree(
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arccapacityscales);
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arcsources);
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arctargets);
+      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->colcommodity);
 
       SCIPfreeMemory(scip, mcfnetwork);
    }
@@ -298,21 +301,25 @@ SCIP_RETCODE mcfnetworkFill(
    int               nflowcands       = mcfdata->nflowcands;
    int               ncommodities     = mcfdata->ncommodities;
    int*              commoditysigns   = mcfdata->commoditysigns;
+   int*              colcommodity     = mcfdata->colcommodity;
    int*              rowcommodity     = mcfdata->rowcommodity;
-   int*              colarcid         = mcfdata->colarcid;
    int*              rownodeid        = mcfdata->rownodeid;
    SCIP_ROW**        capacityrows     = mcfdata->capacityrows;
    SCIP_MCFMODELTYPE modeltype        = mcfdata->modeltype;
    SCIP_MCFFLOWTYPE  flowtype         = mcfdata->flowtype;
 
+   SCIP_Real* comdemands;
    SCIP_ROW** rows;
+   SCIP_COL** cols;
    int nrows;
+   int ncols;
    int* compcommodity;
    int ncompcommodities;
    int v;
    int a;
    int k;
    int i;
+   int c;
 
    assert(mcfnetwork != NULL);
    assert(modeltype != SCIP_MCFMODELTYPE_AUTO);
@@ -328,14 +335,19 @@ SCIP_RETCODE mcfnetworkFill(
 #endif
 
    /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &comdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &compcommodity, ncommodities) );
+
+   /* initialize demand array */
+   BMSclearMemoryArray(comdemands, ncommodities);
 
    /* initialize k -> compk mapping */
    for( k = 0; k < ncommodities; k++ )
       compcommodity[k] = -1;
 
-   /* get LP rows data */
+   /* get LP rows and cols data */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
    /* generate v -> compv mapping */
    for( i = 0; i < ncompnodes; i++ )
@@ -396,6 +408,7 @@ SCIP_RETCODE mcfnetworkFill(
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arccapacityscales, mcfnetwork->narcs) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arcsources, mcfnetwork->narcs) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->arctargets, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->colcommodity, ncols) );
    for( a = 0; a < mcfnetwork->narcs; a++ )
    {
       mcfnetwork->arccapacityrows[a] = NULL;
@@ -403,6 +416,7 @@ SCIP_RETCODE mcfnetworkFill(
       mcfnetwork->arcsources[a] = -1;
       mcfnetwork->arctargets[a] = -1;
    }
+   BMSclearMemoryArray(mcfnetwork->colcommodity, mcfnetwork->ncommodities);
 
    /* fill in existing node data */
    for( i = 0; i < nflowcands; i++ )
@@ -464,29 +478,49 @@ SCIP_RETCODE mcfnetworkFill(
       mcfnetwork->arccapacityrows[a] = capacityrow;
       mcfnetwork->arccapacityscales[a] = 1.0;
 
-      /* scale constraint such that the flow variables have +/-1 coefficients and identify source and target nodes of arc;
-       * in our model we expect all flow variables to have the same coefficient and can therefore take any of them as scaling factor
+      /* Scale constraint such that the coefficients for the flow variables are normalized in such a way that coefficients in
+       * multiple capacity constraints that belong to the same commodity are (hopefully) equal.
+       * This is needed for binary flow variable models in which the demand of each commodity is stored as the coefficient in
+       * the capacity constraints. Since it may happen (e.g., due to presolve) that different capacity constraints are scaled
+       * differently, we need to find scaling factors to make the demand coefficients of each commodity equal.
+       * To do this, we scale the first capacity constraint with +1 and then store the coefficients of the flow variables
+       * as target demands for the commodities. Then, we scale the other constraints in such a way that these demands are hit, if possible.
+       * Note that for continuous flow variable models, the coefficients in the capacity constraints are usually +1.0.
+       * This is achieved automatically by our scaling routine.
        */
       rowcols = SCIProwGetCols(capacityrow);
       rowvals = SCIProwGetVals(capacityrow);
       rowlen = SCIProwGetNLPNonz(capacityrow);
       for( j = 0; j < rowlen; j++ )
       {
-         int c;
-
          c = SCIPcolGetLPPos(rowcols[j]);
          assert(0 <= c && c < SCIPgetNLPCols(scip));
-         if( colarcid[c] >= 0 )
+         k = colcommodity[c];
+         if( k >= 0 )
          {
-            /* store the scaling factor */
-            mcfnetwork->arccapacityscales[a] = 1.0/rowvals[j];
-            break;
+            if( comdemands[k] != 0.0 )
+            {
+               /* update the scaling factor */
+               mcfnetwork->arccapacityscales[a] = comdemands[k]/rowvals[j];
+               break;
+            }
          }
       }
 
-      /* multiply scaling by -1 if we use the left hand side instead of the right hand side */
+      /* use negative scaling if we use the left hand side, use positive scaling if we use the right hand side */
+      mcfnetwork->arccapacityscales[a] = ABS(mcfnetwork->arccapacityscales[a]);
       if( (capacityrowsigns[r] & LHSASSIGNED) != 0 )
          mcfnetwork->arccapacityscales[a] *= -1.0;
+
+      /* record the commodity demands */
+      for( j = 0; j < rowlen; j++ )
+      {
+         c = SCIPcolGetLPPos(rowcols[j]);
+         assert(0 <= c && c < SCIPgetNLPCols(scip));
+         k = colcommodity[c];
+         if( k >= 0 && comdemands[k] == 0.0 )
+            comdemands[k] = mcfnetwork->arccapacityscales[a] * rowvals[j];
+      }
 
       /* copy the source/target node assignment */
       if( mcfdata->arcsources[globala] >= 0 )
@@ -503,6 +537,16 @@ SCIP_RETCODE mcfnetworkFill(
       }
    }
 
+   /* translate colcommodity array */
+   for( c = 0; c < ncols; c++ )
+   {
+      k = colcommodity[c];
+      if( k >= 0 )
+         mcfnetwork->colcommodity[c] = compcommodity[k];
+      else
+         mcfnetwork->colcommodity[c] = -1;
+   }
+
    /* reset v -> compv mapping */
    for( i = 0; i < ncompnodes; i++ )
    {
@@ -513,6 +557,7 @@ SCIP_RETCODE mcfnetworkFill(
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &compcommodity);
+   SCIPfreeBufferArray(scip, &comdemands);
 
    return SCIP_OKAY;
 }
@@ -3220,12 +3265,6 @@ SCIP_RETCODE mcfnetworkExtract(
          /* if there are still undecided commodity signs, fix them to +1 */
          fixCommoditySigns(scip, &mcfdata);
 
-         /**@todo It happens frequently that due to presolving the capacity constraints are mixed up. Often, we have
-          *       the aggregation x + y == 1, which substitutes the +1x in a capacity constraint by -1y. This leads
-          *       to a mix of +1 and -1 signs for the flow variables and we reject the constraint.
-          *       At this point, we may want to postprocess the network and search for capacity constraints of this
-          *       presolved type for the flow variables that do not yet have an associated arc.
-          */
          /**@todo Now we need to assign arcids to flow variables that have not yet been assigned to an arc because
           *       there was no valid capacity constraint.
           *       Go through the list of nodes and generate uncapacitated arcs in the network for the flow variables
@@ -3779,6 +3818,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_Real**       nodeflowscales    = mcfnetwork->nodeflowscales;
    SCIP_ROW**        arccapacityrows   = mcfnetwork->arccapacityrows;
    SCIP_Real*        arccapacityscales = mcfnetwork->arccapacityscales;
+   int*              colcommodity      = mcfnetwork->colcommodity;
    int*              arcsources        = mcfnetwork->arcsources;
    int*              arctargets        = mcfnetwork->arctargets;
    int               nnodes            = mcfnetwork->nnodes;
@@ -3798,6 +3838,7 @@ SCIP_RETCODE generateClusterCuts(
    int deltassize;
    int ndeltas;
    SCIP_Real* cmirweights;
+   SCIP_Real* comcutdemands;
    SCIP_Real* comdemands;
    unsigned int partition;
    unsigned int allpartitions;
@@ -3834,6 +3875,7 @@ SCIP_RETCODE generateClusterCuts(
    deltassize = 16;
    SCIP_CALL( SCIPallocMemoryArray(scip, &deltas, deltassize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cmirweights, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &comcutdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
 
@@ -3863,6 +3905,7 @@ SCIP_RETCODE generateClusterCuts(
 
       /* clear memory */
       BMSclearMemoryArray(cmirweights, nrows);
+      BMSclearMemoryArray(comcutdemands, ncommodities);
       BMSclearMemoryArray(comdemands, ncommodities);
       ndeltas = 0;
 
@@ -3888,77 +3931,21 @@ SCIP_RETCODE generateClusterCuts(
             else
                rhs = SCIProwGetLhs(nodeflowrows[v][k]);
 
-            comdemands[k] += rhs * nodeflowscales[v][k];
+            comcutdemands[k] += rhs * nodeflowscales[v][k];
          }
       }
 
 #ifdef SCIP_DEBUG
       for( v = 0; v < ncommodities; v++ )
       {
-         SCIPdebugMessage(" -> commodity %d: demand=%g\n", v, comdemands[v]);
+         SCIPdebugMessage(" -> commodity %d: cutdemand=%g\n", v, comcutdemands[v]);
       }
 #endif
-
-      /* set weights of node flow conservation constraints in c-MIR aggregation */
-      for( v = 0; v < nnodes; v++ )
-      {
-         int k;
-
-         /* check if node belongs to S */
-         if( !nodeInPartition(nodepartition, partition, v) )
-            continue;
-
-         /* aggregate flow conservation constraints of the 'active' commodities */
-         for( k = 0; k < ncommodities; k++ )
-         {
-            int scale;
-            int r;
-
-            scale = +1;
-            if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
-            {
-               /* in the directed case, use rows of commodities with positive demand (negative -d_k) */
-               if( !SCIPisNegative(scip, comdemands[k]) )
-                  continue;
-            }
-            else
-            {
-               /* in the undirected case, use rows of commodities with non-zero demand */
-               if( SCIPisZero(scip, comdemands[k]) )
-                  continue;
-
-               /* if the demand (-d_k) is negative (i.e., points into the wrong direction), we use the flow constraint with opposite sign */
-               if( comdemands[k] > 0.0 )
-                  scale = -1;
-            }
-            if( nodeflowrows[v][k] == NULL )
-               continue;
-            
-            r = SCIProwGetLPPos(nodeflowrows[v][k]);
-            assert(r < nrows);
-            if( r >= 0 ) /* row might have been removed from LP in the meantime */
-            {
-               SCIP_Real feasibility;
-
-               assert(cmirweights[r] == 0.0);
-
-               /* ignore rows with slack */
-               feasibility = SCIPgetRowSolFeasibility(scip, nodeflowrows[v][k], sol);
-               if( !SCIPisFeasPositive(scip, feasibility) )
-               {
-                  cmirweights[r] = scale * nodeflowscales[v][k];
-                  SCIPdebugMessage(" -> node %d, commodity %d, flow row <%s>: scale=%d weight=%g slack=%g dual=%g\n",
-                                   v, k, SCIProwGetName(nodeflowrows[v][k]), scale, cmirweights[r], 
-                                   SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
-                  SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));
-               }
-            }
-         }
-      }
 
       /* set weights of capacity rows that go from T to S, i.e., a \in A^- */
       for( a = 0; a < narcs; a++ )
       {
+         SCIP_COL** rowcols;
          SCIP_Real* rowvals;
          int rowlen;
          int r;
@@ -4012,7 +3999,8 @@ SCIP_RETCODE generateClusterCuts(
                           SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
          SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));
 
-         /* extract useful deltas for c-MIR scaling */
+         /* extract useful deltas for c-MIR scaling and update the demand value for commodities (in binary flow model) */
+         rowcols = SCIProwGetCols(arccapacityrows[a]);
          rowvals = SCIProwGetVals(arccapacityrows[a]);
          rowlen = SCIProwGetNLPNonz(arccapacityrows[a]);
          for( j = 0; j < rowlen; j++ )
@@ -4021,6 +4009,8 @@ SCIP_RETCODE generateClusterCuts(
             SCIP_Bool exists;
             int left;
             int right;
+            int k;
+            int c;
 
             coef = rowvals[j] * arccapacityscales[a];
             coef = ABS(coef);
@@ -4057,7 +4047,75 @@ SCIP_RETCODE generateClusterCuts(
                   BMScopyMemoryArray(&deltas[left+1], &deltas[left], ndeltas - left);
                deltas[left] = coef;
                ndeltas++;
-            }  
+            }
+
+            /* update commodity demands */
+            c = SCIPcolGetLPPos(rowcols[j]);
+            assert(0 <= c && c < SCIPgetNLPCols(scip));
+            k = colcommodity[c];
+            if( k >= 0 )
+               comdemands[k] = coef;
+         }
+      }
+
+      /* set weights of node flow conservation constraints in c-MIR aggregation */
+      for( v = 0; v < nnodes; v++ )
+      {
+         int k;
+
+         /* check if node belongs to S */
+         if( !nodeInPartition(nodepartition, partition, v) )
+            continue;
+
+         /* aggregate flow conservation constraints of the 'active' commodities */
+         for( k = 0; k < ncommodities; k++ )
+         {
+            SCIP_Real scale;
+            int r;
+
+            /* if commodity was not hit by the capacity constraints of the cut in the graph, ignore the commodity */
+            if ( comdemands[k] == 0.0 )
+               continue;
+
+            scale = comdemands[k];
+            if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
+            {
+               /* in the directed case, use rows of commodities with positive demand (negative -d_k) */
+               if( !SCIPisNegative(scip, comcutdemands[k]) )
+                  continue;
+            }
+            else
+            {
+               /* in the undirected case, use rows of commodities with non-zero demand */
+               if( SCIPisZero(scip, comcutdemands[k]) )
+                  continue;
+
+               /* if the demand (-d_k) is negative (i.e., points into the wrong direction), we use the flow constraint with opposite sign */
+               if( comcutdemands[k] > 0.0 )
+                  scale *= -1.0;
+            }
+            if( nodeflowrows[v][k] == NULL )
+               continue;
+            
+            r = SCIProwGetLPPos(nodeflowrows[v][k]);
+            assert(r < nrows);
+            if( r >= 0 ) /* row might have been removed from LP in the meantime */
+            {
+               SCIP_Real feasibility;
+
+               assert(cmirweights[r] == 0.0);
+
+               /* ignore rows with slack */
+               feasibility = SCIPgetRowSolFeasibility(scip, nodeflowrows[v][k], sol);
+               if( !SCIPisFeasPositive(scip, feasibility) )
+               {
+                  cmirweights[r] = scale * nodeflowscales[v][k];
+                  SCIPdebugMessage(" -> node %d, commodity %d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
+                                   v, k, SCIProwGetName(nodeflowrows[v][k]), scale, cmirweights[r], 
+                                   SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
+                  SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));
+               }
+            }
          }
       }
 
@@ -4102,6 +4160,7 @@ SCIP_RETCODE generateClusterCuts(
    /* free local memory */
    SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPfreeBufferArray(scip, &comdemands);
+   SCIPfreeBufferArray(scip, &comcutdemands);
    SCIPfreeBufferArray(scip, &cmirweights);
    SCIPfreeMemoryArray(scip, &deltas);
 
