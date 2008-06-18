@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.270 2008/05/06 13:27:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.271 2008/06/18 17:49:02 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9323,7 +9323,11 @@ SCIP_RETCODE SCIPlpGetState(
    assert(blkmem != NULL);
    assert(lpistate != NULL);
 
-   SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, lpistate) );
+   /* check whether there is no lp */
+   if ( lp->nlpicols == 0 && lp->nlpirows == 0 )
+      *lpistate = NULL;
+   else
+      SCIP_CALL( SCIPlpiGetState(lp->lpi, blkmem, lpistate) );
 
    return SCIP_OKAY;
 }
@@ -9344,10 +9348,18 @@ SCIP_RETCODE SCIPlpSetState(
    assert(lp->flushed);
 
    /* set LPI state in the LP solver */
-   SCIP_CALL( SCIPlpiSetState(lp->lpi, blkmem, lpistate) );
+   if ( lpistate == NULL )
+   {
+      assert( lp->nlpicols == 0 && lp->nlpirows == 0 );
+      lp->solisbasic = FALSE;
+   }
+   else
+   {
+      SCIP_CALL( SCIPlpiSetState(lp->lpi, blkmem, lpistate) );
+      lp->solisbasic = SCIPlpiHasStateBasis(lp->lpi, lpistate);
+   }
    lp->primalfeasible = TRUE;
    lp->dualfeasible = TRUE;
-   lp->solisbasic = SCIPlpiHasStateBasis(lp->lpi, lpistate);
 
    return SCIP_OKAY;
 }
