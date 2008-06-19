@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.16 2008/06/06 20:44:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.17 2008/06/19 10:33:44 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -1113,7 +1113,7 @@ SCIP_RETCODE checkSolution(
        variables in the branch and bound tree and check after every fixing if all
        constraints are disabled; at the point where all constraints are disabled the
        unfixed variables are stars; */
-   assert( SCIPgetNVars(scip) != 0);
+   assert( SCIPgetNOrigVars(scip) != 0);
    assert( SCIPsolGetHeur(sol) == NULL);
 
 #ifdef SCIP_DEBUG
@@ -1220,7 +1220,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
    {
       int v;
       conshdlrdata->nvars = SCIPgetNVars(scip);
-
+      
       SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->vars, conshdlrdata->nvars) );
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &conshdlrdata->vars, SCIPgetVars(scip), conshdlrdata->nvars) );
 
