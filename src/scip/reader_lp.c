@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.57 2008/05/06 14:38:38 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.58 2008/06/20 13:52:44 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1762,16 +1762,20 @@ void appendLine(
    const char*           extension           /**< string to extent the line */
    )
 {
+   int len;
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
    assert( extension != NULL );
    assert( strlen(linebuffer) + strlen(extension) < LP_MAX_PRINTLEN );
 
-   /* NOTE: the following line does not work:
-    *    snprintf(linebuffer, LP_MAX_PRINTLEN, "%s%s", linebuffer, extension);
+   /* NOTE: avoid
+    *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
+    * because of overlapping memory arreas in memcpy used in sprintf.
     */
-   sprintf(linebuffer, "%s%s", linebuffer, extension);
+   len = strlen(linebuffer);
+   strncat(linebuffer, extension, LP_MAX_PRINTLEN - len);
+
    (*linecnt) += (int) strlen(extension);
 
    SCIPdebugMessage("linebuffer <%s>, length = %zd\n", linebuffer, strlen(linebuffer));
