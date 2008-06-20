@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.25 2008/06/18 18:35:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.26 2008/06/20 13:11:33 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -65,6 +65,7 @@
 #define MINNODES                      2 /**< minimal number of nodes in network to keep it for separation */
 #define MINARCS                       1 /**< minimal number of arcs in network to keep it for separation */
 
+#define OUTPUTGRAPH                     /**< should a .gml graph of the network be generated for debugging purposes? */
 
 
 
@@ -3696,26 +3697,6 @@ void nodepartitionFree(
    SCIPfreeMemory(scip, nodepartition);
 }
 
-#ifdef SCIP_DEBUG
-static
-void nodepartitionPrint(
-   NODEPARTITION*        nodepartition       /**< node partition data structure */
-   )
-{
-   int c;
-
-   for( c = 0; c < nodepartition->nclusters; c++ )
-   {
-      int i;
-
-      printf("cluster %d:", c);
-      for( i = nodepartition->clusterbegin[c]; i < nodepartition->clusterbegin[c+1]; i++ )
-         printf(" %d", nodepartition->clusternodes[i]);
-      printf("\n");
-   }
-}
-#endif
-
 /** returns whether given node v is in a cluster that belongs to the partition S */
 static
 SCIP_Bool nodeInPartition(
@@ -3739,6 +3720,242 @@ SCIP_Bool nodeInPartition(
 
    return ((partition & clusterbit) != 0);
 }
+
+#ifdef SCIP_DEBUG
+static
+void nodepartitionPrint(
+   NODEPARTITION*        nodepartition       /**< node partition data structure */
+   )
+{
+   int c;
+
+   for( c = 0; c < nodepartition->nclusters; c++ )
+   {
+      int i;
+
+      printf("cluster %d:", c);
+      for( i = nodepartition->clusterbegin[c]; i < nodepartition->clusterbegin[c+1]; i++ )
+         printf(" %d", nodepartition->clusternodes[i]);
+      printf("\n");
+   }
+}
+#endif
+
+#ifdef OUTPUTGRAPH
+/** generates a GML file to visualize the network graph and LP solution */
+static
+SCIP_RETCODE outputGraph(
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
+   NODEPARTITION*        nodepartition,      /**< node partition data structure */
+   unsigned int          partition           /**< partition of nodes */
+   )
+{
+   FILE* file;
+   char filename[SCIP_MAXSTRLEN];
+   int v;
+   int a;
+
+   /* open file */
+   sprintf(filename, "mcf-%d.gml", partition);
+   SCIPinfoMessage(scip, NULL, "creating GML output file <%s>...\n", filename);
+   file = fopen(filename, "w");
+   if( file == NULL )
+   {
+      SCIPerrorMessage("cannot create GML output file <%s>\n", filename);
+      return SCIP_FILECREATEERROR;
+   }
+
+   /* print GML header */
+   fprintf(file, "graph\n");
+   fprintf(file, "[\n");
+   fprintf(file, "        hierarchic      1\n");
+   fprintf(file, "        label   \"\"\n");
+   fprintf(file, "        directed        1\n");
+
+   /* nodes */
+   for( v = 0; v < mcfnetwork->nnodes; v++ )
+   {
+      char label[SCIP_MAXSTRLEN];
+      SCIP_Bool inpartition;
+
+      if( mcfnetwork->nodeflowrows[v][0] != NULL )
+         sprintf(label, "%s", SCIProwGetName(mcfnetwork->nodeflowrows[v][0]));
+      else
+         sprintf(label, "%d", v);
+      inpartition = nodeInPartition(nodepartition, partition, v);
+
+      fprintf(file, "        node\n");
+      fprintf(file, "        [\n");
+      fprintf(file, "                id      %d\n", v);
+      fprintf(file, "                label   \"%s\"\n", label);
+      fprintf(file, "                graphics\n");
+      fprintf(file, "                [\n");
+      fprintf(file, "                        w       30.0\n");
+      fprintf(file, "                        h       30.0\n");
+      fprintf(file, "                        type    \"ellipse\"\n");
+      if( inpartition )
+         fprintf(file, "                        fill    \"#FF0000\"\n");
+      else
+         fprintf(file, "                        fill    \"#00FF00\"\n");
+      fprintf(file, "                        outline \"#000000\"\n");
+      fprintf(file, "                ]\n");
+      fprintf(file, "                LabelGraphics\n");
+      fprintf(file, "                [\n");
+      fprintf(file, "                        text    \"%s\"\n", label);
+      fprintf(file, "                        fontSize        13\n");
+      fprintf(file, "                        fontName        \"Dialog\"\n");
+      fprintf(file, "                        anchor  \"c\"\n");
+      fprintf(file, "                ]\n");
+      if( inpartition )
+         fprintf(file, "                gid     %d\n", mcfnetwork->nnodes+1);
+      else
+         fprintf(file, "                gid     %d\n", mcfnetwork->nnodes+2);
+      fprintf(file, "        ]\n");
+   }
+
+   /* dummy node for missing arc sources or arc targets */
+   fprintf(file, "        node\n");
+   fprintf(file, "        [\n");
+   fprintf(file, "                id      %d\n", mcfnetwork->nnodes);
+   fprintf(file, "                label   \"?\"\n");
+   fprintf(file, "                graphics\n");
+   fprintf(file, "                [\n");
+   fprintf(file, "                        w       30.0\n");
+   fprintf(file, "                        h       30.0\n");
+   fprintf(file, "                        type    \"ellipse\"\n");
+   fprintf(file, "                        fill    \"#FFFFFF\"\n");
+   fprintf(file, "                        outline \"#000000\"\n");
+   fprintf(file, "                ]\n");
+   fprintf(file, "                LabelGraphics\n");
+   fprintf(file, "                [\n");
+   fprintf(file, "                        text    \"?\"\n");
+   fprintf(file, "                        fontSize        13\n");
+   fprintf(file, "                        fontName        \"Dialog\"\n");
+   fprintf(file, "                        anchor  \"c\"\n");
+   fprintf(file, "                ]\n");
+   fprintf(file, "        ]\n");
+
+   /* group node for partition S */
+   fprintf(file, "        node\n");
+   fprintf(file, "        [\n");
+   fprintf(file, "                id      %d\n", mcfnetwork->nnodes+1);
+   fprintf(file, "                label   \"Partition S\"\n");
+   fprintf(file, "                graphics\n");
+   fprintf(file, "                [\n");
+   fprintf(file, "                        type    \"roundrectangle\"\n");
+   fprintf(file, "                        fill    \"#CAECFF84\"\n");
+   fprintf(file, "                        outline \"#666699\"\n");
+   fprintf(file, "                        outlineStyle    \"dotted\"\n");
+   fprintf(file, "                        topBorderInset  0\n");
+   fprintf(file, "                        bottomBorderInset       0\n");
+   fprintf(file, "                        leftBorderInset 0\n");
+   fprintf(file, "                        rightBorderInset        0\n");
+   fprintf(file, "                ]\n");
+   fprintf(file, "                LabelGraphics\n");
+   fprintf(file, "                [\n");
+   fprintf(file, "                        text    \"Partition S\"\n");
+   fprintf(file, "                        fill    \"#99CCFF\"\n");
+   fprintf(file, "                        fontSize        15\n");
+   fprintf(file, "                        fontName        \"Dialog\"\n");
+   fprintf(file, "                        alignment       \"right\"\n");
+   fprintf(file, "                        autoSizePolicy  \"node_width\"\n");
+   fprintf(file, "                        anchor  \"t\"\n");
+   fprintf(file, "                        borderDistance  0.0\n");
+   fprintf(file, "                ]\n");
+   fprintf(file, "                isGroup 1\n");
+   fprintf(file, "        ]\n");
+
+   /* group node for partition T */
+   fprintf(file, "        node\n");
+   fprintf(file, "        [\n");
+   fprintf(file, "                id      %d\n", mcfnetwork->nnodes+2);
+   fprintf(file, "                label   \"Partition T\"\n");
+   fprintf(file, "                graphics\n");
+   fprintf(file, "                [\n");
+   fprintf(file, "                        type    \"roundrectangle\"\n");
+   fprintf(file, "                        fill    \"#CAECFF84\"\n");
+   fprintf(file, "                        outline \"#666699\"\n");
+   fprintf(file, "                        outlineStyle    \"dotted\"\n");
+   fprintf(file, "                        topBorderInset  0\n");
+   fprintf(file, "                        bottomBorderInset       0\n");
+   fprintf(file, "                        leftBorderInset 0\n");
+   fprintf(file, "                        rightBorderInset        0\n");
+   fprintf(file, "                ]\n");
+   fprintf(file, "                LabelGraphics\n");
+   fprintf(file, "                [\n");
+   fprintf(file, "                        text    \"Partition T\"\n");
+   fprintf(file, "                        fill    \"#99CCFF\"\n");
+   fprintf(file, "                        fontSize        15\n");
+   fprintf(file, "                        fontName        \"Dialog\"\n");
+   fprintf(file, "                        alignment       \"right\"\n");
+   fprintf(file, "                        autoSizePolicy  \"node_width\"\n");
+   fprintf(file, "                        anchor  \"t\"\n");
+   fprintf(file, "                        borderDistance  0.0\n");
+   fprintf(file, "                ]\n");
+   fprintf(file, "                isGroup 1\n");
+   fprintf(file, "        ]\n");
+
+   /* arcs */
+   for( a = 0; a < mcfnetwork->narcs; a++ )
+   {
+      SCIP_ROW* row;
+      SCIP_Real slack;
+      SCIP_Bool hasfractional;
+
+      hasfractional = FALSE;
+      row = mcfnetwork->arccapacityrows[a];
+      if( row != NULL )
+      {
+         SCIP_COL** rowcols;
+         int rowlen;
+         int i;
+
+         slack = ABS(mcfnetwork->arccapacityscales[a]) * SCIPgetRowLPFeasibility(scip, row);
+         rowcols = SCIProwGetCols(row);
+         rowlen = SCIProwGetNNonz(row);
+         for( i = 0; i < rowlen; i++ )
+         {
+            SCIP_VAR* var;
+
+            var = SCIPcolGetVar(rowcols[i]);
+            if( SCIPvarIsIntegral(var) && !SCIPisFeasIntegral(scip, SCIPvarGetLPSol(var)) )
+            {
+               hasfractional = TRUE;
+               break;
+            }
+         }
+      }
+      else
+         slack = SCIPinfinity(scip);
+
+      fprintf(file, "        edge\n");
+      fprintf(file, "        [\n");
+      fprintf(file, "                source  %d\n", mcfnetwork->arcsources[a] >= 0 ? mcfnetwork->arcsources[a] : mcfnetwork->nnodes);
+      fprintf(file, "                target  %d\n", mcfnetwork->arctargets[a] >= 0 ? mcfnetwork->arctargets[a] : mcfnetwork->nnodes);
+      fprintf(file, "                graphics\n");
+      fprintf(file, "                [\n");
+      if( SCIPisFeasPositive(scip, slack) )
+         fprintf(file, "                        fill    \"#000000\"\n");
+      else
+         fprintf(file, "                        fill    \"#FF0000\"\n");
+      if( hasfractional )
+         fprintf(file, "                        style   \"dashed\"\n");
+      fprintf(file, "                        width   1\n");
+      fprintf(file, "                        targetArrow     \"standard\"\n");
+      fprintf(file, "                ]\n");
+      fprintf(file, "        ]\n");
+   }
+
+   /* print GML footer */
+   fprintf(file, "]\n");
+
+   /* close file */
+   fclose(file);
+
+   return SCIP_OKAY;
+}
+#endif
 
 /** adds given cut to LP if violated */
 static
@@ -3902,6 +4119,10 @@ SCIP_RETCODE generateClusterCuts(
       int d;
 
       SCIPdebugMessage("generating cuts for partition 0x%x\n", partition);
+
+#ifdef OUTPUTGRAPH
+      SCIP_CALL( outputGraph(scip, mcfnetwork, nodepartition, partition) );
+#endif
 
       /* clear memory */
       BMSclearMemoryArray(cmirweights, nrows);
@@ -4151,8 +4372,10 @@ SCIP_RETCODE generateClusterCuts(
 
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
          {
-            SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
+            printf/*????????????????SCIPdebugMessage*/(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
             SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+            if( cutact - cutrhs >= 0.5 )
+               abort(); /*??????????????????*/
          }
       }
    }
