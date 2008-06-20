@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.279 2008/05/14 14:31:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.280 2008/06/20 13:34:16 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -2738,11 +2738,39 @@ SCIP_RETCODE applyFixings(
             fixedval = SCIPvarGetLbGlobal(var);
             if( !SCIPisInfinity(scip, -consdata->lhs) )
             {
-               SCIP_CALL( chgLhs(scip, cons, consdata->lhs - val * fixedval) );
+	       if ( SCIPisInfinity(scip, ABS(fixedval)) )
+	       {
+		  if ( val * fixedval > 0.0 )
+		  {
+		     SCIP_CALL( chgLhs(scip, cons, -SCIPinfinity(scip)) );
+		  }
+		  else
+		  {
+		     SCIP_CALL( chgLhs(scip, cons, SCIPinfinity(scip)) );
+		  }
+	       }
+	       else
+	       {
+		  SCIP_CALL( chgLhs(scip, cons, consdata->lhs - val * fixedval) );
+	       }
             }
             if( !SCIPisInfinity(scip, consdata->rhs) )
             {
-               SCIP_CALL( chgRhs(scip, cons, consdata->rhs - val * fixedval) );
+	       if ( SCIPisInfinity(scip, ABS(fixedval)) )
+	       {
+		  if ( val * fixedval > 0.0 )
+		  {
+		     SCIP_CALL( chgRhs(scip, cons, -SCIPinfinity(scip)) );
+		  }
+		  else
+		  {
+		     SCIP_CALL( chgRhs(scip, cons, SCIPinfinity(scip)) );
+		  }
+	       }
+	       else
+	       {
+		  SCIP_CALL( chgRhs(scip, cons, consdata->rhs - val * fixedval) );
+	       }
             }
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
