@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.18 2008/06/20 13:47:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.19 2008/06/22 18:49:26 bzfpfets Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -321,7 +321,7 @@ SCIP_RETCODE checkLPBoundsClean(
  *  variables other than the binary indicators are always 0 and
  *  hence do not have to be changed.
  *
- *  We already use the tranformation \f$y' = 1 - y$.
+ *  We already use the tranformation \f$y' = 1 - y\f$.
  */
 static
 SCIP_RETCODE setAltLPObj(
@@ -1850,7 +1850,12 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
 
 
-/** LP initialization method of constraint handler */
+/** LP initialization method of constraint handler 
+ *
+ *  For an indicator constraint with binary variable \f$y\f$ and slack variable \f$s\f$ the coupling
+ *  inequality \f$s \le M (1-y)\f$ (equivalently: \f$s + M y \le M\f$) is inserted, where \f$M\f$ is
+ *  an upper bound on the value of \f$s\f$. If \f$M\f$ is too large the inequality is not inserted.
+ */
 static
 SCIP_DECL_CONSINITLP(consInitlpIndicator)
 {
@@ -1895,11 +1900,11 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 #else
 	    name[0] = '\0';
 #endif
-	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
+	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->slackvar, 1.0) );
-	    SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, -ub) );
+	    SCIP_CALL( SCIPaddVarToRow(scip, row, consdata->binvar, ub) );
 	    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
 	    SCIPdebugMessage("Insert coupling inequality for indicator constraint <%s> (coeff: %f).\n", SCIPconsGetName(conss[c]), ub);
@@ -2357,31 +2362,35 @@ SCIP_DECL_EVENTEXEC(eventExecIndicator)
       /* if variable is now fixed to be nonzero */
       if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
 	 ++(consdata->nFixedNonzero);
+      SCIPdebugMessage("changed lower bound of variable <%s> from %f to %f (nFixedNonzero: %d).\n",
+	 SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if variable is now fixed to be nonzero */
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
 	 ++(consdata->nFixedNonzero);
+      SCIPdebugMessage("changed upper bound of variable <%s> from %f to %f (nFixedNonzero: %d).\n",
+	 SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
 	 --(consdata->nFixedNonzero);
+      SCIPdebugMessage("changed lower bound of variable <%s> from %f to %f (nFixedNonzero: %d).\n",
+	 SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nFixedNonzero);
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
 	 --(consdata->nFixedNonzero);
+      SCIPdebugMessage("changed upper bound of variable <%s> from %f to %f (nFixedNonzero: %d).\n",
+	 SCIPvarGetName(SCIPeventGetVar(event)), oldbound, newbound, consdata->nFixedNonzero);
       break;
    default:
       SCIPerrorMessage("invalid event type.\n");
       return SCIP_INVALIDDATA;
    }
    assert( 0 <= consdata->nFixedNonzero && consdata->nFixedNonzero <= 2 );
-
-   SCIPdebugMessage("changed bound of variable <%s> from %f to %f (nFixedNonzero: %d).\n",
-		    SCIPvarGetName(SCIPeventGetVar(event)),
-		    oldbound, newbound, consdata->nFixedNonzero);
 
    return SCIP_OKAY;
 }
