@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.256 2008/04/22 13:31:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.257 2008/06/23 18:29:34 bzfpfets Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1611,6 +1611,9 @@ SCIP_RETCODE priceAndCutLoop(
 
             if( !(*cutoff) )
             {
+               mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
+               mustsepa = mustsepa || !lp->flushed;
+
                /* if a new bound change (e.g. a cut with only one column) was found, propagate domains again */
                if( stat->domchgcount != olddomchgcount )
                {
@@ -1624,9 +1627,6 @@ SCIP_RETCODE priceAndCutLoop(
                      SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat) );
                   }
                }
-
-               mustprice = mustprice || !lp->flushed || (prob->ncolvars != npricedcolvars);
-               mustsepa = mustsepa || !lp->flushed;
 
                if( !(*cutoff) )
                {
