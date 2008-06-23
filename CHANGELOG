@@ -148,6 +148,7 @@ fixed bugs:
 - corrected bug in SCIPtreeBranchVar() (tree.c) - several comparison functions needed a 'feas'.
 - corrected bug in SCIPlpGetState if the LP is empty
 - corrected bug in cons_linear.c:applyFixings() [if variable was fixed to infinity the rhs/lhs were wrong]
+- corrected bug in priceAndCutLoop(): separation was aborted if domain reduction was applied
 
 
 SCIP version 1.00
