@@ -113,6 +113,7 @@ do
 	    fi
 	    echo set mip limits nodes $NODELIMIT    >> $TMPFILE
 	    echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+	    echo set threads 1                      >> $TMPFILE
 	    echo write $SETFILE                     >> $TMPFILE
 	    echo read $i                            >> $TMPFILE
 	    echo display problem stats              >> $TMPFILE
