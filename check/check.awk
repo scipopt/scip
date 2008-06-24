@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.65 2008/04/17 19:30:44 bzfpfets Exp $
+# $Id: check.awk,v 1.66 2008/06/24 08:54:46 bzfberth Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -46,17 +46,21 @@ BEGIN {
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
    printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
+   printf("\\usepackage{supertabular}\n")                           >TEXFILE;
    printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
    printf("\\begin{document}\n\n")                                  >TEXFILE;
-   printf("\\begin{table}[p]\n")                                    >TEXFILE;
    printf("\\begin{center}\n")                                      >TEXFILE;
    printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
    printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-   printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
-   printf("\\toprule\n")                                         >TEXFILE;
+   printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") > TEXFILE;
-   printf("\\midrule\n")                                         >TEXFILE;
-   
+   printf("\\midrule\n}\n")                                         >TEXFILE;
+   printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
+   printf("\\multicolumn{8}{r} \\; continue next page \\\\\n")      >TEXFILE;
+   printf("\\bottomrule\n}\n")                                      >TEXFILE;
+   printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
+   printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
+  
    printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
    printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
    printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
@@ -518,12 +522,10 @@ END {
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f \n",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
-   printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
-   printf("\\end{tabular*}\n")                                           >TEXFILE;
-   printf("\\caption{%s}\n", settings)                                   >TEXFILE;
+   printf("\\end{supertabular*}\n")                                      >TEXFILE;
+   printf("{\\bfseries Settings:} %s\n", settings)                       >TEXFILE;
    printf("\\end{center}\n")                                             >TEXFILE;
-   printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
    printf("@02 timelimit: %g\n", timelimit);
