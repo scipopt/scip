@@ -70,6 +70,7 @@ features:
 - better branching in SOS1/SOS2 constraints
 - added ccg-reader (weighted column connectivity graph)
 - cons_countsols.c is now able to store the collected solution if required
+- check.awk now uses TeX package supertabular which supports automatic pagebreak
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
