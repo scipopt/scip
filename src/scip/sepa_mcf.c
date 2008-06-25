@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.26 2008/06/20 13:11:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.27 2008/06/25 15:34:40 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -65,7 +65,7 @@
 #define MINNODES                      2 /**< minimal number of nodes in network to keep it for separation */
 #define MINARCS                       1 /**< minimal number of arcs in network to keep it for separation */
 
-#define OUTPUTGRAPH                     /**< should a .gml graph of the network be generated for debugging purposes? */
+/*#define OUTPUTGRAPH*/                     /**< should a .gml graph of the network be generated for debugging purposes? */
 
 
 
@@ -3902,6 +3902,12 @@ SCIP_RETCODE outputGraph(
       SCIP_ROW* row;
       SCIP_Real slack;
       SCIP_Bool hasfractional;
+      char label[SCIP_MAXSTRLEN];
+
+      if( mcfnetwork->arccapacityrows[a] != NULL )
+         sprintf(label, "%s", SCIProwGetName(mcfnetwork->arccapacityrows[a]));
+      else
+         sprintf(label, "%d", a);
 
       hasfractional = FALSE;
       row = mcfnetwork->arccapacityrows[a];
@@ -3933,6 +3939,7 @@ SCIP_RETCODE outputGraph(
       fprintf(file, "        [\n");
       fprintf(file, "                source  %d\n", mcfnetwork->arcsources[a] >= 0 ? mcfnetwork->arcsources[a] : mcfnetwork->nnodes);
       fprintf(file, "                target  %d\n", mcfnetwork->arctargets[a] >= 0 ? mcfnetwork->arctargets[a] : mcfnetwork->nnodes);
+      fprintf(file, "                label \"%s\"\n", label);
       fprintf(file, "                graphics\n");
       fprintf(file, "                [\n");
       if( SCIPisFeasPositive(scip, slack) )
@@ -3943,6 +3950,10 @@ SCIP_RETCODE outputGraph(
          fprintf(file, "                        style   \"dashed\"\n");
       fprintf(file, "                        width   1\n");
       fprintf(file, "                        targetArrow     \"standard\"\n");
+      fprintf(file, "                ]\n");
+      fprintf(file, "                LabelGraphics\n");
+      fprintf(file, "                [\n");
+      fprintf(file, "                        text    \"%s\"\n", label);
       fprintf(file, "                ]\n");
       fprintf(file, "        ]\n");
    }
@@ -4205,6 +4216,8 @@ SCIP_RETCODE generateClusterCuts(
             continue;
          assert(cmirweights[r] == 0.0);
 
+         /**@todo ignore capacity constraints that have too large slack (see c-MIR separator for tolerance) */
+
          /* if one of the arc nodes is unknown, we only use the capacity row if it does not have slack */
          if( arcsources[a] == -1 || arctargets[a] == -1 )
          {
@@ -4216,7 +4229,7 @@ SCIP_RETCODE generateClusterCuts(
          }
          
          cmirweights[r] = arccapacityscales[a];
-         SCIPdebugMessage(" -> arc %d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, SCIProwGetName(arccapacityrows[a]), cmirweights[r],
+         SCIPdebugMessage(" -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), cmirweights[r],
                           SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
          SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));
 
@@ -4331,8 +4344,8 @@ SCIP_RETCODE generateClusterCuts(
                if( !SCIPisFeasPositive(scip, feasibility) )
                {
                   cmirweights[r] = scale * nodeflowscales[v][k];
-                  SCIPdebugMessage(" -> node %d, commodity %d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
-                                   v, k, SCIProwGetName(nodeflowrows[v][k]), scale, cmirweights[r], 
+                  SCIPdebugMessage(" -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
+                                   v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, cmirweights[r], 
                                    SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
                   SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));
                }
@@ -4353,6 +4366,7 @@ SCIP_RETCODE generateClusterCuts(
          if( SCIPisFeasZero(scip, deltas[d]) )
             continue;
 
+         SCIPdebugMessage("applying MIR with delta = %g\n", deltas[d]);
          SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL, 
                                 sepadata->maxrowfac, MINFRAC, MAXFRAC, cmirweights, 1.0/deltas[d], NULL, cutcoefs, &cutrhs, &cutact, 
                                 &success, &cutislocal) );
@@ -4372,10 +4386,12 @@ SCIP_RETCODE generateClusterCuts(
 
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
          {
-            printf/*????????????????SCIPdebugMessage*/(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
+            SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
             SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+#if 0
             if( cutact - cutrhs >= 0.5 )
                abort(); /*??????????????????*/
+#endif
          }
       }
    }
