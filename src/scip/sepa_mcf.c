@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.27 2008/06/25 15:34:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.28 2008/06/25 16:50:45 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -49,7 +49,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_NCLUSTERS             8 /**< number of clusters to generate in the shrunken network */
-#define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
+#define DEFAULT_MAXROWFAC          1e+6 /**< maximal row aggregation factor */
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
@@ -3411,6 +3411,7 @@ SCIP_RETCODE arcqueueCreate(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(*arcqueue)->arcentries, mcfnetwork->narcs) );
    for( a = 0; a < mcfnetwork->narcs; a++ )
    {
+      SCIP_Real maxval;
       SCIP_Real slack;
       SCIP_Real dualsol;
       SCIP_Real scale;
@@ -3418,7 +3419,9 @@ SCIP_RETCODE arcqueueCreate(
       slack = SCIPgetRowFeasibility(scip, mcfnetwork->arccapacityrows[a]);
       slack = MAX(slack, 0.0); /* can only be negative due to numerics */
       dualsol = SCIProwGetDualsol(mcfnetwork->arccapacityrows[a]);
-      scale = ABS(mcfnetwork->arccapacityscales[a]);
+      maxval = SCIPgetRowMaxCoef(scip, mcfnetwork->arccapacityrows[a]);
+      assert(maxval > 0.0);
+      scale = ABS(mcfnetwork->arccapacityscales[a])/maxval; /* divide by maxval to normalize rows */
 
       /* shrink rows with large slack first, and from the tight rows, shrink the ones with small dual solution value first */
       (*arcqueue)->arcentries[a].arcid = a;
@@ -4240,55 +4243,58 @@ SCIP_RETCODE generateClusterCuts(
          for( j = 0; j < rowlen; j++ )
          {
             SCIP_Real coef;
-            SCIP_Bool exists;
-            int left;
-            int right;
             int k;
             int c;
 
             coef = rowvals[j] * arccapacityscales[a];
             coef = ABS(coef);
             
-            /* binary search if we already know this coefficient */
-            exists = FALSE;
-            left = 0;
-            right = ndeltas-1;
-            while( left <= right )
-            {
-               int mid = (left+right)/2;
-               if( SCIPisEQ(scip, deltas[mid], coef) )
-               {
-                  exists = TRUE;
-                  break;
-               }
-               else if( coef < deltas[mid] )
-                  right = mid-1;
-               else
-                  left = mid+1;
-            }
-
-            /* insert new candidate value */
-            if( !exists )
-            {
-               assert(right == left-1);
-               assert(ndeltas <= deltassize);
-               if( ndeltas == deltassize )
-               {
-                  deltassize *= 2;
-                  SCIP_CALL( SCIPreallocMemoryArray(scip, &deltas, deltassize) );
-               }
-               if( left < ndeltas )
-                  BMScopyMemoryArray(&deltas[left+1], &deltas[left], ndeltas - left);
-               deltas[left] = coef;
-               ndeltas++;
-            }
-
             /* update commodity demands */
             c = SCIPcolGetLPPos(rowcols[j]);
             assert(0 <= c && c < SCIPgetNLPCols(scip));
             k = colcommodity[c];
             if( k >= 0 )
                comdemands[k] = coef;
+            else
+            {
+               SCIP_Bool exists;
+               int left;
+               int right;
+
+               /* binary search if we already know this coefficient */
+               exists = FALSE;
+               left = 0;
+               right = ndeltas-1;
+               while( left <= right )
+               {
+                  int mid = (left+right)/2;
+                  if( SCIPisEQ(scip, deltas[mid], coef) )
+                  {
+                     exists = TRUE;
+                     break;
+                  }
+                  else if( coef < deltas[mid] )
+                     right = mid-1;
+                  else
+                     left = mid+1;
+               }
+
+               /* insert new candidate value */
+               if( !exists )
+               {
+                  assert(right == left-1);
+                  assert(ndeltas <= deltassize);
+                  if( ndeltas == deltassize )
+                  {
+                     deltassize *= 2;
+                     SCIP_CALL( SCIPreallocMemoryArray(scip, &deltas, deltassize) );
+                  }
+                  if( left < ndeltas )
+                     BMScopyMemoryArray(&deltas[left+1], &deltas[left], ndeltas - left);
+                  deltas[left] = coef;
+                  ndeltas++;
+               }
+            }
          }
       }
 
@@ -4353,9 +4359,10 @@ SCIP_RETCODE generateClusterCuts(
          }
       }
 
-      /* try out deltas to generate c-MIR cuts */
+      /* try out deltas to generate c-MIR cuts: use larger deltas first */
       /**@todo use deltas as in the c-MIR separator from the mksetcoefs returned by SCIPcalcMIR() */
-      for( d = 0; d < maxtestdelta && d < ndeltas; d++ )
+      /**@todo use only the best delta instead of generating all cuts */
+      for( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
       {
          SCIP_Real cutrhs;
          SCIP_Real cutact;
