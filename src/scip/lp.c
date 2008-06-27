@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.272 2008/06/25 15:34:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.273 2008/06/27 14:43:14 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6812,17 +6812,16 @@ SCIP_RETCODE SCIPlpSumRows(
    return SCIP_OKAY;
 }
 
-/** returns the maximum absolute coefficient in rows weighted by the given weight vector, and calculates the sparsity pattern of the weights */
+/** returns the maximum absolute row weight in the given weight vector, and calculates the sparsity pattern of the weights */
 static
-SCIP_Real getMaxWeightedCoefCalcSparsity(
-   SCIP_SET*             set,                /**< global SCIP settings */
+SCIP_Real getMaxAbsWeightCalcSparsity(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
    int*                  nrowinds            /**< pointer to store number of used rows */
    )
 {
-   SCIP_Real maxweightedcoef;
+   SCIP_Real maxabsweight;
    int r;
 
    assert(lp != NULL);
@@ -6832,32 +6831,24 @@ SCIP_Real getMaxWeightedCoefCalcSparsity(
 
    *nrowinds = 0;
 
-   maxweightedcoef = 0.0;
+   maxabsweight = 0.0;
    for( r = 0; r < lp->nrows; ++r )
    {
-      SCIP_Real maxval;
-      SCIP_Real weightedmaxval;
+      SCIP_Real absweight;
 
       /* skip unused rows */
       if( weights[r] == 0.0 )
          continue;
-
-      /* get maximal absolute coefficient in row */
-      maxval = SCIProwGetMaxval(lp->rows[r], set);
-      if( SCIPsetIsZero(set, maxval) )
-         continue;
-      assert(maxval > 0.0);
-
+      
       /* record the row in the sparsity pattern */
       rowinds[*nrowinds] = r;
       (*nrowinds)++;
 
-      /* update maximal absolute weight, with rows scaled to max{a_j} == 1 */
-      weightedmaxval = REALABS(weights[r]) * maxval;
-      maxweightedcoef = MAX(maxweightedcoef, weightedmaxval);
+      absweight = REALABS(weights[r]);
+      maxabsweight = MAX(maxabsweight, absweight);
    }
 
-   return maxweightedcoef;
+   return maxabsweight;
 }
 
 /** adds a single row to an aggregation */
@@ -6940,7 +6931,7 @@ void sumMIRRow(
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
-   SCIP_Real             maxcoefrange,       /**< maximal valid range max(|weight_i|*max{|a_ij|})/min(|weight_i|*max{|a_ij|}) of scaled row coefficients */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size prob->nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
@@ -6953,14 +6944,14 @@ void sumMIRRow(
    SCIP_Bool*            localrowsused       /**< pointer to store whether local rows were used in summation */
    )
 {
-   SCIP_Real maxweightedcoef;
+   SCIP_Real maxweight;
    int i;
 
    assert(prob != NULL);
    assert(lp != NULL);
    assert(weights != NULL);
    assert(!SCIPsetIsZero(set, scale));
-   assert(maxcoefrange >= 1.0);
+   assert(maxweightrange >= 1.0);
    assert(mircoef != NULL);
    assert(mirrhs != NULL);
    assert(slacksign != NULL);
@@ -6978,9 +6969,9 @@ void sumMIRRow(
    /* initialize varused array */
    BMSclearMemoryArray(varused, prob->nvars);
 
-   /* search the maximal absolute weighted coefficient in rows and calculate the row sparsity pattern */
-   maxweightedcoef = getMaxWeightedCoefCalcSparsity(set, lp, weights, rowinds, nrowinds);
-   maxweightedcoef *= ABS(scale);
+   /* search the maximal absolute weight and calculate the row sparsity pattern */
+   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds);
+   maxweight *= ABS(scale);
 
    /* calculate the row summation */
    BMSclearMemoryArray(mircoef, prob->nvars);
@@ -6991,7 +6982,7 @@ void sumMIRRow(
    {
       SCIP_ROW* row;
       SCIP_Real weight;
-      SCIP_Real weightedcoef;
+      SCIP_Real absweight;
       int r;
 
       r = rowinds[i];
@@ -7009,9 +7000,9 @@ void sumMIRRow(
        * close to zero weights or weights outside the maximal range are ignored
        */
       weight = scale * weights[r];
-      weightedcoef = REALABS(weight) * SCIProwGetMaxval(row, set);
+      absweight = REALABS(weight);
       if( !row->modifiable && (allowlocal || !row->local)
-         && weightedcoef * maxcoefrange >= maxweightedcoef && !SCIPsetIsSumZero(set, weight) )
+         && absweight * maxweightrange >= maxweight && !SCIPsetIsSumZero(set, weight) )
       {
          SCIP_Bool uselhs;
 
@@ -7036,9 +7027,6 @@ void sumMIRRow(
       else
       {
          /* remove row from sparsity pattern */
-         SCIPdebugMessage("ignoring row <%s>: modifiable=%d allowlocal=%d local=%d weight=%g weightedcoef=%g maxcoefrange=%g prod=%g maxweightedcoef=%g\n",
-            SCIProwGetName(row), row->modifiable, allowlocal, row->local, weight, weightedcoef,
-            maxcoefrange, weightedcoef * maxcoefrange, maxweightedcoef);
          rowinds[i] = rowinds[(*nrowinds)-1];
          (*nrowinds)--;
          i--;
@@ -8117,11 +8105,7 @@ void printMIR(
    {
       if( mircoef[i] != 0.0 )
       {
-         SCIP_VARTYPE vartype = SCIPvarGetType(prob->vars[i]);
-         printf(" %+g<%s>[%c]", mircoef[i], SCIPvarGetName(prob->vars[i]),
-                vartype == SCIP_VARTYPE_BINARY ? 'B' :
-                vartype == SCIP_VARTYPE_INTEGER ? 'I' :
-                vartype == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+         printf(" %+g<%s>", mircoef[i], SCIPvarGetName(prob->vars[i]));
          activity += mircoef[i] * SCIPvarGetLPSol(prob->vars[i]);
       }
    }
@@ -8173,7 +8157,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
                                               *   NULL for using closest bound for all variables */
-   SCIP_Real             maxcoefrange,       /**< maximal valid range max(|weight_i|*max{|a_ij|})/min(|weight_i|*max{|a_ij|}) of scaled row coefficients */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
@@ -8229,7 +8213,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
 
    /* calculate the row summation */
    sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
-      maxcoefrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
+      maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
       &emptyrow, &localrowsused);
    assert(allowlocal || !localrowsused);
    *cutislocal = localrowsused;
@@ -8359,7 +8343,7 @@ void sumStrongCGRow(
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
-   SCIP_Real             maxcoefrange,       /**< maximal valid range max(|weight_i|*max{|a_ij|})/min(|weight_i|*max{|a_ij|}) of scaled row coefficients */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size prob->nvars */
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
@@ -8372,14 +8356,14 @@ void sumStrongCGRow(
    SCIP_Bool*            localrowsused       /**< pointer to store whether local rows were used in summation */
    )
 {
-   SCIP_Real maxweightedcoef;
+   SCIP_Real maxweight;
    int i;
 
    assert(prob != NULL);
    assert(lp != NULL);
    assert(weights != NULL);
    assert(!SCIPsetIsZero(set, scale));
-   assert(maxcoefrange >= 1.0);
+   assert(maxweightrange >= 1.0);
    assert(strongcgcoef != NULL);
    assert(strongcgrhs != NULL);
    assert(slacksign != NULL);
@@ -8397,9 +8381,9 @@ void sumStrongCGRow(
    /* initialize varused array */
    BMSclearMemoryArray(varused, prob->nvars);
 
-   /* search the maximal absolute weighted coefficient in rows and calculate the row sparsity pattern */
-   maxweightedcoef = getMaxWeightedCoefCalcSparsity(set, lp, weights, rowinds, nrowinds);
-   maxweightedcoef *= ABS(scale);
+   /* search the maximal absolute weight and calculate the row sparsity pattern */
+   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds);
+   maxweight *= ABS(scale);
 
    /* calculate the row summation */
    BMSclearMemoryArray(strongcgcoef, prob->nvars);
@@ -8410,7 +8394,7 @@ void sumStrongCGRow(
    {
       SCIP_ROW* row;
       SCIP_Real weight;
-      SCIP_Real weightedcoef;
+      SCIP_Real absweight;
       SCIP_Bool skiprow;
       int r;
 
@@ -8429,10 +8413,10 @@ void sumStrongCGRow(
        * close to zero weights or weights outside the maximal range are ignored
        */
       weight = scale * weights[r];
-      weightedcoef = ABS(weight) * SCIProwGetMaxval(row, set);
+      absweight = ABS(weight);
       skiprow = FALSE;
       if( !row->modifiable && (allowlocal || !row->local)
-         && weightedcoef * maxcoefrange >= maxweightedcoef && !SCIPsetIsSumZero(set, weight) )
+         && absweight * maxweightrange >= maxweight && !SCIPsetIsSumZero(set, weight) )
       {
 	 /*lint --e{644}*/
          SCIP_Bool uselhs;
@@ -9149,7 +9133,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
-   SCIP_Real             maxcoefrange,       /**< maximal valid range max(|weight_i|*max{|a_ij|})/min(|weight_i|*max{|a_ij|}) of scaled row coefficients */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
@@ -9206,7 +9190,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
 
    /* calculate the row summation */
    sumStrongCGRow(set, prob, lp, weights, scale, allowlocal, 
-      maxcoefrange, strongcgcoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
+      maxweightrange, strongcgcoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
       &emptyrow, &localrowsused);
    assert(allowlocal || !localrowsused);
    *cutislocal = *cutislocal || localrowsused;

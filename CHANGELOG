@@ -45,9 +45,6 @@ interface:
   handler is ask to print for violated constraint a reason;
 - the parameter list of the method scip_check() (objconshdlr.h) has an additional parameter "printreason" 
   see for explanation the previous point
-- replaced the 'maxweightrange' parameter of SCIPcalcMIR() and SCIPcalcStrongCG() by a more useful 'maxcoefrange' parameter:
-  instead of limiting the range of the row weights (max{|weight_i|}/min{|weight_i|} <= maxweightrange), we now limit the range
-  of the resulting maximal row coefficients (max{|weight_i|*max{|a_ij|}}/min{|weight_i|*max{|a_ij|}} <= maxcoefrange)
 
 features:
 - the MPS reader is now able to write a problem in MPS format

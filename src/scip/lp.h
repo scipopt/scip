@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.129 2008/06/25 15:34:38 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.130 2008/06/27 14:43:14 bzfpfend Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -766,7 +766,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
                                               *   NULL for using closest bound for all variables */
-   SCIP_Real             maxcoefrange,       /**< maximal valid range max(|weight_i|*max{|a_ij|})/min(|weight_i|*max{|a_ij|}) of scaled row coefficients */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
@@ -791,7 +791,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
-   SCIP_Real             maxcoefrange,       /**< maximal valid range max(|weight_i|*max{|a_ij|})/min(|weight_i|*max{|a_ij|}) of scaled row coefficients */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
