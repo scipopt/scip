@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.461 2008/06/27 14:43:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.462 2008/07/04 10:07:28 bzfpfend Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10449,6 +10449,57 @@ SCIP_Bool SCIPisEfficacious(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisCutEfficacious", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPsetIsEfficacious(scip->set, (SCIPtreeGetCurrentDepth(scip->tree) == 0), efficacy);
+}
+
+/** calculates the efficacy norm of the given vector, which depends on the "separating/efficacynorm" parameter */
+SCIP_Real SCIPgetVectorEfficacyNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            vals,               /**< array of values */
+   int                   nvals               /**< number of values */
+   )
+{
+   SCIP_Real norm;
+   int i;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVectorEfficacyNorm", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   norm = 0.0;
+   switch( scip->set->sepa_efficacynorm )
+   {
+   case 'e':
+      for( i = 0; i < nvals; ++i )
+         norm += SQR(vals[i]);
+      norm = SQRT(norm);
+      break;
+   case 'm':
+      for( i = 0; i < nvals; ++i )
+      {
+         SCIP_Real absval;
+
+         absval = REALABS(vals[i]);
+         norm = MAX(norm, absval);
+      }
+      break;
+   case 's':
+      for( i = 0; i < nvals; ++i )
+         norm += REALABS(vals[i]);
+      break;
+   case 'd':
+      for( i = 0; i < nvals; ++i )
+      {
+         if( !SCIPisZero(scip, vals[i]) )
+         {
+            norm = 1.0;
+            break;
+         }
+      }
+      break;
+   default:
+      SCIPerrorMessage("invalid efficacy norm parameter '%c'\n", scip->set->sepa_efficacynorm);
+      assert(FALSE);
+   }
+
+   return norm;
 }
 
 /** adds cut to separation storage */

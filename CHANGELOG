@@ -45,6 +45,8 @@ interface:
   handler is ask to print for violated constraint a reason;
 - the parameter list of the method scip_check() (objconshdlr.h) has an additional parameter "printreason" 
   see for explanation the previous point
+- new method SCIPgetVectorEfficacyNorm()
+- new method SCIPcutGenerationHeuristicCmir()
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -102,6 +104,7 @@ parameters:
 - new parameter "constraints/and/initiallp" to turn on, off, or 'auto' that the LP relaxation of the AND constraints are in the initial LP;
 - new parameter "constraints/countsols/collect" to enable the storing of the solutions; default value FALSE;
 - new parameter "constraints/indicator/addCoupling" to enable generation of relaxation
+- removed parameter "separating/cmir/maxtestdeltaroot"
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c

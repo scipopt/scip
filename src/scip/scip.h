@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.321 2008/06/27 14:43:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.322 2008/07/04 10:07:28 bzfpfend Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3784,6 +3784,14 @@ extern
 SCIP_Bool SCIPisEfficacious(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             efficacy            /**< efficacy of the cut */
+   );
+
+/** calculates the efficacy norm of the given vector, which depends on the "separating/efficacynorm" parameter */
+extern
+SCIP_Real SCIPgetVectorEfficacyNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            vals,               /**< array of values */
+   int                   nvals               /**< number of values */
    );
 
 /** adds cut to separation storage */
