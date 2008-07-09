@@ -12,11 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.h,v 1.2 2008/04/17 17:49:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.h,v 1.3 2008/07/09 08:21:40 bzfpfend Exp $"
 
 /**@file   sepa_mcf.h
- * @brief  mcf separator
+ * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
+ * @author Christian Raack
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

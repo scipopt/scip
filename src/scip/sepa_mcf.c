@@ -12,13 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.30 2008/07/09 08:20:07 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.31 2008/07/09 08:21:40 bzfpfend Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
+ * @author Christian Raack
  *
  * We try to identify a multi-commodity flow structure in the LP relaxation of the
  * following type:
