@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.29 2008/07/04 10:07:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.30 2008/07/09 08:20:07 bzfpfend Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
 /*#define SCIP_DEBUG*/
@@ -52,7 +52,7 @@
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
-#define DEFAULT_NCLUSTERS             8 /**< number of clusters to generate in the shrunken network */
+#define DEFAULT_NCLUSTERS             6 /**< number of clusters to generate in the shrunken network */
 #define DEFAULT_MAXWEIGHTRANGE    1e+06 /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_TRYNEGSCALING     FALSE /**< should negative values also be tested in scaling? */
@@ -4072,9 +4072,11 @@ SCIP_RETCODE generateClusterCuts(
    int nvars;
 
    SCIP_Real* cutcoefs;
+#ifndef USECMIRDELTAS
    SCIP_Real* deltas;
    int deltassize;
    int ndeltas;
+#endif
    SCIP_Real* rowweights;
    SCIP_Real* comcutdemands;
    SCIP_Real* comdemands;
@@ -4111,8 +4113,10 @@ SCIP_RETCODE generateClusterCuts(
     *                                                           + sum_{a \in A^-} sum_{k \in K} f_a^k - c_a x_a  <=  0
     */
 
+#ifndef USECMIRDELTAS
    deltassize = 16;
    SCIP_CALL( SCIPallocMemoryArray(scip, &deltas, deltassize) );
+#endif
    SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comcutdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comdemands, ncommodities) );
@@ -4152,7 +4156,9 @@ SCIP_RETCODE generateClusterCuts(
       BMSclearMemoryArray(rowweights, nrows);
       BMSclearMemoryArray(comcutdemands, ncommodities);
       BMSclearMemoryArray(comdemands, ncommodities);
+#ifndef USECMIRDELTAS
       ndeltas = 0;
+#endif
 
       /* Identify commodities with positive T -> S demand */
       for( v = 0; v < nnodes; v++ )
@@ -4265,6 +4271,7 @@ SCIP_RETCODE generateClusterCuts(
             k = colcommodity[c];
             if( k >= 0 )
                comdemands[k] = coef;
+#ifndef USECMIRDELTAS
             else
             {
                SCIP_Bool exists;
@@ -4308,6 +4315,7 @@ SCIP_RETCODE generateClusterCuts(
                   ndeltas++;
                }
             }
+#endif
          }
       }
 
@@ -4430,7 +4438,9 @@ SCIP_RETCODE generateClusterCuts(
    SCIPfreeBufferArray(scip, &comdemands);
    SCIPfreeBufferArray(scip, &comcutdemands);
    SCIPfreeBufferArray(scip, &rowweights);
+#ifndef USECMIRDELTAS
    SCIPfreeMemoryArray(scip, &deltas);
+#endif
 
    return SCIP_OKAY;
 }
