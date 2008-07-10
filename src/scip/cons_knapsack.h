@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.38 2008/04/21 18:51:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.39 2008/07/10 14:43:53 bzfpfend Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -169,6 +169,7 @@ SCIP_RETCODE SCIPsolveKnapsack(
  *  polytop by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
  *  are fixed to one (C2)
  */
+extern
 SCIP_RETCODE SCIPliftKnapsackCover(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
@@ -188,15 +189,30 @@ SCIP_RETCODE SCIPliftKnapsackCover(
    );
 
 /** separates lifted cover inequalities for given knapsack problem */
+extern
 SCIP_RETCODE SCIPseparateKnapsackCover(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem, or NULL */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
    int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   );
+
+/* relaxes given general linear constraint into a knapsack constraint and separates lifted knapsack cover inequalities */
+extern
+SCIP_RETCODE SCIPseparateRelaxedKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the linear constraint, or NULL */
+   int                   nknapvars,          /**< number of variables in the continuous knapsack constraint */
+   SCIP_VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
+   SCIP_Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
+   SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
+   SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 

@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.34 2008/07/10 12:19:54 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.35 2008/07/10 14:43:53 bzfpfend Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
+//#define SEPARATEKNAPSACKCOVERS /*?????????????????*/
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
@@ -43,6 +44,9 @@
 #include "scip/sepa_mcf.h"
 #ifdef USECMIRDELTAS /*????????????????????*/
 #include "scip/sepa_cmir.h"
+#endif
+#ifdef SEPARATEKNAPSACKCOVERS
+#include "scip/cons_knapsack.h"
 #endif
 
 
@@ -73,6 +77,7 @@
 #define MINCOMNODESFRACTION         0.5 /**< minimal size of commodity relative to largest commodity to keep it in the network */
 #define MINNODES                      3 /**< minimal number of nodes in network to keep it for separation */
 #define MINARCS                       3 /**< minimal number of arcs in network to keep it for separation */
+#define MAXCAPACITYSLACK            0.1 /**< maximal slack of weighted capacity constraints to use in aggregation */
 
 /*#define OUTPUTGRAPH*/                     /**< should a .gml graph of the network be generated for debugging purposes? */
 
@@ -1450,68 +1455,6 @@ void addFlowrowToCommodity(
    }
 }
 
-#if 0 /*???????????????????????*/
-/** deletes the last commodity, which must only have a single node, and removes the flow row again from the system */
-static
-void deleteSingleNodeCommodity(
-   SCIP*                 scip,               /**< SCIP data structure */
-   MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
-   SCIP_ROW*             row                 /**< single flow row of the commodity */
-   )
-{
-   unsigned char* flowrowsigns = mcfdata->flowrowsigns;
-   SCIP_Bool*     plusflow     = mcfdata->plusflow;
-   SCIP_Bool*     minusflow    = mcfdata->minusflow;
-   int            ncommodities = mcfdata->ncommodities;
-   int*           colcommodity = mcfdata->colcommodity;
-   int*           rowcommodity = mcfdata->rowcommodity;
-
-   SCIP_COL** rowcols;
-   SCIP_Real* rowvals;
-   int rowlen;
-   int r;
-   int k;
-   int i;
-
-   k = ncommodities-1;
-   assert(k >= 0);
-
-   r = SCIProwGetLPPos(row);
-   assert(r >= 0);
-   assert(rowcommodity[r] == k);
-   assert((flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
-
-   SCIPdebugMessage("deleting commodity %d with single flow row %d <%s>\n", k, r, SCIProwGetName(row));
-
-   /* remove the lhs/rhs assignment */
-   flowrowsigns[r] &= ~(LHSASSIGNED | RHSASSIGNED);
-
-   /* remove row from commodity */
-   rowcommodity[r] = -1;
-   rowcols = SCIProwGetCols(row);
-   rowvals = SCIProwGetVals(row);
-   rowlen = SCIProwGetNLPNonz(row);
-   for( i = 0; i < rowlen; i++ )
-   {
-      int c;
-
-      c = SCIPcolGetLPPos(rowcols[i]);
-      assert(0 <= c && c < SCIPgetNLPCols(scip));
-
-      /* remove column from commodity */
-      assert(colcommodity[c] == k);
-      colcommodity[c] = -1;
-
-      /* reset plusflow/minusflow */
-      assert(plusflow[c] != minusflow[c]);
-      plusflow[c] = FALSE;
-      minusflow[c] = FALSE;
-   }
-
-   /* get rid of commodity */
-   mcfdata->ncommodities--;
-}
-#else
 /** deletes a commodity and removes the flow rows again from the system */
 static
 void deleteCommodity(
@@ -1585,7 +1528,6 @@ void deleteCommodity(
    else
       mcfdata->nemptycommodities++;
 }
-#endif
 
 /** checks whether the given row fits into the given commodity and returns the possible flow row signs */
 static
@@ -1873,17 +1815,9 @@ SCIP_RETCODE extractFlow(
       maxnnodes = MAX(maxnnodes, nnodes);
       SCIPdebugMessage(" -> finished commodity %d: identified %d nodes, maxnnodes=%d\n", mcfdata->ncommodities-1, nnodes, maxnnodes);
 
-      /**@todo discard uninteresting commodities (like 5 nodes with only 2 arcs per node, see rococoC12-100000) */
-#if 0 /*????????????????*/
-      /* if the commodity has only one node, delete it again */
-      if( nnodes == 1 )
-         deleteSingleNodeCommodity(scip, mcfdata, comrows[0]);
-      //deleteSingleNodeCommodity(scip, mcfdata, lastrow);
-#else
       /* if the commodity has too few nodes, or if it has much fewer nodes than the largest commodity, discard it */
       if( nnodes < MINNODES || nnodes < MINCOMNODESFRACTION * maxnnodes )
          deleteCommodity(scip, mcfdata, mcfdata->ncommodities-1, comrows, nnodes);
-#endif
    }
 
    /* final cleanup of small commodities */
@@ -1969,7 +1903,7 @@ SCIP_RETCODE extractCapacities(
 
    /**@todo use capacity candidates in their score order
     *       instead of looping through the used flow columns and their column vectors
-    */
+    */ /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
    /* for each column, search for a capacity constraint */
    for( c = 0; c < ncols; c++ )
    {
@@ -3462,6 +3396,7 @@ SCIP_RETCODE mcfnetworkExtract(
           *       there was no valid capacity constraint.
           *       Go through the list of nodes and generate uncapacitated arcs in the network for the flow variables
           *       that do not yet have an arc assigned, such that the commodities still match.
+          *!!!!!!!!!!!!!!!!!!!!!!
           */
 
          /* clean up the network: get rid of commodities without arcs or with at most one node */
@@ -4181,6 +4116,11 @@ SCIP_RETCODE addCut(
    SCIP_VAR** vars;
    int nvars;
    int v;
+#ifdef SEPARATEKNAPSACKCOVERS
+   SCIP_VAR** cutvars;
+   SCIP_Real* cutvals;
+   int ncutvars;
+#endif
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -4190,6 +4130,13 @@ SCIP_RETCODE addCut(
    /* get active problem variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    assert(nvars == 0 || vars != NULL);
+
+#ifdef SEPARATEKNAPSACKCOVERS
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
+   ncutvars = 0;
+#endif
 
    /* create the cut */
    sprintf(cutname, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
@@ -4204,6 +4151,12 @@ SCIP_RETCODE addCut(
          continue;
 
       SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[v], cutcoefs[v]) );
+
+#ifdef SEPARATEKNAPSACKCOVERS
+      cutvars[ncutvars] = vars[v];
+      cutvals[ncutvars] = cutcoefs[v];
+      ncutvars++;
+#endif
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
@@ -4223,6 +4176,15 @@ SCIP_RETCODE addCut(
 
    /* release the row */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+
+#ifdef SEPARATEKNAPSACKCOVERS
+   /* relax cut to knapsack row and separate lifted cover cuts */
+   SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts) );
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &cutvals);
+   SCIPfreeBufferArray(scip, &cutvars);
+#endif
 
    return SCIP_OKAY;
 }
@@ -4384,6 +4346,7 @@ SCIP_RETCODE generateClusterCuts(
       {
          SCIP_COL** rowcols;
          SCIP_Real* rowvals;
+         SCIP_Real feasibility;
          int rowlen;
          int r;
          int j;
@@ -4421,17 +4384,26 @@ SCIP_RETCODE generateClusterCuts(
             continue;
          assert(rowweights[r] == 0.0);
 
-         /**@todo ignore capacity constraints that have too large slack (see c-MIR separator for tolerance) */
-
-         /* if one of the arc nodes is unknown, we only use the capacity row if it does not have slack */
+         /* if one of the arc nodes is unknown, we only use the capacity row if it does not have slack,
+          * otherwise, we discard it if the slack is too large
+          */
+         feasibility = SCIPgetRowSolFeasibility(scip, arccapacityrows[a], sol);
          if( arcsources[a] == -1 || arctargets[a] == -1 )
          {
-            SCIP_Real feasibility;
-
-            feasibility = SCIPgetRowSolFeasibility(scip, arccapacityrows[a], sol);
             if( SCIPisFeasPositive(scip, feasibility) )
                continue;
          }
+#if 1 /*???????????????????*/
+         else
+         {
+            SCIP_Real maxcoef;
+
+            maxcoef = SCIPgetRowMaxCoef(scip, arccapacityrows[a]);
+            assert(maxcoef > 0.0);
+            if( SCIPisFeasGT(scip, feasibility/maxcoef, MAXCAPACITYSLACK) )
+               continue;
+         }
+#endif
 
          rowweights[r] = arccapacityscales[a];
          SCIPdebugMessage(" -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), rowweights[r],
@@ -4574,9 +4546,8 @@ SCIP_RETCODE generateClusterCuts(
 
 #else
       /* try out deltas to generate c-MIR cuts: use larger deltas first */
-      /**@todo use deltas as in the c-MIR separator from the mksetcoefs returned by SCIPcalcMIR() */
       /**@todo use only the best delta instead of generating all cuts */
-      /**@todo also separate lifted knapsack cover inequalities */
+      /**@todo also separate lifted knapsack cover inequalities !!!!!!!!!!!!!!!!!*/
       for( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
       {
          SCIP_Real cutrhs;
@@ -4613,6 +4584,15 @@ SCIP_RETCODE generateClusterCuts(
 #if 0
             if( cutact - cutrhs >= 0.5 )
                abort(); /*??????????????????*/
+#endif
+#if 0 /*????????????????????*/
+            for( a = 0; a < narcs; a++ )
+            {
+               printf(" -> arc %d, capacity row <%s>: weight=%g slack=%g prod=%g dual=%g\n", a,
+                      SCIProwGetName(arccapacityrows[a]), arccapacityscales[a],
+                      SCIPgetRowFeasibility(scip, arccapacityrows[a]),
+                      SCIPgetRowFeasibility(scip, arccapacityrows[a]) * arccapacityscales[a], SCIProwGetDualsol(arccapacityrows[a]));
+            }
 #endif
          }
       }
@@ -4863,7 +4843,6 @@ SCIP_RETCODE SCIPincludeSepaMcf(
 {
    SCIP_SEPADATA* sepadata;
 
-   /**@todo look at rococo instances: on some instances the network detection fails, while it works on others */
 #if 1
    /* disabled, because separator is not yet finished */
    return SCIP_OKAY;

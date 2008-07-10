@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.280 2008/06/20 13:34:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.281 2008/07/10 14:43:53 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -87,10 +87,6 @@
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
 #define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify inequalities */
 #define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be preformed? */
-
-#define KNAPSACKRELAX_MAXDELTA        0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
-#define KNAPSACKRELAX_MAXDNOM      1000LL /**< maximal allowed denominator in knapsack rational relaxation */
-#define KNAPSACKRELAX_MAXSCALE     1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
@@ -800,7 +796,14 @@ void consdataPrint(
    else
    {
       for( v = 0; v < consdata->nvars; ++v )
-         SCIPinfoMessage(scip, file, "%+.15g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]) );
+#if 0 /*???????????????*/
+         SCIPinfoMessage(scip, file, "%+.15g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
+#else
+      SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]),
+                      SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY ? 'B' :
+                      SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_INTEGER ? 'I' :
+                      SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+#endif
    }
    
    /* print right hand side */
@@ -3451,283 +3454,6 @@ SCIP_RETCODE addRelaxation(
    return SCIP_OKAY;
 }
 
-/* separates relaxed knapsack constraint */
-static
-SCIP_RETCODE separateRelaxedKnapsack(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< linear constraint */
-   int                   nknapvars,          /**< number of variables in the continuous knapsack constraint */
-   SCIP_VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
-   SCIP_Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
-   SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
-   SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   int*                  ncuts               /**< pointer to add up the number of found cuts */
-   )
-{
-   SCIP_VAR** binvars;
-   SCIP_VAR** consvars;
-   SCIP_Real* binvals;
-   SCIP_Longint* consvals;
-   SCIP_Longint maxact;
-   SCIP_Real intscalar;
-   SCIP_Bool success;
-   int nbinvars;
-   int nconsvars;
-   int i;
-
-   assert(nknapvars > 0);
-   assert(knapvars != NULL);
-
-   SCIPdebugMessage("separate linear constraint <%s> relaxed to knapsack\n", SCIPconsGetName(cons));
-   SCIPdebug(SCIPprintCons(scip, cons, NULL));
-
-   SCIP_CALL( SCIPgetVarsData(scip, &binvars, NULL, &nbinvars, NULL, NULL, NULL) );
-
-   if( nbinvars == 0 )
-      return SCIP_OKAY;
-
-   /* set up data structures */
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &binvals, nbinvars) );
-   BMSclearMemoryArray(binvals, nbinvars);
-
-   /* relax continuous knapsack constraint:
-    * 1. make all variables binary:
-    *    if x_j is continuous or integer variable substitute:
-    *      - a_j < 0: x_j = lb  or  x_j = b*z + d with variable lower bound b*z + d with binary variable z
-    *      - a_j > 0: x_j = ub  or  x_j = b*z + d with variable upper bound b*z + d with binary variable z
-    * 2. convert coefficients of all variables to positive integers:
-    *      - scale all coefficients a_j to a~_j integral
-    *      - substitute  x~_j = 1 - x_j if a~_j < 0
-    */
-
-   /* replace integer and continuous variables with binary variables */
-   for( i = 0; i < nknapvars; i++ )
-   {
-      SCIP_VAR* var;
-
-      var = knapvars[i];
-
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-      {
-         assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
-         binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
-         SCIPdebugMessage(" -> binary variable %+.15g<%s>(%.15g)\n", 
-            valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var));
-      }
-      else if( valscale * knapvals[i] > 0.0 )
-      {
-         SCIP_VAR** zvlb;
-         SCIP_Real* bvlb;
-         SCIP_Real* dvlb;
-         SCIP_Real bestlbsol;
-         int bestlbtype;
-         int nvlb;
-         int j;
-
-         /* a_j > 0: substitution with lb or vlb */
-         nvlb = SCIPvarGetNVlbs(var);
-         zvlb = SCIPvarGetVlbVars(var);
-         bvlb = SCIPvarGetVlbCoefs(var);
-         dvlb = SCIPvarGetVlbConstants(var);
-
-         /* search for lb or vlb with maximal bound value */
-         bestlbsol = SCIPvarGetLbGlobal(var);
-         bestlbtype = -1;
-         for( j = 0; j < nvlb; j++ )
-         {
-            /* use only vlb with binary variable z */
-            if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvlb[j]) )
-            {
-               SCIP_Real vlbsol;
-
-               assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
-               vlbsol = bvlb[j] * SCIPgetSolVal(scip, sol, zvlb[j]) + dvlb[j];
-               if( SCIPisGE(scip, vlbsol, bestlbsol) )
-               {
-                  bestlbsol = vlbsol;
-                  bestlbtype = j;
-               }
-            }
-         }
-
-         /* if no lb or vlb with binary variable was found, we have to abort */
-         if( SCIPisInfinity(scip, -bestlbsol) )
-            goto TERMINATE;
-
-         if( bestlbtype == -1 )
-         {
-            rhs -= valscale * knapvals[i] * bestlbsol;
-            SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with lower bound %.15g (rhs=%.15g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbGlobal(var), rhs);
-         }
-         else
-         {
-            assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
-            rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
-            binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
-            SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with variable lower bound %+.15g<%s>(%.15g) %+.15g (rhs=%.15g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
-               bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]),
-               SCIPgetSolVal(scip, sol, zvlb[bestlbtype]), dvlb[bestlbtype], rhs);
-         }
-      }
-      else
-      {
-         SCIP_VAR** zvub;
-         SCIP_Real* bvub;
-         SCIP_Real* dvub;
-         SCIP_Real bestubsol;
-         int bestubtype;
-         int nvub;
-         int j;
-
-         assert(valscale * knapvals[i] < 0.0);
-
-         /* a_j < 0: substitution with ub or vub */
-         nvub = SCIPvarGetNVubs(var);
-         zvub = SCIPvarGetVubVars(var);
-         bvub = SCIPvarGetVubCoefs(var);
-         dvub = SCIPvarGetVubConstants(var);
-
-         /* search for ub or vub with minimal bound value */
-         bestubsol = SCIPvarGetUbGlobal(var);
-         bestubtype = -1;
-         for( j = 0; j < nvub; j++ )
-         {
-            /* use only vub with active binary variable z */
-            if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvub[j])  )
-            {
-               SCIP_Real vubsol;
-
-               assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
-               vubsol = bvub[j] * SCIPgetSolVal(scip, sol, zvub[j]) + dvub[j];
-               if( SCIPisLE(scip, vubsol, bestubsol) )
-               {
-                  bestubsol = vubsol;
-                  bestubtype = j;
-               }
-            }
-         }
-
-         /* if no ub or vub with binary variable was found, we have to abort */
-         if( SCIPisInfinity(scip, bestubsol) )
-            goto TERMINATE;
-
-         if( bestubtype == -1 )
-         {
-            rhs -= valscale * knapvals[i] * bestubsol;
-            SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with upper bound %.15g (rhs=%.15g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetUbGlobal(var), rhs);
-         }
-         else
-         {
-            assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
-            rhs -= valscale * knapvals[i] * dvub[bestubtype];
-            binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
-            SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with variable upper bound %+.15g<%s>(%.15g) %+.15g (rhs=%.15g)\n",
-               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
-               bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]),
-               SCIPgetSolVal(scip, sol, zvub[bestubtype]), dvub[bestubtype], rhs);
-         }
-      }
-   }
-
-   /* convert coefficents of all (now binary) variables to positive integers:
-    *   - make all coefficients integral
-    *   - make all coefficients positive (substitute negated variable)
-    */
-   nconsvars = 0;
-
-   /* calculate scalar which makes all coefficients integral */
-   SCIP_CALL( SCIPcalcIntegralScalar(binvals, nbinvars, -SCIPepsilon(scip), KNAPSACKRELAX_MAXDELTA,
-         KNAPSACKRELAX_MAXDNOM, KNAPSACKRELAX_MAXSCALE, &intscalar, &success) );
-   SCIPdebugMessage(" -> intscalar = %.15g\n", intscalar);
-
-   /* if coefficients can not be made integral, we have to use a scalar of 1.0 and only round fractional coefficients down */
-   if( !success )
-      intscalar = 1.0;
-
-   /* make all coefficients integral and positive:
-    *  - scale a~_j = a_j * intscalar
-    *  - substitute x~_j = 1 - x_j if a~_j < 0
-    */
-   rhs = rhs*intscalar;
-
-   SCIPdebugMessage(" -> rhs = %.15g\n", rhs);
-   maxact = 0;
-   for( i = 0; i < nbinvars; i++ )
-   {
-      SCIP_VAR* var;
-      SCIP_Longint val;
-
-      val = (SCIP_Longint)SCIPfloor(scip, binvals[i]*intscalar);
-      if( val == 0 )
-         continue;
-
-      if( val > 0 )
-      {
-         var = binvars[i];
-         SCIPdebugMessage(" -> positive scaled binary variable %+"SCIP_LONGINT_FORMAT"<%s> (unscaled %.15g): not changed (rhs=%.15g)\n",
-            val, SCIPvarGetName(var), binvals[i], rhs);
-      }
-      else
-      {
-         assert(val < 0);
-
-         SCIP_CALL( SCIPgetNegatedVar(scip, binvars[i], &var) );
-         val = -val;
-         rhs += val;
-         SCIPdebugMessage(" -> negative scaled binary variable %+"SCIP_LONGINT_FORMAT"<%s> (unscaled %.15g): substituted by (1 - <%s>) (rhs=%.15g)\n",
-            -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
-      }
-
-      maxact += val;
-      consvals[nconsvars] = val;
-      consvars[nconsvars] = var;
-      nconsvars++;
-   }
-
-   if( nconsvars > 0 )
-   {
-      SCIP_Longint capacity;
-
-      assert(consvars != NULL);
-      assert(consvals != NULL);
-      capacity = (SCIP_Longint)SCIPfeasFloor(scip, rhs);
-      if( maxact > capacity )
-      {
-#ifdef SCIP_DEBUG
-         SCIP_Real act;
-
-         SCIPdebugMessage(" -> linear constraint <%s> relaxed to knapsack:", SCIPconsGetName(cons));
-         act = 0.0;
-         for( i = 0; i < nconsvars; ++i )
-         {
-            SCIPdebugPrintf(" %+"SCIP_LONGINT_FORMAT"<%s>(%.15g)", consvals[i], SCIPvarGetName(consvars[i]),
-               SCIPgetSolVal(scip, sol, consvars[i]));
-            act += consvals[i] * SCIPgetSolVal(scip, sol, consvars[i]);
-         }
-         SCIPdebugPrintf(" <= %"SCIP_LONGINT_FORMAT" (%.15g) [act: %.15g, max: %"SCIP_LONGINT_FORMAT"]\n",
-            capacity, rhs, act, maxact);
-#endif
-
-         /* separate lifted cut from relaxed knapsack constraint */
-         SCIP_CALL( SCIPseparateKnapsackCover(scip, cons, consvars, nconsvars, consvals, capacity, sol, -1, ncuts) );
-      }
-   }
-
- TERMINATE:
-   /* free data structures */
-   SCIPfreeBufferArray(scip, &binvals);
-   SCIPfreeBufferArray(scip, &consvals);
-   SCIPfreeBufferArray(scip, &consvars);
-
-   return SCIP_OKAY;
-}
-
 /** separates linear constraint: adds linear constraint as cut, if violated by given solution */
 static
 SCIP_RETCODE separateCons(
@@ -3774,7 +3500,7 @@ SCIP_RETCODE separateCons(
             {
                if( !SCIPisInfinity(scip, consdata->rhs) )
                {
-                  SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
+                  SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
                         consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
                }
             }
@@ -3782,7 +3508,7 @@ SCIP_RETCODE separateCons(
             {
                if( !SCIPisInfinity(scip, -consdata->lhs) )
                {
-                  SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
+                  SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
                         consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
                }
             }
@@ -3792,12 +3518,12 @@ SCIP_RETCODE separateCons(
       {
          if( !SCIPisInfinity(scip, consdata->rhs) )
          {
-            SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
+            SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
                   consdata->vals, +1.0, consdata->rhs, sol, ncuts) );
          }
          if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
-            SCIP_CALL( separateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
+            SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, cons, consdata->nvars, consdata->vars,
                   consdata->vals, -1.0, -consdata->lhs, sol, ncuts) );
          }
       }

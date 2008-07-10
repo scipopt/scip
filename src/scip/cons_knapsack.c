@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.158 2008/05/05 10:14:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.159 2008/07/10 14:43:53 bzfpfend Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -54,6 +54,10 @@
 #define MAX_DYNPROG_CAPACITY      10000 /**< maximal capacity of knapsack to apply dynamic programming */
 #define MAX_USECLIQUES_SIZE        1000 /**< maximal number of items in knapsack where clique information is used */
 #define MAX_ZEROITEMS_SIZE        10000 /**< maximal number of items to store in the zero list in preprocessing */
+
+#define KNAPSACKRELAX_MAXDELTA        0.1 /**< maximal allowed rounding distance for scaling in knapsack relaxation */
+#define KNAPSACKRELAX_MAXDNOM      1000LL /**< maximal allowed denominator in knapsack rational relaxation */
+#define KNAPSACKRELAX_MAXSCALE     1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
 
 #define DEFAULT_SEPACARDFREQ          1 /**< multiplier on separation frequency, how often cardinality cuts are separated */
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
@@ -1823,7 +1827,7 @@ SCIP_RETCODE SCIPliftKnapsackCover(
 /** separates lifted cover inequalities for given knapsack problem */
 SCIP_RETCODE SCIPseparateKnapsackCover(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem, or NULL */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
@@ -1858,7 +1862,6 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    int j;
 
    assert(scip != NULL);
-   assert(cons != NULL);
    assert(vars != NULL);
    assert(nvars > 0);
    assert(weights != NULL);
@@ -1866,8 +1869,11 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    assert(ncuts != NULL);
 
    /* increase age of constraint (age is reset to zero, if a cut was found) */
-   SCIP_CALL( SCIPincConsAge(scip, cons) );
-   
+   if( cons != NULL )
+   {
+      SCIP_CALL( SCIPincConsAge(scip, cons) );
+   }
+
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varscn2, nvars) );
@@ -1992,7 +1998,7 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
          SCIP_CALL( liftKnapsackCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, 
                ncovervars, ncovervarsc1, ncovervarsc2, nnoncovervars, initminweight,
                liftcoefs, &liftrhs, &liftlpval) );
-         
+
          /* check, if lifting yielded a violated cut */
          if( SCIPisEfficacious(scip, (covervarsc1activity + liftlpval - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
          {
@@ -2001,10 +2007,15 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             int v;
             
             /* create LP row */
-            sprintf(name, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons),
-               SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
+            if( cons != NULL )
+               sprintf(name, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons),
+                  SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
+            else
+               sprintf(name, "card_%d", j);
+
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
-                  SCIPconsIsLocal(cons), FALSE, SCIPconsIsRemovable(cons)) );
+                  cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
+                  cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
             
             /* add all variables in the knapsack constraint with calculated lifting coefficient to the cut */
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -2024,7 +2035,10 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             /* check, if cut is violated enough */
             if( SCIPisCutEfficacious(scip, sol, row) )
             {         
-               SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               if( cons != NULL )
+               {
+                  SCIP_CALL( SCIPresetConsAge(scip, cons) );
+               }
                SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
                if( !SCIProwIsLocal(row) )
                {
@@ -2051,6 +2065,285 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    SCIPfreeBufferArray(scip, &varsc2);
    SCIPfreeBufferArray(scip, &varscn2);
    SCIPfreeBufferArray(scip, &solvals);
+
+   return SCIP_OKAY;
+}
+
+/* relaxes given general linear constraint into a knapsack constraint and separates lifted knapsack cover inequalities */
+SCIP_RETCODE SCIPseparateRelaxedKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the linear constraint, or NULL */
+   int                   nknapvars,          /**< number of variables in the continuous knapsack constraint */
+   SCIP_VAR**            knapvars,           /**< variables in the continuous knapsack constraint */
+   SCIP_Real*            knapvals,           /**< coefficientce of the variables in the continuous knapsack constraint */
+   SCIP_Real             valscale,           /**< -1.0 if lhs of row is used as rhs of c. k. constraint, +1.0 otherwise */
+   SCIP_Real             rhs,                /**< right hand side of the continuous knapsack constraint */
+   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   )
+{
+   SCIP_VAR** binvars;
+   SCIP_VAR** consvars;
+   SCIP_Real* binvals;
+   SCIP_Longint* consvals;
+   SCIP_Longint maxact;
+   SCIP_Real intscalar;
+   SCIP_Bool success;
+   int nbinvars;
+   int nconsvars;
+   int i;
+
+   assert(nknapvars > 0);
+   assert(knapvars != NULL);
+
+   SCIPdebugMessage("separate linear constraint <%s> relaxed to knapsack\n", cons != NULL ? SCIPconsGetName(cons) : "-");
+   if( cons != NULL )
+   {
+      SCIPdebug(SCIPprintCons(scip, cons, NULL));
+   }
+
+   SCIP_CALL( SCIPgetVarsData(scip, &binvars, NULL, &nbinvars, NULL, NULL, NULL) );
+
+   if( nbinvars == 0 )
+      return SCIP_OKAY;
+
+   /* set up data structures */
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &binvals, nbinvars) );
+   BMSclearMemoryArray(binvals, nbinvars);
+
+   /* relax continuous knapsack constraint:
+    * 1. make all variables binary:
+    *    if x_j is continuous or integer variable substitute:
+    *      - a_j < 0: x_j = lb  or  x_j = b*z + d with variable lower bound b*z + d with binary variable z
+    *      - a_j > 0: x_j = ub  or  x_j = b*z + d with variable upper bound b*z + d with binary variable z
+    * 2. convert coefficients of all variables to positive integers:
+    *      - scale all coefficients a_j to a~_j integral
+    *      - substitute  x~_j = 1 - x_j if a~_j < 0
+    */
+
+   /* replace integer and continuous variables with binary variables */
+   for( i = 0; i < nknapvars; i++ )
+   {
+      SCIP_VAR* var;
+
+      var = knapvars[i];
+
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      {
+         assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
+         binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
+         SCIPdebugMessage(" -> binary variable %+.15g<%s>(%.15g)\n", 
+            valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var));
+      }
+      else if( valscale * knapvals[i] > 0.0 )
+      {
+         SCIP_VAR** zvlb;
+         SCIP_Real* bvlb;
+         SCIP_Real* dvlb;
+         SCIP_Real bestlbsol;
+         int bestlbtype;
+         int nvlb;
+         int j;
+
+         /* a_j > 0: substitution with lb or vlb */
+         nvlb = SCIPvarGetNVlbs(var);
+         zvlb = SCIPvarGetVlbVars(var);
+         bvlb = SCIPvarGetVlbCoefs(var);
+         dvlb = SCIPvarGetVlbConstants(var);
+
+         /* search for lb or vlb with maximal bound value */
+         bestlbsol = SCIPvarGetLbGlobal(var);
+         bestlbtype = -1;
+         for( j = 0; j < nvlb; j++ )
+         {
+            /* use only vlb with binary variable z */
+            if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvlb[j]) )
+            {
+               SCIP_Real vlbsol;
+
+               assert(0 <= SCIPvarGetProbindex(zvlb[j]) && SCIPvarGetProbindex(zvlb[j]) < nbinvars);
+               vlbsol = bvlb[j] * SCIPgetSolVal(scip, sol, zvlb[j]) + dvlb[j];
+               if( SCIPisGE(scip, vlbsol, bestlbsol) )
+               {
+                  bestlbsol = vlbsol;
+                  bestlbtype = j;
+               }
+            }
+         }
+
+         /* if no lb or vlb with binary variable was found, we have to abort */
+         if( SCIPisInfinity(scip, -bestlbsol) )
+            goto TERMINATE;
+
+         if( bestlbtype == -1 )
+         {
+            rhs -= valscale * knapvals[i] * bestlbsol;
+            SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with lower bound %.15g (rhs=%.15g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetLbGlobal(var), rhs);
+         }
+         else
+         {
+            assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
+            rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
+            binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
+            SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with variable lower bound %+.15g<%s>(%.15g) %+.15g (rhs=%.15g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
+               bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]),
+               SCIPgetSolVal(scip, sol, zvlb[bestlbtype]), dvlb[bestlbtype], rhs);
+         }
+      }
+      else
+      {
+         SCIP_VAR** zvub;
+         SCIP_Real* bvub;
+         SCIP_Real* dvub;
+         SCIP_Real bestubsol;
+         int bestubtype;
+         int nvub;
+         int j;
+
+         assert(valscale * knapvals[i] < 0.0);
+
+         /* a_j < 0: substitution with ub or vub */
+         nvub = SCIPvarGetNVubs(var);
+         zvub = SCIPvarGetVubVars(var);
+         bvub = SCIPvarGetVubCoefs(var);
+         dvub = SCIPvarGetVubConstants(var);
+
+         /* search for ub or vub with minimal bound value */
+         bestubsol = SCIPvarGetUbGlobal(var);
+         bestubtype = -1;
+         for( j = 0; j < nvub; j++ )
+         {
+            /* use only vub with active binary variable z */
+            if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvub[j])  )
+            {
+               SCIP_Real vubsol;
+
+               assert(0 <= SCIPvarGetProbindex(zvub[j]) && SCIPvarGetProbindex(zvub[j]) < nbinvars);
+               vubsol = bvub[j] * SCIPgetSolVal(scip, sol, zvub[j]) + dvub[j];
+               if( SCIPisLE(scip, vubsol, bestubsol) )
+               {
+                  bestubsol = vubsol;
+                  bestubtype = j;
+               }
+            }
+         }
+
+         /* if no ub or vub with binary variable was found, we have to abort */
+         if( SCIPisInfinity(scip, bestubsol) )
+            goto TERMINATE;
+
+         if( bestubtype == -1 )
+         {
+            rhs -= valscale * knapvals[i] * bestubsol;
+            SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with upper bound %.15g (rhs=%.15g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var), SCIPvarGetUbGlobal(var), rhs);
+         }
+         else
+         {
+            assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
+            rhs -= valscale * knapvals[i] * dvub[bestubtype];
+            binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
+            SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with variable upper bound %+.15g<%s>(%.15g) %+.15g (rhs=%.15g)\n",
+               valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
+               bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]),
+               SCIPgetSolVal(scip, sol, zvub[bestubtype]), dvub[bestubtype], rhs);
+         }
+      }
+   }
+
+   /* convert coefficents of all (now binary) variables to positive integers:
+    *   - make all coefficients integral
+    *   - make all coefficients positive (substitute negated variable)
+    */
+   nconsvars = 0;
+
+   /* calculate scalar which makes all coefficients integral */
+   SCIP_CALL( SCIPcalcIntegralScalar(binvals, nbinvars, -SCIPepsilon(scip), KNAPSACKRELAX_MAXDELTA,
+         KNAPSACKRELAX_MAXDNOM, KNAPSACKRELAX_MAXSCALE, &intscalar, &success) );
+   SCIPdebugMessage(" -> intscalar = %.15g\n", intscalar);
+
+   /* if coefficients can not be made integral, we have to use a scalar of 1.0 and only round fractional coefficients down */
+   if( !success )
+      intscalar = 1.0;
+
+   /* make all coefficients integral and positive:
+    *  - scale a~_j = a_j * intscalar
+    *  - substitute x~_j = 1 - x_j if a~_j < 0
+    */
+   rhs = rhs*intscalar;
+
+   SCIPdebugMessage(" -> rhs = %.15g\n", rhs);
+   maxact = 0;
+   for( i = 0; i < nbinvars; i++ )
+   {
+      SCIP_VAR* var;
+      SCIP_Longint val;
+
+      val = (SCIP_Longint)SCIPfloor(scip, binvals[i]*intscalar);
+      if( val == 0 )
+         continue;
+
+      if( val > 0 )
+      {
+         var = binvars[i];
+         SCIPdebugMessage(" -> positive scaled binary variable %+"SCIP_LONGINT_FORMAT"<%s> (unscaled %.15g): not changed (rhs=%.15g)\n",
+            val, SCIPvarGetName(var), binvals[i], rhs);
+      }
+      else
+      {
+         assert(val < 0);
+
+         SCIP_CALL( SCIPgetNegatedVar(scip, binvars[i], &var) );
+         val = -val;
+         rhs += val;
+         SCIPdebugMessage(" -> negative scaled binary variable %+"SCIP_LONGINT_FORMAT"<%s> (unscaled %.15g): substituted by (1 - <%s>) (rhs=%.15g)\n",
+            -val, SCIPvarGetName(binvars[i]), binvals[i], SCIPvarGetName(var), rhs);
+      }
+
+      maxact += val;
+      consvals[nconsvars] = val;
+      consvars[nconsvars] = var;
+      nconsvars++;
+   }
+
+   if( nconsvars > 0 )
+   {
+      SCIP_Longint capacity;
+
+      assert(consvars != NULL);
+      assert(consvals != NULL);
+      capacity = (SCIP_Longint)SCIPfeasFloor(scip, rhs);
+      if( maxact > capacity )
+      {
+#ifdef SCIP_DEBUG
+         SCIP_Real act;
+
+         SCIPdebugMessage(" -> linear constraint <%s> relaxed to knapsack:", cons != NULL ? SCIPconsGetName(cons) : "-");
+         act = 0.0;
+         for( i = 0; i < nconsvars; ++i )
+         {
+            SCIPdebugPrintf(" %+"SCIP_LONGINT_FORMAT"<%s>(%.15g)", consvals[i], SCIPvarGetName(consvars[i]),
+               SCIPgetSolVal(scip, sol, consvars[i]));
+            act += consvals[i] * SCIPgetSolVal(scip, sol, consvars[i]);
+         }
+         SCIPdebugPrintf(" <= %"SCIP_LONGINT_FORMAT" (%.15g) [act: %.15g, max: %"SCIP_LONGINT_FORMAT"]\n",
+            capacity, rhs, act, maxact);
+#endif
+
+         /* separate lifted cut from relaxed knapsack constraint */
+         SCIP_CALL( SCIPseparateKnapsackCover(scip, cons, consvars, nconsvars, consvals, capacity, sol, -1, ncuts) );
+      }
+   }
+
+ TERMINATE:
+   /* free data structures */
+   SCIPfreeBufferArray(scip, &binvals);
+   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(scip, &consvars);
 
    return SCIP_OKAY;
 }

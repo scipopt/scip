@@ -46,7 +46,8 @@ interface:
 - the parameter list of the method scip_check() (objconshdlr.h) has an additional parameter "printreason" 
   see for explanation the previous point
 - new method SCIPgetVectorEfficacyNorm()
-- new method SCIPcutGenerationHeuristicCmir()
+- new method SCIPcutGenerationHeuristicCmir() in sepa_cmir.h
+- new method SCIPseparateRelaxedKnapsack() in cons_knapsack.h
 
 features:
 - the MPS reader is now able to write a problem in MPS format
