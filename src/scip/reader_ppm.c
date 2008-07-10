@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.11 2008/05/15 14:43:57 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.12 2008/07/10 13:15:59 bzfheinz Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -168,19 +168,17 @@ void appendLine(
    const char*           extension           /**< string to extent the line */
    )
 {
-   char tmp[PPM_MAX_LINELEN];
-   
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
    assert( extension != NULL );
-
+   
    if( *linecnt + strlen(extension) > PPM_MAX_LINELEN )
       endLine(scip, file, readerdata, linebuffer, linecnt);
-
-   snprintf(tmp, PPM_MAX_LINELEN, "%s", linebuffer);
-   snprintf(linebuffer, PPM_MAX_LINELEN, "%s%s", tmp, extension);
-   (*linecnt) += (int) strlen(extension) + 1;
+   
+   /* append extension to linebuffer */
+   strncat(linebuffer, extension, PPM_MAX_LINELEN - (*linecnt));
+   (*linecnt) += (int) strlen(extension);
 }
 
 
