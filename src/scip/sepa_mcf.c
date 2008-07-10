@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.33 2008/07/09 16:09:57 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.34 2008/07/10 12:19:54 bzfpfend Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
 /*#define SCIP_DEBUG*/
@@ -46,6 +46,8 @@
 #endif
 
 
+//#define STRICTCOLSPERCOMMODITYLIMIT /*???????????????????*/
+
 #define SEPA_NAME              "mcf"
 #define SEPA_DESC              "multi-commodity-flow network cut separator"
 #define SEPA_PRIORITY            -10000
@@ -68,8 +70,9 @@
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 
-#define MINNODES                      2 /**< minimal number of nodes in network to keep it for separation */
-#define MINARCS                       1 /**< minimal number of arcs in network to keep it for separation */
+#define MINCOMNODESFRACTION         0.5 /**< minimal size of commodity relative to largest commodity to keep it in the network */
+#define MINNODES                      3 /**< minimal number of nodes in network to keep it for separation */
+#define MINARCS                       3 /**< minimal number of arcs in network to keep it for separation */
 
 /*#define OUTPUTGRAPH*/                     /**< should a .gml graph of the network be generated for debugging purposes? */
 
@@ -148,6 +151,7 @@ struct mcfdata
    SCIP_Bool*            plusflow;           /**< is column c member of a flow row with coefficient +1? */
    SCIP_Bool*            minusflow;          /**< is column c member of a flow row with coefficient -1? */
    int                   ncommodities;       /**< number of commodities */
+   int                   nemptycommodities;  /**< number of commodities that have been discarded but still counted in 'ncommodities' */
    int*                  commoditysigns;     /**< +1: regular, -1: all arcs have opposite direction; 0: undecided */
    int                   commoditysignssize; /**< size of commoditysigns array */
    int*                  colcommodity;       /**< commodity number of each column, or -1 */
@@ -805,8 +809,8 @@ SCIP_RETCODE extractFlowRows(
          continue;
       rowcols = SCIProwGetCols(row);
       rowvals = SCIProwGetVals(row);
-      rowlhs = SCIProwGetLhs(row);
-      rowrhs = SCIProwGetRhs(row);
+      rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
+      rowrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
 
       /* identify flow conservation constraints */
       coef = ABS(rowvals[0]);
@@ -947,9 +951,10 @@ SCIP_RETCODE extractCapacityRows(
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
-   int*              colcommodity = mcfdata->colcommodity;
-   int               ncommodities = mcfdata->ncommodities;
-   SCIP_MCFMODELTYPE modeltype    = mcfdata->modeltype;
+   int*              colcommodity       = mcfdata->colcommodity;
+   int               ncommodities       = mcfdata->ncommodities;
+   int               nactivecommodities = mcfdata->ncommodities - mcfdata->nemptycommodities;
+   SCIP_MCFMODELTYPE modeltype          = mcfdata->modeltype;
 
    unsigned char* capacityrowsigns;
    SCIP_Real*     capacityrowscores;
@@ -1037,8 +1042,8 @@ SCIP_RETCODE extractCapacityRows(
          continue;
       rowcols = SCIProwGetCols(row);
       rowvals = SCIProwGetVals(row);
-      rowlhs = SCIProwGetLhs(row);
-      rowrhs = SCIProwGetRhs(row);
+      rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
+      rowrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
 
       /* reset commodity counting array */
       BMSclearMemoryArray(ncolspercommodity, ncommodities);
@@ -1155,8 +1160,8 @@ SCIP_RETCODE extractCapacityRows(
          if( nbadcoefs == 0 )
             capacityrowscores[r] += 1000.0;
 
-         /* almost all commodities are covered: score +2000*(nposflow+nnegflow)/ncommodities */
-         capacityrowscores[r] += 2000.0 * (nposflowcoefs+nnegflowcoefs)/(SCIP_Real)ncommodities;
+         /* almost all commodities are covered: score +2000*(nposflow+nnegflow)/nactivecommodities */
+         capacityrowscores[r] += 2000.0 * (nposflowcoefs+nnegflowcoefs)/(SCIP_Real)nactivecommodities;
 
          /* all coefficients of flow variables are +1 or all are -1: score +500 */
          if( SCIPisEQ(scip, ABS(sameflowcoef), 1.0) )
@@ -1170,9 +1175,8 @@ SCIP_RETCODE extractCapacityRows(
          if( SCIPisEQ(scip, sameabsflowcoef, 1.0) )
             capacityrowscores[r] += 100.0;
 
-         /* all coefficients of flow variables are equal in their absolute values and
-         there is at least one greater capacity : score +100 */
-         if( sameflowcoef != 0.0 && sameflowcoef != SCIP_REAL_MAX && maxabscapacitycoef >  sameabsflowcoef )
+         /* there is at least one capacity variable with coefficient not equal to +/-1: score +100 */
+         if( maxabscapacitycoef > 0.0 && !SCIPisEQ(scip, maxabscapacitycoef, 1.0) )
             capacityrowscores[r] += 100.0;
 
          /* all coefficients of flow variables are equal in their absolute values: score +50 */
@@ -1194,8 +1198,8 @@ SCIP_RETCODE extractCapacityRows(
             capacityrowscores[r] += 10.0;
 
          assert(capacityrowscores[r] > 0.0);
-         SCIPdebugMessage("row <%s>: maxcolspercommodity=%d capacityrowsign=%d nposflowcoefs=%d nnegflowcoefs=%d nposcapacitycoefs=%d nnegcapacitycoefs=%d nbadcoefs=%d ncommodities=%d sameflowcoef=%g -> score=%g\n",
-                                                   SCIProwGetName(row), maxcolspercommodity[r], capacityrowsigns[r], nposflowcoefs, nnegflowcoefs, nposcapacitycoefs, nnegcapacitycoefs, nbadcoefs, ncommodities, sameflowcoef, capacityrowscores[r]);
+         SCIPdebugMessage("row <%s>: maxcolspercommodity=%d capacityrowsign=%d nposflowcoefs=%d nnegflowcoefs=%d nposcapacitycoefs=%d nnegcapacitycoefs=%d nbadcoefs=%d nactivecommodities=%d sameflowcoef=%g -> score=%g\n",
+                                                   SCIProwGetName(row), maxcolspercommodity[r], capacityrowsigns[r], nposflowcoefs, nnegflowcoefs, nposcapacitycoefs, nnegcapacitycoefs, nbadcoefs, nactivecommodities, sameflowcoef, capacityrowscores[r]);
 
          /* update maximum dual solution value for additional score tie breaking */
          maxdualcapacity = MAX(maxdualcapacity, absdualsol);
@@ -1384,8 +1388,8 @@ void addFlowrowToCommodity(
       }
       else
       {
-         SCIP_Real rowlhs = SCIProwGetLhs(row);
-         SCIP_Real rowrhs = SCIProwGetRhs(row);
+         SCIP_Real rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
+         SCIP_Real rowrhs = SCIProwGetRhs(row) - SCIProwGetConstant(row);
 
          /* choose row sign such that we get a*x <= -d with d non-negative */
          if( rowrhs < 0.0 )
@@ -1513,6 +1517,7 @@ static
 void deleteCommodity(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
+   int                   k,                  /**< commodity to delete */
    SCIP_ROW**            comrows,            /**< flow rows of the commodity */
    int                   nrows               /**< number of flow rows in the commodity */
    )
@@ -1524,13 +1529,11 @@ void deleteCommodity(
    int*           colcommodity = mcfdata->colcommodity;
    int*           rowcommodity = mcfdata->rowcommodity;
 
-   int k;
    int n;
 
-   k = ncommodities-1;
-   assert(k >= 0);
+   assert(0 <= k && k < ncommodities);
 
-   SCIPdebugMessage("deleting commodity %d with %d flow rows\n", k, nrows);
+   SCIPdebugMessage("deleting commodity %d (%d total commodities) with %d flow rows\n", k, ncommodities, nrows);
 
    for( n = 0; n < nrows; n++ )
    {
@@ -1569,15 +1572,18 @@ void deleteCommodity(
          colcommodity[c] = -1;
 
          /* reset plusflow/minusflow */
-         /**@todo WHY SHOULD plusflow and minusflow not be the same??? */
-//          assert(plusflow[c] != minusflow[c]);
          plusflow[c] = FALSE;
          minusflow[c] = FALSE;
       }
    }
 
-   /* get rid of commodity */
-   mcfdata->ncommodities--;
+   /* get rid of commodity if it is the last one; otherwise, just leave it
+    * as an empty commodity which will be discarded later
+    */
+   if( k == ncommodities-1 )
+      mcfdata->ncommodities--;
+   else
+      mcfdata->nemptycommodities++;
 }
 #endif
 
@@ -1784,6 +1790,7 @@ SCIP_RETCODE extractFlow(
    int* rowcommodity;
 
    SCIP_ROW** comrows;
+   int* ncomnodes;
    SCIP_ROW** rows;
    int nrows;
    int ncols;
@@ -1791,6 +1798,7 @@ SCIP_RETCODE extractFlow(
    int i;
    int c;
    int r;
+   int k;
 
    /* get LP data */
    rows = SCIPgetLPRows(scip);
@@ -1810,6 +1818,7 @@ SCIP_RETCODE extractFlow(
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &comrows, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ncomnodes, nrows) );
 
    /* 3. Extract network structure of flow conservation constraints:
     *    (a) Initialize plusflow[c] = minusflow[c] = FALSE for all columns c and other local data.
@@ -1860,6 +1869,7 @@ SCIP_RETCODE extractFlow(
       }
       while( newrow != NULL );
 
+      ncomnodes[mcfdata->ncommodities-1] = nnodes;
       maxnnodes = MAX(maxnnodes, nnodes);
       SCIPdebugMessage(" -> finished commodity %d: identified %d nodes, maxnnodes=%d\n", mcfdata->ncommodities-1, nnodes, maxnnodes);
 
@@ -1867,18 +1877,50 @@ SCIP_RETCODE extractFlow(
 #if 0 /*????????????????*/
       /* if the commodity has only one node, delete it again */
       if( nnodes == 1 )
-         deleteSingleNodeCommodity(scip, mcfdata, lastrow);
+         deleteSingleNodeCommodity(scip, mcfdata, comrows[0]);
+      //deleteSingleNodeCommodity(scip, mcfdata, lastrow);
 #else
-      /* if the commodity has at most three nodes, or if it has much fewer nodes than the largest commodity, discard it */
-      if( nnodes <= 3 || nnodes < maxnnodes/2 )
-         deleteCommodity(scip, mcfdata, comrows, nnodes);
+      /* if the commodity has too few nodes, or if it has much fewer nodes than the largest commodity, discard it */
+      if( nnodes < MINNODES || nnodes < MINCOMNODESFRACTION * maxnnodes )
+         deleteCommodity(scip, mcfdata, mcfdata->ncommodities-1, comrows, nnodes);
 #endif
    }
 
+   /* final cleanup of small commodities */
+   for( k = 0; k < mcfdata->ncommodities; k++ )
+   {
+      assert(ncomnodes[k] >= MINNODES);
+
+      /* if the commodity has much fewer nodes than the largest commodity, discard it */
+      if( ncomnodes[k] < MINCOMNODESFRACTION * maxnnodes )
+      {
+         int nnodes;
+         
+         nnodes = 0;
+         for( i = 0; i < mcfdata->nflowcands; i++ )
+         {
+            r = flowcands[i];
+            if( rowcommodity[r] == k )
+            {
+               comrows[nnodes] = rows[r];
+               nnodes++;
+#ifdef NDEBUG
+               if( nnodes == ncomnodes[k] )
+                  break;
+#endif
+            }
+         }
+         assert(nnodes == ncomnodes[k]);
+         deleteCommodity(scip, mcfdata, k, comrows, nnodes);
+      }
+   }
+
    /* free temporary memory */
+   SCIPfreeBufferArray(scip, &ncomnodes);
    SCIPfreeBufferArray(scip, &comrows);
 
-   printf/*??????????????SCIPdebugMessage*/("identified %d commodities with a maximum of %d nodes\n", mcfdata->ncommodities, maxnnodes);
+   printf/*??????????????SCIPdebugMessage*/("identified %d commodities (%d empty) with a maximum of %d nodes\n",
+                                            mcfdata->ncommodities, mcfdata->nemptycommodities, maxnnodes);
 
    return SCIP_OKAY;
 }
@@ -2412,12 +2454,16 @@ SCIP_RETCODE extractNodes(
             /* due to presolving we may have multiple flow variables of the same arc in the row */
             if( modeltype == SCIP_MCFMODELTYPE_UNDIRECTED || rowscale * rowvals[i] > 0.0 )
             {
+#ifdef STRICTCOLSPERCOMMODITYLIMIT
                assert(arcpattern[arcid] >= 0);
+#endif
                arcpattern[arcid]++;
             }
             else
             {
+#ifdef STRICTCOLSPERCOMMODITYLIMIT
                assert(arcpattern[arcid] <= 0);
+#endif
                arcpattern[arcid]--;
             }
          }
@@ -2676,9 +2722,8 @@ SCIP_RETCODE cleanupNetwork(
    /* we want to keep only commodities that have at least a certain size relative
     * to the largest commodity
     */
-   nnodesthreshold = 0.2 * maxnnodes;
-   nnodesthreshold = MAX(nnodesthreshold, 1);
-   nnodesthreshold = MIN(nnodesthreshold, 10);
+   nnodesthreshold = MINCOMNODESFRACTION * maxnnodes;
+   nnodesthreshold = MAX(nnodesthreshold, MINNODES);
    SCIPdebugMessage(" -> node threshold: %d\n", nnodesthreshold);
 
    /* discard trivial commodities */
@@ -3355,6 +3400,7 @@ SCIP_RETCODE mcfnetworkExtract(
    mcfdata.plusflow = NULL;
    mcfdata.minusflow = NULL;
    mcfdata.ncommodities = 0;
+   mcfdata.nemptycommodities = 0;
    mcfdata.commoditysigns = NULL;
    mcfdata.commoditysignssize = 0;
    mcfdata.colcommodity = NULL;
@@ -4318,9 +4364,9 @@ SCIP_RETCODE generateClusterCuts(
                continue;
 
             if( nodeflowscales[v][k] > 0.0 )
-               rhs = SCIProwGetRhs(nodeflowrows[v][k]);
+               rhs = SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]);
             else
-               rhs = SCIProwGetLhs(nodeflowrows[v][k]);
+               rhs = SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]);
 
             comcutdemands[k] += rhs * nodeflowscales[v][k];
          }
