@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.17 2008/04/17 17:49:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.18 2008/07/11 10:29:59 bzfheinz Exp $"
 
 /**@file   heur_oneopt.c
  * @brief  oneopt primal heuristic
@@ -45,7 +45,7 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_SOL* prevsol;
+   SCIP_Longint nodenumber;
    SCIP_Bool weightedobj;
 };
 
@@ -146,35 +146,6 @@ SCIP_Real calcShiftVal(
    return shiftval;
 }
 
-/** insertion sort for small arrays */
-static
-void sortByObj(
-   SCIP_Real* a,                            /**< array to be sorted                                              */
-   SCIP_VAR** b,                            /**< array to be sorted                                              */
-   int size                                 /**< size of array                                                   */
-   )
-{
-   int i;
-   int j;
-   SCIP_Real tmp_real;
-   SCIP_VAR* tmp_var;
-
-   /* simple insertion sort algorithm */
-   for( i = 1; i < size; i++ )
-   {
-      tmp_real = a[i];
-      tmp_var = b[i];
-      j = i-1;
-      while( j >= 0 && a[j] > tmp_real )
-      {
-         a[j+1] = a[j];
-         b[j+1] = b[j];
-         j = j-1;
-      }
-      a[j+1] = tmp_real;
-      b[j+1] = tmp_var;
-   }
-}
 
 /** update row activities after a variable's solution value changed */
 static
@@ -260,7 +231,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
    /* create heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   heurdata->prevsol = NULL;
+   heurdata->nodenumber = -1;
 
    return SCIP_OKAY;
 }
@@ -307,7 +278,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    /* we only want to process each solution once */
    bestsol = SCIPgetBestSol(scip);
-   if( heurdata->prevsol == bestsol || bestsol == NULL )
+   if( bestsol == NULL  || heurdata->nodenumber == SCIPgetSolNodenum(scip, bestsol) )
       return SCIP_OKAY;
 
    /* we can only work on solutions valid in the transformed space */
@@ -332,7 +303,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    /* initialize data */
    nshiftcands = 0;
    shiftcandssize = 8;
-   heurdata->prevsol = bestsol;
+   heurdata->nodenumber = SCIPgetSolNodenum(scip, bestsol);
 
    SCIP_CALL( SCIPcreateSolCopy(scip, &worksol, bestsol) );
    SCIPsolSetHeur(worksol,heur);
@@ -427,7 +398,9 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             for( i = 0; i < nshiftcands; ++i )
                objcoeffs[i] = SCIPvarGetObj(shiftcands[i]);
          }
-         sortByObj(objcoeffs, shiftcands, nshiftcands);
+
+         /* sort arrays with respect to the first one */
+         SCIPsortRealPtr(objcoeffs, (void*)shiftcands, nshiftcands);
 
          /* try to shift each variable -> Activities have to be updated */
          for( i = 0; i < nshiftcands; ++i )
