@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.35 2008/07/10 14:43:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.36 2008/07/15 09:39:46 bzfpfend Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
 //#define SEPARATEKNAPSACKCOVERS /*?????????????????*/
@@ -956,6 +956,7 @@ SCIP_RETCODE extractCapacityRows(
    MCFDATA*              mcfdata             /**< internal MCF extraction data to pass to subroutines */
    )
 {
+   unsigned char*    flowrowsigns       = mcfdata->flowrowsigns;
    int*              colcommodity       = mcfdata->colcommodity;
    int               ncommodities       = mcfdata->ncommodities;
    int               nactivecommodities = mcfdata->ncommodities - mcfdata->nemptycommodities;
@@ -1033,18 +1034,24 @@ SCIP_RETCODE extractCapacityRows(
       row = rows[r];
       assert(SCIProwGetLPPos(row) == r);
 
+      capacityrowsigns[r] = 0;
+      capacityrowscores[r] = 0.0;
+
+      /* ignore empty rows */
+      rowlen = SCIProwGetNNonz(row);
+      if( rowlen == 0 )
+         continue;
+
+      /* ignore rows that have already been used as flow conservation constraints */
+      if( (flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0 )
+         continue;
+
       /* get dual solution, if available */
       absdualsol = SCIProwGetDualsol(row);
       if( absdualsol == SCIP_INVALID )
          absdualsol = 0.0;
       absdualsol = ABS(absdualsol);
 
-      capacityrowsigns[r] = 0;
-      capacityrowscores[r] = 0.0;
-
-      rowlen = SCIProwGetNNonz(row);
-      if( rowlen == 0 )
-         continue;
       rowcols = SCIProwGetCols(row);
       rowvals = SCIProwGetVals(row);
       rowlhs = SCIProwGetLhs(row) - SCIProwGetConstant(row);
@@ -1203,8 +1210,8 @@ SCIP_RETCODE extractCapacityRows(
             capacityrowscores[r] += 10.0;
 
          assert(capacityrowscores[r] > 0.0);
-         SCIPdebugMessage("row <%s>: maxcolspercommodity=%d capacityrowsign=%d nposflowcoefs=%d nnegflowcoefs=%d nposcapacitycoefs=%d nnegcapacitycoefs=%d nbadcoefs=%d nactivecommodities=%d sameflowcoef=%g -> score=%g\n",
-                                                   SCIProwGetName(row), maxcolspercommodity[r], capacityrowsigns[r], nposflowcoefs, nnegflowcoefs, nposcapacitycoefs, nnegcapacitycoefs, nbadcoefs, nactivecommodities, sameflowcoef, capacityrowscores[r]);
+         printf/*?????????????SCIPdebugMessage*/("row <%s>: maxcolspercommodity=%d capacityrowsign=%d nposflowcoefs=%d nnegflowcoefs=%d nposcapacitycoefs=%d nnegcapacitycoefs=%d nbadcoefs=%d nactivecommodities=%d sameflowcoef=%g -> score=%g\n",
+                          SCIProwGetName(row), maxcolspercommodity[r], capacityrowsigns[r], nposflowcoefs, nnegflowcoefs, nposcapacitycoefs, nnegcapacitycoefs, nbadcoefs, nactivecommodities, sameflowcoef, capacityrowscores[r]);
 
          /* update maximum dual solution value for additional score tie breaking */
          maxdualcapacity = MAX(maxdualcapacity, absdualsol);
