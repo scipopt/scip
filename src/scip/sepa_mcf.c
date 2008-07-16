@@ -12,13 +12,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.40 2008/07/16 14:05:38 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.41 2008/07/16 15:05:00 bzfpfend Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
-// #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
-// #define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
+#define SEPARATEKNAPSACKCOVERS /*?????????????????*/
+#define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
 #define SEPARATESINGLENODECUTS /*??????????????????*/
+//#define FORCECUTS /*??????????????????????*/
 /*#define SCIP_DEBUG*/
+
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
@@ -2696,7 +2698,7 @@ SCIP_RETCODE cleanupNetwork(
       int c;
       int v;
 
-      printf/*?????????????SCIPdebugMessage*/(" -> discarding %d of %d commodities\n", ncommodities - newncommodities, ncommodities);
+      SCIPdebugMessage(" -> discarding %d of %d commodities\n", ncommodities - newncommodities, ncommodities);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &arcisused, narcs) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nodeisused, nnodes) );
@@ -4181,7 +4183,11 @@ SCIP_RETCODE addCut(
       SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f\n",
                        cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug(SCIPprintRow(scip, cut, NULL));
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, TRUE) );/*????????????????????????TRUE???*/
+#ifdef FORCECUTS
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, TRUE) );
+#else
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+#endif
       if( !cutislocal )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, cut) );
@@ -4766,8 +4772,7 @@ SCIP_RETCODE generateClusterCuts(
                totalviolationdelta += violationdelta;
             }
          }
-         if( totalviolationdelta > 0.0)
-            SCIPdebugMessage("  -> violation improvement: %g  total violation: %g\n", totalviolationdelta, bestabsviolation + totalviolationdelta);
+
          /* if we removed a capacity constraint from the aggregation, try the new aggregation */
          if( totalviolationdelta > 0.0 && totalviolationdelta + bestabsviolation > 0.0 )
          {
