@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.39 2008/07/16 10:35:02 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.40 2008/07/16 14:05:38 bzfraack Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
-#define SEPARATEKNAPSACKCOVERS /*?????????????????*/
-#define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
+// #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
+// #define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
 #define SEPARATESINGLENODECUTS /*??????????????????*/
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
@@ -4181,7 +4181,7 @@ SCIP_RETCODE addCut(
       SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f\n",
                        cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut));
       SCIPdebug(SCIPprintRow(scip, cut, NULL));
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, TRUE) );/*????????????????????????TRUE???*/
       if( !cutislocal )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, cut) );
@@ -4649,7 +4649,7 @@ SCIP_RETCODE generateClusterCuts(
 
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
          {
-            printf/*SCIPdebugMessage*/("CUT ineq -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
+            SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
             SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
 #if 0 /*????????????????????*/
             for( a = 0; a < narcs; a++ )
@@ -4670,7 +4670,6 @@ SCIP_RETCODE generateClusterCuts(
       {
          SCIP_Real onedivoneminsf0;
          SCIP_Real totalviolationdelta;
-         printf/*????????????????SCIPdebugMessage*/("------------- Trying to separate a flow cut inequality --------------\n");
          totalviolationdelta = 0.0;
          onedivoneminsf0 = 1.0/(1.0 - f0);
          for( a = 0; a < narcs; a++ )
@@ -4760,7 +4759,7 @@ SCIP_RETCODE generateClusterCuts(
 
             if( SCIPisPositive(scip, violationdelta) )
             {
-               printf/*????????????????SCIPdebugMessage*/(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
+               SCIPdebugMessage(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
                                 SCIProwGetName(arccapacityrows[a]), SCIPgetRowFeasibility(scip, arccapacityrows[a]),
                                 rowweights[r], violationdelta);
                rowweights[r] = 0.0;
@@ -4768,7 +4767,7 @@ SCIP_RETCODE generateClusterCuts(
             }
          }
          if( totalviolationdelta > 0.0)
-            printf/*????????????????SCIPdebugMessage*/("  -> violation improvement: %g  total violation: %g\n", totalviolationdelta, bestabsviolation + totalviolationdelta);
+            SCIPdebugMessage("  -> violation improvement: %g  total violation: %g\n", totalviolationdelta, bestabsviolation + totalviolationdelta);
          /* if we removed a capacity constraint from the aggregation, try the new aggregation */
          if( totalviolationdelta > 0.0 && totalviolationdelta + bestabsviolation > 0.0 )
          {
@@ -4777,7 +4776,7 @@ SCIP_RETCODE generateClusterCuts(
             SCIP_Bool success;
             SCIP_Bool cutislocal;
 
-            printf/*????????????????SCIPdebugMessage*/("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
+            SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
             SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
                                    sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, cutcoefs, &cutrhs, &cutact,
                                    &success, &cutislocal) );
@@ -4785,8 +4784,8 @@ SCIP_RETCODE generateClusterCuts(
 
             if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
             {
-               printf/*?????????????SCIPdebugMessage*/(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
-                SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+               SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
+               SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
             }
          }
       }
@@ -5044,7 +5043,6 @@ SCIP_RETCODE SCIPincludeSepaMcf(
 {
    SCIP_SEPADATA* sepadata;
 
-   /**@todo single node cuts */
 #if 1
    /* disabled, because separator is not yet finished */
    return SCIP_OKAY;
