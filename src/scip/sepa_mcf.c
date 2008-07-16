@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.38 2008/07/16 09:53:01 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.39 2008/07/16 10:35:02 bzfraack Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
 #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
@@ -1838,7 +1838,7 @@ SCIP_RETCODE extractFlow(
       if( ncomnodes[k] < MINCOMNODESFRACTION * maxnnodes )
       {
          int nnodes;
-         
+
          nnodes = 0;
          for( i = 0; i < mcfdata->nflowcands; i++ )
          {
@@ -4296,7 +4296,7 @@ SCIP_RETCODE generateClusterCuts(
        * cluster i is in S iff bit i of 'partition' is 1
        */
       int nclusters = nodepartition->nclusters;
-      
+
       assert((unsigned int)nclusters <= 8*sizeof(unsigned int));
 
       startpartition = 1;
@@ -4324,7 +4324,8 @@ SCIP_RETCODE generateClusterCuts(
 #ifdef SEPARATEFLOWCUTS
       SCIP_Real baserhs;
       SCIP_Real bestdelta;
-      SCIP_Real bestviolation;
+      SCIP_Real bestrelviolation;
+      SCIP_Real bestabsviolation;
       SCIP_Real f0;
 #endif
 #endif
@@ -4603,7 +4604,8 @@ SCIP_RETCODE generateClusterCuts(
       /**@todo use only the best delta instead of generating all cuts */
 #ifdef SEPARATEFLOWCUTS
       bestdelta = deltas[ndeltas-1];  /* if nothing else is found, use maxdelta */
-      bestviolation = SCIP_REAL_MIN;
+      bestrelviolation = SCIP_REAL_MIN;
+      bestabsviolation = SCIP_REAL_MIN;
 #endif
       for( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
       {
@@ -4611,6 +4613,7 @@ SCIP_RETCODE generateClusterCuts(
          SCIP_Real cutact;
          SCIP_Bool success;
          SCIP_Bool cutislocal;
+         SCIP_Real relviolation;
 
          /* do not use too small deltas */
          if( SCIPisFeasZero(scip, deltas[d]) )
@@ -4635,16 +4638,18 @@ SCIP_RETCODE generateClusterCuts(
 #endif
 
 #ifdef SEPARATEFLOWCUTS
-         if( success && deltas[d] * (cutact - cutrhs) > bestviolation )
+         relviolation = (cutact - cutrhs) / MAX(REALABS(cutrhs), 1.0);
+         if( success && relviolation > bestrelviolation )
          {
             bestdelta = deltas[d];
-            bestviolation = deltas[d] * (cutact - cutrhs);
+            bestrelviolation = relviolation;
+            bestabsviolation = (cutact - cutrhs);
          }
 #endif
 
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
          {
-            SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
+            printf/*SCIPdebugMessage*/("CUT ineq -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
             SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
 #if 0 /*????????????????????*/
             for( a = 0; a < narcs; a++ )
@@ -4665,7 +4670,7 @@ SCIP_RETCODE generateClusterCuts(
       {
          SCIP_Real onedivoneminsf0;
          SCIP_Real totalviolationdelta;
-
+         printf/*????????????????SCIPdebugMessage*/("------------- Trying to separate a flow cut inequality --------------\n");
          totalviolationdelta = 0.0;
          onedivoneminsf0 = 1.0/(1.0 - f0);
          for( a = 0; a < narcs; a++ )
@@ -4755,16 +4760,17 @@ SCIP_RETCODE generateClusterCuts(
 
             if( SCIPisPositive(scip, violationdelta) )
             {
-               SCIPdebugMessage(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
+               printf/*????????????????SCIPdebugMessage*/(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
                                 SCIProwGetName(arccapacityrows[a]), SCIPgetRowFeasibility(scip, arccapacityrows[a]),
                                 rowweights[r], violationdelta);
                rowweights[r] = 0.0;
                totalviolationdelta += violationdelta;
             }
          }
-
+         if( totalviolationdelta > 0.0)
+            printf/*????????????????SCIPdebugMessage*/("  -> violation improvement: %g  total violation: %g\n", totalviolationdelta, bestabsviolation + totalviolationdelta);
          /* if we removed a capacity constraint from the aggregation, try the new aggregation */
-         if( totalviolationdelta > 0.0 && totalviolationdelta + bestviolation > 0.0 )
+         if( totalviolationdelta > 0.0 && totalviolationdelta + bestabsviolation > 0.0 )
          {
             SCIP_Real cutrhs;
             SCIP_Real cutact;
@@ -4780,7 +4786,7 @@ SCIP_RETCODE generateClusterCuts(
             if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
             {
                printf/*?????????????SCIPdebugMessage*/(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
-               SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+                SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
             }
          }
       }
