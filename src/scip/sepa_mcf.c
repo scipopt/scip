@@ -12,11 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.37 2008/07/15 19:08:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.38 2008/07/16 09:53:01 bzfpfend Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
-//#define SEPARATEKNAPSACKCOVERS /*?????????????????*/
+#define SEPARATEKNAPSACKCOVERS /*?????????????????*/
 #define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
+#define SEPARATESINGLENODECUTS /*??????????????????*/
 /*#define SCIP_DEBUG*/
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
@@ -3838,25 +3839,28 @@ void nodepartitionFree(
 /** returns whether given node v is in a cluster that belongs to the partition S */
 static
 SCIP_Bool nodeInPartition(
-   NODEPARTITION*        nodepartition,      /**< node partition data structure */
-   unsigned int          partition,          /**< bit field to mark clusters in partition S */
+   NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
+   unsigned int          partition,          /**< partition of nodes, or node number in single-node partition */
    int                   v                   /**< node to check */
    )
 {
-   int cluster;
-   unsigned int clusterbit;
-
-   assert(nodepartition != NULL);
-
    /* if the node does not exist, it is not in the partition */
    if( v < 0 )
       return FALSE;
 
-   cluster = nodepartition->nodeclusters[v];
-   assert(0 <= cluster && cluster < nodepartition->nclusters);
-   clusterbit = (1 << cluster);
+   if( nodepartition == NULL )
+      return (v == (int)partition);
+   else
+   {
+      int cluster;
+      unsigned int clusterbit;
 
-   return ((partition & clusterbit) != 0);
+      cluster = nodepartition->nodeclusters[v];
+      assert(0 <= cluster && cluster < nodepartition->nclusters);
+      clusterbit = (1 << cluster);
+
+      return ((partition & clusterbit) != 0);
+   }
 }
 
 #ifdef SCIP_DEBUG
@@ -3885,8 +3889,8 @@ static
 SCIP_RETCODE outputGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
-   NODEPARTITION*        nodepartition,      /**< node partition data structure */
-   unsigned int          partition           /**< partition of nodes */
+   NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
+   unsigned int          partition           /**< partition of nodes, or node number */
    )
 {
    FILE* file;
@@ -3895,7 +3899,10 @@ SCIP_RETCODE outputGraph(
    int a;
 
    /* open file */
-   sprintf(filename, "mcf-%d.gml", partition);
+   if( nodepartition == NULL )
+      sprintf(filename, "mcf-node-%d.gml", partition);
+   else
+      sprintf(filename, "mcf-part-%d.gml", partition);
    SCIPinfoMessage(scip, NULL, "creating GML output file <%s>...\n", filename);
    file = fopen(filename, "w");
    if( file == NULL )
@@ -4198,7 +4205,9 @@ SCIP_RETCODE addCut(
 }
 #endif
 
-/** enumerates cuts between subsets of the clusters */
+/** enumerates cuts between subsets of the clusters
+ *  generates single-node cuts if nodepartition == NULL, otherwise generates cluster cuts
+ */
 static
 SCIP_RETCODE generateClusterCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4206,7 +4215,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
-   NODEPARTITION*        nodepartition,      /**< node partition data structure */
+   NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
    int*                  ncuts               /**< pointer to count the number of added cuts */
    )
 {
@@ -4222,8 +4231,6 @@ SCIP_RETCODE generateClusterCuts(
    int               ncommodities      = mcfnetwork->ncommodities;
    SCIP_MCFMODELTYPE modeltype         = mcfnetwork->modeltype;
 
-   int nclusters = nodepartition->nclusters;
-
    int nrows;
    int nvars;
 
@@ -4238,12 +4245,11 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_Real* comdemands;
    unsigned int partition;
    unsigned int allpartitions;
+   unsigned int startpartition;
 
 #ifndef USECMIRDELTAS /*????????????????????*/
    int maxtestdelta = (sepadata->maxtestdelta >= 0 ? sepadata->maxtestdelta : INT_MAX);
 #endif
-
-   assert((unsigned int)nclusters <= 8*sizeof(unsigned int));
 
    nrows = SCIPgetNLPRows(scip);
    nvars = SCIPgetNVars(scip);
@@ -4278,23 +4284,38 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &comdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
 
-   /* loop over all possible partitions of the clusters;
-    * cluster i is in S iff bit i of 'partition' is 1
-    */
-   if( mcfnetwork->modeltype == SCIP_MCFMODELTYPE_DIRECTED )
+   if( nodepartition == NULL )
    {
-      /* in the directed case, we try all (non-trivial) partitions */
-      allpartitions = (1 << nclusters) - 1;
+      /* loop over all nodes and generate single-node cuts */
+      startpartition = 0;
+      allpartitions = nnodes;
    }
    else
    {
-      /* In the undirected case, we only need to try half of the partitions, since they are pairwise
-       * equivalent (S-T is equivalent to T-S). Thus, we fix the last cluster to belong to partition T.
+      /* loop over all possible partitions of the clusters;
+       * cluster i is in S iff bit i of 'partition' is 1
        */
-      assert(mcfnetwork->modeltype == SCIP_MCFMODELTYPE_UNDIRECTED);
-      allpartitions = (1 << (nclusters-1));
+      int nclusters = nodepartition->nclusters;
+      
+      assert((unsigned int)nclusters <= 8*sizeof(unsigned int));
+
+      startpartition = 1;
+      if( mcfnetwork->modeltype == SCIP_MCFMODELTYPE_DIRECTED )
+      {
+         /* in the directed case, we try all (non-trivial) partitions */
+         allpartitions = (1 << nclusters) - 1;
+      }
+      else
+      {
+         /* In the undirected case, we only need to try half of the partitions, since they are pairwise
+          * equivalent (S-T is equivalent to T-S). Thus, we fix the last cluster to belong to partition T.
+          */
+         assert(mcfnetwork->modeltype == SCIP_MCFMODELTYPE_UNDIRECTED);
+         allpartitions = (1 << (nclusters-1));
+      }
    }
-   for( partition = 1; partition <= allpartitions-1; partition++ )
+
+   for( partition = startpartition; partition <= allpartitions-1; partition++ )
    {
       int v;
       int a;
@@ -4308,7 +4329,10 @@ SCIP_RETCODE generateClusterCuts(
 #endif
 #endif
 
-      SCIPdebugMessage("generating cuts for partition 0x%x\n", partition);
+      if( nodepartition == NULL )
+         SCIPdebugMessage("generating single-node cuts for node %d\n", partition);
+      else
+         SCIPdebugMessage("generating cluster cuts for partition 0x%x\n", partition);
 
 #ifdef OUTPUTGRAPH
       SCIP_CALL( outputGraph(scip, mcfnetwork, nodepartition, partition) );
@@ -4850,12 +4874,18 @@ SCIP_RETCODE separateCuts(
          assert(mcfnetwork->nnodes >= 2);
          assert(mcfnetwork->narcs >= 1);
 
+#ifdef SEPARATESINGLENODECUTS
+         printf("************** [%6.2f] MCF create single-node cuts\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+         /* enumerate single node cuts */
+         SCIP_CALL( generateClusterCuts(scip, sepadata, sol, varsolvals, mcfnetwork, NULL, &ncuts) );
+#endif
+
          printf("************** [%6.2f] MCF create node partition\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
          /* partition nodes into a small number of clusters */
          SCIP_CALL( nodepartitionCreate(scip, mcfnetwork, &nodepartition, sepadata->nclusters) );
          SCIPdebug( nodepartitionPrint(nodepartition) );
 
-         printf("************** [%6.2f] MCF generate cuts\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+         printf("************** [%6.2f] MCF generate cluster cuts\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
          /* enumerate cuts between subsets of the clusters */
          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, varsolvals, mcfnetwork, nodepartition, &ncuts) );
 
