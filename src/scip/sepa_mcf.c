@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.43 2008/07/17 13:56:00 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.44 2008/07/17 13:57:30 bzfraack Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
 #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
@@ -1492,7 +1492,6 @@ void invertCommodity(
    unsigned char* flowrowsigns = mcfdata->flowrowsigns;
    SCIP_Bool*     plusflow     = mcfdata->plusflow;
    SCIP_Bool*     minusflow    = mcfdata->minusflow;
-   int*           colcommodity = mcfdata->colcommodity;
 
    int i;
 
@@ -1532,7 +1531,7 @@ void invertCommodity(
 
       c = comcolids[i];
       assert(0 <= c && c < SCIPgetNLPCols(scip));
-      assert(colcommodity[c] == k);
+      assert(mcfdata->colcommodity[c] == k);
 
       tmp = plusflow[c];
       plusflow[c] = minusflow[c];
