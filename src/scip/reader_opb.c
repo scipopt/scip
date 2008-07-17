@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.13 2008/05/16 15:11:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.14 2008/07/17 13:17:21 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -60,8 +60,6 @@
  *  <oneOrMoreLiterals>::= <literal> | <literal> <oneOrMoreSpace> <oneOrMoreLiterals>
  *  <literal>::= <variablename> | "~"<variablename>
  */
-
-/**@todo add SCIP_DECL_READERWRITE(readerWriteOpb) method to opb reader */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -1294,8 +1292,9 @@ void appendBuffer(
    if( (*linecnt) + strlen(extension) >= OPB_MAX_LINELEN )
       writeBuffer(scip, file, linebuffer, linecnt);
    
-   snprintf(linebuffer, OPB_MAX_LINELEN, "%s%s", linebuffer, extension);
-   (*linecnt) += (int) strlen(extension) + 1;
+   /* append extension to linebuffer */
+   strncat(linebuffer, extension, OPB_MAX_LINELEN - (*linecnt));
+   (*linecnt) += (int) strlen(extension);
 }
 
 
@@ -1693,7 +1692,7 @@ SCIP_DECL_READERWRITE(readerWriteOpb)
       }
       else
       {
-         SCIPwarningMessage("OPB format needs generic variable names:\n");
+         SCIPwarningMessage("OPB format needs generic variable names!\n");
          
          if( transformed )
          {
