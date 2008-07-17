@@ -12,15 +12,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.42 2008/07/17 12:21:53 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.43 2008/07/17 13:56:00 bzfraack Exp $"
 
 //#define USECMIRDELTAS /*????????????????????*/
 #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
-// #define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
+#define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
 #define SEPARATESINGLENODECUTS /*??????????????????*/
 //#define STRICTCOLSPERCOMMODITYLIMIT /*???????????????????*/
 #define FORCECUTS /*??????????????????????*/
-/*#define SCIP_DEBUG*/
+//#define SCIP_DEBUG
 
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
@@ -876,8 +876,6 @@ SCIP_RETCODE extractFlowRows(
       /* calculate flow row score */
       if( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0 )
       {
-         flowrowscalars[r] = 1.0;
-
          /* row is an equation: score +1000 */
          if( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == (LHSPOSSIBLE | RHSPOSSIBLE) )
             flowrowscores[r] += 1000.0;
@@ -1121,7 +1119,7 @@ SCIP_RETCODE extractCapacityRows(
             {
                /* the row has too many entries in this commodities: discard capacity row */
                SCIPdebugMessage("row <%s> has %d flow variables in commodity %d, max=%d -> discard\n",
-                                                           SCIProwGetName(row), ncolspercommodity[k], k, maxcolspercommoditylimit);
+                                SCIProwGetName(row), ncolspercommodity[k], k, maxcolspercommoditylimit);
                break;
             }
             else if( ncolspercommodity[k] == 2 )
@@ -1733,7 +1731,7 @@ void getFlowrowFit(
    else
    {
       /* we can discard the row, since it can also not be member of a different commodity */
-      SCIPdebugMessage(" -> discard flow row %d <%s>\n", r, SCIProwGetName(row));
+      SCIPdebugMessage(" -> discard flow row %d <%s>, comoditysign=%d\n", r, SCIProwGetName(row), commoditysigns[k]);
       flowrowsigns[r] |= DISCARDED;
    }
 }
