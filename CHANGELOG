@@ -48,6 +48,7 @@ interface:
 - new method SCIPgetVectorEfficacyNorm()
 - new method SCIPcutGenerationHeuristicCmir() in sepa_cmir.h
 - new method SCIPseparateRelaxedKnapsack() in cons_knapsack.h
+- new method SCIPgetCutoffdepth() which returns the depth of first node in active path that is marked being cutoff
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -74,6 +75,9 @@ features:
 - added ccg-reader (weighted column connectivity graph)
 - cons_countsols.c is now able to store the collected solution if required
 - check.awk now uses TeX package supertabular which supports automatic pagebreak
+- struct SCIP_Stat has now two additional variables: nprobboundchgs, nprobholechgs; 
+  these are used to fix the domain reduction counts in sepa.c, cons.c, branch.c, and prop.c; 
+  this means, that now the domain reduction counts are reduced by those domain reduceds which are preformed during probing
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})

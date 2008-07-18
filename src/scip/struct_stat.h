@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.49 2008/04/17 17:49:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.50 2008/07/18 14:43:33 bzfheinz Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -67,6 +67,8 @@ struct SCIP_Stat
    SCIP_Longint          domchgcount;        /**< internal counter, where all domain changes are counted */
    SCIP_Longint          nboundchgs;         /**< total number of bound changes generated in the tree */
    SCIP_Longint          nholechgs;          /**< total number of hole changes generated in the tree */
+   SCIP_Longint          nprobboundchgs;     /**< total number of bound changes generated in the tree during probing */
+   SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             conflictscoreweight;/**< current weight to use for updating conflict scores in history */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.78 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.79 2008/07/18 14:43:33 bzfheinz Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -167,6 +167,8 @@ void SCIPstatReset(
    stat->domchgcount = 0;
    stat->nboundchgs = 0;
    stat->nholechgs = 0;
+   stat->nprobboundchgs = 0;
+   stat->nprobholechgs = 0;
    stat->nruns = 0;
    stat->nconfrestarts = 0;
    stat->nrootboundchgs = 0;

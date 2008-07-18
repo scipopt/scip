@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.61 2008/04/17 17:49:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.62 2008/07/18 14:43:33 bzfheinz Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -294,6 +294,7 @@ SCIP_RETCODE SCIPsepaExecLP(
       if( !sepa->delay || execdelayed )
       {
 	 SCIP_Longint oldndomchgs;
+	 SCIP_Longint oldnprobdomchgs;
 	 int oldncuts;
 	 int oldnactiveconss;
          int ncutsfound;
@@ -301,6 +302,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          SCIPdebugMessage("executing separator <%s> on LP solution\n", sepa->name);
 
 	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
+	 oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 	 oldncuts = SCIPsepastoreGetNCuts(sepastore);
 	 oldnactiveconss = stat->nactiveconss;
 
@@ -333,7 +335,11 @@ SCIP_RETCODE SCIPsepaExecLP(
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
 	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
 	 sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+	 sepa->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -390,6 +396,7 @@ SCIP_RETCODE SCIPsepaExecSol(
       if( !sepa->delay || execdelayed )
       {
 	 SCIP_Longint oldndomchgs;
+	 SCIP_Longint oldnprobdomchgs;
 	 int oldncuts;
 	 int oldnactiveconss;
          int ncutsfound;
@@ -397,6 +404,7 @@ SCIP_RETCODE SCIPsepaExecSol(
          SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, sol);
 
 	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
+	 oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 	 oldncuts = SCIPsepastoreGetNCuts(sepastore);
 	 oldnactiveconss = stat->nactiveconss;
 
@@ -429,7 +437,11 @@ SCIP_RETCODE SCIPsepaExecSol(
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
 	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
 	 sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+	 sepa->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF

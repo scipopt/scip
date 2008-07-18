@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.19 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.20 2008/07/18 14:43:33 bzfheinz Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -268,10 +268,12 @@ SCIP_RETCODE SCIPpropExec(
       if( !prop->delay || execdelayed )
       {
          SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
          
          SCIPdebugMessage("executing propagator <%s>\n", prop->name);
          
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          
          /* start timing */
          SCIPclockStart(prop->propclock, set);
@@ -287,7 +289,11 @@ SCIP_RETCODE SCIPpropExec(
             prop->ncalls++;
          if( *result == SCIP_CUTOFF )
             prop->ncutoffs++;
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
          prop->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         prop->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF

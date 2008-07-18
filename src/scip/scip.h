@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.322 2008/07/04 10:07:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.323 2008/07/18 14:43:33 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4852,6 +4852,12 @@ extern
 SCIP_RETCODE SCIPrepropagateNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node that should be propagated again */
+   );
+
+/** returns depth of first node in active path that is marked being cutoff */
+extern
+int SCIPgetCutoffdepth(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */

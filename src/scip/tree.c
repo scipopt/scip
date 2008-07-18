@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.207 2008/06/17 17:58:30 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.208 2008/07/18 14:43:33 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1631,6 +1631,10 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
          
    stat->nboundchgs++;
 
+   /* if we are in probing mode we have to additionally count the bound changes for the probing statistic */
+   if( tree->probingroot != NULL )
+      stat->nprobboundchgs++;
+   
    /* if the node is the root node: change local and global bound immediately */
    if( SCIPnodeGetDepth(node) <= tree->effectiverootdepth )
    {
@@ -1759,6 +1763,7 @@ SCIP_RETCODE SCIPnodeAddHolechg(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HOLELIST**       ptr,                /**< changed list pointer */
    SCIP_HOLELIST*        newlist,            /**< new value of list pointer */
    SCIP_HOLELIST*        oldlist             /**< old value of list pointer */
@@ -1774,6 +1779,10 @@ SCIP_RETCODE SCIPnodeAddHolechg(
 
    stat->nholechgs++;
 
+   /* if we are in probing mode we have to additionally count the bound changes for the probing statistic */
+   if( tree->probingroot != NULL )
+      stat->nprobholechgs++;
+   
    SCIP_CALL( SCIPdomchgAddHolechg(&node->domchg, blkmem, set, ptr, newlist, oldlist) );
 
    /**@todo apply hole change on active nodes and issue event */

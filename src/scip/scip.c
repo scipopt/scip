@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.462 2008/07/04 10:07:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.463 2008/07/18 14:43:33 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11238,13 +11238,13 @@ SCIP_RETCODE SCIPpropagateProbing(
    }
 
    if( ndomredsfound != NULL )
-      *ndomredsfound = -(scip->stat->nboundchgs + scip->stat->nholechgs);
+      *ndomredsfound = -(scip->stat->nprobboundchgs + scip->stat->nprobholechgs);
 
    SCIP_CALL( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree,
          scip->conflict, 0, maxproprounds, cutoff) );
 
    if( ndomredsfound != NULL )
-      *ndomredsfound += scip->stat->nboundchgs + scip->stat->nholechgs;
+      *ndomredsfound += scip->stat->nprobboundchgs + scip->stat->nprobholechgs;
 
    return SCIP_OKAY;
 }
@@ -12896,6 +12896,17 @@ SCIP_RETCODE SCIPrepropagateNode(
    SCIPnodePropagateAgain(node, scip->set, scip->stat, scip->tree);
 
    return SCIP_OKAY;
+}
+
+/** returns depth of first node in active path that is marked being cutoff */
+extern
+int SCIPgetCutoffdepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetCutoffdepth", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return scip->tree->cutoffdepth;
 }
 
 

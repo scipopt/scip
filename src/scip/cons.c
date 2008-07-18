@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.172 2008/04/21 18:51:33 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.173 2008/07/18 14:43:32 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2369,6 +2369,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
+            SCIP_Longint oldnprobdomchgs;
             int oldncuts;
             int oldnactiveconss;
             int lastsepalpcount;
@@ -2386,6 +2387,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
             conss = &(conshdlr->sepaconss[firstcons]);
          
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
+            oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
             oldncuts = SCIPsepastoreGetNCuts(sepastore);
             oldnactiveconss = stat->nactiveconss;
 
@@ -2424,7 +2426,11 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
                conshdlr->ncutoffs++;
             conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+            
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
             /* evaluate result */
             if( *result != SCIP_CUTOFF
@@ -2498,6 +2504,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
+            SCIP_Longint oldnprobdomchgs;
             int oldncuts;
             int oldnactiveconss;
 
@@ -2508,6 +2515,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
             conss = conshdlr->sepaconss;
          
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
+            oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
             oldncuts = SCIPsepastoreGetNCuts(sepastore);
             oldnactiveconss = stat->nactiveconss;
 
@@ -2542,7 +2550,11 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
                conshdlr->ncutoffs++;
             conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
             /* evaluate result */
             if( *result != SCIP_CUTOFF
@@ -2640,6 +2652,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       {
          SCIP_CONS** conss;
          SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
          int oldncuts;
          int oldnactiveconss;
 
@@ -2658,6 +2671,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          oldncuts = SCIPsepastoreGetNCuts(sepastore);
          oldnactiveconss = stat->nactiveconss;
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
          /* check, if we want to use eager evaluation */
          if( (conshdlr->eagerfreq == 0 && conshdlr->nenfolpcalls == 0)
@@ -2693,7 +2707,11 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
          }
          else
             conshdlr->nchildren += tree->nchildren;
@@ -2789,7 +2807,8 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       {
          SCIP_CONS** conss;
          SCIP_Longint oldndomchgs;
-         
+         SCIP_Longint oldnprobdomchgs;
+                     
          SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution)\n",
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, pschanged ? "new" : "old");
 
@@ -2802,6 +2821,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          conss = &(conshdlr->enfoconss[firstcons]);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
          /* check, if we want to use eager evaluation */
          if( (conshdlr->eagerfreq == 0 && conshdlr->nenfopscalls == 0)
@@ -2841,7 +2861,11 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
          }
          else
             conshdlr->nchildren += tree->nchildren;
@@ -2986,6 +3010,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
+            SCIP_Longint oldnprobdomchgs;
             SCIP_Longint lastpropdomchgcount;
             int lastnusefulpropconss;
          
@@ -3001,6 +3026,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             conss = &(conshdlr->propconss[firstcons]);
 
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
+            oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
             /* check, if we want to use eager evaluation */
             if( (conshdlr->eagerfreq == 0 && conshdlr->npropcalls == 0)
@@ -3040,7 +3066,11 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             }
             if( *result == SCIP_CUTOFF )
                conshdlr->ncutoffs++;
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
             /* check result code of callback method */
             if( *result != SCIP_CUTOFF

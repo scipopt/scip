@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.98 2008/06/02 13:42:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.99 2008/07/18 14:43:33 bzfheinz Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -206,6 +206,7 @@ SCIP_RETCODE SCIPnodeAddHolechg(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HOLELIST**       ptr,                /**< changed list pointer */
    SCIP_HOLELIST*        newlist,            /**< new value of list pointer */
    SCIP_HOLELIST*        oldlist             /**< old value of list pointer */

@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.78 2008/04/17 17:49:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.79 2008/07/18 14:43:32 bzfheinz Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -953,12 +953,14 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
       if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
       {
          SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
          int oldncuts;
          int oldnactiveconss;
 
          SCIPdebugMessage("executing LP branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          oldncuts = SCIPsepastoreGetNCuts(sepastore);
          oldnactiveconss = stat->nactiveconss;
 
@@ -998,7 +1000,12 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            branchrule->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+
             branchrule->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             branchrule->nconssfound += stat->nactiveconss - oldnactiveconss; /*lint !e776*/
          }
@@ -1039,11 +1046,13 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
       if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
       {
          SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
          SCIP_Longint oldnactiveconss;
 
          SCIPdebugMessage("executing pseudo branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          oldnactiveconss = stat->nactiveconss;
 
          /* start timing */
@@ -1081,7 +1090,12 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            branchrule->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+
             branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
          }
          else
