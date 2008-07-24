@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.2 2007/11/15 14:25:19 bzfpfend Exp $
+# $Id: make.project,v 1.3 2008/07/24 13:41:33 bzfviger Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -129,7 +129,7 @@ LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 endif
 
 ifeq ($(LPS),clp)
-LPSLDFLAGS	=	-Wl,-rpath,$(LIBDIR) -lclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT) -lcoin.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+LPSLDFLAGS	=	-Wl,-rpath,$(LIBDIR) -lclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT) -lcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
