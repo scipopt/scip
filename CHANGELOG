@@ -158,7 +158,8 @@ fixed bugs:
 - corrected bug in SCIPlpGetState if the LP is empty
 - corrected bug in cons_linear.c:applyFixings() [if variable was fixed to infinity the rhs/lhs were wrong]
 - corrected bug in priceAndCutLoop(): separation was aborted if domain reduction was applied
-
+- fixed bug in SCIPlpSolveAndEval(): added extra simplex step if objlimit reached, fastmip and pricers enabled 
+  in order to get dual solution for pricing.
 
 SCIP version 1.00
 =================
