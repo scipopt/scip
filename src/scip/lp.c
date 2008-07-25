@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.273 2008/06/27 14:43:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.274 2008/07/25 12:56:30 bzfgamra Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9771,7 +9771,7 @@ SCIP_RETCODE lpAlgorithm(
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("calling LP algorithm <%s>\n with a time limit of %f seconds", lpalgoName(lpalgo), timelimit);
+   SCIPdebugMessage("calling LP algorithm <%s>\n with a time limit of %f seconds\n", lpalgoName(lpalgo), timelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
@@ -10526,7 +10526,72 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_OBJLIMIT:
-         if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
+         /* make sure, a dual feasible solution exists, that exceeds the objective limit if pricing is performed;
+          * With FASTMIP setting, CPLEX does not apply the final pivot to reach the dual solution exceeding the objective
+          * limit. Therefore, we have to either turn off FASTMIP and resolve the problem or continue solving it without
+          * objective limit for at least one iteration. It seems that the strategy to continue with FASTMIP for one
+          * additional simplex iteration yields better results.
+          */
+         if ( set->npricers > 0 && set->lp_fastmip && lp->lpihasfastmip )
+         {
+            SCIP_LPI* lpi;
+            SCIP_Real objval;
+
+            lpi = SCIPlpGetLPI(lp);
+
+            assert(lpi != NULL);
+            assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX || SCIPlpiIsObjlimExc(lpi));
+
+            SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+
+            /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
+            if ( objval < lp->lpiuobjlim )
+            {
+               SCIP_Real tmpcutoff;
+               SCIP_Bool resolve;
+               
+               /* temporarily disable cutoffbound, which also disables the objective limit, and set an iteration limit of 1 */
+               tmpcutoff = lp->cutoffbound;
+               lp->cutoffbound = SCIPlpiInfinity(lpi);
+               SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 1) );
+
+               /* resolve LP */            
+               resolve = FALSE;
+               SCIP_CALL( lpSolveStable(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+
+               SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+               assert(objval > tmpcutoff - lp->looseobjval);
+
+               /* reinstall old cutoff bound and iteration limits in LP solver */
+               lp->cutoffbound = tmpcutoff;
+               SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
+
+               /* check for error */
+               if( *lperror )
+               {
+                  SCIPdebugMessage("unresolved error while doing an extra simplex step to exceed the objlimit\n");
+                  lp->solved = FALSE;
+                  lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+                  return SCIP_OKAY;
+               }
+               
+               lp->solved = TRUE;
+               lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+               lp->lpobjval = SCIPsetInfinity(set);
+
+               /* get new solution and objective value */
+               SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
+
+               SCIPdebugMessage(" -> resolved objlim exceeding LP in 1 iteration (infeasible:%d, optimal:%d) objval: %f, objlimit: %f\n",
+                  SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsOptimal(lpi), 
+                  objval, lp->cutoffbound - lp->looseobjval);
+            }
+            else if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
+            {
+               SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
+            }
+         }
+         else if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
          {
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
          }
