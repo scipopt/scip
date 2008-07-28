@@ -12,15 +12,16 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.44 2008/07/17 13:57:30 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.45 2008/07/28 11:28:08 bzfpfend Exp $"
+
+/*#define SCIP_DEBUG*/
 
 //#define USECMIRDELTAS /*????????????????????*/
 #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
 #define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
 #define SEPARATESINGLENODECUTS /*??????????????????*/
 //#define STRICTCOLSPERCOMMODITYLIMIT /*???????????????????*/
-#define FORCECUTS /*??????????????????????*/
-//#define SCIP_DEBUG
+//#define FORCECUTS /*??????????????????????*/
 
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
@@ -729,7 +730,7 @@ void printCommodities(
       if( rowcommodity[r] == -1 && (capacityrowsigns == NULL || (capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0) )
       {
          printf(" row <%s>\n", SCIProwGetName(rows[r]));
-         SCIPdebug( SCIPprintRow(scip, rows[r], NULL) );
+         /*SCIPdebug( SCIPprintRow(scip, rows[r], NULL) );*/
       }
    }
    printf("\n");
@@ -943,8 +944,9 @@ SCIP_RETCODE extractFlowRows(
    SCIPdebugMessage("flow conservation candidates:\n");
    for( r = 0; r < mcfdata->nflowcands; r++ )
    {
-      SCIPdebug(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL));
-      SCIPdebugMessage("%4d [score: %2g]: %s\n", r, flowrowscores[mcfdata->flowcands[r]], SCIProwGetName(rows[mcfdata->flowcands[r]]));
+      /*SCIPdebug(SCIPprintRow(scip, rows[mcfdata->flowcands[r]], NULL));*/
+      SCIPdebugMessage("%4d [score: %2g]: %s\n", mcfdata->flowcands[r], flowrowscores[mcfdata->flowcands[r]],
+                       SCIProwGetName(rows[mcfdata->flowcands[r]]));
    }
 
    return SCIP_OKAY;
@@ -1305,12 +1307,13 @@ SCIP_RETCODE extractCapacityRows(
    /* sort candidates by score */
    SCIPsortInd(mcfdata->capacitycands, compCands, (void*)capacityrowscores, mcfdata->ncapacitycands);
 
-#if 0 /*??????????????????*/
-   printf/*??????????????SCIPdebugMessage*/("capacity candidates:\n");
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("capacity candidates:\n");
    for( r = 0; r < mcfdata->ncapacitycands; r++ )
    {
-      /*??????????????SCIPdebug*/(SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL));
-      printf/*???????????????SCIPdebugMessage*/("%4d [score: %2g]: %s\n", r, capacityrowscores[mcfdata->capacitycands[r]], SCIProwGetName(rows[mcfdata->capacitycands[r]]));
+      SCIPdebugMessage("row %4d [score: %2g]: %s\n", mcfdata->capacitycands[r],
+                       capacityrowscores[mcfdata->capacitycands[r]], SCIProwGetName(rows[mcfdata->capacitycands[r]]));
+      /*SCIPdebug(SCIPprintRow(scip, rows[mcfdata->capacitycands[r]], NULL));*/
    }
 #endif
 
@@ -1433,7 +1436,7 @@ void addFlowrowToCommodity(
 
    SCIPdebugMessage("adding flow row %d <%s> with sign %+d to commodity %d [score:%g]\n",
                     r, SCIProwGetName(row), rowscale, k, mcfdata->flowrowscores[r]);
-   SCIPdebug( SCIPprintRow(scip, row, NULL) );
+   /*SCIPdebug( SCIPprintRow(scip, row, NULL) );*/
 
    /* add row to commodity */
    rowcommodity[r] = k;
@@ -4306,7 +4309,7 @@ SCIP_RETCODE addCut(
    {
       SCIPdebugMessage(" -> found MCF cut <%s>: rhs=%f, act=%f eff=%f\n",
                        cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut));
-      SCIPdebug(SCIPprintRow(scip, cut, NULL));
+      /*SCIPdebug(SCIPprintRow(scip, cut, NULL));*/
 #ifdef FORCECUTS
       SCIP_CALL( SCIPaddCut(scip, sol, cut, TRUE) );
 #else
@@ -4461,9 +4464,13 @@ SCIP_RETCODE generateClusterCuts(
 #endif
 
       if( nodepartition == NULL )
+      {
          SCIPdebugMessage("generating single-node cuts for node %d\n", partition);
+      }
       else
+      {
          SCIPdebugMessage("generating cluster cuts for partition 0x%x\n", partition);
+      }
 
 #ifdef OUTPUTGRAPH
       SCIP_CALL( outputGraph(scip, mcfnetwork, nodepartition, partition) );
@@ -4578,7 +4585,7 @@ SCIP_RETCODE generateClusterCuts(
          rowweights[r] = arccapacityscales[a];
          SCIPdebugMessage(" -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), rowweights[r],
                           SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
-         SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));
+         /*SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));*/
 
 #ifdef SEPARATEFLOWCUTS
          if( rowweights[r] > 0.0 )
@@ -4659,10 +4666,6 @@ SCIP_RETCODE generateClusterCuts(
       {
          int k;
 
-         /* check if node belongs to S */
-         if( !nodeInPartition(nodepartition, partition, v) )
-            continue;
-
          /* aggregate flow conservation constraints of the 'active' commodities */
          for( k = 0; k < ncommodities; k++ )
          {
@@ -4679,6 +4682,10 @@ SCIP_RETCODE generateClusterCuts(
                /* in the directed case, use rows of commodities with positive demand (negative -d_k) */
                if( !SCIPisNegative(scip, comcutdemands[k]) )
                   continue;
+
+               /* check if node belongs to S */
+               if( !nodeInPartition(nodepartition, partition, v) )
+                  continue;
             }
             else
             {
@@ -4686,9 +4693,19 @@ SCIP_RETCODE generateClusterCuts(
                if( SCIPisZero(scip, comcutdemands[k]) )
                   continue;
 
-               /* if the demand (-d_k) is negative (i.e., points into the wrong direction), we use the flow constraint with opposite sign */
-               if( comcutdemands[k] > 0.0 )
-                  scale *= -1.0;
+               /* If the demand (-d_k) is negative (i.e., points into the wrong direction), we use the flow 
+                * in the opposite direction, i.e., sum over all nodes in T instead of S.
+                */
+               if( comcutdemands[k] > 0.0 ) {
+                  /* check if node belongs to T */
+                  if( nodeInPartition(nodepartition, partition, v) )
+                     continue;
+               }
+               else {
+                  /* check if node belongs to S */
+                  if( !nodeInPartition(nodepartition, partition, v) )
+                     continue;
+               }
             }
             if( nodeflowrows[v][k] == NULL )
                continue;
@@ -4709,7 +4726,7 @@ SCIP_RETCODE generateClusterCuts(
                   SCIPdebugMessage(" -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
                                    v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, rowweights[r],
                                    SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
-                  SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));
+                  /*SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));*/
 #ifdef SEPARATEFLOWCUTS
                   if( rowweights[r] > 0.0 )
                      baserhs += rowweights[r] * (SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
@@ -4890,8 +4907,8 @@ SCIP_RETCODE generateClusterCuts(
             if( SCIPisPositive(scip, violationdelta) )
             {
                SCIPdebugMessage(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
-                                SCIProwGetName(arccapacityrows[a]), SCIPgetRowFeasibility(scip, arccapacityrows[a]),
-                                rowweights[r], violationdelta);
+                                SCIProwGetName(arccapacityrows[a]), rowweights[r], SCIPgetRowFeasibility(scip, arccapacityrows[a]),
+                                violationdelta);
                rowweights[r] = 0.0;
                totalviolationdelta += violationdelta;
             }
@@ -4964,6 +4981,7 @@ SCIP_RETCODE separateCuts(
    {
       *result = SCIP_DIDNOTFIND;
       SCIP_CALL( mcfnetworkExtract(scip, sepadata, &sepadata->mcfnetworks, &sepadata->nmcfnetworks) );
+
       /*?????????????#ifdef SCIP_DEBUG*/
       printf/*??????????????SCIPdebugMessage*/("extracted %d networks\n", sepadata->nmcfnetworks);
       for( i = 0; i < sepadata->nmcfnetworks; i++ )
