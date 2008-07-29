@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.159 2008/07/10 14:43:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.160 2008/07/29 16:02:14 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -29,6 +29,7 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
+#include "scip/pub_misc.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "knapsack"
@@ -175,37 +176,20 @@ void sortItems(
 
    if( !consdata->sorted )
    {
-      int i;
-
-      for( i = 0; i < consdata->nvars; i++)
-      {
-         SCIP_VAR* var;
-         SCIP_Longint weight;
-         SCIP_EVENTDATA* eventdata;
-         int cliqueid;
-         int j;
-
-         var = consdata->vars[i];
-         weight = consdata->weights[i];
-         eventdata = consdata->eventdatas[i];
-         cliqueid = consdata->cliquepartition[i];
-
-         for( j = i; j > 0 && weight > consdata->weights[j-1]; j-- )
-         {
-            consdata->weights[j] = consdata->weights[j-1];
-            consdata->vars[j] = consdata->vars[j-1];
-            consdata->eventdatas[j] = consdata->eventdatas[j-1];
-            consdata->cliquepartition[j] = consdata->cliquepartition[j-1];
-         }
-         consdata->weights[j] = weight;
-         consdata->vars[j] = var;
-         consdata->eventdatas[j] = eventdata;
-         consdata->cliquepartition[j] = cliqueid;
-      }
+      /* sort of four joint arrays of Long/pointer/pointer/ints, 
+       * sorted by first array in non-increasing order via sort template */
+      SCIPsortDownLongPtrPtrInt(
+         consdata->weights, 
+         (void**)consdata->vars, 
+         (void**)consdata->eventdatas, 
+         consdata->cliquepartition, 
+         consdata->nvars);
+      
       consdata->sorted = TRUE;
-   } 
+   }
 #ifndef NDEBUG
    {
+      /* check if the weight array is sorted in a non-increasing way */ 
       int i;
       for( i = 0; i < consdata->nvars-1; ++i )
          assert(consdata->weights[i] >= consdata->weights[i+1]);

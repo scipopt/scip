@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.39 2008/04/17 17:49:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.40 2008/07/29 16:02:14 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -342,27 +342,12 @@ void SCIPsortRealInt(
 extern
 void SCIPsortRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
-   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< second  SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
-/** sort array of ints in non-decreasing order */
-extern
-void SCIPsortInt(
-  int*                  intarray,           /**< int array to be sorted */
-  int                   len                 /**< length of arrays */
-  );
-
-/** sort of two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
-extern
-void SCIPsortIntPtr(
-  int*                  intarray,           /**< int array to be sorted */
-  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
-  int                   len                 /**< length of arrays */
-  );
-
-/** sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-decreasing order */
+/** sort of four joint arrays of Reals/Long/Reals/ints, sorted by first array in non-decreasing order */
 extern
 void SCIPsortRealLongRealInt(
   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
@@ -389,9 +374,35 @@ void SCIPsortRealRealRealBoolPtr(
   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  void**                ptrarray,           /**< pointer array to be permuted in the same way */
   int                   len                 /**< length of arrays */
   );
+
+/** sort array of ints in non-decreasing order */
+extern
+void SCIPsortInt(
+  int*                  intarray,           /**< int array to be sorted */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort of two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
+extern
+void SCIPsortIntPtr(
+  int*                  intarray,           /**< int array to be sorted */
+  void**                ptrarray,           /**< pointer array to be permuted in the same way */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortLongPtrPtrInt(
+  SCIP_Longint*         longarray1,         /**< SCIP_Longint array to be sorted */
+  void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+  void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+  int*                  intarray,           /**< int array to be sorted */
+  int                   len                 /**< length of arrays */
+  );
+
 
 /* now all downwards-sorting methods */
 
@@ -480,11 +491,19 @@ void SCIPsortDownPtrRealIntInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of two joint arrays of Reals/pointers, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownRealPtr(
+   SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of two joint arrays of Reals/ints, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownRealInt(
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
-   int*                  intarray,           /**< int array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real  array to be sorted */
+   int*                  intarray,           /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -492,35 +511,12 @@ void SCIPsortDownRealInt(
 extern
 void SCIPsortDownRealRealPtr(
    SCIP_Real*            realarray1,         /**< first SCIP_Real array to be sorted */
-   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be sorted */
+   SCIP_Real*            realarray2,         /**< second SCIP_Real array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
-/** sort of two joint arrays of Reals/pointers, sorted by first array in non-increasing order */
-extern
-void SCIPsortDownRealPtr(
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   void**                ptrarray,           /**< pointer array to be sorted */
-   int                   len                 /**< length of arrays */
-   );
-
-/** sort array of ints in non-increasing order */
-extern
-void SCIPsortDownInt(
-  int*                  intarray,           /**< int array to be sorted */
-  int                   len                 /**< length of arrays */
-  );
-
-/** sort of two joint arrays of ints/pointers, sorted by first array in non-increasing order */
-extern
-void SCIPsortDownIntPtr(
-  int*                  intarray,           /**< int array to be sorted */
-  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
-  int                   len                 /**< length of arrays */
-  );
-
-/** sort of four joint arrays of Reals/Reals/Reals/ints, sorted by first array in non-increasing order */
+/** sort of four joint arrays of Reals/Long/Reals/ints, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownRealLongRealInt(
   SCIP_Real*            realarray1,         /**< SCIP_Real array to be sorted */
@@ -547,10 +543,34 @@ void SCIPsortDownRealRealRealBoolPtr(
   SCIP_Real*            realarray2,         /**< SCIP_Real array to be permuted in the same way */
   SCIP_Real*            realarray3,         /**< SCIP_Real array to be permuted in the same way */
   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
-  void**                ptrarray,           /**< pointer to data field that is given to the external compare method */
+  void**                ptrarray,           /**< pointer array to be permuted in the same way */
   int                   len                 /**< length of arrays */
   );
 
+/** sort array of ints in non-increasing order */
+extern
+void SCIPsortDownInt(
+  int*                  intarray,           /**< int array to be sorted */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort of two joint arrays of ints/pointers, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownIntPtr(
+  int*                  intarray,           /**< int array to be sorted */
+  void**                ptrarray,           /**< pointer array to be permuted in the same way */
+  int                   len                 /**< length of arrays */
+  );
+
+/** sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownLongPtrPtrInt(
+  SCIP_Longint*         longarray1,         /**< SCIP_Longint array to be sorted */
+  void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+  void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+  int*                  intarray,           /**< int array to be sorted */
+  int                   len                 /**< length of arrays */
+  );
 
 /*
  * Numerical methods
