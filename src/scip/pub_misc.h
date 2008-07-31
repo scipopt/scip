@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.40 2008/07/29 16:02:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.41 2008/07/31 07:22:51 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -393,6 +393,16 @@ void SCIPsortIntPtr(
   int                   len                 /**< length of arrays */
   );
 
+/** sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortIntPtrIntReal(
+  int*                  intarray1,           /**< int array to be sorted */
+  void**                ptrarray,            /**< pointer array to be permuted in the same way */
+  int*                  intarray2,           /**< int array to be permuted in the same way */
+  SCIP_Real*            realarray,           /**< SCIP_Real array to be permuted in the same way */
+  int                   len                  /**< length of arrays */
+  );
+
 /** sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-decreasing order */
 extern
 void SCIPsortLongPtrPtrInt(
@@ -560,6 +570,16 @@ void SCIPsortDownIntPtr(
   int*                  intarray,           /**< int array to be sorted */
   void**                ptrarray,           /**< pointer array to be permuted in the same way */
   int                   len                 /**< length of arrays */
+  );
+
+/** sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortDownIntPtrIntReal(
+  int*                  intarray1,           /**< int array to be sorted */
+  void**                ptrarray,            /**< pointer array to be permuted in the same way */
+  int*                  intarray2,           /**< int array to be permuted in the same way */
+  SCIP_Real*            realarray,           /**< SCIP_Real array to be permuted in the same way */
+  int                   len                  /**< length of arrays */
   );
 
 /** sort of four joint arrays of Long/pointer/pointer/ints, sorted by first array in non-increasing order */

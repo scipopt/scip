@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.37 2008/04/17 17:49:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.38 2008/07/31 07:22:51 bzfheinz Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -229,6 +229,10 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 /*
  * Row methods
  */
+
+/** comparison method for sorting variables by non-decreasing index */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIProwComp);
 
 /** locks an unmodifiable row, which forbids further changes; has no effect on modifiable rows */
 extern

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.274 2008/07/25 12:56:30 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.275 2008/07/31 07:22:50 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -253,196 +253,24 @@ SCIP_RETCODE SCIProwEnsureSize(
  * Sorting and searching rows and columns
  */
 
-/** bubble sort part of rows in a column */
-static
-void colBSort(
-   SCIP_COL*             col,                /**< LP column */
-   int                   firstpos,           /**< first position to include in the sort */
-   int                   lastpos             /**< last position to include in the sort */
-   )
+
+/** comparison method for sorting rows by non-decreasing index */
+SCIP_DECL_SORTPTRCOMP(SCIProwComp)
 {
-   SCIP_ROW** rows;
-   SCIP_Real* vals;
-   int* linkpos;
-   SCIP_ROW* tmprow;
-   SCIP_Real tmpval;
-   int tmplinkpos;
-   int tmpindex;
-   int pos;
-   int sortpos;
+   assert(elem1 != NULL);
+   assert(elem2 != NULL);
 
-   assert(col != NULL);
-   assert(0 <= firstpos && firstpos <= lastpos+1 && lastpos < col->len);
-
-   /**@todo do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?) */
-   rows = col->rows;
-   vals = col->vals;
-   linkpos = col->linkpos;
-
-   while( firstpos < lastpos )
+   if( ((SCIP_ROW*)elem1)->index < ((SCIP_ROW*)elem2)->index )
+      return -1;
+   else if( ((SCIP_ROW*)elem1)->index > ((SCIP_ROW*)elem2)->index )
+      return +1;
+   else
    {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && rows[pos]->index <= rows[pos+1]->index )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert(rows[pos]->index > rows[pos+1]->index);
-         tmprow = rows[pos];
-         tmpval = vals[pos];
-         tmplinkpos = linkpos[pos];
-         tmpindex = tmprow->index;
-         do
-         {
-            rows[pos] = rows[pos+1];
-            vals[pos] = vals[pos+1];
-            linkpos[pos] = linkpos[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && rows[pos+1]->index < tmpindex );
-         rows[pos] = tmprow;
-         vals[pos] = tmpval;
-         linkpos[pos] = tmplinkpos;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && rows[pos-1]->index <= rows[pos]->index )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert(rows[pos-1]->index > rows[pos]->index);
-         tmprow = rows[pos];
-         tmpval = vals[pos];
-         tmplinkpos = linkpos[pos];
-         tmpindex = tmprow->index;
-         do
-         {
-            rows[pos] = rows[pos-1];
-            vals[pos] = vals[pos-1];
-            linkpos[pos] = linkpos[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && rows[pos-1]->index > tmpindex );
-         rows[pos] = tmprow;
-         vals[pos] = tmpval;
-         linkpos[pos] = tmplinkpos;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
+      assert(SCIProwGetIndex((SCIP_ROW*)(elem1)) == SCIProwGetIndex(((SCIP_ROW*)elem2)));
+      return 0;
    }
 }
 
-/** bubble sort part of columns in a row */
-static
-void rowBSort(
-   SCIP_ROW*             row,                /**< LP row */
-   int                   firstpos,           /**< first position to include in the sort */
-   int                   lastpos             /**< last position to include in the sort */
-   )
-{
-   SCIP_COL** cols;
-   SCIP_Real* vals;
-   int* idx;
-   int* linkpos;
-   SCIP_COL* tmpcol;
-   SCIP_Real tmpval;
-   int tmpidx;
-   int tmplinkpos;
-   int pos;
-   int sortpos;
-
-   assert(row != NULL);
-   assert(0 <= firstpos && firstpos <= lastpos+1 && lastpos < row->len);
-
-   /**@todo do a quick sort here, if many elements are unsorted (sorted-Bool -> sorted-Int?) */
-   cols = row->cols;
-   vals = row->vals;
-   idx = row->cols_index;
-   linkpos = row->linkpos;
-
-#ifndef NDEBUG
-   for( pos = 0; pos < row->len; ++pos )
-      assert(idx[pos] == cols[pos]->index);
-#endif
-
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && idx[pos] <= idx[pos+1] )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert(idx[pos] > idx[pos+1]);
-         tmpcol = cols[pos];
-         tmpidx = idx[pos];
-         tmpval = vals[pos];
-         tmplinkpos = linkpos[pos];
-         do
-         {
-            cols[pos] = cols[pos+1];
-            idx[pos] = idx[pos+1];
-            vals[pos] = vals[pos+1];
-            linkpos[pos] = linkpos[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && idx[pos+1] < tmpidx );
-         cols[pos] = tmpcol;
-         idx[pos] = tmpidx;
-         vals[pos] = tmpval;
-         linkpos[pos] = tmplinkpos;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && idx[pos-1] <= idx[pos] )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert(idx[pos-1] > idx[pos]);
-         tmpcol = cols[pos];
-         tmpidx = idx[pos];
-         tmpval = vals[pos];
-         tmplinkpos = linkpos[pos];
-         do
-         {
-            cols[pos] = cols[pos-1];
-            idx[pos] = idx[pos-1];
-            vals[pos] = vals[pos-1];
-            linkpos[pos] = linkpos[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && idx[pos-1] > tmpidx );
-         cols[pos] = tmpcol;
-         idx[pos] = tmpidx;
-         vals[pos] = tmpval;
-         linkpos[pos] = tmplinkpos;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
-}
 
 /** sorts column entries of linked rows currently in the LP such that lower row indices precede higher ones */
 static
@@ -459,7 +287,7 @@ void colSortLP(
       return;
 
    /* sort coefficients */
-   colBSort(col, 0, col->nlprows-1);
+   SCIPsortPtrRealInt((void**)col->rows, col->vals, col->linkpos, SCIProwComp, col->nlprows );
 
    /* update links */
    for( i = 0; i < col->nlprows; ++i )
@@ -492,7 +320,7 @@ void colSortNonLP(
       return;
 
    /* sort coefficients */
-   colBSort(col, col->nlprows, col->len-1);
+   SCIPsortPtrRealInt((void**)(&(col->rows[col->nlprows])), &(col->vals[col->nlprows]), &(col->linkpos[col->nlprows]), SCIProwComp, col->len - col->nlprows);
 
    /* update links */
    for( i = col->nlprows; i < col->len; ++i )
@@ -523,8 +351,8 @@ void rowSortLP(
       return;
 
    /* sort coefficients */
-   rowBSort(row, 0, row->nlpcols-1);
-   
+   SCIPsortIntPtrIntReal(row->cols_index, (void**)row->cols, row->linkpos, row->vals, row->nlpcols);
+
    /* update links */
    for( i = 0; i < row->nlpcols; ++i )
    {
@@ -556,7 +384,7 @@ void rowSortNonLP(
       return;
 
    /* sort coefficients */
-   rowBSort(row, row->nlpcols, row->len-1);
+   SCIPsortIntPtrIntReal(&(row->cols_index[row->nlpcols]), (void**)(&(row->cols[row->nlpcols])), &(row->linkpos[row->nlpcols]), &(row->vals[row->nlpcols]), row->len - row->nlpcols);
    
    /* update links */
    for( i = row->nlpcols; i < row->len; ++i )
