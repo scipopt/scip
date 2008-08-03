@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.70 2008/06/04 13:02:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.71 2008/08/03 21:09:34 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -2522,15 +2522,38 @@ SCIP_RETCODE SCIPlpiReadState(
 
 /** writes LP state (like basis information) to a file */
 SCIP_RETCODE SCIPlpiWriteState(
-   SCIP_LPI*             /*lpi*/,            /**< LP interface structure */
-   const char*           /*fname*/           /**< file name */
+   SCIP_LPI*             lpi,            /**< LP interface structure */
+   const char*           fname           /**< file name */
    )
 {
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
 
-   SCIPerrorMessage("SCIPlpiWriteState() not implemented yet in SOPLEX interface\n");
+   /* init names */
+   int nRows = lpi->spx->nRows();
+   int nCols = lpi->spx->nCols();
+   char name [255];
 
-   return SCIP_INVALIDCALL;
+   NameSet rowNames;
+   rowNames.reMax(nRows);
+   for (int i = 0; i < nRows; ++i)
+   {
+      sprintf(name, "C%d", i+1);
+      rowNames.add(name);
+   }
+
+   NameSet colNames;
+   colNames.reMax(nCols);
+   for (int j = 0; j < nCols; ++j)
+   {
+      sprintf(name, "x%d", j);
+      colNames.add(name);
+   }
+
+   bool res = lpi->spx->writeBasisFile(fname, rowNames, colNames);
+
+   if ( ! res )
+      return SCIP_ERROR;
+   return SCIP_OKAY;
 }
 
 /**@} */
@@ -2599,7 +2622,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
-      if( ival )
+      if ( ival )
          Param::setVerbose(2);
       else 
          Param::setVerbose(0);
