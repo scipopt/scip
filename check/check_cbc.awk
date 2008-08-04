@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.3 2008/04/17 19:30:45 bzfpfets Exp $
+# $Id: check_cbc.awk,v 1.4 2008/08/04 16:22:23 bzfheinz Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator
@@ -349,7 +349,7 @@ END {
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
-   printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
+   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
 
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
