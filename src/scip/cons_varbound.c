@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.73 2008/04/21 18:51:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.74 2008/08/04 06:52:41 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -63,12 +63,12 @@ struct SCIP_ConsData
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
+   unsigned int          addvarbounds:1;     /**< are the globbaly valid variable bound are added? */
 };
 
 
 
-
-/*
+ /*
  * Propagation rules
  */
 
@@ -161,28 +161,13 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->row = NULL;
    (*consdata)->propagated = FALSE;
    (*consdata)->presolved = FALSE;
+   (*consdata)->addvarbounds = FALSE;
 
    /* if we are in the transformed problem, get transformed variables, add variable bound information, and catch events */
    if( SCIPisTransformed(scip) )
    {
-      SCIP_Bool infeasible;
-
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->var, &(*consdata)->var) );
       SCIP_CALL( SCIPgetTransformedVar(scip, (*consdata)->vbdvar, &(*consdata)->vbdvar) );
-
-      /* if lhs is finite, we have a variable lower bound: lhs <= x + c*y  =>  x >= -c*y + lhs */
-      if( !local && !SCIPisInfinity(scip, -(*consdata)->lhs) )
-      {
-         SCIP_CALL( SCIPaddVarVlb(scip, (*consdata)->var, (*consdata)->vbdvar, -(*consdata)->vbdcoef, (*consdata)->lhs,
-               &infeasible, NULL) );
-      }
-
-      /* if rhs is finite, we have a variable upper bound: x + c*y <= rhs  =>  x <= -c*y + rhs */
-      if( !local && !SCIPisInfinity(scip, (*consdata)->rhs) )
-      {
-         SCIP_CALL( SCIPaddVarVub(scip, (*consdata)->var, (*consdata)->vbdvar, -(*consdata)->vbdcoef, (*consdata)->rhs,
-               &infeasible, NULL) );
-      }
 
       /* catch events for variables */
       SCIP_CALL( catchEvents(scip, *consdata) );
@@ -1360,6 +1345,32 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
       /* tighten variable bound coefficient */
       SCIP_CALL( tightenCoefs(scip, conss[i], nchgcoefs, nchgsides) );
+
+      /** informs once variable x about a globally valid variable lower or upper bound */
+      if( !consdata->addvarbounds )
+      {
+         SCIP_Bool infeasible;
+         
+         /* if lhs is finite, we have a variable lower bound: lhs <= x + c*y  =>  x >= -c*y + lhs */
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            SCIP_CALL( SCIPaddVarVlb(scip, consdata->var, consdata->vbdvar, -consdata->vbdcoef, consdata->lhs,
+                  &infeasible, NULL) );
+
+            assert( infeasible == FALSE );
+         }
+         
+
+         /* if rhs is finite, we have a variable upper bound: x + c*y <= rhs  =>  x <= -c*y + rhs */
+         if( !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            SCIP_CALL( SCIPaddVarVub(scip, consdata->var, consdata->vbdvar, -consdata->vbdcoef, consdata->rhs,
+                  &infeasible, NULL) );
+
+            assert( infeasible == FALSE );
+         }
+         consdata->addvarbounds = TRUE;
+      }
    } 
 
    /**@todo preprocess pairs of variable bound constraints */
