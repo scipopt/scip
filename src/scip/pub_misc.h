@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.41 2008/07/31 07:22:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.42 2008/08/04 12:57:06 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -385,6 +385,14 @@ void SCIPsortInt(
   int                   len                 /**< length of arrays */
   );
 
+/** sort of two joint arrays of ints/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortIntInt(
+  int*                  intarray1,          /**< int array to be sorted */
+  int*                  intarray2,          /**< second int array to be permuted in the same way */
+  int                   len                 /**< length of arrays */
+  );
+
 /** sort of two joint arrays of ints/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortIntPtr(
@@ -392,6 +400,7 @@ void SCIPsortIntPtr(
   void**                ptrarray,           /**< pointer array to be permuted in the same way */
   int                   len                 /**< length of arrays */
   );
+
 
 /** sort of four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
 extern
@@ -563,6 +572,14 @@ void SCIPsortDownInt(
   int*                  intarray,           /**< int array to be sorted */
   int                   len                 /**< length of arrays */
   );
+
+/** sort of two joint arrays of ints/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownIntInt(
+   int*                  intarray1,          /**< int array to be sorted */
+   int*                  intarray2,          /**< second int array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
 
 /** sort of two joint arrays of ints/pointers, sorted by first array in non-increasing order */
 extern
