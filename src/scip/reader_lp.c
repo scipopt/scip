@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.58 2008/06/20 13:52:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.59 2008/08/06 09:20:09 bzfwolte Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -2507,7 +2507,8 @@ SCIP_RETCODE SCIPwriteLp(
 
    /* create hashtable for storing aggregated variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggregatedVars, nvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, 
+         NULL) );
 
    /* check for aggregated variables in SOS1 constraints and output aggregations as linear constraints */
    for (c = 0; c < nConsSOS1; ++c)

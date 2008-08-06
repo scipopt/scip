@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.27 2008/06/04 17:00:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.28 2008/08/06 09:20:09 bzfwolte Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -619,7 +619,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
     
    /* initialize hash table */
    SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
-         hashGetKeySols, hashKeyEqSols, hashKeyValSols) );
+         hashGetKeySols, hashKeyEqSols, hashKeyValSols, NULL) );
    assert(heurdata->hashtable != NULL );
 
    return SCIP_OKAY;

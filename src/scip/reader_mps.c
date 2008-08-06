@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.93 2008/05/06 13:59:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.94 2008/08/06 09:20:09 bzfwolte Exp $"
 
 //#define SCIP_DEBUG
 
@@ -2540,7 +2540,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* create hashtable for storing aggregated variables */
    saggvars = nvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &aggvars, saggvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregatedHash, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregatedHash, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, 
+         NULL) );
    
    /* initialize sparse matrix */
    SCIP_CALL( initializeMatrix(scip, &matrix, (nvars * 2)) );

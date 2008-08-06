@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.42 2008/08/04 12:57:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.43 2008/08/06 09:20:09 bzfwolte Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -104,7 +104,8 @@ SCIP_RETCODE SCIPhashtableCreate(
    int                   tablesize,          /**< size of the hash table */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
-   SCIP_DECL_HASHKEYVAL((*hashkeyval))       /**< returns the hash value of the key */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr             /**< user pointer */
    );
 
 /** frees the hash table */

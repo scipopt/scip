@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.18 2008/04/17 17:49:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.19 2008/08/06 09:20:10 bzfwolte Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -65,6 +65,7 @@ struct SCIP_HashTable
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
    SCIP_HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
    int                   nlists;             /**< number of lists stored in the hash table */
+   void*                 userptr;            /**< user pointer */
 };
 
 /** element list to store single mappings of a hash map */

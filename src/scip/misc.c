@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.80 2008/08/04 12:57:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.81 2008/08/06 09:20:09 bzfwolte Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -272,6 +272,7 @@ SCIP_HASHTABLELIST* hashtablelistFind(
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr,            /**< user pointer */
    unsigned int          keyval,             /**< hash value of key */
    void*                 key                 /**< key to retrieve */
    )
@@ -284,9 +285,9 @@ SCIP_HASHTABLELIST* hashtablelistFind(
 
    while( hashtablelist != NULL )
    {
-      currentkey = hashgetkey(hashtablelist->element);
-      currentkeyval = hashkeyval(currentkey);
-      if( currentkeyval == keyval && hashkeyeq(currentkey, key) )
+      currentkey = hashgetkey(userptr, hashtablelist->element);
+      currentkeyval = hashkeyval(userptr, currentkey);
+      if( currentkeyval == keyval && hashkeyeq(userptr, currentkey, key) )
          return hashtablelist;
       hashtablelist = hashtablelist->next;
    }
@@ -301,6 +302,7 @@ void* hashtablelistRetrieve(
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr,            /**< user pointer */
    unsigned int          keyval,             /**< hash value of key */
    void*                 key                 /**< key to retrieve */
    )
@@ -308,7 +310,7 @@ void* hashtablelistRetrieve(
    SCIP_HASHTABLELIST* h;
 
    /* find hash list entry */
-   h = hashtablelistFind(hashtablelist, hashgetkey, hashkeyeq, hashkeyval, keyval, key);
+   h = hashtablelistFind(hashtablelist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
 
    /* return element */
    if( h != NULL )
@@ -353,7 +355,8 @@ SCIP_RETCODE SCIPhashtableCreate(
    int                   tablesize,          /**< size of the hash table */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
-   SCIP_DECL_HASHKEYVAL((*hashkeyval))       /**< returns the hash value of the key */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr             /**< user pointer */
    )
 {
    int i;
@@ -371,6 +374,7 @@ SCIP_RETCODE SCIPhashtableCreate(
    (*hashtable)->hashgetkey = hashgetkey;
    (*hashtable)->hashkeyeq = hashkeyeq;
    (*hashtable)->hashkeyval = hashkeyval;
+   (*hashtable)->userptr = userptr;
 
    /* initialize hash lists */
    for( i = 0; i < tablesize; ++i )
@@ -417,8 +421,8 @@ SCIP_RETCODE SCIPhashtableInsert(
    assert(element != NULL);
 
    /* get the hash key and its hash value */
-   key = hashtable->hashgetkey(element);
-   keyval = hashtable->hashkeyval(key);
+   key = hashtable->hashgetkey(hashtable->userptr, element);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
@@ -437,7 +441,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
    assert(hashtable->hashgetkey != NULL);
 
    /* check, if key is already existing */
-   if( SCIPhashtableRetrieve(hashtable, hashtable->hashgetkey(element)) != NULL )
+   if( SCIPhashtableRetrieve(hashtable, hashtable->hashgetkey(hashtable->userptr, element)) != NULL )
       return SCIP_KEYALREADYEXISTING;
 
    /* insert element in hash table */
@@ -464,11 +468,11 @@ void* SCIPhashtableRetrieve(
    assert(key != NULL);
 
    /* get the hash value of the key */
-   keyval = hashtable->hashkeyval(key);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    return hashtablelistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, 
-      hashtable->hashkeyval, keyval, key);
+      hashtable->hashkeyval, hashtable->userptr, keyval, key);
 }
 
 /** returns whether the given element exists in the table */
@@ -490,12 +494,12 @@ SCIP_Bool SCIPhashtableExists(
    assert(element != NULL);
 
    /* get the hash key and its hash value */
-   key = hashtable->hashgetkey(element);
-   keyval = hashtable->hashkeyval(key);
+   key = hashtable->hashgetkey(hashtable->userptr, element);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    return (hashtablelistFind(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq,
-         hashtable->hashkeyval, keyval, key) != NULL);
+         hashtable->hashkeyval, hashtable->userptr, keyval, key) != NULL);
 }
 
 /** removes element from the hash table, if it exists */
@@ -517,8 +521,8 @@ SCIP_RETCODE SCIPhashtableRemove(
    assert(element != NULL);
 
    /* get the hash key and its hash value */
-   key = hashtable->hashgetkey(element);
-   keyval = hashtable->hashkeyval(key);
+   key = hashtable->hashgetkey(hashtable->userptr, element);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* remove element from the list at the hash position */

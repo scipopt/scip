@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.14 2008/04/17 17:49:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.15 2008/08/06 09:20:10 bzfwolte Exp $"
 
 /**@file   type_misc.h
  * @brief  type definitions for miscellaneous datastructures
@@ -54,13 +54,13 @@ typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing
 #define SCIP_DECL_SORTPTRCOMP(x) int x (void* elem1, void* elem2)
 
 /** gets the key of the given element */
-#define SCIP_DECL_HASHGETKEY(x) void* x (void* elem)
+#define SCIP_DECL_HASHGETKEY(x) void* x (void* userptr, void* elem)
 
 /** returns TRUE iff both keys are equal */
-#define SCIP_DECL_HASHKEYEQ(x) SCIP_Bool x (void* key1, void* key2)
+#define SCIP_DECL_HASHKEYEQ(x) SCIP_Bool x (void* userptr, void* key1, void* key2)
 
 /** returns the hash value of the key */
-#define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* key)
+#define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
 
 
 

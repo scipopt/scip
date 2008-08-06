@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.95 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.96 2008/08/06 09:20:09 bzfwolte Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -180,7 +180,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->probinitsol = probinitsol;
    (*prob)->probexitsol = probexitsol;
    SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem, SCIP_HASHSIZE_NAMES,
-                  SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
+         SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    (*prob)->vars = NULL;
    (*prob)->varssize = 0;
    (*prob)->nvars = 0;
@@ -196,7 +196,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->deletedvarssize = 0;
    (*prob)->ndeletedvars = 0;
    SCIP_CALL( SCIPhashtableCreate(&(*prob)->consnames, blkmem, SCIP_HASHSIZE_NAMES,
-                  SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
+         SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    (*prob)->conss = NULL;
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;

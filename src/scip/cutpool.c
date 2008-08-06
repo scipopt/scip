@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.55 2008/05/06 10:01:28 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.56 2008/08/06 09:20:09 bzfwolte Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -265,7 +265,7 @@ SCIP_RETCODE SCIPcutpoolCreate(
    SCIP_CALL( SCIPclockCreate(&(*cutpool)->poolclock, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, SCIP_HASHSIZE_CUTPOOLS,
-                  hashGetKeyCut, hashKeyEqCut, hashKeyValCut) );
+         hashGetKeyCut, hashKeyEqCut, hashKeyValCut, NULL) );
 
    (*cutpool)->cuts = NULL;
    (*cutpool)->cutssize = 0;

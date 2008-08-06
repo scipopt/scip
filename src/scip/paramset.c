@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.47 2008/05/06 13:27:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.48 2008/08/06 09:20:09 bzfwolte Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -1252,7 +1252,7 @@ SCIP_RETCODE SCIPparamsetCreate(
    SCIP_ALLOC( BMSallocMemory(paramset) );
 
    SCIP_CALL( SCIPhashtableCreate(&(*paramset)->hashtable, blkmem, SCIP_HASHSIZE_PARAMS,
-                  hashGetKeyParam, SCIPhashKeyEqString, SCIPhashKeyValString) );
+         hashGetKeyParam, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
 
    (*paramset)->params = NULL;
    (*paramset)->nparams = 0;
