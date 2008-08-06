@@ -49,6 +49,7 @@ interface:
 - new method SCIPcutGenerationHeuristicCmir() in sepa_cmir.h
 - new method SCIPseparateRelaxedKnapsack() in cons_knapsack.h
 - new method SCIPgetCutoffdepth() which returns the depth of first node in active path that is marked being cutoff
+- added user pointer to callback methods of hash table
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -78,6 +79,8 @@ features:
 - struct SCIP_Stat has now two additional variables: nprobboundchgs, nprobholechgs; 
   these are used to fix the domain reduction counts in sepa.c, cons.c, branch.c, and prop.c; 
   this means, that now the domain reduction counts are reduced by those domain reduceds which are preformed during probing
+- improved pairwise presolving in cons_linear.c: reduced cache misses, reduced number of SCIPisStopped() calls and 
+  included detecting of redundant constraints with hash table in advance
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -161,6 +164,8 @@ fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): added extra simplex step if objlimit reached, fastmip and pricers enabled 
   in order to get dual solution for pricing.
 - fixed bug in cons_varbounds.c, concerning SCIPaddVarVlb() and SCIPaddVarVub()
+- fixed bugs in pairwise presolving of cons_linear.c concerning deletion of upgraded constraints and 
+  inconsistent update of nchgsides in case of coefsequal and coefsnegated  
 
 SCIP version 1.00
 =================
