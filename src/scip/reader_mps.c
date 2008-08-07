@@ -12,9 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.94 2008/08/06 09:20:09 bzfwolte Exp $"
-
-//#define SCIP_DEBUG
+#pragma ident "@(#) $Id: reader_mps.c,v 1.95 2008/08/07 15:27:26 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @brief  (extended) MPS file reader
@@ -423,6 +421,8 @@ SCIP_Bool mpsinputReadLine(
    SCIP_Bool is_empty;
    char* nexttok;
 
+
+
    do
    {
       mpsi->f0 = mpsi->f1 = mpsi->f2 = mpsi->f3 = mpsi->f4 = mpsi->f5 = 0;
@@ -432,6 +432,7 @@ SCIP_Bool mpsinputReadLine(
       /* Read until we have a not comment line. */
       do
       {
+         BMSclearMemoryArray(mpsi->buf, MPS_MAX_LINELEN);
          if (NULL == SCIPfgets(mpsi->buf, sizeof(mpsi->buf), mpsi->fp))
             return FALSE;
          mpsi->lineno++;
@@ -447,6 +448,8 @@ SCIP_Bool mpsinputReadLine(
 
       if (len < 80)
          clearFrom(mpsi->buf, len);
+
+      SCIPdebugMessage("line %d: <%s>\n", mpsi->lineno, mpsi->buf);
 
       assert(strlen(mpsi->buf) >= 80);
 
@@ -613,17 +616,17 @@ SCIP_RETCODE readName(
 {
    assert(mpsi != NULL);
 
+   SCIPdebugMessage("read problem name\n");
+
    /* This has to be the Line with the NAME section. */
    if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL || strcmp(mpsinputField0(mpsi), "NAME"))
    {
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-
+   
    /* Sometimes the name is omitted. */
    mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
-
-   /*printf("Problem name   : %s\n", mpsinputProbname(mpsi));*/
 
    /* This hat to be a new section */
    if (!mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL))
@@ -658,6 +661,8 @@ SCIP_RETCODE readObjsen(
    )
 {
    assert(mpsi != NULL);
+
+   SCIPdebugMessage("read objective sense\n");
 
    /* This has to be the Line with MIN or MAX. */
    if (!mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL))
@@ -708,6 +713,8 @@ SCIP_RETCODE readObjname(
 {
    assert(mpsi != NULL);
 
+   SCIPdebugMessage("read objective name\n");
+   
    /* This has to be the Line with the name. */
    if (!mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL)
    {
@@ -742,6 +749,9 @@ SCIP_RETCODE readRows(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+
+   SCIPdebugMessage("read rows\n");
+
    while(mpsinputReadLine(mpsi))
    {
       if (mpsinputField0(mpsi) != NULL)
@@ -836,6 +846,8 @@ SCIP_RETCODE readCols(
    SCIP_CONS*    cons;
    SCIP_VAR*     var;
    SCIP_Real     val;
+
+   SCIPdebugMessage("read columns\n");
 
    var = NULL;
    while(mpsinputReadLine(mpsi))
@@ -946,6 +958,8 @@ SCIP_RETCODE readRhs(
    SCIP_Real   lhs;
    SCIP_Real   rhs;
    SCIP_Real   val;
+
+   SCIPdebugMessage("read right hand sides\n");
 
    while(mpsinputReadLine(mpsi))
    {
@@ -1062,12 +1076,12 @@ SCIP_RETCODE readRanges(
    SCIP_Real   rhs;
    SCIP_Real   val;
 
+   SCIPdebugMessage("read ranges\n");
+
    while(mpsinputReadLine(mpsi))
    {
       if (mpsinputField0(mpsi) != NULL)
       {
-         /*printf("Range name     : %s\n", rngname);*/
-
          if (!strcmp(mpsinputField0(mpsi), "BOUNDS"))
             mpsinputSetSection(mpsi, MPS_BOUNDS);
          else if (!strcmp(mpsinputField0(mpsi), "SOS"))
@@ -1188,12 +1202,12 @@ SCIP_RETCODE readBounds(
    SCIP_VAR*   var;
    SCIP_Real   val;
 
+   SCIPdebugMessage("read bounds\n");
+
    while(mpsinputReadLine(mpsi))
    {
       if (mpsinputField0(mpsi) != 0)
       {
-         /*printf("Bound name     : %s\n", bndname);*/
-
          if (!strcmp(mpsinputField0(mpsi), "SOS"))
             mpsinputSetSection(mpsi, MPS_SOS);
          else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
@@ -1339,6 +1353,8 @@ SCIP_RETCODE readSOS(
    int consType = -1;
    int cnt = 0;
 
+   SCIPdebugMessage("read SOS constraints\n");
+   
    /* standard settings for SOS constraints: */
    initial = TRUE;
    separate = FALSE;
@@ -1569,8 +1585,6 @@ SCIP_RETCODE readMps(
    if( !error )
    {
       SCIP_CALL( SCIPsetObjsense(scip, mpsinputObjsense(mpsi)) );
-
-      /*printf("Objective sense: %s\n", (mpsinputObjsense(mpsi) == SCIP_OBJSENSE_MINIMIZE) ? "Minimize" : "Maximize");*/
    }
    mpsinputFree(scip, &mpsi);
 
