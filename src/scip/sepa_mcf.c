@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.45 2008/07/28 11:28:08 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.46 2008/08/07 01:58:51 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -114,7 +114,8 @@ struct SCIP_McfNetwork
 {
    SCIP_ROW***           nodeflowrows;       /**< nodeflowrows[v][k]: flow conservation constraint for node v and
                                               *   commodity k; NULL if this node does not exist in the commodity */
-   SCIP_Real**           nodeflowscales;     /**< scaling factors to convert nodeflowrows[v][k] into a +/-1 >= row */
+   SCIP_Real**           nodeflowscales;     /**< scaling factors to convert nodeflowrows[v][k] into a +/-1 <= row */
+   SCIP_Bool**           nodeflowinverted;   /**< does nodeflowrows[v][k] have to be inverted to fit the network structure? */
    SCIP_ROW**            arccapacityrows;    /**< arccapacity[a]: capacity constraint on arc a;
                                               *   NULL if uncapacitated */
    SCIP_Real*            arccapacityscales;  /**< scaling factors to convert arccapacity[a] into a <= row with
@@ -225,8 +226,9 @@ typedef struct nodepartition NODEPARTITION;
 #define RHSPOSSIBLE     2                    /**< we may use the constraint as a*x <= rhs */
 #define LHSASSIGNED     4                    /**< we have chosen to use the constraint as lhs <= a*x */
 #define RHSASSIGNED     8                    /**< we have chosen to use the constraint as a*x <= rhs */
-#define DISCARDED      16                    /**< we have chosen to not use the constraint */
-#define UNDIRECTED     32                    /**< the capacity candidate has two flow variables for a commodity */
+#define INVERTED       16                    /**< we need to invert the row */
+#define DISCARDED      32                    /**< we have chosen to not use the constraint */
+#define UNDIRECTED     64                    /**< the capacity candidate has two flow variables for a commodity */
 
 
 /** creates an empty MCF network data structure */
@@ -241,6 +243,7 @@ SCIP_RETCODE mcfnetworkCreate(
    SCIP_CALL( SCIPallocMemory(scip, mcfnetwork) );
    (*mcfnetwork)->nodeflowrows = NULL;
    (*mcfnetwork)->nodeflowscales = NULL;
+   (*mcfnetwork)->nodeflowinverted = NULL;
    (*mcfnetwork)->arccapacityrows = NULL;
    (*mcfnetwork)->arccapacityscales = NULL;
    (*mcfnetwork)->arcsources = NULL;
@@ -280,6 +283,7 @@ SCIP_RETCODE mcfnetworkFree(
          }
          SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowrows[v]);
          SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowscales[v]);
+         SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowinverted[v]);
       }
       for( a = 0; a < (*mcfnetwork)->narcs; a++ )
       {
@@ -290,6 +294,7 @@ SCIP_RETCODE mcfnetworkFree(
       }
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowrows);
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowscales);
+      SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->nodeflowinverted);
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arccapacityrows);
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arccapacityscales);
       SCIPfreeMemoryArrayNull(scip, &(*mcfnetwork)->arcsources);
@@ -414,14 +419,17 @@ SCIP_RETCODE mcfnetworkFill(
    /* allocate memory for arrays and initialize with default values */
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows, mcfnetwork->nnodes) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales, mcfnetwork->nnodes) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowinverted, mcfnetwork->nnodes) );
    for( v = 0; v < mcfnetwork->nnodes; v++ )
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowrows[v], mcfnetwork->ncommodities) );
       SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowscales[v], mcfnetwork->ncommodities) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &mcfnetwork->nodeflowinverted[v], mcfnetwork->ncommodities) );
       for( k = 0; k < mcfnetwork->ncommodities; k++ )
       {
          mcfnetwork->nodeflowrows[v][k] = NULL;
          mcfnetwork->nodeflowscales[v][k] = 0.0;
+         mcfnetwork->nodeflowinverted[v][k] = FALSE;
       }
    }
 
@@ -472,6 +480,7 @@ SCIP_RETCODE mcfnetworkFill(
          if( commoditysigns[rk] == -1 )
             scale *= -1.0;
          mcfnetwork->nodeflowscales[v][k] = scale;
+         mcfnetwork->nodeflowinverted[v][k] = ((flowrowsigns[r] & INVERTED) != 0);
       }
    }
 
@@ -493,6 +502,7 @@ SCIP_RETCODE mcfnetworkFill(
       r = SCIProwGetLPPos(capacityrow);
       assert(0 <= r && r < nrows);
       assert((capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
+      assert((capacityrowsigns[r] & INVERTED) == 0);
       assert(mcfdata->rowarcid[r] == globala);
 
       SCIP_CALL( SCIPcaptureRow(scip, capacityrow) );
@@ -607,7 +617,8 @@ void mcfnetworkPrint(
             printf("  commodity %2d: ", k);
             if( mcfnetwork->nodeflowrows[v][k] != NULL )
             {
-               printf("<%s> [%+g]\n", SCIProwGetName(mcfnetwork->nodeflowrows[v][k]), mcfnetwork->nodeflowscales[v][k]);
+               printf("<%s> [%+g] [inv:%d]\n", SCIProwGetName(mcfnetwork->nodeflowrows[v][k]), 
+                      mcfnetwork->nodeflowscales[v][k], mcfnetwork->nodeflowinverted[v][k]);
                /*SCIProwPrint(mcfnetwork->nodeflowrows[v][k], NULL);*/
             }
             else
@@ -673,8 +684,9 @@ void printCommodities(
       for( r = 0; r < nrows; r++ )
       {
          if( rowcommodity[r] == k )
-            printf(" row <%s>: node %d [sign:%+d]\n", SCIProwGetName(rows[r]), rownodeid != NULL ? rownodeid[r] : -1,
-                   (flowrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1);
+            printf(" row <%s>: node %d [sign:%+d, inv:%+d]\n", SCIProwGetName(rows[r]), rownodeid != NULL ? rownodeid[r] : -1,
+                   (flowrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1,
+                   (flowrowsigns[r] & INVERTED) != 0 ? -1 : +1);
       }
       printf("\n");
    }
@@ -689,7 +701,9 @@ void printCommodities(
          for( r = 0; r < nrows; r++ )
          {
             if( rownodeid[r] == v )
-               printf(" row <%s> [sign:%+d]\n", SCIProwGetName(rows[r]), (flowrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1);
+               printf(" row <%s> [sign:%+d, inv:%+d]\n", SCIProwGetName(rows[r]),
+                      (flowrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1,
+                      (flowrowsigns[r] & INVERTED) != 0 ? -1 : +1);
          }
          printf("\n");
       }
@@ -1372,6 +1386,7 @@ void addFlowrowToCommodity(
    SCIP_Real* rowvals;
    int rowlen;
    int rowscale;
+   SCIP_Bool invertrow;
    int r;
    int k;
    int i;
@@ -1384,6 +1399,11 @@ void addFlowrowToCommodity(
 
    r = SCIProwGetLPPos(row);
    assert(r >= 0);
+
+   /* check if row has to be inverted */
+   invertrow = ((rowsign & INVERTED) != 0);
+   rowsign &= ~INVERTED;
+
    assert(rowcommodity[r] == -1);
    assert((flowrowsigns[r] | rowsign) == flowrowsigns[r]);
    assert((rowsign & (LHSPOSSIBLE | RHSPOSSIBLE)) == rowsign);
@@ -1432,10 +1452,18 @@ void addFlowrowToCommodity(
       rowscale = +1;
    else
       rowscale = -1;
+
+   /* reintroduce inverted flag */
+   if( invertrow )
+   {
+      rowsign |= INVERTED;
+      rowscale *= -1;
+   }
    flowrowsigns[r] |= rowsign;
 
-   SCIPdebugMessage("adding flow row %d <%s> with sign %+d to commodity %d [score:%g]\n",
-                    r, SCIProwGetName(row), rowscale, k, mcfdata->flowrowscores[r]);
+   SCIPdebugMessage("adding flow row %d <%s> with sign %+d%s to commodity %d [score:%g]\n",
+                    r, SCIProwGetName(row), rowscale, (rowsign & INVERTED) != 0 ? " (inverted)" : "",
+                    k, mcfdata->flowrowscores[r]);
    /*SCIPdebug( SCIPprintRow(scip, row, NULL) );*/
 
    /* add row to commodity */
@@ -1518,6 +1546,7 @@ void invertCommodity(
 
       rowsign = flowrowsigns[r];
       assert((rowsign & (LHSASSIGNED | RHSASSIGNED)) != 0);
+      assert((rowsign & INVERTED) == 0);
 
       flowrowsigns[r] &= ~(LHSASSIGNED | RHSASSIGNED);
       if( (rowsign & LHSASSIGNED) != 0 )
@@ -1582,8 +1611,8 @@ void deleteCommodity(
 
       SCIPdebugMessage(" -> removing row <%s> from commodity\n", SCIProwGetName(row));
 
-      /* remove the lhs/rhs assignment */
-      flowrowsigns[r] &= ~(LHSASSIGNED | RHSASSIGNED);
+      /* remove the lhs/rhs assignment and the inverted flag */
+      flowrowsigns[r] &= ~(LHSASSIGNED | RHSASSIGNED | INVERTED);
 
       /* remove row from commodity */
       rowcommodity[r] = -1;
@@ -1661,12 +1690,7 @@ void getFlowrowFit(
       return;
    if( (flowrowsign & (LHSPOSSIBLE | RHSPOSSIBLE)) == 0 )
       return;
-
-   /* initialize flow row sign to use if commodity is inverted */
-   if( commoditysigns == NULL || commoditysigns[k] == 0 )
-      invflowrowsign = flowrowsign;
-   else
-      invflowrowsign = 0;
+   invflowrowsign = flowrowsign;
 
    /* check whether the row fits w.r.t. the signs of the coefficients */
    rowcols = SCIProwGetCols(row);
@@ -1722,13 +1746,28 @@ void getFlowrowFit(
 
    if( flowrowsign != 0 )
    {
+      /* flow row fits without inverting anything */
       *rowsign = flowrowsign;
       *invertcommodity = FALSE;
    }
    else if( invflowrowsign != 0 )
    {
-      *rowsign = invflowrowsign;
-      *invertcommodity = TRUE;
+      /* this must be an inequality */
+      assert((flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != (LHSPOSSIBLE | RHSPOSSIBLE));
+
+      /* flow row fits only if row or commodity is inverted */
+      if( commoditysigns == NULL || commoditysigns[k] == 0 )
+      {
+         /* commodity can be inverted */
+         *rowsign = invflowrowsign;
+         *invertcommodity = TRUE;
+      }
+      else
+      {
+         /* row has to be inverted */
+         *rowsign = (invflowrowsign | INVERTED);
+         *invertcommodity = FALSE;
+      }
    }
    else
    {
@@ -1814,16 +1853,27 @@ void getNextFlowrow(
          /* do we have a winner? */
          if( flowrowsign != 0 )
          {
-            int r = SCIProwGetLPPos(row);
-            assert(0 <= r && r < SCIPgetNLPRows(scip));
-            assert(flowrowscores[r] > 0.0);
+            int r;
+            SCIP_Real score;
 
-            if( flowrowscores[r] > bestscore )
+            r = SCIProwGetLPPos(row);
+            assert(0 <= r && r < SCIPgetNLPRows(scip));
+            score = flowrowscores[r];
+            assert(score > 0.0);
+
+            /* If we have to invert the row, this will lead to a negative slack variable in the MIR cut,
+             * which needs to be substituted in the end. We like to avoid this and therefore reduce the
+             * score.
+             */
+            if( (flowrowsign & INVERTED) != 0 )
+               score *= 0.75;
+
+            if( score > bestscore )
             {
                bestrow = row;
                bestrowsign = flowrowsign;
                bestinvertcommodity = invertcommodity;
-               bestscore = flowrowscores[r];
+               bestscore = score;
             }
          }
       }
@@ -1925,6 +1975,7 @@ SCIP_RETCODE extractFlow(
       if( newrowsign == 0 )
          continue;
       assert(!newinvertcommodity);
+      assert((newrowsign & INVERTED) == 0);
 
       /* start new commodity */
       SCIP_CALL( createNewCommodity(scip, mcfdata) );
@@ -2321,6 +2372,8 @@ SCIP_RETCODE getNodeSilimarityScore(
       valsign = (rowvals[i] > 0.0 ? +1 : -1);
       if( (flowrowsigns[r] & LHSASSIGNED) != 0 )
          valsign *= -1;
+      if( (flowrowsigns[r] & INVERTED) != 0 )
+         valsign *= -1;
 
       /* check if this arc is also member of the base row */
       if( basearcpattern[arcid] != 0 )
@@ -2511,6 +2564,8 @@ SCIP_RETCODE extractNodes(
          rowscale = +1;
       else
          rowscale = -1;
+      if( (flowrowsigns[r] & INVERTED) != 0 )
+         rowscale *= -1;
       if( commoditysigns[basecommodity] == -1 )
          rowscale *= -1;
 
@@ -3030,6 +3085,8 @@ void getIncidentNodes(
          /* check whether the flow row is inverted */
          scale = +1;
          if( (flowrowsigns[r] & LHSASSIGNED) != 0 )
+            scale *= -1;
+         if( (flowrowsigns[r] & INVERTED) != 0 )
             scale *= -1;
          if( commoditysigns[k] == -1 )
             scale *= -1;
@@ -4354,6 +4411,7 @@ SCIP_RETCODE generateClusterCuts(
 {
    SCIP_ROW***       nodeflowrows      = mcfnetwork->nodeflowrows;
    SCIP_Real**       nodeflowscales    = mcfnetwork->nodeflowscales;
+   SCIP_Bool**       nodeflowinverted  = mcfnetwork->nodeflowinverted;
    SCIP_ROW**        arccapacityrows   = mcfnetwork->arccapacityrows;
    SCIP_Real*        arccapacityscales = mcfnetwork->arccapacityscales;
    int*              colcommodity      = mcfnetwork->colcommodity;
@@ -4452,6 +4510,7 @@ SCIP_RETCODE generateClusterCuts(
    {
       int v;
       int a;
+      int k;
 #ifndef USECMIRDELTAS /*????????????????????*/
       int d;
 #ifdef SEPARATEFLOWCUTS
@@ -4490,8 +4549,6 @@ SCIP_RETCODE generateClusterCuts(
       /* Identify commodities with positive T -> S demand */
       for( v = 0; v < nnodes; v++ )
       {
-         int k;
-
          /* check if node belongs to S */
          if( !nodeInPartition(nodepartition, partition, v) )
             continue;
@@ -4508,17 +4565,36 @@ SCIP_RETCODE generateClusterCuts(
                rhs = SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]);
             else
                rhs = SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]);
+            if( nodeflowinverted[v][k] )
+               rhs *= -1.0;
 
             comcutdemands[k] += rhs * nodeflowscales[v][k];
          }
       }
 
-#ifdef SCIP_DEBUG
-      for( v = 0; v < ncommodities; v++ )
+      /* check if there is at least one useful commodity */
+      if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
       {
-         SCIPdebugMessage(" -> commodity %d: cutdemand=%g\n", v, comcutdemands[v]);
+         for( k = 0; k < ncommodities; k++ )
+         {
+            /* in the directed case, use commodities with positive demand (negative -d_k) */
+            SCIPdebugMessage(" -> commodity %d: cutdemand=%g\n", k, comcutdemands[k]);
+            if( SCIPisNegative(scip, comcutdemands[k]) )
+               break;
+         }
       }
-#endif
+      else
+      {
+         for( k = 0; k < ncommodities; k++ )
+         {
+            /* in the undirected case, use commodities with non-zero demand */
+            SCIPdebugMessage(" -> commodity %d: cutdemand=%g\n", k, comcutdemands[k]);
+            if( !SCIPisZero(scip, comcutdemands[k]) )
+               break;
+         }
+      }
+      if( k == ncommodities )
+         continue;
 
       /* set weights of capacity rows that go from T to S, i.e., a \in A^- */
       for( a = 0; a < narcs; a++ )
@@ -4601,7 +4677,6 @@ SCIP_RETCODE generateClusterCuts(
          for( j = 0; j < rowlen; j++ )
          {
             SCIP_Real coef;
-            int k;
             int c;
 
             coef = rowvals[j] * arccapacityscales[a];
@@ -4664,8 +4739,6 @@ SCIP_RETCODE generateClusterCuts(
       /* set weights of node flow conservation constraints in c-MIR aggregation */
       for( v = 0; v < nnodes; v++ )
       {
-         int k;
-
          /* aggregate flow conservation constraints of the 'active' commodities */
          for( k = 0; k < ncommodities; k++ )
          {
@@ -4723,12 +4796,14 @@ SCIP_RETCODE generateClusterCuts(
                if( !SCIPisFeasPositive(scip, feasibility) )
                {
                   rowweights[r] = scale * nodeflowscales[v][k];
+                  if( nodeflowinverted[v][k] )
+                     rowweights[r] *= -1.0;
                   SCIPdebugMessage(" -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
                                    v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, rowweights[r],
                                    SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
                   /*SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));*/
 #ifdef SEPARATEFLOWCUTS
-                  if( rowweights[r] > 0.0 )
+                  if( nodeflowscales[v][k] > 0.0 )
                      baserhs += rowweights[r] * (SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
                   else
                      baserhs += rowweights[r] * (SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
@@ -4825,6 +4900,9 @@ SCIP_RETCODE generateClusterCuts(
             SCIP_Real* rowvals;
             int rowlen;
             SCIP_Real rowweight;
+            SCIP_Real rowlhs;
+            SCIP_Real rowrhs;
+            SCIP_Real rowconstant;
             SCIP_Real violationdelta;
             int r;
             int j;
@@ -4852,10 +4930,14 @@ SCIP_RETCODE generateClusterCuts(
             rowvals = SCIProwGetVals(arccapacityrows[a]);
             rowlen = SCIProwGetNLPNonz(arccapacityrows[a]);
             rowweight = rowweights[r]/bestdelta;
-            if( rowweight > 0.0 )
-               violationdelta = rowweight * (SCIProwGetRhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
+            rowlhs = SCIProwGetLhs(arccapacityrows[a]);
+            rowrhs = SCIProwGetRhs(arccapacityrows[a]);
+            rowconstant = SCIProwGetConstant(arccapacityrows[a]);
+            if( SCIPisInfinity(scip, rowrhs) || (!SCIPisInfinity(scip, -rowlhs) && rowweight < 0.0) )
+               violationdelta = rowweight * (rowlhs - rowconstant);
             else
-               violationdelta = rowweight * (SCIProwGetLhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
+               violationdelta = rowweight * (rowrhs - rowconstant);
+
             for( j = 0; j < rowlen; j++ )
             {
                SCIP_VAR* var;
