@@ -81,6 +81,7 @@ features:
   this means, that now the domain reduction counts are reduced by those domain reduceds which are preformed during probing
 - improved pairwise presolving in cons_linear.c: reduced cache misses, reduced number of SCIPisStopped() calls and 
   included detecting of redundant constraints with hash table in advance
+- The SoPlex LPI can now write basis files.
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
