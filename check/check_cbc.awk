@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.4 2008/08/04 16:22:23 bzfheinz Exp $
+# $Id: check_cbc.awk,v 1.5 2008/08/11 17:53:07 bzfheinz Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator
@@ -116,6 +116,7 @@ BEGIN {
    tottime    = 0.0;
    aborted    = 1;
    timelimit  = 0.0;
+   cbcversion = "";
 }
 
 #
@@ -124,6 +125,15 @@ BEGIN {
 /^Coin:/ {
    $0 = substr($0, 6, length($0)-5);
 }
+
+#
+# Cbc version
+#
+/^Coin Cbc and Clp/ {
+   split($7, v, ",");
+   cbcversion = v[1];
+}
+
 #
 # settings
 #
@@ -361,5 +371,5 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
-   printf("@01 CBC:%s\n", settings);
+   printf("@01 CBC(%s):%s\n", cbcversion, settings);
 }

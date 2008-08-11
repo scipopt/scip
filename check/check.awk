@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.67 2008/08/11 08:19:30 bzfheinz Exp $
+# $Id: check.awk,v 1.68 2008/08/11 17:53:07 bzfheinz Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -90,6 +90,7 @@ BEGIN {
    pass = 0;
    settings = "default";
    lpsname = "";
+   lpsversion = "";
    scipversion = "";
    conftottime = 0.0;
    overheadtottime = 0.0;
@@ -170,7 +171,10 @@ BEGIN {
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
 /^SCIP version/ {
+   # get SCIP version 
    scipversion = $3; 
+
+   # get name of LP solver
    if( $13 == "SOPLEX")
       lpsname = "spx";
    else if ($13 == "SOPLEX")
@@ -179,6 +183,13 @@ BEGIN {
       lpsname = "none";
    else if ($13 == "Clp")
       lpsname = "clp";
+
+   # get LP solver version 
+   if( NF >= 14 ) 
+   {
+      split($14, v, "]");
+      lpsversion = v[1];
+   }
 }
 /^SCIP> SCIP> / { $0 = substr($0, 13, length($0)-12); }
 /^SCIP> / { $0 = substr($0, 7, length($0)-6); }
@@ -542,5 +553,5 @@ END {
    printf("\\end{document}\n")                                           >TEXFILE;
 
    printf("@02 timelimit: %g\n", timelimit);
-   printf("@01 SCIP(%s)%s:%s\n", scipversion, lpsname, settings);
+   printf("@01 SCIP(%s)%s(%s):%s\n", scipversion, lpsname, lpsversion, settings);
 }
