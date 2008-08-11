@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.66 2008/06/24 08:54:46 bzfberth Exp $
+# $Id: check.awk,v 1.67 2008/08/11 08:19:30 bzfheinz Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -89,6 +89,8 @@ BEGIN {
    fail = 0;
    pass = 0;
    settings = "default";
+   lpsname = "";
+   scipversion = "";
    conftottime = 0.0;
    overheadtottime = 0.0;
    timelimit = 0.0;
@@ -167,6 +169,17 @@ BEGIN {
 }
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
+/^SCIP version/ {
+   scipversion = $3; 
+   if( $13 == "SOPLEX")
+      lpsname = "spx";
+   else if ($13 == "SOPLEX")
+      lpsname = "cpx";
+   else if ($13 == "NONE")
+      lpsname = "none";
+   else if ($13 == "Clp")
+      lpsname = "clp";
+}
 /^SCIP> SCIP> / { $0 = substr($0, 13, length($0)-12); }
 /^SCIP> / { $0 = substr($0, 7, length($0)-6); }
 /^loaded parameter file/ { settings = $4; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
@@ -529,5 +542,5 @@ END {
    printf("\\end{document}\n")                                           >TEXFILE;
 
    printf("@02 timelimit: %g\n", timelimit);
-   printf("@01 SCIP:%s\n", settings);
+   printf("@01 SCIP(%s)%s:%s\n", scipversion, lpsname, settings);
 }

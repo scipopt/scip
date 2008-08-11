@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.50 2008/04/17 19:30:44 bzfpfets Exp $
+# $Id: check.sh,v 1.51 2008/08/11 08:19:30 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -26,6 +26,7 @@ DISPFREQ=$9
 CONTINUE=${10}
 LOCK=${11}
 VERSION=${12}
+LPS=${13}
 
 SETDIR=../settings
 
@@ -38,9 +39,9 @@ then
     mkdir locks
 fi
 
-LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.lock
-RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.run.$BINID
-DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.done
+LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
+RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.run.$BINID
+DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.done
 
 OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
