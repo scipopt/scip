@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.71 2008/08/03 21:09:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.72 2008/08/11 20:15:57 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -79,6 +79,7 @@ class SPxSCIP : public SPxSolver
    Real             m_objLoLimit;       /**< lower objective limit */
    Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
+   bool             m_lpinfo;           /**< storing whether output is turned on */
 
 public:
    SPxSCIP(const char* probname = NULL) 
@@ -136,6 +137,16 @@ public:
       m_fromscratch = fs;
    }
 
+   bool getLpInfo() const
+   {
+      return m_lpinfo;
+   }
+
+   void setLpInfo(bool li)
+   {
+      m_lpinfo = li;
+   }
+
    void setProbname(const char* probname)
    {
       assert(probname != NULL);
@@ -170,10 +181,13 @@ public:
    {
       try
       {
-         if( getFromScratch() )
+         if ( getFromScratch() )
             SPxSolver::reLoad();
+	 if ( getLpInfo() )
+	    Param::setVerbose(2);
+	 else 
+	    Param::setVerbose(0);
          m_stat = SPxSolver::solve();
-     
       }
 #if SOPLEX_VERSION >= 133
       catch(SPxException x)
@@ -2587,7 +2601,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->spx->getFromScratch();
       break;
    case SCIP_LPPAR_LPINFO:
-      *ival = (Param::verbose() > 0 ? TRUE : FALSE);
+      *ival = lpi->spx->getLpInfo();
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->spx->terminationIter();
@@ -2622,10 +2636,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
-      if ( ival )
-         Param::setVerbose(2);
-      else 
-         Param::setVerbose(0);
+      lpi->spx->setLpInfo(bool(ival));
       break;
    case SCIP_LPPAR_LPITLIM:
       lpi->spx->setTerminationIter(ival);
