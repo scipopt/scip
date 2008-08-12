@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.46 2008/08/07 01:58:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.47 2008/08/12 12:04:23 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -3604,11 +3604,11 @@ SCIP_RETCODE mcfnetworkExtract(
          if( mcfdata.flowtype == SCIP_MCFFLOWTYPE_AUTO )
             mcfdata.flowtype = SCIP_MCFFLOWTYPE_CONTINUOUS;
       }
-   }
 
 #ifdef SCIP_DEBUG
-   printCommodities(scip, &mcfdata);
+      printCommodities(scip, &mcfdata);
 #endif
+   }
 
    /* allocate temporary memory for component finding */
    SCIP_CALL( SCIPallocBufferArray(scip, &nodevisited, mcfdata.nnodes) );
