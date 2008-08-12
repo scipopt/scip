@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.282 2008/08/06 09:20:08 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.283 2008/08/12 12:17:26 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4199,6 +4199,8 @@ SCIP_RETCODE convertBinaryEquality(
 /* processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
  * into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that is
  * implicitly integral by this constraint
+ *
+ * @todo Check whether a more clever way of avoiding aggregation of variables containing implicitly integer variables can help.
  */
 static
 SCIP_RETCODE convertLongEquality(
@@ -4221,6 +4223,7 @@ SCIP_RETCODE convertLongEquality(
    int ncontvars;
    int contvarpos;
    int nintvars;
+   int nimplvars;
    int intvarpos;
    int v;
 
@@ -4246,6 +4249,7 @@ SCIP_RETCODE convertLongEquality(
    ncontvars = 0;
    contvarpos = -1;
    nintvars = 0;
+   nimplvars = 0;
    intvarpos = -1;
    for( v = 0; v < consdata->nvars; ++v )
    {
@@ -4275,6 +4279,8 @@ SCIP_RETCODE convertLongEquality(
       coefsintegral = coefsintegral && SCIPisIntegral(scip, val);
       varsintegral = varsintegral && (slacktype != SCIP_VARTYPE_CONTINUOUS);
       iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_VARTYPE_IMPLINT);
+      if ( slacktype == SCIP_VARTYPE_IMPLINT )
+	 ++nimplvars;
 
       /* update candidates for continuous -> implint and integer -> implint conversion */
       if( iscont )
@@ -4325,10 +4331,12 @@ SCIP_RETCODE convertLongEquality(
 
    /* if the slack variable is of integer type, and the constraint itself may take fractional values,
     * we cannot aggregate the variable, because the integrality condition would get lost
+    * Similarly, if there are implicitly integral variables we cannot aggregate, since we might
+    * loose the integrality condition for this variable.
     */
    if( bestslackpos >= 0
       && (bestslacktype == SCIP_VARTYPE_CONTINUOUS || bestslacktype == SCIP_VARTYPE_IMPLINT
-         || (coefsintegral && varsintegral)) )
+         || (coefsintegral && varsintegral && nimplvars == 0)) )
    {
       SCIP_VAR* slackvar;
       SCIP_Real* scalars;
