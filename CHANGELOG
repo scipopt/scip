@@ -167,6 +167,7 @@ fixed bugs:
 - fixed bug in cons_varbounds.c, concerning SCIPaddVarVlb() and SCIPaddVarVub()
 - fixed bugs in pairwise presolving of cons_linear.c concerning deletion of upgraded constraints and 
   inconsistent update of nchgsides in case of coefsequal and coefsnegated  
+- avoiding aggregation that removes information about implicitly integer variables (removes bug)
 
 SCIP version 1.00
 =================
