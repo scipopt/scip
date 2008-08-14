@@ -37,9 +37,13 @@
  *
  * SCIP is a program and library to solve constraint integer programs (CIPs).
  *
- * SCIP is based on SIP (Solving Integer Programs) by Alexander Martin. The main developer of SCIP was Tobias Achterberg (2002-2007). The current developers are Timo Berthold and Kati Wolter.
+ * SCIP is based on SIP (Solving Integer Programs) by Alexander Martin. The main developer of SCIP
+ * was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati Wolter. The
+ * persons listed above have contributed or are currently contributing to SCIP.
  *
  * - \ref CODE    "Coding style guidelines"
+ * - \ref MAKE    "Makefiles"
+ * - \ref START   "How to start a new project"
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref CONS    "How to add constraint handlers"
  * - \ref PRICER  "How to add variable pricers"
@@ -55,6 +59,7 @@
  * - \ref DISP    "How to add display columns"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
+ * - \ref DEBUG   "Debugging"
  * - \ref FAQ     "Frequently asked questions"
 */
 
@@ -78,6 +83,55 @@
  * - Document functions, parameters and variables doxygen conform.
  *
  * As an example have a look at tree.c .
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page MAKE Makefiles
+ *
+ * SCIP contains a makefile system, which allows the individual setting of several parameters. For
+ * instance, the following settings are supported:
+ *
+ * - <code>OPT=\<dbg|opt\></code> Here <code>dbg</code> turns on the debug mode of SCIP. This enables
+ *   asserts and avoids macros for several function in order to ease debugging. The default is
+ *   <code>opt</code>, which enables the optimized mode.
+ *
+ * - <code>LPS=\<clp|cpx|msk|spx|xprs\></code> This determines the LP-solver, which should have been
+ *   installed separately from SCIP. The options are the following:
+ *      - <code>clp</code>: COIN Clp LP-solver
+ *      - <code>cpx</code>: CPLEX LP-solver
+ *      - <code>msk</code>: Mosek LP-solver
+ *      - <code>spx</code>: SoPlex LP-solver (default)
+ *      - <code>xprs></code>: XPress LP-solver
+ * .
+ * - <code>ZIMPL=<true|false></code> Turns direct support of ZIMPL in SCIP on or off, respectively.
+ * 
+ * - <code>READLINE=<true|false></code> Turns support via the readline library on or off, respectively.
+ *
+ * The SCIP makefiles are structured as follows.
+ *
+ * - <code>Makefile</code> This is the basic makefile in the SCIP root directory. It loads
+ *   additional makefile information depending on the parameters set.
+ * - <code>make/make.project</code> This file contains definitions that are useful for all codes
+ *   that use SCIP, for instance, the examples.
+ * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt\></code> These file contain system/compiler specific
+ *   definitions. If you have a yet unsupported compiler, you could copy one of these and modify it
+ *   accordingly.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page START How to start a new project
+ *
+ * If you want to use SCIP to write your own branch-and-cut or branch-and-cut-and-price code, below
+ * you find some hints of how to get started.
+ *
+ * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
+ *   directory). For branch-and-cut, the linear ordering example <code>LOP</code> should be a good
+ *   starting point. If you use column generation have a look at <code>SamplePricer</code>.
+ * - Edit the makefile according to your needs - in particular, include a correct path to the SCIP
+ *   root at the top. Moreover, you should rename the targets and source file names.
+ * - Once you have edited the makefile, you can use all the flags that can be used in SCIP to
+ *   compile your code, see \ref MAKE.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3007,6 +3061,28 @@
  *     The user should not interfere with this internal memory management. Accessing
  *     the string parameter through the given valueptr is okay as long as it does not
  *     involve reallocating memory for the string.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page DEBUG Debugging
+ *
+ *  If you want to debug your own code that uses SCIP, there are some tricks that we collect as
+ *  follows - check whether one of these helps in your case.
+ * 
+ *  - Use the debug mode (<code>make OPT=dbg</code>, see \ref MAKE) and run the code.
+ *  - Use asserts in your code (see \ref CODE).
+ *  - Turn on additional debug output by placing <code>\#define SCIP_DEBUG</code> at the top of your
+ *    files. This will output messages included in the code using <code>SCIPdebugMessage()</code>.
+ *  - If available on your system, you can use software like valgrind to check for uninitialized
+ *    values or segmentation faults.
+ *  - For checking the usage of SCIP memory, you can use
+ *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use. This is
+ *    almost always only useful after a <code>SCIPfree()</code> call.
+ *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
+ *    you define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
+ *    containing a solution in SCIP format. This solution is the read and it is check for every cut,
+ *    whether the solution violates the cut.
+ * 
  */
 
 /**@page FAQ Frequently Asked Questions
