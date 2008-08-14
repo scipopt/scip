@@ -73,6 +73,7 @@
       A third way is to implement your own plugins into SCIP. 
       This is explained in the HowTos of all plugin types, which you can find at the 
       <a href="http://scip.zib.de/doc/html/index.html">doxygen documentation</a>.
+      See also <a href="http://scip.zib.de/doc/html/START.html">How to start a new project</a>.
     </p>
     <p class="q">
       <a name="Q6"> I would like to check whether some functionality is implemented into SCIP. 
@@ -143,6 +144,12 @@
       Yes. There is a setting-file settings/emphasis/cpsolver.set. 
       Furthermore, you can compile SCIP without any LP-Solver by &quot;make LPS=none&quot;.
     </p>    
+    <p class="q">
+       <a name="Q19">How can I use the SCIP makefiles?</a>
+    </p>
+    <p class="a">
+      See <a href="http://scip.zib.de/doc/html/MAKE.html">Makefiles</a>.
+    </p>
     <p class="q">
        <a name="Q19">What is this business with .a and .so libraries in the directory <tt>lib/</tt>?</a>
     </p>
@@ -312,6 +319,12 @@
       (i.e. the case that the return code is not SCIP_OKAY) on your own. 
     </p>		   
 <h4><a name="Section4">Using SCIP as a Branch-Cut-And-Price-Framework</a></h4>
+    <p class="q">
+      <a name="Q18">How do I start a project?</a>
+    </p>
+    <p class="a">
+      See <a href="http://scip.zib.de/doc/html/START.html">How to start a new project</a>.
+    </p>
     <p class="q">
       <a name="Q19">What types of plugins can I add and how do I do this?</a>
     </p>
