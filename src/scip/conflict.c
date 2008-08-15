@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.135 2008/05/06 08:59:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.136 2008/08/15 16:23:22 bzfpfets Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -4872,7 +4872,6 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
                                               *   infeasible upwards branch, or NULL */
    )
 {
-   SCIP_VAR* var;
    int* cstat;
    int* rstat;
    SCIP_Real oldlb;
@@ -4927,8 +4926,6 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    oldlb = col->lb;
    oldub = col->ub;
 
-   var = SCIPcolGetVar(col);
-
    /* is down branch infeasible? */
    if( col->sbdownvalid && SCIPsetIsGE(set, col->sbdown, lp->cutoffbound) )
    {
@@ -4938,7 +4935,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIP_RETCODE retcode;
 
          SCIPdebugMessage("analyzing conflict on infeasible downwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPtreeGetCurrentDepth(tree));
+            SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
+	    SCIPtreeGetCurrentDepth(tree));
 
          conflict->nsbcalls++;
 
@@ -4998,7 +4996,8 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
          SCIP_RETCODE retcode;
 
          SCIPdebugMessage("analyzing conflict on infeasible upwards strongbranch for variable <%s>[%g,%g] in depth %d\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPtreeGetCurrentDepth(tree));
+            SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
+	    SCIPtreeGetCurrentDepth(tree));
 
          conflict->nsbcalls++;
 
