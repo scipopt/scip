@@ -12,25 +12,24 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.5 2008/04/21 18:51:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.6 2008/08/15 19:47:09 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
- * An indicator constraint is given by a binary variable z and an
- * inequality ax <= b. It states that if z = 1 then ax <= b holds.
+ * An indicator constraint is given by a binary variable \f$z\f$ and an inequality \f$ax \leq
+ * b\f$. It states that if \f$z = 1\f$ then \f$ax \leq b\f$ holds.
  *
- * This constraint is handled by adding a slack variable s: ax - s <= b
- * with s >= 0. The constraint is enforced by fixing s to 0 if z = 1.
+ * This constraint is handled by adding a slack variable \f$s:\; ax - s \leq b\f$ with \f$s \geq
+ * 0\f$. The constraint is enforced by fixing \f$s\f$ to 0 if \f$z = 1\f$.
  *
- * Important note: The constraint only implements an implication not
- * an equivalence, i.e., it does not ensure that z = 1 if ax <= b or
- * equivalently if s = 0.
+ * @note The constraint only implements an implication not an equivalence, i.e., it does not ensure
+ * that \f$z = 1\f$ if \f$ax \leq b\f$ or equivalently if \f$s = 0\f$ holds.
  *
- * This constraint is quivalent to a linear constraint ax - s <= b and
- * an SOS1 constraint on z and s (at most one should be nonzero). In
- * this context we can, however, separate more inequalities.
+ * This constraint is equivalent to a linear constraint \f$ax - s \leq b\f$ and an SOS1 constraint on
+ * \f$z\f$ and \f$s\f$ (at most one should be nonzero). In the indicator context we can, however,
+ * separate more inequalities.
  *
  * The name indicator apparently comes from ILOG CPLEX.
  */
@@ -73,7 +72,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_Bool             local,              /**< is constraint only valid locally?
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
