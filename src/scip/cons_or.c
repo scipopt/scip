@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.69 2008/04/21 18:51:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.70 2008/08/15 17:23:51 bzfpfets Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -716,6 +716,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIP_CALL( createRelaxation(scip, cons) );
    }
+   assert( consdata->rows != NULL );
 
    for( r = 0; r < consdataGetNRows(consdata); ++r )
    {
