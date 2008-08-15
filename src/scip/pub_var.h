@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.68 2008/08/15 19:50:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.69 2008/08/15 20:40:51 bzfpfets Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -657,7 +657,8 @@ SCIP_CLIQUE** SCIPvarGetCliques(
 #define SCIPvarGetTransVar(var)         (var)->data.original.transvar
 #define SCIPvarGetCol(var)              (var)->data.col
 #define SCIPvarIsInLP(var)              ((var)->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP((var)->data.col))
-#define SCIPvarGetAggrVar(var)          (var)->data.aggregate.var
+/* use different name for var - otherwise we have clash with the var at the end */
+#define SCIPvarGetAggrVar(war)          (war)->data.aggregate.var
 #define SCIPvarGetAggrScalar(var)       (var)->data.aggregate.scalar
 #define SCIPvarGetAggrConstant(var)     (var)->data.aggregate.constant
 #define SCIPvarGetMultaggrNVars(var)    (var)->data.multaggr.nvars
