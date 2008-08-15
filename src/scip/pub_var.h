@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.67 2008/04/17 17:49:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.68 2008/08/15 19:50:34 bzfpfets Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -343,6 +343,12 @@ SCIP_Bool SCIPvarIsActive(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** returns whether variable is not allowed to be multi-aggregated */
+extern
+SCIP_Bool SCIPvarDoNotMultaggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets unique index of variable */
 extern
 int SCIPvarGetIndex(
@@ -642,9 +648,10 @@ SCIP_CLIQUE** SCIPvarGetCliques(
 #define SCIPvarGetType(var)             ((SCIP_VARTYPE)((var)->vartype))
 #define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS)
 #define SCIPvarIsInitial(var)           (var)->initial
-#define SCIPvarIsRemovable(var)        (var)->removable
+#define SCIPvarIsRemovable(var)         (var)->removable
 #define SCIPvarIsDeleted(var)           (var)->deleted
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
+#define SCIPvarDoNotMultaggr(var)       (var)->donotmultaggr
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbindex(var)        (var)->probindex
 #define SCIPvarGetTransVar(var)         (var)->data.original.transvar

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.323 2008/07/18 14:43:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.324 2008/08/15 19:50:35 bzfpfets Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2577,6 +2577,13 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    SCIP_Real             constant,           /**< constant shift c in aggregation x = a_1*y_1 + ... + a_n*y_n + c */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the aggregation is infeasible */
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
+   );
+
+/** marks the variable to not to be multi-aggregated */
+extern
+SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to delete */
    );
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the

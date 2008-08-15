@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.224 2008/05/06 10:43:39 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.225 2008/08/15 19:50:35 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1704,6 +1704,7 @@ SCIP_RETCODE varCreate(
    (*var)->initial = initial;
    (*var)->removable = removable;
    (*var)->deleted = FALSE;
+   (*var)->donotmultaggr = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
@@ -2258,6 +2259,7 @@ SCIP_RETCODE SCIPvarAddLocks(
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
          if( var->data.multaggr.scalars[i] > 0.0 )
@@ -2322,6 +2324,7 @@ int SCIPvarGetNLocksDown(
          return SCIPvarGetNLocksUp(var->data.aggregate.var);
 
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       nlocks = 0;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
@@ -2376,6 +2379,7 @@ int SCIPvarGetNLocksUp(
          return SCIPvarGetNLocksDown(var->data.aggregate.var);
 
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       nlocks = 0;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
@@ -2470,6 +2474,9 @@ SCIP_RETCODE SCIPvarTransform(
       (*transvar)->nlocksup = origvar->nlocksup;
       assert((*transvar)->nlocksdown >= 0);
       assert((*transvar)->nlocksup >= 0);
+
+      /* copy doNotMultiaggr status */
+      (*transvar)->donotmultaggr = origvar->donotmultaggr;
 
       /* transform user data */
       if( origvar->vartrans != NULL )
@@ -3296,6 +3303,13 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    case SCIP_VARSTATUS_LOOSE:
       assert(!SCIPeventqueueIsDelayed(eventqueue)); /* otherwise, the pseudo objective value update gets confused */
 
+      /* if the variable is not allowed to be multi-aggregated */
+      if ( SCIPvarDoNotMultaggr(var) )
+      {
+	 SCIPdebugMessage("variable is not allowed to be multi-aggregated.\n");
+	 break;
+      }
+
       /* if the variable to be multiaggregated has implications or variable bounds (i.e. is the implied variable or
        * variable bound variable of another variable), we have to remove it from the other variables implications or
        * variable bounds
@@ -3491,6 +3505,9 @@ SCIP_RETCODE SCIPvarNegate(
       (*negvar)->branchpriority = var->branchpriority;
       (*negvar)->branchdirection = SCIPbranchdirOpposite((SCIP_BRANCHDIR)var->branchdirection); /*lint !e641*/
 
+      /* copy doNotMultiaggr status */
+      (*negvar)->donotmultaggr = var->donotmultaggr;
+
       /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
       SCIP_CALL( varAddParent(var, blkmem, set, *negvar) );
       assert((*negvar)->nuses == 1);
@@ -3600,6 +3617,17 @@ void SCIPvarMarkDeleted(
    assert(var->probindex != -1);
 
    var->deleted = TRUE;
+}
+
+/** marks the variable to not to be multi-aggregated */
+void SCIPvarMarkDoNotMultaggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->probindex != -1);
+
+   var->donotmultaggr = TRUE;
 }
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -3770,6 +3798,7 @@ SCIP_RETCODE SCIPvarAddObj(
          break;
 
       case SCIP_VARSTATUS_MULTAGGR:
+	 assert(!var->donotmultaggr);
          /* x = a_1*y_1 + ... + a_n*y_n  + c  ->  add a_i*addobj to obj. val. of y_i, and c*addobj to obj. offset */
          SCIPprobAddObjoffset(prob, var->data.multaggr.constant * addobj);
          SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
@@ -7007,6 +7036,7 @@ void SCIPvarChgBranchFactor(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       for( v = 0; v < var->data.multaggr.nvars; ++v )
          SCIPvarChgBranchFactor(var->data.multaggr.vars[v], set, branchfactor);
       break;
@@ -7116,6 +7146,7 @@ void SCIPvarChgBranchPriority(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);      
       for( v = 0; v < var->data.multaggr.nvars; ++v )
          SCIPvarChgBranchPriority(var->data.multaggr.vars[v], branchpriority);
       break;
@@ -7234,6 +7265,7 @@ void SCIPvarChgBranchDirection(
       break;
          
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       for( v = 0; v < var->data.multaggr.nvars; ++v )
       {
          /* only update branching direction of aggregation variables, if they don't have a preferred direction yet */
@@ -7857,6 +7889,7 @@ SCIP_Real SCIPvarGetLPSol(
       return var->data.aggregate.scalar * SCIPvarGetLPSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
       assert(var->data.multaggr.nvars >= 2);
@@ -7909,6 +7942,7 @@ SCIP_Real SCIPvarGetPseudoSol(
       return var->data.aggregate.scalar * SCIPvarGetPseudoSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
       assert(var->data.multaggr.nvars >= 2);
@@ -7990,6 +8024,7 @@ SCIP_Real SCIPvarGetRootSol(
       return var->data.aggregate.scalar * SCIPvarGetRootSol(var->data.aggregate.var) + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
       assert(var->data.multaggr.nvars >= 2);
@@ -8078,6 +8113,7 @@ SCIP_Real SCIPvarGetAvgSol(
          + var->data.aggregate.constant;
 
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
       assert(var->data.multaggr.nvars >= 2);
@@ -8292,6 +8328,7 @@ SCIP_RETCODE SCIPvarAddToRow(
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_MULTAGGR:
+      assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
       assert(var->data.multaggr.nvars >= 2);
@@ -10082,6 +10119,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsRemovable
 #undef SCIPvarIsDeleted
 #undef SCIPvarIsActive
+#undef SCIPvarDoNotMultaggr
 #undef SCIPvarGetIndex
 #undef SCIPvarGetProbindex
 #undef SCIPvarGetTransVar
@@ -10385,6 +10423,16 @@ SCIP_Bool SCIPvarIsActive(
    return (var->probindex >= 0);
 }
 
+/** returns whether variable is not allowed to be multi-aggregated */
+SCIP_Bool SCIPvarDoNotMultaggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->donotmultaggr;
+}
+
 /** gets unique index of variable */
 int SCIPvarGetIndex(
    SCIP_VAR*             var                 /**< problem variable */
@@ -10477,6 +10525,7 @@ int SCIPvarGetMultaggrNVars(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(!var->donotmultaggr);
 
    return var->data.multaggr.nvars;
 }
@@ -10488,6 +10537,7 @@ SCIP_VAR** SCIPvarGetMultaggrVars(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(!var->donotmultaggr);
 
    return var->data.multaggr.vars;
 }
@@ -10499,6 +10549,7 @@ SCIP_Real* SCIPvarGetMultaggrScalars(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(!var->donotmultaggr);
 
    return var->data.multaggr.scalars;
 }
@@ -10510,6 +10561,7 @@ SCIP_Real SCIPvarGetMultaggrConstant(
 {
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   assert(!var->donotmultaggr);
 
    return var->data.multaggr.constant;
 }

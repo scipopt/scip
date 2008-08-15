@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.46 2008/04/17 17:49:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.47 2008/08/15 19:50:35 bzfpfets Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -249,6 +249,7 @@ struct SCIP_Var
    unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int          removable:1;        /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
    unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */
+   unsigned int          donotmultaggr:1;    /**< TRUE iff variable is not allowed to be multi-aggregated */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */

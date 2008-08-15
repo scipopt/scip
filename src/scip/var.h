@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.117 2008/04/17 17:49:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.118 2008/08/15 19:50:36 bzfpfets Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -407,6 +407,12 @@ SCIP_RETCODE SCIPvarRemove(
 /** marks the variable to be deleted from the problem */
 extern
 void SCIPvarMarkDeleted(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks the variable to not to be multi-aggregated */
+extern
+void SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
