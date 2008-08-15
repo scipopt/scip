@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.284 2008/08/15 13:59:05 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.285 2008/08/15 19:48:20 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4810,6 +4810,10 @@ SCIP_RETCODE dualPresolve(
          if( !consdata->upgraded )
             (*ndelconss)++;
          (*naggrvars)++;
+      }
+      else
+      {
+	 SCIPdebugMessage("aggregation non succesfull!\n");
       }
    }
 
