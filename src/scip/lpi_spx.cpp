@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.73 2008/08/15 17:40:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.74 2008/08/15 18:02:46 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -75,7 +75,6 @@ class SPxSCIP : public SPxSolver
    SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR       m_price_devex;      /**< devex pricer */
    SPxFastRT        m_ratio;            /**< fast shifting ratio tester */
-   //SPxDefaultRT        m_ratio;            /**< fast shifting ratio tester */
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
    Real             m_objLoLimit;       /**< lower objective limit */
@@ -186,7 +185,7 @@ public:
          if ( getFromScratch() )
             SPxSolver::reLoad();
 	 if ( getLpInfo() )
-	    Param::setVerbose(10);
+	    Param::setVerbose(2);
 	 else 
 	    Param::setVerbose(0);
          m_stat = SPxSolver::solve();
