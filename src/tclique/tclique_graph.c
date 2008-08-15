@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.7 2008/06/05 12:55:09 bzfgamra Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.8 2008/08/15 17:00:59 bzfpfets Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -560,7 +560,10 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
  
    if( !tcliqueCreate(tcliquegraph) )
+   {
+      fclose(file);
       return FALSE;
+   }
  
    /* set name of problem, number of nodes and number of edges in graph */
    fscanf(file, "%s", probname);
