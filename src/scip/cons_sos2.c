@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.15 2008/05/05 10:45:25 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.16 2008/08/15 17:36:05 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
@@ -1875,17 +1875,21 @@ SCIP_RETCODE SCIPcreateConsSOS2(
    consdata->nFixedNonzero = -1;
    consdata->weights = NULL;
    if ( nvars > 0 )
+   {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->Vars, vars, nvars) );
 
-   /* check weights */
-   if ( weights != NULL )
-   {
-      /* store weights */
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars) );
-
-      /* sort variables - ascending order */
-      SCIPsortRealPtr(consdata->weights, (void**)consdata->Vars, nvars);
+      /* check weights */
+      if ( weights != NULL )
+      {
+	 /* store weights */
+	 SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars) );
+	 
+	 /* sort variables - ascending order */
+	 SCIPsortRealPtr(consdata->weights, (void**)consdata->Vars, nvars);
+      }
    }
+   else
+      assert( weights == NULL );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
