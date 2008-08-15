@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.18 2008/08/15 16:41:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.19 2008/08/15 17:20:52 bzfpfets Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -746,7 +746,7 @@ SCIP_Bool checkLogicor(
       }
       
       /* delete constraint from the problem locally since it is satisfied */
-      SCIPdelConsLocal(scip, conss[c]);
+      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
    return TRUE;
 }
@@ -838,7 +838,7 @@ SCIP_Bool checkKnapsack(
       }
     
       /* delete constraint from the problem locally since it is satisfied */
-      SCIPdelConsLocal(scip, conss[c]);
+      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
    return TRUE;
 }
@@ -913,7 +913,7 @@ SCIP_Bool checkBounddisjunction(
       }
     
       /* delete constraint from the problem locally since it is satisfied */
-      SCIPdelConsLocal(scip, conss[c]);
+      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
    return TRUE;
 }
@@ -985,7 +985,7 @@ SCIP_Bool checkVarbound(
       }
       
       /* delete constraint from the problem locally since it is satisfied */
-      SCIPdelConsLocal(scip, conss[c]);
+      SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
    }
    return TRUE;
 }
