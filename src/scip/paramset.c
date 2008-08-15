@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.48 2008/08/06 09:20:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.49 2008/08/15 17:45:30 bzfpfets Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2046,11 +2046,16 @@ SCIP_RETCODE SCIPparamsetRead(
    {
       lineno++;
       retcode = paramsetParse(paramset, set, line);
-      if( retcode == SCIP_PARSEERROR )
+      if ( retcode != SCIP_OKAY )
       {
-         SCIPerrorMessage("input error in file <%s> line %d\n", filename, lineno);
+	 fclose(file);
+      
+	 if( retcode == SCIP_PARSEERROR )
+	 {
+	    SCIPerrorMessage("input error in file <%s> line %d\n", filename, lineno);
+	 }
+	 SCIP_CALL( retcode );
       }
-      SCIP_CALL( retcode );
    }
 
    /* close input file */
