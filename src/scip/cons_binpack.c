@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.42 2008/04/21 18:51:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.43 2008/08/15 17:29:42 bzfpfets Exp $"
 
 /**@file   cons_binpack.c
  * @brief  constraint handler for binpack constraints
@@ -433,7 +433,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdBinpack)
    upgrade = FALSE;
    if( nposbin + nnegbin == nvars
       && ncoeffspone + ncoeffsnone + ncoeffspint + ncoeffsnint == nvars
-      && (SCIPisInfinity(scip, -lhs) ^ SCIPisInfinity(scip, rhs)) )
+      && (SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs)) 
+      && !(SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs)) )
    {
       SCIP_Bool found;
       int i;
