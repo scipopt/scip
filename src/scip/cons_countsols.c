@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.17 2008/06/19 10:33:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.18 2008/08/15 16:41:32 bzfpfets Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -1517,6 +1517,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
 
    switch( SCIPgetStage(scip) )
    {
@@ -1526,7 +1527,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       
    case SCIP_STAGE_PROBLEM:
       /* activate constraint handler cons_countsols */
-      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
       if( !active )
       {
          SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
