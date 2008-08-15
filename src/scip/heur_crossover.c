@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.28 2008/08/06 09:20:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.29 2008/08/15 16:54:22 bzfpfets Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -491,7 +491,7 @@ SCIP_RETCODE createSubproblem(
       return SCIP_OKAY;
 
    /* get name of the original problem and add the string "_crossoversub" */
-   sprintf(consname, "%s_crossoversub", SCIPgetProbName(scip));
+   snprintf(consname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );

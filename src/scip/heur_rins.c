@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.25 2008/06/04 17:00:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.26 2008/08/15 16:54:23 bzfpfets Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -94,7 +94,7 @@ SCIP_RETCODE createSubproblem(
    assert( bestsol != NULL );
 
    /* get name of the original problem and add the string "_rinssub" */
-   sprintf(consname, "%s_rinssub", SCIPgetProbName(scip));
+   snprintf(consname, SCIP_MAXSTRLEN, "%s_rinssub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );

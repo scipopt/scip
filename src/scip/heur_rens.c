@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.14 2008/06/04 17:00:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.15 2008/08/15 16:54:22 bzfpfets Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -97,7 +97,7 @@ SCIP_RETCODE createSubproblem(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    /* get name of the original problem and add the string "_renssub" */
-   sprintf(consname, "%s_renssub", SCIPgetProbName(scip));
+   snprintf(consname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -410,7 +410,7 @@ SCIP_RETCODE SCIPapplyRens(
 #if 0
    {
    char fname[SCIP_MAXSTRLEN];
-   sprintf(fname, "test/%s.lp",SCIPgetProbName(scip));
+   snprintf(fname, SCIP_MAXSTRLEN, "test/%s.lp",SCIPgetProbName(scip));
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
    SCIP_CALL( SCIPsolve(subscip) );
    SCIP_CALL( SCIPwriteMIP(subscip,fname,TRUE,TRUE) );
