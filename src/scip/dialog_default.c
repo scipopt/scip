@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.87 2008/05/06 13:34:30 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.88 2008/08/15 17:37:56 bzfpfets Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -1653,7 +1653,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
-   strncpy(filename, valuestr, SCIP_MAXSTRLEN);
+   strncpy(filename, valuestr, SCIP_MAXSTRLEN-1);
 
    /* second ask for generic variable and row names */
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
