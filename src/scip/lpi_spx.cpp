@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.72 2008/08/11 20:15:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.73 2008/08/15 17:40:35 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -39,6 +39,7 @@
 #include "spxparmultpr.h"
 #include "spxdevexpr.h"
 #include "spxfastrt.h"
+#include "spxdefaultrt.h"
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
 #undef SCIP_DEBUG
@@ -73,7 +74,8 @@ class SPxSCIP : public SPxSolver
    SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
    SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR       m_price_devex;      /**< devex pricer */
-   SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
+   SPxFastRT        m_ratio;            /**< fast shifting ratio tester */
+   //SPxDefaultRT        m_ratio;            /**< fast shifting ratio tester */
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
    Real             m_objLoLimit;       /**< lower objective limit */
@@ -184,7 +186,7 @@ public:
          if ( getFromScratch() )
             SPxSolver::reLoad();
 	 if ( getLpInfo() )
-	    Param::setVerbose(2);
+	    Param::setVerbose(10);
 	 else 
 	    Param::setVerbose(0);
          m_stat = SPxSolver::solve();
@@ -2217,6 +2219,8 @@ SCIP_RETCODE SCIPlpiSetBase(
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
+	 delete [] spxcstat;
+	 delete [] spxrstat;
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
@@ -2247,8 +2251,8 @@ SCIP_RETCODE SCIPlpiSetBase(
    }
    lpi->spx->setBasis(spxrstat, spxcstat);
 
-   delete[] spxcstat;
-   delete[] spxrstat;
+   delete [] spxcstat;
+   delete [] spxrstat;
    
    return SCIP_OKAY;
 }
