@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.283 2008/08/12 12:17:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.284 2008/08/15 13:59:05 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5738,6 +5738,8 @@ SCIP_RETCODE detectRedundantConstraints(
          /* update the first changed constraint to begin the next aggregation round with */
          if( consdatastay->changed && SCIPconsGetPos(consstay) < *firstchange )
             *firstchange = SCIPconsGetPos(consstay);
+
+         assert(SCIPconsIsActive(consstay));
       }
       else
       {
@@ -6161,11 +6163,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_CALL( SCIPsetConsStickingAtNode(scip, consstay, TRUE) );
          }
 
+         assert( !consdatastay->upgraded );
          /* delete consdel */
          SCIP_CALL( SCIPdelCons(scip, consdel) );
          conss[consinddel] = NULL;
-         assert(!consdatadel->upgraded);
-         (*ndelconss)++;
+         if( !consdatadel->upgraded )
+            (*ndelconss)++;
          continue;
       }
 
@@ -7325,6 +7328,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                SCIPconsGetName(cons), minactivity, maxactivity, consdata->lhs, consdata->rhs);
             SCIP_CALL( SCIPdelCons(scip, cons) );
             assert(!SCIPconsIsActive(cons));
+
             if( !consdata->upgraded )
                (*ndelconss)++;
             break;
@@ -7421,19 +7425,19 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          firstchangenew = -1;
          for( c = 0; c < nconss; ++c )
          {
-            /* ignore inactive and modifiable constraints */
-            if( !SCIPconsIsActive(conss[c]) || SCIPconsIsModifiable(conss[c]) )
-               continue;
-            
             /* update firstchange */
             if( c == firstchange )
                firstchangenew = nusefulconss;
+
+            /* ignore inactive and modifiable constraints */
+            if( !SCIPconsIsActive(conss[c]) || SCIPconsIsModifiable(conss[c]) )
+               continue;
 
             usefulconss[nusefulconss] = conss[c];
             nusefulconss++;     
          }
          firstchange = firstchangenew;
-         assert(firstchangenew >= 0 && firstchangenew < nusefulconss);
+         assert(firstchangenew >= 0 && firstchangenew <= nusefulconss);
 
          for( c = firstchange; c < nusefulconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
