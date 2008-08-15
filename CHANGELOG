@@ -170,6 +170,7 @@ fixed bugs:
 - avoiding aggregation that removes information about implicitly integer variables (removes bug)
 - fixed false assert and corrected a bug caused by deleting a constraint on "firstchanged" position in pairwise 
   presolving with hashing in cons_linear.c
+- removed memory leak detected with the help of coverity in dialog.c
 
 SCIP version 1.00
 =================
