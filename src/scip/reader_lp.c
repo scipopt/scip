@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.59 2008/08/06 09:20:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.60 2008/08/15 17:17:29 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1836,7 +1836,7 @@ void printRow(
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
       snprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      snprintf(buffer, LP_MAX_LINELEN, " %+.15g %s", vals[v], varname);
+      snprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", vals[v], varname);
       
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
