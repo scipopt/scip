@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.40 2008/04/17 17:49:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.41 2008/08/15 16:34:04 bzfpfets Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -109,6 +109,7 @@ SCIP_RETCODE removeHistory(
    HIST_ENTRY* entry;
    
    entry = remove_history(pos);
+   (void)free_history_entry(entry);
 #endif
 
    return SCIP_OKAY;
@@ -608,6 +609,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
 
       for( i = getHistoryLength()-1; i >= dialoghdlr->nprotectedhistelems; --i )
       {
+	 printf("Stuss\n");
          SCIP_CALL( removeHistory(i) );
       }
    }
