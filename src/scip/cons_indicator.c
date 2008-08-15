@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.20 2008/08/15 19:46:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.21 2008/08/15 20:43:43 bzfpfets Exp $"
 //#define SCIP_DEBUG
 //#define SCIP_OUTPUT
 
@@ -644,13 +644,10 @@ SCIP_RETCODE addAltLPConstraint(
    if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_AGGREGATED )
    {
       SCIP_VAR* var = NULL;
-      SCIP_Real scalar = 0.0;
+      SCIP_Real scalar = 1.0;
       SCIP_Real constant = 0.0;
 
-      var = SCIPvarGetAggrVar(slackvar);
-      scalar = SCIPvarGetAggrScalar(slackvar);
-      constant = SCIPvarGetAggrConstant(slackvar);
-
+      var = slackvar;
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
 
       SCIPdebugMessage("slack variable aggregated (scalar: %f, constant: %f)\n", scalar, constant);
@@ -698,8 +695,8 @@ SCIP_RETCODE addAltLPConstraint(
 #endif
 
    SCIP_CALL( SCIPallocBufferArray(scip, &matbeg, nlinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matind, 2*nlinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &matval, 2*nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matind, 4*nlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &matval, 4*nlinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &obj, 2*nlinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lb, 2*nlinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ub, 2*nlinvars) );
@@ -902,7 +899,7 @@ SCIP_RETCODE addAltLPConstraint(
       SCIPfreeBufferArray(scip, &linvars);
    }
 
-   SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altLP, "alt.lp") );
+   /* SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altLP, "alt.lp") ); */
 
    return SCIP_OKAY;
 }
@@ -1670,42 +1667,45 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->slackHash == NULL );
 
-   /* generate hash for storing all slack variables (size is just a guess) */
-   SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->slackHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
-   assert( conshdlrdata->slackHash != NULL );
-
-   /* first initialize slack hash */
-   for (c = 0; c < nconss; ++c)
+   if ( conshdlrdata->sepaAlternativeLP )
    {
-      SCIP_CONSDATA* consdata;
+      /* generate hash for storing all slack variables (size is just a guess) */
+      SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->slackHash, SCIPblkmem(scip), 10 * SCIPgetNVars(scip)) );
+      assert( conshdlrdata->slackHash != NULL );
 
-      assert( conss != NULL );
-      assert( conss[c] != NULL );
-      assert( SCIPconsIsTransformed(conss[c]) );
-
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-
-      /* insert slack variable into hash */
-      SCIP_CALL( SCIPhashmapInsert(conshdlrdata->slackHash, consdata->slackvar, (void*) (size_t) (INT_MAX)) );
-      assert( SCIPhashmapExists(conshdlrdata->slackHash, consdata->slackvar) );
-      ++conshdlrdata->nSlackVars;
+      /* first initialize slack hash */
+      for (c = 0; c < nconss; ++c)
+      {
+	 SCIP_CONSDATA* consdata;
+	 
+	 assert( conss != NULL );
+	 assert( conss[c] != NULL );
+	 assert( SCIPconsIsTransformed(conss[c]) );
+	 
+	 consdata = SCIPconsGetData(conss[c]);
+	 assert( consdata != NULL );
+	 
+	 /* insert slack variable into hash */
+	 SCIP_CALL( SCIPhashmapInsert(conshdlrdata->slackHash, consdata->slackvar, (void*) (size_t) (INT_MAX)) );
+	 assert( SCIPhashmapExists(conshdlrdata->slackHash, consdata->slackvar) );
+	 ++conshdlrdata->nSlackVars;
+      }
    }
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
-
+      
       assert( conss != NULL );
       assert( conss[c] != NULL );
       assert( SCIPconsIsTransformed(conss[c]) );
-
+      
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
-
+      
       SCIPdebugMessage("Initializing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) );
-
+      
       /* if not happend already, get transformed linear constraint */
       if ( ! SCIPconsIsTransformed(consdata->lincons) )
       {
@@ -1735,13 +1735,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   if ( conshdlrdata->altLP != NULL )
+   if ( conshdlrdata->sepaAlternativeLP )
    {
+      assert( conshdlrdata->altLP != NULL );
       assert( conshdlrdata->varHash != NULL );
       assert( conshdlrdata->lbHash != NULL );
       assert( conshdlrdata->ubHash != NULL );
       assert( conshdlrdata->slackHash != NULL );
-      assert( conshdlrdata->altLP != NULL );
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
