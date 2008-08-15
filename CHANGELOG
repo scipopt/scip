@@ -82,6 +82,7 @@ features:
 - improved pairwise presolving in cons_linear.c: reduced cache misses, reduced number of SCIPisStopped() calls and 
   included detecting of redundant constraints with hash table in advance
 - The SoPlex LPI can now write basis files.
+- added capabilities to avoid multi-aggregation by setting a corresponding flag (SCIPmarkDoNotMultaggrVar())
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -171,6 +172,7 @@ fixed bugs:
 - fixed false assert and corrected a bug caused by deleting a constraint on "firstchanged" position in pairwise 
   presolving with hashing in cons_linear.c
 - removed memory leak detected with the help of coverity in dialog.c
+
 
 SCIP version 1.00
 =================
