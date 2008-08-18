@@ -28,10 +28,12 @@
  * @version  1.00.8
  * @author   Tobias Achterberg
  * @author   Timo Berthold
+ * @author   Gerald Gamrath
  * @author   Stefan Heinz
  * @author   Thorsten Koch
  * @author   Alexander Martin
  * @author   Marc Pfetsch
+ * @author   Christian Raack
  * @author   Michael Winkler
  * @author   Kati Wolter
  *
