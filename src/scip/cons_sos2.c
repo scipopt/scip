@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.16 2008/08/15 17:36:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.17 2008/08/18 17:50:48 bzfpfets Exp $"
 
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
@@ -79,11 +79,11 @@ struct SCIP_ConshdlrData
 /** fix variable in given node to 0 or add constraint if variable is multi-aggregated */
 static
 SCIP_RETCODE fixVariableZeroNode(
-     SCIP* scip,            /**< SCIP pointer */
-     SCIP_VAR* var,         /**< variable to be fixed to 0*/
-     SCIP_NODE* node,       /**< node */
-     SCIP_Bool* infeasible  /**< if fixing is infeasible */
-     )
+   SCIP* scip,            /**< SCIP pointer */
+   SCIP_VAR* var,         /**< variable to be fixed to 0*/
+   SCIP_NODE* node,       /**< node */
+   SCIP_Bool* infeasible  /**< if fixing is infeasible */
+   )
 {
    /* if variable cannot be nonzero */
    *infeasible = FALSE;
@@ -104,7 +104,7 @@ SCIP_RETCODE fixVariableZeroNode(
 	 SCIPdebugMessage("creating constraint to force multi-aggregated variable <%s> to 0.\n", SCIPvarGetName(var));
 	 /* we have to insert a local constraint var = 0 */
 	 SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "branch", 1, &var, &val, 0.0, 0.0, TRUE, TRUE, TRUE, TRUE, TRUE,
-					 TRUE, FALSE, FALSE, FALSE, FALSE) );
+	       TRUE, FALSE, FALSE, FALSE, FALSE) );
 	 SCIP_CALL( SCIPaddConsNode(scip, node, cons, NULL) );
 	 SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
@@ -124,13 +124,13 @@ SCIP_RETCODE fixVariableZeroNode(
 /** fix variable in local node to 0, and return whether the operation was feasible */
 static
 SCIP_RETCODE inferVariableZero(
-     SCIP* scip,            /**< SCIP pointer */
-     SCIP_VAR* var,         /**< variable to be fixed to 0*/
-     SCIP_CONS* cons,       /**< constraint */
-     int inferinfo,         /**< info for reverse prop. */
-     SCIP_Bool* infeasible, /**< if fixing is infeasible */
-     SCIP_Bool* tightened   /**< if fixing was performed */
-     )
+   SCIP* scip,            /**< SCIP pointer */
+   SCIP_VAR* var,         /**< variable to be fixed to 0*/
+   SCIP_CONS* cons,       /**< constraint */
+   int inferinfo,         /**< info for reverse prop. */
+   SCIP_Bool* infeasible, /**< if fixing is infeasible */
+   SCIP_Bool* tightened   /**< if fixing was performed */
+   )
 {
    *infeasible = FALSE;
    *tightened = FALSE;
@@ -434,11 +434,11 @@ SCIP_RETCODE deleteVarSOS2(
 /** propagate variables */
 static
 SCIP_RETCODE propSOS2(
-	 SCIP* scip,               /**< SCIP pointer */
-	 SCIP_CONS* cons,          /**< constraint */
-	 SCIP_CONSDATA* consdata,  /**< constraint data */
-	 SCIP_Bool* cutoff,        /**< whether a cutoff happend */
-	 int* nGen                 /**< number of domain changes */
+   SCIP* scip,               /**< SCIP pointer */
+   SCIP_CONS* cons,          /**< constraint */
+   SCIP_CONSDATA* consdata,  /**< constraint data */
+   SCIP_Bool* cutoff,        /**< whether a cutoff happend */
+   int* nGen                 /**< number of domain changes */
    )
 {
    assert( scip != NULL );
@@ -535,13 +535,13 @@ SCIP_RETCODE propSOS2(
       if ( ! SCIPisFeasPositive(scip, SCIPvarGetLbLocal(Vars[j])) && ! SCIPisFeasNegative(scip, SCIPvarGetUbLocal(Vars[j])) )
       {
 	 SCIPdebugMessage("the node is infeasible: variable <%s> is fixed nonzero and some non-adjacent variable is fixed nonzero.\n",
-			  SCIPvarGetName(Vars[firstFixedNonzero]));
+	    SCIPvarGetName(Vars[firstFixedNonzero]));
 	 *cutoff = TRUE;
 	 return SCIP_OKAY;
       }
 
       SCIPdebugMessage("variables <%s> and <%s> are fixed nonzero, fixing other variables to 0.\n", SCIPvarGetName(Vars[firstFixedNonzero]),
-		       SCIPvarGetName(Vars[firstFixedNonzero+1]));
+	 SCIPvarGetName(Vars[firstFixedNonzero+1]));
 
       /* fix variables before firstFixedNonzero to 0 */
       for (j = 0; j < firstFixedNonzero; ++j)
@@ -608,12 +608,12 @@ SCIP_RETCODE propSOS2(
  */
 static
 SCIP_RETCODE enforceSOS2(
-      SCIP* scip,               /**< SCIP pointer */
-      SCIP_CONSHDLR* conshdlr,  /**< constraint handler */
-      int nconss,               /**< number of constraints */
-      SCIP_CONS** conss,        /**< indicator constraints */
-      SCIP_RESULT* result       /**< result */
-      )
+   SCIP* scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR* conshdlr,  /**< constraint handler */
+   int nconss,               /**< number of constraints */
+   SCIP_CONS** conss,        /**< indicator constraints */
+   SCIP_RESULT* result       /**< result */
+   )
 {
    SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -682,7 +682,7 @@ SCIP_RETCODE enforceSOS2(
       assert( cnt == 0 );
       for (j = 0; j < nVars; ++j)
       {
-	 SCIP_Real val = fabs(SCIPgetSolVal(scip, NULL, Vars[j]));
+	 SCIP_Real val = REALABS(SCIPgetSolVal(scip, NULL, Vars[j]));
 	 weight1 += val * (SCIP_Real) j;
 	 weight2 += val;
 
@@ -735,7 +735,7 @@ SCIP_RETCODE enforceSOS2(
    Vars = consdata->Vars;
 
    SCIPdebugMessage("Branching on variable <%s> in constraint <%s> (nonzeros: %d).\n", SCIPvarGetName(Vars[maxInd]),
-		    SCIPconsGetName(branchCons), maxNonzeros);
+      SCIPconsGetName(branchCons), maxNonzeros);
 
    /* branch on variable ind: either all variables before ind or all variables after ind are zero */
    SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPgetLocalTransEstimate(scip) ) );
@@ -777,9 +777,9 @@ SCIP_RETCODE enforceSOS2(
  */
 static
 SCIP_RETCODE generateBasicRowSOS2(
-	  SCIP* scip,               /**< SCIP pointer */
-	  SCIP_CONSDATA* consdata   /**< constraint data */
-	  )
+   SCIP* scip,               /**< SCIP pointer */
+   SCIP_CONSDATA* consdata   /**< constraint data */
+   )
 {
    SCIP_VAR** Vars;
    SCIP_Real minLb = SCIPinfinity(scip);
@@ -1043,11 +1043,11 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
    /* create transformed constraint with the same flags */
    snprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
-			     SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
-			     SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
-			     SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
-			     SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
-			     SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+	 SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
+	 SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
+	 SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
+	 SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
+	 SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    /* catch bound change events on variable */
    for (j = 0; j < consdata->nVars; ++j)
@@ -1482,15 +1482,15 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
 	       if ( j > firstNonzero+1 )
 	       {
 		  *result = SCIP_INFEASIBLE;
-                  
+
                   if( printreason )
                   {
                      SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
 
-                     SCIPinfoMessage(scip, NULL, "violation: <%s> = %.15g and  <%s> = %.15g\n", 
-                        SCIPvarGetName(consdata->Vars[firstNonzero]), 
+                     SCIPinfoMessage(scip, NULL, "violation: <%s> = %.15g and  <%s> = %.15g\n",
+                        SCIPvarGetName(consdata->Vars[firstNonzero]),
                         SCIPgetSolVal(scip, sol, consdata->Vars[firstNonzero]),
-                        SCIPvarGetName(consdata->Vars[j]), 
+                        SCIPvarGetName(consdata->Vars[j]),
                         SCIPgetSolVal(scip, sol, consdata->Vars[j]));
                   }
 		  return SCIP_OKAY;
@@ -1845,7 +1845,7 @@ SCIP_RETCODE SCIPcreateConsSOS2(
    SCIP_Bool             local,              /**< is constraint only valid locally?
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -1883,7 +1883,7 @@ SCIP_RETCODE SCIPcreateConsSOS2(
       {
 	 /* store weights */
 	 SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars) );
-	 
+
 	 /* sort variables - ascending order */
 	 SCIPsortRealPtr(consdata->weights, (void**)consdata->Vars, nvars);
       }
@@ -1893,7 +1893,7 @@ SCIP_RETCODE SCIPcreateConsSOS2(
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-			     local, modifiable, dynamic, removable, stickingatnode) );
+	 local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
 }
