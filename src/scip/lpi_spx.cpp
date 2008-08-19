@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.74 2008/08/15 18:02:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.75 2008/08/19 19:20:26 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -89,7 +89,8 @@ public:
         m_fromscratch(false),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
-        m_stat(NO_PROBLEM)
+        m_stat(NO_PROBLEM),
+	m_lpinfo(false)
    {
       setSolver(&m_slu);
       setTester(&m_ratio);
