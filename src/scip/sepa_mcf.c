@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.47 2008/08/12 12:04:23 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.48 2008/08/21 13:31:20 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -617,7 +617,7 @@ void mcfnetworkPrint(
             printf("  commodity %2d: ", k);
             if( mcfnetwork->nodeflowrows[v][k] != NULL )
             {
-               printf("<%s> [%+g] [inv:%d]\n", SCIProwGetName(mcfnetwork->nodeflowrows[v][k]), 
+               printf("<%s> [%+g] [inv:%d]\n", SCIProwGetName(mcfnetwork->nodeflowrows[v][k]),
                       mcfnetwork->nodeflowscales[v][k], mcfnetwork->nodeflowinverted[v][k]);
                /*SCIProwPrint(mcfnetwork->nodeflowrows[v][k], NULL);*/
             }
@@ -1598,7 +1598,7 @@ void deleteCommodity(
    {
       SCIP_ROW* row;
       SCIP_COL** rowcols;
-      SCIP_Real* rowvals;
+//       SCIP_Real* rowvals;
       int rowlen;
       int r;
       int i;
@@ -1617,7 +1617,7 @@ void deleteCommodity(
       /* remove row from commodity */
       rowcommodity[r] = -1;
       rowcols = SCIProwGetCols(row);
-      rowvals = SCIProwGetVals(row);
+//       rowvals = SCIProwGetVals(row);
       rowlen = SCIProwGetNLPNonz(row);
       for( i = 0; i < rowlen; i++ )
       {
@@ -3176,7 +3176,7 @@ SCIP_RETCODE identifySourcesTargets(
    for( a = 0; a < narcs; a++ )
    {
       SCIP_COL** rowcols;
-      SCIP_Real* rowvals;
+//       SCIP_Real* rowvals;
       int rowlen;
       int bestsourcev;
       int besttargetv;
@@ -3201,7 +3201,7 @@ SCIP_RETCODE identifySourcesTargets(
 
       /* check the flow variables of the capacity row for flow conservation constraints */
       rowcols = SCIProwGetCols(capacityrows[a]);
-      rowvals = SCIProwGetVals(capacityrows[a]);
+//       rowvals = SCIProwGetVals(capacityrows[a]);
       rowlen = SCIProwGetNLPNonz(capacityrows[a]);
       ntouchednodes = 0;
       totalnodecnt = 0;
@@ -4766,7 +4766,7 @@ SCIP_RETCODE generateClusterCuts(
                if( SCIPisZero(scip, comcutdemands[k]) )
                   continue;
 
-               /* If the demand (-d_k) is negative (i.e., points into the wrong direction), we use the flow 
+               /* If the demand (-d_k) is negative (i.e., points into the wrong direction), we use the flow
                 * in the opposite direction, i.e., sum over all nodes in T instead of S.
                 */
                if( comcutdemands[k] > 0.0 ) {
