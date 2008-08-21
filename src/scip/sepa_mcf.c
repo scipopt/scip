@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.48 2008/08/21 13:31:20 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.49 2008/08/21 14:59:32 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -256,6 +256,8 @@ SCIP_RETCODE mcfnetworkCreate(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** frees MCF network data structure */
 static
 SCIP_RETCODE mcfnetworkFree(
@@ -306,6 +308,8 @@ SCIP_RETCODE mcfnetworkFree(
 
    return SCIP_OKAY;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** fills the MCF network structure with the MCF data */
 static
@@ -593,6 +597,8 @@ SCIP_RETCODE mcfnetworkFill(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 #ifdef SCIP_DEBUG
 /** displays the MCF network */
 static
@@ -639,6 +645,8 @@ void mcfnetworkPrint(
       }
    }
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** displays commodities and its members */
 static
@@ -751,6 +759,8 @@ void printCommodities(
 }
 #endif
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** comparator method for flow and capacity row candidates */
 static
 SCIP_DECL_SORTINDCOMP(compCands)
@@ -764,6 +774,8 @@ SCIP_DECL_SORTINDCOMP(compCands)
    else
       return 0;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** extracts flow conservation from the LP */
 static
@@ -966,7 +978,9 @@ SCIP_RETCODE extractFlowRows(
    return SCIP_OKAY;
 }
 
-/** extracts flow conservation and capacity rows from the LP */
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
+/** extracts capacity rows from the LP */
 static
 SCIP_RETCODE extractCapacityRows(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1338,6 +1352,8 @@ SCIP_RETCODE extractCapacityRows(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** creates a new commodity */
 static
 SCIP_RETCODE createNewCommodity(
@@ -1361,6 +1377,8 @@ SCIP_RETCODE createNewCommodity(
 
    return SCIP_OKAY;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** adds the given flow row and all involved columns to the current commodity */
 static
@@ -1508,6 +1526,8 @@ void addFlowrowToCommodity(
    }
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /* inverts the lhs/rhs assignment of all rows in the given commodity */
 static
 void invertCommodity(
@@ -1570,6 +1590,8 @@ void invertCommodity(
       minusflow[c] = tmp;
    }
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** deletes a commodity and removes the flow rows again from the system */
 static
@@ -1644,6 +1666,8 @@ void deleteCommodity(
    else
       mcfdata->nemptycommodities++;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** checks whether the given row fits into the given commodity and returns the possible flow row signs */
 static
@@ -1777,6 +1801,8 @@ void getFlowrowFit(
    }
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** returns a flow conservation row that fits into the current commodity, or NULL */
 static
 void getNextFlowrow(
@@ -1893,6 +1919,8 @@ void getNextFlowrow(
       }
    }
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** extracts flow conservation rows and puts them into commodities */
 static
@@ -2047,6 +2075,8 @@ SCIP_RETCODE extractFlow(
 
    return SCIP_OKAY;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** identifies capacity constraints for the arcs and assigns arc ids to columns and capacity constraints */
 static
@@ -2214,6 +2244,9 @@ SCIP_RETCODE extractCapacities(
    return SCIP_OKAY;
 }
 
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** collects all flow columns of all commodities (except the one of the base row) that are incident to the node described by the given flow row */
 static
 void collectIncidentFlowCols(
@@ -2294,6 +2327,8 @@ void collectIncidentFlowCols(
       }
    }
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** compares given row against a base node flow row and calculates a similarity score;
  *  score is 0.0 if the rows are incompatible
@@ -2463,6 +2498,7 @@ SCIP_RETCODE getNodeSilimarityScore(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** assigns node ids to flow conservation constraints */
 static
@@ -2732,6 +2768,8 @@ void fixCommoditySigns(
          commoditysigns[k] = +1;
    }
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** cleans up the network: gets rid of commodities without arcs or with at most one node */
 static
@@ -3033,6 +3071,8 @@ SCIP_RETCODE cleanupNetwork(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** identifies the (at most) two nodes which contain the given flow variable */
 static
 void getIncidentNodes(
@@ -3109,6 +3149,8 @@ void getIncidentNodes(
       }
    }
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** for each arc identifies a source and target node */
 static
@@ -3335,6 +3377,8 @@ SCIP_RETCODE identifySourcesTargets(
 #define ONSTACK 1  /**< node is currently on the processing stack */
 #define VISITED 2  /**< node has been visited and assigned to some component */
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** returns lists of nodes and arcs in the connected component of the given startv */
 static
 SCIP_RETCODE identifyComponent(
@@ -3458,6 +3502,8 @@ SCIP_RETCODE identifyComponent(
 
    return SCIP_OKAY;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** extracts MCF network structures from the current LP */
 static
@@ -3698,6 +3744,7 @@ SCIP_RETCODE mcfnetworkExtract(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** comparison method for weighted arcs */
 static
@@ -3713,6 +3760,8 @@ SCIP_DECL_SORTPTRCOMP(compArcs)
    else
       return 0;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** creates a priority queue and fills it with the given arc entries */
 static
@@ -3764,6 +3813,8 @@ SCIP_RETCODE arcqueueCreate(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** frees memory of an arc queue */
 static
 void arcqueueFree(
@@ -3779,6 +3830,8 @@ void arcqueueFree(
    SCIPfreeMemory(scip, arcqueue);
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** returns whether there are any arcs left on the queue */
 static
 SCIP_Bool arcqueueIsEmpty(
@@ -3789,6 +3842,8 @@ SCIP_Bool arcqueueIsEmpty(
 
    return (SCIPpqueueFirst(arcqueue->pqueue) == NULL);
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** removes the top element from the arc priority queue and returns the arcid */
 static
@@ -3806,6 +3861,8 @@ int arcqueueRemove(
    else
       return -1;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** returns the representative node in the cluster of the given node */
 static
@@ -3829,6 +3886,8 @@ int nodepartitionGetRepresentative(
    return v;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** joins two clusters given by their representative nodes */
 static
 void nodepartitionJoin(
@@ -3850,6 +3909,8 @@ void nodepartitionJoin(
    else
       nodepartition->representatives[rep1] = rep2;
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** partitions nodes into a small number of clusters */
 static
@@ -4005,6 +4066,8 @@ SCIP_RETCODE nodepartitionCreate(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** frees node partition data */
 static
 void nodepartitionFree(
@@ -4021,6 +4084,8 @@ void nodepartitionFree(
    SCIPfreeMemoryArray(scip, &(*nodepartition)->clusterbegin);
    SCIPfreeMemory(scip, nodepartition);
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** returns whether given node v is in a cluster that belongs to the partition S */
 static
@@ -4049,6 +4114,8 @@ SCIP_Bool nodeInPartition(
    }
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 #ifdef SCIP_DEBUG
 static
 void nodepartitionPrint(
@@ -4068,6 +4135,8 @@ void nodepartitionPrint(
    }
 }
 #endif
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 #ifdef OUTPUTGRAPH
 /** generates a GML file to visualize the network graph and LP solution */
@@ -4299,6 +4368,8 @@ SCIP_RETCODE outputGraph(
 }
 #endif
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 #ifndef USECMIRDELTAS /*????????????????????*/
 /** adds given cut to LP if violated */
 static
@@ -4394,6 +4465,8 @@ SCIP_RETCODE addCut(
    return SCIP_OKAY;
 }
 #endif
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** enumerates cuts between subsets of the clusters
  *  generates single-node cuts if nodepartition == NULL, otherwise generates cluster cuts
@@ -4506,7 +4579,7 @@ SCIP_RETCODE generateClusterCuts(
       }
    }
 
-   for( partition = startpartition; partition <= allpartitions-1; partition++ )
+   for( partition = startpartition; partition <= allpartitions-1 && !SCIPisStopped(scip); partition++ )
    {
       int v;
       int a;
@@ -5033,6 +5106,8 @@ SCIP_RETCODE generateClusterCuts(
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 /** searches and adds MCF network cuts that separate the given primal solution */
 static
 SCIP_RETCODE separateCuts(
@@ -5142,7 +5217,7 @@ SCIP_RETCODE separateCuts(
    return SCIP_OKAY;
 }
 
-
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 
 /*
@@ -5168,6 +5243,8 @@ SCIP_DECL_SEPAFREE(sepaFreeMcf)
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
 
 /** initialization method of separator (called after problem was transformed) */
 #if 0
@@ -5183,6 +5260,7 @@ SCIP_DECL_SEPAINIT(sepaInitMcf)
 #define sepaInitMcf NULL
 #endif
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** deinitialization method of separator (called before transformed problem is freed) */
 #if 0
@@ -5198,6 +5276,7 @@ SCIP_DECL_SEPAEXIT(sepaExitMcf)
 #define sepaExitMcf NULL
 #endif
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** solving process initialization method of separator (called when branch and bound process is about to begin) */
 #if 0
@@ -5213,6 +5292,7 @@ SCIP_DECL_SEPAINITSOL(sepaInitsolMcf)
 #define sepaInitsolMcf NULL
 #endif
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** solving process deinitialization method of separator (called before branch and bound process data is freed) */
 static
@@ -5236,6 +5316,7 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolMcf)
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** LP solution separation method of separator */
 static
@@ -5247,6 +5328,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpMcf)
    return SCIP_OKAY;
 }
 
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** arbitrary primal solution separation method of separator */
 static
@@ -5259,7 +5341,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMcf)
 }
 
 
-
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /*
  * separator specific interface methods
