@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.49 2008/08/21 14:59:32 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.50 2008/08/21 19:30:30 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -3550,6 +3550,7 @@ SCIP_RETCODE mcfnetworkExtract(
     *        (i) Create new commodity and use first flow conservation constraint as newrow.
     *       (ii) Add newrow to commodity, update pluscom/minuscom accordingly.
     *      (iii) For the newly added columns search for an incident flow conservation constraint. Pick the one of highest ranking.
+    *            Reflect row or commodity if necessary (multiply with -1)
     *       (iv) If found, set newrow to this row and goto (ii).
     *        (v) If only very few flow rows have been used, discard the commodity immediately.
     * 4. Identify candidate rows for capacity constraints in the LP.
@@ -3637,7 +3638,19 @@ SCIP_RETCODE mcfnetworkExtract(
           *       there was no valid capacity constraint.
           *       Go through the list of nodes and generate uncapacitated arcs in the network for the flow variables
           *       that do not yet have an arc assigned, such that the commodities still match.
-          *!!!!!!!!!!!!!!!!!!!!!!
+          * algorithmic idea: arc should be uncapacitated for all commodities, if not we do nothing
+          *         -  for all flow-columns that have no arcid in the first commodity:       ----- colcommodity, colarcid
+          *         -          get incident nodes: source target                             ----- arcsources, arctargets
+          *         -          for all other commodities:
+          *         -               check if source and target have same incident 
+          *                         unassigned column
+          *         -               (for undirected case direction does not matter?)
+          *          -               assign arc-id
+          *          -               break if not possible
+          * alternative:
+          *          assign arc-id even if there is no corresponding arc in other commodities
+          *          this is more time-consuming, we have to apply the algo above to every commodity
+          *          and to maintain list of unasigned columns. this list has to be updated.
           */
 
          /* clean up the network: get rid of commodities without arcs or with at most one node */
