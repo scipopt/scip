@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.464 2008/08/15 19:50:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.465 2008/08/22 08:32:28 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6462,7 +6462,7 @@ SCIP_RETCODE SCIPtightenVarLb(
    }
    newbound = MIN(newbound, ub);
 
-   if( !force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub) )
+   if( (force && SCIPsetIsLE(scip->set, newbound, lb)) || (!force && !SCIPsetIsLbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )
@@ -6532,7 +6532,7 @@ SCIP_RETCODE SCIPtightenVarUb(
    }
    newbound = MAX(newbound, lb);
 
-   if( !force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub) )
+   if( (force && SCIPsetIsGE(scip->set, newbound, ub)) || (!force && !SCIPsetIsUbBetter(scip->set, newbound, lb, ub)) )
       return SCIP_OKAY;
 
    switch( scip->set->stage )

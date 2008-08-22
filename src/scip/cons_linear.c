@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.285 2008/08/15 19:48:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.286 2008/08/22 08:32:27 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -803,9 +803,9 @@ void consdataPrint(
          SCIPinfoMessage(scip, file, "%+.15g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
 #else
       SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]),
-                      SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY ? 'B' :
-                      SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_INTEGER ? 'I' :
-                      SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+         SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY ? 'B' :
+         SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_INTEGER ? 'I' :
+         SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
 #endif
    }
    
@@ -5570,6 +5570,50 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    return hashval;
 }
 
+/** updates the flags of the first constraint according to the ones of the second constraint */
+static
+SCIP_RETCODE updateFlags(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons0,              /**< constraint that should stay */
+   SCIP_CONS*            cons1               /**< constraint that should be deleted */
+   )
+{
+   if( SCIPconsIsInitial(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsInitial(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsSeparated(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsSeparated(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsEnforced(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsChecked(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsChecked(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsPropagated(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsPropagated(scip, cons0, TRUE) );
+   }
+   if( !SCIPconsIsDynamic(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsDynamic(scip, cons0, FALSE) );
+   }
+   if( !SCIPconsIsRemovable(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsRemovable(scip, cons0, FALSE) );
+   }
+   if( SCIPconsIsStickingAtNode(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsStickingAtNode(scip, cons0, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
  *  accordingly; in contrast to preprocessConstraintPairs(), it uses a hash table 
  */
@@ -5699,39 +5743,8 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIP_CALL( chgLhs(scip, consstay, lhs) );
          SCIP_CALL( chgRhs(scip, consstay, rhs) );
 
-         /* update the flags of consstay */
-         if( SCIPconsIsInitial(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsInitial(scip, consstay, TRUE) );
-         }
-         if( SCIPconsIsSeparated(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsSeparated(scip, consstay, TRUE) );
-         }
-         if( SCIPconsIsEnforced(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsEnforced(scip, consstay, TRUE) );
-         }
-         if( SCIPconsIsChecked(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsChecked(scip, consstay, TRUE) );
-         }
-         if( SCIPconsIsPropagated(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsPropagated(scip, consstay, TRUE) );
-         }
-         if( !SCIPconsIsDynamic(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsDynamic(scip, consstay, FALSE) );
-         }
-         if( !SCIPconsIsRemovable(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsRemovable(scip, consstay, FALSE) );
-         }
-         if( SCIPconsIsStickingAtNode(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsStickingAtNode(scip, consstay, TRUE) );
-         }
+         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         SCIP_CALL( updateFlags(scip, consstay, consdel) ); 
 
          /* delete consdel */
          assert(!consdatastay->upgraded || (consdatastay->upgraded && consdatadel->upgraded));
@@ -6133,39 +6146,8 @@ SCIP_RETCODE preprocessConstraintPairs(
             cons0rhs = consdata0->rhs;
          }
 
-         /* update the flags of consstay */
-         if( SCIPconsIsInitial(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsInitial(scip, consstay, TRUE) );
-         }
-         if( SCIPconsIsSeparated(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsSeparated(scip, consstay, TRUE) );
-         }
-         if( SCIPconsIsEnforced(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsEnforced(scip, consstay, TRUE) );
-         }
-         if( SCIPconsIsChecked(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsChecked(scip, consstay, TRUE) );
-         }
-         if( SCIPconsIsPropagated(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsPropagated(scip, consstay, TRUE) );
-         }
-         if( !SCIPconsIsDynamic(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsDynamic(scip, consstay, FALSE) );
-         }
-         if( !SCIPconsIsRemovable(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsRemovable(scip, consstay, FALSE) );
-         }
-         if( SCIPconsIsStickingAtNode(consdel) )
-         {
-            SCIP_CALL( SCIPsetConsStickingAtNode(scip, consstay, TRUE) );
-         }
+         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         SCIP_CALL( updateFlags(scip, consstay, consdel) ); 
 
          assert( !consdatastay->upgraded );
          /* delete consdel */
@@ -6202,7 +6184,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             cons0lhs = consdata0->lhs;
             cons0isequality = FALSE;
             if( !consdata0->upgraded )
+            {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+
                (*nchgsides)++;
+            }
          }
       }
       else if( cons0dominateslhs && (!cons1isequality || cons0dominatesrhs || SCIPisInfinity(scip, consdata1->rhs)) )
@@ -6227,7 +6214,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_CALL( chgLhs(scip, cons1, -SCIPinfinity(scip)) );
             cons1isequality = FALSE;
             if( !consdata1->upgraded )
+            {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
+
                (*nchgsides)++;
+            }
          }
       }
       if( cons1dominatesrhs && (!cons0isequality || cons1dominateslhs || SCIPisInfinity(scip, -consdata0->lhs)) )
@@ -6253,7 +6245,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             cons0rhs = consdata0->rhs;
             cons0isequality = FALSE;
             if( !consdata0->upgraded )
+            {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+
                (*nchgsides)++;
+            }
          }
       }
       else if( cons0dominatesrhs && (!cons1isequality || cons0dominateslhs || SCIPisInfinity(scip, -consdata1->lhs)) )
@@ -6278,7 +6275,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_CALL( chgRhs(scip, cons1, SCIPinfinity(scip)) );
             cons1isequality = FALSE;
             if( !consdata1->upgraded )
+            {
+               /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+               SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
+
                (*nchgsides)++;
+            }
          }
       }
 
@@ -6290,7 +6292,12 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIP_CALL( SCIPdelCons(scip, cons0) );
          conss[chkind] = NULL;
          if( !consdata0->upgraded )
+         {
+            /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+            
             (*ndelconss)++;
+         }
          continue;
       }
       if( SCIPisInfinity(scip, -consdata1->lhs) && SCIPisInfinity(scip, consdata1->rhs) )
@@ -6300,7 +6307,12 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIP_CALL( SCIPdelCons(scip, cons1) );
          conss[c] = NULL;
          if( !consdata1->upgraded )
+         {
+            /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+            SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
+
             (*ndelconss)++;
+         }
          continue;
       }
 
