@@ -14,13 +14,13 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.3 2008/07/24 13:41:33 bzfviger Exp $
+# $Id: make.project,v 1.4 2008/08/22 16:39:56 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
-
+#@author  Timo Berthold 
 
 #-----------------------------------------------------------------------------
 # detect host architecture
@@ -117,7 +117,7 @@ DFLAGS		+=	$(USRDFLAGS)
 LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
-LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP)
+LPSLDFLAGS	=	-lcplex.$(OSTYPE).$(ARCH).$(COMP) -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 endif
 
 ifeq ($(LPS),spx)
@@ -129,7 +129,7 @@ LPSLDFLAGS	=	-lsoplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 endif
 
 ifeq ($(LPS),clp)
-LPSLDFLAGS	=	-Wl,-rpath,$(LIBDIR) -lclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT) -lcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+LPSLDFLAGS	=	-lclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT) -lcoinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT) -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
