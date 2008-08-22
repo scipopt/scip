@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.50 2008/08/21 19:30:30 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.51 2008/08/22 13:58:19 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -3642,15 +3642,22 @@ SCIP_RETCODE mcfnetworkExtract(
           *         -  for all flow-columns that have no arcid in the first commodity:       ----- colcommodity, colarcid
           *         -          get incident nodes: source target                             ----- arcsources, arctargets
           *         -          for all other commodities:
-          *         -               check if source and target have same incident 
+          *         -               check if source and target have same incident
           *                         unassigned column
           *         -               (for undirected case direction does not matter?)
-          *          -               assign arc-id
-          *          -               break if not possible
+          *         -               assign arc-id
+          *         -               break if not possible
+          *
           * alternative:
-          *          assign arc-id even if there is no corresponding arc in other commodities
-          *          this is more time-consuming, we have to apply the algo above to every commodity
-          *          and to maintain list of unasigned columns. this list has to be updated.
+          *   - go through flow conservation constraints (and for var without arc) to generate
+          *     flowvarsources and flowvartargets arrays ....
+          *   - for all nodes i
+          *        init nodecnt[nnodes] := {0,...,0}
+          *        for all coms k
+          *           - get flowcon
+          *           - for each flowvar f in flowcon: nodecnt[othernode[f]]++ (for othernode use flowsource, flowtargets arrays)
+          *        if count is large enough (80% rounded up) asign arc id to all corresponding flow vars
+          *
           */
 
          /* clean up the network: get rid of commodities without arcs or with at most one node */
@@ -3776,6 +3783,9 @@ SCIP_DECL_SORTPTRCOMP(compArcs)
 
 /** ---------------------------------------------------------------------------------------------------------------------------- */
 
+
+/**@todo we should rather maintain a queue of node-pair weights
+         the weight is the minimal slack of fwd and bwd arcs --> this is important in the directed case*/
 /** creates a priority queue and fills it with the given arc entries */
 static
 SCIP_RETCODE arcqueueCreate(
