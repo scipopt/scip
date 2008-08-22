@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.72 2008/07/04 10:07:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.73 2008/08/22 13:36:36 bzfberth Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -1058,6 +1058,10 @@ SCIP_RETCODE separateCuts(
    if( nrows == 0 )
       return SCIP_OKAY;
 
+   /* check whether SCIP was stopped in the meantime */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+   
    /* get active problem variables */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);

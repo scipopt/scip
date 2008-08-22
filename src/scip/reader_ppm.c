@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.12 2008/07/10 13:15:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.13 2008/08/22 13:36:36 bzfberth Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -97,15 +97,15 @@ SCIP_RETCODE getActiveVariables(
 
    if( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
 
       if( requiredsize > *nvars )
       {
          *nvars = requiredsize;
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, *nvars ) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, *nvars ) );
-
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize) );
+         
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
    }

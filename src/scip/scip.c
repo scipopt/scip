@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.465 2008/08/22 08:32:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.466 2008/08/22 13:36:36 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -82,6 +82,9 @@
 #endif
 
 
+/* 
+ * Local methods
+ */
 
 #ifndef NDEBUG
 /** checks, if SCIP is in one of the feasible stages */
@@ -352,7 +355,47 @@ SCIP_RETCODE checkStage(
    freesolve,freetrans) SCIP_OKAY
 #endif
 
+/** gets global primal bound (objective value of best solution or user objective limit) */
+static
+SCIP_Real getPrimalbound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return SCIPprobExternObjval(scip->transprob, scip->set, scip->primal->upperbound);
+}
 
+/** gets global dual bound */
+static
+SCIP_Real getDualbound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real lowerbound;
+
+   lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
+   if( SCIPsetIsInfinity(scip->set, lowerbound) )
+      return getPrimalbound(scip);
+   else
+      return SCIPprobExternObjval(scip->transprob, scip->set, lowerbound);
+}
+
+/** gets global lower (dual) bound in transformed problem */
+static
+SCIP_Real getLowerbound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return SCIPtreeGetLowerbound(scip->tree, scip->set);
+}
+
+/** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
+static
+SCIP_Real getUpperbound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return scip->primal->upperbound;
+}
 
 
 /*
@@ -5127,10 +5170,10 @@ SCIP_RETCODE SCIPsolve(
          SCIPmessagePrintInfo("Solving Nodes      : %"SCIP_LONGINT_FORMAT"\n", scip->stat->nnodes);
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
          SCIPmessagePrintInfo("Primal Bound       : %+.14e (%"SCIP_LONGINT_FORMAT" solutions)\n",
-            SCIPgetPrimalbound(scip), scip->primal->nsolsfound);
+            getPrimalbound(scip), scip->primal->nsolsfound);
       if( scip->set->stage >= SCIP_STAGE_SOLVING && scip->set->stage <= SCIP_STAGE_SOLVED )
       {
-         SCIPmessagePrintInfo("Dual Bound         : %+.14e\n", SCIPgetDualbound(scip));
+         SCIPmessagePrintInfo("Dual Bound         : %+.14e\n", getDualbound(scip));
          SCIPmessagePrintInfo("Gap                : ");
          if( SCIPsetIsInfinity(scip->set, SCIPgetGap(scip)) )
             SCIPmessagePrintInfo("infinite\n");
@@ -5536,6 +5579,20 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    return SCIP_OKAY;
 }
 
+/** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+SCIP_RETCODE SCIPflattenVarAggregationGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert( scip != NULL );
+   assert( var != NULL );
+   SCIP_CALL( checkStage(scip, "SCIPflattenVarAggregationGraph", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->solvemem, scip->set) );
+   return SCIP_OKAY;
+}
+
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
  *
  * If the number of needed active variables is greater than the available slots in the variable array, nothing happens except
@@ -5552,28 +5609,10 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    int                   varssize,           /**< available slots in vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    )
 {
-   SCIP_VAR** activevars;
-   SCIP_Real* activescalars;
-   int nactivevars = 0;
-   SCIP_Real activeconstant = 0.0;
-   int activevarssize = (*nvars) * 2;
-
-   SCIP_VAR* var;
-   SCIP_Real scalar;
-   int v,r;
-
-   SCIP_VAR** multvars;
-   SCIP_Real* multscalars;
-   SCIP_Real multconstant;
-   int multvarssize;
-   int nmultvars;
-   int multrequiredsize;
-
-   SCIP_CALL( checkStage(scip, "SCIPgetProbvarLinearSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
    assert( scip != NULL );
    assert( vars != NULL );
    assert( scalars != NULL );
@@ -5582,151 +5621,11 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    assert( requiredsize != NULL );
    assert( *nvars <= varssize );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &activevars, activevarssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &activescalars, activevarssize) );
-
-   /* collect for each variable the representation in active variables */
-   for( v = 0; v < (*nvars); ++v )
-   {
-      var = vars[v];
-      scalar = scalars[v];
-
-      assert( var != NULL );
-
-      /* transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
-       * scalar and constant;
-       * if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
-       * in "constant"
-       */
-      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
-      assert( var != NULL );
-
-      assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
-
-      switch( SCIPvarGetStatus(var) )
-      {
-      case SCIP_VARSTATUS_LOOSE:
-      case SCIP_VARSTATUS_COLUMN:
-         /* x = a*y + c */
-         if( nactivevars >= activevarssize )
-         {
-            nactivevars *= 2;
-            SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, activevarssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &activescalars, activevarssize) );
-            assert(nactivevars < activevarssize);
-         }
-         activevars[nactivevars] = var;
-         activescalars[nactivevars] = scalar;
-         nactivevars++;
-         break;
-
-      case SCIP_VARSTATUS_MULTAGGR:
-         /* x = a_1*y_1 + ... + a_n*y_n + c */
-         multconstant = SCIPvarGetMultaggrConstant(var);
-         nmultvars = SCIPvarGetMultaggrNVars(var);
-
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &multvars, SCIPvarGetMultaggrVars(var), nmultvars) );
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &multscalars, SCIPvarGetMultaggrScalars(var), nmultvars) );
-         multvarssize = nmultvars;
-
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
-
-         if( multrequiredsize > multvarssize )
-         {
-            multvarssize = multrequiredsize;
-            SCIP_CALL( SCIPreallocBufferArray(scip, &multvars, multvarssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &multscalars, multvarssize) );
-
-            SCIP_CALL( SCIPgetProbvarLinearSum(scip, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize) );
-            
-            assert(multrequiredsize <= multvarssize );
-         }
-
-         if( nactivevars + nmultvars > activevarssize )
-         {
-            activevarssize += nactivevars + nmultvars;
-            SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, activevarssize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &activescalars, activevarssize) );
-         }
-
-         /* copy the variables and scalars */
-         for( r = 0; r < nmultvars; ++r, ++nactivevars )
-         {
-            assert( SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_COLUMN );
-            assert( nactivevars < activevarssize );
-
-            activevars[nactivevars] = multvars[r];
-            activescalars[nactivevars] = scalar * multscalars[r];
-         }
-
-         activeconstant += scalar * multconstant;
-
-         /* free buffers for multiaggregated variables */
-         SCIPfreeBufferArray(scip, &multvars);
-         SCIPfreeBufferArray(scip, &multscalars);
-         break;
-
-      case SCIP_VARSTATUS_FIXED:
-      case SCIP_VARSTATUS_ORIGINAL:
-      case SCIP_VARSTATUS_AGGREGATED:
-      case SCIP_VARSTATUS_NEGATED:
-      default:
-         /* x = c */
-         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-         
-      }
-   }
-
-   /* sort variable and scalar array by variable index */
-   SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
-
-   /* eliminate duplicates and count required size */
-   r = 0;
-   for( v = 1; v < nactivevars; ++v )
-   {
-      assert( r <= v );
-      if( SCIPvarCompare(activevars[r], activevars[v]) == 0 )
-      {
-         /* combine both variable since they are the same */
-         activevars[r] = activevars[v];
-         activescalars[r] += activescalars[v];
-      }
-      else if( SCIPvarCompare(activevars[r], activevars[v]) == -1 )
-      {
-         r++;
-         if( r != v )
-         {
-            /* remove empty slots */
-            activevars[r] = activevars[v];
-            activescalars[r] = activescalars[v];
-         }
-      }
-   }
-
-   *requiredsize = r +  1;
-
-   if( *nvars >= *requiredsize )
-   {
-      *nvars = *requiredsize;
-      (*constant) += activeconstant;
-
-      /* copy active variable and scalar array to the given arrays */
-      for( v = 0; v < *nvars; ++v )
-      {
-         vars[v] = activevars[v];
-         scalars[v] = activescalars[v];
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &activevars);
-   SCIPfreeBufferArray(scip, &activescalars);
+   SCIP_CALL( checkStage(scip, "SCIPgetProbvarLinearSum", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( SCIPvarGetActiveRepresentatives(scip->set, vars, scalars, nvars, varssize, constant, requiredsize, mergemultiples) );
 
    return SCIP_OKAY;
 }
-
 
 
 /** returns the reduced costs of the variable in the current node's LP relaxation,
@@ -13451,9 +13350,9 @@ SCIP_Real SCIPgetDualbound(
 
    lowerbound = SCIPtreeGetLowerbound(scip->tree, scip->set);
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
-      return SCIPgetPrimalbound(scip);
+      return getPrimalbound(scip);
    else
-      return SCIPprobExternObjval(scip->transprob, scip->set, lowerbound);
+      return getDualbound(scip);
 }
 
 /** gets global lower (dual) bound in transformed problem */
@@ -13463,7 +13362,7 @@ SCIP_Real SCIPgetLowerbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLowerbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   return SCIPtreeGetLowerbound(scip->tree, scip->set);
+   return getLowerbound(scip);
 }
 
 /** gets dual bound of the root node */
@@ -13474,7 +13373,7 @@ SCIP_Real SCIPgetDualboundRoot(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualboundRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
-      return SCIPgetPrimalbound(scip);
+      return getPrimalbound(scip);
    else
       return SCIPprobExternObjval(scip->transprob, scip->set, scip->stat->rootlowerbound);
 }
@@ -13496,7 +13395,7 @@ SCIP_Real SCIPgetPrimalbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPrimalbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return SCIPprobExternObjval(scip->transprob, scip->set, scip->primal->upperbound);
+   return getPrimalbound(scip);
 }
 
 /** gets global upper (primal) bound in transformed problem (objective value of best solution or user objective limit) */
@@ -13506,7 +13405,7 @@ SCIP_Real SCIPgetUpperbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetUpperbound", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
-   return scip->primal->upperbound;
+   return getUpperbound(scip);
 }
 
 /** gets global cutoff bound in transformed problem: a sub problem with lower bound larger than the cutoff
@@ -13547,11 +13446,11 @@ SCIP_Real SCIPgetGap(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   if( SCIPsetIsInfinity(scip->set, SCIPgetLowerbound(scip)) )
+   if( SCIPsetIsInfinity(scip->set, getLowerbound(scip)) )
       return 0.0;
 
-   primalbound = SCIPgetPrimalbound(scip);
-   dualbound = SCIPgetDualbound(scip);
+   primalbound = getPrimalbound(scip);
+   dualbound = getDualbound(scip);
 
    if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
       return 0.0;
@@ -13575,8 +13474,8 @@ SCIP_Real SCIPgetTransGap(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetTransGap", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
-   upperbound = SCIPgetUpperbound(scip);
-   lowerbound = SCIPgetLowerbound(scip);
+   upperbound = getUpperbound(scip);
+   lowerbound = getLowerbound(scip);
 
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
       return 0.0;
@@ -14457,8 +14356,8 @@ void printSolutionStatistics(
    assert(scip->stat != NULL);
    assert(scip->primal != NULL);
 
-   primalbound = SCIPgetPrimalbound(scip);
-   dualbound = SCIPgetDualbound(scip);
+   primalbound = getPrimalbound(scip);
+   dualbound = getDualbound(scip);
    dualboundroot = SCIPgetDualboundRoot(scip);
    gap = SCIPgetGap(scip);
 

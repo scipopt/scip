@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.1 2008/05/15 17:51:02 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.2 2008/08/22 13:36:35 bzfberth Exp $"
 
 /**@file   reader_ccg.c
  * @brief  Graph file reader (actually, only a writer)
@@ -173,7 +173,7 @@ SCIP_RETCODE getActiveVariables(
 
    if ( transformed )
    {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize) );
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
 
       if ( requiredsize > *nvars )
       {
@@ -181,7 +181,7 @@ SCIP_RETCODE getActiveVariables(
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, *nvars ) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, *nvars ) );
 
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize) );
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
    }

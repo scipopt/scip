@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.257 2008/06/23 18:29:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.258 2008/08/22 13:36:37 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -726,10 +726,6 @@ SCIP_RETCODE primalHeuristics(
    if( set->nheurs == 0 || (heurtiming == SCIP_HEURTIMING_AFTERNODE && nextnode == NULL) )
       return SCIP_OKAY;
 
-   /* check if solving should be aborted */
-   if( SCIPsolveIsStopped(set, stat, FALSE) )
-      return SCIP_OKAY;
-
    /* sort heuristics by priority, but move the delayed heuristics to the front */
    SCIPsetSortHeurs(set);
 
@@ -848,7 +844,7 @@ SCIP_RETCODE separationRoundLP(
    int i;
    SCIP_Bool consadded;
    SCIP_Bool root;
-
+ 
    assert(set != NULL);
    assert(lp != NULL);
    assert(set->conshdlrs_sepa != NULL);
@@ -870,8 +866,7 @@ SCIP_RETCODE separationRoundLP(
 
    /* call LP separators with nonnegative priority */
    for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-           && !SCIPsolveIsStopped(set, stat, FALSE);
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
         ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
@@ -906,8 +901,7 @@ SCIP_RETCODE separationRoundLP(
 
    /* try separating constraints of the constraint handlers */
    for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-           && !SCIPsolveIsStopped(set, stat, FALSE);
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
         ++i )
    {
       if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
@@ -942,8 +936,7 @@ SCIP_RETCODE separationRoundLP(
 
    /* call LP separators with negative priority */
    for( i = 0; i < set->nsepas && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-           && !SCIPsolveIsStopped(set, stat, FALSE);
+           && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
         ++i )
    {
       if( SCIPsepaGetPriority(set->sepas[i]) >= 0 )
@@ -982,8 +975,7 @@ SCIP_RETCODE separationRoundLP(
       consadded = FALSE;
 
       for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
-              && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-              && !SCIPsolveIsStopped(set, stat, FALSE);
+              && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
            ++i )
       {
 	 if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
@@ -1520,10 +1512,14 @@ SCIP_RETCODE priceAndCutLoop(
       delayedsepa = delayedsepa && !mustsepa; /* if regular separation applies, we ignore delayed separators */
       mustsepa = mustsepa || delayedsepa;
 
-      /* if the LP is infeasible or exceeded the objective limit, we don't need to separate cuts */
-      if( !separate
-         || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-         || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound) )
+      /* if the LP is infeasible, exceeded the objective limit or a global performance limit was reached, 
+       * we don't need to separate cuts 
+       */
+      if( (!separate
+            || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+            || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
+         //         && !SCIPsolveIsStopped(set, stat, TRUE)  ???????????????????????????????????
+          )
       {
          mustsepa = FALSE;
          delayedsepa = FALSE;

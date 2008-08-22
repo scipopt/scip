@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.160 2008/07/29 16:02:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.161 2008/08/22 13:36:34 bzfberth Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -3814,7 +3814,7 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
    ncuts = 0;
 
    /* separate useful constraints */
-   for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
+   for( i = 0; i < nusefulconss && ncuts < maxsepacuts && !SCIPisStopped(scip); i++ )
    {
       SCIP_CALL( separateCons(scip, conss[i], NULL, sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
    }
@@ -3870,7 +3870,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
    ncuts = 0;
 
    /* separate useful constraints */
-   for( i = 0; i < nusefulconss && ncuts < maxsepacuts; i++ )
+   for( i = 0; i < nusefulconss && ncuts < maxsepacuts && !SCIPisStopped(scip); i++ )
    {
       SCIP_CALL( separateCons(scip, conss[i], sol, sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
    }

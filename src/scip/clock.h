@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.h,v 1.20 2008/04/17 17:49:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: clock.h,v 1.21 2008/08/22 13:36:34 bzfberth Exp $"
 
 /**@file   clock.h
  * @brief  internal methods for clocks and timing issues
@@ -99,6 +99,12 @@ SCIP_Bool SCIPclockIsRunning(
 /** gets the used time of this clock in seconds */
 extern
 SCIP_Real SCIPclockGetTime(
+   SCIP_CLOCK*           clck                /**< clock timer */
+   );
+
+/** gets the last validated time of this clock in seconds */
+extern
+SCIP_Real SCIPclockGetLastTime(
    SCIP_CLOCK*           clck                /**< clock timer */
    );
 

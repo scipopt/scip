@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.28 2008/04/17 17:49:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.29 2008/08/22 13:36:34 bzfberth Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -39,10 +39,77 @@
 
 #include "scip/struct_clock.h"
 
+/** converts CPU clock ticks into seconds */
+static
+SCIP_Real cputime2sec(
+   clock_t          cputime             /**< clock ticks for CPU time */
+   )
+{
+   clock_t clocks_per_second;
+
+#if defined(_WIN32) || defined(_WIN64)
+   clocks_per_second = 100;
+#else
+#ifndef CLK_TCK
+   clocks_per_second = sysconf(_SC_CLK_TCK);
+#else
+   clocks_per_second = CLK_TCK;
+#endif
+#endif
+
+   return (SCIP_Real)cputime / (SCIP_Real)clocks_per_second;
+}
 
 /*lint -esym(*,timeval)*/
 /*lint -esym(*,gettimeofday)*/
 
+/** converts wall clock time into seconds */
+static
+SCIP_Real walltime2sec(
+   long                  sec,                /**< seconds counter */
+   long                  usec                /**< microseconds counter */
+   )
+{
+   return (SCIP_Real)sec + 0.000001 * (SCIP_Real)usec;
+}
+
+/** converts seconds into CPU clock ticks */
+static
+void sec2cputime(
+   SCIP_Real             sec,                /**< seconds */
+   clock_t*         cputime             /**< pointer to store clock ticks for CPU time */
+   )
+{
+   clock_t clocks_per_second;
+
+   assert(cputime != NULL);
+
+#ifdef _WIN32
+   clocks_per_second = 100;
+#else
+#ifndef CLK_TCK
+   clocks_per_second = sysconf(_SC_CLK_TCK);
+#else
+   clocks_per_second = CLK_TCK;
+#endif
+#endif
+   *cputime = (clock_t)(sec * clocks_per_second);
+}
+
+/** converts wall clock time into seconds */
+static
+void sec2walltime(
+   SCIP_Real             sec,                /**< seconds */
+   long*                 wallsec,            /**< pointer to store seconds counter */
+   long*                 wallusec            /**< pointer to store microseconds counter */
+   )
+{
+   assert(wallsec != NULL);
+   assert(wallusec != NULL);
+
+   *wallsec = (long)sec;
+   *wallusec = (long)(sec * 1000000.0) - (*wallsec);
+}
 
 
 /** sets the clock's type and converts the clock timer accordingly */
@@ -122,9 +189,10 @@ void SCIPclockInit(
    )
 {
    assert(clck != NULL);
-
+   
    SCIPdebugMessage("initializing clock %p of type %d\n", clck, clocktype);
    clck->enabled = TRUE;
+   clck->lasttime = 0.0;
    SCIPclockSetType(clck, clocktype);
 }
 
@@ -232,6 +300,7 @@ void SCIPclockStart(
             (void)times(&now);
             clck->data.cpuclock.user -= now.tms_utime;
 #endif
+            clck->lasttime = cputime2sec(clck->data.cpuclock.user);
             break;
 
          case SCIP_CLOCKTYPE_WALL:            
@@ -250,6 +319,7 @@ void SCIPclockStart(
                clck->data.wallclock.usec -= tp.tv_usec; /*lint !e115 !e40*/
             }
 #endif
+            clck->lasttime = walltime2sec(clck->data.wallclock.sec, clck->data.wallclock.usec);
             break;
 
          case SCIP_CLOCKTYPE_DEFAULT:            
@@ -339,82 +409,16 @@ SCIP_Bool SCIPclockIsRunning(
    return (clck->nruns > 0);
 }
 
-/** converts CPU clock ticks into seconds */
-static
-SCIP_Real cputime2sec(
-   clock_t          cputime             /**< clock ticks for CPU time */
-   )
-{
-   clock_t clocks_per_second;
-
-#if defined(_WIN32) || defined(_WIN64)
-   clocks_per_second = 100;
-#else
-#ifndef CLK_TCK
-   clocks_per_second = sysconf(_SC_CLK_TCK);
-#else
-   clocks_per_second = CLK_TCK;
-#endif
-#endif
-
-   return (SCIP_Real)cputime / (SCIP_Real)clocks_per_second;
-}
-
-/** converts wall clock time into seconds */
-static
-SCIP_Real walltime2sec(
-   long                  sec,                /**< seconds counter */
-   long                  usec                /**< microseconds counter */
-   )
-{
-   return (SCIP_Real)sec + 0.000001 * (SCIP_Real)usec;
-}
-
-/** converts seconds into CPU clock ticks */
-static
-void sec2cputime(
-   SCIP_Real             sec,                /**< seconds */
-   clock_t*         cputime             /**< pointer to store clock ticks for CPU time */
-   )
-{
-   clock_t clocks_per_second;
-
-   assert(cputime != NULL);
-
-#ifdef _WIN32
-   clocks_per_second = 100;
-#else
-#ifndef CLK_TCK
-   clocks_per_second = sysconf(_SC_CLK_TCK);
-#else
-   clocks_per_second = CLK_TCK;
-#endif
-#endif
-   *cputime = (clock_t)(sec * clocks_per_second);
-}
-
-/** converts wall clock time into seconds */
-static
-void sec2walltime(
-   SCIP_Real             sec,                /**< seconds */
-   long*                 wallsec,            /**< pointer to store seconds counter */
-   long*                 wallusec            /**< pointer to store microseconds counter */
-   )
-{
-   assert(wallsec != NULL);
-   assert(wallusec != NULL);
-
-   *wallsec = (long)sec;
-   *wallusec = (long)(sec * 1000000.0) - (*wallsec);
-}
 
 /** gets the used time of this clock in seconds */
 SCIP_Real SCIPclockGetTime(
    SCIP_CLOCK*           clck                /**< clock timer */
    )
 {
+   SCIP_Real result;
    assert(clck != NULL);
-
+   result = 0.0;
+   
    SCIPdebugMessage("getting time of clock %p (type %d, usedefault=%d, nruns=%d)\n",
       clck, clck->clocktype, clck->usedefault, clck->nruns);
 
@@ -424,18 +428,17 @@ SCIP_Real SCIPclockGetTime(
       switch( clck->clocktype )
       {
       case SCIP_CLOCKTYPE_DEFAULT:
-         return 0.0;
-
+         break;
       case SCIP_CLOCKTYPE_CPU:
-         return cputime2sec(clck->data.cpuclock.user);
-
+         result = cputime2sec(clck->data.cpuclock.user);
+         break;
       case SCIP_CLOCKTYPE_WALL:            
-         return walltime2sec(clck->data.wallclock.sec, clck->data.wallclock.usec);
-
+         result = walltime2sec(clck->data.wallclock.sec, clck->data.wallclock.usec);
+         break;
       default:
          SCIPerrorMessage("invalid clock type\n");
          SCIPABORT();
-         return 0.0; /*lint !e527*/
+         result = 0.0; /*lint !e527*/
       }
    }
    else
@@ -456,32 +459,45 @@ SCIP_Real SCIPclockGetTime(
       case SCIP_CLOCKTYPE_CPU:
 #if defined(_WIN32) || defined(_WIN64)
           GetProcessTimes(GetCurrentProcess(), &creationtime, &exittime, &kerneltime, &usertime);
-          return cputime2sec(clck->data.cpuclock.user + usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L);
+          result = cputime2sec(clck->data.cpuclock.user + usertime.dwHighDateTime * 42950 + usertime.dwLowDateTime / 100000L);
 #else
          (void)times(&now);
-         return cputime2sec(clck->data.cpuclock.user + now.tms_utime);
+         result = cputime2sec(clck->data.cpuclock.user + now.tms_utime);
 #endif
-
+         break;
       case SCIP_CLOCKTYPE_WALL:            
 #if defined(_WIN32) || defined(_WIN64)
-         return walltime2sec(clck->data.wallclock.sec + time(NULL), 0);
+         result = walltime2sec(clck->data.wallclock.sec + time(NULL), 0);
 #else
          gettimeofday(&tp, NULL);
          if( tp.tv_usec + clck->data.wallclock.usec > 1000000 ) /*lint !e115 !e40*/
-            return walltime2sec(clck->data.wallclock.sec + tp.tv_sec + 1, /*lint !e115 !e40*/
+            result = walltime2sec(clck->data.wallclock.sec + tp.tv_sec + 1, /*lint !e115 !e40*/
                (clck->data.wallclock.usec - 1000000) + tp.tv_usec); /*lint !e115 !e40*/
          else
-            return walltime2sec(clck->data.wallclock.sec + tp.tv_sec, /*lint !e115 !e40*/
+            result = walltime2sec(clck->data.wallclock.sec + tp.tv_sec, /*lint !e115 !e40*/
                clck->data.wallclock.usec + tp.tv_usec); /*lint !e115 !e40*/
 #endif
-
+         break;
       case SCIP_CLOCKTYPE_DEFAULT:
       default:
          SCIPerrorMessage("invalid clock type\n");
          SCIPABORT();
-         return 0.0; /*lint !e527*/
+         result = 0.0; /*lint !e527*/
       }
    }
+   
+   clck->lasttime = result;
+   return result;
+}
+
+/** gets the last validated time of this clock in seconds */
+SCIP_Real SCIPclockGetLastTime(
+   SCIP_CLOCK*           clck                /**< clock timer */
+   )
+{
+   assert(clck != NULL);
+   
+   return clck->lasttime;
 }
 
 /** sets the used time of this clock in seconds */

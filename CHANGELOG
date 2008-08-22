@@ -50,6 +50,8 @@ interface:
 - new method SCIPseparateRelaxedKnapsack() in cons_knapsack.h
 - new method SCIPgetCutoffdepth() which returns the depth of first node in active path that is marked being cutoff
 - added user pointer to callback methods of hash table
+- new method SCIPflattenVarAggregationGraph()
+- new method SCIPclockGetLastTime()
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -83,6 +85,7 @@ features:
   included detecting of redundant constraints with hash table in advance
 - The SoPlex LPI can now write basis files.
 - added capabilities to avoid multi-aggregation by setting a corresponding flag (SCIPmarkDoNotMultaggrVar())
+- added capabilities to flatten the (multi)-aggregation graph of variables
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -177,6 +180,10 @@ fixed bugs:
 - fixed bug in SCIPtightenVarLb/Ub() in scip.c concering forcing a bound change (bound improvement is checked now)
 - fixed bug in preprocessConstraintPairs() in cons_linear.c concerning updating the flags of the constraint that
   stayes in the problem (nonredundant information were lost before) 
+- fixed bug with exponential running times due to complicated recursive multi-aggregation
+- heavily decreased the usage of SCIPisStopped(), which costs system time
+- fixed bug with memory reallocation in SCIPgetProbvarLinearSum()
+- improved stage checking for bound computation
 
 
 SCIP version 1.00

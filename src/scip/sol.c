@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.86 2008/05/05 11:06:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.87 2008/08/22 13:36:37 bzfberth Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -215,13 +215,17 @@ static
 void solStamp(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             checktime           /**< should the time be updated? */
    )
 {
    assert(sol != NULL);
    assert(stat != NULL);
 
-   sol->time = SCIPclockGetTime(stat->solvingtime);
+   if( checktime )
+      sol->time = SCIPclockGetTime(stat->solvingtime);
+   else
+      sol->time = SCIPclockGetLastTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
    sol->depth = SCIPtreeGetCurrentDepth(tree);
@@ -251,7 +255,7 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree);
+   solStamp(*sol, stat, tree,TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -282,7 +286,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree);
+   solStamp(*sol, stat, tree,TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -413,7 +417,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree);
+   solStamp(*sol, stat, tree,TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -490,7 +494,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
       sol->obj = SCIPlpGetObjval(lp, set);
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
-   solStamp(sol, stat, tree);
+   solStamp(sol, stat, tree,TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -518,7 +522,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    /* link solution to pseudo solution */
    sol->obj = SCIPlpGetPseudoObjval(lp, set);
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
-   solStamp(sol, stat, tree);
+   solStamp(sol, stat, tree,TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -562,7 +566,7 @@ SCIP_RETCODE SCIPsolClear(
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_ZERO;
    sol->obj = 0.0;
-   solStamp(sol, stat, tree);
+   solStamp(sol, stat, tree,TRUE);
 
    return SCIP_OKAY;
 }
@@ -579,7 +583,7 @@ SCIP_RETCODE SCIPsolSetUnknown(
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_UNKNOWN;
    sol->obj = 0.0;
-   solStamp(sol, stat, tree);
+   solStamp(sol, stat, tree,TRUE);
 
    return SCIP_OKAY;
 }
@@ -655,7 +659,7 @@ SCIP_RETCODE SCIPsolSetVal(
             if( val != SCIP_UNKNOWN ) /*lint !e777*/
                sol->obj += obj * val;
 
-            solStamp(sol, stat, tree);
+            solStamp(sol, stat, tree,FALSE);
          }
          return SCIP_OKAY;
       }
@@ -679,7 +683,7 @@ SCIP_RETCODE SCIPsolSetVal(
          if( val != SCIP_UNKNOWN ) /*lint !e777*/
             sol->obj += obj * val;
 
-         solStamp(sol, stat, tree);
+         solStamp(sol, stat, tree,FALSE);
       }
       return SCIP_OKAY;
 
@@ -742,7 +746,7 @@ SCIP_RETCODE SCIPsolIncVal(
       {
          SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
          sol->obj += SCIPvarGetObj(var) * incval;
-         solStamp(sol, stat, tree);
+         solStamp(sol, stat, tree,FALSE);
          return SCIP_OKAY;
       }
       else
@@ -753,7 +757,7 @@ SCIP_RETCODE SCIPsolIncVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
       SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
       sol->obj += SCIPvarGetObj(var) * incval;
-      solStamp(sol, stat, tree);
+      solStamp(sol, stat, tree,FALSE);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:

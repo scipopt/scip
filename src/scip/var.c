@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.225 2008/08/15 19:50:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.226 2008/08/22 13:36:38 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2780,6 +2780,242 @@ SCIP_RETCODE SCIPvarFix(
    return SCIP_OKAY;
 }
 
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
+ *
+ * If the number of needed active variables is greater than the available slots in the variable array, nothing happens except
+ * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
+ * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays.
+ *
+ * The reason for this approach is that we cannot reallocate memory, since we do not know how the
+ * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ */
+SCIP_RETCODE SCIPvarGetActiveRepresentatives(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< variable array to get active variables */
+   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   int                   varssize,           /**< available slots in vars and scalars array */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   )
+{
+   SCIP_VAR** activevars;
+   SCIP_Real* activescalars;
+   int nactivevars;
+   SCIP_Real activeconstant;
+   int activevarssize;
+
+   SCIP_VAR* var;
+   SCIP_Real scalar;
+   int v;
+   int r;
+
+   SCIP_VAR** multvars;
+   SCIP_Real* multscalars;
+   SCIP_Real multconstant;
+   int multvarssize;
+   int nmultvars;
+   int multrequiredsize;
+
+   assert( set != NULL );
+   assert( vars != NULL );
+   assert( scalars != NULL );
+   assert( nvars != NULL );
+   assert( constant != NULL );
+   assert( requiredsize != NULL );
+   assert( *nvars <= varssize );
+
+   nactivevars = 0;
+   activeconstant = 0.0;
+   activevarssize = (*nvars) * 2;
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activescalars, activevarssize) );
+
+   /* collect for each variable the representation in active variables */
+   for( v = 0; v < (*nvars); ++v )
+   {
+      var = vars[v];
+      scalar = scalars[v];
+
+      assert( var != NULL );
+
+      /* transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
+       * scalar and constant;
+       * if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
+       * in "constant"
+       */
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
+      assert( var != NULL );
+
+      assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+
+      switch( SCIPvarGetStatus(var) )
+      {
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+         /* x = a*y + c */
+         if( nactivevars >= activevarssize )
+         {
+            activevarssize *= 2;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
+            assert(nactivevars < activevarssize);
+         }
+         activevars[nactivevars] = var;
+         activescalars[nactivevars] = scalar;
+         nactivevars++;
+         break;
+
+      case SCIP_VARSTATUS_MULTAGGR:
+         /* x = a_1*y_1 + ... + a_n*y_n + c */
+         multconstant = SCIPvarGetMultaggrConstant(var);
+         nmultvars = SCIPvarGetMultaggrNVars(var);
+
+         SCIP_CALL( SCIPsetDuplicateBufferArray(set, &multvars, SCIPvarGetMultaggrVars(var), nmultvars) );
+         SCIP_CALL( SCIPsetDuplicateBufferArray(set, &multscalars, SCIPvarGetMultaggrScalars(var), nmultvars) );
+         multvarssize = nmultvars;
+
+         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, mergemultiples) );
+         if( multrequiredsize > multvarssize )
+         {
+            multvarssize = multrequiredsize;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &multvars, multvarssize) );
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &multscalars, multvarssize) );
+
+            SCIP_CALL( SCIPvarGetActiveRepresentatives(set, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, mergemultiples) );
+            
+            assert(multrequiredsize <= multvarssize );
+         }
+
+         if( nactivevars + nmultvars > activevarssize )
+         {
+            activevarssize += nactivevars + nmultvars;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
+         }
+
+         /* copy the variables and scalars */
+         for( r = 0; r < nmultvars; ++r, ++nactivevars )
+         {
+            assert( SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_COLUMN );
+            assert( nactivevars < activevarssize );
+
+            activevars[nactivevars] = multvars[r];
+            activescalars[nactivevars] = scalar * multscalars[r];
+         }
+
+         activeconstant += scalar * multconstant;
+
+         /* free buffers for multiaggregated variables */
+         SCIPsetFreeBufferArray(set, &multvars);
+         SCIPsetFreeBufferArray(set, &multscalars);
+         break;
+
+      case SCIP_VARSTATUS_FIXED:
+      case SCIP_VARSTATUS_ORIGINAL:
+      case SCIP_VARSTATUS_AGGREGATED:
+      case SCIP_VARSTATUS_NEGATED:
+      default:
+         /* x = c */
+         assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
+         
+      }
+   }
+
+   if( mergemultiples )
+   {
+      /* sort variable and scalar array by variable index */
+      SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
+
+      /* eliminate duplicates and count required size */
+      r = 0;
+      for( v = 1; v < nactivevars; ++v )
+      {
+         assert( r <= v );
+         /* combine both variable since they are the same */
+         if( SCIPvarCompare(activevars[r], activevars[v]) == 0 )
+            activescalars[r] += activescalars[v];
+         else
+         {
+            /* variables are sorted, so +1 cannot happen */
+            assert(SCIPvarCompare(activevars[r], activevars[v]) == -1);
+            r++;
+            if( r != v )
+            {
+               /* remove empty slots */
+               activevars[r] = activevars[v];
+               activescalars[r] = activescalars[v];
+            }
+         }
+      }
+      *requiredsize = r +  1;
+   }
+   else
+      *requiredsize = nactivevars;
+
+   if( varssize >= *requiredsize )
+   {
+      *nvars = *requiredsize;
+      (*constant) += activeconstant;
+
+      /* copy active variable and scalar array to the given arrays */
+      for( v = 0; v < *nvars; ++v )
+      {
+         vars[v] = activevars[v];
+         scalars[v] = activescalars[v];
+      }
+   }
+
+   SCIPsetFreeBufferArray(set, &activevars);
+   SCIPsetFreeBufferArray(set, &activescalars);
+
+   return SCIP_OKAY;
+}
+
+
+/** flattens aggeregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+SCIP_RETCODE SCIPvarFlattenAggregationGraph(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real multconstant;
+   int multvarssize;
+   int nmultvars;
+   int multrequiredsize;
+
+   assert( var != NULL );
+   assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR );
+
+   multconstant = var->data.multaggr.constant;
+   nmultvars = var->data.multaggr.nvars;
+   multvarssize = var->data.multaggr.varssize;
+
+   SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, FALSE) );
+
+   if( multrequiredsize > multvarssize )
+   {
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.vars), multvarssize, multrequiredsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(var->data.multaggr.scalars), multvarssize, multrequiredsize) );
+      multvarssize = multrequiredsize;
+      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, FALSE) );
+      assert( multrequiredsize <= multvarssize );
+   }
+
+   var->data.multaggr.constant = multconstant;
+   var->data.multaggr.nvars = nmultvars;
+   var->data.multaggr.varssize = multvarssize;
+
+   return SCIP_OKAY;
+}
+
+
 /** tightens the bounds of both variables in aggregation x = a*y + c */
 static
 SCIP_RETCODE varUpdateAggregationBounds(
@@ -3237,6 +3473,7 @@ SCIP_RETCODE SCIPvarAggregate(
    return SCIP_OKAY;
 }
 
+
 /** converts variable into multi-aggregated variable */
 SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_VAR*             var,                /**< problem variable */
@@ -3282,8 +3519,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    else if( naggvars == 1)
       return SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
          aggvars[0], scalars[0], constant, infeasible, aggregated);
-
-   SCIPdebugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
+    SCIPdebugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
 
    *infeasible = FALSE;
    *aggregated = FALSE;
@@ -3344,6 +3580,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       var->data.multaggr.constant = constant;
       var->data.multaggr.nvars = naggvars;
       var->data.multaggr.varssize = naggvars;
+
+      SCIP_CALL( SCIPvarFlattenAggregationGraph(var, blkmem, set) );
 
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
       SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );

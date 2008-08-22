@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.11 2008/05/09 12:31:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.12 2008/08/22 13:36:37 bzfberth Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -2333,6 +2333,10 @@ SCIP_RETCODE separateCuts(
    if( nvars == 0 )
       return SCIP_OKAY;
 
+   /* check whether SCIP was stopped in the meantime */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+   
    *result = SCIP_DIDNOTFIND;
 
    /* get the type of norm to use for efficacy calculations */

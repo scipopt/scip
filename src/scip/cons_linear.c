@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.286 2008/08/22 08:32:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.287 2008/08/22 13:36:34 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -799,7 +799,7 @@ void consdataPrint(
    else
    {
       for( v = 0; v < consdata->nvars; ++v )
-#if 0 /*???????????????*/
+#if 0
          SCIPinfoMessage(scip, file, "%+.15g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
 #else
       SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]),
@@ -2796,6 +2796,7 @@ SCIP_RETCODE applyFixings(
             break;
 
          case SCIP_VARSTATUS_MULTAGGR:
+            SCIP_CALL( SCIPflattenVarAggregationGraph(scip,var) );
             naggrvars = SCIPvarGetMultaggrNVars(var);
             aggrvars = SCIPvarGetMultaggrVars(var);
             aggrscalars = SCIPvarGetMultaggrScalars(var);
@@ -4402,6 +4403,7 @@ SCIP_RETCODE convertLongEquality(
       }
       SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g]\n", aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub);
 
+
       /* perform the multi-aggregation */
       SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, vars, scalars, aggrconst,
             &infeasible, &aggregated) );
@@ -4551,6 +4553,7 @@ SCIP_RETCODE dualPresolve(
    SCIP_Bool bestislhs;
    int bestpos;
    int i;
+   int maxadditionalconss;
 
    assert(cutoff != NULL);
    assert(naggrvars != NULL);
@@ -4575,6 +4578,18 @@ SCIP_RETCODE dualPresolve(
    bestpos = -1;
    bestisint = TRUE;
    bestislhs = FALSE;
+
+   /* we only want to multi-aggregate variables, if they appear in maximal one addtional constraint,
+    * everything else would produce fill-in. Exceptions: If there is only one more variable in the constraint from which 
+    * the multi-aggregation arises, no fill-in will be produced and if there at most three further variables, 
+    * multiaggregation in two additional constraint will remove five nonzeros and ad four. God exists! 
+    */
+   maxadditionalconss = 1;
+   if( consdata->nvars <= 2 )
+      maxadditionalconss = INT_MAX;
+   else if( consdata->nvars <= 4 )
+      maxadditionalconss = 2;   
+
    for( i = 0; i < consdata->nvars && bestisint; ++i )
    {
       SCIP_VAR* var;
@@ -4621,16 +4636,21 @@ SCIP_RETCODE dualPresolve(
        * a_i <= 0, c_i >= 0, rhs exists, nlocksdown(x_i) == 1:
        *  - constraint is the only one that forbids fixing the variable to its lower bound
        *  - fix x_i to the smallest value for this constraint: x_i := rhs/a_i - \sum_{j \neq i} a_j/a_i * x_j
-       *
+       *       
        * but: all this is only applicable, if the aggregated value is inside x_i's bounds for all possible values
        *      of all x_j
+       * furthermore: we only want to apply this, if no fill-in will be produced
        */
       agglhs = lhsexists
-         && ((val > 0.0 && SCIPvarGetNLocksDown(var) == 1 && !SCIPisNegative(scip, obj))
-            || (val < 0.0 && SCIPvarGetNLocksUp(var) == 1 && !SCIPisPositive(scip, obj)));
+         && ((val > 0.0 && !SCIPisNegative(scip, obj) && SCIPvarGetNLocksDown(var) == 1 
+               && SCIPvarGetNLocksUp(var) <= maxadditionalconss)
+            || (val < 0.0 && !SCIPisPositive(scip, obj) && SCIPvarGetNLocksUp(var) == 1
+               && SCIPvarGetNLocksDown(var) <= maxadditionalconss));
       aggrhs = rhsexists
-         && ((val > 0.0 && SCIPvarGetNLocksUp(var) == 1 && !SCIPisPositive(scip, obj))
-            || (val < 0.0 && SCIPvarGetNLocksDown(var) == 1 && !SCIPisNegative(scip, obj)));
+         && ((val > 0.0 && !SCIPisPositive(scip, obj) && SCIPvarGetNLocksUp(var) == 1 
+               && SCIPvarGetNLocksDown(var) <= maxadditionalconss)            
+            || (val < 0.0 && !SCIPisNegative(scip, obj)  && SCIPvarGetNLocksDown(var) == 1 
+               && SCIPvarGetNLocksUp(var) <= maxadditionalconss));
       if( agglhs || aggrhs )
       {
          SCIP_Real minresactivity;

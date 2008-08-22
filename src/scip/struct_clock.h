@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_clock.h,v 1.14 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_clock.h,v 1.15 2008/08/22 13:36:38 bzfberth Exp $"
 
 /**@file   struct_clock.h
  * @brief  datastructures for clocks and timing issues
@@ -57,6 +57,7 @@ struct SCIP_Clock
       SCIP_CPUCLOCK      cpuclock;           /**< CPU clock counter */
       SCIP_WALLCLOCK     wallclock;          /**< wall clock counter */
    } data;
+   SCIP_Real             lasttime;           /**< last validated time of clock */
    int                   nruns;              /**< number of SCIPclockStart() calls without SCIPclockStop() calls */
    SCIP_CLOCKTYPE        clocktype;          /**< current type of clock used */
    SCIP_Bool             usedefault;         /**< should the clock's type be overruled by the default clock type? */
