@@ -172,6 +172,11 @@ fixed bugs:
 - fixed false assert and corrected a bug caused by deleting a constraint on "firstchanged" position in pairwise 
   presolving with hashing in cons_linear.c
 - removed memory leak detected with the help of coverity in dialog.c
+- fixed bug in applyFixings() in cons_varbound.c concerning tightening the bound of a variable left in a 
+  redundant constraint (bound change is forced now)
+- fixed bug in SCIPtightenVarLb/Ub() in scip.c concering forcing a bound change (bound improvement is checked now)
+- fixed bug in preprocessConstraintPairs() in cons_linear.c concerning updating the flags of the constraint that
+  stayes in the problem (nonredundant information were lost before) 
 
 
 SCIP version 1.00
