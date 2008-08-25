@@ -43,7 +43,7 @@ SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.cmd
 
 SETTINGS=settings/$SETNAME.cbcset
 
-if test "$CONTINUE" == "true"
+if test "$CONTINUE" = "true"
 then
     MVORCP=cp
 else
@@ -60,7 +60,7 @@ then
     $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
-if test "$CONTINUE" == "true"
+if test "$CONTINUE" = "true"
 then
     LASTPROB=`getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
@@ -83,7 +83,7 @@ echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
 
 for i in `cat $TSTNAME.test`
 do
-    if test "$LASTPROB" == ""
+    if test "$LASTPROB" = ""
     then
 	LASTPROB=""
 	if test -f $i
@@ -131,7 +131,7 @@ do
 	fi
     else
 	echo skipping $i
-	if test "$LASTPROB" == "$i"
+	if test "$LASTPROB" = "$i"
 	then
 	    LASTPROB=""
         fi

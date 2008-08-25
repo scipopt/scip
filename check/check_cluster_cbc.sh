@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster_cbc.sh,v 1.1 2008/08/04 16:24:59 bzfheinz Exp $
+# $Id: check_cluster_cbc.sh,v 1.2 2008/08/25 12:25:47 bzfwanie Exp $
 
 TSTNAME=$1
 BINID=$2
@@ -32,7 +32,7 @@ SCIPPATH=`pwd`
 SETDIR=../settings
 
 # choose a queue for the cluster run 
-if test "$OPT" == "opt"
+if test "$OPT" = "opt"
     then
     QUEUE="gbe"
 else
@@ -58,7 +58,7 @@ echo > $EVALFILE
 
 for i in `cat $TSTNAME.test` DONE
 do
-  if test "$i" == "DONE"
+  if test "$i" = "DONE"
       then
       break
   fi

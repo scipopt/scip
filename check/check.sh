@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.51 2008/08/11 08:19:30 bzfheinz Exp $
+# $Id: check.sh,v 1.52 2008/08/25 12:25:47 bzfwanie Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -52,7 +52,7 @@ SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=$SETDIR/$SETNAME.set
 
-if test "$LOCK" == "true"
+if test "$LOCK" = "true"
 then
     if test -e $DONEFILE
     then
@@ -78,7 +78,7 @@ then
     CONTINUE=false
 fi
 
-if test "$CONTINUE" == "true"
+if test "$CONTINUE" = "true"
 then
     MVORCP=cp
 else
@@ -95,7 +95,7 @@ then
     $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
-if test "$CONTINUE" == "true"
+if test "$CONTINUE" = "true"
 then
     LASTPROB=`getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
@@ -119,13 +119,13 @@ echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
 for i in `cat $TSTNAME.test` DONE
 do
-    if test "$i" == "DONE"
+    if test "$i" = "DONE"
     then
 	date > $DONEFILE
 	break
     fi
 
-    if test "$LASTPROB" == ""
+    if test "$LASTPROB" = ""
     then
 	LASTPROB=""
 	if test -f $i
@@ -177,7 +177,7 @@ do
 	fi
     else
 	echo skipping $i
-	if test "$LASTPROB" == "$i"
+	if test "$LASTPROB" = "$i"
 	then
 	    LASTPROB=""
         fi
@@ -193,7 +193,7 @@ if test -e $DONEFILE
 then
     ./evalcheck.sh $OUTFILE
 
-    if test "$LOCK" == "true"
+    if test "$LOCK" = "true"
     then
 	rm -f $RUNFILE
     fi

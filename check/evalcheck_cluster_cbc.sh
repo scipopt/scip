@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster_cbc.sh,v 1.1 2008/08/04 16:24:59 bzfheinz Exp $
+# $Id: evalcheck_cluster_cbc.sh,v 1.2 2008/08/25 12:25:47 bzfwanie Exp $
 export LANG=C
 
 AWKARGS=""
@@ -30,7 +30,7 @@ echo > $OUTFILE
 echo create overall output file
 for i in `cat $DIR/$EVALFILE.eval` DONE
   do
-  if test "$i" == "DONE"
+  if test "$i" = "DONE"
       then
       break
   fi

@@ -184,6 +184,7 @@ fixed bugs:
 - heavily decreased the usage of SCIPisStopped(), which costs system time
 - fixed bug with memory reallocation in SCIPgetProbvarLinearSum()
 - improved stage checking for bound computation
+- fixed usage of command test for string comparision in check-scripts (now compatible with ubuntu)
 
 
 SCIP version 1.00
