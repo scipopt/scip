@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.251 2008/08/11 08:19:30 bzfheinz Exp $
+# $Id: Makefile,v 1.252 2008/08/25 15:12:59 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -228,8 +228,9 @@ LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
-LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) -Wl,-rpath,$(CURDIR)/$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) $(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)gfortran$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX)
+LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) -Wl,-rpath,$(CURDIR)/$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)gfortran$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX) $(LINKCXX_l)bz2$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/clpinc
@@ -566,6 +567,11 @@ testcbc:
 testcluster:		
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(OPT);
+
+.PHONY: testclustercbc
+testclustercbc:		
+		cd check; \
+		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
