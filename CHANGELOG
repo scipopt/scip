@@ -86,6 +86,7 @@ features:
 - The SoPlex LPI can now write basis files.
 - added capabilities to avoid multi-aggregation by setting a corresponding flag (SCIPmarkDoNotMultaggrVar())
 - added capabilities to flatten the (multi)-aggregation graph of variables
+- the ZPL reader is now able to pass a starting solution to SCIP
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
