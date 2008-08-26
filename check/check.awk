@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.68 2008/08/11 17:53:07 bzfheinz Exp $
+# $Id: check.awk,v 1.69 2008/08/26 07:40:09 bzfheinz Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -177,7 +177,7 @@ BEGIN {
    # get name of LP solver
    if( $13 == "SOPLEX")
       lpsname = "spx";
-   else if ($13 == "SOPLEX")
+   else if ($13 == "CPLEX")
       lpsname = "cpx";
    else if ($13 == "NONE")
       lpsname = "none";
