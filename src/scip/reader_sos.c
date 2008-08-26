@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.5 2008/04/17 17:49:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.6 2008/08/26 12:23:06 bzfviger Exp $"
 
 /**@file   reader_sos.c
  * @brief  SOS file reader
@@ -53,7 +53,7 @@
 enum SosSection
 {
    SOS_NAME,
-   [5~   SOS_SOSSECTION,
+   SOS_SOSSECTION,
    SOS_ENDATA
 };
 typedef enum SosSection SOSSECTION;
