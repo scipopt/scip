@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.15 2008/08/22 13:36:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.16 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -1030,8 +1030,10 @@ SCIP_RETCODE readConstraints(
    /* check if we reached the line end */
    if( !getNextToken(opbinput) || !isEndLine(opbinput) )
    {
-      //*(opbinput->token) = '\0';
-      //*(opbinput->tokenbuf) = '\0';
+  	  /*
+      *(opbinput->token) = '\0';
+      *(opbinput->tokenbuf) = '\0';
+      */
       syntaxError(scip, opbinput, "expected endline character ';'");
       goto TERMINATE;
    }

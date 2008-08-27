@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.208 2008/07/18 14:43:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.209 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -159,7 +159,7 @@ void forkCaptureLPIState(
    assert(nuses > 0);
 
    fork->nlpistateref += nuses;
-   SCIPdebugMessage("captured LPI state of fork %p %d times -> new nlpistateref=%d\n", fork, nuses, fork->nlpistateref);
+   SCIPdebugMessage("captured LPI state of fork %p %d times -> new nlpistateref=%d\n", (void*)fork, nuses, fork->nlpistateref);
 }
 
 /** decreases the reference counter of the LP state in the fork */
@@ -181,7 +181,7 @@ SCIP_RETCODE forkReleaseLPIState(
       SCIP_CALL( SCIPlpFreeState(lp, blkmem, &(fork->lpistate)) );
    }
 
-   SCIPdebugMessage("released LPI state of fork %p -> new nlpistateref=%d\n", fork, fork->nlpistateref);
+   SCIPdebugMessage("released LPI state of fork %p -> new nlpistateref=%d\n", (void*)fork, fork->nlpistateref);
 
    return SCIP_OKAY;
 }
@@ -199,7 +199,7 @@ void subrootCaptureLPIState(
 
    subroot->nlpistateref += nuses;
    SCIPdebugMessage("captured LPI state of subroot %p %d times -> new nlpistateref=%d\n", 
-      subroot, nuses, subroot->nlpistateref);
+      (void*)subroot, nuses, subroot->nlpistateref);
 }
 
 /** decreases the reference counter of the LP state in the subroot */
@@ -221,7 +221,7 @@ SCIP_RETCODE subrootReleaseLPIState(
       SCIP_CALL( SCIPlpFreeState(lp, blkmem, &(subroot->lpistate)) );
    }
    
-   SCIPdebugMessage("released LPI state of subroot %p -> new nlpistateref=%d\n", subroot, subroot->nlpistateref);
+   SCIPdebugMessage("released LPI state of subroot %p -> new nlpistateref=%d\n", (void*)subroot, subroot->nlpistateref);
 
    return SCIP_OKAY;
 }
@@ -1673,7 +1673,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       /* get the solution value of variable in last solved LP on the active path:
        *  - if the LP was solved at the current node, the LP values of the columns are valid
        *  - if the last solved LP was the one in the current lpstatefork, the LP value in the columns are still valid
-       *  - otherwise, the LP values are invalid
+       *  - otherwise, the LP values are invalid
        */
       if( SCIPtreeHasCurrentNodeLP(tree)
          || (tree->focuslpstateforklpcount == stat->lpcount && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN) )
@@ -1775,7 +1775,7 @@ SCIP_RETCODE SCIPnodeAddHolechg(
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD);
 
    SCIPdebugMessage("adding holechange at node at depth %d: changed pointer at %p from %p to %p\n",
-      node->depth, ptr, newlist, oldlist);
+      node->depth, (void*)ptr, (void*)newlist, (void*)oldlist);
 
    stat->nholechgs++;
 

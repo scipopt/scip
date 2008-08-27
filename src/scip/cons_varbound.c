@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.75 2008/08/22 08:32:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.76 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   cons_varbound.c
  * @brief  constraint handler for variable bound constraints
@@ -309,7 +309,7 @@ SCIP_Bool checkCons(
    assert(consdata != NULL);
 
    SCIPdebugMessage("checking variable bound constraint <%s> for feasibility of solution %p (lprows=%d)\n",
-      SCIPconsGetName(cons), sol, checklprows);
+      SCIPconsGetName(cons), (void*)sol, checklprows);
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {

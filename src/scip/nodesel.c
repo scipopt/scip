@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.56 2008/05/05 09:24:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.57 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -272,7 +272,7 @@ SCIP_RETCODE SCIPnodepqInsert(
    bfsqueue[bfspos] = pos;
    bfsposs[pos] = bfspos;
 
-   SCIPdebugMessage("inserted node %p[%g] at pos %d and bfspos %d of node queue\n", node, lowerbound, pos, bfspos);
+   SCIPdebugMessage("inserted node %p[%g] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
 
    return SCIP_OKAY;
 }
@@ -318,7 +318,7 @@ SCIP_Bool nodepqDelPos(
    assert(0 <= freebfspos && freebfspos < nodepq->len);
 
    SCIPdebugMessage("delete node %p[%g] at pos %d and bfspos %d of node queue\n", 
-      slots[freepos], SCIPnodeGetLowerbound(slots[freepos]), freepos, freebfspos);
+      (void*)slots[freepos], SCIPnodeGetLowerbound(slots[freepos]), freepos, freebfspos);
 
    /* remove node of the tree and get a free slot,
     * if the removed node was the last node of the queue

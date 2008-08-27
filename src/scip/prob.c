@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.96 2008/08/06 09:20:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.97 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -715,7 +715,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
       /* don't delete the variable, if it was fixed or aggregated in the meantime */
       if( SCIPvarGetProbindex(var) >= 0 )
       {
-         SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), var);
+         SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), (void*)var);
          
          /* convert column variable back into loose variable, free LP column */
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -1398,7 +1398,7 @@ SCIP_VAR* SCIPprobFindVar(
    assert(prob != NULL);
    assert(name != NULL);
 
-   return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (void*)name));
+   return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (char*)name));
 }
 
 /** returns constraint of the problem with given name */
@@ -1410,7 +1410,7 @@ SCIP_CONS* SCIPprobFindCons(
    assert(prob != NULL);
    assert(name != NULL);
 
-   return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (void*)name));
+   return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (char*)name));
 }
 
 /** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present

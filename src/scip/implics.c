@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.27 2008/08/06 09:20:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.28 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -765,7 +765,7 @@ SCIP_RETCODE SCIPimplicsAdd(
    assert(added != NULL);
 
    SCIPdebugMessage("adding implication to implics %p [%d]: <%s> %s %g\n",
-      *implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
+      (void*)*implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
 
    checkImplics(*implics, set);
 
@@ -949,7 +949,7 @@ SCIP_RETCODE SCIPimplicsDel(
    assert(implvar != NULL);
 
    SCIPdebugMessage("deleting implication from implics %p [%d]: <%s> %s x\n",
-      *implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=");
+      (void*)*implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=");
 
    checkImplics(*implics, set);
 
@@ -1424,7 +1424,7 @@ SCIP_RETCODE SCIPcliquelistAdd(
    assert((*cliquelist)->cliques[value] != NULL);
 
    SCIPdebugMessage("adding clique %d to cliquelist %p value %d (length: %d)\n", 
-      clique->id, *cliquelist, value, (*cliquelist)->ncliques[value]);
+      clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
    
    /* insert clique into list, sorted by clique id */
    id = clique->id;
@@ -1450,7 +1450,7 @@ SCIP_RETCODE SCIPcliquelistDel(
    assert(*cliquelist != NULL);
 
    SCIPdebugMessage("deleting clique %d from cliquelist %p value %d (length: %d)\n", 
-      clique->id, *cliquelist, value, (*cliquelist)->ncliques[value]);
+      clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
    
    pos = cliquesSearchClique((*cliquelist)->cliques[value], (*cliquelist)->ncliques[value], clique);
    assert(0 <= pos && pos < (*cliquelist)->ncliques[value]);

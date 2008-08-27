@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.226 2008/08/22 13:36:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.227 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -851,7 +851,7 @@ SCIP_RETCODE domchgMakeDynamic(
    assert(domchg != NULL);
    assert(blkmem != NULL);
 
-   SCIPdebugMessage("making domain change data %p pointing to %p dynamic\n", domchg, *domchg);
+   SCIPdebugMessage("making domain change data %p pointing to %p dynamic\n", (void*)domchg, (void*)*domchg);
 
    if( *domchg == NULL )
    {
@@ -904,7 +904,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
    assert(domchg != NULL);
    assert(blkmem != NULL);
 
-   SCIPdebugMessage("making domain change data %p pointing to %p static\n", domchg, *domchg);
+   SCIPdebugMessage("making domain change data %p pointing to %p static\n", (void*)domchg, (void*)*domchg);
 
    if( *domchg != NULL )
    {
@@ -1049,7 +1049,7 @@ SCIP_RETCODE SCIPdomchgApply(
 
    *cutoff = FALSE;
 
-   SCIPdebugMessage("applying domain changes at %p in depth %d\n", domchg, depth);
+   SCIPdebugMessage("applying domain changes at %p in depth %d\n", (void*)domchg, depth);
    if( domchg == NULL )
       return SCIP_OKAY;
 
@@ -1091,7 +1091,7 @@ SCIP_RETCODE SCIPdomchgUndo(
 {
    int i;
 
-   SCIPdebugMessage("undoing domain changes at %p\n", domchg);
+   SCIPdebugMessage("undoing domain changes at %p\n", (void*)domchg);
    if( domchg == NULL )
       return SCIP_OKAY;
 
@@ -1134,7 +1134,7 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
    if( domchg == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("applying domain changes at %p to the global problem\n", domchg);
+   SCIPdebugMessage("applying domain changes at %p to the global problem\n", (void*)domchg);
 
    /* apply bound changes */
    for( i = 0; i < (int)domchg->domchgbound.nboundchgs; ++i )
@@ -1183,7 +1183,7 @@ SCIP_RETCODE SCIPdomchgAddBoundchg(
    SCIPdebugMessage("adding %s bound change <%s: %g> of variable <%s> to domain change at %p pointing to %p\n",
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", 
       boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING ? "branching" : "inference", 
-      newbound, var->name, domchg, *domchg);
+      newbound, var->name, (void*)domchg, (void*)*domchg);
 
    /* if domain change data doesn't exist, create it;
     * if domain change is static, convert it into dynamic change
@@ -1838,7 +1838,7 @@ SCIP_RETCODE varAddParent(
    assert(var->nparentvars == 0 || SCIPvarGetStatus(parentvar) != SCIP_VARSTATUS_ORIGINAL);
 
    SCIPdebugMessage("adding parent <%s>[%p] to variable <%s>[%p] in slot %d\n", 
-      parentvar->name, parentvar, var->name, var, var->nparentvars);
+      parentvar->name, (void*)parentvar, var->name, (void*)var, var->nparentvars);
 
    SCIP_CALL( varEnsureParentvarsSize(var, blkmem, set, var->nparentvars+1) );
 
@@ -2487,7 +2487,7 @@ SCIP_RETCODE SCIPvarTransform(
          (*transvar)->vardata = origvar->vardata;
    }
 
-   SCIPdebugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, origvar, (*transvar)->name, *transvar);
+   SCIPdebugMessage("transformed variable: <%s>[%p] -> <%s>[%p]\n", origvar->name, (void*)origvar, (*transvar)->name, (void*)*transvar);
 
    return SCIP_OKAY;
 }
@@ -11174,7 +11174,7 @@ SCIP_RETCODE SCIPvarCatchEvent(
    assert(SCIPvarIsTransformed(var));
 
    SCIPdebugMessage("catch event of type 0x%x of variable <%s> with handler %p and data %p\n", 
-      eventtype, var->name, eventhdlr, eventdata);
+      eventtype, var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 
@@ -11196,7 +11196,7 @@ SCIP_RETCODE SCIPvarDropEvent(
    assert(var->eventfilter != NULL);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPdebugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, eventhdlr, eventdata);
+   SCIPdebugMessage("drop event of variable <%s> with handler %p and data %p\n", var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
 

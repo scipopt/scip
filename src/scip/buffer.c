@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.30 2008/04/17 17:49:02 bzfpfets Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.31 2008/08/27 08:36:37 bzfviger Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -130,7 +130,7 @@ SCIP_RETCODE SCIPbufferAllocMem(
    buffer->firstfree++;
 
    SCIPdebugMessage("allocated buffer %d/%d at %p of size %d (required size: %d) for pointer %p\n", 
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, (void*)ptr);
 
 #else
    SCIP_ALLOC( BMSallocMemorySize(ptr, size) );
@@ -208,7 +208,7 @@ SCIP_RETCODE SCIPbufferReallocMem(
    assert(*ptr == buffer->data[bufnum]);
 
    SCIPdebugMessage("reallocated buffer %d/%d at %p to size %d (required size: %d) for pointer %p\n", 
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, (void*)ptr);
 
 #else
    SCIP_ALLOC( BMSreallocMemorySize(ptr, size) );
@@ -250,7 +250,7 @@ void SCIPbufferFreeMem(
       buffer->firstfree--;
 
    SCIPdebugMessage("freed buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], (void*)ptr, buffer->firstfree);
 
 #else
    BMSfreeMemory(ptr);

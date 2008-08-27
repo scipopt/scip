@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.56 2008/08/06 09:20:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.57 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -538,7 +538,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    found = FALSE;
 
    SCIPdebugMessage("separating cut pool %p with %d cuts, beginning with cut %d\n",
-      cutpool, cutpool->ncuts, cutpool->firstunprocessed);
+      (void*)cutpool, cutpool->ncuts, cutpool->firstunprocessed);
 
    /* start timing */
    SCIPclockStart(cutpool->poolclock, set);

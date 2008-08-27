@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.c,v 1.29 2008/08/22 13:36:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: clock.c,v 1.30 2008/08/27 08:36:37 bzfviger Exp $"
 
 /**@file   clock.c
  * @brief  methods for clocks and timing issues
@@ -190,7 +190,7 @@ void SCIPclockInit(
 {
    assert(clck != NULL);
    
-   SCIPdebugMessage("initializing clock %p of type %d\n", clck, clocktype);
+   SCIPdebugMessage("initializing clock %p of type %d\n", (void*)clck, clocktype);
    clck->enabled = TRUE;
    clck->lasttime = 0.0;
    SCIPclockSetType(clck, clocktype);
@@ -203,7 +203,7 @@ void SCIPclockReset(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("resetting clock %p of type %d (usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
+   SCIPdebugMessage("resetting clock %p of type %d (usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
    switch( clck->clocktype )
    {
    case SCIP_CLOCKTYPE_DEFAULT:
@@ -229,7 +229,7 @@ void SCIPclockEnable(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("enabling clock %p of type %d (usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
+   SCIPdebugMessage("enabling clock %p of type %d (usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
    clck->enabled = TRUE;
 }
@@ -241,7 +241,7 @@ void SCIPclockDisable(
 {
    assert(clck != NULL);
 
-   SCIPdebugMessage("disabling clock %p of type %d (usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
+   SCIPdebugMessage("disabling clock %p of type %d (usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
    clck->enabled = FALSE;
    SCIPclockReset(clck);
@@ -256,7 +256,7 @@ void SCIPclockSetType(
    assert(clck != NULL);
 
    SCIPdebugMessage("setting type of clock %p (type %d, usedefault=%d) to %d\n", 
-      clck, clck->clocktype, clck->usedefault, clocktype);
+      (void*)clck, clck->clocktype, clck->usedefault, clocktype);
 
    clck->clocktype = clocktype;
    clck->usedefault = (clocktype == SCIP_CLOCKTYPE_DEFAULT);
@@ -288,7 +288,7 @@ void SCIPclockStart(
          struct tms now;
 #endif
          
-         SCIPdebugMessage("starting clock %p (type %d, usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
+         SCIPdebugMessage("starting clock %p (type %d, usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
          switch( clck->clocktype )
          {
@@ -358,7 +358,7 @@ void SCIPclockStop(
          struct tms now;
 #endif
          
-         SCIPdebugMessage("stopping clock %p (type %d, usedefault=%d)\n", clck, clck->clocktype, clck->usedefault);
+         SCIPdebugMessage("stopping clock %p (type %d, usedefault=%d)\n", (void*)clck, clck->clocktype, clck->usedefault);
 
          switch( clck->clocktype )
          {
@@ -420,7 +420,7 @@ SCIP_Real SCIPclockGetTime(
    result = 0.0;
    
    SCIPdebugMessage("getting time of clock %p (type %d, usedefault=%d, nruns=%d)\n",
-      clck, clck->clocktype, clck->usedefault, clck->nruns);
+      (void*)clck, clck->clocktype, clck->usedefault, clck->nruns);
 
    if( clck->nruns == 0 )
    {
@@ -509,7 +509,7 @@ void SCIPclockSetTime(
    assert(clck != NULL);
 
    SCIPdebugMessage("setting time of clock %p (type %d, usedefault=%d, nruns=%d) to %g\n",
-      clck, clck->clocktype, clck->usedefault, clck->nruns, sec);
+      (void*)clck, clck->clocktype, clck->usedefault, clck->nruns, sec);
 
    /* if the clock type is not yet set, set it to an arbitrary value to be able to store the number */
    if( clck->clocktype == SCIP_CLOCKTYPE_DEFAULT )

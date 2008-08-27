@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.81 2008/08/06 09:20:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.82 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1036,7 +1036,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
    assert(minidx <= maxidx);
 
    SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
-      realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
+      (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
@@ -1167,7 +1167,7 @@ SCIP_RETCODE SCIPrealarrayClear(
    assert(realarray != NULL);
 
    SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
-      realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
+      (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
 
    if( realarray->minusedidx <= realarray->maxusedidx )
    {
@@ -1225,7 +1225,7 @@ SCIP_RETCODE SCIPrealarraySetVal(
    assert(idx >= 0);
 
    SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n", 
-      realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
+      (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
 
    if( !SCIPsetIsZero(set, val) )
    {
@@ -1401,7 +1401,7 @@ SCIP_RETCODE SCIPintarrayExtend(
    assert(minidx <= maxidx);
 
    SCIPdebugMessage("extending intarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
-      intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, minidx, maxidx);
+      (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
@@ -1532,7 +1532,7 @@ SCIP_RETCODE SCIPintarrayClear(
    assert(intarray != NULL);
 
    SCIPdebugMessage("clearing intarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
-      intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx);
+      (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx);
 
    if( intarray->minusedidx <= intarray->maxusedidx )
    {
@@ -1590,7 +1590,7 @@ SCIP_RETCODE SCIPintarraySetVal(
    assert(idx >= 0);
 
    SCIPdebugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
-      intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, idx, val);
+      (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, idx, val);
 
    if( val != 0 )
    {
@@ -1762,7 +1762,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
    assert(minidx <= maxidx);
 
    SCIPdebugMessage("extending boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
-      boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, minidx, maxidx);
+      (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
@@ -1893,7 +1893,7 @@ SCIP_RETCODE SCIPboolarrayClear(
    assert(boolarray != NULL);
 
    SCIPdebugMessage("clearing boolarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
-      boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx);
+      (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx);
 
    if( boolarray->minusedidx <= boolarray->maxusedidx )
    {
@@ -1951,7 +1951,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    assert(idx >= 0);
 
    SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
-      boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
+      (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
 
    if( val != FALSE )
    {
@@ -2111,7 +2111,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
    assert(minidx <= maxidx);
 
    SCIPdebugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
-      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, minidx, maxidx);
+      (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
@@ -2242,7 +2242,7 @@ SCIP_RETCODE SCIPptrarrayClear(
    assert(ptrarray != NULL);
 
    SCIPdebugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
-      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx);
+      (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx);
 
    if( ptrarray->minusedidx <= ptrarray->maxusedidx )
    {
@@ -2300,7 +2300,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
    assert(idx >= 0);
 
    SCIPdebugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n", 
-      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
+      (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
 
    if( val != NULL )
    {

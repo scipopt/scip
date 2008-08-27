@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.c,v 1.24 2008/04/17 17:49:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: mem.c,v 1.25 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   mem.c
  * @brief  block memory pools and memory buffers
@@ -42,9 +42,9 @@ SCIP_RETCODE SCIPmemCreate(
    SCIP_ALLOC( (*mem)->probmem = BMScreateBlockMemory(1, 10) );
    SCIP_ALLOC( (*mem)->solvemem = BMScreateBlockMemory(1, 10) );
 
-   SCIPdebugMessage("created setmem   block memory at <%p>\n", (*mem)->setmem);
-   SCIPdebugMessage("created probmem  block memory at <%p>\n", (*mem)->probmem);
-   SCIPdebugMessage("created solvemem block memory at <%p>\n", (*mem)->solvemem);
+   SCIPdebugMessage("created setmem   block memory at <%p>\n", (void*)(*mem)->setmem);
+   SCIPdebugMessage("created probmem  block memory at <%p>\n", (void*)(*mem)->probmem);
+   SCIPdebugMessage("created solvemem block memory at <%p>\n", (void*)(*mem)->solvemem);
 
    return SCIP_OKAY;
 }

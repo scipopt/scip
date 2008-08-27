@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.87 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.88 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -415,7 +415,7 @@ SCIP_RETCODE primalAddSol(
    assert(sol != NULL);
    assert(0 <= insertpos && insertpos < set->limit_maxsol);
 
-   SCIPdebugMessage("insert primal solution %p with obj %g at position %d:\n", sol, SCIPsolGetObj(sol, set, prob), insertpos);
+   SCIPdebugMessage("insert primal solution %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetObj(sol, set, prob), insertpos);
    SCIPdebug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) );
 
 #if 0

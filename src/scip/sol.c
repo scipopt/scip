@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.87 2008/08/22 13:36:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.88 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -604,7 +604,7 @@ SCIP_RETCODE SCIPsolUnlink(
    if( sol->solorigin != SCIP_SOLORIGIN_ORIGINAL && sol->solorigin != SCIP_SOLORIGIN_ZERO
       && sol->solorigin != SCIP_SOLORIGIN_UNKNOWN )
    {
-      SCIPdebugMessage("completing solution %p\n", sol);
+      SCIPdebugMessage("completing solution %p\n", (void*)sol);
 
       for( v = 0; v < prob->nvars; ++v )
       {
@@ -637,7 +637,7 @@ SCIP_RETCODE SCIPsolSetVal(
    assert(stat != NULL);
    assert(var != NULL);
 
-   SCIPdebugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), sol, val);
+   SCIPdebugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), (void*)sol, val);
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatus(var) )
@@ -733,7 +733,7 @@ SCIP_RETCODE SCIPsolIncVal(
    assert(stat != NULL);
    assert(var != NULL);
 
-   SCIPdebugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), sol, incval);
+   SCIPdebugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), (void*)sol, incval);
 
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;

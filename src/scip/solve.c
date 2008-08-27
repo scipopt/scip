@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.258 2008/08/22 13:36:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.259 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -250,7 +250,7 @@ SCIP_RETCODE propagateDomains(
       maxproprounds = INT_MAX;
 
    SCIPdebugMessage("domain propagation of node %p in depth %d (using depth %d, maxrounds %d)\n",
-      node, SCIPnodeGetDepth(node), depth, maxproprounds);
+      (void*)node, SCIPnodeGetDepth(node), depth, maxproprounds);
 
    /* propagate as long new bound changes were found and the maximal number of propagation rounds is not exceeded */
    *cutoff = FALSE;
@@ -1518,7 +1518,7 @@ SCIP_RETCODE priceAndCutLoop(
       if( (!separate
             || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
             || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
-         //         && !SCIPsolveIsStopped(set, stat, TRUE)  ???????????????????????????????????
+         /*         && !SCIPsolveIsStopped(set, stat, TRUE)  ??????????????????????????????????? */
           )
       {
          mustsepa = FALSE;

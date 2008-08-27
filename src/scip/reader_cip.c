@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.7 2008/05/07 09:55:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.8 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   reader_cip.c
  * @brief  CIP file reader
@@ -39,6 +39,7 @@
 /** data for cip reader */
 struct SCIP_ReaderData
 {
+	char dummy; /* to have at least one member */
 };
 
 

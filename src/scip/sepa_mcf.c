@@ -12,16 +12,16 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.51 2008/08/22 13:58:19 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.52 2008/08/27 08:36:38 bzfviger Exp $"
 
 /*#define SCIP_DEBUG*/
 
-//#define USECMIRDELTAS /*????????????????????*/
+/*//#define USECMIRDELTAS *//*????????????????????*/
 #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
 #define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
 #define SEPARATESINGLENODECUTS /*??????????????????*/
-//#define STRICTCOLSPERCOMMODITYLIMIT /*???????????????????*/
-//#define FORCECUTS /*??????????????????????*/
+/*//#define STRICTCOLSPERCOMMODITYLIMIT *//*???????????????????*/
+/*//#define FORCECUTS *//*??????????????????????*/
 
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
@@ -1620,7 +1620,7 @@ void deleteCommodity(
    {
       SCIP_ROW* row;
       SCIP_COL** rowcols;
-//       SCIP_Real* rowvals;
+/*//       SCIP_Real* rowvals; */
       int rowlen;
       int r;
       int i;
@@ -1639,7 +1639,7 @@ void deleteCommodity(
       /* remove row from commodity */
       rowcommodity[r] = -1;
       rowcols = SCIProwGetCols(row);
-//       rowvals = SCIProwGetVals(row);
+/*//       rowvals = SCIProwGetVals(row); */
       rowlen = SCIProwGetNLPNonz(row);
       for( i = 0; i < rowlen; i++ )
       {
@@ -3218,7 +3218,7 @@ SCIP_RETCODE identifySourcesTargets(
    for( a = 0; a < narcs; a++ )
    {
       SCIP_COL** rowcols;
-//       SCIP_Real* rowvals;
+/*//       SCIP_Real* rowvals;*/
       int rowlen;
       int bestsourcev;
       int besttargetv;
@@ -3243,7 +3243,7 @@ SCIP_RETCODE identifySourcesTargets(
 
       /* check the flow variables of the capacity row for flow conservation constraints */
       rowcols = SCIProwGetCols(capacityrows[a]);
-//       rowvals = SCIProwGetVals(capacityrows[a]);
+/*//       rowvals = SCIProwGetVals(capacityrows[a]);*/
       rowlen = SCIProwGetNLPNonz(capacityrows[a]);
       ntouchednodes = 0;
       totalnodecnt = 0;

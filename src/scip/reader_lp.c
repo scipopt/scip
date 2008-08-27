@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.61 2008/08/22 13:36:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.62 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -1517,7 +1517,7 @@ SCIP_RETCODE readSos(
 		  {
 		  case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
 		  case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
-		  default: abort(); // should not happen
+		  default: abort(); /* should not happen */
 		  }
 		  SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
 	       }

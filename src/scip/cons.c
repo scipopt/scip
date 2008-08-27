@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.173 2008/07/18 14:43:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.174 2008/08/27 08:36:37 bzfviger Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1482,7 +1482,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
          cons->updateenable, cons->updatedisable,
          cons->updatesepaenable, cons->updatesepadisable, 
          cons->updatepropenable, cons->updatepropdisable, 
-         cons->updateobsolete, cons->updatefree, cons->consdata);
+         cons->updateobsolete, cons->updatefree, (void*)cons->consdata);
 
       if( cons->updateinsert )
       {
@@ -1674,7 +1674,7 @@ SCIP_RETCODE conshdlrAddUpdateCons(
    if( !cons->update )
    {
       SCIPdebugMessage("constraint <%s> of age %g has to be updated in constraint handler <%s> (consdata=%p)\n",
-         cons->name, cons->age, conshdlr->name, cons->consdata);
+         cons->name, cons->age, conshdlr->name, (void*)cons->consdata);
       
       /* add constraint to the updateconss array */
       SCIP_CALL( conshdlrEnsureUpdateconssMem(conshdlr, set, conshdlr->nupdateconss+1) );
@@ -2509,7 +2509,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
             int oldnactiveconss;
 
             SCIPdebugMessage("separating %d constraints of handler <%s> (primal solution %p)\n",
-               nconss, conshdlr->name, sol);
+               nconss, conshdlr->name, (void*)sol);
 
             /* get the array of the constraints to be processed */
             conss = conshdlr->sepaconss;
@@ -4058,7 +4058,7 @@ SCIP_RETCODE SCIPconssetchgApply(
       return SCIP_OKAY;
 
    SCIPdebugMessage("applying constraint set changes at %p: %d constraint additions, %d constraint disablings\n", 
-      conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
+      (void*)conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* apply constraint additions */
    for( i = 0; i < conssetchg->naddedconss; ++i )
@@ -4134,7 +4134,7 @@ SCIP_RETCODE SCIPconssetchgUndo(
       return SCIP_OKAY;
 
    SCIPdebugMessage("undoing constraint set changes at %p: %d constraint additions, %d constraint disablings\n", 
-      conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
+      (void*)conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* undo constraint disablings */
    for( i = conssetchg->ndisabledconss-1; i >= 0; --i )
@@ -4224,7 +4224,7 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
       return SCIP_OKAY;
 
    SCIPdebugMessage("moving constraint set changes at %p to global problem: %d constraint additions, %d constraint disablings\n", 
-      *conssetchg, (*conssetchg)->naddedconss, (*conssetchg)->ndisabledconss);
+      (void*)*conssetchg, (*conssetchg)->naddedconss, (*conssetchg)->ndisabledconss);
 
    /* apply constraint additions to the global problem (loop backwards, because then conssetchgDelAddedCons() is
     * more efficient)

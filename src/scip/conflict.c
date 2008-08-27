@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.136 2008/08/15 16:23:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.137 2008/08/27 08:36:37 bzfviger Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1380,7 +1380,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
          SCIPnodePropagateAgain(tree->path[repropdepth], set, stat, tree);
 
          SCIPdebugMessage("marked node %p in depth %d to be repropagated due to conflicts found in depth %d\n",
-            tree->path[repropdepth], repropdepth, focusdepth);
+            (void*)tree->path[repropdepth], repropdepth, focusdepth);
       }
 
       /* free the conflict storage */

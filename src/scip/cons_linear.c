@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.287 2008/08/22 13:36:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.288 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3388,8 +3388,8 @@ SCIP_RETCODE checkCons(
       activity = consdataGetActivity(scip, consdata, sol);
    
    SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hascurrentnodelp=%d)\n",
-      activity, consdata->lhs, consdata->rhs, consdata->row, checklprows,
-      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), sol,
+      activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
+      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
    
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )

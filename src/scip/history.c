@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.28 2008/04/17 17:49:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.29 2008/08/27 08:36:38 bzfviger Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -174,7 +174,7 @@ void SCIPhistoryUpdatePseudocost(
    history->pscostsum[dir] += weight * objdelta/distance;
 
    SCIPdebugMessage("updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
-      history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostsum[dir]);
+      (void*)history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostsum[dir]);
 }
 
 
