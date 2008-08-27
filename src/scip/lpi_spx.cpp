@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.75 2008/08/19 19:20:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.76 2008/08/27 07:03:44 bzfheinz Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -39,7 +39,6 @@
 #include "spxparmultpr.h"
 #include "spxdevexpr.h"
 #include "spxfastrt.h"
-#include "spxdefaultrt.h"
 
 /* reset the SCIP_DEBUG define to its original SCIP value */
 #undef SCIP_DEBUG
@@ -74,7 +73,7 @@ class SPxSCIP : public SPxSolver
    SPxSteepPR       m_price_steep;      /**< steepest edge pricer */
    SPxParMultPR     m_price_parmult;    /**< partial multiple pricer */
    SPxDevexPR       m_price_devex;      /**< devex pricer */
-   SPxFastRT        m_ratio;            /**< fast shifting ratio tester */
+   SPxFastRT        m_ratio;            /**< Harris fast ratio tester */
    char*            m_probname;         /**< problem name */
    bool             m_fromscratch;      /**< use old basis indicator */
    Real             m_objLoLimit;       /**< lower objective limit */
@@ -90,7 +89,7 @@ public:
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
         m_stat(NO_PROBLEM),
-	m_lpinfo(false)
+        m_lpinfo(false)
    {
       setSolver(&m_slu);
       setTester(&m_ratio);
@@ -175,8 +174,9 @@ public:
 
    void setObjUpLimit(Real limit)
    {
+      SCIPdebugMessage("setting termination value from <%g> to <%g>\n", m_objUpLimit, limit);
       m_objUpLimit = limit;
-      /*SPxSolver::setTerminationValue(limit); this is buggy in Soplex!*/
+      SPxSolver::setTerminationValue(limit);
    }
 
    virtual Status solve()
@@ -1489,11 +1489,11 @@ SCIP_RETCODE spxSolve(
 {
    SCIPdebugMessage("calling SOPLEX solve(): %d cols, %d rows\n", lpi->spx->nCols(), lpi->spx->nRows());
 
-   assert(lpi != NULL);
-   assert(lpi->spx != NULL);
+   assert( lpi != NULL );
+   assert( lpi->spx != NULL );
 
    invalidateSolution(lpi);
-
+   
    SPxSolver::Status status = lpi->spx->solve();
    SCIPdebugMessage(" -> SOPLEX status: %d, basis status: %d\n", lpi->spx->getStatus(), lpi->spx->basis().status());
    lpi->solved = TRUE;
@@ -1538,7 +1538,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
 SCIP_RETCODE SCIPlpiSolveBarrier(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_Bool             crossover            /**< perform crossover */
+   SCIP_Bool             crossover           /**< perform crossover */
    )
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
@@ -2219,8 +2219,8 @@ SCIP_RETCODE SCIPlpiSetBase(
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
-	 delete [] spxcstat;
-	 delete [] spxrstat;
+         delete[] spxcstat;
+         delete[] spxrstat;
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
@@ -2251,8 +2251,8 @@ SCIP_RETCODE SCIPlpiSetBase(
    }
    lpi->spx->setBasis(spxrstat, spxcstat);
 
-   delete [] spxcstat;
-   delete [] spxrstat;
+   delete[] spxcstat;
+   delete[] spxrstat;
    
    return SCIP_OKAY;
 }
