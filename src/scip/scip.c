@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.466 2008/08/22 13:36:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.467 2008/08/28 12:23:23 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4592,7 +4592,7 @@ SCIP_RETCODE presolve(
       else if( *unbounded )
       {
          SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolve initialization detected unboundness\n");
+            "presolve initialization detected unboundedness\n");
       }
    }
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
@@ -4622,6 +4622,7 @@ SCIP_RETCODE presolve(
       int lastnchgsides;
       /*int lastnimplications;*/
       /*int lastncliques;*/
+
 
       lastnfixedvars = scip->stat->npresolfixedvars;
       lastnaggrvars = scip->stat->npresolaggrvars;
