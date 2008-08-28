@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.288 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.289 2008/08/28 12:21:45 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3848,7 +3848,7 @@ SCIP_RETCODE consdataTightenCoefs(
             newval = MAX(consdata->lhs - minactivity, maxactivity - consdata->rhs);
             newlhs = consdata->lhs - (val - newval)*lb;
             newrhs = consdata->rhs - (val - newval)*ub;
-            if( !SCIPisEQ(scip, newval, val) )
+            if( !SCIPisRelEQ(scip, newval, val) )
             {
                SCIPdebugMessage("linear constraint <%s>: change coefficient %+.15g<%s> to %+.15g<%s>, act=[%.15g,%.15g], side=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), val, SCIPvarGetName(var), newval, SCIPvarGetName(var),
@@ -3923,7 +3923,7 @@ SCIP_RETCODE consdataTightenCoefs(
             newval = MIN(consdata->rhs - maxactivity, minactivity - consdata->lhs);
             newlhs = consdata->lhs - (val - newval)*ub;
             newrhs = consdata->rhs - (val - newval)*lb;
-            if( !SCIPisEQ(scip, newval, val) )
+            if( !SCIPisRelEQ(scip, newval, val) )
             {
                SCIPdebugMessage("linear constraint <%s>: change coefficient %+.15g<%s> to %+.15g<%s>, act=[%.15g,%.15g], side=[%.15g,%.15g]\n",
                   SCIPconsGetName(cons), val, SCIPvarGetName(var), newval, SCIPvarGetName(var),
