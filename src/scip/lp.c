@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.275 2008/07/31 07:22:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.276 2008/08/28 12:21:12 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -48,6 +48,9 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
+
+#define MAXCMIRSCALE               1e+16 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
+
 
 
 /*
@@ -8114,6 +8117,12 @@ SCIP_RETCODE SCIPlpCalcMIR(
    downrhs = SCIPsetSumFloor(set, rhs);
    f0 = rhs - downrhs;
    if( f0 < minfrac || f0 > maxfrac )
+      goto TERMINATE;
+
+   /* We multiply the coefficients of the base inequality roughly by scale/(1-f0).
+    * If this gives a scalar that is very big, we better do not generate this cut.
+    */
+   if( REALABS(scale)/(1.0 - f0) > MAXCMIRSCALE )
       goto TERMINATE;
 
    *mirrhs = downrhs;
