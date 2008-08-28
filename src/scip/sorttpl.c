@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.9 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.10 2008/08/28 21:25:40 bzfpfend Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -23,7 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /* template parameters that have to be passed in as #define's:
- * #define SORTTPL_METHOD       <name>     name of the SCIP method that should be generated
+ * #define SORTTPL_NAMEEXT      <ext>      extension to be used for SCIP method names, for example DownIntRealPtr
  * #define SORTTPL_KEYTYPE      <type>     data type of the key array
  * #define SORTTPL_FIELD1TYPE   <type>     data type of first additional array which should be sorted in the same way (optional)
  * #define SORTTPL_FIELD2TYPE   <type>     data type of second additional array which should be sorted in the same way (optional)
@@ -36,8 +36,8 @@
 
 #define SORTTPL_SHELLSORTMAX 25
 
-#ifndef SORTTPL_METHOD
-#error You need to define the SORTTPL_METHOD name.
+#ifndef SORTTPL_NAMEEXT
+#error You need to define SORTTPL_NAMEEXT.
 #endif
 #ifndef SORTTPL_KEYTYPE
 #error You need to define SORTTPL_KEYTYPE.
@@ -100,7 +100,7 @@
  * chapter 3.10.6: Argument Prescan)
  */
 #define SORTTPL_EXPANDNAME(method, methodname) \
-   sorttpl_ ## method ## _ ## methodname
+   method ## methodname
 #define SORTTPL_NAME(method, methodname) \
   SORTTPL_EXPANDNAME(method, methodname)
 
@@ -139,7 +139,7 @@
 
 /** shellsort an array of data elements; use it only for arrays smaller than 25 entries */
 static
-void SORTTPL_NAME(shellSort, SORTTPL_METHOD)
+void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
@@ -196,7 +196,7 @@ void SORTTPL_NAME(shellSort, SORTTPL_METHOD)
 
 /** quicksort an array of pointers; pivot is the medial element */
 static
-void SORTTPL_NAME(qSort, SORTTPL_METHOD)
+void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
@@ -272,7 +272,7 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD)
          /* sort [start,hi] with a recursive call */
          if( start < hi )
          {
-            SORTTPL_NAME(qSort, SORTTPL_METHOD)
+            SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
                (key,
                 SORTTPL_HASFIELD1PAR(field1)
                 SORTTPL_HASFIELD2PAR(field2)
@@ -292,7 +292,7 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD)
          if( lo < end )
          {
             /* sort [lo,end] with a recursive call */
-            SORTTPL_NAME(qSort, SORTTPL_METHOD)
+            SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
                (key,
                 SORTTPL_HASFIELD1PAR(field1)
                 SORTTPL_HASFIELD2PAR(field2)
@@ -312,7 +312,7 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD)
    /* use shell sort on the remaining small list */
    if( end - start >= 1 )
    {
-      SORTTPL_NAME(shellSort, SORTTPL_METHOD)
+      SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
@@ -328,7 +328,7 @@ void SORTTPL_NAME(qSort, SORTTPL_METHOD)
 #ifndef NDEBUG
 /** verifies that an array is indeed sorted */
 static
-void SORTTPL_NAME(checkSort, SORTTPL_METHOD)
+void SORTTPL_NAME(sorttpl_checkSort, SORTTPL_NAMEEXT)
 (
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
@@ -346,8 +346,9 @@ void SORTTPL_NAME(checkSort, SORTTPL_METHOD)
 }
 #endif
 
-/** sorts array 'key' and performs the same permutations on the additional 'field' arrays */
-void SORTTPL_METHOD (
+/** SCIPsort...(): sorts array 'key' and performs the same permutations on the additional 'field' arrays */
+void SORTTPL_NAME(SCIPsort, SORTTPL_NAMEEXT)
+(
    SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
    SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
    SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
@@ -359,11 +360,14 @@ void SORTTPL_METHOD (
    int                   len                 /**< length of arrays */
    )
 {
-   if (len <= 1) return;
+   /* ignore the trivial cases */
+   if( len <= 1 )
+      return;
+
    /* use shell sort on the remaining small list */
    if( len <= SORTTPL_SHELLSORTMAX)
    {
-      SORTTPL_NAME(shellSort, SORTTPL_METHOD)
+      SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
@@ -376,7 +380,7 @@ void SORTTPL_METHOD (
    }
    else
    {
-      SORTTPL_NAME(qSort, SORTTPL_METHOD)
+      SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
          (key,
             SORTTPL_HASFIELD1PAR(field1)
             SORTTPL_HASFIELD2PAR(field2)
@@ -388,7 +392,7 @@ void SORTTPL_METHOD (
             0, len-1);
    }
 #ifndef NDEBUG
-   SORTTPL_NAME(checkSort, SORTTPL_METHOD)
+   SORTTPL_NAME(sorttpl_checkSort, SORTTPL_NAMEEXT)
       (key,
        SORTTPL_HASPTRCOMPPAR(ptrcomp)
        SORTTPL_HASINDCOMPPAR(indcomp)
@@ -398,8 +402,82 @@ void SORTTPL_METHOD (
 }
 
 
+/** SCIPsortedvecInsert...(): adds an element to a sorted multi-vector;
+ *  This method does not do any memory allocation! It assumes that the arrays are large enough
+ *  to store the additional values.
+ */
+void SORTTPL_NAME(SCIPsortedvecInsert, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   SORTTPL_KEYTYPE       keyval,             /**< key value of new element */
+   SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE     field1val  )  /**< field1 value of new element */
+   SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE     field2val  )  /**< field1 value of new element */
+   SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE     field3val  )  /**< field1 value of new element */
+   SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE     field4val  )  /**< field1 value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   )
+{
+   int j;
+
+   for( j = *len; j > 0 && SORTTPL_ISBETTER(keyval, key[j-1]); j-- )
+   {
+      key[j] = key[j-1];
+      SORTTPL_HASFIELD1( field1[j] = field1[j-1]; )
+      SORTTPL_HASFIELD2( field2[j] = field2[j-1]; )
+      SORTTPL_HASFIELD3( field3[j] = field3[j-1]; )
+      SORTTPL_HASFIELD4( field4[j] = field4[j-1]; )
+   }
+          
+   key[j] = keyval;
+   SORTTPL_HASFIELD1( field1[j] = field1val; )
+   SORTTPL_HASFIELD2( field2[j] = field2val; )
+   SORTTPL_HASFIELD3( field3[j] = field3val; )
+   SORTTPL_HASFIELD4( field4[j] = field4val; )
+
+   (*len)++;
+}
+
+/** SCIPsortedvecDelPos...(): deletes an element at a given position from a sorted multi-vector */
+void SORTTPL_NAME(SCIPsortedvecDelPos, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASFIELD1PAR(  SORTTPL_FIELD1TYPE*    field1 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD2PAR(  SORTTPL_FIELD2TYPE*    field2 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD3PAR(  SORTTPL_FIELD3TYPE*    field3 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASFIELD4PAR(  SORTTPL_FIELD4TYPE*    field4 )      /**< additional field that should be sorted in the same way */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   )
+{
+   int j;
+
+   assert(0 <= pos && pos < *len);
+
+   for( j = pos; j < *len; j++ )
+   {
+      key[j] = key[j+1];
+      SORTTPL_HASFIELD1( field1[j] = field1[j+1]; )
+      SORTTPL_HASFIELD2( field2[j] = field2[j+1]; )
+      SORTTPL_HASFIELD3( field3[j] = field3[j+1]; )
+      SORTTPL_HASFIELD4( field4[j] = field4[j+1]; )
+   }
+
+   (*len)--;
+}
+
+
 /* undefine template parameters and local defines */
-#undef SORTTPL_METHOD
+#undef SORTTPL_NAMEEXT
 #undef SORTTPL_KEYTYPE
 #undef SORTTPL_FIELD1TYPE
 #undef SORTTPL_FIELD2TYPE

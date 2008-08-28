@@ -52,6 +52,8 @@ interface:
 - added user pointer to callback methods of hash table
 - new method SCIPflattenVarAggregationGraph()
 - new method SCIPclockGetLastTime()
+- new methods SCIPsortedvecInsert...(), SCIPsortedvecInsertDown...(), SCIPsortedvecDelPos...(), and SCIPsortedvecDelPosDown...()
+  to manage sorted vectors or groups of vectors of various data types that are sorted w.r.t. the first vector
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -87,6 +89,7 @@ features:
 - added capabilities to avoid multi-aggregation by setting a corresponding flag (SCIPmarkDoNotMultaggrVar())
 - added capabilities to flatten the (multi)-aggregation graph of variables
 - the ZPL reader is now able to pass a starting solution to SCIP
+- small performance improvement of c-MIR aggregation heuristic
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})

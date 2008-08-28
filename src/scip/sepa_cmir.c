@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.73 2008/08/22 13:36:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.74 2008/08/28 21:25:40 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -279,12 +279,16 @@ void updateNActiveConts(
    SCIP_Real primsol;
    SCIP_Real lb;
    SCIP_Real ub;
+   int probindex;
 
    assert(nactiveconts != NULL);
 
-   primsol = varsolvals[SCIPvarGetProbindex(var)];
-   lb = bestcontlbs[SCIPvarGetProbindex(var) - nintvars];
-   ub = bestcontubs[SCIPvarGetProbindex(var) - nintvars];
+   probindex = SCIPvarGetProbindex(var);
+   assert(probindex >= nintvars);
+
+   primsol = varsolvals[probindex];
+   lb = bestcontlbs[probindex - nintvars];
+   ub = bestcontubs[probindex - nintvars];
 
    if( SCIPisLT(scip, lb, primsol) && SCIPisLT(scip, primsol, ub) )
       (*nactiveconts) += delta;
@@ -566,6 +570,36 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    return SCIP_OKAY; 
 }
 
+/** returns the minimal distance of the solution of a continuous variable to its bounds */
+static
+SCIP_Real getBounddist(
+   SCIP*                 scip,               /**< SCIP data structure */ 
+   int                   nintvars,           /**< number of integer variables in the problem */
+   SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
+   SCIP_Real*            bestcontlbs,        /**< best lower (variable or standard) bounds of continuous variables */
+   SCIP_Real*            bestcontubs,        /**< best upper (variable or standard) bounds of continuous variables */
+   SCIP_VAR*             var                 /**< continuous variable to get bound distance for */
+   )
+{
+   SCIP_Real primsol;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real distlower;
+   SCIP_Real distupper;
+
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
+   primsol = varsolvals[SCIPvarGetProbindex(var)];
+   lb = bestcontlbs[SCIPvarGetProbindex(var) - nintvars];
+   ub = bestcontubs[SCIPvarGetProbindex(var) - nintvars];
+   assert(SCIPisGE(scip, lb, SCIPvarGetLbGlobal(var)));
+   assert(SCIPisLE(scip, ub, SCIPvarGetUbGlobal(var)));
+   distlower = primsol - lb;
+   distupper = ub - primsol;
+
+   return MIN(distlower, distupper);
+}
+
 /** aggregates different single mixed integer constraints by taking linear combinations of the rows of the LP  */
 static
 SCIP_RETCODE aggregation(
@@ -575,6 +609,7 @@ SCIP_RETCODE aggregation(
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    SCIP_Real*            bestcontlbs,        /**< best lower (variable or standard) bounds of continuous variables */
    SCIP_Real*            bestcontubs,        /**< best upper (variable or standard) bounds of continuous variables */
+   SCIP_Real*            contvarscorebounds, /**< bounds on the maximal rowlhsscores and rowrhsscores the variable is contained in */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int                   startrow,           /**< index of row to start aggregation */ 
@@ -593,9 +628,8 @@ SCIP_RETCODE aggregation(
    SCIP_Real* startnonzcoefs;      
    SCIP_Real* aggrcoefs;       
    SCIP_Real* rowweights;       
-   int* aggrnonzidxs;
-   int* aggrintnonzposs;
    int* aggrcontnonzposs;
+   SCIP_Real* aggrcontnonzbounddists;
    SCIP_Real maxweight;
    SCIP_Real minweight;
    SCIP_Real startrowact;      
@@ -640,9 +674,8 @@ SCIP_RETCODE aggregation(
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggrnonzidxs, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggrintnonzposs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcontnonzposs, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrcontnonzbounddists, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
 
    /* initialize weights of rows in aggregation */
@@ -681,15 +714,16 @@ SCIP_RETCODE aggregation(
       aggrcoefs[pos] = rowweights[startrow] * startnonzcoefs[c];
       if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
+         SCIP_Real bounddist;
+
          updateNActiveConts(scip, varsolvals, bestcontlbs, bestcontubs, nintvars, var, +1, &nactiveconts);
-         aggrnonzidxs[pos] = naggrcontnonzs;
-         aggrcontnonzposs[naggrcontnonzs] = pos;
-         naggrcontnonzs++;
+
+         /* store continuous variable in array sorted by distance to closest bound */
+         bounddist = getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var);
+         SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
       }
       else
       {
-         aggrnonzidxs[pos] = naggrintnonzs;
-         aggrintnonzposs[naggrintnonzs] = pos;
          naggrintnonzs++;
          if( !hasfractional )
          {
@@ -700,6 +734,7 @@ SCIP_RETCODE aggregation(
          }
       }
    }
+   assert(naggrintnonzs + naggrcontnonzs == nstartnonzcols);
 
    /* don't try aggregation if there is no integer variable with fractional value */
    if( !hasfractional )
@@ -718,10 +753,12 @@ SCIP_RETCODE aggregation(
       int nbestrownonzcols;           /* number of columns with nonzero coefficients in best row to add */
       SCIP_Real bestbounddist;
       SCIP_Real bestscore;
+      int bestrowpos;
       SCIP_Real aggrfac;
       SCIP_Real absaggrfac;
       int nzi;
       int oldncuts;
+      int ncanceledcontnonzs;
 
       *wastried = TRUE;
 
@@ -782,41 +819,41 @@ SCIP_RETCODE aggregation(
       {
          SCIP_COL* col;
          SCIP_VAR* var;
-         SCIP_Real primsol;
-         SCIP_Real lb;
-         SCIP_Real ub;
-         SCIP_Real distlower;
-         SCIP_Real distupper;
          SCIP_Real bounddist;
 
          c = aggrcontnonzposs[nzi];
          assert(0 <= c && c < ncols);
-         assert(aggrnonzidxs[c] == nzi);
          assert(!SCIPisZero(scip, aggrcoefs[c]));
 
          col = cols[c];
          var = SCIPcolGetVar(col);
          assert(!SCIPvarIsIntegral(var));
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+         assert(SCIPvarGetProbindex(var) >= nintvars);
 
-         /* get minimum distance of LP solution value of variable to its bounds */
-         primsol = varsolvals[SCIPvarGetProbindex(var)];
-         lb = bestcontlbs[SCIPvarGetProbindex(var) - nintvars];
-         ub = bestcontubs[SCIPvarGetProbindex(var) - nintvars];
-         assert(SCIPisGE(scip, lb, SCIPvarGetLbGlobal(var)));
-         assert(SCIPisLE(scip, ub, SCIPvarGetUbGlobal(var)));
-         distlower = primsol - lb;
-         distupper = ub - primsol;
-         bounddist = MIN(distlower, distupper);
+         bounddist = aggrcontnonzbounddists[nzi];
+         assert(SCIPisEQ(scip, bounddist, getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var)));
+         assert(bounddist <= bestbounddist || bestbounddist == -1.0);
 
          /* check, if variable is candidate to be the new best variable */
          if( bounddist >= bestbounddist - sepadata->aggrtol )
          {
             SCIP_ROW** nonzrows;
             SCIP_Real* nonzcoefs;
+            SCIP_Real maxrowscore;
             int nnonzrows;
-            
+            int probindex;
+
+            probindex = SCIPvarGetProbindex(var);
+            assert(probindex >= nintvars);
+
             SCIPdebugMessage("     -> col <%s>[%g,%g]: sol=%g, dist=%g\n", 
-               SCIPvarGetName(var), lb, ub, primsol, bounddist);
+               SCIPvarGetName(var), bestcontlbs[probindex - nintvars],
+               bestcontubs[probindex - nintvars], varsolvals[probindex], bounddist);
+
+            /* if we know that we will not find a better row, just skip the column */
+            if( contvarscorebounds[probindex - nintvars] <= bestscore )
+               continue;
 
             /* look for "best" row to add (minimal slack), but don't add rows again,
              * that are already involved in aggregation
@@ -824,10 +861,12 @@ SCIP_RETCODE aggregation(
             nnonzrows = SCIPcolGetNLPNonz(col);
             nonzrows = SCIPcolGetRows(col);
             nonzcoefs = SCIPcolGetVals(col);
-            
+            maxrowscore = 0.0;
+
             for( r = 0; r < nnonzrows; r++ )
             {
                SCIP_Real score;
+               SCIP_Real rowscore;
                SCIP_Real factor;
                SCIP_Real absfactor;
                SCIP_Real activity;
@@ -843,6 +882,14 @@ SCIP_RETCODE aggregation(
                   - aggrcoefs[c] / nonzcoefs[r], SCIProwGetLhs(nonzrows[r]), 
                   SCIPgetRowSolActivity(scip, nonzrows[r], sol), SCIProwGetRhs(nonzrows[r]));
 
+               /* update maxrowscore */
+               rowscore = MAX(rowlhsscores[lppos], rowrhsscores[lppos]);
+               maxrowscore = MAX(maxrowscore, rowscore);
+
+               /* if even the better rowscore does not improve the bestscore, ignore the row */
+               if( rowscore <= bestscore )
+                  continue;
+
                /* take only unmodifiable LP rows, that are not yet aggregated */
                if( rowweights[lppos] != 0.0 || SCIProwIsModifiable(nonzrows[r]) )
                   continue;
@@ -855,6 +902,15 @@ SCIP_RETCODE aggregation(
                   || maxweight > sepadata->maxrowfac * absfactor )
                   continue;
                
+               /* for selected real variable y_k, select constraint r with best score SCORE_r with r in P\Q, 
+                * where P\Q is the set of constraints not yet involved in the aggregation zet
+                */
+               assert(!SCIPisInfinity(scip, -SCIProwGetLhs(nonzrows[r])) || rowlhsscores[lppos] == 0.0);
+               assert(!SCIPisInfinity(scip, SCIProwGetRhs(nonzrows[r])) || rowrhsscores[lppos] == 0.0);
+               score = (factor < 0.0 ? rowlhsscores[lppos] : rowrhsscores[lppos]);
+               if( score <= bestscore )
+                  continue;
+
                /* check, if the row's slack multiplied with the aggregation factor is too large */
                activity = SCIPgetRowSolActivity(scip, nonzrows[r], sol);
                lhs = SCIProwGetLhs(nonzrows[r]);
@@ -863,26 +919,54 @@ SCIP_RETCODE aggregation(
                   || (factor > 0.0 && SCIPisGT(scip, factor * (rhs - activity), maxslack)) )
                   continue;
                
-               /* for selected real variable y_k, select constraint r with best score SCORE_r with r in P\Q, 
-                * where P\Q is the set of constraints not yet involved in the aggregation zet
-                */
-               assert(!SCIPisInfinity(scip, -SCIProwGetLhs(nonzrows[r])) || rowlhsscores[lppos] == 0.0);
-               assert(!SCIPisInfinity(scip, SCIProwGetRhs(nonzrows[r])) || rowrhsscores[lppos] == 0.0);
-               score = (factor < 0.0 ? rowlhsscores[lppos] : rowrhsscores[lppos]);
-               if( score > 0.0 && (bounddist > bestbounddist + sepadata->aggrtol || score > bestscore) )
-               {
-                  bestbounddist = bounddist;
-                  bestscore = score; 
-                  bestcol = col;
-                  bestrow = nonzrows[r];
-                  aggrfac = factor;
-                  SCIPdebugMessage("     -> col <%s>: %g * row <%s>, bounddist=%g, score=%g\n",
-                     SCIPvarGetName(SCIPcolGetVar(bestcol)), aggrfac, SCIProwGetName(bestrow), bestbounddist, score);
-               }
+               /* the row passed all tests: it is the best candidate up to now */
+               bestbounddist = bounddist;
+               bestscore = score; 
+               bestcol = col;
+               bestrow = nonzrows[r];
+               aggrfac = factor;
+               SCIPdebugMessage("     -> col <%s>: %g * row <%s>, bounddist=%g, score=%g\n",
+                  SCIPvarGetName(SCIPcolGetVar(bestcol)), aggrfac, SCIProwGetName(bestrow), bestbounddist, score);
             }
+
+            /* update score bound of column */
+            assert(maxrowscore <= contvarscorebounds[probindex - nintvars]);
+            contvarscorebounds[probindex - nintvars] = maxrowscore;
+         }
+         else
+         {
+            /* since the nonzero continuous variables are sorted by bound distance, we can abort now */
+            break;
          }
       }
       assert((bestcol == NULL) == (bestrow == NULL));
+
+#ifndef NDEBUG
+      /* check that the remaining variables really can be ignored */
+      for( ; nzi < naggrcontnonzs; ++nzi )
+      {
+         SCIP_COL* col;
+         SCIP_VAR* var;
+         SCIP_Real bounddist;
+         
+         c = aggrcontnonzposs[nzi];
+         assert(0 <= c && c < ncols);
+         assert(!SCIPisZero(scip, aggrcoefs[c]));
+         
+         col = cols[c];
+         var = SCIPcolGetVar(col);
+         assert(!SCIPvarIsIntegral(var));
+         
+         bounddist = aggrcontnonzbounddists[nzi];
+
+         SCIPdebugMessage("     -> ignoring col <%s>[%g,%g]: sol=%g, dist=%g\n", 
+            SCIPvarGetName(var), bestcontlbs[SCIPvarGetProbindex(var) - nintvars],
+            bestcontubs[SCIPvarGetProbindex(var) - nintvars], varsolvals[SCIPvarGetProbindex(var)], bounddist);
+
+         assert(SCIPisEQ(scip, bounddist, getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var)));
+         assert(bounddist < bestbounddist - sepadata->aggrtol);
+      }
+#endif
 
       /* abort, if no row can be added to remove an additional active continuous variable */
       if( bestcol == NULL )
@@ -892,24 +976,26 @@ SCIP_RETCODE aggregation(
       }
 
       /* Step 3: add row to aggregation */
+      bestrowpos = SCIProwGetLPPos(bestrow);
       SCIPdebugMessage(" -> adding %+g<%s> to eliminate variable <%s> (aggregation %d)\n", 
          aggrfac, SCIProwGetName(bestrow), SCIPvarGetName(SCIPcolGetVar(bestcol)), naggrs+1);
-      assert(rowweights[SCIProwGetLPPos(bestrow)] == 0.0);
+      assert(rowweights[bestrowpos] == 0.0);
       assert(!SCIPisZero(scip, aggrfac));
 
       /* change row's aggregation weight */
-      rowweights[SCIProwGetLPPos(bestrow)] = aggrfac;
+      rowweights[bestrowpos] = aggrfac;
       absaggrfac = REALABS(aggrfac);
       maxweight = MAX(maxweight, absaggrfac);
       minweight = MIN(minweight, absaggrfac);
 
       /* decrease score of aggregation row in order to not aggregate it again too soon */
-      decreaseRowScore(scip, rowlhsscores, rowrhsscores, SCIProwGetLPPos(bestrow));
+      decreaseRowScore(scip, rowlhsscores, rowrhsscores, bestrowpos);
 
       /* change coefficients of aggregation and update the number of continuous variables */
       bestrownonzcols = SCIProwGetCols(bestrow);
       bestrownonzcoefs = SCIProwGetVals(bestrow);
       nbestrownonzcols = SCIProwGetNLPNonz(bestrow);
+      ncanceledcontnonzs = 0;
       for( c = 0; c < nbestrownonzcols; c++ )
       {
          SCIP_VAR* var;
@@ -936,23 +1022,12 @@ SCIP_RETCODE aggregation(
                /* coefficient switched from non-zero to zero */
                if( iscont )
                {
-                  nzi = aggrnonzidxs[pos];
-                  assert(0 <= nzi && nzi < naggrcontnonzs);
-                  assert(aggrcontnonzposs[nzi] == pos);
-                  aggrcontnonzposs[nzi] = aggrcontnonzposs[naggrcontnonzs-1];
-                  aggrnonzidxs[aggrcontnonzposs[nzi]] = nzi;
-                  naggrcontnonzs--;
+                  ncanceledcontnonzs++;
+                  /* naggrcontnonzs will be decreased later in a cleanup step */
                   updateNActiveConts(scip, varsolvals, bestcontlbs, bestcontubs, nintvars, var, -1, &nactiveconts);
                }
                else
-               {
-                  nzi = aggrnonzidxs[pos];
-                  assert(0 <= nzi && nzi < naggrintnonzs);
-                  assert(aggrintnonzposs[nzi] == pos);
-                  aggrintnonzposs[nzi] = aggrintnonzposs[naggrintnonzs-1];
-                  aggrnonzidxs[aggrintnonzposs[nzi]] = nzi;
                   naggrintnonzs--;
-               }
             }
          }
          else if( waszero )
@@ -960,21 +1035,45 @@ SCIP_RETCODE aggregation(
             /* coefficient switched from zero to non-zero */
             if( iscont )
             {
+               SCIP_Real bounddist;
+
                assert(naggrcontnonzs < ncols);
-               aggrnonzidxs[pos] = naggrcontnonzs;
-               aggrcontnonzposs[naggrcontnonzs] = pos;
-               naggrcontnonzs++;
+
+               /* store continuous variable in array sorted by distance to closest bound */
+               bounddist = getBounddist(scip, nintvars, varsolvals, bestcontlbs, bestcontubs, var);
+               SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
+
                updateNActiveConts(scip, varsolvals, bestcontlbs, bestcontubs, nintvars, var, +1, &nactiveconts);
             }
             else
-            {
-               assert(naggrintnonzs < ncols);
-               aggrnonzidxs[pos] = naggrintnonzs;
-               aggrintnonzposs[naggrintnonzs] = pos;
                naggrintnonzs++;
-            }
          }
       }
+
+      /* remove canceled elements from aggtcontnonzs vector */
+      if( ncanceledcontnonzs > 0 )
+      {
+         int newnaggrintnonzs;
+
+         newnaggrintnonzs = 0;
+         for( nzi = 0; nzi < naggrcontnonzs; ++nzi )
+         {
+            int pos;
+
+            pos = aggrcontnonzposs[nzi];
+            assert(0 <= pos && pos < ncols);
+            if( aggrcoefs[pos] != 0.0 )
+            {
+               assert(newnaggrintnonzs <= nzi);
+               aggrcontnonzposs[newnaggrintnonzs] = pos;
+               aggrcontnonzbounddists[newnaggrintnonzs] = aggrcontnonzbounddists[nzi];
+               newnaggrintnonzs++;
+            }
+         }
+         assert(ncanceledcontnonzs == naggrcontnonzs - newnaggrintnonzs);
+         naggrcontnonzs = newnaggrintnonzs;
+      }
+
       naggrs++;
 
       SCIPdebugMessage(" -> %d continuous variables left (%d/%d active), %d/%d nonzeroes, %d/%d aggregations\n", 
@@ -989,9 +1088,8 @@ SCIP_RETCODE aggregation(
 
    /* free datastructures */
    SCIPfreeBufferArray(scip, &rowweights);
+   SCIPfreeBufferArray(scip, &aggrcontnonzbounddists);
    SCIPfreeBufferArray(scip, &aggrcontnonzposs);
-   SCIPfreeBufferArray(scip, &aggrintnonzposs);
-   SCIPfreeBufferArray(scip, &aggrnonzidxs);
    SCIPfreeBufferArray(scip, &aggrcoefs);
 
    return SCIP_OKAY; 
@@ -1011,6 +1109,7 @@ SCIP_RETCODE separateCuts(
    SCIP_Real* varsolvals;
    SCIP_Real* bestcontlbs;
    SCIP_Real* bestcontubs;
+   SCIP_Real* contvarscorebounds;
    SCIP_ROW** rows;     
    SCIP_Real* rowlhsscores;
    SCIP_Real* rowrhsscores;
@@ -1083,7 +1182,8 @@ SCIP_RETCODE separateCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &varsolvals, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcontlbs, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bestcontubs, ncontvars) );
-  
+   SCIP_CALL( SCIPallocBufferArray(scip, &contvarscorebounds, ncontvars) );
+
    /* get the solution values for all active variables */
    SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, varsolvals) );
 
@@ -1113,6 +1213,9 @@ SCIP_RETCODE separateCuts(
 
       bestcontlbs[v-nintvars] = bestlb;
       bestcontubs[v-nintvars] = bestub;
+
+      /* initialize row score bounds for continuous variables */
+      contvarscorebounds[v-nintvars] = SCIP_REAL_MAX;
    }
 
    /* get the maximal number of cuts allowed in a separation round */
@@ -1224,8 +1327,8 @@ SCIP_RETCODE separateCuts(
       int oldncuts;
 
       oldncuts = ncuts;
-      SCIP_CALL( aggregation(scip, sepadata, sol, varsolvals, bestcontlbs, bestcontubs, rowlhsscores, rowrhsscores, roworder[r], 
-            maxaggrs, maxslack, maxconts, &wastried, &ncuts) );
+      SCIP_CALL( aggregation(scip, sepadata, sol, varsolvals, bestcontlbs, bestcontubs, contvarscorebounds,
+            rowlhsscores, rowrhsscores, roworder[r], maxaggrs, maxslack, maxconts, &wastried, &ncuts) );
       if( !wastried )
          continue;
       ntries++;
@@ -1240,6 +1343,7 @@ SCIP_RETCODE separateCuts(
    }
 
    /* free data structure */
+   SCIPfreeBufferArray(scip, &contvarscorebounds);
    SCIPfreeBufferArray(scip, &bestcontubs);
    SCIPfreeBufferArray(scip, &bestcontlbs);
    SCIPfreeBufferArray(scip, &varsolvals);
