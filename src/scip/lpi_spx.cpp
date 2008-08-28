@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.76 2008/08/27 07:03:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.77 2008/08/28 13:37:45 bzfheinz Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -80,7 +80,7 @@ class SPxSCIP : public SPxSolver
    Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
    bool             m_lpinfo;           /**< storing whether output is turned on */
-
+   
 public:
    SPxSCIP(const char* probname = NULL) 
       : SPxSolver(LEAVE, COLUMN),
@@ -1484,15 +1484,20 @@ SCIP_RETCODE SCIPlpiGetCoef(
 /** solves LP -- used for both, primal and dual simplex, because SOPLEX doesn't distinct the two cases */
 static
 SCIP_RETCODE spxSolve(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
+   SCIP_LPI*             lpi,                /**< LP interface structure */
+   SPxSolver::Type       type                /**< algorithm type */
    )
 {
    SCIPdebugMessage("calling SOPLEX solve(): %d cols, %d rows\n", lpi->spx->nCols(), lpi->spx->nRows());
 
    assert( lpi != NULL );
    assert( lpi->spx != NULL );
+   assert( type == SPxSolver::ENTER || type == SPxSolver::LEAVE );
 
    invalidateSolution(lpi);
+   
+   /* set the algorithm type */
+   lpi->spx->setType(type);
    
    SPxSolver::Status status = lpi->spx->solve();
    SCIPdebugMessage(" -> SOPLEX status: %d, basis status: %d\n", lpi->spx->getStatus(), lpi->spx->basis().status());
@@ -1522,7 +1527,12 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 {
    SCIPdebugMessage("calling SCIPlpiSolvePrimal()\n");
 
-   return spxSolve(lpi);
+   /* SOPLEX doesn't distinct between the primal and dual simplex; however
+    * we can force SOPLEX to start with the desired method 
+    * - ENTER = PRIMAL 
+    * - LEAVE = DUAL
+    */
+   return spxSolve(lpi, SPxSolver::ENTER);
 }
 
 /** calls dual simplex to solve the LP */
@@ -1531,8 +1541,13 @@ SCIP_RETCODE SCIPlpiSolveDual(
    )
 {
    SCIPdebugMessage("calling SCIPlpiSolveDual()\n");
-
-   return spxSolve(lpi);
+   
+   /* SOPLEX doesn't distinct between the primal and dual simplex; however
+    * we can force SOPLEX to start with the desired method 
+    * - ENTER = PRIMAL 
+    * - LEAVE = DUAL
+    */
+   return spxSolve(lpi, SPxSolver::LEAVE);
 }
 
 /** calls barrier or interior point algorithm to solve the LP with crossover to simplex basis */
@@ -1542,8 +1557,15 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    )
 {  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiSolveBarrier()\n");
-
-   return spxSolve(lpi);
+   
+   /* SOPLEX doesn't distinct between the primal and dual simplex; however
+    * we can force SOPLEX to start with the desired method 
+    * - ENTER = PRIMAL 
+    * - LEAVE = DUAL
+    *
+    * since SOPLEX does not support barrier we switch to DUAL
+    */
+   return spxSolve(lpi, SPxSolver::LEAVE);
 }
 
 /** performs strong branching iterations on all candidates */
