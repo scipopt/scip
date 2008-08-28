@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.276 2008/08/28 12:21:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.277 2008/08/28 13:39:33 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -49,7 +49,7 @@
 #include "scip/prob.h"
 #include "scip/sol.h"
 
-#define MAXCMIRSCALE               1e+16 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
+#define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
 
 
 
