@@ -12,12 +12,39 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.39 2008/04/17 17:49:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.40 2008/08/29 18:51:17 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
+ * @author Stefan Heinz
  * @author Marc Pfetsch
  * @author John Forrest
+ *
+ *
+ * Notes on this interface:
+ *
+ * - Currently, Clp (Version 1.8) supports two ways of adding rows/columns from arrays: One uses a
+ *   length array that for each row/column specifies the number of nonzeros to be added. The second
+ *   uses the @p beg array that gives the starting index for each row/column. We use the latter
+ *   variant. Since for LPI there should be no gaps in the corresponding arrays, i.e., every entry in
+ *   @p val and @a ind gives a nonzero entry, one can switch between the two formats. With the current
+ *   Clp implementation both formats involve an overhead:
+ *
+ *    - For the @p beg variant, Clp gets the end of the array from the last position in @p beg
+ *      (i.e., the entry one after the last row/column) and we have to copy and extend @p beg for this
+ *      purpose. In the matrix implementation a length information is then again computed.
+ *
+ *    - For the @p length variant, Clp computes the number of elements from this length variant and
+ *      there exists no matrix implementation that uses the length information, i.e., it is recomputed
+ *      again.
+ *    .
+ *    Concluding: the implementation of Clp/CoinPackeMatrix could be improved. The functions
+ *    affected by this are SCIPlpiLoadColLP(), SCIPlpiAddCols(), SCIPlpiAddRows()
+ *
+ * - Clp seems to use/have used an "auxiliary model" that allows to save time when the model is
+ *   scaled. One then needs to specify what parts of the model have been changed between two solving
+ *   calls. It seems that this feature is currently (Clp - Version 1.8) not used anymore. Rudimentary
+ *   support is still included in this file.
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -27,6 +54,7 @@
 #include <ClpDualRowSteepest.hpp>
 #include <CoinIndexedVector.hpp>
 #include <ClpFactorization.hpp>
+#include <config_clp.h>
 
 #include <iostream>
 #include <cassert>
@@ -240,7 +268,9 @@ void lpistateFree(
 
 /** marks the current LP to be unsolved */
 static
-void invalidateSolution(SCIP_LPI* lpi)
+void invalidateSolution(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
 {
    assert(lpi != NULL);
    lpi->solved = FALSE;
@@ -269,7 +299,8 @@ const char* SCIPlpiGetSolverName(
    )
 {
    // Currently Clp has no function to get version, so we hard code it ...
-   sprintf(clpname, "Clp simplex solver");
+   snprintf(clpname, SCIP_MAXSTRLEN-1, "Clp "VERSION"");
+   clpname[SCIP_MAXSTRLEN-1] = '\0';
    return clpname;
 }
 
@@ -319,18 +350,22 @@ SCIP_RETCODE SCIPlpiCreate(
    // set pricing routines
 
    // for primal:
-   // 0 is exact devex, 
-   // 1 full steepest, 
+   // 0 is exact devex,
+   // 1 full steepest,
    // 2 is partial exact devex
    // 3 switches between 0 and 2 depending on factorization
    // 4 starts as partial dantzig/devex but then may switch between 0 and 2.
-   ClpPrimalColumnSteepest primalSteepest(3);
+   // - currently (Clp 1.8stable) default is 3
+   ClpPrimalColumnSteepest primalSteepest;
    (*lpi)->clp->setPrimalColumnPivotAlgorithm(primalSteepest);
 
    // for dual:
-   // 0 is uninitialized, 1 full, 2 is partial uninitialized,
+   // 0 is uninitialized,
+   // 1 full,
+   // 2 is partial uninitialized,
    // 3 starts as 2 but may switch to 1.
-   ClpDualRowSteepest steep(3);
+   // - currently (Clp 1.8stable) default is 3
+   ClpDualRowSteepest steep;
    (*lpi)->clp->setDualRowPivotAlgorithm(steep);
 
    // set problem name
@@ -417,13 +452,14 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    ClpSimplex* clp = lpi->clp;
 
    // copy beg-array
-   int* mybeg = new int [ncols+1];
-   memcpy((void *) mybeg, beg, ncols * sizeof(int));
+   int* mybeg;
+   SCIP_ALLOC( BMSallocMemoryArray(&mybeg, ncols + 1) );
+   BMScopyMemoryArray(mybeg, beg, ncols);
    mybeg[ncols] = nnonz;   // add additional entry at end
 
    // load problem
    clp->loadProblem(ncols, nrows, mybeg, ind, val, lb, ub, obj, lhs, rhs);
-   delete [] mybeg;
+   BMSfreeMemoryArray( &mybeg );
 
    // set objective sense
    clp->setOptimizationDirection(objsen);
@@ -435,13 +471,13 @@ SCIP_RETCODE SCIPlpiLoadColLP(
       std::vector<std::string> rowNames(nrows);
       if (colnames)
       {
-	 for (int j = 0; j < ncols; ++j)
-	    columnNames[j].assign(colnames[j]);
+         for (int j = 0; j < ncols; ++j)
+            columnNames[j].assign(colnames[j]);
       }
       if (rownames)
       {
-	 for (int i = 0; i < ncols; ++i)
-	    rowNames[i].assign(rownames[i]);
+         for (int i = 0; i < ncols; ++i)
+            rowNames[i].assign(rownames[i]);
       }
       clp->copyNames(rowNames, columnNames);
    }
@@ -480,29 +516,36 @@ SCIP_RETCODE SCIPlpiAddCols(
    invalidateSolution(lpi);
 
    // store number of columns for later
-   int numCols = lpi->clp->getNumCols(); 
+   int numCols = lpi->clp->getNumCols();
 
    // copy beg-array (if not 0)
-   int* mybeg = new int [ncols+1];
+   int* mybeg;
+   SCIP_ALLOC( BMSallocMemoryArray(&mybeg, ncols + 1) );
+
+   // if columns are not empty
    if ( nnonz == 0 )
    {
-      for (int j = 0; j < ncols; ++j)
-	 mybeg[j] = 0;
+      BMScopyMemoryArray(mybeg, beg, ncols);
+      mybeg[ncols] = nnonz;   // add additional entry at end
+
+      // add columns
+      lpi->clp->addColumns(ncols, lb, ub, obj, mybeg, ind, val);
    }
    else
-      memcpy((void *) mybeg, beg, ncols * sizeof(int));
-   mybeg[ncols] = nnonz;   // add additional entry at end
-
-   // add columns
-   lpi->clp->addColumns(ncols, lb, ub, obj, mybeg, ind, val);
-   delete [] mybeg;
+   {
+      for (int j = 0; j <= ncols; ++j)
+         mybeg[j] = 0;
+      // add empty columns
+      lpi->clp->addColumns(ncols, lb, ub, obj, mybeg, 0, 0);
+   }
+   BMSfreeMemoryArray(&mybeg);
 
    // copy columnnames if necessary
    if ( colnames )
    {
       std::vector<std::string> columnNames(ncols);
       for (int j = 0; j < ncols; ++j)
-	 columnNames[j].assign(colnames[j]);
+         columnNames[j].assign(colnames[j]);
       lpi->clp->copyColumnNames(columnNames, numCols, numCols + ncols);
    }
 
@@ -525,21 +568,23 @@ SCIP_RETCODE SCIPlpiDelCols(
 
    invalidateSolution(lpi);
 
-   // Clp can't delete a range of columns; we have to use deleteColumns (see SCIPlpiDelColset)
+   // Current Clp version (1.8) can't delete a range of columns; we have to use deleteColumns (see SCIPlpiDelColset)
    int num = lastcol-firstcol+1;
-   int* which = new int [num];
+   int* which;
+   SCIP_ALLOC( BMSallocMemoryArray( &which, num) );;
 
+   // fill array with interval
    for (int j = firstcol; j <= lastcol; ++j)
       which[j - firstcol] = j;
 
    lpi->clp->deleteColumns(num, which);
-   delete [] which;
+   BMSfreeMemoryArray( &which );
 
    return SCIP_OKAY;   
 }
 
 
-/** deletes columns from SCIP_LP; the new position of a column must not be greater that its old position */
+/** deletes columns from SCIP_LPI; the new position of a column must not be greater that its old position */
 SCIP_RETCODE SCIPlpiDelColset(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  dstat               /**< deletion status of columns
@@ -556,28 +601,29 @@ SCIP_RETCODE SCIPlpiDelColset(
    invalidateSolution(lpi);
 
    // transform dstat information
-   int ncols = lpi->clp->getNumCols(); 
-   int* which = new int [ncols];  
+   int ncols = lpi->clp->getNumCols();
+   int* which;
+   SCIP_ALLOC( BMSallocMemoryArray( &which, ncols) );
    int cnt = 0;
    for (int j = 0; j < ncols; ++j)
    {
       if ( dstat[j] == 1 )
-	 which[cnt++] = j;
+         which[cnt++] = j;
    }
    lpi->clp->deleteColumns(cnt, which);
-   delete [] which;
+   BMSfreeMemoryArray(&which);
 
-   // update dstat (is this necessary?)
+   // update dstat
    cnt = 0;
    for (int j = 0; j < ncols; ++j)
    {
       if ( dstat[j] == 1 )
       {
-	 dstat[j] = -1;
-	 ++cnt;
+         dstat[j] = -1;
+         ++cnt;
       }
       else
-	 dstat[j] = j - cnt;
+         dstat[j] = j - cnt;
    }
 
    return SCIP_OKAY;   
@@ -610,34 +656,35 @@ SCIP_RETCODE SCIPlpiAddRows(
    invalidateSolution(lpi);
 
    // store number of rows for later use
-   int numRows = lpi->clp->getNumRows(); 
+   int numRows = lpi->clp->getNumRows();
+
+   int* mybeg;
+   SCIP_ALLOC( BMSallocMemoryArray( &mybeg, nrows + 1) );
 
    if ( nnonz != 0 )
    {
       // copy beg-array
-      int* mybeg = new int [nrows+1];
-      memcpy((void *) mybeg, beg, nrows * sizeof(int));
+      BMScopyMemoryArray( mybeg, beg, nrows);
       mybeg[nrows] = nnonz;   // add additional entry at end
-      
+
       // add rows
       lpi->clp->addRows(nrows, lhs, rhs, mybeg, ind, val);
-      delete [] mybeg;
    }
    else
    {
       // add empty rows
-      int* mybeg = new int [nrows+1];
       for (int i = 0; i <= nrows; ++i)
-	 mybeg[i] = 0;
+         mybeg[i] = 0;
       lpi->clp->addRows(nrows, lhs, rhs, mybeg, 0, 0);
    }
+   BMSfreeMemoryArray( &mybeg );
 
    // copy rownames if necessary
    if ( rownames )
    {
       std::vector<std::string> rowNames(nrows);
       for (int j = 0; j < nrows; ++j)
-	 rowNames[j].assign(rownames[j]);
+         rowNames[j].assign(rownames[j]);
       lpi->clp->copyRowNames(rowNames, numRows, numRows + nrows);
    }
 
@@ -660,17 +707,20 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    invalidateSolution(lpi);
 
-   // Clp can't delete a range of rows; we have to use deleteRows (see SCIPlpiDelRowset)
+   // Current Clp version (1.8) can't delete a range of rows; we have to use deleteRows (see SCIPlpiDelRowset)
    int num = lastrow-firstrow+1;
-   int* which = new int [num];
+   int* which;
+   SCIP_ALLOC( BMSallocMemoryArray( &which, num) );
 
+   // fill array with interval
    for (int i = firstrow; i <= lastrow; ++i)
       which[i - firstrow] = i;
 
    lpi->clp->deleteRows(num, which);
-   delete [] which;
 
-   return SCIP_OKAY;   
+   BMSfreeMemoryArray( &which );
+
+   return SCIP_OKAY;
 }
 
 
@@ -691,31 +741,32 @@ SCIP_RETCODE SCIPlpiDelRowset(
    invalidateSolution(lpi);
 
    // transform dstat information
-   int nrows = lpi->clp->getNumRows(); 
-   int* which = new int [nrows];
+   int nrows = lpi->clp->getNumRows();
+   int* which;
+   SCIP_ALLOC( BMSallocMemoryArray( &which, nrows) );
    int cnt = 0;
    for (int i = 0; i < nrows; ++i)
    {
       if ( dstat[i] == 1 )
-	 which[cnt++] = i;
+         which[cnt++] = i;
    }
    lpi->clp->deleteRows(cnt, which);
-   delete [] which;
+   BMSfreeMemoryArray( &which );
 
-   // update dstat (is this necessary)
+   // update dstat
    cnt = 0;
    for (int i = 0; i < nrows; ++i)
    {
       if ( dstat[i] == 1 )
       {
-	 dstat[i] = -1;
-	 ++cnt;
+         dstat[i] = -1;
+         ++cnt;
       }
       else
-	 dstat[i] = i - cnt;
+         dstat[i] = i - cnt;
    }
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 
@@ -759,18 +810,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    ClpSimplex* clp = lpi->clp;
 
-   /* OLD code
-   double* colLower = clp->columnLower();     // we have direct access to the data of Clp!
-   double* colUpper = clp->columnUpper();
-   for( int j = 0; j < ncols; ++j )
-   {
-      assert(0 <= ind[j] && ind[j] < clp->numberColumns());
-      colLower[ind[j]] = lb[j];
-      colUpper[ind[j]] = ub[j];
-   }
-   */
-
-   // new version (updates whatsChanged in Clp)  (bound checking in Clp)
+   // updates whatsChanged in Clp (bound checking in Clp)
    for( int j = 0; j < ncols; ++j )
       clp->setColBounds(ind[j], lb[j], ub[j]);
    
@@ -799,18 +839,7 @@ SCIP_RETCODE SCIPlpiChgSides(
 
    ClpSimplex* clp = lpi->clp;
 
-   /* OLD code
-   double* rowLower = clp->rowLower();     // we have direct access to the data of Clp!
-   double* rowUpper = clp->rowUpper();
-   for( int i = 0; i < nrows; ++i )
-   {
-      assert(0 <= ind[i] && ind[i] < clp->numberRows());
-      rowLower[ind[i]] = lhs[i];
-      rowUpper[ind[i]] = rhs[i];
-   }
-   */
-
-   // new version (updates whatsChanged in Clp)  (bound checking in Clp)
+   // updates whatsChanged in Clp (bound checking in Clp)
    for( int i = 0; i < nrows; ++i )
       clp->setRowBounds(ind[i], lhs[i], rhs[i]);
 
@@ -880,18 +909,9 @@ SCIP_RETCODE SCIPlpiChgObj(
 
    ClpSimplex* clp = lpi->clp;
 
-   /* OLD code
-   double* objvec = clp->objective();          // we have direct access to the data of Clp!
+   // updates whatsChanged in Clp (bound checking in Clp)
    for( int j = 0; j < ncols; ++j )
-   {
-      assert(0 <= ind[j] && ind[j] < lpi->clp->numberColumns());
-      objvec[ind[j]] = obj[j];
-   }
-   */
-
-   // new version (updates whatsChanged in Clp)  (bound checking in Clp)
-   for( int j = 0; j < ncols; ++j )
-      clp->setObjCoeff(ind[j], obj[j]);
+      clp->setObjCoeff(ind[j], obj[j]);  // inlined version of clp->setObjectiveCoefficient(ind[j], obj[j]);
 
    return SCIP_OKAY;
 }
@@ -1126,22 +1146,21 @@ SCIP_RETCODE SCIPlpiGetCols(
    ClpSimplex* clp = lpi->clp;
 
    // get lower and upper bounds for the variables
-   if( lb != 0 )
+   assert( (lb != 0 && ub != 0) || (lb == 0 && ub == 0) );
+   if ( lb != 0 )
    {
-      assert(ub != 0);
-
       const double* colLower = clp->getColLower();    // Here we can use the const versions (see SCIPchgBounds)
       const double* colUpper = clp->getColUpper();
-      for( int j = firstcol; j <= lastcol; ++j )
-      {
-         lb[j-firstcol] = colLower[j];
-         ub[j-firstcol] = colUpper[j];
-      }
-   }
-   else
-      assert(ub == 0);
 
-   if( nnonz != 0 )
+      BMScopyMemoryArray( lb, colLower + firstcol, (lastcol - firstcol + 1));
+      BMScopyMemoryArray( ub, colUpper + firstcol, (lastcol - firstcol + 1));
+   }
+
+   assert( nnonz != 0 || beg == 0);
+   assert( nnonz != 0 || ind == 0);
+   assert( nnonz != 0 || val == 0);
+
+   if ( nnonz != 0 )
    {
       CoinPackedMatrix* M = clp->matrix();
       assert( M != 0 );
@@ -1153,22 +1172,16 @@ SCIP_RETCODE SCIPlpiGetCols(
       const double* Mval = M->getElements();
 
       *nnonz = 0;
-      for( int j = firstcol; j <= lastcol; ++j )
+      // can we use memcpy for the whole set (requires that columns are stored sequentially)
+      for (int j = firstcol; j <= lastcol; ++j)
       {
          beg[j-firstcol] = *nnonz;
-         for( CoinBigIndex k = Mbeg[j]; k < Mbeg[j] + Mlength[j]; ++k )
-         {
-            ind[*nnonz] = Mind[k];
-            val[*nnonz] = Mval[k];
-            (*nnonz)++;
-         }
+
+         BMScopyMemoryArray( (ind + (*nnonz)), Mind + Mbeg[j], Mlength[j]);
+         BMScopyMemoryArray( (val + (*nnonz)), Mval + Mbeg[j], Mlength[j]);
+
+         (*nnonz) += Mlength[j];
       }
-   }
-   else
-   {
-      assert(beg == 0);
-      assert(ind == 0);
-      assert(val == 0);
    }
 
    return SCIP_OKAY;
@@ -1198,22 +1211,21 @@ SCIP_RETCODE SCIPlpiGetRows(
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
 
    ClpSimplex* clp = lpi->clp;
-   if( lhs != 0 )
+   assert( (lhs != 0 && rhs != 0) || (lhs == 0 && rhs == 0) );
+   if ( lhs != 0 )
    {
-      assert(rhs != 0);
-
       const double* rowLower = clp->getRowLower();    // Here we can use the const versions (see SCIPchgSides)
       const double* rowUpper = clp->getRowUpper();
-      for( int i = firstrow; i <= lastrow; ++i )
-      {
-         lhs[i-firstrow] = rowLower[i];
-         rhs[i-firstrow] = rowUpper[i];
-      }
-   }
-   else
-      assert(rhs == 0);
 
-   if( nnonz != 0 )
+      BMScopyMemoryArray( lhs, rowLower + firstrow, (lastrow - firstrow + 1) );
+      BMScopyMemoryArray( rhs, rowUpper + firstrow, (lastrow - firstrow + 1) );
+   }
+
+   assert( nnonz != 0 || beg == 0);
+   assert( nnonz != 0 || ind == 0);
+   assert( nnonz != 0 || val == 0);
+
+   if ( nnonz != 0 )
    {
       ClpMatrixBase* M = clp->rowCopy();   // get row view on matrix
       if ( M == 0 ) // can happen e.g. if no LP was solved yet ...
@@ -1238,12 +1250,6 @@ SCIP_RETCODE SCIPlpiGetRows(
          }
       }
    }
-   else
-   {
-      assert(beg == 0);
-      assert(ind == 0);
-      assert(val == 0);
-   }
 
    return SCIP_OKAY;
 }
@@ -1260,7 +1266,7 @@ SCIP_RETCODE SCIPlpiIgnoreInstability(
    assert(lpi != NULL);
    assert(lpi->clp != NULL);
 
-   /* instable situations cannot be ignored */
+   /* unstable situations cannot be ignored */
    *success = FALSE;
 
    return SCIP_OKAY;
@@ -1283,8 +1289,8 @@ SCIP_RETCODE SCIPlpiGetObj(
    assert(vals != 0);
 
    const double* obj = lpi->clp->getObjCoefficients();    // Here we can use the const versions (see SCIPchgObj)
-   for( int j = firstcol; j <= lastcol; ++j )
-      vals[j-firstcol] = obj[j];
+
+   BMScopyMemoryArray( vals, obj + firstcol, (lastcol - firstcol + 1) );
 
    return SCIP_OKAY;
 }
@@ -1304,15 +1310,17 @@ SCIP_RETCODE SCIPlpiGetBounds(
    assert(lpi != 0);
    assert(lpi->clp != 0);
    assert(0 <= firstcol && firstcol <= lastcol && lastcol < lpi->clp->numberColumns());
-   
-   const double* colLower = lpi->clp->getColLower();    // Here we can use the const versions (see SCIPchgBounds)
-   const double* colUpper = lpi->clp->getColUpper();
-   for( int j = firstcol; j <= lastcol; ++j )
+
+   if ( lbs != 0 )
    {
-      if (lbs != 0)
-	 lbs[j-firstcol] = colLower[j];
-      if (ubs != 0)
-	 ubs[j-firstcol] = colUpper[j];
+      const double* colLower = lpi->clp->getColLower();    // Here we can use the const versions (see SCIPchgBounds)
+      BMScopyMemoryArray( lbs, colLower + firstcol, (lastcol - firstcol + 1) );
+   }
+
+   if ( ubs != 0 )
+   {
+      const double* colUpper = lpi->clp->getColUpper();
+      BMScopyMemoryArray( ubs, colUpper + firstcol, (lastcol - firstcol + 1) );
    }
 
    return SCIP_OKAY;
@@ -1334,14 +1342,16 @@ SCIP_RETCODE SCIPlpiGetSides(
    assert(lpi->clp != 0);
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < lpi->clp->numberRows());
 
-   const double* rowLower = lpi->clp->getRowLower();    // Here we can use the const versions (see SCIPchgSides)
-   const double* rowUpper = lpi->clp->getRowUpper();
-   for( int i = firstrow; i <= lastrow; ++i )
+   if ( lhss != 0 )
    {
-      if (lhss != 0)
-	 lhss[i-firstrow] = rowLower[i];
-      if (rhss != 0)
-	 rhss[i-firstrow] = rowUpper[i];
+      const double* rowLower = lpi->clp->getRowLower();    // Here we can use the const versions (see SCIPchgSides)
+      BMScopyMemoryArray( lhss, rowLower + firstrow, (lastrow - firstrow + 1) );
+   }
+
+   if ( rhss != 0 )
+   {
+      const double* rowUpper = lpi->clp->getRowUpper();
+      BMScopyMemoryArray( rhss,  rowUpper + firstrow, (lastrow - firstrow + 1) );
    }
 
    return SCIP_OKAY;
@@ -1364,24 +1374,7 @@ SCIP_RETCODE SCIPlpiGetCoef(
    assert(0 <= row && row < lpi->clp->numberRows());
    assert(val != 0);
 
-   *val = 0.0;
-   // There seems to be no direct way to get the coefficient
-   CoinPackedMatrix* M = lpi->clp->matrix();
-   assert( M != 0 );
-   assert( M->getNumCols() == lpi->clp->numberColumns() );
-
-   const CoinBigIndex* Mbeg = M->getVectorStarts();
-   const int* Mlength = M->getVectorLengths();
-   const int* Mind = M->getIndices();
-   const double* Mval = M->getElements();
-   for( CoinBigIndex k = Mbeg[col]; k < Mbeg[col] + Mlength[col]; ++k )
-   {
-      if ( Mind[k] == row )
-      {
-	 *val = Mval[k];
-	 break;
-      }
-   }
+   *val = lpi->clp->matrix()->getCoefficient(row, col);
 
    return SCIP_OKAY;
 }
@@ -1430,14 +1423,16 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    lpi->solved = TRUE;
 
    // Unfortunately the status of Clp is hard coded ...
-   // 0 - optimal
-   // 1 - primal infeasible
-   // 2 - dual infeasible
-   // 3 - stopped on iterations or time
-   // 4 - stopped due to errors
-   // 5 - stopped by event handler
-
-   if ( status == 4 || status == 5 )    // begin stopped by event handler should not occur
+   // -1 - did not run
+   //  0 - optimal
+   //  1 - primal infeasible
+   //  2 - dual infeasible
+   //  3 - stopped on iterations or time
+   //  4 - stopped due to errors
+   //  5 - stopped by event handler
+   assert( status != -1 );      // did not run should not occur
+   assert( status != 5 );       // begin stopped by event handler should not occur
+   if ( status == 4 || status == 5 || status == -1 )
       return SCIP_LPERROR;
 
    return SCIP_OKAY;
@@ -1477,14 +1472,16 @@ SCIP_RETCODE SCIPlpiSolveDual(
       lpi->clp->auxiliaryModel(63-2);
 
    // Unfortunately the status of Clp is hard coded ...
-   // 0 - optimal
-   // 1 - primal infeasible
-   // 2 - dual infeasible
-   // 3 - stopped on iterations or time
-   // 4 - stopped due to errors
-   // 5 - stopped by event handler
-
-   if ( status == 4 || status == 5 )    // begin stopped by event handler should not occur
+   // -1 - did not run
+   //  0 - optimal
+   //  1 - primal infeasible
+   //  2 - dual infeasible
+   //  3 - stopped on iterations or time
+   //  4 - stopped due to errors
+   //  5 - stopped by event handler
+   assert( status != -1 );      // did not run should not occur
+   assert( status != 5 );       // begin stopped by event handler should not occur
+   if ( status == 4 || status == 5 || status == -1 )
       return SCIP_LPERROR;
 
    return SCIP_OKAY;
@@ -1517,14 +1514,16 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
    // We may need to call ClpModel::status()
 
    // Unfortunately the status of Clp is hard coded ...
-   // 0 - optimal
-   // 1 - primal infeasible
-   // 2 - dual infeasible
-   // 3 - stopped on iterations or time
-   // 4 - stopped due to errors
-   // 5 - stopped by event handler
-
-   if ( status == 4 || status == 5 )    // begin stopped by event handler should not occur
+   // -1 - did not run
+   //  0 - optimal
+   //  1 - primal infeasible
+   //  2 - dual infeasible
+   //  3 - stopped on iterations or time
+   //  4 - stopped due to errors
+   //  5 - stopped by event handler
+   assert( status != -1 );      // did not run should not occur
+   assert( status != 5 );       // begin stopped by event handler should not occur
+   if ( status == 4 || status == 5 || status == -1 )
       return SCIP_LPERROR;
 
    return SCIP_OKAY;
@@ -1753,7 +1752,6 @@ SCIP_Bool SCIPlpiExistsDualRay(
 
    // Clp assumes to have a dual ray whenever it concludes "primal infeasible", 
    // (but is not necessarily dual feasible), see ClpModel::infeasibilityRay
-
    return ( lpi->clp->status() == 1 && ! lpi->clp->secondaryStatus() ); // status = 1  is "primal infeasible"
 }
 
@@ -1772,7 +1770,6 @@ SCIP_Bool SCIPlpiHasDualRay(
 
    // Clp assumes to have a dual ray whenever it concludes "primal infeasible", 
    // (but is not necessarily dual feasible), see ClpModel::infeasibilityRay
-
    return ( lpi->clp->status() == 1 && ! lpi->clp->secondaryStatus() ); // status = 1  is "primal infeasible"
 }
 
@@ -1843,20 +1840,20 @@ SCIP_Bool SCIPlpiIsStable(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   // We first if status is ok, i.e., is one of the following:
+   // We first check if status is ok, i.e., is one of the following:
    //    0 - optimal
    //    1 - primal infeasible
    //    2 - dual infeasible
 
    // Then we check the secondary status of Clp:
    /** 0 - none
-       1 - primal infeasible because dual limit reached OR probably primal infeasible but can't prove it (main status 4)
-       2 - scaled problem optimal - unscaled problem has primal infeasibilities
-       3 - scaled problem optimal - unscaled problem has dual infeasibilities
-       4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
-       6 - failed due to empty problem check 
-       100 up - translation of enum from ClpEventHandler
-   */
+    *  1 - primal infeasible because dual limit reached OR probably primal infeasible but can't prove it (main status 4)
+    *  2 - scaled problem optimal - unscaled problem has primal infeasibilities
+    *  3 - scaled problem optimal - unscaled problem has dual infeasibilities
+    *  4 - scaled problem optimal - unscaled problem has primal and dual infeasibilities
+    *  6 - failed due to empty problem check
+    *  100 up - translation of enum from ClpEventHandler
+    */
    SCIPdebugMessage("status: %d   secondary: %d\n", lpi->clp->status(), lpi->clp->secondaryStatus());
    return( (lpi->clp->status() <= 2) && (! lpi->clp->isAbandoned()) && (lpi->clp->secondaryStatus() <= 1 || lpi->clp->secondaryStatus() == 6) );
 }
@@ -1958,22 +1955,22 @@ SCIP_RETCODE SCIPlpiGetSol(
    if( primsol != 0 )
    {
       const double* sol = clp->getColSolution();
-      memcpy((void *) primsol, sol, clp->numberColumns() * sizeof(double));
+      BMScopyMemoryArray( primsol, sol, clp->numberColumns() );
    }
    if( dualsol != 0 )
    {
       const double* dsol = clp->getRowPrice();
-      memcpy((void *) dualsol, dsol, clp->numberRows() * sizeof(double));
+      BMScopyMemoryArray( dualsol, dsol, clp->numberRows() );
    }
    if( activity != 0 )
    {
       const double* act = clp->getRowActivity();
-      memcpy((void *) activity, act, clp->numberRows() * sizeof(double));
+      BMScopyMemoryArray( activity, act, clp->numberRows() );
    }
    if( redcost != 0 )
    {
       const double* red = clp->getReducedCost();
-      memcpy((void *) redcost, red, clp->numberColumns() * sizeof(double));
+      BMScopyMemoryArray( redcost, red, clp->numberColumns() );
    }
 
    return SCIP_OKAY;
@@ -1992,10 +1989,14 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
    assert(lpi->clp != 0);
    assert(ray != 0);
 
+   /** Unbounded ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
    const double* clpray = lpi->clp->unboundedRay();
+
    if ( clpray == 0 )
       return SCIP_LPERROR;
-   memcpy((void *) ray, clpray, lpi->clp->numberColumns() * sizeof(double));
+
+   BMScopyMemoryArray( ray, clpray, lpi->clp->numberColumns() );
+
    delete [] clpray;
    
    return SCIP_OKAY;
@@ -2013,12 +2014,16 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(lpi->clp != 0);
    assert(dualfarkas != 0);
 
+   /** Infeasibility ray (NULL returned if none/wrong). Up to user to use delete [] on these arrays.  */
    const double* dualray = lpi->clp->infeasibilityRay();
+
    if ( dualray == 0 )
       return SCIP_LPERROR;
-   memcpy((void *) dualfarkas, dualray, lpi->clp->numberRows() * sizeof(double));
+
+   BMScopyMemoryArray( dualfarkas, dualray, lpi->clp->numberRows() );
+
    delete [] dualray;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2062,34 +2067,6 @@ SCIP_RETCODE SCIPlpiGetBase(
    assert(lpi->clp != 0);
 
    ClpSimplex* clp = lpi->clp;
-   
-   // Clp basis status can be:
-   //  isFree = 0x00,
-   //  basic = 0x01,
-   //  atUpperBound = 0x02,
-   //  atLowerBound = 0x03,
-   //  superBasic = 0x04,
-   //  isFixed = 0x05
-
-   // The conversions come from OsiClpSolverInterface
-
-   /*
-   int lookup[] = {SCIP_BASESTAT_ZERO, SCIP_BASESTAT_BASIC, SCIP_BASESTAT_UPPER, SCIP_BASESTAT_LOWER, 
-		   SCIP_BASESTAT_ZERO, SCIP_BASESTAT_LOWER};   // conversion table
-
-   if( rstat != 0 )
-   {
-      for( int i = 0; i < clp->numberRows(); ++i )
-	 rstat[i] = lookup[clp->getRowStatus(i)];
-   }
-
-   if( cstat != 0 )
-   {
-      for( int j = 0; j < clp->numberColumns(); ++j )
-         cstat[j] = lookup[clp->getBasisColStatus(i)];
-   }
-   */
-
 
    // slower but easier to understand (and portable)
    if( rstat != 0 )
@@ -2253,7 +2230,21 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
    
-   clp->setWhatsChanged(clp->whatsChanged() & (~512));   // tell Clp that basis has changed
+   /** Whats changed since last solve.
+    *  It is only used when startFinishOptions used in dual or primal.
+    * Bit 1 - number of rows/columns has not changed (so work arrays valid)
+    *     2 - matrix has not changed
+    *     4 - if matrix has changed only by adding rows
+    *     8 - if matrix has changed only by adding columns
+    *    16 - row lbs not changed
+    *    32 - row ubs not changed
+    *    64 - column objective not changed
+    *   128 - column lbs not changed
+    *   256 - column ubs not changed
+    *	512 - basis not changed (up to user to set this to 0)
+    *	      top bits may be used internally
+    */
+   clp->setWhatsChanged(clp->whatsChanged() & (~512));
 
    return SCIP_OKAY;
 }
@@ -2305,13 +2296,13 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert( 0 <= r && r <= lpi->clp->numberRows() );
 
    ClpSimplex* clp = lpi->clp;
-   if( clp->usingAuxiliaryModel() )
+   if ( clp->usingAuxiliaryModel() )
    {
-      int status;
+      SCIPdebugMessage("Resolving model to obtain basis inverse times matrix column ...\n");
 
       clp->deleteAuxiliaryModel();
-      status = clp->dual(0,3);
-      if( status != 0 )
+      int status = clp->dual(0,3);
+      if ( status != 0 )
          return SCIP_LPERROR;
    }
    clp->getBInvRow(r, coef);
@@ -2339,12 +2330,12 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert( 0 <= c && c <= lpi->clp->numberRows() ); /* basis matrix is nrows * nrows */
 
    ClpSimplex* clp = lpi->clp;
-   if( clp->usingAuxiliaryModel() )
+   if ( clp->usingAuxiliaryModel() )
    {
-      int status;
+      SCIPdebugMessage("Resolving model to obtain basis inverse times matrix column ...\n");
 
       clp->deleteAuxiliaryModel();
-      status = clp->dual(0,3);
+      int status = clp->dual(0,3);
       if( status != 0 )
          return SCIP_LPERROR;
    }
@@ -2370,13 +2361,13 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert( 0 <= r && r <= lpi->clp->numberRows() );
 
    ClpSimplex* clp = lpi->clp;
-   if( clp->usingAuxiliaryModel() )
+   if ( clp->usingAuxiliaryModel() )
    {
-      int status;
+      SCIPdebugMessage("Resolving model to obtain basis inverse times matrix column ...\n");
 
       clp->deleteAuxiliaryModel();
-      status = clp->dual(0,3);
-      if( status != 0 )
+      int status = clp->dual(0,3);
+      if ( status != 0 )
          return SCIP_LPERROR;
    }
    clp->getBInvARow(r, coef, 0);
@@ -2400,13 +2391,13 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert( 0 <= c && c <= lpi->clp->numberColumns() );
 
    ClpSimplex* clp = lpi->clp;
-   if( clp->usingAuxiliaryModel() )
+   if ( clp->usingAuxiliaryModel() )
    {
-      int status;
+      SCIPdebugMessage("Resolving model to obtain basis inverse times matrix column ...\n");
 
       clp->deleteAuxiliaryModel();
-      status = clp->dual(0,3);
-      if( status != 0 )
+      int status = clp->dual(0,3);
+      if ( status != 0 )
          return SCIP_LPERROR;
    }
    clp->getBInvACol(c, coef);
@@ -2530,7 +2521,7 @@ SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    )
 {
-   return TRUE;
+   return (lpistate != NULL);
 }
 
 /** reads LP state (like basis information from a file */
@@ -2541,9 +2532,12 @@ SCIP_RETCODE SCIPlpiReadState(
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
 
-   // Note: this might not be what is expected ...
-   if ( lpi->clp->restoreModel(fname) )
-      return SCIP_ERROR;
+   /** Read a basis from the given filename,
+    *  returns -1 on file error, 0 if no values, 1 if values
+    */
+   if ( lpi->clp->readBasis(fname) < 0 )
+      return SCIP_LPERROR;
+
    return SCIP_OKAY;
 }
 
@@ -2555,9 +2549,18 @@ SCIP_RETCODE SCIPlpiWriteState(
 {
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
 
-   // Note: this might not be what is expected ...
-   if ( lpi->clp->saveModel(fname) )
-      return SCIP_ERROR;
+   /** Write the basis in MPS format to the specified file.
+    *  If writeValues true, writes values of structurals
+    *  (and adds VALUES to end of NAME card)
+    *
+    *  parameters:
+    *  - filename
+    *  - bool writeValues
+    *  - int formatType  (0 - normal, 1 - extra accuracy, 2 - IEEE hex)
+    */
+   if ( lpi->clp->writeBasis(fname, false, 0) )
+      return SCIP_LPERROR;
+
    return SCIP_OKAY;
 }
 
@@ -2605,14 +2608,6 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->pricing;          // store pricing method in LPI struct
       break;
    case SCIP_LPPAR_LPINFO:
-      /** Amount of print out:
-	  0 - none
-	  1 - just final
-	  2 - just factorizations
-	  3 - as 2 plus a bit more
-	  4 - verbose
-	  above that 8,16,32 etc just for selective SCIPdebug
-      */
       *ival = lpi->clp->logLevel() > 0 ? TRUE : FALSE;
       break;
    case SCIP_LPPAR_LPITLIM:
@@ -2641,16 +2636,20 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    // Handle pricing separately ...
    if( type == SCIP_LPPAR_PRICING )
    {
-      // primal pricing:
-      // 0 is exact devex, 
-      // 1 full steepest, 
+      // for primal:
+      // 0 is exact devex,
+      // 1 full steepest,
       // 2 is partial exact devex
       // 3 switches between 0 and 2 depending on factorization
       // 4 starts as partial dantzig/devex but then may switch between 0 and 2.
-      //
+      // - currently (Clp 1.8) default is 3
+
       // for dual:
-      // 0 is uninitialized, 1 full, 2 is partial uninitialized,
+      // 0 is uninitialized,
+      // 1 full,
+      // 2 is partial uninitialized,
       // 3 starts as 2 but may switch to 1.
+      // - currently (Clp 1.8) default is 3
       lpi->pricing = ival;
       int primalmode = 0;
       int dualmode = 0;
@@ -2686,7 +2685,15 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       SCIPABORT();
    case SCIP_LPPAR_LPINFO:
       assert(ival == TRUE || ival == FALSE);
-      if( ival )
+      /** Amount of print out:
+       *  0 - none
+       *  1 - just final
+       *  2 - just factorizations
+       *  3 - as 2 plus a bit more
+       *  4 - verbose
+       *  above that 8,16,32 etc just for selective SCIPdebug
+       */
+      if ( ival )
          lpi->clp->setLogLevel(2);
       else 
          lpi->clp->setLogLevel(0);
@@ -2744,7 +2751,7 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    default:
       return SCIP_PARAMETERUNKNOWN;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -2856,7 +2863,6 @@ SCIP_Bool fileExists(
    return TRUE;
 }
 
-
 /** reads LP from a file */
 SCIP_RETCODE SCIPlpiReadLP(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -2870,12 +2876,18 @@ SCIP_RETCODE SCIPlpiReadLP(
 
    // WARNING: can only read mps files
 
-   if( !fileExists(fname) )
+   if ( !fileExists(fname) )
       return SCIP_NOFILE;
 
-   if( lpi->clp->readMps(fname, true, false) )
+   /** read file in MPS format
+    * parameters:
+    * filename
+    * bool keepNames
+    * bool ignoreErrors
+    */
+   if ( lpi->clp->readMps(fname, true, false) )
       return SCIP_READERROR;
-   
+
    return SCIP_OKAY;
 }
 
@@ -2890,6 +2902,13 @@ SCIP_RETCODE SCIPlpiWriteLP(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   /** write file in MPS format
+    *  parameters:
+    *  filename
+    *  int formatType  (0 - normal, 1 - extra accuracy, 2 - IEEE hex)
+    *  int numberAcross (1 or 2 values should be specified on every data line in the MPS file)
+    *  double objSense
+    */
    if ( lpi->clp->writeMps(fname, 0, 2, lpi->clp->optimizationDirection()) )
       return SCIP_ERROR;
 
