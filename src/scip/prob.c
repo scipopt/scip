@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.98 2008/08/29 16:44:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.99 2008/08/29 18:43:10 bzfpfets Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -151,7 +151,7 @@ SCIP_Bool consHasName(
    SCIP_CONS*            cons                /**< constraint */
    )
 {
-   char* name;
+   const char* name;
 
    name = SCIPconsGetName(cons);
 
@@ -164,7 +164,7 @@ SCIP_Bool varHasName(
    SCIP_VAR*             var                 /**< variable */
    )
 {
-   char* name;
+   const char* name;
 
    name = SCIPvarGetName(var);
 
