@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.292 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.293 2008/08/29 20:08:02 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -7439,63 +7439,65 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff
-      && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
-      && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides )
+   if( !cutoff && (conshdlrdata->presolusehashing || conshdlrdata->presolpairwise) )
    {
-      assert(firstchange >= 0);
-
-      if( firstchange < nconss && conshdlrdata->presolusehashing ) 
+      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *nchgbds == oldnchgbds && *ndelconss == oldndelconss
+          && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides )
       {
-         /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-         SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff,
-               ndelconss, nchgsides) );
-      }
+         assert(firstchange >= 0);
 
-      if( firstchange < nconss && conshdlrdata->presolpairwise )
-      {
-         SCIP_CONS** usefulconss;
-         int nusefulconss;
-         int firstchangenew;
+         if( firstchange < nconss && conshdlrdata->presolusehashing ) 
+         {
+            /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff,
+                                                  ndelconss, nchgsides) );
+         }
 
-         /* allocate temporary memory */
-         SCIP_CALL( SCIPallocBufferArray(scip, &usefulconss, nconss) );
+         if( firstchange < nconss && conshdlrdata->presolpairwise )
+         {
+            SCIP_CONS** usefulconss;
+            int nusefulconss;
+            int firstchangenew;
+
+            /* allocate temporary memory */
+            SCIP_CALL( SCIPallocBufferArray(scip, &usefulconss, nconss) );
       
-         nusefulconss = 0;
-         firstchangenew = -1;
-         for( c = 0; c < nconss; ++c )
-         {
-            /* update firstchange */
-            if( c == firstchange )
-               firstchangenew = nusefulconss;
+            nusefulconss = 0;
+            firstchangenew = -1;
+            for( c = 0; c < nconss; ++c )
+            {
+               /* update firstchange */
+               if( c == firstchange )
+                  firstchangenew = nusefulconss;
 
-            /* ignore inactive and modifiable constraints */
-            if( !SCIPconsIsActive(conss[c]) || SCIPconsIsModifiable(conss[c]) )
-               continue;
+               /* ignore inactive and modifiable constraints */
+               if( !SCIPconsIsActive(conss[c]) || SCIPconsIsModifiable(conss[c]) )
+                  continue;
 
-            usefulconss[nusefulconss] = conss[c];
-            nusefulconss++;     
-         }
-         firstchange = firstchangenew;
-         assert(firstchangenew >= 0 && firstchangenew <= nusefulconss);
+               usefulconss[nusefulconss] = conss[c];
+               nusefulconss++;     
+            }
+            firstchange = firstchangenew;
+            assert(firstchangenew >= 0 && firstchangenew <= nusefulconss);
 
-         for( c = firstchange; c < nusefulconss && !cutoff && !SCIPisStopped(scip); ++c )
-         {
-            /* constraint has become inactive or modifiable during pairwise presolving */
-            if( usefulconss[c] == NULL )
-               continue;
+            for( c = firstchange; c < nusefulconss && !cutoff && !SCIPisStopped(scip); ++c )
+            {
+               /* constraint has become inactive or modifiable during pairwise presolving */
+               if( usefulconss[c] == NULL )
+                  continue;
               
-            assert(SCIPconsIsActive(usefulconss[c]) && !SCIPconsIsModifiable(usefulconss[c]));
-            SCIP_CALL( preprocessConstraintPairs(scip, usefulconss, firstchange, c, conshdlrdata->maxaggrnormscale,
-                  &cutoff, ndelconss, nchgsides, nchgcoefs) );
-         }
+               assert(SCIPconsIsActive(usefulconss[c]) && !SCIPconsIsModifiable(usefulconss[c]));
+               SCIP_CALL( preprocessConstraintPairs(scip, usefulconss, firstchange, c, conshdlrdata->maxaggrnormscale,
+                                                    &cutoff, ndelconss, nchgsides, nchgcoefs) );
+            }
 
-         /* free temporary memory */
-         SCIPfreeBufferArray(scip, &usefulconss);
+            /* free temporary memory */
+            SCIPfreeBufferArray(scip, &usefulconss);
+         }
       }
+      else
+         delay = TRUE;
    }
-   else
-      delay = TRUE;
 
    /* before upgrading, check whether we can apply some additional dual presolving, because a variable only appears
     * in linear constraints and we therefore have full information about it
