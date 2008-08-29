@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.209 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.210 2008/08/29 16:05:51 bzfpfets Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4401,8 +4401,8 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
    solval = SCIPvarGetSol(var, tree->focusnodehaslp);
-   assert(SCIPsetIsGE(set, solval, SCIPvarGetLbLocal(var)));
-   assert(SCIPsetIsLE(set, solval, SCIPvarGetUbLocal(var)));
+   assert(SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(var)));
 
    downub = SCIP_INVALID;
    fixval = SCIP_INVALID;
