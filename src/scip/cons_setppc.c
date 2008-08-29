@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.126 2008/08/29 16:16:43 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.127 2008/08/29 20:02:33 bzfpfend Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -53,13 +53,15 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating set covering constraints"
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
+#define DEFAULT_PRESOLPAIRWISE    FALSE /**< should pairwise constraint comparison be performed in presolving? */
+
 /*#define VARUSES*/  /* activate variable usage counting, that is necessary for LP and pseudo branching */
 /*#define BRANCHLP*/ /* BRANCHLP is only useful if the ENFOPRIORITY is set to a positive value */
 #ifdef BRANCHLP
-#define MINBRANCHWEIGHT             0.3  /**< minimum weight of both sets in binary set branching */
-#define MAXBRANCHWEIGHT             0.7  /**< maximum weight of both sets in binary set branching */
+#define MINBRANCHWEIGHT             0.3 /**< minimum weight of both sets in binary set branching */
+#define MAXBRANCHWEIGHT             0.7 /**< maximum weight of both sets in binary set branching */
 #endif
-#define DEFAULT_NPSEUDOBRANCHES       2  /**< number of children created in pseudo branching (0: disable branching) */
+#define DEFAULT_NPSEUDOBRANCHES       2 /**< number of children created in pseudo branching (0: disable branching) */
 
 
 /** constraint handler data */
@@ -70,6 +72,7 @@ struct SCIP_ConshdlrData
    SCIP_INTARRAY*        varuses;            /**< number of times a var is used in the active set ppc constraints */
 #endif
    int                   npseudobranches;    /**< number of children created in pseudo branching (0 to disable branching) */
+   SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
 };
 
 /** constraint data for set partitioning / packing / covering constraints */
@@ -2856,18 +2859,21 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    }
 
    /* check constraints for redundancy */
-   for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
+   if( conshdlrdata->presolpairwise )
    {
-      assert(*result != SCIP_CUTOFF);
-      if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+      for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
       {
-         SCIP_Bool cutoff;
-
-         SCIP_CALL( removeRedundantConstraints(scip, conss, firstchange, c, &cutoff, nfixedvars, ndelconss, nchgsides) );
-         if( cutoff )
+         assert(*result != SCIP_CUTOFF);
+         if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
          {
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
+            SCIP_Bool cutoff;
+            
+            SCIP_CALL( removeRedundantConstraints(scip, conss, firstchange, c, &cutoff, nfixedvars, ndelconss, nchgsides) );
+            if( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
          }
       }
    }
@@ -3498,6 +3504,10 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          "constraints/setppc/npseudobranches",
          "number of children created in pseudo branching (0: disable pseudo branching)",
          &conshdlrdata->npseudobranches, TRUE, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/setppc/presolpairwise",
+         "should pairwise constraint comparison be performed in presolving?",
+         &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.93 2008/05/16 16:28:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.94 2008/08/29 20:02:33 bzfpfend Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -47,8 +47,7 @@
 #define EVENTHDLR_NAME         "and"
 #define EVENTHDLR_DESC         "bound change event handler for and constraints"
 
-#define DEFAULT_MAXPRESOLPAIRROUNDS  -1 /**< maximal number of presolving rounds with pairwise constraint comparison
-                                         *   (-1: no limit) */
+#define DEFAULT_PRESOLPAIRWISE    FALSE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_LINEARIZE         FALSE /**< should constraint get linearize and removed? */
 #define DEFAULT_INITIALLP             1 /**< should lp relaxation be in the initial LP? (0: FALSE, 1: auto, 2: TRUE) */
 
@@ -82,9 +81,8 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events on watched variables */
-   int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
-                                              *   (-1: no limit) */
    int                   initiallp;          /**< should lp relaxation be in the initial LP? (0: FALSE, 1: auto, 2: TRUE) */
+   SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             linearize;          /**< should constraint get linearize and removed? */
 };
 
@@ -2169,22 +2167,22 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
+   if( !cutoff && conshdlrdata->presolpairwise )
    {
-      if( conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds )
+      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
          for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
                SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
-                     &cutoff, naggrvars, nchgbds, ndelconss) );
+                                                    &cutoff, naggrvars, nchgbds, ndelconss) );
             }
          }
       }
+      else
+         delay = TRUE;
    }
-   else
-      delay = TRUE;
 
    /* return the correct result code */
    if( cutoff )
@@ -2330,10 +2328,10 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          conshdlrdata) );
 
    /* add and constraint handler parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/and/maxpresolpairrounds",
-         "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
-         &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/and/presolpairwise",
+         "should pairwise constraint comparison be performed in presolving?",
+         &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/and/initiallp",
          "should the lp relaxation be in the initial LP (0: FALSE, 1: auto, 2: TRUE)",

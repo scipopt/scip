@@ -124,6 +124,9 @@ parameters:
 - new parameter "constraints/countsols/collect" to enable the storing of the solutions; default value FALSE;
 - new parameter "constraints/indicator/addCoupling" to enable generation of relaxation
 - removed parameter "separating/cmir/maxtestdeltaroot"
+- changed all int parameters "maxpresolpairrounds" into bool parameters "presolpairwise"
+- added new parameters "constraints/logicor/presolpairwise" and "constraints/setppc/presolpairwise"
+- changed default values of "presolpairwise" parameters to FALSE
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.291 2008/08/29 16:44:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.292 2008/08/29 20:02:33 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -77,8 +77,7 @@
 #define DEFAULT_MAXROUNDSROOT          -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS            50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
-#define DEFAULT_MAXPRESOLPAIRROUNDS     0 /**< maximal number of presolving rounds with pairwise constraint comparison
-                                           *   (-1: no limit) */
+#define DEFAULT_PRESOLPAIRWISE      FALSE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_PRESOLUSEHASHING     TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define DEFAULT_MAXAGGRNORMSCALE      0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                            *   (0.0: disable constraint aggregation) */
@@ -167,8 +166,7 @@ struct SCIP_ConshdlrData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
-   int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
-                                              *   (-1: no limit) */
+   SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             separateall;        /**< should all constraints be subject to cardinality cut generation instead of only
                                               *   the ones with non-zero dual value? */
@@ -7454,7 +7452,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                ndelconss, nchgsides) );
       }
 
-      if( firstchange < nconss && (conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds) )
+      if( firstchange < nconss && conshdlrdata->presolpairwise )
       {
          SCIP_CONS** usefulconss;
          int nusefulconss;
@@ -7565,7 +7563,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                 * delete upgraded equalities, if we don't need it anymore for aggregation and redundancy checking
                 */
                if( SCIPisLT(scip, consdata->lhs, consdata->rhs)
-                  || (conshdlrdata->maxpresolpairrounds != -1 && nrounds > conshdlrdata->maxpresolpairrounds)
+                  || !conshdlrdata->presolpairwise
                   || (conshdlrdata->maxaggrnormscale == 0.0) )
                {
                   SCIP_CALL( SCIPdelCons(scip, cons) );
@@ -7948,10 +7946,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/linear/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/linear/maxpresolpairrounds",
-         "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
-         &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/linear/presolpairwise",
+         "should pairwise constraint comparison be performed in presolving?",
+         &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/linear/presolusehashing",
          "should hash table be used for detecting redundant constraints in advance", 

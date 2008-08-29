@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.64 2008/05/05 10:46:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.65 2008/08/29 20:02:33 bzfpfend Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -46,8 +46,7 @@
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
-#define DEFAULT_MAXPRESOLPAIRROUNDS  -1 /**< maximal number of presolving rounds with pairwise constraint comparison
-                                         *   (-1: no limit) */
+#define DEFAULT_PRESOLPAIRWISE    FALSE /**< should pairwise constraint comparison be performed in presolving? */
 #define NROWS 4
 
 
@@ -78,8 +77,7 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
-   int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
-                                              *   (-1: no limit) */
+   SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
 };
 
 
@@ -1913,9 +1911,9 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
+   if( !cutoff && conshdlrdata->presolpairwise )
    {
-      if( conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds )
+      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
          for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
@@ -1926,9 +1924,9 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             }
          }
       }
+      else
+         delay = TRUE;
    }
-   else
-      delay = TRUE;
 
    /* return the correct result code */
    if( cutoff )
@@ -2072,10 +2070,10 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          conshdlrdata) );
 
    /* add xor constraint handler parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/xor/maxpresolpairrounds",
-         "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
-         &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/xor/presolpairwise",
+         "should pairwise constraint comparison be performed in presolving?",
+         &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

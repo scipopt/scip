@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.117 2008/08/29 16:16:42 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.118 2008/08/29 20:02:33 bzfpfend Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -54,6 +54,8 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating logic or constraints"
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
+#define DEFAULT_PRESOLPAIRWISE    FALSE /**< should pairwise constraint comparison be performed in presolving? */
+
 
 /**@todo make this a parameter setting */
 #if 1 /*???????????????? test which AGEINCREASE formula is better! */
@@ -68,6 +70,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
    SCIP_CONSHDLR*        conshdlrlinear;     /**< pointer to linear constraint handler or NULL if not included */
+   SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
 };
 
 /** logic or constraint data */
@@ -1851,16 +1854,21 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    assert(*result != SCIP_CUTOFF);
 
    /* check constraints for redundancy */
-   for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
+   if( conshdlrdata->presolpairwise )
    {
-      if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+      for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
       {
-         SCIP_CALL( removeRedundantConstraints(scip, conss, &firstchange, c, ndelconss) );
+         if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+         {
+            SCIP_CALL( removeRedundantConstraints(scip, conss, &firstchange, c, ndelconss) );
+         }
       }
    }
 
  TERMINATE:
+
    SCIPfreeBufferArray(scip, &entries);
+
    return SCIP_OKAY;
 }
 
@@ -2288,6 +2296,12 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
 
    /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */
    SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLogicor, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+
+   /* logic or constraint handler parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/logicor/presolpairwise",
+         "should pairwise constraint comparison be performed in presolving?",
+         &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
