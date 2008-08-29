@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.40 2008/08/29 18:51:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.41 2008/08/29 19:20:42 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -45,6 +45,11 @@
  *   scaled. One then needs to specify what parts of the model have been changed between two solving
  *   calls. It seems that this feature is currently (Clp - Version 1.8) not used anymore. Rudimentary
  *   support is still included in this file.
+ *
+ * - Clp allows the setting of several special flags. These are now set when the FASTMIP option in
+ *   SCIP is true. We tried to use the best settings, while still working correctly, see
+ *   setFastmipClpParameters(). These settings probably have to be adapted to future Clp
+ *   version. Maybe more possibilities will appear.
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -74,23 +79,24 @@ extern "C"
 #define NULL 0
 
 
-#define DISABLE_SCALING  /* scaling seems to be bad for strong branching */
 
 
 /** LP interface for Clp */
 struct SCIP_LPi
 {
-   ClpSimplex*           clp;                /**< Clp simiplex solver class */
-   int*                  cstat;              /**< array for storing column basis status */
-   int*                  rstat;              /**< array for storing row basis status */
-   int                   cstatsize;          /**< size of cstat array */
-   int                   rstatsize;          /**< size of rstat array */
-   bool                  startscratch;       /**< start from scratch? */
-   bool                  presolving;         /**< preform preprocessing? */
-   int                   pricing;            /**< scip pricing setting  */
-   bool                  validFactorization; /**< whether we have a valid factorization in clp */
-   bool	                 scaledFactorization;/**< whether the last stored factorization was scaled */
-   SCIP_Bool             solved;             /**< was the current LP solved? */
+   ClpSimplex*           clp;                        /**< Clp simiplex solver class */
+   int*                  cstat;                      /**< array for storing column basis status */
+   int*                  rstat;                      /**< array for storing row basis status */
+   int                   cstatsize;                  /**< size of cstat array */
+   int                   rstatsize;                  /**< size of rstat array */
+   bool                  startscratch;               /**< start from scratch? */
+   bool                  presolving;                 /**< preform preprocessing? */
+   int                   pricing;                    /**< scip pricing setting  */
+   bool                  validFactorization;         /**< whether we have a valid factorization in clp */
+   bool	                 scaledFactorization;        /**< whether the last stored factorization was scaled */
+   SCIP_Bool             solved;                     /**< was the current LP solved? */
+   bool                  setFactorizationFrequency;  /**< store whether the factorization frequency is set */
+   SCIP_Bool             fastmip;                    /**< are fast mip settings turned on */
 };
 
 
@@ -276,7 +282,105 @@ void invalidateSolution(
    lpi->solved = FALSE;
 }
 
+/** set factorization frequency */
+static
+void setFactorizationFrequency(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   /* set the factorization frequency only once */
+   if ( lpi->setFactorizationFrequency )
+      return;
 
+   lpi->clp->defaultFactorizationFrequency();
+   lpi->setFactorizationFrequency = true;
+}
+
+/** this methods sets parameters of Clp */
+static
+void setFastmipClpParameters(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   lpi->fastmip = TRUE;
+   
+   /** Perturbation:
+    *  50  - switch on perturbation
+    *  100 - auto perturb if takes too long (1.0e-6 largest nonzero)
+    *  101 - we are perturbed
+    *  102 - don't try perturbing again
+    *  - default is 100
+    *  - others are for playing
+    *
+    *  ! internally Cbc 2.20.00 set this parameter to 50
+    */
+   lpi->clp->setPerturbation(50);
+
+   /** For advanced options
+    *       1 - Don't keep changing infeasibility weight
+    *       2 - Keep nonLinearCost round solves
+    *       4 - Force outgoing variables to exact bound (primal)
+    *       8 - Safe to use dense initial factorization
+    *      16 - Just use basic variables for operation if column generation
+    *      32 - Clean up with primal before strong branching
+    *      64 - Treat problem as feasible until last minute (i.e. minimize infeasibilities)
+    *     128 - Switch off all matrix sanity checks
+    *     256 - No row copy
+    *     512 - If not in values pass, solution guaranteed, skip as much as possible
+    *    1024 - In branch and bound
+    *    2048 - Don't bother to re-factorize if < 20 iterations
+    *    4096 - Skip some optimality checks
+    *    8192 - Do Primal when cleaning up primal
+    *   16384 - In fast dual (so we can switch off things)
+    *   32768 - called from Osi
+    *   65536 - keep arrays around as much as possible (also use maximumR/C)
+    *  131072 - scale factor arrays have inverse values at end
+    *  262144 - extra copy of scaled matrix
+    *  524288 - Clp fast dual
+    *  NOTE   - many applications can call Clp but there may be some short cuts
+    *           which are taken which are not guaranteed safe from all applications.
+    *           Vetted applications will have a bit set and the code may test this
+    *           At present I expect a few such applications - if too many I will
+    *           have to re-think.  It is up to application owner to change the code
+    *           if she/he needs these short cuts.  I will not debug unless in Coin
+    *           repository.  See COIN_CLP_VETTED comments.
+    *  0x01000000 is Cbc (and in branch and bound)
+    *  0x02000000 is in a different branch and bound
+    *
+    * ! internally Cbc 2.20.00 sets the special options in the following way:
+    * lpi->clp->setSpecialOptions(1|64|128|1024|2048|262144|0x01000000);
+    */
+
+   // for Clp 1.6 stable:
+   // 2048 does not seem to work
+   //
+   // for Clp trunk:
+   // 65536 does not seem to work
+   // 262144 does not seem to work
+   lpi->clp->setSpecialOptions(1|64|128|1024|4096|0x01000000);
+
+   // let memory grow only (do not shrink) - [needs specialOptions & 65536 != 0]
+   // does not seem to work
+   //lpi->clp->setPersistenceFlag(1);
+}
+
+/** this methods sets parameters of Clp */
+static
+void unsetFastmipClpParameters(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   lpi->fastmip = FALSE;
+
+   // reset to default value:
+   lpi->clp->setPerturbation(100);
+
+   // turn off special options:
+   lpi->clp->setSpecialOptions(0);
+
+   // turn off memory enlargement
+   lpi->clp->setPersistenceFlag(0);
+}
 
 
 /*
@@ -345,6 +449,8 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->pricing = SCIP_PRICING_AUTO;
    (*lpi)->validFactorization = false;
    (*lpi)->scaledFactorization = false;
+   (*lpi)->setFactorizationFrequency = false;
+   (*lpi)->fastmip = FALSE;
    invalidateSolution(*lpi);
 
    // set pricing routines
@@ -365,8 +471,8 @@ SCIP_RETCODE SCIPlpiCreate(
    // 2 is partial uninitialized,
    // 3 starts as 2 but may switch to 1.
    // - currently (Clp 1.8stable) default is 3
-   ClpDualRowSteepest steep;
-   (*lpi)->clp->setDualRowPivotAlgorithm(steep);
+   ClpDualRowSteepest dualSteepest;
+   (*lpi)->clp->setDualRowPivotAlgorithm(dualSteepest);
 
    // set problem name
    (*lpi)->clp->setStrParam(ClpProbName, std::string(name) );
@@ -377,10 +483,8 @@ SCIP_RETCODE SCIPlpiCreate(
    // turn off output by default
    (*lpi)->clp->setLogLevel(0);
 
-#ifdef DISABLE_SCALING
-   // turn off scaling
+   // turn off scaling by default
    (*lpi)->clp->scaling(0);
-#endif
 
    return SCIP_OKAY;
 }
@@ -1406,6 +1510,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    int scaling = lpi->clp->scalingFlag();
 
+   // intialize factorization freq. depending on model size - applied only once
+   setFactorizationFrequency(lpi);
+
+   // if we want to construct a new basis
    if ( lpi->startscratch )
    {
       lpi->clp->allSlackBasis(true);   // reset basis
@@ -1417,7 +1525,18 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 	 lpi->validFactorization = false;
    }
 
-   int status = lpi->clp->primal(0, lpi->validFactorization ? 3 : 1);
+   /** startFinishOptions - bits
+    *  1 - do not delete work areas and factorization at end
+    *  2 - use old factorization if same number of rows
+    *  4 - skip as much initialization of work areas as possible (work in progress)
+    */
+   int startFinishOptions = 1;
+   if ( lpi->validFactorization )
+      startFinishOptions = 1 | 2;
+
+   /** Primal algorithm */
+   int status = lpi->clp->primal(0, startFinishOptions);
+
    lpi->validFactorization = true;
    lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
@@ -1453,6 +1572,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    int scaling = lpi->clp->scalingFlag();
 
+   // intialize factorization freq. depending on model size - applied only once
+   setFactorizationFrequency(lpi);
+
+   // if we want to construct a new basis
    if( lpi->startscratch )
    {
       lpi->clp->allSlackBasis(true);   // reset basis
@@ -1464,12 +1587,35 @@ SCIP_RETCODE SCIPlpiSolveDual(
          lpi->validFactorization = false;
    }
 
-   int status = lpi->clp->dual(0, lpi->validFactorization ? 3 : 1);
+   /** startFinishOptions - bits
+    *  1 - do not delete work areas and factorization at end
+    *  2 - use old factorization if same number of rows
+    *  4 - skip as much initialization of work areas as possible (work in progress)
+    */
+   int startFinishOptions = 1;
+   if ( lpi->validFactorization )
+      startFinishOptions = 1 | 2;
+
+   /* Usage of auxiliary model:
+    *  1 - rhs is constant
+    *  2 - bounds are constant
+    *  4 - objective is constant
+    *  8 - solution in by basis and no djs etc in
+    * 16 - no duals out (but reduced costs)
+    * 32 - no output if infeasible
+    *
+    * @todo The auxiliary model does not seem to appear, but one should change the settings for it
+    * in the modification problems and not here.
+    */
+   if ( lpi->fastmip && lpi->clp->usingAuxiliaryModel() )
+      lpi->clp->auxiliaryModel(63-2);
+
+   /** Dual algorithm */
+   int status = lpi->clp->dual(0, startFinishOptions);
+
    lpi->validFactorization = true;
    lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
-   if( !lpi->clp->usingAuxiliaryModel() )
-      lpi->clp->auxiliaryModel(63-2);
 
    // Unfortunately the status of Clp is hard coded ...
    // -1 - did not run
@@ -1507,7 +1653,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
       lpi->clp->finish();
    */
 
-   // Call barrier
+   // call barrier
    int status = lpi->clp->barrier(crossover);
    lpi->solved = TRUE;
 
@@ -2298,7 +2444,7 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    ClpSimplex* clp = lpi->clp;
    if ( clp->usingAuxiliaryModel() )
    {
-      SCIPdebugMessage("Resolving model to obtain basis inverse times matrix column ...\n");
+      SCIPdebugMessage("Resolving model to obtain row of basis inverse ...\n");
 
       clp->deleteAuxiliaryModel();
       int status = clp->dual(0,3);
@@ -2332,7 +2478,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    ClpSimplex* clp = lpi->clp;
    if ( clp->usingAuxiliaryModel() )
    {
-      SCIPdebugMessage("Resolving model to obtain basis inverse times matrix column ...\n");
+      SCIPdebugMessage("Resolving model to obtain column of basis inverse ...\n");
 
       clp->deleteAuxiliaryModel();
       int status = clp->dual(0,3);
@@ -2363,7 +2509,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    ClpSimplex* clp = lpi->clp;
    if ( clp->usingAuxiliaryModel() )
    {
-      SCIPdebugMessage("Resolving model to obtain basis inverse times matrix column ...\n");
+      SCIPdebugMessage("Resolving model to obtain row of basis inverse times matrix ...\n");
 
       clp->deleteAuxiliaryModel();
       int status = clp->dual(0,3);
@@ -2393,7 +2539,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    ClpSimplex* clp = lpi->clp;
    if ( clp->usingAuxiliaryModel() )
    {
-      SCIPdebugMessage("Resolving model to obtain basis inverse times matrix column ...\n");
+      SCIPdebugMessage("Resolving model to obtain column of basis inverse times matrix ...\n");
 
       clp->deleteAuxiliaryModel();
       int status = clp->dual(0,3);
@@ -2595,15 +2741,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = lpi->startscratch;
       break;
    case SCIP_LPPAR_SCALING:
-#ifdef DISABLE_SCALING
-      return SCIP_PARAMETERUNKNOWN;
-#else      
       if( lpi->clp->scalingFlag() != 0 )     // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
 	 *ival = TRUE;
       else
 	 *ival = FALSE;
       break;
-#endif
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;          // store pricing method in LPI struct
       break;
@@ -2612,6 +2754,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       *ival = lpi->clp->maximumIterations();
+      break;
+   case SCIP_LPPAR_FASTMIP:
+      *ival = lpi->fastmip;
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
@@ -2675,12 +2820,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->startscratch = ival;
       break;
    case SCIP_LPPAR_SCALING:
-#ifdef DISABLE_SCALING
-      return SCIP_PARAMETERUNKNOWN;
-#else
       lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
       break;
-#endif
    case SCIP_LPPAR_PRICING:
       SCIPABORT();
    case SCIP_LPPAR_LPINFO:
@@ -2700,6 +2841,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_LPITLIM:
       lpi->clp->setMaximumIterations(ival);
+      break;
+   case SCIP_LPPAR_FASTMIP:
+      assert(ival == TRUE || ival == FALSE);
+      if( ival )
+         setFastmipClpParameters(lpi);
+      else
+         unsetFastmipClpParameters(lpi);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
