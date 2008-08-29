@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.295 2008/08/29 21:20:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.296 2008/08/29 22:52:49 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4197,6 +4197,53 @@ SCIP_RETCODE convertBinaryEquality(
    return SCIP_OKAY;
 }
 
+/** calculates the new lhs and rhs of the constraint after the given variable is aggregated out */
+static
+void getNewSidesAfterAggregation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_VAR*             slackvar,           /**< variable to be aggregated out */
+   SCIP_Real             slackcoef,          /**< coefficient of variable in constraint */
+   SCIP_Real*            newlhs,             /**< pointer to store new lhs of constraint */
+   SCIP_Real*            newrhs              /**< pointer to store new rhs of constraint */
+   )
+{
+   SCIP_Real slackvarlb;
+   SCIP_Real slackvarub;
+
+   assert(consdata != NULL);
+   assert(newlhs != NULL);
+   assert(newrhs != NULL);
+   assert(!SCIPisInfinity(scip, -consdata->lhs));
+   assert(!SCIPisInfinity(scip, consdata->rhs));
+
+   slackvarlb = SCIPvarGetLbGlobal(slackvar);
+   slackvarub = SCIPvarGetUbGlobal(slackvar);
+   if( slackcoef > 0.0 )
+   {
+      if( SCIPisInfinity(scip, -slackvarlb) )
+         *newrhs = SCIPinfinity(scip);
+      else
+         *newrhs = consdata->rhs - slackcoef * slackvarlb;
+      if( SCIPisInfinity(scip, slackvarub) )
+         *newlhs = -SCIPinfinity(scip);
+      else
+         *newlhs = consdata->lhs - slackcoef * slackvarub;
+   }
+   else
+   {
+      if( SCIPisInfinity(scip, -slackvarlb) )
+         *newlhs = -SCIPinfinity(scip);
+      else
+         *newlhs = consdata->rhs - slackcoef * slackvarlb;
+      if( SCIPisInfinity(scip, slackvarub) )
+         *newrhs = SCIPinfinity(scip);
+      else
+         *newrhs = consdata->lhs - slackcoef * slackvarub;
+   }
+   assert(SCIPisLE(scip, *newlhs, *newrhs));
+}
+
 /* processes equality with more than two variables by multi-aggregating one of the variables and converting the equality
  * into an inequality; if multi-aggregation is not possible, tries to identify one continuous or integer variable that is
  * implicitly integral by this constraint
@@ -4208,7 +4255,8 @@ SCIP_RETCODE convertLongEquality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
-   int*                  naggrvars           /**< pointer to count number of aggregated variables */
+   int*                  naggrvars,          /**< pointer to count number of aggregated variables */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -4216,11 +4264,17 @@ SCIP_RETCODE convertLongEquality(
    SCIP_Real* vals;
    SCIP_VARTYPE bestslacktype;
    SCIP_VARTYPE slacktype;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
    SCIP_Real bestslackdomrng;
+   SCIP_Bool bestremovescons;
    SCIP_Bool coefszeroone;
    SCIP_Bool coefsintegral;
    SCIP_Bool varsintegral;
+   int maxnlocksstay;
+   int maxnlocksremove;
    int bestslackpos;
+   int bestnlocks;
    int ncontvars;
    int contvarpos;
    int nintvars;
@@ -4238,11 +4292,56 @@ SCIP_RETCODE convertLongEquality(
 
    SCIPdebugMessage("linear constraint <%s>: try to multi-aggregate equality\n", SCIPconsGetName(cons));
 
+   /* We do not want to increase the total number of non-zeros due to the multiaggregation.
+    * Therefore, we have to restrict the number of locks of a variable that is aggregated out.
+    *   maxnlocksstay:   maximal sum of lock numbers if the constraint does not become redundant after the aggregation
+    *   maxnlocksremove: maximal sum of lock numbers if the constraint can be deleted after the aggregation
+    */
+   lhs = consdata->lhs;
+   rhs = consdata->rhs;
+   maxnlocksstay = 0;
+   if( consdata->nvars == 3 )
+   {
+      /* If the constraint becomes redundant, 3 non-zeros are removed, and we get 1 additional non-zero for each
+       * constraint the variable appears in. Thus, the variable must appear in at most 3 other constraints.
+       */
+      maxnlocksremove = 3;
+   }
+   else if( consdata->nvars == 4 )
+   {
+      /* If the constraint becomes redundant, 4 non-zeros are removed, and we get 2 additional non-zeros for each
+       * constraint the variable appears in. Thus, the variable must appear in at most 2 other constraints.
+       */
+      maxnlocksremove = 2;
+   }
+   else
+   {
+      /* If the constraint is redundant but has more than 4 variables, we can only accept one other constraint. */
+      maxnlocksremove = 1;
+   }
+
+   /* the locks on this constraint can be ignored */
+   if( SCIPconsIsChecked(cons) )
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         maxnlocksstay++;
+         maxnlocksremove++;
+      }
+      if( !SCIPisInfinity(scip, rhs) )
+      {
+         maxnlocksstay++;
+         maxnlocksremove++;
+      }
+   }
+
    /* look for a slack variable s to convert a*x + s == b into lhs <= a*x <= rhs */
    vars = consdata->vars;
    vals = consdata->vals;
    bestslackpos = -1;
    bestslacktype = SCIP_VARTYPE_BINARY;
+   bestnlocks = INT_MAX;
+   bestremovescons = FALSE;
    bestslackdomrng = 0.0;
    coefszeroone = TRUE;
    coefsintegral = TRUE;
@@ -4260,7 +4359,7 @@ SCIP_RETCODE convertLongEquality(
       SCIP_Real varlb;
       SCIP_Real varub;
       SCIP_Bool iscont;
-      int maxnlocks;
+      int nlocks;
 
       assert(vars != NULL);
       assert(vals != NULL);
@@ -4299,24 +4398,65 @@ SCIP_RETCODE convertLongEquality(
       if( !SCIPvarIsActive(var) )
          continue;
 
-      /* check, if variable is used in other constraints */
-      maxnlocks = SCIPconsIsChecked(cons) ? 1 : 0;
-      if( SCIPvarGetNLocksDown(var) > maxnlocks || SCIPvarGetNLocksUp(var) > maxnlocks )
+      /* check, if variable is used in too many other constraints, even if this constraint could be deleted */
+      nlocks = SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksUp(var);
+      if( nlocks > maxnlocksremove )
          continue;
 
       /* check, if variable can be used as a slack variable */
       if( iscont || (coefsintegral && varsintegral && SCIPisEQ(scip, absval, 1.0)) )
       {
+         SCIP_Bool better;
+         SCIP_Bool equal;
          SCIP_Real slackdomrng;
 
          slackdomrng = (varub - varlb)*absval;
-         if( bestslackpos == -1
-            || slacktype > bestslacktype
-            || (slacktype == bestslacktype && slackdomrng > bestslackdomrng) )
+         better = FALSE;
+         equal = FALSE;
+         better = better || (bestslackpos == -1);
+         better = better || (slacktype > bestslacktype);
+         if( !better && slacktype == bestslacktype )
          {
-            bestslackpos = v;
-            bestslacktype = slacktype;
-            bestslackdomrng = slackdomrng;
+            better = (nlocks < bestnlocks);
+            if( nlocks == bestnlocks && !bestremovescons )
+            {
+               better = SCIPisGT(scip, slackdomrng, bestslackdomrng);
+               equal = !better && SCIPisGE(scip, slackdomrng, bestslackdomrng);
+            }
+         }
+
+         if( better || equal )
+         {
+            SCIP_Real minresactivity;
+            SCIP_Real maxresactivity;
+            SCIP_Real newlhs;
+            SCIP_Real newrhs;
+            SCIP_Bool removescons;
+
+            /* check if the constraint becomes redundant after multi-aggregation */
+            consdataGetActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
+            getNewSidesAfterAggregation(scip, consdata, var, val, &newlhs, &newrhs);
+            removescons = (SCIPisFeasLE(scip, newlhs, minresactivity) && SCIPisFeasLE(scip, maxresactivity, newrhs));
+
+            /* prefer variables that make the constraints redundant */
+            if( bestremovescons && !removescons )
+               continue;
+
+            /* if the constraint does not become redundant, only accept the variable it if it does not appear in
+             * other constraints
+             */
+            if( !removescons && nlocks > maxnlocksstay )
+               continue;
+
+            better = better || (!bestremovescons && removescons);
+            if( better )
+            {
+               bestslackpos = v;
+               bestslacktype = slacktype;
+               bestnlocks = nlocks;
+               bestslackdomrng = slackdomrng;
+               bestremovescons = removescons;
+            }
          }
       }
    }
@@ -4342,8 +4482,6 @@ SCIP_RETCODE convertLongEquality(
       SCIP_VAR* slackvar;
       SCIP_Real* scalars;
       SCIP_Real slackcoef;
-      SCIP_Real slackvarlb;
-      SCIP_Real slackvarub;
       SCIP_Real aggrconst;
       SCIP_Real newlhs;
       SCIP_Real newrhs;
@@ -4362,30 +4500,8 @@ SCIP_RETCODE convertLongEquality(
       slackcoef = vals[bestslackpos];
       assert(!SCIPisZero(scip, slackcoef));
       aggrconst = consdata->rhs/slackcoef;
-      slackvarlb = SCIPvarGetLbGlobal(slackvar);
-      slackvarub = SCIPvarGetUbGlobal(slackvar);
-      if( slackcoef > 0.0 )
-      {
-         if( SCIPisInfinity(scip, -slackvarlb) )
-            newrhs = SCIPinfinity(scip);
-         else
-            newrhs = consdata->rhs - slackcoef * slackvarlb;
-         if( SCIPisInfinity(scip, slackvarub) )
-            newlhs = -SCIPinfinity(scip);
-         else
-            newlhs = consdata->lhs - slackcoef * slackvarub;
-      }
-      else
-      {
-         if( SCIPisInfinity(scip, -slackvarlb) )
-            newlhs = -SCIPinfinity(scip);
-         else
-            newlhs = consdata->rhs - slackcoef * slackvarlb;
-         if( SCIPisInfinity(scip, slackvarub) )
-            newrhs = SCIPinfinity(scip);
-         else
-            newrhs = consdata->lhs - slackcoef * slackvarub;
-      }
+
+      getNewSidesAfterAggregation(scip, consdata, slackvar, slackcoef, &newlhs, &newrhs);
       assert(SCIPisLE(scip, newlhs, newrhs));
       SCIP_CALL( chgLhs(scip, cons, newlhs) );
       SCIP_CALL( chgRhs(scip, cons, newrhs) );
@@ -4401,8 +4517,9 @@ SCIP_RETCODE convertLongEquality(
          scalars[v] = -consdata->vals[v]/slackcoef;
          SCIPdebugPrintf(" %+.15g<%s>", scalars[v], SCIPvarGetName(vars[v]));
       }
-      SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g]\n", aggrconst, SCIPvarGetName(slackvar), slackvarlb, slackvarub);
-
+      SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d\n",
+         aggrconst, SCIPvarGetName(slackvar), SCIPvarGetLbGlobal(slackvar), SCIPvarGetUbGlobal(slackvar),
+         bestnlocks, bestremovescons ? maxnlocksremove : maxnlocksstay);
 
       /* perform the multi-aggregation */
       SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, vars, scalars, aggrconst,
@@ -4421,6 +4538,16 @@ SCIP_RETCODE convertLongEquality(
       }
 
       (*naggrvars)++;
+
+      /* delete the constraint if it became redundant */
+      if( bestremovescons )
+      {
+         SCIPdebugMessage("linear constraint <%s>: redundant after multi-aggregation\n", SCIPconsGetName(cons));
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         
+         if( !consdata->upgraded )
+            (*ndelconss)++;
+      }
    }
    else if( ncontvars == 1 )
    {
@@ -4502,7 +4629,7 @@ SCIP_RETCODE convertEquality(
    else
    {
       /* try to multi-aggregate one of the variables */
-      SCIP_CALL( convertLongEquality(scip, cons, cutoff, naggrvars) );
+      SCIP_CALL( convertLongEquality(scip, cons, cutoff, naggrvars, ndelconss) );
    }
 
    return SCIP_OKAY;
@@ -4565,7 +4692,7 @@ SCIP_RETCODE dualPresolve(
     */
    if( !SCIPconsIsChecked(cons) )
       return SCIP_OKAY;
-
+      
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
