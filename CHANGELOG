@@ -92,8 +92,9 @@ features:
 - added capabilities to flatten the (multi)-aggregation graph of variables
 - the ZPL reader is now able to pass a starting solution to SCIP
 - small performance improvement of c-MIR aggregation heuristic
-- added a debug method to check whether the LP solver produces in SCIPlpiGetBInvRow() the right inverse 
-  basis matrix row; therefore, see debug.h and debug.c
+- revised lpi_clp.cpp (many small changes, in particular writing and reading of bases)
+- reworked strong branching in lpi_clp.cpp (scaling works now, bounds can be trusted)
+- added FASTMIP settings in lpi_clp.cpp that try to improve the performance of Clp as much as possible
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -126,9 +127,6 @@ parameters:
 - new parameter "constraints/countsols/collect" to enable the storing of the solutions; default value FALSE;
 - new parameter "constraints/indicator/addCoupling" to enable generation of relaxation
 - removed parameter "separating/cmir/maxtestdeltaroot"
-- changed all int parameters "maxpresolpairrounds" into bool parameters "presolpairwise"
-- added new parameters "constraints/logicor/presolpairwise" and "constraints/setppc/presolpairwise"
-- changed default values of "presolpairwise" parameters to FALSE
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
@@ -198,6 +196,8 @@ fixed bugs:
 - fixed usage of command test for string comparision in check-scripts (now compatible with ubuntu)
 - fixed performance bug with large number of unnamed constraints that will kill the name hash table
   (now, unnamed constraints are not put into the hash table)
+- corrected imlementation of SCIPlpiGetBasisInd() in lpi_clp.cpp (this fixes the bug that almost no Gomory cuts are found with Clp).
+
 
 
 SCIP version 1.00
