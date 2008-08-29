@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.145 2008/08/07 12:29:15 bzfheinz Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.146 2008/08/29 16:44:05 bzfpfend Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -162,7 +162,6 @@
 #define SCIP_HASHSIZE_CLIQUES    131101 /**< size of hash table in clique tables */
 #define SCIP_HASHSIZE_PARAMS       4099 /**< size of hash table in parameter name tables */
 #define SCIP_HASHSIZE_VBC        131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
-#define SCIP_HASHSIZE_LINEARCONS 131101 /**< size of hash table in linear constraint tables */
 
 /*#define BMS_NOBLOCKMEM*/
 

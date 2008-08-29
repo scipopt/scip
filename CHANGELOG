@@ -52,8 +52,10 @@ interface:
 - added user pointer to callback methods of hash table
 - new method SCIPflattenVarAggregationGraph()
 - new method SCIPclockGetLastTime()
-- new methods SCIPsortedvecInsert...(), SCIPsortedvecInsertDown...(), SCIPsortedvecDelPos...(), and SCIPsortedvecDelPosDown...()
-  to manage sorted vectors or groups of vectors of various data types that are sorted w.r.t. the first vector
+- new methods SCIPsortedvecInsert...(), SCIPsortedvecInsertDown...(), SCIPsortedvecDelPos...(), SCIPsortedvecDelPosDown...(),
+  SCIPsortedvecFind...(), and SCIPsortedvecFindDown...() to manage sorted vectors or groups of vectors of various data types
+  that are sorted w.r.t. the first vector
+- new method SCIPcalcHashtableSize() to get a reasonable hash table size
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -189,6 +191,8 @@ fixed bugs:
 - fixed bug with memory reallocation in SCIPgetProbvarLinearSum()
 - improved stage checking for bound computation
 - fixed usage of command test for string comparision in check-scripts (now compatible with ubuntu)
+- fixed performance bug with large number of unnamed constraints that will kill the name hash table
+  (now, unnamed constraints are not put into the hash table)
 
 
 SCIP version 1.00

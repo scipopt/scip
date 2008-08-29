@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.10 2008/08/28 21:25:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.11 2008/08/29 16:44:05 bzfpfend Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -474,6 +474,62 @@ void SORTTPL_NAME(SCIPsortedvecDelPos, SORTTPL_NAMEEXT)
 
    (*len)--;
 }
+
+
+/* The SCIPsortedvecFind...() method only has needs the key array but not the other field arrays. In order to
+ * avoid defining the same method multiple times, only include this method if we do not have any additional fields.
+ */
+#ifndef SORTTPL_FIELD1TYPE
+
+/** SCIPsortedvecFind...(): Finds the position at which 'val' is located in the sorted vector by binary search.
+ *  If the element exists, the method returns TRUE and stores the position of the element in '*pos'.
+ *  If the element does not exist, the method returns FALSE and stores the position of the element that follows
+ *  'val' in the ordering in '*pos', i.e., '*pos' is the position at which 'val' would be inserted.
+ *  Note that if the element is not found, '*pos' may be equal to len if all existing elements are smaller than 'val'.
+ */
+SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
+(
+    SORTTPL_KEYTYPE*      key,
+    SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )
+    SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )
+    SORTTPL_HASINDCOMPPAR( void*                  dataptr    )
+    SORTTPL_KEYTYPE       val,
+    int                   len,
+    int*                  pos
+    )
+{
+   int left;
+   int right;
+
+   assert(key != NULL);
+   assert(pos != NULL);
+
+   left = 0;
+   right = len-1;
+   while( left <= right )
+   {
+      int middle;
+
+      middle = (left+right)/2;
+      assert(0 <= middle && middle < len);
+
+      if( SORTTPL_ISBETTER(val, key[middle]) )
+         right = middle-1;
+      else if( SORTTPL_ISBETTER(key[middle], val) )
+         left = middle+1;
+      else
+      {
+         *pos = middle;
+         return TRUE;
+      }
+   }
+   assert(left == right+1);
+
+   *pos = left;
+   return FALSE;
+}
+
+#endif
 
 
 /* undefine template parameters and local defines */

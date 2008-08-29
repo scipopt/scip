@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.290 2008/08/29 16:16:42 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.291 2008/08/29 16:44:04 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -92,6 +92,8 @@
 
 #define MAXDNOM                   10000LL /**< maximal denominator for simple rational fixed values */
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
+
+#define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
 
 
 /** constraint data for linear constraints */
@@ -5584,7 +5586,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    if( consdataGetMaxAbsval(consdata) > INT_MAX )
       maxabsval = 0;
    else
-      maxabsval = ((int) consdataGetMaxAbsval(consdata)) % SCIP_HASHSIZE_LINEARCONS;
+      maxabsval = (int) consdataGetMaxAbsval(consdata);
+
    hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx + maxabsval; /*lint !e701*/
 
    return hashval;
@@ -5650,6 +5653,7 @@ SCIP_RETCODE detectRedundantConstraints(
 )
 {
    SCIP_HASHTABLE* hashtable;
+   int hashtablesize;
    int c;
 
    assert(conss != NULL);
@@ -5658,7 +5662,9 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(nchgsides != NULL);
 
    /* create a hash table for the constraint set */
-   SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, SCIP_HASHSIZE_LINEARCONS, 
+   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = MAX(hashtablesize, HASHSIZE_LINEARCONS);
+   SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyLinearcons, hashKeyEqLinearcons, hashKeyValLinearcons, (void*) scip) );
 
    /* check all constraints in the given set for redundancy */
@@ -7447,6 +7453,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff,
                ndelconss, nchgsides) );
       }
+
       if( firstchange < nconss && (conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds) )
       {
          SCIP_CONS** usefulconss;
