@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.467 2008/08/28 12:23:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.468 2008/08/29 20:20:35 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -70,6 +70,7 @@
 #include "scip/relax.h"
 #include "scip/sepa.h"
 #include "scip/prop.h"
+#include "scip/debug.h"
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -9444,6 +9445,7 @@ SCIP_Bool SCIPisLPSolBasic(
    return SCIPlpIsSolBasic(scip->lp);
 }
 
+
 /** gets all indices of basic columns and rows: index i >= 0 corresponds to column i, index i < 0 to row -i-1 */
 SCIP_RETCODE SCIPgetLPBasisInd(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9459,7 +9461,7 @@ SCIP_RETCODE SCIPgetLPBasisInd(
    }
 
    SCIP_CALL( SCIPlpGetBasisInd(scip->lp, basisind) );
-
+   
    return SCIP_OKAY;
 }
 
@@ -9479,6 +9481,9 @@ SCIP_RETCODE SCIPgetLPBInvRow(
    }
 
    SCIP_CALL( SCIPlpGetBInvRow(scip->lp, r, coef) );
+
+   /* debug check if the coef is the r-th line of the inverse matrix B^-1 */
+   SCIP_CALL( SCIPdebugCheckBInvRow(scip, r, coef) );
 
    return SCIP_OKAY;
 }

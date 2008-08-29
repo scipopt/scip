@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.28 2008/04/17 17:49:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.29 2008/08/29 20:20:35 bzfheinz Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -27,6 +27,8 @@
 /** uncomment this define to activate debugging on given solution */
 /*#define SCIP_DEBUG_SOLUTION "check/lseu.sol"*/
 
+/** uncomment this define to activate debugging the LP interface  */
+/*#define SCIP_DEBUG_LP_INTERFACE*/
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -128,8 +130,27 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,conflictset,nliterals) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
-
 #endif
 
+
+/* 
+ * debug method for LP interface, to check if the LP interface works correct 
+ */
+#ifdef SCIP_DEBUG_LP_INTERFACE 
+
+/* check if the coef is the r-th line of the inverse matrix B^-1; this is
+ * the case if (coef * B) is the r-th unit vector */
+extern
+SCIP_RETCODE SCIPdebugCheckBInvRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   r,                  /**< row number */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   );
+
+#else
+
+#define SCIPdebugCheckBInvRow(scip,r,coef) SCIP_OKAY
+
+#endif
 
 #endif

@@ -92,6 +92,8 @@ features:
 - added capabilities to flatten the (multi)-aggregation graph of variables
 - the ZPL reader is now able to pass a starting solution to SCIP
 - small performance improvement of c-MIR aggregation heuristic
+- added a debug method to check whether the LP solver produces in SCIPlpiGetBInvRow() the right inverse 
+  basis matrix row; therefore, see debug.h and debug.c
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
