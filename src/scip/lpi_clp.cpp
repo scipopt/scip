@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.41 2008/08/29 19:20:42 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.42 2008/08/29 19:31:32 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -93,7 +93,6 @@ struct SCIP_LPi
    bool                  presolving;                 /**< preform preprocessing? */
    int                   pricing;                    /**< scip pricing setting  */
    bool                  validFactorization;         /**< whether we have a valid factorization in clp */
-   bool	                 scaledFactorization;        /**< whether the last stored factorization was scaled */
    SCIP_Bool             solved;                     /**< was the current LP solved? */
    bool                  setFactorizationFrequency;  /**< store whether the factorization frequency is set */
    SCIP_Bool             fastmip;                    /**< are fast mip settings turned on */
@@ -448,7 +447,6 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->startscratch = true;
    (*lpi)->pricing = SCIP_PRICING_AUTO;
    (*lpi)->validFactorization = false;
-   (*lpi)->scaledFactorization = false;
    (*lpi)->setFactorizationFrequency = false;
    (*lpi)->fastmip = FALSE;
    invalidateSolution(*lpi);
@@ -1508,8 +1506,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    invalidateSolution(lpi);
 
-   int scaling = lpi->clp->scalingFlag();
-
    // intialize factorization freq. depending on model size - applied only once
    setFactorizationFrequency(lpi);
 
@@ -1518,11 +1514,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    {
       lpi->clp->allSlackBasis(true);   // reset basis
       lpi->validFactorization = false;
-   }
-   else
-   {
-      if ( lpi->scaledFactorization != (scaling != 0) )
-	 lpi->validFactorization = false;
    }
 
    /** startFinishOptions - bits
@@ -1538,7 +1529,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    int status = lpi->clp->primal(0, startFinishOptions);
 
    lpi->validFactorization = true;
-   lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
 
    // Unfortunately the status of Clp is hard coded ...
@@ -1570,8 +1560,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    invalidateSolution(lpi);
 
-   int scaling = lpi->clp->scalingFlag();
-
    // intialize factorization freq. depending on model size - applied only once
    setFactorizationFrequency(lpi);
 
@@ -1580,11 +1568,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
    {
       lpi->clp->allSlackBasis(true);   // reset basis
       lpi->validFactorization = false;
-   }
-   else
-   {
-      if( lpi->scaledFactorization != (scaling != 0) )
-         lpi->validFactorization = false;
    }
 
    /** startFinishOptions - bits
@@ -1614,7 +1597,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
    int status = lpi->clp->dual(0, startFinishOptions);
 
    lpi->validFactorization = true;
-   lpi->scaledFactorization = (scaling != 0);
    lpi->solved = TRUE;
 
    // Unfortunately the status of Clp is hard coded ...
@@ -1702,64 +1684,117 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    ClpSimplex* clp = lpi->clp;
 
-   // prepare call
-   *down = EPSCEIL(psol - 1.0, 1e-06);
-   *up   = EPSFLOOR(psol + 1.0, 1e-06);
-
+   // set up output arrays
    int ncols = clp->numberColumns();
-   double** outputSolution = new double* [2];
-   outputSolution[0] = new double [ncols];
-   outputSolution[1] = new double [ncols];
-   int* outputStatus = new int [2];
-   int* outputIterations = new int [2];
+   double** outputSolution;
+   SCIP_ALLOC( BMSallocMemoryArray( &outputSolution, 2) );
+   SCIP_ALLOC( BMSallocMemoryArray( &outputSolution[0], ncols) );
+   SCIP_ALLOC( BMSallocMemoryArray( &outputSolution[1], ncols) );
+
+   int* outputStatus;
+   SCIP_ALLOC( BMSallocMemoryArray( &outputStatus, 2) );
+
+   int* outputIterations;
+   SCIP_ALLOC( BMSallocMemoryArray( &outputIterations, 2) );
 
    // set iteration limit
    int iterlimit = clp->maximumIterations();
    clp->setMaximumIterations(itlim);
 
+   // store objective value
    double objval = clp->objectiveValue();
 
-   if ( lpi->scaledFactorization )
-      lpi->validFactorization = false;
-
-   int scaling = clp->scalingFlag();
-   if( scaling != 0 )
-      clp->scaling(0);
-   // the last three parameters are:
-   // bool stopOnFirstInfeasible=true,
-   // bool alwaysFinish=false);
-   // int startFinishOptions
-#if 0
-   (void)clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true,
-      lpi->validFactorization ? 3 : 1);
-#else /*???????????????????*/
+   // store special options for later reset
    int specialoptions = clp->specialOptions();
-   clp->setSpecialOptions(specialoptions | (64|128|512|1024|2048|4096));  // 38592 = 32678+4096+1024+512+256+16+8+2
-   (void)clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, true,
-      lpi->validFactorization ? 7 : 5);
-   clp->setSpecialOptions(specialoptions);
+
+   /** Clp special options:
+    *       1 - Don't keep changing infeasibility weight
+    *       2 - Keep nonLinearCost round solves
+    *       4 - Force outgoing variables to exact bound (primal)
+    *       8 - Safe to use dense initial factorization
+    *      16 - Just use basic variables for operation if column generation
+    *      32 - Clean up with primal before strong branching
+    *      64 - Treat problem as feasible until last minute (i.e. minimize infeasibilities)
+    *     128 - Switch off all matrix sanity checks
+    *     256 - No row copy
+    *     512 - If not in values pass, solution guaranteed, skip as much as possible
+    *    1024 - In branch and bound
+    *    2048 - Don't bother to re-factorize if < 20 iterations
+    *    4096 - Skip some optimality checks
+    *    8192 - Do Primal when cleaning up primal
+    *   16384 - In fast dual (so we can switch off things)
+    *   32768 - called from Osi
+    *   65536 - keep arrays around as much as possible (also use maximumR/C)
+    *  131072 - scale factor arrays have inverse values at end
+    *  262144 - extra copy of scaled matrix
+    *  524288 - Clp fast dual
+    *  0x01000000 is Cbc (and in branch and bound)
+    *  0x02000000 is in a different branch and bound
+    */
+#ifndef NDEBUG
+   // in debug mode: leave checks on
+   clp->setSpecialOptions(specialoptions | (64|512|1024|2048|4096) & ~(128+4096) );
+#else
+   clp->setSpecialOptions(specialoptions | (64|128|512|1024|2048|4096));
 #endif
-   if( scaling != 0 )
-      clp->scaling(scaling);
-   lpi->scaledFactorization = false;
+
+   /* 'startfinish' options for strong branching:
+    *  1 - do not delete work areas and factorization at end
+    *  2 - use old factorization if same number of rows
+    *  4 - skip as much initialization of work areas as possible
+    *      (based on whatsChanged in clpmodel.hpp) ** work in progress
+    */
+   int startFinishOptions = 1;
+   if ( lpi->validFactorization )
+      startFinishOptions = startFinishOptions | 2;
+
+   // set new lower and upper bounds for variable
+   *down = EPSCEIL(psol - 1.0, 1e-06);
+   *up   = EPSFLOOR(psol + 1.0, 1e-06);
+
+   /** For strong branching.  On input lower and upper are new bounds while
+    *  on output they are change in objective function values (>1.0e50
+    *  infeasible).  Return code is
+    *   0 if nothing interesting,
+    *  -1 if infeasible both ways and
+    *  +1 if infeasible one way (check values to see which one(s))
+    *  -2 if bad factorization
+    * Solutions are filled in as well - even down, odd up - also status and number of iterations
+    *
+    * The bools are:
+    *   bool stopOnFirstInfeasible
+    *   bool alwaysFinish
+    */
+   int res = clp->strongBranching(1, &col, up, down, outputSolution, outputStatus, outputIterations, false, false, startFinishOptions);
+
+   // reset special options
+   clp->setSpecialOptions(specialoptions);
+
    lpi->validFactorization = true;
 
    *down += objval;
    *up += objval;
-   *downvalid = FALSE; /* ?????? we don't trust CLP's strong branching call - there seem to be numerical difficulties (see flugpl.mps) */
-   *upvalid = FALSE; /* ?????? we don't trust CLP's strong branching call - there seem to be numerical difficulties (see flugpl.mps) */
 
+   // The bounds returned by CLP seem to be valid using the above options */
+   *downvalid = TRUE;
+   *upvalid = TRUE;
+
+   // correct iteration count
    if (iter)
       *iter = outputIterations[0] + outputIterations[1];
 
    // reset iteration limit
    clp->setMaximumIterations(iterlimit);
 
-   delete [] outputStatus;
-   delete [] outputIterations;
-   delete [] outputSolution[1];
-   delete [] outputSolution[0];
-   delete [] outputSolution;
+   // free local memory
+   BMSfreeMemoryArray( &outputStatus );
+   BMSfreeMemoryArray( &outputIterations );
+   BMSfreeMemoryArray( &outputSolution[1] );
+   BMSfreeMemoryArray( &outputSolution[0] );
+   BMSfreeMemoryArray( &outputSolution );
+
+   if ( res == -2 )
+      return SCIP_LPERROR;
 
    return SCIP_OKAY;
 }
