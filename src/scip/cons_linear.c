@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.294 2008/08/29 21:09:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.295 2008/08/29 21:20:20 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4553,7 +4553,7 @@ SCIP_RETCODE dualPresolve(
    SCIP_Bool bestislhs;
    int bestpos;
    int i;
-   int maxadditionalconss;
+   int maxotherlocks;
 
    assert(cutoff != NULL);
    assert(naggrvars != NULL);
@@ -4583,19 +4583,25 @@ SCIP_RETCODE dualPresolve(
     * everything else would produce fill-in. Exceptions:
     * - If there are only two variables in the constraint from which the multi-aggregation arises, no fill-in will be
     *   produced.
+    * - If there are three variables in the constraint, multiaggregation in three additional constraintsw will remove
+    *   six nonzeros (three from the constraint and the three entries of the multi-aggregated variable) and add
+    *   six nonzeros (two variables per substitution).
     * - If there at most four variables in the constraint, multiaggregation in two additional constraints will remove
     *   six nonzeros (four from the constraint and the two entries of the multi-aggregated variable) and add
     *   six nonzeros (three variables per substitution). God exists! 
     */
-   maxadditionalconss = 1;
    if( consdata->nvars <= 2 )
-      maxadditionalconss = INT_MAX;
-   else if( consdata->nvars <= 4 )
-      maxadditionalconss = 2;   
+      maxotherlocks = INT_MAX;
+   else if( consdata->nvars == 3 )
+      maxotherlocks = 3;
+   else if( consdata->nvars == 4 )
+      maxotherlocks = 2;
+   else
+      maxotherlocks = 1;
 
    /* if this is constraint has both sides, it also provides a lock for the other side and thus we can allow one more lock */
    if( lhsexists && rhsexists )
-      maxadditionalconss++;
+      maxotherlocks++;
 
    for( i = 0; i < consdata->nvars && bestisint; ++i )
    {
@@ -4650,14 +4656,14 @@ SCIP_RETCODE dualPresolve(
        */
       agglhs = lhsexists
          && ((val > 0.0 && !SCIPisNegative(scip, obj) && SCIPvarGetNLocksDown(var) == 1 
-               && SCIPvarGetNLocksUp(var) <= maxadditionalconss)
+               && SCIPvarGetNLocksUp(var) <= maxotherlocks)
             || (val < 0.0 && !SCIPisPositive(scip, obj) && SCIPvarGetNLocksUp(var) == 1
-               && SCIPvarGetNLocksDown(var) <= maxadditionalconss));
+               && SCIPvarGetNLocksDown(var) <= maxotherlocks));
       aggrhs = rhsexists
          && ((val > 0.0 && !SCIPisPositive(scip, obj) && SCIPvarGetNLocksUp(var) == 1 
-               && SCIPvarGetNLocksDown(var) <= maxadditionalconss)            
+               && SCIPvarGetNLocksDown(var) <= maxotherlocks)            
             || (val < 0.0 && !SCIPisNegative(scip, obj)  && SCIPvarGetNLocksDown(var) == 1 
-               && SCIPvarGetNLocksUp(var) <= maxadditionalconss));
+               && SCIPvarGetNLocksUp(var) <= maxotherlocks));
       if( agglhs || aggrhs )
       {
          SCIP_Real minresactivity;
