@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.125 2008/07/18 12:23:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.126 2008/08/29 16:16:43 bzfwinkm Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -508,9 +508,7 @@ SCIP_Longint consdataGetSignature(
    return consdata->signature;
 }
 
-/** sorts linear constraint's variables by binaries, integers, implicit integers, and continuous variables,
- *  and sorts the variables of the same type by non-decreasing variable index
- */
+/** sorts setppc constraint's variables by non-decreasing variable index */
 static
 SCIP_RETCODE consdataSort(
    SCIP*                 scip,               /**< SCIP data structure */

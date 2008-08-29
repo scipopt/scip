@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.289 2008/08/28 12:21:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.290 2008/08/29 16:16:42 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -77,7 +77,7 @@
 #define DEFAULT_MAXROUNDSROOT          -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS            50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
-#define DEFAULT_MAXPRESOLPAIRROUNDS    -1 /**< maximal number of presolving rounds with pairwise constraint comparison
+#define DEFAULT_MAXPRESOLPAIRROUNDS     0 /**< maximal number of presolving rounds with pairwise constraint comparison
                                            *   (-1: no limit) */
 #define DEFAULT_PRESOLUSEHASHING     TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define DEFAULT_MAXAGGRNORMSCALE      0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
@@ -7441,18 +7441,17 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    {
       assert(firstchange >= 0);
 
+      if( firstchange < nconss && conshdlrdata->presolusehashing ) 
+      {
+         /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+         SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff,
+               ndelconss, nchgsides) );
+      }
       if( firstchange < nconss && (conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds) )
       {
          SCIP_CONS** usefulconss;
          int nusefulconss;
          int firstchangenew;
-
-         if( conshdlrdata->presolusehashing ) 
-         {
-            /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, &cutoff,
-                  ndelconss, nchgsides) );
-         }
 
          /* allocate temporary memory */
          SCIP_CALL( SCIPallocBufferArray(scip, &usefulconss, nconss) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.116 2008/07/18 12:25:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.117 2008/08/29 16:16:42 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -82,6 +82,8 @@ struct SCIP_ConsData
    int                   filterpos1;         /**< event filter position of first watched variable */
    int                   filterpos2;         /**< event filter position of second watched variable */
    unsigned int          impladded:1;        /**< was the 2-variable logic or constraint already added as implication? */
+   unsigned int          sorted:1;           /**< are the constraint's variables sorted? */
+   unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
 };
 
 
@@ -190,6 +192,8 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->filterpos1 = -1;
    (*consdata)->filterpos2 = -1;
    (*consdata)->impladded = FALSE;
+   (*consdata)->changed = TRUE;
+   (*consdata)->sorted = (nvars <= 1);
 
    /* get transformed variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -354,7 +358,11 @@ SCIP_RETCODE delCoefPos(
    assert(pos != consdata->watchedvar2);
 
    /* move the last variable to the free slot */
-   consdata->vars[pos] = consdata->vars[consdata->nvars-1];
+   if( pos != consdata->nvars - 1 )
+   {
+      consdata->vars[pos] = consdata->vars[consdata->nvars-1];
+      consdata->sorted = FALSE;
+   }
    consdata->nvars--;
 
    /* if the last variable (that moved) was watched, update the watched position */
@@ -362,6 +370,8 @@ SCIP_RETCODE delCoefPos(
       consdata->watchedvar1 = pos;
    if( consdata->watchedvar2 == consdata->nvars )
       consdata->watchedvar2 = pos;
+
+   consdata->changed = TRUE;
 
    SCIP_CALL( SCIPenableConsPropagation(scip, cons) );
 
@@ -460,6 +470,94 @@ SCIP_RETCODE disableCons(
    else
    {
       SCIP_CALL( SCIPdisableCons(scip, cons) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/**find pairs of negated variables in constraint: constraint is redundant */
+/**find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
+static
+SCIP_RETCODE findpairsandsets(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< logic or constraint */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   unsigned char**       entries,            /**< array to store whether two positions in constraints represent the same variable */
+   int*                  nentries,           /**< pointer for array size, if array will be to small it's corrected */
+   SCIP_Bool*            correct,            /**< pointer to store if array size was correct */
+   SCIP_Bool*            redundant           /**< returns whether a variable fixed to one exists in the constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(eventhdlr != NULL);
+   assert(*entries != NULL);
+   assert(nentries != NULL);
+   assert(redundant != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->vars != NULL);
+   assert(consdata->nvars >= 0);
+
+   *redundant = FALSE;
+   *correct = FALSE;
+
+   /** check size of array entries and in case of return necessary size */
+   if (*nentries < SCIPgetNBinVars(scip))
+   {
+      *nentries = SCIPgetNBinVars(scip);
+      return SCIP_OKAY;
+   }
+   assert(consdata->nvars <= *nentries);
+
+   *correct = TRUE;
+
+   /** initialize entries array */
+   for( v = consdata->nvars - 1; v >= 0; --v)
+   {
+      assert(SCIPvarGetProbindex(consdata->vars[v]) >= -1);
+      assert(SCIPvarGetProbindex(consdata->vars[v]) < SCIPgetNBinVars(scip));
+      /** var is not active yet */
+      if( SCIPvarGetProbindex(consdata->vars[v]) >= 0 )
+         (*entries)[SCIPvarGetProbindex(consdata->vars[v])] = 0;
+   }
+
+   /** check all vars for multiple entries*/
+   for( v = consdata->nvars - 1; v >= 0; --v)
+   {
+      /** var is not active yet */
+      if( SCIPvarGetProbindex(consdata->vars[v]) == -1 )
+         continue;
+
+      /** if var occurs first time in constraint init entries array */
+      if( (*entries)[SCIPvarGetProbindex(consdata->vars[v])] == 0 )
+         (*entries)[SCIPvarGetProbindex(consdata->vars[v])] = SCIPvarIsNegated(consdata->vars[v]) ? 2 : 1;
+      /** if var occurs second time in constraint, first time it was not negated */
+      else if( (*entries)[SCIPvarGetProbindex(consdata->vars[v])] == 1 )
+      {
+         if( SCIPvarIsNegated(consdata->vars[v]) )
+         {
+            *redundant = TRUE;
+            return SCIP_OKAY;
+         }
+         else 
+            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+      }
+      /** if var occurs second time in constraint, first time it was negated */
+      else
+      {
+         if( !SCIPvarIsNegated(consdata->vars[v]) )
+         {
+            *redundant = TRUE;
+            return SCIP_OKAY;
+         }
+         else 
+            SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+      }
    }
 
    return SCIP_OKAY;
@@ -910,6 +1008,250 @@ SCIP_RETCODE enforcePseudo(
    return SCIP_OKAY;
 }
 
+/** sorts logicor constraint's variables by non-decreasing variable index */
+static
+SCIP_RETCODE consdataSort(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata            /**< linear constraint data */
+   )
+{
+   assert(consdata != NULL);
+
+   if( consdata->nvars == 0 )
+      consdata->sorted = TRUE;
+   else if( !consdata->sorted )
+   {
+      SCIP_VAR* tmp1 = NULL;
+      SCIP_VAR* tmp2 = NULL;
+      
+      if( consdata->watchedvar1 != -1 )
+      {
+         tmp1 = consdata->vars[consdata->watchedvar1];
+         assert(tmp1 != NULL);
+         consdata->watchedvar1 = -1;
+         if( consdata->watchedvar2 != -1 )
+         {
+            tmp2 = consdata->vars[consdata->watchedvar2];
+            assert(tmp2 != NULL);
+            consdata->watchedvar2 = -1;
+         }
+      }
+      
+      assert(consdata->watchedvar1 == -1);
+      assert(consdata->watchedvar2 == -1);
+
+      SCIPsortPtr((void**)consdata->vars, SCIPvarComp, consdata->nvars);
+      consdata->sorted = TRUE;
+      if( tmp1 != NULL )
+      {
+         int v;
+         for( v = consdata->nvars - 1; v >= 0; --v )
+         {
+            if( consdata->vars[v] == tmp1 )
+            {
+               assert(consdata->watchedvar1 == -1);
+               consdata->watchedvar1 = v;
+               if (tmp2 == NULL || consdata->watchedvar2 != -1)
+                  break;
+            }
+            else if ( consdata->vars[v] == tmp2 )
+            {
+               assert(consdata->watchedvar2 == -1);
+               assert(consdata->vars[v] != NULL);
+               consdata->watchedvar2 = v;
+               if (consdata->watchedvar1 != -1)
+                  break;
+            }
+         }
+      }
+
+   }
+   assert(consdata->sorted);
+
+   return SCIP_OKAY;
+}
+
+/** removes the redundant second constraint and updates the flags of the first one */
+static
+SCIP_RETCODE removeRedundantCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons0,              /**< constraint that should stay */
+   SCIP_CONS*            cons1,              /**< constraint that should be deleted */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   )
+{
+   assert(ndelconss != NULL);
+
+   SCIPdebugMessage(" -> removing logicor constraint <%s> which is redundant to <%s>\n",
+      SCIPconsGetName(cons1), SCIPconsGetName(cons0));
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+
+   /* update flags of cons0 */
+   if( SCIPconsIsInitial(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsInitial(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsSeparated(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsSeparated(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsEnforced(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsChecked(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsChecked(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsPropagated(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsPropagated(scip, cons0, TRUE) );
+   }
+   if( !SCIPconsIsDynamic(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsDynamic(scip, cons0, FALSE) );
+   }
+   if( !SCIPconsIsRemovable(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsRemovable(scip, cons0, FALSE) );
+   }
+   if( SCIPconsIsStickingAtNode(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsStickingAtNode(scip, cons0, TRUE) );
+   }
+
+   /* delete cons1 */
+   SCIP_CALL( SCIPdelCons(scip, cons1) );
+   (*ndelconss)++;
+
+   return SCIP_OKAY;
+}
+
+
+/** deletes redundant constraints */
+static
+SCIP_RETCODE removeRedundantConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraint set */
+   int*                  firstchange,        /**< first constraint that changed since last pair preprocessing round */
+   int                   chkind,             /**< index of constraint to check against all prior indices upto startind */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   )
+{
+   SCIP_CONS* cons0;
+   SCIP_CONSDATA* consdata0;
+   SCIP_Bool cons0changed;
+   int c;
+
+   assert(ndelconss != NULL);
+
+   /* get the constraint to be checked against all prior constraints */
+   cons0 = conss[chkind];
+   assert(SCIPconsIsActive(cons0));
+   assert(!SCIPconsIsModifiable(cons0));
+
+   consdata0 = SCIPconsGetData(cons0);
+   assert(consdata0 != NULL);
+   assert(consdata0->nvars >= 1);
+
+   /* sort the constraint */
+   SCIP_CALL( consdataSort(scip, consdata0) );
+
+   /* check constraint against all prior constraints */
+   cons0changed = consdata0->changed;
+   consdata0->changed = FALSE;
+   for( c = (cons0changed ? 0 : *firstchange); c < chkind && SCIPconsIsActive(cons0); ++c )
+   {
+      SCIP_CONS* consstay;
+      SCIP_CONS* consdel;
+      SCIP_CONSDATA* consdatastay;
+      SCIP_CONSDATA* consdatadel;
+      SCIP_CONS* cons1;
+      SCIP_CONSDATA* consdata1;
+      SCIP_Bool consdelisredundant;
+      int v0;
+      int v1;
+
+      cons1 = conss[c];
+      assert(SCIPconsIsActive(cons0));
+
+      /* ignore inactive and modifiable constraints */
+      if( !SCIPconsIsActive(cons1) || SCIPconsIsModifiable(cons1) )
+         continue;
+
+      consdata1 = SCIPconsGetData(cons1);
+      assert(consdata1 != NULL);
+
+      /* sort the constraint */
+      SCIP_CALL( consdataSort(scip, consdata1) );
+
+      if( consdata0->nvars <= consdata1->nvars )
+      {
+         consstay = cons0;
+         consdel = cons1;
+         consdatastay = consdata0;
+         consdatadel = consdata1;
+      }
+      else
+      {
+         consstay = cons1;
+         consdel = cons0;
+         consdatastay = consdata1;
+         consdatadel = consdata0;
+      }
+
+      v0 = 0;
+      v1 = 0;
+      consdelisredundant = TRUE;
+
+      while( v0 < consdatastay->nvars && v1 < consdatadel->nvars )
+      {
+         int index0;
+         int index1;
+
+         index0 = SCIPvarGetIndex(consdatastay->vars[v0]);
+         index1 = SCIPvarGetIndex(consdatadel->vars[v1]);
+         if( index1 < index0 )
+         {
+            for( ++v1; v1 < consdatadel->nvars; ++v1 )
+            {
+               index1 = SCIPvarGetIndex(consdatadel->vars[v1]);
+               if( index1 >= index0 )
+                  break;
+            }
+         }
+         if( index0 == index1 )
+         {
+            v0++;
+            v1++;
+         }
+         else
+         {
+            consdelisredundant = FALSE;
+            break;
+         }
+      }
+
+      if (v0 < consdatastay->nvars)
+            consdelisredundant = FALSE;
+
+      if( consdelisredundant )
+      {
+         /* delete cons1 */
+         SCIPdebugMessage("logicor constraint <%s> is contained in <%s>\n", SCIPconsGetName(consdel), SCIPconsGetName(consstay));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, consstay, NULL) ) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, consdel, NULL) ) );
+         SCIP_CALL( removeRedundantCons(scip, consstay, consdel, ndelconss) );
+
+         /* update the first changed constraint to begin the next aggregation round with */
+         if( consdatastay->changed && SCIPconsGetPos(consstay) < *firstchange )
+            *firstchange = SCIPconsGetPos(consstay);
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -1356,11 +1698,14 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
+   unsigned char* entries;
    SCIP_Bool infeasible;
    SCIP_Bool redundant;
    SCIP_Bool fixed;
    int c;
-
+   int firstchange;
+   int nentries = SCIPgetNBinVars(scip);
+   
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
@@ -1370,6 +1715,10 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   firstchange = INT_MAX;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &entries, nentries) );
 
    /* process constraints */
    for( c = 0; c < nconss && *result != SCIP_CUTOFF && !SCIPisStopped(scip); ++c )
@@ -1392,7 +1741,15 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
       /**@todo find pairs of negated variables in constraint: constraint is redundant */
       /**@todo find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
-
+      if( !redundant )
+      {
+         SCIP_Bool correct = FALSE;
+         
+         SCIP_CALL( findpairsandsets(scip, cons, conshdlrdata->eventhdlr, &entries, &nentries, &correct, &redundant) );
+                  
+         assert(correct);
+      }
+      
       if( redundant )
       {
          SCIPdebugMessage("logic or constraint <%s> is redundant\n", SCIPconsGetName(cons));
@@ -1410,7 +1767,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          {
             SCIPdebugMessage("logic or constraint <%s> is infeasible\n", SCIPconsGetName(cons));
             *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
+            goto TERMINATE;
          }
          else if( consdata->nvars == 1 )
          {
@@ -1430,7 +1787,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                {
                   SCIPdebugMessage(" -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
+                  goto TERMINATE;
                }
                assert(fixed);
                (*nfixedvars)++;
@@ -1477,15 +1834,33 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             if( implinfeasible )
             {
                *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
+               goto TERMINATE;
             }
             consdata->impladded = TRUE;
          }
       }
+
+      /* remember the first changed constraint to begin the next redundancy round with */
+      if( firstchange == INT_MAX && consdata->changed )
+         firstchange = c;
+
    }
    
    /**@todo preprocess pairs of logic or constraints */
 
+   assert(*result != SCIP_CUTOFF);
+
+   /* check constraints for redundancy */
+   for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
+   {
+      if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+      {
+         SCIP_CALL( removeRedundantConstraints(scip, conss, &firstchange, c, ndelconss) );
+      }
+   }
+
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &entries);
    return SCIP_OKAY;
 }
 
