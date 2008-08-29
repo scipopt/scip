@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.293 2008/08/29 20:08:02 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.294 2008/08/29 21:09:41 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4579,16 +4579,23 @@ SCIP_RETCODE dualPresolve(
    bestisint = TRUE;
    bestislhs = FALSE;
 
-   /* we only want to multi-aggregate variables, if they appear in maximal one addtional constraint,
-    * everything else would produce fill-in. Exceptions: If there is only one more variable in the constraint from which 
-    * the multi-aggregation arises, no fill-in will be produced and if there at most three further variables, 
-    * multiaggregation in two additional constraint will remove five nonzeros and ad four. God exists! 
+   /* We only want to multi-aggregate variables, if they appear in maximal one additional constraint,
+    * everything else would produce fill-in. Exceptions:
+    * - If there are only two variables in the constraint from which the multi-aggregation arises, no fill-in will be
+    *   produced.
+    * - If there at most four variables in the constraint, multiaggregation in two additional constraints will remove
+    *   six nonzeros (four from the constraint and the two entries of the multi-aggregated variable) and add
+    *   six nonzeros (three variables per substitution). God exists! 
     */
    maxadditionalconss = 1;
    if( consdata->nvars <= 2 )
       maxadditionalconss = INT_MAX;
    else if( consdata->nvars <= 4 )
       maxadditionalconss = 2;   
+
+   /* if this is constraint has both sides, it also provides a lock for the other side and thus we can allow one more lock */
+   if( lhsexists && rhsexists )
+      maxadditionalconss++;
 
    for( i = 0; i < consdata->nvars && bestisint; ++i )
    {
