@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.42 2008/08/29 19:31:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.43 2008/08/29 20:17:21 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -1775,7 +1775,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    *down += objval;
    *up += objval;
 
-   // The bounds returned by CLP seem to be valid using the above options */
+   // The bounds returned by CLP seem to be valid using the above options
    *downvalid = TRUE;
    *upvalid = TRUE;
 
@@ -2443,20 +2443,23 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    assert(lpi->clp != 0);
    assert(bind != 0);
 
-   int cnt = 0;
    ClpSimplex* clp = lpi->clp;
-   for( int i = 0; i < clp->numberRows(); ++i )
+   int nrows = clp->numberRows();
+   int ncols = clp->numberColumns();
+
+   int* idx;
+   SCIP_ALLOC( BMSallocMemoryArray(&idx, nrows) );
+   clp->getBasics(idx);
+
+   for (int i = 0; i < nrows; ++i)
    {
-      int status = clp->getRowStatus(i);
-      if ( status == ClpSimplex::basic )
-	 bind[cnt++] = -1 - i;
+      if ( idx[i] < ncols )
+         bind[i] = idx[i];
+      else
+         bind[i] = -1 - (idx[i] - ncols);
    }
-   for( int j = 0; j < clp->numberColumns(); ++j )
-   {
-      int status = clp->getColumnStatus(j);
-      if ( status == ClpSimplex::basic )
-	 bind[cnt++] = j;
-   }
+
+   BMSfreeMemoryArray(&idx);
    
    return SCIP_OKAY;
 }
