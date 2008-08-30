@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.43 2008/08/29 20:17:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.44 2008/08/30 21:24:48 bzfviger Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -625,7 +625,7 @@ SCIP_RETCODE SCIPlpiAddCols(
    SCIP_ALLOC( BMSallocMemoryArray(&mybeg, ncols + 1) );
 
    // if columns are not empty
-   if ( nnonz == 0 )
+   if ( nnonz != 0 )
    {
       BMScopyMemoryArray(mybeg, beg, ncols);
       mybeg[ncols] = nnonz;   // add additional entry at end
