@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.50 2008/08/30 21:10:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.51 2008/08/30 21:27:13 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -370,6 +370,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
+
+   /* only call feaspump once at the root: if timing mask has already been reset and we are at the root node, skip it */
+   if( SCIPgetDepth(scip) == 0 && SCIPheurGetTimingmask(heur) == HEUR_TIMING )
+      return SCIP_OKAY;
 
    /* reset the timing mask to its default value (at the root node it could be different) */
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
