@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.31 2008/08/29 20:20:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.32 2008/08/30 13:02:32 bzfviger Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -832,7 +832,7 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
          
          /* since idx < 0 we are in the case of a slack variable, i.e., the corresponding column 
             is the idx-unit vector; note that some LP solver return a -idx-unit vector */
-         //               vecval = REALABS(coef[idx]);
+         /*//               vecval = REALABS(coef[idx]);*/
          vecval = coef[idx];
       }
       
