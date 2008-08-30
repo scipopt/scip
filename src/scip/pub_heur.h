@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.16 2008/04/17 17:49:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.17 2008/08/30 21:10:44 bzfpfend Exp $"
 
 /**@file   pub_heur.h
  * @brief  public methods for primal heuristics
@@ -64,6 +64,19 @@ const char* SCIPheurGetDesc(
 extern
 char SCIPheurGetDispchar(
    SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** returns the timing mask of the heuristic */
+extern
+SCIP_HEURTIMING SCIPheurGetTimingmask(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** sets new timing mask for heuristic */
+extern
+void SCIPheurSetTimingmask(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_HEURTIMING       timingmask          /**< new timing mask of heuristic */
    );
 
 /** gets priority of primal heuristic */

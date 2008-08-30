@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.259 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.260 2008/08/30 21:10:44 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1457,8 +1457,6 @@ SCIP_RETCODE priceAndCutLoop(
    stallnfracs = INT_MAX;
    while( !(*cutoff) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
    {
-      SCIP_Bool foundsol;
-
       SCIPdebugMessage("-------- node solving loop --------\n");
       assert(lp->flushed);
       assert(lp->solved);
@@ -1488,19 +1486,19 @@ SCIP_RETCODE priceAndCutLoop(
          SCIPdebugMessage(" -> error solving LP. keeping old bound: %g\n", SCIPnodeGetLowerbound(focusnode));
       }
 
+      /* display node information line for root node */
+      if( root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
+      {
+         SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
+      }
+
       /* call primal heuristics that are applicable during node LP solving loop */
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
       {
+         SCIP_Bool foundsol;
+
          SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
          *lperror = *lperror || lp->resolvelperror;
-      }
-      else
-         foundsol = FALSE;
-
-      /* display node information line for root node */
-      if( !foundsol && root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
-      {
-         SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
       }
 
       /* check, if we exceeded the separation round limit */

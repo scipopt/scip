@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.49 2008/04/17 17:49:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.50 2008/08/30 21:10:44 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -278,11 +278,26 @@ SCIP_DECL_HEUREXIT(heurExitFeaspump)
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolFeaspump NULL
+static
+SCIP_DECL_HEURINITSOL(heurInitsolFeaspump)
+{
+   /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
+   if( SCIPheurGetFreqofs(heur) == 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
+
+   return SCIP_OKAY;
+}
 
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolFeaspump NULL
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolFeaspump)
+{
+   /* reset the timing mask to its default value */
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
+
+   return SCIP_OKAY;
+}
 
 
 /** execution method of primal heuristic */
@@ -355,6 +370,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTRUN;
+
+   /* reset the timing mask to its default value (at the root node it could be different) */
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);

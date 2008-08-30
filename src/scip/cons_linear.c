@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.296 2008/08/29 22:52:49 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.297 2008/08/30 21:10:44 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3869,7 +3869,7 @@ SCIP_RETCODE consdataTightenCoefs(
                /* get the new minimal and maximal activity of the constraint */
                consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
             }
-            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisFeasEQ(scip, newlhs, consdata->lhs) )
             {
                SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
 
@@ -3877,7 +3877,7 @@ SCIP_RETCODE consdataTightenCoefs(
                (*nchgsides)++;
                assert(SCIPisEQ(scip, consdata->lhs, newlhs));
             }
-            if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
+            if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisFeasEQ(scip, newrhs, consdata->rhs) )
             {
                SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
 
@@ -3944,7 +3944,7 @@ SCIP_RETCODE consdataTightenCoefs(
                /* get the new minimal and maximal activity of the constraint */
                consdataGetActivityBounds(scip, consdata, &minactivity, &maxactivity);
             }
-            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
+            if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisFeasEQ(scip, newlhs, consdata->lhs) )
             {
                SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
 
@@ -3952,7 +3952,7 @@ SCIP_RETCODE consdataTightenCoefs(
                (*nchgsides)++;
                assert(SCIPisEQ(scip, consdata->lhs, newlhs));
             }
-            if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
+            if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisFeasEQ(scip, newrhs, consdata->rhs) )
             {
                SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
 
@@ -4067,7 +4067,7 @@ SCIP_RETCODE consdataTightenCoefs(
       newlhs = consdata->lhs - minleftactivity;
       newrhs = consdata->rhs - maxleftactivity;
       
-      if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisEQ(scip, newlhs, consdata->lhs) )
+      if( !SCIPisInfinity(scip, -consdata->lhs) && !SCIPisFeasEQ(scip, newlhs, consdata->lhs) )
       {
          SCIPdebugMessage("linear constraint <%s>: change lhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->lhs, newlhs);
          
@@ -4075,7 +4075,7 @@ SCIP_RETCODE consdataTightenCoefs(
          (*nchgsides)++;
          assert(SCIPisEQ(scip, consdata->lhs, newlhs));
       }
-      if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisEQ(scip, newrhs, consdata->rhs) )
+      if( !SCIPisInfinity(scip, consdata->rhs) && !SCIPisFeasEQ(scip, newrhs, consdata->rhs) )
       {
          SCIPdebugMessage("linear constraint <%s>: change rhs %.15g to %.15g\n", SCIPconsGetName(cons), consdata->rhs, newrhs);
          
@@ -4517,9 +4517,9 @@ SCIP_RETCODE convertLongEquality(
          scalars[v] = -consdata->vals[v]/slackcoef;
          SCIPdebugPrintf(" %+.15g<%s>", scalars[v], SCIPvarGetName(vars[v]));
       }
-      SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d\n",
+      SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d, removescons=%d\n",
          aggrconst, SCIPvarGetName(slackvar), SCIPvarGetLbGlobal(slackvar), SCIPvarGetUbGlobal(slackvar),
-         bestnlocks, bestremovescons ? maxnlocksremove : maxnlocksstay);
+         bestnlocks, bestremovescons ? maxnlocksremove : maxnlocksstay, bestremovescons);
 
       /* perform the multi-aggregation */
       SCIP_CALL( SCIPmultiaggregateVar(scip, slackvar, consdata->nvars, vars, scalars, aggrconst,
