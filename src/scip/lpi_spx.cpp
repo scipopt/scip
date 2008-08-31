@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.77 2008/08/28 13:37:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.78 2008/08/31 02:09:51 bzfpfend Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -21,6 +21,9 @@
  */
 //#define SCIP_DEBUG
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#define AUTOPRICING_ITERSWITCH          1000 /**< start with devex and switch to steepest edge after this many iterations */
+
 
 /* turn off asserts; otherwise there is an assert(ptr == 0) failure at OneSpin Solutions */
 #ifndef NDEBUG
@@ -80,7 +83,9 @@ class SPxSCIP : public SPxSolver
    Real             m_objUpLimit;       /**< upper objective limit */
    Status           m_stat;             /**< solving status */
    bool             m_lpinfo;           /**< storing whether output is turned on */
-   
+   bool             m_autopricing;      /**< is automatic pricing selected? */
+   int              m_autophase1iters;  /**< number of iterations spend in phase one of auto pricing */
+
 public:
    SPxSCIP(const char* probname = NULL) 
       : SPxSolver(LEAVE, COLUMN),
@@ -89,7 +94,9 @@ public:
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
         m_stat(NO_PROBLEM),
-        m_lpinfo(false)
+        m_lpinfo(false),
+        m_autopricing(true),
+        m_autophase1iters(0)
    {
       setSolver(&m_slu);
       setTester(&m_ratio);
@@ -108,24 +115,43 @@ public:
          spx_free(m_probname);  /*lint !e1551*/
    }
 
-   void setAutoPricer()
+   void setAutoPricer(bool initialphase)
+   {
+      if( initialphase )
+         setPricer(&m_price_devex);
+      else
+         setPricer(&m_price_steep);
+      m_autopricing = true;
+   }
+
+   void setFullPricer()
    {
       setPricer(&m_price_steep);
+      m_autopricing = false;
    }
 
    void setSteepPricer()
    {
       setPricer(&m_price_steep);
+      m_autopricing = false;
+   }
+
+   void setSteepQStartPricer()
+   {
+      setPricer(&m_price_steep);
+      m_autopricing = false;
    }
 
    void setParmultPricer()
    {
       setPricer(&m_price_parmult);
+      m_autopricing = false;
    }
 
    void setDevexPricer()
    {
       setPricer(&m_price_devex);
+      m_autopricing = false;
    }
 
    bool getFromScratch() const
@@ -189,6 +215,21 @@ public:
 	    Param::setVerbose(2);
 	 else 
 	    Param::setVerbose(0);
+
+         /* in auto pricing, do the first 10000 iterations with devex, then switch to steepest edge */
+         if( m_autopricing && terminationIter() >= 100*AUTOPRICING_ITERSWITCH && SPxBasis::status() < SPxBasis::REGULAR )
+         {
+            int olditlim = terminationIter();
+
+            setAutoPricer(true);
+            setTerminationIter(AUTOPRICING_ITERSWITCH);
+            m_stat = SPxSolver::solve();
+            m_autophase1iters = SPxSolver::iterations();
+            setTerminationIter(olditlim);
+            setAutoPricer(false);
+         }
+         else
+            m_autophase1iters = 0;
          m_stat = SPxSolver::solve();
       }
 #if SOPLEX_VERSION >= 133
@@ -225,6 +266,11 @@ public:
    Status getStatus() const
    {
       return m_stat;
+   }
+
+   int iterations() const
+   {
+      return SPxSolver::iterations() + m_autophase1iters;
    }
 
    virtual void clear()
@@ -621,11 +667,14 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->rstat = NULL;
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
-   (*lpi)->pricing = SCIP_PRICING_AUTO;
+   (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    invalidateSolution(*lpi);
 
    /* set objective sense */
    SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
+
+   /* set default pricing */
+   SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
 
    return SCIP_OKAY;
 }
@@ -1498,7 +1547,7 @@ SCIP_RETCODE spxSolve(
    
    /* set the algorithm type */
    lpi->spx->setType(type);
-   
+
    SPxSolver::Status status = lpi->spx->solve();
    SCIPdebugMessage(" -> SOPLEX status: %d, basis status: %d\n", lpi->spx->getStatus(), lpi->spx->basis().status());
    lpi->solved = TRUE;
@@ -1622,6 +1671,9 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    oldItlim = spx->terminationIter();             
    spx->setTerminationIter(itlim);
+
+   /* set the algorithm type to use dual simplex */
+   lpi->spx->setType(SPxSolver::LEAVE);
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, 1e-06);
@@ -2671,16 +2723,21 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->pricing = (SCIP_PRICING)ival;
       switch( lpi->pricing )
       {
+      case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_AUTO:
+         lpi->spx->setAutoPricer(false);
+         break;
       case SCIP_PRICING_FULL:
-         lpi->spx->setAutoPricer();
+         lpi->spx->setFullPricer();
          break;
       case SCIP_PRICING_PARTIAL:
          lpi->spx->setParmultPricer();
          break;
       case SCIP_PRICING_STEEP:
-      case SCIP_PRICING_STEEPQSTART:
          lpi->spx->setSteepPricer();
+	 break;
+      case SCIP_PRICING_STEEPQSTART:
+         lpi->spx->setSteepQStartPricer();
 	 break;
       case SCIP_PRICING_DEVEX:
          lpi->spx->setDevexPricer();

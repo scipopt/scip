@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.196 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.197 2008/08/31 02:09:51 bzfpfend Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -144,7 +144,7 @@
                                                  *   barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
                                                  *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
-#define SCIP_DEFAULT_LP_PRICING             's' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial,
+#define SCIP_DEFAULT_LP_PRICING             'l' /**< LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial,
                                                  *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
                                                  *   'd'evex pricing) */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
@@ -669,8 +669,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/pricing",
-         "LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
-         &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "afpsqd",
+         "LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
+         &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "lafpsqd",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",

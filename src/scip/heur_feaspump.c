@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.51 2008/08/30 21:27:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.52 2008/08/31 02:09:51 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -38,7 +38,7 @@
 
 #define DEFAULT_MAXLPITERQUOT    0.01   /**< maximal fraction of diving LP iterations compared to node LP iterations */
 #define DEFAULT_MAXLPITEROFS     1000   /**< additional number of allowed LP iterations */
-#define DEFAULT_MAXSOLS             5   /**< total number of feasible solutions found up to which heuristic is called
+#define DEFAULT_MAXSOLS             2   /**< total number of feasible solutions found up to which heuristic is called
                                          *   (-1: no limit) */
 #define DEFAULT_MAXLOOPS        10000   /**< maximal number of pumping rounds (-1: no limit) */
 #define DEFAULT_MAXSTALLLOOPS      10   /**< maximal number of pumping rounds without fractionality improvement (-1: no limit) */
@@ -48,7 +48,7 @@
 #define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round, 
                                          *   1.0 for dynamic, depending on solutions already found */
 
-#define MINLPITER               10000   /**< minimal number of LP iterations allowed in each LP solving call */
+#define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
 
 
@@ -300,6 +300,19 @@ SCIP_DECL_HEUREXITSOL(heurExitsolFeaspump)
 }
 
 
+/** calculates an adjusted maximal number of LP iterations */
+static
+SCIP_Longint adjustedMaxNLPIterations(
+   SCIP_Longint          maxnlpiterations,   /**< regular maximal number of LP iterations */
+   int                   nstallloops         /**< current number of stalling rounds */
+   )
+{
+   if( nstallloops <= 1 )
+      return 2*maxnlpiterations;
+   else
+      return maxnlpiterations;
+}
+
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecFeaspump)
@@ -371,12 +384,16 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* only call feaspump once at the root: if timing mask has already been reset and we are at the root node, skip it */
-   if( SCIPgetDepth(scip) == 0 && SCIPheurGetTimingmask(heur) == HEUR_TIMING )
+   /* only call feaspump once at the root */
+   if( SCIPgetDepth(scip) == 0 && SCIPheurGetNCalls(heur) > 0 )
       return SCIP_OKAY;
 
    /* reset the timing mask to its default value (at the root node it could be different) */
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
+
+   /* only call the heuristic before cutting planes if we do not have an incumbent */
+   if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetNSolsFound(scip) > 0 )
+      return SCIP_OKAY;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
@@ -392,9 +409,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    assert(0 <= nfracs && nfracs <= nbinvars + nintvars);
    if( nfracs == 0 )
       return SCIP_OKAY;
-   
+
    /* calculate the maximal number of LP iterations until heuristic is aborted */
-   nlpiterations = SCIPgetNNodeLPIterations(scip);
+   nlpiterations = SCIPgetNLPIterations(scip);
    ncalls = SCIPheurGetNCalls(heur);
    nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
    maxnlpiterations = (SCIP_Longint)((1.0 + 10.0*(nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
@@ -404,6 +421,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    if( heurdata->nlpiterations >= maxnlpiterations )
       return SCIP_OKAY;
    
+   /* at the first root call, allow more iterations if there is no feasible solution yet */
+   if( SCIPheurGetNCalls(heur) == 0 && SCIPgetNSolsFound(scip) == 0 && SCIPgetDepth(scip) == 0 )
+      maxnlpiterations += 0.75*nlpiterations;
+
    /* allow at least a certain number of LP iterations in this dive */
    maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
    
@@ -412,7 +433,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    maxloops = (heurdata->maxloops == -1 ? INT_MAX : heurdata->maxloops);
    maxstallloops = (heurdata->maxstallloops == -1 ? INT_MAX : heurdata->maxstallloops);
    
-   SCIPdebugMessage("executing feasibility pump heuristic, maxnlpit:%"SCIP_LONGINT_FORMAT", maxflips:%d \n", maxnlpiterations, maxflips);
+   SCIPdebugMessage("executing feasibility pump heuristic, nlpiters=%"SCIP_LONGINT_FORMAT", maxnlpit:%"SCIP_LONGINT_FORMAT", maxflips:%d \n",
+                    nlpiterations, maxnlpiterations, maxflips);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -448,14 +470,18 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    nstallloops = 0;
    nbestsolsfound = SCIPgetNBestSolsFound(scip);
    bestnfracs = INT_MAX;
-   while( !SCIPisStopped(scip) && nfracs > 0 &&  heurdata->nlpiterations < maxnlpiterations
+   while( !SCIPisStopped(scip) && nfracs > 0
+      && heurdata->nlpiterations < adjustedMaxNLPIterations(maxnlpiterations, nstallloops)
       && nloops < maxloops && nstallloops < maxstallloops )
    {
+      SCIP_Longint nlpiterationsleft;
+      int iterlimit;
+
       nloops++;
       alpha *= objfactor;
 
-      SCIPdebugMessage("feasibility pump loop %d: %d fractional variables (stall: %d/%d)\n", 
-         nloops, nfracs, nstallloops, maxstallloops);
+      SCIPdebugMessage("feasibility pump loop %d: %d fractional variables (alpha: %.4f, stall: %d/%d)\n", 
+         nloops, nfracs, alpha, nstallloops, maxstallloops);
 
       /* create solution from diving LP and try to round it */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
@@ -581,13 +607,16 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       
       /* the LP with the new (distance) objective is solved */
       nlpiterations = SCIPgetNLPIterations(scip);
-      SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+      nlpiterationsleft = adjustedMaxNLPIterations(maxnlpiterations, nstallloops) - heurdata->nlpiterations;
+      iterlimit = MAX((int)nlpiterationsleft, MINLPITER);
+      SCIPdebugMessage(" -> solve LP with iteration limit %d\n", iterlimit);
+      SCIP_CALL( SCIPsolveDiveLP(scip, iterlimit, &lperror) );
       lpsolstat = SCIPgetLPSolstat(scip);
 
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n", 
-         heurdata->nlpiterations, maxnlpiterations);
+      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", lperror=%d, lpsolstat=%d\n", 
+         heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nstallloops), lperror, lpsolstat);
 
       /* check whether LP was solved optimal */
       if( lperror || lpsolstat != SCIP_LPSOLSTAT_OPTIMAL )
@@ -609,6 +638,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
       else
          nstallloops++;
+
+      SCIPdebugMessage(" -> loop finished: %d fractional variables (stall: %d/%d, iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n", 
+         nfracs, nstallloops, maxstallloops, heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nstallloops));
    }
 
    /* try final solution, if no more fractional variables are left */
@@ -635,6 +667,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    SCIPfreeBufferArray(scip, &lastroundedsols);
    SCIPfreeBufferArray(scip, &mostfracvals);
    SCIPfreeBufferArray(scip, &mostfracvars);
+
+   SCIPdebugMessage("feasibility pump finished.\n");
 
    return SCIP_OKAY;
 }

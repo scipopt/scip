@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.277 2008/08/28 13:39:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.278 2008/08/31 02:09:51 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2109,6 +2109,9 @@ SCIP_RETCODE lpSetPricingChar(
 
    switch( pricingchar )
    {
+   case 'l':
+      pricing = SCIP_PRICING_LPIDEFAULT;
+      break;
    case 'a':
       pricing = SCIP_PRICING_AUTO;
       break;

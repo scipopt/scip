@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.21 2008/04/17 17:49:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.22 2008/08/31 02:09:51 bzfpfend Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -56,12 +56,13 @@ typedef enum SCIP_LPParam SCIP_LPPARAM;
 /** LP pricing strategy */
 enum SCIP_Pricing
 {
-   SCIP_PRICING_AUTO        = 0,        /**< the LP solver should use its preferred strategy */
-   SCIP_PRICING_FULL        = 1,        /**< full pricing */
-   SCIP_PRICING_PARTIAL     = 2,        /**< partial pricing */
-   SCIP_PRICING_STEEP       = 3,        /**< steepest edge pricing */
-   SCIP_PRICING_STEEPQSTART = 4,        /**< steepest edge pricing without initial dual norms */
-   SCIP_PRICING_DEVEX       = 5         /**< devex pricing */
+   SCIP_PRICING_LPIDEFAULT  = 0,        /**< the SCIP/LP interface should use its preferred strategy */
+   SCIP_PRICING_AUTO        = 1,        /**< the LP solver should use its preferred strategy */
+   SCIP_PRICING_FULL        = 2,        /**< full pricing */
+   SCIP_PRICING_PARTIAL     = 3,        /**< partial pricing */
+   SCIP_PRICING_STEEP       = 4,        /**< steepest edge pricing */
+   SCIP_PRICING_STEEPQSTART = 5,        /**< steepest edge pricing without initial dual norms */
+   SCIP_PRICING_DEVEX       = 6         /**< devex pricing */
 };
 typedef enum SCIP_Pricing SCIP_PRICING;
 

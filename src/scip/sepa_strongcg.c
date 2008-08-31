@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.28 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.29 2008/08/31 02:09:51 bzfpfend Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -63,6 +63,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of strong CG separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of strong CG cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of strong CG cuts separated per separation round in root node */
+   int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
@@ -287,6 +288,22 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
+
+   /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
+   if( ncols >= 50*nrows )
+      return SCIP_OKAY;
+   if( ncols >= 5*nrows )
+   {
+      int ncutsfound;
+
+      ncutsfound = SCIPgetNCutsFound(scip);
+      if( ncutsfound > sepadata->lastncutsfound || !SCIPsepaWasLPDelayed(sepa) )
+      {
+         sepadata->lastncutsfound = ncutsfound;
+         *result = SCIP_DELAYED;
+         return SCIP_OKAY;
+      }
+   }
 
    /* get the type of norm to use for efficacy calculations */
    SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
@@ -521,6 +538,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIPfreeBufferArray(scip, &cutcoefs);
 
    SCIPdebugMessage("end searching strong CG cuts: found %d cuts\n", ncuts);
+
+   sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 
    return SCIP_OKAY;
 }

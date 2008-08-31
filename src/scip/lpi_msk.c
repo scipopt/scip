@@ -729,7 +729,7 @@ SCIP_RETCODE SCIPlpiCreate(SCIP_LPI**            lpi,                /**< pointe
 
   (*lpi)->termcode   = MSK_RES_OK;
   (*lpi)->itercount  = 0;
-  (*lpi)->pricing    = SCIP_PRICING_AUTO;
+  (*lpi)->pricing    = SCIP_PRICING_LPIDEFAULT;
   (*lpi)->lpid       = nextlpid++;
   (*lpi)->skxsize    = 0;
   (*lpi)->skcsize    = 0;
@@ -5075,7 +5075,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 
   #if MSK_VERSION_MAJOR >= 5
   #if SCIP_CONTROLS_PRICING
-  static int pricing[6] = {
+  static int pricing[7] = {
+      MSK_SIM_SELECTION_SE,
       MSK_SIM_SELECTION_FREE,
       MSK_SIM_SELECTION_FULL,
       MSK_SIM_SELECTION_PARTIAL,
@@ -5085,7 +5086,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
   };
   #endif
   #else
-  static int pricing[6] = {
+  static int pricing[7] = {
+      MSK_SIM_SELECTION_SE,
       MSK_SIM_SELECTION_FREE,
       MSK_SIM_SELECTION_FULL,
       MSK_SIM_SELECTION_PARTIAL,
@@ -5095,12 +5097,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
   };
   #endif
 
-  assert(SCIP_PRICING_AUTO        == 0);
-  assert(SCIP_PRICING_FULL        == 1);
-  assert(SCIP_PRICING_PARTIAL     == 2);
-  assert(SCIP_PRICING_STEEP       == 3);
-  assert(SCIP_PRICING_STEEPQSTART == 4);
-  assert(SCIP_PRICING_DEVEX == 5);
+  assert(SCIP_PRICING_LPIDEFAULT  == 0);
+  assert(SCIP_PRICING_AUTO        == 1);
+  assert(SCIP_PRICING_FULL        == 2);
+  assert(SCIP_PRICING_PARTIAL     == 3);
+  assert(SCIP_PRICING_STEEP       == 4);
+  assert(SCIP_PRICING_STEEPQSTART == 5);
+  assert(SCIP_PRICING_DEVEX       == 6);
 
   #if DEBUG_PRINT_CALLS
   printf("Calling SCIPlpiSetIntpar (%d) %s = %d\n",lpi->lpid,paramty2str(type),ival);

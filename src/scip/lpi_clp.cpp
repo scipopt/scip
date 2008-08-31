@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.44 2008/08/30 21:24:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.45 2008/08/31 02:09:51 bzfpfend Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -91,7 +91,7 @@ struct SCIP_LPi
    int                   rstatsize;                  /**< size of rstat array */
    bool                  startscratch;               /**< start from scratch? */
    bool                  presolving;                 /**< preform preprocessing? */
-   int                   pricing;                    /**< scip pricing setting  */
+   SCIP_PRICING          pricing;                    /**< SCIP pricing setting  */
    bool                  validFactorization;         /**< whether we have a valid factorization in clp */
    SCIP_Bool             solved;                     /**< was the current LP solved? */
    bool                  setFactorizationFrequency;  /**< store whether the factorization frequency is set */
@@ -445,7 +445,7 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
    (*lpi)->startscratch = true;
-   (*lpi)->pricing = SCIP_PRICING_AUTO;
+   (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->validFactorization = false;
    (*lpi)->setFactorizationFrequency = false;
    (*lpi)->fastmip = FALSE;
@@ -483,6 +483,9 @@ SCIP_RETCODE SCIPlpiCreate(
 
    // turn off scaling by default
    (*lpi)->clp->scaling(0);
+
+   /* set default pricing */
+   SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
 
    return SCIP_OKAY;
 }
@@ -2785,7 +2788,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
 	 *ival = FALSE;
       break;
    case SCIP_LPPAR_PRICING:
-      *ival = lpi->pricing;          // store pricing method in LPI struct
+      *ival = (int)lpi->pricing;          // store pricing method in LPI struct
       break;
    case SCIP_LPPAR_LPINFO:
       *ival = lpi->clp->logLevel() > 0 ? TRUE : FALSE;
@@ -2833,17 +2836,24 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       // 2 is partial uninitialized,
       // 3 starts as 2 but may switch to 1.
       // - currently (Clp 1.8) default is 3
-      lpi->pricing = ival;
+      lpi->pricing = (SCIP_PRICING)ival;
       int primalmode = 0;
       int dualmode = 0;
-      switch (ival)
+      switch( (SCIP_PRICING)ival )
       {
-      case SCIP_PRICING_AUTO: primalmode = 3; dualmode = 3; break;
-      case SCIP_PRICING_FULL: primalmode = 0; dualmode = 1; break;
-      case SCIP_PRICING_STEEP: primalmode = 1; dualmode = 0; break;
-      case SCIP_PRICING_STEEPQSTART: primalmode = 1; dualmode = 2; break;
-      case SCIP_PRICING_DEVEX: primalmode = 2; dualmode = 3; break;
-      default: SCIPerrorMessage("unkown pricing parameter %d!\n", ival); SCIPABORT();
+      case SCIP_PRICING_AUTO:
+         primalmode = 3; dualmode = 3; break;
+      case SCIP_PRICING_FULL:
+         primalmode = 0; dualmode = 1; break;
+      case SCIP_PRICING_LPIDEFAULT:
+      case SCIP_PRICING_STEEP:
+         primalmode = 1; dualmode = 0; break;
+      case SCIP_PRICING_STEEPQSTART:
+         primalmode = 1; dualmode = 2; break;
+      case SCIP_PRICING_DEVEX:
+         primalmode = 2; dualmode = 3; break;
+      default:
+         SCIPerrorMessage("unkown pricing parameter %d!\n", ival); SCIPABORT();
       }
       ClpPrimalColumnSteepest primalpivot(primalmode);
       lpi->clp->setPrimalColumnPivotAlgorithm(primalpivot);      

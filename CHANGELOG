@@ -57,6 +57,9 @@ interface:
   that are sorted w.r.t. the first vector
 - new method SCIPcalcHashtableSize() to get a reasonable hash table size
 - new methods SCIPheurGetTimingmask() and SCIPheurSetTimingmask()
+- added new LPI pricing option SCIP_PRICING_LPIDEFAULT, such that every LP interface can set the default pricing strategy
+  on its own ('auto' is not useful for this, because for CPLEX, for example, SCIP seems to be worse with 'auto' then with
+  'steepest edge')
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -104,7 +107,7 @@ plugins:
 - added reader for pseudo-Boolean problems (reader_opb.{c,h})
 - added first version of constraint handler cons_countsols.{c,h}
 - tighter memory limits in knapsack presolve lifting procedure to avoid overly expensive presolving
-- feasibility pump is now called directly after the initial root LP solve
+- feasibility pump is now called directly after the initial root LP solve, if there is no solution yet
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),
@@ -129,6 +132,7 @@ parameters:
 - new parameter "constraints/countsols/collect" to enable the storing of the solutions; default value FALSE;
 - new parameter "constraints/indicator/addCoupling" to enable generation of relaxation
 - removed parameter "separating/cmir/maxtestdeltaroot"
+- new value 'l' for parameter "lp/pricing", which is the new default
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
