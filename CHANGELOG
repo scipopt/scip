@@ -84,23 +84,17 @@ features:
 - updated mmm.{test,solu}, mittelmann.{test,solu}, miplib3.solu, miplib.solu, shortmiplib.test and added mittelmann_current.test, mittelmann_old.test 
 - LPI now has a function SCIPlpiGetSolverPointer() that returns a solver dependent pointer. This can be used to directly access the LP solver. 
   This should, of course, only be used by people that know exactly what they are doing.
-- improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
-- better branching in SOS1/SOS2 constraints
 - added ccg-reader (weighted column connectivity graph)
 - cons_countsols.c is now able to store the collected solution if required
 - check.awk now uses TeX package supertabular which supports automatic pagebreak
 - struct SCIP_Stat has now two additional variables: nprobboundchgs, nprobholechgs; 
   these are used to fix the domain reduction counts in sepa.c, cons.c, branch.c, and prop.c; 
   this means, that now the domain reduction counts are reduced by those domain reduceds which are preformed during probing
-- improved pairwise presolving in cons_linear.c: reduced cache misses, reduced number of SCIPisStopped() calls and 
-  included detecting of redundant constraints with hash table in advance
 - The SoPlex LPI can now write basis files.
 - added capabilities to avoid multi-aggregation by setting a corresponding flag (SCIPmarkDoNotMultaggrVar())
 - added capabilities to flatten the (multi)-aggregation graph of variables
 - the ZPL reader is now able to pass a starting solution to SCIP
-- small performance improvement of c-MIR aggregation heuristic
 - revised lpi_clp.cpp (many small changes, in particular writing and reading of bases)
-- reworked strong branching in lpi_clp.cpp (scaling works now, bounds can be trusted)
 - added FASTMIP settings in lpi_clp.cpp that try to improve the performance of Clp as much as possible
 
 plugins:
@@ -109,7 +103,6 @@ plugins:
 - less aggressive scaling in linear constraint handler presolve to improve numerics
 - added reader for pseudo-Boolean problems (reader_opb.{c,h})
 - added first version of constraint handler cons_countsols.{c,h}
-- tighter memory limits in knapsack presolve lifting procedure to avoid overly expensive presolving
 - feasibility pump is now called directly after the initial root LP solve, if there is no solution yet
 
 parameters:
@@ -136,6 +129,19 @@ parameters:
 - new parameter "constraints/indicator/addCoupling" to enable generation of relaxation
 - removed parameter "separating/cmir/maxtestdeltaroot"
 - new value 'l' for parameter "lp/pricing", which is the new default
+
+performance improvements:
+- improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
+- better branching in SOS1/SOS2 constraints
+- improved pairwise presolving in cons_linear.c: reduced cache misses, reduced number of SCIPisStopped() calls and 
+  included detecting of redundant constraints with hash table in advance
+- small performance improvement of c-MIR aggregation heuristic
+- tighter memory limits in knapsack presolve lifting procedure to avoid overly expensive presolving
+- heavily decreased the usage of SCIPisStopped(), which costs system time
+- fixed performance bug with large number of unnamed constraints that will kill the name hash table
+  (now, unnamed constraints are not put into the hash table)
+- reworked strong branching in lpi_clp.cpp (scaling works now, bounds can be trusted)
+- improved performance of SCIPvarGetLPSol(), which affects many parts of the code, in particular Gomory and strong CG cuts
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
@@ -199,12 +205,9 @@ fixed bugs:
 - fixed bug in preprocessConstraintPairs() in cons_linear.c concerning updating the flags of the constraint that
   stayes in the problem (nonredundant information were lost before) 
 - fixed bug with exponential running times due to complicated recursive multi-aggregation
-- heavily decreased the usage of SCIPisStopped(), which costs system time
 - fixed bug with memory reallocation in SCIPgetProbvarLinearSum()
 - improved stage checking for bound computation
 - fixed usage of command test for string comparision in check-scripts (now compatible with ubuntu)
-- fixed performance bug with large number of unnamed constraints that will kill the name hash table
-  (now, unnamed constraints are not put into the hash table)
 - corrected imlementation of SCIPlpiGetBasisInd() in lpi_clp.cpp (this fixes the bug that almost no Gomory cuts are found with Clp).
 - weakened two too strong asserts in lp.c concerning the LP result OBJLIMIT
 
