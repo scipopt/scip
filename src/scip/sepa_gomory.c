@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.70 2008/09/01 18:20:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.71 2008/09/01 21:06:51 bzfpfets Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -55,6 +55,8 @@
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.95
+
+#define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
 
 
 /** separator data */
@@ -292,6 +294,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
 
+#if 0
    /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
    if( ncols >= 50*nrows )
       return SCIP_OKAY;
@@ -307,6 +310,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          return SCIP_OKAY;
       }
    }
+#endif
 
    /* get the type of norm to use for efficacy calculations */
    SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
@@ -413,7 +417,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
          /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
-               sepadata->maxweightrange, MINFRAC, MAXFRAC,
+               MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);

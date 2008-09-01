@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.12 2008/08/22 13:36:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.13 2008/09/01 21:06:51 bzfpfets Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -67,6 +67,8 @@
 #define MAXDELTA                  1e-09 
 #define MAXSCALE                 1000.0 
 #define MAXDYNPROGSPACE         1000000 
+
+#define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
 
 
 
@@ -2179,7 +2181,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and delta */
       SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
-            1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, cutcoefs, &cutrhs, &cutact, 
+            MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       
@@ -2224,7 +2226,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and bestdelta */
       SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
-            1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
+            MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 

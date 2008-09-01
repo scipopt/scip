@@ -63,6 +63,7 @@ interface:
 - SCIPgetVarRedcost() now returns 0 for variables that have been aggregated out or removed in presolving.
 - new methods SCIPgetVarFarkasCoef() and SCIPgetColFarkasCoef() to get the
   farkas coefficient of a variable (analogon of reduced cost in case of infeasible LPs)
+- new parameter "maxmksetcoefs" for SCIPcalcMIR() and SCIPcalcStrongCG() methods
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -142,6 +143,7 @@ performance improvements:
   (now, unnamed constraints are not put into the hash table)
 - reworked strong branching in lpi_clp.cpp (scaling works now, bounds can be trusted)
 - improved performance of SCIPvarGetLPSol(), which affects many parts of the code, in particular Gomory and strong CG cuts
+- do not calculate MIR and StrongCG cut aggregations if number of nonzeros in aggregated row is too large
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c

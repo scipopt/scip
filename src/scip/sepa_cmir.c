@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.74 2008/08/28 21:25:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.75 2008/09/01 21:06:51 bzfpfets Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -69,6 +69,8 @@
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
+
+#define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
 
 
 
@@ -364,7 +366,7 @@ SCIP_RETCODE tryDelta(
 
       /* create a MIR cut out of the weighted LP rows */
       SCIP_CALL( SCIPcalcMIR(scip, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, 
-            maxweightrange, minfrac, maxfrac, rowweights, delta, mksetcoefs, cutcoefs, &cutrhs, &cutact, 
+            MAXAGGRLEN(nvars), maxweightrange, minfrac, maxfrac, rowweights, delta, mksetcoefs, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       SCIPdebugMessage("delta = %g  -> success: %d\n", delta, success);
@@ -553,7 +555,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
 
       /* generate cut with bestdelta and best boundswitch value */
       SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, fixintegralrhs, NULL, NULL, 
-            maxweightrange, MINFRAC, MAXFRAC, rowweights, bestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
+            MAXAGGRLEN(nvars), maxweightrange, MINFRAC, MAXFRAC, rowweights, bestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 

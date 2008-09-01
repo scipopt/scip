@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.280 2008/09/01 12:28:39 bzforlow Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.281 2008/09/01 21:06:51 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6652,7 +6652,8 @@ SCIP_Real getMaxAbsWeightCalcSparsity(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
-   int*                  nrowinds            /**< pointer to store number of used rows */
+   int*                  nrowinds,           /**< pointer to store number of used rows */
+   int*                  rowlensum           /**< pointer to store total numer of non-zeros in used rows */
    )
 {
    SCIP_Real maxabsweight;
@@ -6664,6 +6665,7 @@ SCIP_Real getMaxAbsWeightCalcSparsity(
    assert(nrowinds != NULL);
 
    *nrowinds = 0;
+   *rowlensum = 0;
 
    maxabsweight = 0.0;
    for( r = 0; r < lp->nrows; ++r )
@@ -6677,6 +6679,8 @@ SCIP_Real getMaxAbsWeightCalcSparsity(
       /* record the row in the sparsity pattern */
       rowinds[*nrowinds] = r;
       (*nrowinds)++;
+
+      (*rowlensum) += SCIProwGetNNonz(lp->rows[r]);
 
       absweight = REALABS(weights[r]);
       maxabsweight = MAX(maxabsweight, absweight);
@@ -6765,6 +6769,7 @@ void sumMIRRow(
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size prob->nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
@@ -6775,10 +6780,12 @@ void sumMIRRow(
    int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
    int*                  nrowinds,           /**< pointer to store number of used rows */
    SCIP_Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
-   SCIP_Bool*            localrowsused       /**< pointer to store whether local rows were used in summation */
+   SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
+   SCIP_Bool*            rowtoolong          /**< pointer to store whether the aggregated row is too long and thus invalid */
    )
 {
    SCIP_Real maxweight;
+   int rowlensum;
    int i;
 
    assert(prob != NULL);
@@ -6796,22 +6803,31 @@ void sumMIRRow(
    assert(nrowinds != NULL);
    assert(emptyrow != NULL);
    assert(localrowsused != NULL);
+   assert(rowtoolong != NULL);
 
    *nvarinds = 0;
    *nrowinds = 0;
+   *mirrhs = 0.0;
+   *emptyrow = TRUE;
+   *localrowsused = FALSE;
+   *rowtoolong = FALSE;
 
    /* initialize varused array */
    BMSclearMemoryArray(varused, prob->nvars);
 
    /* search the maximal absolute weight and calculate the row sparsity pattern */
-   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds);
+   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds, &rowlensum);
    maxweight *= ABS(scale);
+
+   /* if the total number of non-zeros is way too large, we just skip this aggregation */
+   if( rowlensum/5 > maxmksetcoefs )
+   {
+      *rowtoolong = TRUE;
+      return;
+   }
 
    /* calculate the row summation */
    BMSclearMemoryArray(mircoef, prob->nvars);
-   *mirrhs = 0.0;
-   *emptyrow = TRUE;
-   *localrowsused = FALSE;
    for( i = 0; i < *nrowinds; i++ )
    {
       SCIP_ROW* row;
@@ -6869,6 +6885,10 @@ void sumMIRRow(
 #endif
       }
    }
+
+   /* check if the total number of non-zeros is too large */
+   if( *nrowinds > maxmksetcoefs )
+      *rowtoolong = TRUE;
 }
 
 /** removes all nearly-zero coefficients from MIR row and relaxes the right hand side correspondingly in order to
@@ -7991,6 +8011,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
                                               *   NULL for using closest bound for all variables */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
@@ -8019,6 +8040,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Bool freevariable;
    SCIP_Bool localrowsused;
    SCIP_Bool localbdsused;
+   SCIP_Bool rowtoolong;
 
    assert(lp != NULL);
    assert(lp->solved);
@@ -8047,11 +8069,11 @@ SCIP_RETCODE SCIPlpCalcMIR(
 
    /* calculate the row summation */
    sumMIRRow(set, prob, lp, weights, scale, allowlocal, 
-      maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
-      &emptyrow, &localrowsused);
+      maxmksetcoefs, maxweightrange, mircoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
+      &emptyrow, &localrowsused, &rowtoolong);
    assert(allowlocal || !localrowsused);
    *cutislocal = localrowsused;
-   if( emptyrow )
+   if( emptyrow || rowtoolong )
       goto TERMINATE;
    SCIPdebug(printMIR(prob, mircoef, rhs));
 
@@ -8183,6 +8205,7 @@ void sumStrongCGRow(
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Bool             allowlocal,         /**< should local rows be included, resulting in a locally valid summation? */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size prob->nvars */
    SCIP_Real*            strongcgrhs,        /**< pointer to store the right hand side of the strong CG row */
@@ -8193,10 +8216,12 @@ void sumStrongCGRow(
    int*                  rowinds,            /**< array to store sparsity pattern of used rows; size lp->nrows */
    int*                  nrowinds,           /**< pointer to store number of used rows */
    SCIP_Bool*            emptyrow,           /**< pointer to store whether the returned row is empty */
-   SCIP_Bool*            localrowsused       /**< pointer to store whether local rows were used in summation */
+   SCIP_Bool*            localrowsused,      /**< pointer to store whether local rows were used in summation */
+   SCIP_Bool*            rowtoolong          /**< pointer to store whether the aggregated row is too long and thus invalid */
    )
 {
    SCIP_Real maxweight;
+   int rowlensum;
    int i;
 
    assert(prob != NULL);
@@ -8217,19 +8242,27 @@ void sumStrongCGRow(
 
    *nvarinds = 0;
    *nrowinds = 0;
+   *localrowsused = FALSE;
+   *strongcgrhs = 0.0;
+   *emptyrow = TRUE;
+   *rowtoolong = FALSE;
 
    /* initialize varused array */
    BMSclearMemoryArray(varused, prob->nvars);
 
    /* search the maximal absolute weight and calculate the row sparsity pattern */
-   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds);
+   maxweight = getMaxAbsWeightCalcSparsity(lp, weights, rowinds, nrowinds, &rowlensum);
    maxweight *= ABS(scale);
+
+   /* if the total number of non-zeros is way too large, we just skip this aggregation */
+   if( rowlensum/5 > maxmksetcoefs )
+   {
+      *rowtoolong = TRUE;
+      return;
+   }
 
    /* calculate the row summation */
    BMSclearMemoryArray(strongcgcoef, prob->nvars);
-   *strongcgrhs = 0.0;
-   *emptyrow = TRUE;
-   *localrowsused = FALSE;
    for( i = 0; i < *nrowinds; i++ )
    {
       SCIP_ROW* row;
@@ -8314,6 +8347,10 @@ void sumStrongCGRow(
 #endif
       }
    }
+
+   /* check if the total number of non-zeros is too large */
+   if( *nrowinds > maxmksetcoefs )
+      *rowtoolong = TRUE;
 }
 
 /** Transform equation  a*x == b, lb <= x <= ub  into standard form
@@ -8973,6 +9010,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
@@ -9001,6 +9039,7 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Bool freevariable;
    SCIP_Bool localrowsused;
    SCIP_Bool localbdsused;
+   SCIP_Bool rowtoolong;
 
    assert(lp != NULL);
    assert(lp->solved);
@@ -9030,11 +9069,11 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
 
    /* calculate the row summation */
    sumStrongCGRow(set, prob, lp, weights, scale, allowlocal, 
-      maxweightrange, strongcgcoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
-      &emptyrow, &localrowsused);
+      maxmksetcoefs, maxweightrange, strongcgcoef, &rhs, slacksign, varused, varinds, &nvarinds, rowinds, &nrowinds,
+      &emptyrow, &localrowsused, &rowtoolong);
    assert(allowlocal || !localrowsused);
    *cutislocal = *cutislocal || localrowsused;
-   if( emptyrow )
+   if( emptyrow || rowtoolong )
       goto TERMINATE;
    SCIPdebug(printMIR(prob, strongcgcoef, rhs));
    

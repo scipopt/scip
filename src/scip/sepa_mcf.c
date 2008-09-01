@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.52 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.53 2008/09/01 21:06:52 bzfpfets Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -77,6 +77,8 @@
 #define ALLOWLOCAL                 TRUE
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
+
+#define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
 
 #define MINCOMNODESFRACTION         0.5 /**< minimal size of commodity relative to largest commodity to keep it in the network */
 #define MINNODES                      3 /**< minimal number of nodes in network to keep it for separation */
@@ -4939,8 +4941,9 @@ SCIP_RETCODE generateClusterCuts(
 
          SCIPdebugMessage("applying MIR with delta = %g\n", deltas[d]);
          SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
-                                sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/deltas[d], NULL, cutcoefs, &cutrhs, &cutact,
-                                &success, &cutislocal) );
+	       MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/deltas[d],
+	       NULL, cutcoefs, &cutrhs, &cutact,
+	       &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
 
 #if 0
@@ -5102,8 +5105,8 @@ SCIP_RETCODE generateClusterCuts(
 
             SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
             SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
-                                   sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, cutcoefs, &cutrhs, &cutact,
-                                   &success, &cutislocal) );
+		  MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, cutcoefs, &cutrhs, &cutact,
+		  &success, &cutislocal) );
             assert(ALLOWLOCAL || !cutislocal);
 
             if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
