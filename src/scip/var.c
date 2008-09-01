@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.227 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.228 2008/09/01 19:38:31 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8094,7 +8094,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
 }
 
 /** gets primal LP solution value of variable */
-SCIP_Real SCIPvarGetLPSol(
+SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
@@ -10399,6 +10399,7 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetImplIds
 #undef SCIPvarGetNCliques
 #undef SCIPvarGetCliques
+#undef SCIPvarGetLPSol
 #undef SCIPvarCatchEvent
 #undef SCIPvarDropEvent
 #undef SCIPbdchgidxIsEarlierNonNull
@@ -11154,6 +11155,19 @@ SCIP_CLIQUE** SCIPvarGetCliques(
    assert(SCIPvarIsActive(var));
 
    return SCIPcliquelistGetCliques(var->cliquelist, varfixing);
+}
+
+/** gets primal LP solution value of variable */
+SCIP_Real SCIPvarGetLPSol(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIPcolGetPrimsol(var->data.col);
+   else
+      return SCIPvarGetLPSol_rec(var);
 }
 
 /** includes event handler with given data in variable's event filter */

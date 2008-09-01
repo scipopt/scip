@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.69 2008/08/15 20:40:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.70 2008/09/01 19:38:31 bzfpfets Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -627,6 +627,12 @@ SCIP_CLIQUE** SCIPvarGetCliques(
    SCIP_Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
    );
 
+/** gets primal LP solution value of variable */
+extern
+SCIP_Real SCIPvarGetLPSol(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -698,6 +704,7 @@ SCIP_CLIQUE** SCIPvarGetCliques(
 #define SCIPvarGetImplIds(var, fix)     (SCIPimplicsGetIds((var)->implics, fix))
 #define SCIPvarGetNCliques(var, fix)    (SCIPcliquelistGetNCliques((var)->cliquelist, fix))
 #define SCIPvarGetCliques(var, fix)     (SCIPcliquelistGetCliques((var)->cliquelist, fix))
+#define SCIPvarGetLPSol(var)            ((var)->varstatus == SCIP_VARSTATUS_COLUMN ? SCIPcolGetPrimsol((var)->data.col) : SCIPvarGetLPSol_rec(var))
 #endif
 
 /** gets best local bound of variable with respect to the objective function */
@@ -726,7 +733,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
 
 /** gets primal LP solution value of variable */
 extern
-SCIP_Real SCIPvarGetLPSol(
+SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
