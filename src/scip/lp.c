@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.279 2008/09/01 10:59:02 bzforlow Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.280 2008/09/01 12:28:39 bzforlow Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10402,7 +10402,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_CALL( lpSolveStable(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
 
                SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-               assert(objval > tmpcutoff - lp->looseobjval);
+               assert(SCIPsetIsGE(set, objval, tmpcutoff - lp->looseobjval));
 
                /* reinstall old cutoff bound and iteration limits in LP solver */
                lp->cutoffbound = tmpcutoff;
