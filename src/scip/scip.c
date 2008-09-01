@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.468 2008/08/29 20:20:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.469 2008/09/01 14:59:28 bzforlow Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5630,9 +5630,10 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
 }
 
 
-/** returns the reduced costs of the variable in the current node's LP relaxation,
- *  if the variable is not in the current LP, SCIP_INVALID will be returned,
- *  the current node has to have an LP
+/** Returns the reduced costs of the variable in the current node's LP relaxation;
+ *  the current node has to have a feasible LP.
+ *  Returns SCIP_INVALID if the variable is active but not in the current LP;
+ *  returns 0 if the variable has been aggregated out or fixed in presolving.
  */
 SCIP_Real SCIPgetVarRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5653,11 +5654,52 @@ SCIP_Real SCIPgetVarRedcost(
       return SCIPgetColRedcost(scip,SCIPvarGetCol(var));
 
    case SCIP_VARSTATUS_LOOSE:
+      return SCIP_INVALID;
+
    case SCIP_VARSTATUS_FIXED:
    case SCIP_VARSTATUS_AGGREGATED:
    case SCIP_VARSTATUS_MULTAGGR:
    case SCIP_VARSTATUS_NEGATED:
+      return 0;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return SCIP_INVALID; /*lint !e527*/
+   }
+}
+
+/** Returns the farkas coefficient of the variable in the current node's LP relaxation;
+ *  the current node has to have an infeasible LP.
+ *  Returns SCIP_INVALID if the variable is active but not in the current LP;
+ *  returns 0 if the variable has been aggregated out or fixed in presolving.
+ */
+SCIP_Real SCIPgetVarFarkasCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return SCIP_INVALID;
+      return SCIPgetVarFarkasCoef(scip,var->data.original.transvar);
+
+   case SCIP_VARSTATUS_COLUMN:
+      return SCIPgetColFarkasCoef(scip,SCIPvarGetCol(var));
+
+   case SCIP_VARSTATUS_LOOSE:
       return SCIP_INVALID;
+
+   case SCIP_VARSTATUS_FIXED:
+   case SCIP_VARSTATUS_AGGREGATED:
+   case SCIP_VARSTATUS_MULTAGGR:
+   case SCIP_VARSTATUS_NEGATED:
+      return 0;
 
    default:
       SCIPerrorMessage("unknown variable status\n");
@@ -9825,7 +9867,7 @@ SCIP_RETCODE SCIPgetLPI(
  * LP column methods
  */
 
-/** returns the reduced costs of a column in the last LP */
+/** returns the reduced costs of a column in the last (feasible) LP */
 SCIP_Real SCIPgetColRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
@@ -9843,6 +9885,22 @@ SCIP_Real SCIPgetColRedcost(
 }
 
 
+/** returns the farkas coefficient of a column in the last (infeasible) LP */
+SCIP_Real SCIPgetColFarkasCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
+   {
+      SCIPerrorMessage("cannot get farkas coeff, because node LP is not processed\n");
+      SCIPABORT();
+   }
+
+   return SCIPcolGetFarkasCoef(col, scip->stat, scip->lp);
+}
 
 
 /*

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.325 2008/08/22 13:36:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.326 2008/09/01 14:59:28 bzforlow Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1955,10 +1955,20 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    
 /** returns the reduced costs of the variable in the current node's LP relaxation, 
  *  if the variable is not in the current LP, SCIP_INVALID will be returned,
- *  the current node has to have an LP
+ *  the current node has to have a feasible LP
  */
 extern
 SCIP_Real SCIPgetVarRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
+   );
+
+/** returns the farkas coefficients of the variable in the current node's LP relaxation, 
+ *  if the variable is not in the current LP, SCIP_INVALID will be returned,
+ *  the current node has to have an infeasible LP
+ */
+extern
+SCIP_Real SCIPgetVarFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
@@ -3488,9 +3498,16 @@ SCIP_RETCODE SCIPgetLPI(
 /**@name LP Column Methods */
 /**@{ */
 
-/** returns the reduced costs of a column in the last LP */
+/** returns the reduced costs of a column in the last (feasible) LP */
 extern
 SCIP_Real SCIPgetColRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   );
+
+/** returns the farkas coefficient of a column in the last (infeasible) LP */
+extern
+SCIP_Real SCIPgetColFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
    );
