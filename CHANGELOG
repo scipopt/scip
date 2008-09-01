@@ -60,6 +60,9 @@ interface:
 - added new LPI pricing option SCIP_PRICING_LPIDEFAULT, such that every LP interface can set the default pricing strategy
   on its own ('auto' is not useful for this, because for CPLEX, for example, SCIP seems to be worse with 'auto' then with
   'steepest edge')
+- SCIPgetVarRedcost() now returns 0 for variables that have been aggregated out or removed in presolving.
+- new methods SCIPgetVarFarkasCoef() and SCIPgetColFarkasCoef() to get the
+  farkas coefficient of a variable (analogon of reduced cost in case of infeasible LPs)
 
 features:
 - the MPS reader is now able to write a problem in MPS format
@@ -203,6 +206,7 @@ fixed bugs:
 - fixed performance bug with large number of unnamed constraints that will kill the name hash table
   (now, unnamed constraints are not put into the hash table)
 - corrected imlementation of SCIPlpiGetBasisInd() in lpi_clp.cpp (this fixes the bug that almost no Gomory cuts are found with Clp).
+- weakened two too strong asserts in lp.c concerning the LP result OBJLIMIT
 
 
 
