@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.29 2008/08/31 02:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.30 2008/09/01 18:20:06 bzfheinz Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -564,6 +564,7 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   sepadata->lastncutsfound = 0;
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
