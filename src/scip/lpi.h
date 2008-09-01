@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.65 2008/04/17 17:49:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.66 2008/09/01 11:03:26 bzforlow Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -542,7 +542,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    );
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs */
 extern 
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
