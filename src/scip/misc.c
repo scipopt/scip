@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.84 2008/08/29 16:44:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.85 2008/09/01 18:38:55 bzfpfets Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -220,7 +220,7 @@ void** SCIPpqueueElems(
  */
 
 /** table of some prime numbers */
-static const int primetable[] = {
+static int primetable[] = {
    2,
    7,
    19,
@@ -282,7 +282,7 @@ int SCIPcalcHashtableSize(
    SCIP_Bool found;
    int pos;
 
-   found = SCIPsortedvecFindInt((int*)primetable, minsize, primetablesize, &pos);
+   found = SCIPsortedvecFindInt(primetable, minsize, primetablesize, &pos);
    assert(pos < primetablesize);
 
    return primetable[pos];
