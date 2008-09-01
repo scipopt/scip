@@ -61,6 +61,7 @@
 =opt= alu5_6                                     1e+20 
 =opt= alu6_6                                     1e+20 
 =opt= alu5_4                                     1e+20 
+=opt= alu8_2                                     1e+20 
 =opt= alu8_3                                     1e+20 
 =opt= alu9_4                                     1e+20 
 =opt= alu6_4                                     1e+20 
@@ -75,6 +76,7 @@
 =opt= alu4_3                                     1e+20 
 =opt= alu4_2                                     1e+20 
 =opt= alu8_4                                     1e+20 
+=opt= alu8_2                                     1e+20 
 =opt= alu6_5                                     1e+20 
 =opt= alu9_3                                     1e+20 
 =opt= alu8_5                                     1e+20 
