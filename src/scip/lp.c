@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.278 2008/08/31 02:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.279 2008/09/01 10:59:02 bzforlow Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -26,7 +26,7 @@
  *  the LP solvers data has to be updated to the current LP with a call to
  *  lpFlush().
  */
-
+ 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
@@ -10380,7 +10380,9 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             lpi = SCIPlpGetLPI(lp);
 
             assert(lpi != NULL);
-            assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX || SCIPlpiIsObjlimExc(lpi));
+            assert(lp->lastlpalgo != SCIP_LPALGO_DUALSIMPLEX || 
+                   SCIPlpiIsObjlimExc(lpi) || 
+                   SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim));
 
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
