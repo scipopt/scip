@@ -104,7 +104,6 @@ plugins:
 - less aggressive scaling in linear constraint handler presolve to improve numerics
 - added reader for pseudo-Boolean problems (reader_opb.{c,h})
 - added first version of constraint handler cons_countsols.{c,h}
-- feasibility pump is now called directly after the initial root LP solve, if there is no solution yet
 - pseudoobj propagator now also propagates the global lower (dual) bound
 
 parameters:
@@ -132,6 +131,7 @@ parameters:
 - removed parameter "separating/cmir/maxtestdeltaroot"
 - new value 'l' for parameter "lp/pricing", which is the new default
 - new parameter "separating/cmir/densityoffset" to allow for more c-MIR cuts on small models
+- new parameter "heuristics/feaspump/beforecuts" to allow the feaspump to be called before cut separation
 
 performance improvements:
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity

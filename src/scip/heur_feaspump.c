@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.52 2008/08/31 02:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.53 2008/09/02 19:39:26 bzfpfend Exp $"
 
 /**@file   heur_feaspump.c
  * @brief  feasibility pump primal heuristic
@@ -47,6 +47,7 @@
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
 #define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round, 
                                          *   1.0 for dynamic, depending on solutions already found */
+#define DEFAULT_BEFORECUTS      FALSE   /**< should the feasibility pump be called at root node before cut separation? */
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -71,6 +72,7 @@ struct SCIP_HeurData
    int                   perturbfreq;        /**< number of iterations until a random perturbation is forced */
    int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
    unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_Bool             beforecuts;         /**< should the feasibility pump be called at root node before cut separation? */
 };
 
 /** checks whether a variable is one of the currently most fractional ones */
@@ -281,8 +283,13 @@ SCIP_DECL_HEUREXIT(heurExitFeaspump)
 static
 SCIP_DECL_HEURINITSOL(heurInitsolFeaspump)
 {
-   /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
-   if( SCIPheurGetFreqofs(heur) == 0 )
+   SCIP_HEURDATA* heurdata;
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* if the heuristic is called at the root node, we may want to be called directly after the initial root LP solve */
+   if( heurdata->beforecuts && SCIPheurGetFreqofs(heur) == 0 )
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
 
    return SCIP_OKAY;
@@ -732,6 +739,10 @@ SCIP_RETCODE SCIPincludeHeurFeaspump(
          "heuristics/feaspump/perturbfreq", 
          "number of iterations until a random perturbation is forced",
          &heurdata->perturbfreq, TRUE, DEFAULT_PERTURBFREQ, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/feaspump/beforecuts", 
+         "should the feasibility pump be called at root node before cut separation?",
+         &heurdata->beforecuts, FALSE, DEFAULT_BEFORECUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
