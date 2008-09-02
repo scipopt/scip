@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.21 2008/09/02 19:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.22 2008/09/02 19:42:45 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -366,6 +366,8 @@ SCIP_Real getMaxObjPseudoactivityResidual(
       else
          contrib *= -1.0;
    }
+   else
+      contrib = 0.0;
 
    return getMaxObjPseudoactivityResidualValue(scip, propdata, contrib);
 }
