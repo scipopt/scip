@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.75 2008/09/01 21:06:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.76 2008/09/02 19:18:59 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -53,6 +53,7 @@
 #define DEFAULT_SLACKSCORE        1e-03 /**< weight of slack in the aggregation scoring of the rows */
 #define DEFAULT_MAXAGGDENSITY      0.20 /**< maximal density of aggregated row */
 #define DEFAULT_MAXROWDENSITY      0.05 /**< maximal density of row to be used in aggregation */
+#define DEFAULT_DENSITYOFFSET       100 /**< additional number of variables allowed in row on top of density */
 #define DEFAULT_MAXROWFAC          1e+4 /**< maximal row aggregation factor */
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
@@ -103,6 +104,7 @@ struct SCIP_SepaData
    int                   maxaggrsroot;       /**< maximal number of aggregations for each row per round in the root node */
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cmir cuts separated per separation round in root node */
+   int                   densityoffset;      /**< additional number of variables allowed in row on top of density */
    int                   maxtestdelta;	     /**< maximal number of different deltas to try (-1: unlimited) */
    int                   maxconts;	     /**< maximal number of active continuous variables in aggregated row */
    int                   maxcontsroot;       /**< maximal number of active continuous variables in aggregated row in the root */
@@ -369,7 +371,8 @@ SCIP_RETCODE tryDelta(
             MAXAGGRLEN(nvars), maxweightrange, minfrac, maxfrac, rowweights, delta, mksetcoefs, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
-      SCIPdebugMessage("delta = %g  -> success: %d\n", delta, success);
+      SCIPdebugMessage("delta = %g  -> success: %d, cutact: %g, cutrhs: %g, vio: %g\n",
+         delta, success, cutact, cutrhs, cutact - cutrhs);
                
       /* check if delta generates cut which is more violated */
       if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
@@ -672,7 +675,7 @@ SCIP_RETCODE aggregation(
    SCIPdebugMessage("start c-MIR aggregation with row <%s> (%d/%d)\n", SCIProwGetName(rows[startrow]), startrow, nrows);
 
    /* calculate maximal number of non-zeros in aggregated row */
-   maxaggrnonzs = (int)(sepadata->maxaggdensity * ncols);
+   maxaggrnonzs = (int)(sepadata->maxaggdensity * ncols) + sepadata->densityoffset;
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, ncols) );
@@ -689,9 +692,6 @@ SCIP_RETCODE aggregation(
       rowweights[startrow] = 1.0;
    maxweight = 1.0;
    minweight = 1.0;
-   
-   /* decrease score of startrow in order to not aggregate it again too soon */
-   decreaseRowScore(scip, rowlhsscores, rowrhsscores, startrow);
    
    /* get nonzero columns and coefficients of startrow */
    startnonzcols =  SCIProwGetCols(rows[startrow]);
@@ -740,8 +740,14 @@ SCIP_RETCODE aggregation(
 
    /* don't try aggregation if there is no integer variable with fractional value */
    if( !hasfractional )
+   {
+      SCIPdebugMessage(" -> row has no fractional integer variables: ignore\n");
       maxaggrs = -1;
+   }
 
+   /* decrease score of startrow in order to not aggregate it again too soon */
+   decreaseRowScore(scip, rowlhsscores, rowrhsscores, startrow);
+   
    /* try to generate cut from the current aggregated row 
     * add cut if found, otherwise add another row to aggregated row 
     * in order to get rid of a continuous variable
@@ -1083,9 +1089,13 @@ SCIP_RETCODE aggregation(
    }
 #ifdef SCIP_DEBUG
    if( nactiveconts > maxconts )
+   {
       SCIPdebugMessage(" -> abort aggregation: %d/%d active continuous variables\n", nactiveconts, maxconts);
+   }
    if( naggrcontnonzs + naggrintnonzs > maxaggrnonzs )
+   {
       SCIPdebugMessage(" -> abort aggregation: %d/%d nonzeros\n", naggrcontnonzs + naggrintnonzs, maxaggrnonzs);
+   }
 #endif
 
    /* free datastructures */
@@ -1173,6 +1183,8 @@ SCIP_RETCODE separateCuts(
    /* nothing to do, if problem has no variables */
    if( nvars == 0 )
       return SCIP_OKAY;
+
+   SCIPdebugMessage("separating c-MIR cuts\n");
 
    *result = SCIP_DIDNOTFIND;
 
@@ -1274,7 +1286,7 @@ SCIP_RETCODE separateCuts(
          rhs = SCIProwGetRhs(rows[r]);
          rownorm = SCIProwGetNorm(rows[r]);
          rownorm = MAX(rownorm, 0.1);
-         rowdensity = (SCIP_Real)nnonz/(SCIP_Real)nvars;
+         rowdensity = (SCIP_Real)(nnonz - sepadata->densityoffset)/(SCIP_Real)nvars;
          assert(SCIPisPositive(scip, rownorm));
 
          slack = (activity - lhs)/rownorm;
@@ -1310,6 +1322,9 @@ SCIP_RETCODE separateCuts(
          roworder[i] = roworder[i-1];
       assert(0 <= i && i <= r);
       roworder[i] = r;
+
+      SCIPdebugMessage(" -> row %d <%s>: lhsscore=%g rhsscore=%g maxscore=%g\n", r, SCIProwGetName(rows[r]),
+                       rowlhsscores[r], rowrhsscores[r], rowscores[r]);
    }
 
    /* start aggregation heuristic for each row in the LP */
@@ -1509,6 +1524,10 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          "separating/cmir/maxrowdensity",
          "maximal density of row to be used in aggregation",
          &sepadata->maxrowdensity, TRUE, DEFAULT_MAXROWDENSITY, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "separating/cmir/densityoffset",
+         "additional number of variables allowed in row on top of density",
+         &sepadata->densityoffset, TRUE, DEFAULT_DENSITYOFFSET, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/maxrowfac",
          "maximal row aggregation factor",

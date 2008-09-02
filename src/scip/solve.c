@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.260 2008/08/30 21:10:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.261 2008/09/02 19:18:59 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1462,44 +1462,85 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       /* solve the LP with pricing in new variables */
-      if( mustprice )
+      while( mustprice && !(*lperror) )
       {
+         SCIP_Real oldlowerbound;
+
+         oldlowerbound = SCIPtreeGetLowerbound(tree, set);
+
          SCIP_CALL( SCIPpriceLoop(blkmem, set, stat, prob, tree, lp, pricestore, branchcand, eventqueue,
                root, root, -1, &npricedcolvars, &mustsepa, lperror) );
          mustprice = FALSE;
+
+         assert(lp->flushed);
+         assert(lp->solved || *lperror);
+
+         /* update lower bound w.r.t. the the LP solution */
+         if( !(*lperror) )
+         {
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+            SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
+                             SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
+
+            /* update node estimate */
+            SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
+         }
+         else
+         {
+            SCIPdebugMessage(" -> error solving LP. keeping old bound: %g\n", SCIPnodeGetLowerbound(focusnode));
+         }
+
+         /* display node information line for root node */
+         if( root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
+         {
+            SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
+         }
+
+         if( !(*lperror) )
+         {
+            SCIP_Real newlowerbound;
+
+            /* if the global lower bound changed, propagate domains again since this may trigger reductions */
+            newlowerbound = SCIPtreeGetLowerbound(tree, set);
+            if( SCIPsetIsGT(set, newlowerbound, oldlowerbound) )
+            {
+               SCIPdebugMessage(" -> global lower bound changed from %g to %g: propagate domains again\n",
+                                oldlowerbound, newlowerbound);
+               SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
+
+               /* if we found something, solve LP again */
+               if( !lp->flushed )
+               {
+                  SCIPdebugMessage("    -> found reduction: resolve LP\n");
+
+                  /* in the root node, remove redundant rows permanently from the LP */
+                  if( root )
+                  {
+                     SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
+                     SCIP_CALL( SCIPlpRemoveRedundantRows(lp, blkmem, set, stat) );
+                  }
+
+                  /* resolve LP */
+                  SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, TRUE, FALSE, lperror) );
+                  assert(lp->flushed);
+                  assert(lp->solved || *lperror);
+
+                  mustprice = TRUE;
+               }
+            }
+         }
+
+         /* call primal heuristics that are applicable during node LP solving loop */
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+         {
+            SCIP_Bool foundsol;
+
+            SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
+            *lperror = *lperror || lp->resolvelperror;
+         }
       }
       assert(lp->flushed);
       assert(lp->solved || *lperror);
-
-      /* update lower bound w.r.t. the the LP solution */
-      if( !(*lperror) )
-      {
-         SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
-         SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
-            SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
-
-         /* update node estimate */
-         SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );
-      }
-      else
-      {
-         SCIPdebugMessage(" -> error solving LP. keeping old bound: %g\n", SCIPnodeGetLowerbound(focusnode));
-      }
-
-      /* display node information line for root node */
-      if( root && (SCIP_VERBLEVEL)set->disp_verblevel >= SCIP_VERBLEVEL_HIGH )
-      {
-         SCIP_CALL( SCIPdispPrintLine(set, stat, NULL, TRUE) );
-      }
-
-      /* call primal heuristics that are applicable during node LP solving loop */
-      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         SCIP_Bool foundsol;
-
-         SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
-         *lperror = *lperror || lp->resolvelperror;
-      }
 
       /* check, if we exceeded the separation round limit */
       mustsepa = mustsepa
