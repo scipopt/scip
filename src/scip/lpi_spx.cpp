@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.78 2008/08/31 02:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.79 2008/09/02 17:10:47 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -2914,7 +2914,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   lpi->spx->dumpFile(fname);
+   lpi->spx->writeFile(fname);
 
    return SCIP_OKAY;
 }
