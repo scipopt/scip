@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.299 2008/09/03 15:35:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.300 2008/09/03 19:56:53 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -4410,11 +4410,15 @@ SCIP_RETCODE convertLongEquality(
          SCIP_Bool equal;
          SCIP_Real slackdomrng;
 
-         slackdomrng = (varub - varlb)*absval;
-         better = FALSE;
+	 if( SCIPisInfinity(scip, varub) || SCIPisInfinity(scip, -varlb) )
+	   slackdomrng = SCIPinfinity(scip);
+	 else
+	   {
+	     slackdomrng = (varub - varlb)*absval;
+	     assert(!SCIPisInfinity(scip, slackdomrng));
+	   }
          equal = FALSE;
-         better = better || (bestslackpos == -1);
-         better = better || (slacktype > bestslacktype);
+         better = (slacktype > bestslacktype) || (bestslackpos == -1);
          if( !better && slacktype == bestslacktype )
          {
             better = (nlocks < bestnlocks);
