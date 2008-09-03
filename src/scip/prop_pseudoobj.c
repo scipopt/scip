@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.22 2008/09/02 19:42:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.23 2008/09/03 00:54:24 bzfpfend Exp $"
 
 /**@file   prop_pseudoobj.c
  * @brief  pseudoobj propagator
@@ -51,7 +51,6 @@ struct SCIP_PropData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */
    SCIP_VAR**            objvars;            /**< variables with non-zero objective */
    SCIP_Real             maxpseudoobjact;    /**< maximal global pseudo objective activity */
-   SCIP_Real             maxpseudoobjactmax; /**< maximal individual contribution to maxpseudoobjact */
    int                   maxpseudoobjactinf; /**< number of coefficients contributing with infinite value to maxpseudoobjact */
    int                   nobjvars;           /**< number of variables with non-zero objective */
    int                   maxcands;           /**< maximal number of variables to look at in a single propagation round */
@@ -267,7 +266,6 @@ void calcMaxObjPseudoactivity(
 
    /* calculate current max pseudo activity and largest contribution */
    propdata->maxpseudoobjact = 0.0;
-   propdata->maxpseudoobjactmax = 0.0;
    propdata->maxpseudoobjactinf = 0;
    for( v = 0; v < nvars; v++ )
    {
@@ -292,7 +290,6 @@ void calcMaxObjPseudoactivity(
       else
          continue;
 
-      propdata->maxpseudoobjactinf = MAX(propdata->maxpseudoobjactinf, contrib);
       if( SCIPisInfinity(scip, contrib) )
          propdata->maxpseudoobjactinf++;
       else
@@ -403,14 +400,11 @@ SCIP_RETCODE propagateLowerbound(
       return SCIP_OKAY;
 
    /* check if there is a chance to find a reduction */
+   /**@todo This must be done in a clever way: Store the smallest global lower bound at which
+    *       a propagation is triggered and skip the propagation if lowerbound < triggerlowerbound.
+    *       The same can be done for the cutoff propagation, which most probably makes the lastvarnum approach irrelevant.
+    */
    lowerbound = SCIPgetLowerbound(scip);
-   residual = getMaxObjPseudoactivityResidualValue(scip, propdata, propdata->maxpseudoobjactmax);
-   SCIPdebugMessage("propagating objective function w.r.t. lower bound: lowerbound=%g, smallestresidual=%g\n",
-                    lowerbound, residual);
-#if 0 /*????????????????*/
-   if( SCIPisFeasGE(scip, residual, lowerbound) )
-      return SCIP_OKAY;
-#endif
 
    /* propagate c*x >= lowerbound */
    for( k = 0; k < nobjvars; k++ )
@@ -436,8 +430,8 @@ SCIP_RETCODE propagateLowerbound(
          newlb = (lowerbound - residual)/obj;
          if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
-            SCIPdebugMessage(" -> new global lower bound of variable <%s>[%.10f,%.10f]: %.10f\n",
-               SCIPvarGetName(var), lb, ub, newlb);
+            SCIPdebugMessage(" -> new global lower bound of variable <%s>[%.10f,%.10f]: %.10f (obj=%g, residual=%g)\n",
+               SCIPvarGetName(var), lb, ub, newlb, obj, residual);
             SCIP_CALL( SCIPtightenVarLbGlobal(scip, var, newlb, FALSE, &infeasible, &tightened) );
             if( infeasible )
             {
@@ -457,8 +451,8 @@ SCIP_RETCODE propagateLowerbound(
          newub = (lowerbound - residual)/obj;
          if( SCIPisUbBetter(scip, newub, lb, ub) )
          {
-            SCIPdebugMessage(" -> new global upper bound of variable <%s>[%.10f,%.10f]: %.10f\n",
-               SCIPvarGetName(var), lb, ub, newub);
+            SCIPdebugMessage(" -> new global upper bound of variable <%s>[%.10f,%.10f]: %.10f (obj=%g, residual=%g)\n",
+               SCIPvarGetName(var), lb, ub, newub, obj, residual);
             SCIP_CALL( SCIPtightenVarUbGlobal(scip, var, newub, FALSE, &infeasible, &tightened) );
             if( infeasible )
             {
@@ -577,6 +571,8 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
    }
 
    propdata->nobjvars = nobjvars;
+   propdata->maxpseudoobjact = SCIP_INVALID;
+   propdata->maxpseudoobjactinf = 0;
 
    return SCIP_OKAY;
 }
@@ -690,7 +686,6 @@ SCIP_DECL_EVENTEXEC(eventExecPseudoobj)
 
    /* invalidate the maximum pseudo objective activity */
    propdata->maxpseudoobjact = SCIP_INVALID;
-   propdata->maxpseudoobjactmax = 0.0;
    propdata->maxpseudoobjactinf = 0;
 
    return SCIP_OKAY;
@@ -718,7 +713,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
    propdata->objvars = NULL;
    propdata->nobjvars = 0;
-   propdata->maxpseudoobjact = 0.0;
+   propdata->maxpseudoobjact = SCIP_INVALID;
    propdata->maxpseudoobjactinf = 0;
    propdata->lastvarnum = -1;
 

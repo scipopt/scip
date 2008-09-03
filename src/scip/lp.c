@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.281 2008/09/01 21:06:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.282 2008/09/03 00:54:24 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6959,6 +6959,107 @@ void cleanupMIRRow(
       *mirrhs = SCIPsetInfinity(set);
 }
 
+/** finds the best lower bound of the variable to use for MIR transformation */
+static
+void findBestLb(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Real*            bestlb,             /**< pointer to store best bound value */
+   int*                  bestlbtype          /**< pointer to store best bound type */
+   )
+{
+   assert(bestlb != NULL);
+   assert(bestlbtype != NULL);
+
+   *bestlb = SCIPvarGetLbGlobal(var);
+   *bestlbtype = -1;
+
+   if( allowlocal )
+   {
+      SCIP_Real loclb;
+
+      loclb = SCIPvarGetLbLocal(var);
+      if( SCIPsetIsGT(set, loclb, *bestlb) )
+      {
+         *bestlb = loclb;
+         *bestlbtype = -2;
+      }
+   }
+   if( usevbds && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   {
+      SCIP_Real bestvlb;
+      int bestvlbidx;
+
+      SCIPvarGetClosestVlb(var, stat, &bestvlb, &bestvlbidx);
+      if( bestvlbidx >= 0
+          && (bestvlb > *bestlb || (*bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, *bestlb))) )
+      {
+         SCIP_VAR** vlbvars;
+
+         /* we have to avoid cyclic variable bound usage, so we enforce to use only VB vars of smaller index */
+         vlbvars = SCIPvarGetVlbVars(var);
+         if( SCIPvarGetProbindex(vlbvars[bestvlbidx]) < SCIPvarGetProbindex(var) )
+         {
+            *bestlb = bestvlb;
+            *bestlbtype = bestvlbidx;
+         }
+      }
+   }
+}
+
+/** finds the best upper bound of the variable to use for MIR transformation */
+static
+void findBestUb(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Real*            bestub,             /**< pointer to store best bound value */
+   int*                  bestubtype          /**< pointer to store best bound type */
+   )
+{
+   assert(bestub != NULL);
+   assert(bestubtype != NULL);
+
+   *bestub = SCIPvarGetUbGlobal(var);
+   *bestubtype = -1;
+   if( allowlocal )
+   {
+      SCIP_Real locub;
+
+      locub = SCIPvarGetUbLocal(var);
+      if( SCIPsetIsLT(set, locub, *bestub) )
+      {
+         *bestub = locub;
+         *bestubtype = -2;
+      }
+   }
+   if( usevbds && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   {
+      SCIP_Real bestvub;
+      int bestvubidx;
+
+      SCIPvarGetClosestVub(var, stat, &bestvub, &bestvubidx);
+      if( bestvubidx >= 0
+          && (bestvub < *bestub || (*bestubtype < 0 && SCIPsetIsLE(set, bestvub, *bestub))) )
+      {
+         SCIP_VAR** vubvars;
+
+         /* we have to avoid cyclic variable bound usage, so we enforce to use only VB vars of smaller index */
+         vubvars = SCIPvarGetVubVars(var);
+         if( SCIPvarGetProbindex(vubvars[bestvubidx]) < SCIPvarGetProbindex(var) )
+         {
+            *bestub = bestvub;
+            *bestubtype = bestvubidx;
+         }
+      }
+   }
+}
+
 /** Transform equation  a*x == b, lb <= x <= ub  into standard form
  *    a'*x' == b, 0 <= x' <= ub'.
  *  
@@ -7085,117 +7186,80 @@ SCIP_RETCODE transformMIRRow(
          if( boundtypesfortrans[v] == SCIP_BOUNDTYPE_LOWER )
          {
             /* user wants to use lower bound */
-            if( boundsfortrans[v] == -1 )
+            bestlbtype = boundsfortrans[v];
+            if( bestlbtype == -1 )
                bestlb = SCIPvarGetLbGlobal(var); /* use global standard lower bound */ 
-            else if( boundsfortrans[v] == -2 )
+            else if( bestlbtype == -2 )
                bestlb = SCIPvarGetLbLocal(var);  /* use local standard lower bound */
             else
             {
                SCIP_VAR** vlbvars;
                SCIP_Real* vlbcoefs;
                SCIP_Real* vlbconsts;
+               int k;
 
                /* use the given variable lower bound */
                vlbvars = SCIPvarGetVlbVars(var);
                vlbcoefs = SCIPvarGetVlbCoefs(var);
                vlbconsts = SCIPvarGetVlbConstants(var);
-               assert(boundsfortrans[v] >= 0 && boundsfortrans[v] <  SCIPvarGetNVlbs(var));
-               bestlb = vlbcoefs[boundsfortrans[v]] * SCIPvarGetLPSol(vlbvars[boundsfortrans[v]]) + vlbconsts[boundsfortrans[v]];
+               k = boundsfortrans[v];
+               assert(k >= 0 && k <  SCIPvarGetNVlbs(var));
+
+               /* we have to avoid cyclic variable bound usage, so we enforce to use only VB vars of smaller index */
+               if( SCIPvarGetProbindex(vlbvars[k]) < v )
+                  bestlb = vlbcoefs[k] * SCIPvarGetLPSol(vlbvars[k]) + vlbconsts[k];
+               else
+               {
+                  bestlbtype = -1; /* fall back to global standard bound */
+                  bestlb = SCIPvarGetLbGlobal(var);
+               }
             }
-            bestlbtype = boundsfortrans[v];
 
             assert(!SCIPsetIsInfinity(set, -bestlb));
             uselb = TRUE;
 
             /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
-            bestub = SCIPvarGetUbGlobal(var);
-            bestubtype = -1;
-            if( fixintegralrhs )
-            {
-               if( allowlocal )
-               {
-                  SCIP_Real locub;
-
-                  locub = SCIPvarGetUbLocal(var);
-                  if( SCIPsetIsLT(set, locub, bestub) )
-                  {
-                     bestub = locub;
-                     bestubtype = -2;
-                  }
-               }
-               if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               {
-                  SCIP_Real bestvub;
-                  int bestvubidx;
-
-                  SCIPvarGetClosestVub(var, stat, &bestvub, &bestvubidx);
-                  if( bestvubidx >= 0
-                     && (bestvub < bestub || (bestubtype < 0 && SCIPsetIsLE(set, bestvub, bestub))) )
-                  {
-                     bestub = bestvub;
-                     bestubtype = bestvubidx;
-                  }
-               }
-            }
+            findBestUb(set, stat, var, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, &bestub, &bestubtype);
          }
          else
          {
             assert(boundtypesfortrans[v] == SCIP_BOUNDTYPE_UPPER);
                
             /* user wants to use upper bound */
-            if( boundsfortrans[v] == -1 )
+            bestubtype = boundsfortrans[v];
+            if( bestubtype == -1 )
                bestub = SCIPvarGetUbGlobal(var); /* use global standard upper bound */
-            else if( boundsfortrans[v] == -2 )
+            else if( bestubtype == -2 )
                bestub = SCIPvarGetUbLocal(var);  /* use local standard upper bound */
             else
             {
                SCIP_VAR** vubvars;
                SCIP_Real* vubcoefs;
                SCIP_Real* vubconsts;
+               int k;
 
                /* use the given variable upper bound */
                vubvars = SCIPvarGetVubVars(var);
                vubcoefs = SCIPvarGetVubCoefs(var);
                vubconsts = SCIPvarGetVubConstants(var);
-               assert(boundsfortrans[v] >= 0 && boundsfortrans[v] <  SCIPvarGetNVubs(var));
-               bestub = ( vubcoefs[boundsfortrans[v]] * SCIPvarGetLPSol(vubvars[boundsfortrans[v]]) ) 
-                  + vubconsts[boundsfortrans[v]];
+               k = boundsfortrans[v];
+               assert(k >= 0 && k <  SCIPvarGetNVubs(var));
+
+               /* we have to avoid cyclic variable bound usage, so we enforce to use only VB vars of smaller index */
+               if( SCIPvarGetProbindex(vubvars[k]) < v )
+                  bestub = vubcoefs[k] * SCIPvarGetLPSol(vubvars[k]) + vubconsts[k];
+               else
+               {
+                  bestubtype = -1; /* fall back to global standard bound */
+                  bestub = SCIPvarGetUbGlobal(var);
+               }
             }
-            bestubtype = boundsfortrans[v];
 
             assert(!SCIPsetIsInfinity(set, bestub));
             uselb = FALSE;
 
             /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
-            bestlb = SCIPvarGetLbGlobal(var);
-            bestlbtype = -1;
-            if( fixintegralrhs )
-            {
-               if( allowlocal )
-               {
-                  SCIP_Real loclb;
-
-                  loclb = SCIPvarGetLbLocal(var);
-                  if( SCIPsetIsGT(set, loclb, bestlb) )
-                  {
-                     bestlb = loclb;
-                     bestlbtype = -2;
-                  }
-               }
-               if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               {
-                  SCIP_Real bestvlb;
-                  int bestvlbidx;
-
-                  SCIPvarGetClosestVlb(var, stat, &bestvlb, &bestvlbidx);
-                  if( bestvlbidx >= 0
-                     && (bestvlb > bestlb || (bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, bestlb))) )
-                  {
-                     bestlb = bestvlb;
-                     bestlbtype = bestvlbidx;
-                  }
-               }
-            }
+            findBestLb(set, stat, var, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, &bestlb, &bestlbtype);
          }
       }
       else
@@ -7205,60 +7269,10 @@ SCIP_RETCODE transformMIRRow(
          /* bound selection should be done automatically */
 
          /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
-         bestlb = SCIPvarGetLbGlobal(var);
-         bestlbtype = -1;
-         if( allowlocal )
-         {
-            SCIP_Real loclb;
-
-            loclb = SCIPvarGetLbLocal(var);
-            if( SCIPsetIsGT(set, loclb, bestlb) )
-            {
-               bestlb = loclb;
-               bestlbtype = -2;
-            }
-         }
-         if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            SCIP_Real bestvlb;
-            int bestvlbidx;
-
-            SCIPvarGetClosestVlb(var, stat, &bestvlb, &bestvlbidx);
-            if( bestvlbidx >= 0
-               && (bestvlb > bestlb || (bestlbtype < 0 && SCIPsetIsGE(set, bestvlb, bestlb))) )
-            {
-               bestlb = bestvlb;
-               bestlbtype = bestvlbidx;
-            }
-         }
+         findBestLb(set, stat, var, usevbds, allowlocal, &bestlb, &bestlbtype);
 
          /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
-         bestub = SCIPvarGetUbGlobal(var);
-         bestubtype = -1;
-         if( allowlocal )
-         {
-            SCIP_Real locub;
-
-            locub = SCIPvarGetUbLocal(var);
-            if( SCIPsetIsLT(set, locub, bestub) )
-            {
-               bestub = locub;
-               bestubtype = -2;
-            }
-         }
-         if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-         {
-            SCIP_Real bestvub;
-            int bestvubidx;
-
-            SCIPvarGetClosestVub(var, stat, &bestvub, &bestvubidx);
-            if( bestvubidx >= 0
-               && (bestvub < bestub || (bestubtype < 0 && SCIPsetIsLE(set, bestvub, bestub))) )
-            {
-               bestub = bestvub;
-               bestubtype = bestvubidx;
-            }
-         }
+         findBestUb(set, stat, var, usevbds, allowlocal, &bestub, &bestubtype);
 
          /* check, if variable is free variable */
          if( SCIPsetIsInfinity(set, -bestlb) && SCIPsetIsInfinity(set, bestub) )
@@ -7547,6 +7561,7 @@ void roundMIRRow(
    )
 {
    SCIP_Real onedivoneminusf0;
+   int nbinvars;
    int nintvars;
    int i;
 
@@ -7560,51 +7575,56 @@ void roundMIRRow(
    assert(0.0 < f0 && f0 < 1.0);
 
    onedivoneminusf0 = 1.0 / (1.0 - f0);
+   nbinvars = prob->nbinvars;
    nintvars = prob->nvars - prob->ncontvars;
 
-   /* start with integer variables, since the variable bound substitutions can add up to the integer cut coefficients;
-    * loop backwards to be able to delete coefficients from the sparsity pattern
+   /* Loop backwards to be able to delete coefficients from the sparsity pattern. Additionally, the variable bound
+    * substitutions are only used in such a way that a variable of higher index is substituted by a variable of a
+    * lower index. Therefore, we must loop backwards.
     */
    SCIPsortDownInt(varinds, *nvarinds);
 
-   /* integer variables */
    for( i = *nvarinds-1; i >= 0; i-- )
    {
       SCIP_VAR* var;
-      SCIP_Real aj;
-      SCIP_Real downaj;
       SCIP_Real cutaj;
-      SCIP_Real fj;
       int v;
 
       v = varinds[i];
       assert(0 <= v && v < prob->nvars);
       assert(varused[v]);
 
-      /* stop this loop if we reached the continuous variables */
-      if( v >= nintvars )
-      {
-         assert(!SCIPvarIsIntegral(prob->vars[v]));
-         assert(SCIPvarGetType(prob->vars[v]) == SCIP_VARTYPE_CONTINUOUS);
-         break;
-      }
-
       var = prob->vars[v];
       assert(var != NULL);
-      assert(SCIPvarIsIntegral(var));
       assert(SCIPvarGetProbindex(var) == v);
-      assert(boundtype[v] == -1 || boundtype[v] == -2);
       assert(varsign[v] == +1 || varsign[v] == -1);
 
       /* calculate the coefficient in the retransformed cut */
-      aj = varsign[v] * mircoef[v]; /* a'_j */
-      downaj = SCIPsetFloor(set, aj);
-      fj = aj - downaj;
-      
-      if( SCIPsetIsSumLE(set, fj, f0) )
-         cutaj = varsign[v] * downaj; /* a起j */
+      if( SCIPvarIsIntegral(var) )
+      {
+         SCIP_Real aj;
+         SCIP_Real downaj;
+         SCIP_Real fj;
+
+         aj = varsign[v] * mircoef[v]; /* a'_j */
+         downaj = SCIPsetFloor(set, aj);
+         fj = aj - downaj;
+         
+         if( SCIPsetIsSumLE(set, fj, f0) )
+            cutaj = varsign[v] * downaj; /* a起j */
+         else
+            cutaj = varsign[v] * (downaj + (fj - f0) * onedivoneminusf0); /* a起j */
+      }
       else
-         cutaj = varsign[v] * (downaj + (fj - f0) * onedivoneminusf0); /* a起j */
+      {
+         SCIP_Real aj;
+
+         aj = varsign[v] * mircoef[v]; /* a'_j */
+         if( aj >= 0.0 )
+            cutaj = 0.0;
+         else
+            cutaj = varsign[v] * aj * onedivoneminusf0; /* a起j */
+      }
 
       /* remove zero cut coefficients from sparsity pattern */
       if( SCIPsetIsZero(set, cutaj) )
@@ -7618,78 +7638,6 @@ void roundMIRRow(
 
       mircoef[v] = cutaj;
       
-      /* move the constant term  -a~_j * lb_j == -a起j * lb_j , or  a~_j * ub_j == -a起j * ub_j  to the rhs */
-      if( varsign[v] == +1 )
-      {
-         /* lower bound was used */
-         if( boundtype[v] == -1 )
-         {
-            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
-            (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
-         }
-         else
-         {
-            assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
-            (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
-         }
-      }
-      else
-      {
-         /* upper bound was used */
-         if( boundtype[v] == -1 )
-         {
-            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
-            (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
-         }
-         else
-         {
-            assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
-            (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
-         }
-      }
-   }
-
-   /* continuous variables */
-   for( ; i >= 0; i-- )
-   {
-      SCIP_VAR* var;
-      SCIP_Real aj;
-      int v;
-
-      v = varinds[i];
-      assert(0 <= v && v < prob->nvars);
-      assert(varused[v]);
-
-      var = prob->vars[v];
-      assert(var != NULL);
-      assert(!SCIPvarIsIntegral(var));
-      assert(SCIPvarGetProbindex(var) == v);
-      assert(varsign[v] == +1 || varsign[v] == -1);
-
-      /* calculate the coefficient in the retransformed cut */
-      aj = varsign[v] * mircoef[v]; /* a'_j */
-      if( aj >= 0.0 )
-         mircoef[v] = 0.0;
-      else
-      {
-         SCIP_Real cutaj;
-
-         cutaj = varsign[v] * aj * onedivoneminusf0; /* a起j */
-         if( SCIPsetIsZero(set, cutaj) )
-            mircoef[v] = 0.0;
-         else
-            mircoef[v] = cutaj;
-      }
-
-      /* remove zero cut coefficients from sparsity pattern */
-      if( mircoef[v] == 0.0 )
-      {
-         varused[v] = FALSE;
-         varinds[i] = varinds[(*nvarinds)-1];
-         (*nvarinds)--;
-         continue;
-      }
-
       /* check for variable bound use */
       if( boundtype[v] < 0 )
       {
@@ -7702,12 +7650,12 @@ void roundMIRRow(
             if( boundtype[v] == -1 )
             {
                assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(var)));
-               (*mirrhs) += mircoef[v] * SCIPvarGetLbGlobal(var);
+               (*mirrhs) += cutaj * SCIPvarGetLbGlobal(var);
             }
             else
             {
                assert(!SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)));
-               (*mirrhs) += mircoef[v] * SCIPvarGetLbLocal(var);
+               (*mirrhs) += cutaj * SCIPvarGetLbLocal(var);
             }
          }
          else
@@ -7716,12 +7664,12 @@ void roundMIRRow(
             if( boundtype[v] == -1 )
             {
                assert(!SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(var)));
-               (*mirrhs) += mircoef[v] * SCIPvarGetUbGlobal(var);
+               (*mirrhs) += cutaj * SCIPvarGetUbGlobal(var);
             }
             else
             {
                assert(!SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)));
-               (*mirrhs) += mircoef[v] * SCIPvarGetUbLocal(var);
+               (*mirrhs) += cutaj * SCIPvarGetUbLocal(var);
             }
          }
       }
@@ -7754,11 +7702,11 @@ void roundMIRRow(
             vbd = SCIPvarGetVubConstants(var);
          }
          assert(SCIPvarIsActive(vbz[vbidx]));
-         zidx =  SCIPvarGetProbindex(vbz[vbidx]);
+         zidx = SCIPvarGetProbindex(vbz[vbidx]);
          assert(0 <= zidx && zidx < v);
 
-         (*mirrhs) += mircoef[v] * vbd[vbidx];
-         mircoef[zidx] -= mircoef[v] * vbb[vbidx];
+         (*mirrhs) += cutaj * vbd[vbidx];
+         mircoef[zidx] -= cutaj * vbb[vbidx];
 
          /* add variable to sparsity pattern */
          if( !varused[zidx] )

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.261 2008/09/02 19:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.262 2008/09/03 00:54:24 bzfpfend Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1552,16 +1552,19 @@ SCIP_RETCODE priceAndCutLoop(
       mustsepa = mustsepa || delayedsepa;
 
       /* if the LP is infeasible, exceeded the objective limit or a global performance limit was reached, 
-       * we don't need to separate cuts 
+       * we don't need to separate cuts
+       * (the global limits are only checked at the root node in order to not query system time too often)
        */
-      if( (!separate
-            || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
-            || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound))
-         /*         && !SCIPsolveIsStopped(set, stat, TRUE)  ??????????????????????????????????? */
-          )
+      if( mustsepa || delayedsepa )
       {
-         mustsepa = FALSE;
-         delayedsepa = FALSE;
+         if( !separate
+             || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
+             || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
+             || (root && SCIPsolveIsStopped(set, stat, FALSE)) )
+         {
+            mustsepa = FALSE;
+            delayedsepa = FALSE;
+         }
       }
 
       /* separation and reduced cost strengthening

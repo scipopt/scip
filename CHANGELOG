@@ -97,6 +97,7 @@ features:
 - the ZPL reader is now able to pass a starting solution to SCIP
 - revised lpi_clp.cpp (many small changes, in particular writing and reading of bases)
 - added FASTMIP settings in lpi_clp.cpp that try to improve the performance of Clp as much as possible
+- SCIPcalcMIR() now also uses variable bounds for integer and implicit integer variables
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -105,6 +106,8 @@ plugins:
 - added reader for pseudo-Boolean problems (reader_opb.{c,h})
 - added first version of constraint handler cons_countsols.{c,h}
 - pseudoobj propagator now also propagates the global lower (dual) bound
+- linear constraint handler now detects continuous variables that are implicit integer in dual presolve
+- the c-MIR separator now also tries to get rid of implicit integer variables by aggregation
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),
@@ -132,6 +135,8 @@ parameters:
 - new value 'l' for parameter "lp/pricing", which is the new default
 - new parameter "separating/cmir/densityoffset" to allow for more c-MIR cuts on small models
 - new parameter "heuristics/feaspump/beforecuts" to allow the feaspump to be called before cut separation
+- changed default for "separating/minorthoroot" from 0.5 to 0.2
+- changed default for "separating/cmir/maxroundsroot" from 10 to 15
 
 performance improvements:
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity

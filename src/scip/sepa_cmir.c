@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.76 2008/09/02 19:18:59 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.77 2008/09/03 00:54:24 bzfpfend Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -35,7 +35,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        10 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        15 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXTRIES            100 /**< maximal number of rows to start aggregation with per separation round
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
@@ -70,6 +70,7 @@
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 #define MAKECONTINTEGRAL          FALSE
+#define IMPLINTSARECONT
 
 #define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
 
@@ -280,22 +281,25 @@ void updateNActiveConts(
    int*                  nactiveconts        /**< pointer to count number of active continuous variabls */
    )
 {
-   SCIP_Real primsol;
-   SCIP_Real lb;
-   SCIP_Real ub;
-   int probindex;
-
    assert(nactiveconts != NULL);
 
-   probindex = SCIPvarGetProbindex(var);
-   assert(probindex >= nintvars);
+   if( !SCIPvarIsIntegral(var) )
+   {
+      SCIP_Real primsol;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      int probindex;
 
-   primsol = varsolvals[probindex];
-   lb = bestcontlbs[probindex - nintvars];
-   ub = bestcontubs[probindex - nintvars];
+      probindex = SCIPvarGetProbindex(var);
+      assert(probindex >= nintvars);
 
-   if( SCIPisLT(scip, lb, primsol) && SCIPisLT(scip, primsol, ub) )
-      (*nactiveconts) += delta;
+      primsol = varsolvals[probindex];
+      lb = bestcontlbs[probindex - nintvars];
+      ub = bestcontubs[probindex - nintvars];
+      
+      if( SCIPisLT(scip, lb, primsol) && SCIPisLT(scip, primsol, ub) )
+         (*nactiveconts) += delta;
+   }
 }
 
 /** decreases the score of a row in order to not aggregate it again too soon */
@@ -575,6 +579,23 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    return SCIP_OKAY; 
 }
 
+/** returns whether the variable should be tried to be aggregated out */
+static
+SCIP_Bool varIsContinuous(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_VARTYPE vartype;
+
+   vartype = SCIPvarGetType(var);
+
+#ifdef IMPLINTSARECONT
+   return (vartype == SCIP_VARTYPE_CONTINUOUS || vartype == SCIP_VARTYPE_IMPLINT);
+#else
+   return (vartype == SCIP_VARTYPE_CONTINUOUS);
+#endif
+}
+
 /** returns the minimal distance of the solution of a continuous variable to its bounds */
 static
 SCIP_Real getBounddist(
@@ -591,8 +612,9 @@ SCIP_Real getBounddist(
    SCIP_Real ub;
    SCIP_Real distlower;
    SCIP_Real distupper;
+   SCIP_Real bounddist;
 
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+   assert(varIsContinuous(var));
 
    primsol = varsolvals[SCIPvarGetProbindex(var)];
    lb = bestcontlbs[SCIPvarGetProbindex(var) - nintvars];
@@ -601,8 +623,15 @@ SCIP_Real getBounddist(
    assert(SCIPisLE(scip, ub, SCIPvarGetUbGlobal(var)));
    distlower = primsol - lb;
    distupper = ub - primsol;
+   bounddist = MIN(distlower, distupper);
 
-   return MIN(distlower, distupper);
+#ifdef IMPLINTSARECONT
+   /* prefer continuous variables over implicit integers to be aggregated out */
+   if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      bounddist /= 10.0;
+#endif
+
+   return bounddist;
 }
 
 /** aggregates different single mixed integer constraints by taking linear combinations of the rows of the LP  */
@@ -664,6 +693,9 @@ SCIP_RETCODE aggregation(
    *wastried = FALSE;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
+#ifdef IMPLINTSARECONT
+   ncontvars += SCIPgetNImplVars(scip); /* also aggregate out implicit integers */
+#endif
    nintvars = nvars - ncontvars;
    assert((nvars == 0 && nintvars == 0 && ncontvars == 0) || vars != NULL);
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
@@ -714,7 +746,7 @@ SCIP_RETCODE aggregation(
       assert(pos >= 0); 
       assert(!SCIPisZero(scip, startnonzcoefs[c]));
       aggrcoefs[pos] = rowweights[startrow] * startnonzcoefs[c];
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+      if( varIsContinuous(var) )
       {
          SCIP_Real bounddist;
 
@@ -725,15 +757,14 @@ SCIP_RETCODE aggregation(
          SCIPsortedvecInsertDownRealInt(aggrcontnonzbounddists, aggrcontnonzposs, bounddist, pos, &naggrcontnonzs);
       }
       else
-      {
          naggrintnonzs++;
-         if( !hasfractional )
-         {
-            SCIP_Real primsol;
 
-            primsol = varsolvals[SCIPvarGetProbindex(var)];
-            hasfractional = !SCIPisIntegral(scip, primsol);
-         }
+      if( !hasfractional && SCIPvarIsIntegral(var) )
+      {
+         SCIP_Real primsol;
+         
+         primsol = varsolvals[SCIPvarGetProbindex(var)];
+         hasfractional = !SCIPisIntegral(scip, primsol);
       }
    }
    assert(naggrintnonzs + naggrcontnonzs == nstartnonzcols);
@@ -835,8 +866,7 @@ SCIP_RETCODE aggregation(
 
          col = cols[c];
          var = SCIPcolGetVar(col);
-         assert(!SCIPvarIsIntegral(var));
-         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+         assert(varIsContinuous(var));
          assert(SCIPvarGetProbindex(var) >= nintvars);
 
          bounddist = aggrcontnonzbounddists[nzi];
@@ -963,7 +993,7 @@ SCIP_RETCODE aggregation(
          
          col = cols[c];
          var = SCIPcolGetVar(col);
-         assert(!SCIPvarIsIntegral(var));
+         assert(varIsContinuous(var));
          
          bounddist = aggrcontnonzbounddists[nzi];
 
@@ -1017,7 +1047,7 @@ SCIP_RETCODE aggregation(
          assert(pos >= 0);
          assert(!SCIPisZero(scip, bestrownonzcoefs[c]));
 
-         iscont = (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+         iscont = varIsContinuous(var);
          waszero = (aggrcoefs[pos] == 0.0);
          aggrcoefs[pos] += bestrownonzcoefs[c] * aggrfac;
          iszero = SCIPisZero(scip, aggrcoefs[pos]);
@@ -1177,6 +1207,9 @@ SCIP_RETCODE separateCuts(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    ncontvars = SCIPgetNContVars(scip);
+#ifdef IMPLINTSARECONT
+   ncontvars += SCIPgetNImplVars(scip); /* also aggregate out implicit integers */
+#endif
    nintvars = nvars-ncontvars;
    assert(nvars == 0 || vars != NULL);
 

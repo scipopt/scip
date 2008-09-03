@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.297 2008/08/30 21:10:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.298 2008/09/03 00:54:23 bzfpfend Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -6546,9 +6546,14 @@ SCIP_RETCODE fullDualPresolve(
    SCIP_Real* redub;
    int* nlocksdown;
    int* nlocksup;
+   SCIP_Bool* isimplint;
    SCIP_VAR** vars;
+   SCIP_VAR** conscontvars;
    int nvars;
    int nbinvars;
+   int nintvars;
+   int ncontvars;
+   int nupgdvars;
    int v;
    int c;
 
@@ -6558,6 +6563,17 @@ SCIP_RETCODE fullDualPresolve(
     * then:
     *   c_v >= 0 : x_v <= redlb[v] is feasible due to optimality
     *   c_v <= 0 : x_v >= redub[v] is feasible due to optimality
+    */
+
+   /* Additionally, we detect continuous variables that are implicitly integral.
+    * A continuous variable j is implicit integral if it only has only +/-1 coefficients,
+    * and all constraints (including the bounds as trivial constraints) in which:
+    *   c_j > 0: the variable is down-locked,
+    *   c_j < 0: the variable is up-locked,
+    *   c_j = 0: the variable appears
+    * have, apart from j, only integer variables with integral coefficients and integral sides.
+    * This is because then, the value of the variable is either determined by one of its bounds or
+    * by one of these constraints, and in all cases, the value of the variable is integral.
     */
 
    assert(nconss == 0 || conss != NULL);
@@ -6572,11 +6588,17 @@ SCIP_RETCODE fullDualPresolve(
    if( nbinvars == nvars )
       return SCIP_OKAY;
 
+   /* get number of continuous variables */
+   ncontvars = SCIPgetNContVars(scip);
+   nintvars = nvars - ncontvars;
+
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &redlb, nvars - nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &redub, nvars - nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlocksdown, nvars - nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nlocksup, nvars - nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &isimplint, ncontvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &conscontvars, ncontvars) );
 
    /* initialize redundancy bounds */
    for( v = nbinvars; v < nvars; ++v )
@@ -6586,6 +6608,22 @@ SCIP_RETCODE fullDualPresolve(
    }
    BMSclearMemoryArray(nlocksdown, nvars - nbinvars);
    BMSclearMemoryArray(nlocksup, nvars - nbinvars);
+
+   /* Initialize isimplint array: variable may be implied integer if both bounds are integral.
+    * We better not use SCIPisFeasIntegral() in these checks.
+    */
+   for( v = 0; v < ncontvars; v++ )
+   {
+      SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      
+      var = vars[nintvars+v];
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+      isimplint[v] = (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb))
+         && (SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub));
+   }
 
    /* scan all constraints */
    for( c = 0; c < nconss; ++c )
@@ -6598,7 +6636,11 @@ SCIP_RETCODE fullDualPresolve(
          SCIP_CONSDATA* consdata;
          SCIP_Bool lhsexists;
          SCIP_Bool rhsexists;
+         SCIP_Bool hasimpliedpotential;
+         SCIP_Bool integralcoefs;
          int nlockspos;
+         int contvarpos;
+         int nconscontvars;
          int i;
 
          consdata = SCIPconsGetData(conss[c]);
@@ -6609,13 +6651,33 @@ SCIP_RETCODE fullDualPresolve(
 
          /* we do not want to include constraints with locked negation (this would be too weird) */
          if( SCIPconsGetNLocksNeg(conss[c]) > 0 )
+         {
+            /* mark all continuous variables as not being implicit integral */
+            for( i = 0; i < consdata->nvars; ++i )
+            {
+               SCIP_VAR* var;
+
+               var = consdata->vars[i];
+               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               {
+                  int contv;
+                  contv = SCIPvarGetProbindex(var) - nintvars;
+                  assert(0 <= contv && contv < ncontvars); /* variable should be active due to applyFixings() */
+                  isimplint[contv] = FALSE;
+               }
+            }
             continue;
+         }
 
          /* check for existing sides */
          lhsexists = !SCIPisInfinity(scip, -consdata->lhs);
          rhsexists = !SCIPisInfinity(scip, consdata->rhs);
 
          /* count locks and update redundancy bounds */
+         contvarpos = -1;
+         nconscontvars = 0;
+         hasimpliedpotential = FALSE;
+         integralcoefs = TRUE;
          for( i = 0; i < consdata->nvars; ++i )
          {
             SCIP_VAR* var;
@@ -6634,7 +6696,7 @@ SCIP_RETCODE fullDualPresolve(
             /* calculate residual activity bounds if variable would be fixed to zero */
             val = consdata->vals[i];
             consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity);
-            arrayindex = SCIPvarGetProbindex(consdata->vars[i]) - nbinvars;
+            arrayindex = SCIPvarGetProbindex(var) - nbinvars;
             assert(0 <= arrayindex && arrayindex < nvars - nbinvars); /* variable should be active due to applyFixings() */
 
             newredlb = redlb[arrayindex];
@@ -6681,11 +6743,85 @@ SCIP_RETCODE fullDualPresolve(
                   newredlb = SCIPceil(scip, newredlb);
                if( !SCIPisInfinity(scip, -newredub) )
                   newredub = SCIPfloor(scip, newredub);
+
+               /* check if still all integer variables have integral coefficients */
+               integralcoefs = integralcoefs && SCIPisIntegral(scip, val);
             }
 
             /* update redundancy bounds */
             redlb[arrayindex] = MAX(redlb[arrayindex], newredlb);
             redub[arrayindex] = MIN(redub[arrayindex], newredub);
+
+            /* collect the continuous variables of the constraint */
+            if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            {
+               int contv;
+
+               assert(nconscontvars < ncontvars);
+               contvarpos = i;
+               conscontvars[nconscontvars] = var;
+               nconscontvars++;
+
+               contv = SCIPvarGetProbindex(var) - nintvars;
+               assert(0 <= contv && contv < ncontvars);
+               hasimpliedpotential = hasimpliedpotential || isimplint[contv];
+            }
+         }
+
+         /* update implied integer status of continuous variables */
+         if( hasimpliedpotential )
+         {
+            if( nconscontvars > 1 || !integralcoefs )
+            {
+               /* there is more than one continuous variable or the integer variables have fractional coefficients:
+                * none of the continuous variables is implied integer
+                */
+               for( i = 0; i < nconscontvars; i++ )
+               {
+                  int contv;
+                  contv = SCIPvarGetProbindex(conscontvars[i]) - nintvars;
+                  assert(0 <= contv && contv < ncontvars);
+                  isimplint[contv] = FALSE;
+               }
+            }
+            else if( nconscontvars == 1 )
+            {
+               SCIP_VAR* var;
+               SCIP_Real val;
+               SCIP_Real absval;
+               int contv;
+
+               /* there is exactly one continuous variable and the integer variables have integral coefficients:
+                * this is the interesting case, and we have to check whether the coefficient is +/-1 and the corresponding
+                * side(s) of the constraint is integral
+                */
+               assert(0 <= contvarpos && contvarpos < consdata->nvars);
+               var = consdata->vars[contvarpos];
+               val = consdata->vals[contvarpos];
+               contv = SCIPvarGetProbindex(var) - nintvars;
+               assert(0 <= contv && contv < ncontvars);
+               assert(isimplint[contv]);
+               
+               absval = REALABS(val);
+               if( !SCIPisEQ(scip, absval, 1.0) )
+                  isimplint[contv] =  FALSE;
+               else
+               {
+                  SCIP_Real obj;
+                  
+                  obj = SCIPvarGetObj(var);
+                  if( obj * val >= 0.0 && lhsexists )
+                  {
+                     /* the variable may be blocked by the constraint's left hand side */
+                     isimplint[contv] = isimplint[contv] && SCIPisIntegral(scip, consdata->lhs);
+                  }
+                  if( obj * val <= 0.0 && rhsexists )
+                  {
+                     /* the variable may be blocked by the constraint's left hand side */
+                     isimplint[contv] = isimplint[contv] && SCIPisIntegral(scip, consdata->rhs);
+                  }
+               }
+            }
          }
       }
    }
@@ -6761,7 +6897,47 @@ SCIP_RETCODE fullDualPresolve(
       }
    }
 
+   /* upgrade continuous variables to implied integers */
+   nupgdvars = 0;
+   for( v = nintvars; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS);
+      assert(SCIPvarGetNLocksDown(vars[v]) >= nlocksdown[v - nbinvars]);
+      assert(SCIPvarGetNLocksUp(vars[v]) >= nlocksup[v - nbinvars]);
+
+      var = vars[v];
+
+      /* we can only conclude implied integrality if the variable appears in no other constraint */
+      if( isimplint[v-nintvars]
+          && SCIPvarGetNLocksDown(var) == nlocksdown[v - nbinvars]
+          && SCIPvarGetNLocksUp(var) == nlocksup[v - nbinvars] )
+      {
+         /* only collect variables here, because SCIPchgVarType() reorders vars array */
+         conscontvars[nupgdvars] = var; /* borrow this array for collecting implied integer variables */
+         nupgdvars++;
+      }
+   }
+   for( v = 0; v < nupgdvars; ++v )
+   {
+      SCIP_VAR* var;
+
+      var = conscontvars[v];
+
+      /* bounds might have been tightened, but must still be integral */
+      assert(SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) || SCIPisIntegral(scip, SCIPvarGetLbGlobal(var)));
+      assert(SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) || SCIPisIntegral(scip, SCIPvarGetUbGlobal(var)));
+
+      SCIPdebugMessage("dual presolve: converting continuous variable <%s>[%g,%g] to implicit integer\n",
+         SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      SCIP_CALL( SCIPchgVarType(scip, conscontvars[v], SCIP_VARTYPE_IMPLINT) );
+   }
+
    /* free temporary memory */
+   SCIPfreeBufferArray(scip, &conscontvars);
+   SCIPfreeBufferArray(scip, &isimplint);
    SCIPfreeBufferArray(scip, &nlocksup);
    SCIPfreeBufferArray(scip, &nlocksdown);
    SCIPfreeBufferArray(scip, &redub);
