@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.282 2008/09/03 00:54:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.283 2008/09/03 15:35:59 bzfpfend Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6988,7 +6988,7 @@ void findBestLb(
          *bestlbtype = -2;
       }
    }
-   if( usevbds && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
       SCIP_Real bestvlb;
       int bestvlbidx;
@@ -7000,6 +7000,9 @@ void findBestLb(
          SCIP_VAR** vlbvars;
 
          /* we have to avoid cyclic variable bound usage, so we enforce to use only VB vars of smaller index */
+         /**@todo this check is not needed for continuous variables; but allowing all but binary variables
+          *       to be replaced by variable bounds seems to be buggy (wrong result on gesa2)
+          */
          vlbvars = SCIPvarGetVlbVars(var);
          if( SCIPvarGetProbindex(vlbvars[bestvlbidx]) < SCIPvarGetProbindex(var) )
          {
@@ -7038,7 +7041,7 @@ void findBestUb(
          *bestubtype = -2;
       }
    }
-   if( usevbds && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
+   if( usevbds && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
    {
       SCIP_Real bestvub;
       int bestvubidx;
@@ -7050,6 +7053,9 @@ void findBestUb(
          SCIP_VAR** vubvars;
 
          /* we have to avoid cyclic variable bound usage, so we enforce to use only VB vars of smaller index */
+         /**@todo this check is not needed for continuous variables; but allowing all but binary variables
+          *       to be replaced by variable bounds seems to be buggy (wrong result on gesa2)
+          */
          vubvars = SCIPvarGetVubVars(var);
          if( SCIPvarGetProbindex(vubvars[bestvubidx]) < SCIPvarGetProbindex(var) )
          {

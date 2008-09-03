@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.252 2008/08/25 15:12:59 bzfheinz Exp $
+# $Id: Makefile,v 1.253 2008/09/03 15:35:59 bzfpfend Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -230,7 +230,7 @@ LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/clpinc
 LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) -Wl,-rpath,$(CURDIR)/$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)gfortran$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX) $(LINKCXX_l)bz2$(LINKLIBSUFFIX)
+			$(LINKCXX_l)bz2$(LINKLIBSUFFIX)
 LPILIBOBJ	=	scip/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/scip/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/clpinc
