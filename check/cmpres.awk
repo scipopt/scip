@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.46 2008/04/17 19:30:45 bzfpfets Exp $
+# $Id: cmpres.awk,v 1.47 2008/09/03 07:42:20 bzfheinz Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -368,7 +368,12 @@ END {
       if( o == 0 )
          printf(" %39s |", solvername[s]);
       else
-         printf(" %32s |", solvername[s]);
+      {
+         if( length(solvername[s]) <= 33 )
+            printf("%33s |", solvername[s]);
+	 else
+            printf("%34s|", solvername[s]);
+      }
    }
    printf("\n");
    printhline(nsolver);
