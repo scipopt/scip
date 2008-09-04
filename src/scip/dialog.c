@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.42 2008/08/15 19:37:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.43 2008/09/04 20:28:37 bzfpfets Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -109,7 +109,20 @@ SCIP_RETCODE removeHistory(
    HIST_ENTRY* entry;
    
    entry = remove_history(pos);
+
+   /* Free readline/history storage: there seem to be differences in the versions (and the amount of
+    * data to be freed). The following should be a good approximation; if it doesn't work define
+    * NO_REMOVE_HISTORY - see the INSTALL file. This will produce minor memory leaks.
+    */
+#if RL_VERSION_MAJOR >= 5
    (void)free_history_entry(entry);
+#else
+   if ( entry != NULL )
+   {
+      free(entry->line);
+      free(entry);
+   }
+#endif
 #endif
 
    return SCIP_OKAY;
