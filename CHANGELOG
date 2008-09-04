@@ -217,6 +217,8 @@ fixed bugs:
 - corrected imlementation of SCIPlpiGetBasisInd() in lpi_clp.cpp (this fixes the bug that almost no Gomory cuts are found with Clp).
 - weakened two too strong asserts in lp.c concerning the LP result OBJLIMIT
 - fixed bug in cons_linear.c caused by comparing two infinity values during checking of using variable as slackvariable
+- tried to fix memory leak in dialog.c occuring from different versions of the readline/history libraries
+
 
 SCIP version 1.00
 =================
