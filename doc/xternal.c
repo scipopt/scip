@@ -52,7 +52,7 @@
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref MAKE    "Makefiles"
  * - \ref DEBUG   "Debugging"
- * - \ref TEST    "How to run automated tests with SCIP?"
+ * - \ref TEST    "How to run automated tests with SCIP"
  *
  * <b>Programming with SCIP</b>
  *
@@ -3096,7 +3096,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page TEST How to run automated tests with SCIP?
+/**@page TEST How to run automated tests with SCIP
  *
  *  SCIP comes along with a set of useful tools that allow us to perform automated tests. The
  *  following is a step-by-step guide from setting up the test environment to evaluation and
