@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.62 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.63 2008/09/04 19:06:37 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -55,8 +55,8 @@
 #define LP_MAX_LINELEN       65536
 #define LP_MAX_PUSHEDTOKENS  2
 #define LP_INIT_COEFSSIZE    8192
-#define LP_MAX_PRINTLEN      561       /**< the maximum length of any line is 560 + '\0' = 561*/
-#define LP_MAX_NAMELEN       256       /**< the maximum length for any name is 255 + '\0' = 256 */
+#define LP_MAX_PRINTLEN      561       /**< the maximum length of any line is 560 + '\\0' = 561*/
+#define LP_MAX_NAMELEN       256       /**< the maximum length for any name is 255 + '\\0' = 256 */
 #define LP_PRINTLEN          100
 
 /** Section in LP File */

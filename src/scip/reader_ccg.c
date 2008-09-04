@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.2 2008/08/22 13:36:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.3 2008/09/04 19:06:37 bzfpfets Exp $"
 
 /**@file   reader_ccg.c
  * @brief  Graph file reader (actually, only a writer)
@@ -49,7 +49,7 @@
 /*
  * Data structures
  */
-#define CCG_MAX_LINELEN               71      /**< the maximum length of any line is 70 + '\0' = 71*/
+#define CCG_MAX_LINELEN               71      /**< the maximum length of any line is 70 + '\\0' = 71*/
 
 /* graph data structure */
 struct sparseGraph

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.13 2008/09/01 21:06:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.14 2008/09/04 19:06:37 bzfpfets Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -1533,7 +1533,7 @@ SCIP_RETCODE getFlowCover(
 
 }
 
-/** for a given flow cover and a given value of delta, choose L1 subset N1\C1 and L2 subset N2\C2 by comparison such that 
+/** for a given flow cover and a given value of delta, choose L1 subset N1 \ C1 and L2 subset N2 \ C2 by comparison such that 
  *  the violation of the resulting c-MIRFCI is maximized.
  */
 static
@@ -1653,7 +1653,7 @@ SCIP_RETCODE getBoundsForSubstitution(
    int*                  assoctransvars,     /**< associated var in transformed problem for all vars of current row */ 
    int*                  transvarcoefs,      /**< coefficient of all vars in transformed problem */ 
    int*                  flowcoverstatus,    /**< flow cover status of all nonbinary vars in transformed problem; 
-                                              *   1 if in C1 & C2, 2 if in L2, -1 N1\C1 & N2\(C2&L2) */ 
+                                              *   1 if in C1 & C2, 2 if in L2, -1 N1 \ C1 & N2 \ (C2&L2) */ 
    int                   ntransvars,         /**< number of vars in transformed problem */
    int*                  boundsforsubst,     /**< pointer to store bound that should be used for subst in c-mir for vars */
    SCIP_BOUNDTYPE*       boundtypesforsubst  /**< pointer to store type of bound that should be used for subst in c-mir for vars vars */

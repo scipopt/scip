@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.16 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.17 2008/09/04 19:06:37 bzfpfets Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -1254,7 +1254,7 @@ void clearBuffer(
 }
 
 
-/** ends the given line with '\0' and prints it to the given file stream */
+/** ends the given line with '\\0' and prints it to the given file stream */
 static
 void writeBuffer(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.13 2008/08/22 13:36:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.14 2008/09/04 19:06:37 bzfpfets Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -40,7 +40,7 @@
 /*
  * Data structures
  */
-#define PPM_MAX_LINELEN               71      /**< the maximum length of any line is 70 + '\0' = 71*/
+#define PPM_MAX_LINELEN               71      /**< the maximum length of any line is 70 + '\\0' = 71*/
 #define DEFAULT_PPM_RGB_LIMIT        160
 #define DEFAULT_PPM_COEF_LIMIT         3
 #define DEFAULT_PPM_RGB_RELATIVE    TRUE
