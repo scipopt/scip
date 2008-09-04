@@ -19,6 +19,8 @@
  * @brief  main document page
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Mathias Kinder
+ * @author Marc Pfetsch
  * @author Kati Wolter
  */
 
@@ -43,10 +45,18 @@
  * was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati Wolter. The
  * persons listed above have contributed or are currently contributing to SCIP.
  *
- * - \ref CODE    "Coding style guidelines"
- * - \ref MAKE    "Makefiles"
+ * <b>General Information</b>
+ *
+ * - \ref FAQ     "Frequently asked questions"
  * - \ref START   "How to start a new project"
  * - \ref DOC     "How to search the documentation for interface methods"
+ * - \ref MAKE    "Makefiles"
+ * - \ref DEBUG   "Debugging"
+ * - \ref TEST    "How to run automated tests with SCIP?"
+ *
+ * <b>Programming with SCIP</b>
+ *
+ * - \ref CODE    "Coding style guidelines"
  * - \ref CONS    "How to add constraint handlers"
  * - \ref PRICER  "How to add variable pricers"
  * - \ref PRESOL  "How to add presolvers"
@@ -61,8 +71,6 @@
  * - \ref DISP    "How to add display columns"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
- * - \ref DEBUG   "Debugging"
- * - \ref FAQ     "Frequently asked questions"
 */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3085,6 +3093,167 @@
  *    containing a solution in SCIP format. This solution is the read and it is check for every cut,
  *    whether the solution violates the cut.
  * 
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page TEST How to run automated tests with SCIP?
+ *
+ *  SCIP comes along with a set of useful tools that allow us to perform automated tests. The
+ *  following is a step-by-step guide from setting up the test environment to evaluation and
+ *  customization of test runs.
+ *
+ *
+ *  @section SETUP Setting up the test environment
+ *
+ *  Suppose we have a test set of one or more "lp" files. These test instances have to accessible in
+ *  the @c check directory; you can also set a link to the instances. Once this is done, we have
+ *  to create a @em test file within the @c check directory that specifies the location of our test
+ *  instances. In our example, we have three "lp" files, <tt>one.lp</tt>, <tt>two.lp</tt>, and
+ *  <tt>three.lp</tt>, stored in the directory <code>check/testrun</code>, a sample @em test file
+ *  <tt>testrun.test</tt> would look like this
+ *
+ *  - <tt>testrun/one.lp</tt>
+ *  - <tt>testrun/two.lp</tt>
+ *  - <tt>testrun/three.lp</tt>
+ *
+ *  Optionally, we can provide a "solu" file in the "check" directory containing the best known
+ *  objective values for our test instances. SCIP can use these values to verify the results. The
+ *  file has to have the same basename as the @em test file, i.e. in our case
+ *  <tt>testrun.solu</tt>. The file content may look as follows
+ * 
+ *  - <tt>=opt=    one.lp     73389.09</tt>
+ *  - <tt>=opt=    two.lp     153183.89</tt>
+ *  - <tt>=best=  three.lp   234234.21</tt>
+ *
+ *  The string <tt>=best=</tt> indicates that the objective value may not be optimal.
+ *
+ *
+ *  @section STARTING Starting a test run
+ *
+ *  We are now in a position to start the test run. The easiest way to do so, is by calling
+ *
+ *  <code>make TEST=testrun test</code>
+ *
+ *  in the SCIP root directory. Note that <tt>testrun</tt> is exactly the basename of our @em test
+ *  file. This will cause SCIP to solve our test instances one after another and to create various
+ *  output files (see @ref EVAL "Evaluating a test run for details").
+ *
+ * 
+ *  @section EVAL Evaluating a test run
+ *
+ *  During computation, SCIP automatically creates the following output files in the <code>check/result</code>
+ *  directory.
+ *
+ *  \arg <tt>*.out</tt> - output of <tt>stdout</tt>
+ *  \arg <tt>*.err</tt> - output of <tt>stderr</tt>
+ *  \arg <tt>*.set</tt> - copy of the settings file used
+ *
+ *  In order to obtain a summary of the computational results, we call the <tt>evalcheck.sh</tt>
+ *  script in the @c check directory with the "out" file as argument. This produces the following
+ *  files in the <code>check/result</code> directory"
+ *
+ *  \arg <tt>*.res</tt> - ASCII table containing a summary of the computational results
+ *  \arg <tt>*.tex</tt> - TeX table containing a summary of the computational results
+ *  \arg <tt>*.pav</tt> - <a href="http://www.gamsworld.org/performance/paver">PAVER</a> output
+ *
+ *  @b Note The basename of each output file allows us to reconstruct the test setting. Suppose, for
+ *  example, the output file is
+ *
+ *      <tt>check.testrun.scip_binary.machine.fast.out</tt>
+ *
+ *  Then <tt>testrun</tt> is the basename of the @em test file and <tt>scip_binary</tt> is the name of
+ *  the SCIP binary file. Furthermore, <tt>machine</tt> denotes the machine on which the test was
+ *  run and <tt>fast</tt> is the basename of the settings file used.
+ *
+ *
+ *  @section USING Using customized setting files
+ *
+ *  It is possible to use customized settings files for the test run. These have to be placed in the
+ *  @c settings directory. Note that the access to settings files in subfolders of the @c settings
+ *  directory is currently not possible.
+ *
+ *  To run SCIP with a custom settings file, say <tt>fast.set</tt>, we call
+ *
+ *      <tt>make TEST=testrun SETTING=fast test</tt>
+ *
+ *  in the SCIP root directory.
+ *
+ * 
+ *  @section ADVANCED Advanced options
+ *
+ *  We can further customize the test run by specifying the following options in the <tt>make</tt>
+ *  call.
+ *
+ *  \arg <tt>TIME</tt>  - time limit for each test instance in seconds [default: 3600]
+ *  \arg <tt>NODES</tt> - node limit [default: 2100000000]
+ *  \arg <tt>MEM</tt>   -  memory limit in MB [default: 1536]
+ *  \arg <tt>CONTINUE</tt> - continue test run [default: "false"]
+ *
+ * 
+ *  @section COMPARE Comparing test runs for different settings
+ *
+ *  Often test runs are performed on the basis of different settings. In this case, it is useful to
+ *  have a performance comparison. For this purpose, we can use the <tt>allcmpres.sh</tt> script in
+ *  the @c check directory.
+ *
+ *  Suppose, we performed our test run with two different settings, say <tt>fast.set</tt> and
+ *  <tt>slow.set</tt>. Assuming that all other parameters (including the SCIP binary), were the same,
+ *  we may have the following "res" files in the <code>check/result</code> directory
+ *
+ *  <tt>check.testrun.scip_binary.machine.fast.res</tt> and @n
+ *  <tt>check.testrun.scip_binary.machine.slow.res</tt>
+ *
+ *  For a comparison of both computations we simply call
+ *
+ *  <code>allcmpres.sh results/check.testrun.scip_binary.machine.fast.res results/check.testrun.scip_binary.machine.slow.res</code>
+ *
+ *  in the @c check directory. This produces two ASCII tables on the console that provide a detailed
+ *  performance comparison of both test runs. Note that the first "res" file serves as the reference
+ *  computation. In the following list explains the output, where we use the term "solver" for the
+ *  combination of SCIP with a specific settings file.
+ *
+ *  \arg <tt>Nodes</tt> - Number of nodes processed.
+ *  \arg <tt>Time</tt>  - Computation time in seconds.
+ *  \arg <tt>F</tt>     - If no feasible solutions were found, then '#', empty otherwise.
+ *  \arg <tt>NodQ</tt>  - Equals Nodes(i) / Nodes(0), where 'i' denotes the current solver and '0' stands for the reference solver.
+ *  \arg <tt>TimQ</tt>  - Equals Time(i) / Time(0).
+ *  \arg <tt>bounds check</tt> - Status of the primal and dual bound check.
+ *
+ *  \arg <tt>proc</tt> - Number of instances processed.
+ *  \arg <tt>eval</tt> - Number of instances evaluated (bounds check = "ok"). Only these instances are used in the calculation of the mean values.
+ *  \arg <tt>fail</tt> - Number of instances with bounds check = "fail".
+ *  \arg <tt>time</tt> - Number of instances with timeout.
+ *  \arg <tt>solv</tt> - Number of instances correctly solved within the time limit.
+ *  \arg <tt>wins</tt> - Number of instances on which the solver won (i.e., the
+ *      solver was at most 10% slower than the fastest solver OR had the best
+ * 	primal bound in case the instance was not solved by any solver within
+ *	the time limit).
+ *  \arg <tt>bett</tt>    - Number of instances on which the solver was better than the
+ *	reference solver (i.e. more than 10% faster).
+ *  \arg <tt>wors</tt>    - Number of instances on which the solver was worse than the
+ *	reference solver (i.e. more than 10% slower).
+ *  \arg <tt>bobj</tt>    - Number of instances on which the solver had a better primal
+ *	bound than the reference solver (i.e. a difference larger than 10%).
+ *  \arg <tt>wobj</tt>    - Number of instances on which the solver had a worse primal
+ *	bound than the reference solver (i.e. a difference larger than 10%).
+ *  \arg <tt>feas</tt>    - Number of instances for which a feasible solution was found.
+ *  \arg <tt>nodes</tt>   - Geometric mean of the processed nodes over all evaluated instances.
+ *  \arg <tt>shnodes</tt> - Shifted geometric mean of the processed nodes over all evaluated instances.
+ *  \arg <tt>nodesQ</tt>  - Equals nodes(i) / nodes(0), where 'i' denotes the current
+ *	solver and '0' stands for the reference solver.
+ *  \arg <tt>shnodesQ</tt> - Equals shnodes(i) / shnodes(0).
+ *  \arg <tt>time</tt>    - Geometric mean of the computation time over all evaluated instances.
+ *  \arg <tt>shtime</tt>  - Shifted geometric mean of the computation time over all evaluated instances.
+ *  \arg <tt>timeQ</tt>   - Equals time(i) / time(0).
+ *  \arg <tt>shtimeQ</tt> - Equals shtime(i) / shtime(0).
+ *  \arg <tt>score</tt>   - N/A
+ *
+ *  \arg <tt>all</tt>   - All solvers.
+ *  \arg <tt>diff</tt>  - Solvers with instances that differ from the reference solver in the number of processed nodes or number of iterations.
+ *  \arg <tt>equal</tt> - Solvers with instances whose number of processed nodes and number of
+ *       iteration is equal to the reference solver (including a 10% tolerance) and where no timeout
+ *       occured.
+ *  \arg <tt>optimal auto settings</tt> - Theoretical result for a solver that performed 'best of all' for every instance.
  */
 
 /**@page FAQ Frequently Asked Questions
