@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.253 2008/09/03 15:35:59 bzfpfend Exp $
+# $Id: Makefile,v 1.254 2008/09/04 08:51:47 bzforlow Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -60,8 +60,6 @@ GMP             =       auto
 ZIMPL		=	true
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
-
-LPSOPT		=	opt
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
