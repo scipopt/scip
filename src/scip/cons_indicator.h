@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.6 2008/08/15 19:47:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.7 2008/09/04 13:42:38 bzfheinz Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -94,7 +94,6 @@ SCIP_RETCODE SCIPaddVarIndicator(
 /** gets the linear constraint corresponding to the indicator constraint */
 extern
 SCIP_CONS* SCIPgetLinearConsIndicator(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
 

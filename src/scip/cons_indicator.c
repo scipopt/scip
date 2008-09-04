@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.22 2008/08/19 20:28:53 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.23 2008/09/04 13:42:38 bzfheinz Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3097,6 +3097,21 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    return SCIP_OKAY;
 }
 
+/** gets the linear constraint corresponding to the indicator constraint */
+SCIP_CONS* SCIPgetLinearConsIndicator(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   return consdata->lincons;
+}
 
 
 /** gets binary variable corresponding to indicator constraint */
@@ -3105,6 +3120,8 @@ SCIP_VAR* SCIPgetBinaryVarIndicator(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
 
    assert( cons != NULL );
    consdata = SCIPconsGetData(cons);
@@ -3120,6 +3137,8 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
 
    assert( cons != NULL );
    consdata = SCIPconsGetData(cons);
