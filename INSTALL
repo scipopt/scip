@@ -208,6 +208,11 @@ make[1]: Leaving directory `/sw/scip'
    appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_STRTOK_R".
    Make sure, the file "src/scip/misc.c" is recompiled.
 
+   On some systems, the strerror_r() method is not available.
+   In this case, you have to either add "-DNO_STRERROR_R" to the FLAGS in the
+   appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_STRERROR_R".
+   Make sure, the file "src/scip/misc.c" is recompiled.
+
    If you encounter other compiler or linker errors, you should recompile with
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
    fix the corresponding machine dependent makefile in the make subdirectory.

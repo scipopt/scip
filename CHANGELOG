@@ -66,6 +66,9 @@ interface:
 - new methods SCIPgetVarFarkasCoef() and SCIPgetColFarkasCoef() to get the
   farkas coefficient of a variable (analogon of reduced cost in case of infeasible LPs)
 - new parameter "maxmksetcoefs" for SCIPcalcMIR() and SCIPcalcStrongCG() methods
+- new method SCIPprintSysError which encapsulates the strerror_r calls, 
+  the NO_STRERROR_R flag switches between the use of strerror_r and strerror inside
+
 
 features:
 - the MPS reader is now able to write a problem in MPS format

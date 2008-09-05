@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.10 2008/05/06 13:33:25 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.11 2008/09/05 15:28:50 bzfgamra Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -23,7 +23,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
@@ -238,10 +237,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
             file = SCIPfopen(argv[i], "r");
             if( file == NULL )
             {
-	       char buf[1024];
                printf("cannot read command batch file <%s>\n", argv[i]);
-	       (void) strerror_r(errno, buf, 1024);
-	       SCIPerrorMessage("%s: %s\n", argv[i], buf);
+               SCIPprintSysError(argv[i]);
                paramerror = TRUE;
             }
             else

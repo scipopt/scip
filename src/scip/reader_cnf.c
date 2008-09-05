@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.43 2008/05/06 13:59:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.44 2008/09/05 15:28:49 bzfgamra Exp $"
 
 /**@file   reader_cnf.c
  * @brief  CNF file reader
@@ -24,7 +24,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 
 #include "scip/reader_cnf.h"
 #include "scip/cons_linear.h"
@@ -366,10 +365,8 @@ SCIP_DECL_READERREAD(readerReadCnf)
    f = SCIPfopen(filename, "r");
    if( f == NULL )
    {
-      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      (void) strerror_r(errno, buf, 1024);
-      SCIPerrorMessage("%s: %s\n", filename, buf);
+      SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
 

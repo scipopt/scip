@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.88 2008/08/15 17:37:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.89 2008/09/05 15:28:49 bzfgamra Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -24,7 +24,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 
 #include "scip/dialog_default.h"
 
@@ -1812,10 +1811,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
       file = fopen(filename, "w");
       if( file == NULL )
       {
-	 char buf[1024];
          SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
-	 (void) strerror_r(errno, buf, 1024);
-	 SCIPerrorMessage("%s: %s\n", filename, buf);
+         SCIPprintSysError(filename);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
       }
       else

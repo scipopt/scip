@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.63 2008/09/04 19:06:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.64 2008/09/05 15:28:49 bzfgamra Exp $"
 
 /**@file   reader_lp.c
  * @brief  LP file reader
@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
 #include <strings.h>
@@ -1549,10 +1548,8 @@ SCIP_RETCODE readLPFile(
    lpinput->file = SCIPfopen(filename, "r");
    if( lpinput->file == NULL )
    {
-      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      (void) strerror_r(errno, buf, 1024);
-      SCIPerrorMessage("%s: %s\n", filename, buf);
+      SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
 

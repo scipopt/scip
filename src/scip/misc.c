@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.85 2008/09/01 18:38:55 bzfpfets Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.86 2008/09/05 15:28:49 bzfgamra Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -25,6 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -2451,7 +2452,7 @@ int SCIPptrarrayGetMaxIdx(
  * Sorting algorithms
  */
 
-/* first all downwards-sorting methods */
+/* first all upwards-sorting methods */
 
 /** sort an indexed element set, resulting in a permutation index array */
 void SCIPsort(
@@ -3429,6 +3430,24 @@ SCIP_Real SCIPgetRandomReal(
 /*
  * Strings
  */
+
+/** prints an error message containing of the given string followed by a string describing the current system error; 
+    prefers to use the strerror_r method, which is threadsafe; 
+    on systems where this method does not exist, NO_STRERROR_R should be defined (see INSTALL), 
+    in this case, srerror is used which is not guaranteed to be threadsafe (on SUN-systems, it actually is) */
+void SCIPprintSysError(
+   const char*                 message             /**< first part of the error message, e.g. the filename */
+   )
+{
+#ifdef NO_STRERROR_R
+   char* buf;
+   buf = strerror(errno);
+#else
+   char buf[1024];
+   (void) strerror_r(errno, buf, 1024);
+#endif
+   SCIPmessagePrintError("%s: %s\n", message, buf);
+}
 
 /** extracts tokens from strings - wrapper method for strtok_r() */
 char* SCIPstrtok(

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.28 2008/05/06 13:33:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.29 2008/09/05 15:28:50 bzfgamra Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
@@ -112,10 +111,8 @@ SCIP_RETCODE SCIPvbcInit(
 
    if( vbc->file == NULL )
    {
-      char buf[1024];
       SCIPerrorMessage("error creating file <%s>\n", set->vbc_filename);
-      (void) strerror_r(errno, buf, 1024);
-      SCIPerrorMessage("%s: %s\n", set->vbc_filename, buf);
+      SCIPprintSysError(set->vbc_filename);
       return SCIP_FILECREATEERROR;
    }
 

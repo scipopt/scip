@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.32 2008/08/30 13:02:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.33 2008/09/05 15:28:49 bzfgamra Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -23,7 +23,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 #include <assert.h>
 
 #include "scip/def.h"
@@ -71,10 +70,8 @@ SCIP_RETCODE readSolfile(
    file = fopen(solfilename, "r");
    if( file == NULL )
    {
-      char buf[1024];
       SCIPerrorMessage("cannot open solution file <%s> specified in scip/debug.h\n", solfilename);
-      strerror_r(errno, buf, 1024);
-      SCIPerrorMessage("%s: %s\n", solfilename, buf);
+      SCIPprintSysError(solfilename);
       return SCIP_NOFILE;
    }
 

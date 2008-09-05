@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.470 2008/09/01 21:06:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.471 2008/09/05 15:28:50 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -30,7 +30,6 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 
 #include "scip/def.h"
 #include "scip/retcode.h"
@@ -2628,10 +2627,8 @@ SCIP_RETCODE writeProblem(
       file = fopen(filename, "w");
       if( file == NULL )
       {
-	 char buf[1024];
          SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
-	 (void) strerror_r(errno, buf, 1024);
-	 SCIPerrorMessage("%s: %s\n", filename, buf);
+         SCIPprintSysError(filename);
 	 BMSfreeMemoryArray(&tmpfilename);
          return SCIP_FILECREATEERROR;
       }
@@ -9704,10 +9701,8 @@ SCIP_RETCODE SCIPreadSol(
    file = SCIPfopen(fname, "r");
    if( file == NULL )
    {
-      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", fname);
-      (void) strerror_r(errno, buf, 1024);
-      SCIPerrorMessage("%s: %s\n", fname, buf);
+      SCIPprintSysError(fname);
       return SCIP_NOFILE;
    }
 
@@ -14692,10 +14687,8 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
       file = fopen(filename, "w");
       if( file == NULL )
       {
-	 char buf[1024];
          SCIPerrorMessage("cannot create file <%s>\n", filename);
-	 (void) strerror_r(errno, buf, 1024);
-	 SCIPerrorMessage("%s: %s\n", filename, buf);
+         SCIPprintSysError(filename);
          return SCIP_FILECREATEERROR;
       }
    }

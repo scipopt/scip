@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.7 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.8 2008/09/05 15:28:50 bzfgamra Exp $"
 
 /**@file   reader_sos.c
  * @brief  SOS file reader
@@ -28,7 +28,6 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
-#include <errno.h>
 
 #include "scip/reader_sos.h"
 #include "scip/cons_sos1.h"
@@ -593,10 +592,8 @@ SCIP_RETCODE readSOSFile(
    fp = SCIPfopen(filename, "r");
    if (fp == NULL)
    {
-      char buf[1024];
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      strerror_r(errno, buf, 1024);
-      SCIPerrorMessage("%s: %s\n", filename, buf);
+      SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
 
