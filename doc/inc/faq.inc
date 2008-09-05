@@ -173,6 +173,22 @@
        version). If you do not want this to happen you have to delete
        the version that is not intended.
     </p>
+    <p class="q">
+       <a name="Q20">Can I compile SCIP as a shared library?</a>
+    </p>
+    <p class="a">
+       If you are using Linux and a GNU compiler you can use the <code>OPT=opt-shared</code> option
+       when making SCIP. This will generate the libraries of SCIP in shared format. The binary then
+       also uses this form. Note that the path to the <code>lib</code> directory of SCIP is used to
+       locate the libraries. If you want to move the libraries, you might to set the
+       <code>LD_LIBRARY_PATH</code> environment variable to include the new path.
+
+       If you have a different system or compiler (which supports shared libraries) you might try to
+       copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
+       needs (see also <a href="http://scip.zib.de/doc/html/MAKE.html">Makefiles</a>). The "magic"
+       changes are the <code>-FPIC</code> compiler/liner option and the <code>-Wl,-rpath</code>
+       option.
+    </p>
 <h4><a name="Section2">Using SCIP as a standalone MIP-Solver</a></h4>
     <p class="q">
       <a name="Q28">The output is too wide for my terminal window. What can I do?</a>
