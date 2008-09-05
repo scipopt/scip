@@ -103,7 +103,7 @@
  *
  * - <code>OPT=\<dbg|opt\></code> Here <code>dbg</code> turns on the debug mode of SCIP. This enables
  *   asserts and avoids macros for several function in order to ease debugging. The default is
- *   <code>opt</code>, which enables the optimized mode.
+ *   <code>opt</code>, which enables the optimized mode.  
  *
  * - <code>LPS=\<clp|cpx|msk|spx|xprs\></code> This determines the LP-solver, which should have been
  *   installed separately from SCIP. The options are the following:
@@ -126,6 +126,16 @@
  * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt\></code> These file contain system/compiler specific
  *   definitions. If you have a yet unsupported compiler, you could copy one of these and modify it
  *   accordingly.
+ *
+ * There is also a target <code>OPT=noblkmem</code> for Linux/Gnu compilers which turns off the
+ * internal SCIP memory. This way the code can be check via valgrind or similar tools.
+ *
+ * Furthermore, with <code>OPT=opt-shared</code> you can generate a shared object of the SCIP
+ * libraries (the binary uses these shared libraries as well).
+ *
+ * If your platform or compiler is not supported by SCIP you might try and copy one of the existing
+ * makefile in the <code>make</code> directory and modify it. If you succeed, were are always
+ * interested in including more Makefiles into the system.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
