@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.137 2008/08/27 08:36:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.138 2008/09/08 09:48:17 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1350,7 +1350,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
       }
 
       /* reactivate propagation on the first node where one of the new conflict sets trigger a deduction */
-      if( set->conf_repropagate && repropdepth < cutoffdepth && repropdepth <= focusdepth )
+      if( set->conf_repropagate && repropdepth < cutoffdepth && repropdepth < tree->pathlen )
       {
          assert(0 <= repropdepth && repropdepth < tree->pathlen);
          assert(tree->path[repropdepth]->depth == repropdepth);

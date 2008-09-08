@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.471 2008/09/05 15:28:50 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.472 2008/09/08 09:48:17 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12883,6 +12883,16 @@ int SCIPgetCutoffdepth(
    return scip->tree->cutoffdepth;
 }
 
+/** returns depth of first node in active path that has to be propagated again */
+extern
+int SCIPgetRepropdepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetRepropdepth", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return scip->tree->repropdepth;
+}
 
 
 

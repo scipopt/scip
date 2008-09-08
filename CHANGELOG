@@ -68,7 +68,7 @@ interface:
 - new parameter "maxmksetcoefs" for SCIPcalcMIR() and SCIPcalcStrongCG() methods
 - new method SCIPprintSysError which encapsulates the strerror_r calls, 
   the NO_STRERROR_R flag switches between the use of strerror_r and strerror inside
-
+- new method SCIPgetRepropdepth() to get the depth of first node in active path that has to be propagated again 
 
 features:
 - the MPS reader is now able to write a problem in MPS format
