@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.257 2008/09/08 09:48:17 bzfheinz Exp $
+# $Id: Makefile,v 1.258 2008/09/08 09:51:55 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -431,7 +431,6 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/reader_zpl.o \
 			scip/sepa_clique.o \
 			scip/sepa_cmir.o \
-			scip/sepa_conflict.o \
 			scip/sepa_flowcover.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
