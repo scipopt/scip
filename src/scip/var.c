@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.228 2008/09/01 19:38:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.229 2008/09/08 13:08:12 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3178,16 +3178,19 @@ SCIP_RETCODE varUpdateAggregationBounds(
       }
       else
       {
+         SCIP_Real oldbd;
          if( SCIPsetIsGT(set, aggvarlb, aggvar->glbdom.lb) )
          {
+            oldbd = aggvar->glbdom.lb;
             SCIP_CALL( SCIPvarChgLbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarlb) );
-            aggvarbdschanged = TRUE;
+            aggvarbdschanged = !SCIPsetIsEQ(set, oldbd, aggvar->glbdom.lb);
          }
-         if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
+	 if( SCIPsetIsLT(set, aggvarub, aggvar->glbdom.ub) )
          {
-            SCIP_CALL( SCIPvarChgUbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarub) );
-            aggvarbdschanged = TRUE;
-         }
+            oldbd = aggvar->glbdom.ub;
+	    SCIP_CALL( SCIPvarChgUbGlobal(aggvar, blkmem, set, stat, lp, branchcand, eventqueue, aggvarub) );
+            aggvarbdschanged = aggvarbdschanged || !SCIPsetIsEQ(set, oldbd, aggvar->glbdom.ub);
+	 }
 
          /* update the hole list of the aggregation variable */
          /**@todo update hole list of aggregation variable */
