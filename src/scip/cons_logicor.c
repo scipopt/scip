@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.118 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.119 2008/09/09 16:23:55 bzfwanie Exp $"
 
 /**@file   cons_logicor.c
  * @brief  constraint handler for logic or constraints
@@ -28,6 +28,7 @@
 
 #include "scip/cons_logicor.h"
 #include "scip/cons_linear.h"
+#include "scip/misc.h"
 
 
 #define CONSHDLR_NAME          "logicor"
@@ -1809,7 +1810,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                   SCIPvarGetName(consdata->vars[0]));
 
                coef = 1.0;
-               sprintf(consname, "fixmaggr_%s_%s", SCIPconsGetName(cons),SCIPvarGetName(consdata->vars[0]) );
+               SCIPsnprintf(consname, SCIP_MAXSTRLEN, "fixmaggr_%s_%s", SCIPconsGetName(cons),SCIPvarGetName(consdata->vars[0]) );
                SCIP_CALL( SCIPcreateConsLinear(scip,&conslinear,consname,1,consdata->vars,&coef,1.0,1.0,
                      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
@@ -2236,7 +2237,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
       char consname[SCIP_MAXSTRLEN];
       
       /* create a constraint out of the conflict set */
-      sprintf(consname, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
             FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );

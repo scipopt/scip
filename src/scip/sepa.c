@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.63 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.64 2008/09/09 16:23:59 bzfwanie Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -34,6 +34,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/sepa.h"
+#include "scip/misc.h"
 
 #include "scip/struct_sepa.h"
 
@@ -120,24 +121,24 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "separating/%s/priority", name);
-   sprintf(paramdesc, "priority of separator <%s>", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/priority", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of separator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4,
          paramChgdSepaPriority, (SCIP_PARAMDATA*)(*sepa)) ); /*lint !e740*/
 
-   sprintf(paramname, "separating/%s/freq", name);
-   sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "separating/%s/maxbounddist", name);
-   sprintf(paramdesc, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxbounddist", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
       name);
    SCIP_CALL( SCIPsetAddRealParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->maxbounddist, TRUE, maxbounddist, 0.0, 1.0, NULL, NULL) );
 
-   sprintf(paramname, "separating/%s/delay", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should separator be delayed, if other separators found cuts?",
          &(*sepa)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/

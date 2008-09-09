@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.43 2008/09/04 20:28:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.44 2008/09/09 16:23:55 bzfwanie Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -433,8 +433,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       {
          /* use current dialog's path as prompt */
          SCIPdialogGetPath(dialog, '/', path);
-         snprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
-         p[SCIP_MAXSTRLEN-1] = '\0';
+         SCIPsnprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
          prompt = p;
       }
 
@@ -609,7 +608,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
          strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
       else
       {
-         snprintf(s, SCIP_MAXSTRLEN-1, "%s %s", dialog->name, h);
+         SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s %s", dialog->name, h);
          (void)strncpy(h, s, SCIP_MAXSTRLEN-1);
       }
       dialog = dialog->parent;
@@ -946,9 +945,9 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
 
    /* display the dialog's name */
    if( dialog->issubmenu )
-      sprintf(name, "<%s>", dialog->name);
+      SCIPsnprintf(name, SCIP_MAXSTRLEN, "<%s>", dialog->name);
    else
-      sprintf(name, "%s", dialog->name);
+      SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", dialog->name);
    SCIPmessagePrintDialog("  %-21s ", name);
    if( strlen(name) > 21 )
    {
@@ -1014,8 +1013,7 @@ void SCIPdialogGetPath(
    dialog = dialog->parent;
    while( dialog != NULL )
    {
-      snprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
-      s[SCIP_MAXSTRLEN-1] = '\0';
+      SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
       (void)strcpy(path, s);
       dialog = dialog->parent;
    }

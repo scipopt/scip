@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.94 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.95 2008/09/09 16:23:54 bzfwanie Exp $"
 
 /**@file   cons_and.c
  * @brief  constraint handler for and constraints
@@ -26,6 +26,7 @@
 
 #include "scip/cons_and.h"
 #include "scip/cons_linear.h"
+#include "scip/misc.h"
 
 
 /* constraint handler properties */
@@ -853,7 +854,7 @@ SCIP_RETCODE createRelaxation(
    /* create operator rows */
    for( i = 0; i < nvars; ++i )
    {
-      sprintf(rowname, "%s_%d", SCIPconsGetName(cons), i);
+      SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
       SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[i], rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
@@ -861,7 +862,7 @@ SCIP_RETCODE createRelaxation(
    }
 
    /* create additional row */
-   sprintf(rowname, "%s_add", SCIPconsGetName(cons));
+   SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[nvars], rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
@@ -1691,7 +1692,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
          /* create operator linear constraints */
          for( v = 0; v < nvars; ++v )
          {
-            sprintf(consname, "%s_%d", SCIPconsGetName(cons), v);
+            SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), v);
             vars[1] = consdata->vars[v];
             
             SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 2, vars, vals, -SCIPinfinity(scip), 0.0,
@@ -1710,7 +1711,7 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
          SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvars + 1) );
 
          /* create additional linear constraint */
-         sprintf(consname, "%s_add", SCIPconsGetName(cons));
+         SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
 
          for( v = 0; v < nvars; ++v )
          {

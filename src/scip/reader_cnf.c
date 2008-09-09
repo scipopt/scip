@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.44 2008/09/05 15:28:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.45 2008/09/09 16:23:58 bzfwanie Exp $"
 
 /**@file   reader_cnf.c
  * @brief  CNF file reader
@@ -29,6 +29,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
+#include "scip/misc.h"
 
 
 #define READER_NAME             "cnfreader"
@@ -88,7 +89,7 @@ SCIP_RETCODE readCnfLine(
          if( linelen == size-1 )
          {
             char s[SCIP_MAXSTRLEN];
-            snprintf(s, SCIP_MAXSTRLEN, "line too long (exceeds %d characters)", size-2);
+            SCIPsnprintf(s, SCIP_MAXSTRLEN, "line too long (exceeds %d characters)", size-2);
             readError(*linecount, s);
             return SCIP_PARSEERROR;
          }
@@ -167,19 +168,19 @@ SCIP_RETCODE readCnf(
    }
    if( strcmp(format, "cnf") != 0 )
    {
-      snprintf(s, SCIP_MAXSTRLEN, "invalid format tag <%s> (must be 'cnf')", format);
+      SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid format tag <%s> (must be 'cnf')", format);
       readError(linecount, s);
       return SCIP_PARSEERROR;
    }
    if( nvars <= 0 )
    {
-      snprintf(s, SCIP_MAXSTRLEN, "invalid number of variables <%d> (must be positive)", nvars);
+      SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid number of variables <%d> (must be positive)", nvars);
       readError(linecount, s);
       return SCIP_PARSEERROR;
    }
    if( nclauses <= 0 )
    {
-      snprintf(s, SCIP_MAXSTRLEN, "invalid number of clauses <%d> (must be positive)", nclauses);
+      SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid number of clauses <%d> (must be positive)", nclauses);
       readError(linecount, s);
       return SCIP_PARSEERROR;
    }
@@ -197,7 +198,7 @@ SCIP_RETCODE readCnf(
    /* create the variables */
    for( v = 0; v < nvars; ++v )
    {
-      snprintf(varname, SCIP_MAXSTRLEN, "x%d", v+1);
+      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "x%d", v+1);
       SCIP_CALL( SCIPcreateVar(scip, &vars[v], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
             NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, vars[v]) );
@@ -221,7 +222,7 @@ SCIP_RETCODE readCnf(
             /* parse literal and check for errors */
             if( sscanf(tok, "%d", &v) != 1 )
             {
-               snprintf(s, SCIP_MAXSTRLEN, "invalid literal <%s>", tok);
+               SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid literal <%s>", tok);
                readError(linecount, s);
                retcode = SCIP_PARSEERROR;
                goto TERMINATE;
@@ -235,7 +236,7 @@ SCIP_RETCODE readCnf(
                   readWarning(linecount, "empty clause detected in line -- problem infeasible");
 
                clausenum++;
-               snprintf(s, SCIP_MAXSTRLEN, "c%d", clausenum);
+               SCIPsnprintf(s, SCIP_MAXSTRLEN, "c%d", clausenum);
                
                if( SCIPfindConshdlr(scip, "logicor") != NULL )
                {   
@@ -297,7 +298,7 @@ SCIP_RETCODE readCnf(
             }
             else
             {
-               snprintf(s, SCIP_MAXSTRLEN, "invalid variable number <%d>", ABS(v));
+               SCIPsnprintf(s, SCIP_MAXSTRLEN, "invalid variable number <%d>", ABS(v));
                readError(linecount, s);
                retcode = SCIP_PARSEERROR;
                goto TERMINATE;

@@ -39,6 +39,7 @@ int XPRS_CC XPRSpostsolve( XPRSprob prob );
 #include "scip/bitencode.h"
 #include "scip/lpi.h"
 #include "scip/message.h"
+#include "scip/misc.h"
 
 
 
@@ -628,7 +629,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   sprintf(xprsname, "XPRESS %i", XPVERSION);
+   SCIPsnprintf(xprsname, SCIP_MAXSTRLEN, "XPRESS %i", XPVERSION);
 
    return xprsname;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.300 2008/09/03 19:56:53 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.301 2008/09/09 16:23:55 bzfwanie Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -49,6 +49,7 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
+#include "scip/misc.h"
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
@@ -7136,7 +7137,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
             for( i = 0; i < ncols; ++i )
                vars[i] = SCIPcolGetVar(cols[i]);
             
-            sprintf(name, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(scip));
+            SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_%d", SCIProwGetName(row), SCIPgetNRuns(scip));
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncols, vars, SCIProwGetVals(row),
                   SCIProwGetLhs(row) - SCIProwGetConstant(row), SCIProwGetRhs(row) - SCIProwGetConstant(row),
                   TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE) );
@@ -8179,7 +8180,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      sprintf(consname, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
             FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
@@ -8339,8 +8340,8 @@ SCIP_RETCODE SCIPincludeLinconsUpgrade(
    SCIP_CALL( conshdlrdataIncludeUpgrade(scip, conshdlrdata, linconsupgrade) );
 
    /* adds parameter to turn on and off the upgrading step */
-   sprintf(paramname, "constraints/linear/upgrade/%s", conshdlrname);
-   sprintf(paramdesc, "enable linear upgrading for constraint handler <%s>", conshdlrname);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/linear/upgrade/%s", conshdlrname);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable linear upgrading for constraint handler <%s>", conshdlrname);
    SCIP_CALL( SCIPaddBoolParam(scip,
          paramname, paramdesc,
          &linconsupgrade->active, FALSE, TRUE, NULL, NULL) );

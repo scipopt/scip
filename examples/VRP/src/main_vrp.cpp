@@ -36,6 +36,11 @@
 #include "objscip/objscip.h"
 #include "objscip/objscipdefplugins.h"
 
+extern "C"
+{
+#include "scip/misc.h"
+}
+
 // user defined includes
 #include "pricer_vrp.h"
 #include "pqueue.h"
@@ -281,7 +286,7 @@ int main( int argc, char** argv )
       for ( int j = 0; j < i; ++j) {
          SCIP_VAR* var;
          char      var_name[255];
-         sprintf(var_name, "E%d_%d", i, j );
+         SCIPsnprintf(var_name, 255, "E%d_%d", i, j );
             
          SCIP_CALL( SCIPcreateVar
                     (scip,
@@ -309,7 +314,7 @@ int main( int argc, char** argv )
       for ( int j = 0; j < i; ++j) {
          SCIP_CONS* con;
          char       con_name[255];
-         sprintf(con_name, "A%d_%d", i, j );
+         SCIPsnprintf(con_name, 255, "A%d_%d", i, j );
          SCIP_VAR*  index = arc_var[i][j];
          SCIP_Real  coeff = -1;
          SCIP_CALL( SCIPcreateConsLinear
@@ -340,7 +345,7 @@ int main( int argc, char** argv )
    for ( int i = 1; i < num_nodes; ++i) {
       SCIP_CONS* con;
       char       con_name[255];
-      sprintf(con_name, "D%d", i );
+      SCIPsnprintf(con_name, 255, "D%d", i );
       SCIP_CALL( SCIPcreateConsLinear
                  (scip,
                   &con,
@@ -378,7 +383,7 @@ int main( int argc, char** argv )
    for (int i = 1; i < num_nodes; ++i) {   
       SCIP_CONS* con = NULL;      
       char       con_name[255];
-      sprintf(con_name, "C%d", i );
+      SCIPsnprintf(con_name, 255, "C%d", i );
       SCIP_CALL( SCIPcreateConsLinear( scip, 
                                        & con, 
                                        con_name, 

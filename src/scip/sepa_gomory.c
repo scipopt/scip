@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.71 2008/09/01 21:06:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.72 2008/09/09 16:23:59 bzfwanie Exp $"
 
 /**@file   sepa_gomory.c
  * @brief  Gomory MIR Cuts
@@ -27,6 +27,7 @@
 #include <string.h>
 
 #include "scip/sepa_gomory.h"
+#include "scip/misc.h"
 
 
 #define SEPA_NAME              "gomory"
@@ -463,9 +464,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
                /* create the cut */
                if( c >= 0 )
-                  sprintf(cutname, "gom%d_x%d", SCIPgetNLPs(scip), c);
+                  SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
                else
-                  sprintf(cutname, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+                  SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
                SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                                              cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );

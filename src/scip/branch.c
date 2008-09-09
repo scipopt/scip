@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.79 2008/07/18 14:43:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.80 2008/09/09 16:23:54 bzfwanie Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -38,6 +38,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
+#include "scip/misc.h"
 
 #include "scip/struct_branch.h"
 
@@ -784,18 +785,18 @@ SCIP_RETCODE SCIPbranchruleCreate(
    (*branchrule)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "branching/%s/priority", name);
-   sprintf(paramdesc, "priority of branching rule <%s>", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/priority", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of branching rule <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdBranchrulePriority, (SCIP_PARAMDATA*)(*branchrule)) ); /*lint !e740*/
-   sprintf(paramname, "branching/%s/maxdepth", name);
-   sprintf(paramdesc, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxdepth", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->maxdepth, FALSE, maxdepth, -1, INT_MAX, 
          NULL, NULL) ); /*lint !e740*/
-   sprintf(paramname, "branching/%s/maxbounddist", name);
-   sprintf(paramdesc, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxbounddist", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
    SCIP_CALL( SCIPsetAddRealParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->maxbounddist, FALSE, maxbounddist, 0.0, 1.0, 
          NULL, NULL) ); /*lint !e740*/

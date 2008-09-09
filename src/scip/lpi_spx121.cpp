@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.41 2008/04/17 17:49:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.42 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   lpi_spx121.cpp
  * @brief  LP interface for SOPLEX 1.2.1
@@ -52,7 +52,10 @@
 
 #include <cassert>
 
-
+extern "C" 
+{
+#include "scip/misc.h"
+}
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
 /********************************************************************/
@@ -442,7 +445,7 @@ const char* SCIPlpiGetSolverName(
    int version;
 
    version = spx.version();
-   sprintf(spxname, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   SCIPsnprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
    return spxname;
 }
 

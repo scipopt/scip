@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.65 2008/08/30 21:10:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.66 2008/09/09 16:23:56 bzfwanie Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -32,6 +32,7 @@
 #include "scip/paramset.h"
 #include "scip/primal.h"
 #include "scip/scip.h"
+#include "scip/misc.h"
 #include "scip/heur.h"
 
 #include "scip/struct_heur.h"
@@ -136,21 +137,21 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "heuristics/%s/priority", name);
-   sprintf(paramdesc, "priority of heuristic <%s>", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/priority", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
                   paramChgdHeurPriority, (SCIP_PARAMDATA*)(*heur)) ); /*lint !e740*/
-   sprintf(paramname, "heuristics/%s/freq", name);
-   sprintf(paramdesc, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
-   sprintf(paramname, "heuristics/%s/freqofs", name);
-   sprintf(paramdesc, "frequency offset for calling primal heuristic <%s>", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freqofs", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency offset for calling primal heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->freqofs, FALSE, freqofs, 0, INT_MAX, NULL, NULL) );
-   sprintf(paramname, "heuristics/%s/maxdepth", name);
-   sprintf(paramdesc, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdepth", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*heur)->maxdepth, TRUE, maxdepth, -1, INT_MAX, NULL, NULL) );
 

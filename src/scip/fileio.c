@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: fileio.c,v 1.4 2008/04/17 17:49:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: fileio.c,v 1.5 2008/09/09 16:23:56 bzfwanie Exp $"
 
 /**@file   fileio.c
  * @brief  wrapper functions to map file i/o to standard or zlib file i/o
@@ -63,11 +63,13 @@ int SCIPfprintf(SCIP_FILE *stream, const char *format, ...)
 {
    char buffer[BUFFER_LEN];
    va_list ap;
+   int n;
 
    va_start(ap, format); /*lint !e826*/
-   vsnprintf(buffer, BUFFER_LEN, format, ap);
+   n = vsnprintf(buffer, BUFFER_LEN, format, ap);
    va_end(ap);
-
+   if( n < 0 || n > BUFFER_LEN)
+      buffer[BUFFER_LEN-1] = '\0';
    return gzputs((gzFile*)stream, buffer);
 }
 

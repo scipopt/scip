@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.127 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.128 2008/09/09 16:23:55 bzfwanie Exp $"
 
 /**@file   cons_setppc.c
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -27,6 +27,7 @@
 
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
+#include "scip/misc.h"
 
 
 #define CONSHDLR_NAME          "setppc"
@@ -2197,7 +2198,7 @@ SCIP_RETCODE branchLP(
             char name[SCIP_MAXSTRLEN];
 
             /* add set covering constraint x(S) >= 1 */
-            sprintf(name, "BSB%"SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
+            SCIPsnprintf(name, SCIP_MAXSTRLEN, "BSB%"SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
 
             SCIP_CALL( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
                   FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE) );
@@ -3439,7 +3440,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      sprintf(consname, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nbdchginfos, vars,
             FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.32 2008/08/25 16:42:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.33 2008/09/09 16:23:58 bzfwanie Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -34,6 +34,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/misc.h"
 
 /* include the ZIMPL headers necessary to define the LP construction interface */
 #include "zimpl/bool.h"
@@ -398,7 +399,7 @@ Bound* xlp_getlower(const Var* var)
 
    scipvar = (SCIP_VAR*)var;
    lb = SCIPvarGetLbGlobal(scipvar);
-   snprintf(s, SCIP_MAXSTRLEN, "%.20f", lb);
+   SCIPsnprintf(s, SCIP_MAXSTRLEN, "%.20f", lb);
    numb = numb_new_ascii(s); /* ????? isn't there a method numb_new_dbl()? */
    if( SCIPisInfinity(scip_, -lb) )
       boundtype = BOUND_MINUS_INFTY;
@@ -430,7 +431,7 @@ Bound* xlp_getupper(const Var* var)
    else
    {
       boundtype = BOUND_VALUE;
-      snprintf(s, SCIP_MAXSTRLEN, "%.20f", ub);
+      SCIPsnprintf(s, SCIP_MAXSTRLEN, "%.20f", ub);
       numb = numb_new_ascii(s); /* ????? isn't there a method numb_new_dbl()? */
    }
    bound = bound_new(boundtype, numb);
@@ -536,10 +537,10 @@ SCIP_DECL_READERREAD(readerReadZpl)
       buffer[SCIP_MAXSTRLEN-1] = '\0';
       SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
       if( compression != NULL )
-         snprintf(compextension, SCIP_MAXSTRLEN, ".%s", compression);
+         SCIPsnprintf(compextension, SCIP_MAXSTRLEN, ".%s", compression);
       else
          *compextension = '\0';
-      snprintf(namewithoutpath, SCIP_MAXSTRLEN, "%s.%s%s", name, extension, compextension);
+      SCIPsnprintf(namewithoutpath, SCIP_MAXSTRLEN, "%s.%s%s", name, extension, compextension);
       if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");

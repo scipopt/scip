@@ -63,16 +63,17 @@ $(OBJDIR)/cmain.o: src/cmain.c ../../src/scip/scip.h ../../src/scip/def.h \
   ../../src/scip/presol_probing.h ../../src/scip/presol_trivial.h \
   ../../src/scip/prop_pseudoobj.h ../../src/scip/prop_rootredcost.h \
   ../../src/scip/reader_cip.h ../../src/scip/reader_cnf.h \
-  ../../src/scip/reader_fix.h ../../src/scip/reader_lp.h \
-  ../../src/scip/reader_mps.h ../../src/scip/reader_opb.h \
-  ../../src/scip/reader_ppm.h ../../src/scip/reader_rlp.h \
-  ../../src/scip/reader_sol.h ../../src/scip/reader_zpl.h \
-  ../../src/scip/sepa_clique.h ../../src/scip/sepa_cmir.h \
-  ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gomory.h \
-  ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
-  ../../src/scip/sepa_mcf.h ../../src/scip/sepa_redcost.h \
-  ../../src/scip/sepa_strongcg.h ../../src/scip/scipshell.h \
-  src/pricer_healthcare.h src/probdata_healthcare.h
+  ../../src/scip/reader_fix.h ../../src/scip/reader_ccg.h \
+  ../../src/scip/reader_lp.h ../../src/scip/reader_mps.h \
+  ../../src/scip/reader_opb.h ../../src/scip/reader_ppm.h \
+  ../../src/scip/reader_rlp.h ../../src/scip/reader_sol.h \
+  ../../src/scip/reader_zpl.h ../../src/scip/sepa_clique.h \
+  ../../src/scip/sepa_cmir.h ../../src/scip/sepa_flowcover.h \
+  ../../src/scip/sepa_gomory.h ../../src/scip/sepa_impliedbounds.h \
+  ../../src/scip/sepa_intobj.h ../../src/scip/sepa_mcf.h \
+  ../../src/scip/sepa_redcost.h ../../src/scip/sepa_strongcg.h \
+  ../../src/scip/scipshell.h src/pricer_healthcare.h \
+  src/probdata_healthcare.h
 $(OBJDIR)/pricer_healthcare.o: src/pricer_healthcare.c src/pricer_healthcare.h \
   ../../src/scip/scip.h ../../src/scip/def.h \
   ../../src/scip/type_retcode.h ../../src/scip/message.h \
@@ -139,4 +140,5 @@ $(OBJDIR)/probdata_healthcare.o: src/probdata_healthcare.c \
   ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
   ../../src/scip/pub_tree.h ../../src/scip/pub_var.h \
   ../../src/scip/type_history.h ../../src/scip/lpi.h \
-  ../../src/scip/cons_setppc.h ../../src/scip/scip.h
+  ../../src/scip/cons_setppc.h ../../src/scip/scip.h \
+  ../../src/scip/misc.h

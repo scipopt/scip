@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.25 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.26 2008/09/09 16:23:56 bzfwanie Exp $"
 
 /**@file   heur_localbranching.c
  * @brief  localbranching primal heuristic
@@ -26,6 +26,7 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_localbranching.h"
+#include "scip/misc.h"
 
 #define HEUR_NAME             "localbranching"
 #define HEUR_DESC             "local branching heuristic by Fischetti and Lodi"
@@ -99,7 +100,7 @@ SCIP_RETCODE createSubproblem(
    assert(bestsol != NULL);
 
    /* get name of the original problem and add the string "_localbranchsub" */
-   snprintf(name, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
+   SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -181,7 +182,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    SCIP_Real* consvals;
    char consname[SCIP_MAXSTRLEN];
 
-   snprintf(consname, SCIP_MAXSTRLEN, "%s_localbranchcons", SCIPgetProbName(scip));
+   SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_localbranchcons", SCIPgetProbName(scip));
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, NULL, NULL, NULL) );   

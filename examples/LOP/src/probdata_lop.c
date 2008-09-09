@@ -14,11 +14,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.4 2008/04/18 15:14:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.5 2008/09/09 16:23:53 bzfwanie Exp $"
 
 #include "probdata_lop.h"
 
 #include "cons_linearordering.h"
+#include "scip/misc.h"
 
 
 struct SCIP_ProbData
@@ -253,7 +254,7 @@ SCIP_RETCODE LOPgenerateModel(
 	 if (j != i)
 	 {
 	    char s[SCIP_MAXSTRLEN];
-	    sprintf(s, "x#%d#%d", i, j);
+	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
 	    SCIP_CALL( SCIPcreateVar(scip, &(probdata->Vars[i][j]), s, 0.0, 1.0, probdata->W[i][j], SCIP_VARTYPE_BINARY,
 				     TRUE, FALSE, NULL, NULL, NULL, NULL));
 	    SCIP_CALL( SCIPaddVar(scip, probdata->Vars[i][j]) );

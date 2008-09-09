@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.6 2007/11/13 17:21:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.7 2008/09/09 16:23:53 bzfwanie Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -35,6 +35,10 @@
 #include "objscip/objscip.h"
 #include "objscip/objscipdefplugins.h"
 
+extern "C" 
+{
+#include "scip/misc.h"
+}
 
 #define SCIP_DEBUG
 
@@ -193,10 +197,10 @@ public:
 
     char var_name[255];
     char name_part[255];
-    sprintf(var_name, "%d", best_sol_vec[0]);
+    SCIPsnprintf(var_name, 255, "%d", best_sol_vec[0]);
     strcat(var_name, "-");
     for (unsigned int i = 1; i < best_sol_vec.size(); ++i) {
-      sprintf(name_part, "%d", best_sol_vec[i]);
+      SCIPsnprintf(name_part, 255, "%d", best_sol_vec[i]);
       strcat(var_name, name_part);
     } 
     
@@ -284,10 +288,10 @@ public:
 
     char var_name[255];
     char name_part[255];
-    sprintf(var_name, "%d", best_sol_vec[0]);
+    SCIPsnprintf(var_name, 255, "%d", best_sol_vec[0]);
     strcat(var_name, "-");
     for (unsigned int i = 1; i < best_sol_vec.size(); ++i) {
-      sprintf(name_part, "%d", best_sol_vec[i]);
+      SCIPsnprintf(name_part, 255, "%d", best_sol_vec[i]);
       strcat(var_name, name_part);
     } 
     

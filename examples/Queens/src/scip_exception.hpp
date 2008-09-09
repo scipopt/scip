@@ -22,6 +22,7 @@
 extern "C"
 {
 #include <scip/scip.h>
+#include <scip/misc.h>
 }
 
 // unfortunately SCIP has no method to get the string of an error code, you can just print it to a file
@@ -36,67 +37,67 @@ extern "C"
  * @param[out] buffer_str buffer to character array to store translated message, this must be at least of size \ref SCIP_MSG_MAX
  * @return buffer_str or NULL, if retcode could not be translated
  */
-inline char* SCIPgetErrorString(SCIP_RETCODE retcode, char* buffer_str)
+inline char* SCIPgetErrorString(SCIP_RETCODE retcode, char* buffer_str, int buffersize)
 {
    // the following was copied from SCIPprintError
    switch(retcode)
    {
    case SCIP_OKAY:
-      sprintf(buffer_str,"normal termination");
+      SCIPsnprintf(buffer_str, buffersize, "normal termination");
       return buffer_str;
    case SCIP_ERROR:
-      sprintf(buffer_str,"unspecified error");
+      SCIPsnprintf(buffer_str, buffersize, "unspecified error");
       return buffer_str;
    case SCIP_NOMEMORY:
-      sprintf(buffer_str,"insufficient memory error");
+      SCIPsnprintf(buffer_str, buffersize, "insufficient memory error");
       return buffer_str;
    case SCIP_READERROR:
-      sprintf(buffer_str,"file read error");
+      SCIPsnprintf(buffer_str, buffersize, "file read error");
       return buffer_str;
    case SCIP_WRITEERROR:
-      sprintf(buffer_str,"file write error");
+      SCIPsnprintf(buffer_str, buffersize, "file write error");
       return buffer_str;
    case SCIP_NOFILE:
-      sprintf(buffer_str,"file not found error");
+      SCIPsnprintf(buffer_str, buffersize, "file not found error");
       return buffer_str;
    case SCIP_FILECREATEERROR:
-      sprintf(buffer_str,"cannot create file");
+      SCIPsnprintf(buffer_str, buffersize, "cannot create file");
       return buffer_str;
    case SCIP_LPERROR:
-      sprintf(buffer_str,"error in LP solver");
+      SCIPsnprintf(buffer_str, buffersize, "error in LP solver");
       return buffer_str;
    case SCIP_NOPROBLEM:
-      sprintf(buffer_str, "no problem exists");
+      SCIPsnprintf(buffer_str, buffersize, "no problem exists");
       return buffer_str;
    case SCIP_INVALIDCALL:
-      sprintf(buffer_str, "method cannot be called at this time in solution process");
+      SCIPsnprintf(buffer_str, buffersize, "method cannot be called at this time in solution process");
       return buffer_str;
    case SCIP_INVALIDDATA:
-      sprintf(buffer_str, "method cannot be called with this type of data");
+      SCIPsnprintf(buffer_str, buffersize, "method cannot be called with this type of data");
       return buffer_str;
    case SCIP_INVALIDRESULT:
-      sprintf(buffer_str, "method returned an invalid result code");
+      SCIPsnprintf(buffer_str, buffersize, "method returned an invalid result code");
       return buffer_str;
    case SCIP_PLUGINNOTFOUND:
-      sprintf(buffer_str, "a required plugin was not found");
+      SCIPsnprintf(buffer_str, buffersize, "a required plugin was not found");
       return buffer_str;
    case SCIP_PARAMETERUNKNOWN:
-      sprintf(buffer_str, "the parameter with the given name was not found");
+      SCIPsnprintf(buffer_str, buffersize, "the parameter with the given name was not found");
       return buffer_str;
    case SCIP_PARAMETERWRONGTYPE:
-      sprintf(buffer_str, "the parameter is not of the expected type");
+      SCIPsnprintf(buffer_str, buffersize, "the parameter is not of the expected type");
       return buffer_str;
    case SCIP_PARAMETERWRONGVAL:
-      sprintf(buffer_str, "the value is invalid for the given parameter");
+      SCIPsnprintf(buffer_str, buffersize, "the value is invalid for the given parameter");
       return buffer_str;
    case SCIP_KEYALREADYEXISTING:
-      sprintf(buffer_str, "the given key is already existing in table");
+      SCIPsnprintf(buffer_str, buffersize, "the given key is already existing in table");
       return buffer_str;
    case SCIP_PARSEERROR:
-      sprintf(buffer_str, "invalid input given to the parser");
+      SCIPsnprintf(buffer_str, buffersize, "invalid input given to the parser");
       return buffer_str;
    case SCIP_MAXDEPTHLEVEL:
-      sprintf(buffer_str, "maximal branching depth level exceeded");
+      SCIPsnprintf(buffer_str, buffersize, "maximal branching depth level exceeded");
       return buffer_str;
    default:
       return NULL;
@@ -123,8 +124,8 @@ public:
     */
    SCIPException(SCIP_RETCODE retcode)
    {
-      if(SCIPgetErrorString(retcode, _msg)==NULL)
-	 sprintf(_msg, "unknown SCIP retcode %d",retcode);
+      if(SCIPgetErrorString(retcode, _msg, SCIP_MSG_MAX)==NULL)
+	 SCIPsnprintf(_msg, SCIP_MSG_MAX, "unknown SCIP retcode %d",retcode);
    }
 
 

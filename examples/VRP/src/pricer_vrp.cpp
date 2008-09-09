@@ -11,6 +11,11 @@
 #include <map>
 #include <vector>
 
+extern "C"
+{
+#include "scip/misc.h"
+}
+
 using namespace std;
 using namespace scip;
 
@@ -226,11 +231,11 @@ add_tour_variable
    char      var_name[255];
    
    // create meaningful variable name
-   sprintf(var_name, "T" );
+   SCIPsnprintf(var_name, 255, "T" );
    for ( list<int>::const_iterator it = tour.begin(); 
          it != tour.end(); 
          ++it ) {
-      sprintf(var_name, "%s_%d", var_name, *it );
+      SCIPsnprintf(var_name, 255, "%s_%d", var_name, *it );
    }
    
 #if ( SCIP_DEBUG >= 1 )

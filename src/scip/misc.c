@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.86 2008/09/05 15:28:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.87 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3491,6 +3491,34 @@ void SCIPescapeString(
    t[bufsize-1] = '\0';
 }
 
+/* safe version of snprintf */
+int SCIPsnprintf(
+   char*            t,     /**< target string                  */
+   int              len,   /**< length of t                    */
+   const char*      s,     /**< source string or format string */
+   ...                     /**< further parameters             */
+   )
+{
+   va_list ap;
+   int n;
+   
+   assert(t != NULL);
+   assert(len > 0);
+
+   va_start(ap, s);
+   n = vsnprintf(t, len, s, ap);
+   va_end(ap);
+   if( n < 0 || n >= len )
+   {
+#ifndef NDEBUG
+      if( n < 0 )
+         SCIPmessagePrintWarning("vsnprintf returned %d\n",n);
+#endif
+      t[len-1] = '\0';
+      n = len-1;
+   }
+   return n;
+}
 
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.8 2008/09/05 15:28:50 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.9 2008/09/09 16:23:58 bzfwanie Exp $"
 
 /**@file   reader_sos.c
  * @brief  SOS file reader
@@ -32,6 +32,7 @@
 #include "scip/reader_sos.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/misc.h"
 
 
 #define READER_NAME             "sosreader"
@@ -500,7 +501,7 @@ SCIP_RETCODE readSOS(
 	    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 	 }
 	 /* create new name, since we do not get a name from the file */
-	 snprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
+	 SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
 
 	 /* create new SOS1 constraint */
 	 if ( type == 1 )

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.14 2008/09/04 19:06:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.15 2008/09/09 16:23:58 bzfwanie Exp $"
 
 /**@file   reader_ppm.c
  * @brief  PPM file reader
@@ -32,6 +32,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/misc.h"
 
 #define READER_NAME             "ppmreader"
 #define READER_DESC             "file writer for ppm file format"
@@ -282,7 +283,7 @@ void printRow(
    varindex = -1;
    maxvarindex = 0;
 
-   snprintf(white, 4, "%c%c%c", max, max, max);
+   SCIPsnprintf(white, 4, "%c%c%c", max, max, max);
    clearLine(linebuffer, &linecnt);
 
    /* calculate maximum index of the variables in this constraint */
@@ -324,10 +325,10 @@ void printRow(
 	 if (red == 35 || red == 0) red++;
 	 if (green==35 || green == 0) green++;
 	 if (blue==35 || blue == 0) blue++;
-	 snprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (char)red, (char)green, (char)blue);
+	 SCIPsnprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (char)red, (char)green, (char)blue);
       }
       else
-         snprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
+         SCIPsnprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
       
       appendLine(scip, file, readerdata, linebuffer, &linecnt, buffer);
       i++;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.79 2008/09/02 17:10:47 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.80 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SOPLEX 1.3.0
@@ -55,6 +55,7 @@
 extern "C" 
 {
 #include "scip/message.h"
+#include "scip/misc.h"
 }
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
@@ -628,7 +629,7 @@ const char* SCIPlpiGetSolverName(
    int version;
 
    version = spx.version();
-   sprintf(spxname, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   SCIPsnprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
    return spxname;
 }
 
@@ -2629,7 +2630,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    rowNames.reMax(nRows);
    for (int i = 0; i < nRows; ++i)
    {
-      sprintf(name, "C%d", i+1);
+      SCIPsnprintf(name, 255, "C%d", i+1);
       rowNames.add(name);
    }
 
@@ -2637,7 +2638,7 @@ SCIP_RETCODE SCIPlpiWriteState(
    colNames.reMax(nCols);
    for (int j = 0; j < nCols; ++j)
    {
-      sprintf(name, "x%d", j);
+      SCIPsnprintf(name, 255, "x%d", j);
       colNames.add(name);
    }
 

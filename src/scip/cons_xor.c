@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.65 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.66 2008/09/09 16:23:55 bzfwanie Exp $"
 
 /**@file   cons_xor.c
  * @brief  constraint handler for xor constraints
@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "scip/misc.h"
 #include "scip/cons_xor.h"
 
 
@@ -755,7 +756,7 @@ SCIP_RETCODE createRelaxation(
       {
          int ub;
 
-         sprintf(varname, "%s_int", SCIPconsGetName(cons));
+         SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_int", SCIPconsGetName(cons));
          ub = consdata->nvars/2;
          SCIP_CALL( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, (SCIP_Real)ub, 0.0,
                consdata->nvars >= 4 ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_BINARY,
@@ -783,7 +784,7 @@ SCIP_RETCODE createRelaxation(
       {
          int v;
 
-         sprintf(rowname, "%s_%d", SCIPconsGetName(cons), r);
+         SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
          SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[r], rowname, -SCIPinfinity(scip), 0.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
@@ -793,7 +794,7 @@ SCIP_RETCODE createRelaxation(
       }
 
       /* create the <= 2 row with all positive signs */
-      sprintf(rowname, "%s_3", SCIPconsGetName(cons));
+      SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), 2.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, 1.0) );
@@ -808,7 +809,7 @@ SCIP_RETCODE createRelaxation(
       {
          int v;
 
-         sprintf(rowname, "%s_%d", SCIPconsGetName(cons), r);
+         SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
          SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[r], rowname, -SCIPinfinity(scip), 1.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
@@ -818,7 +819,7 @@ SCIP_RETCODE createRelaxation(
       }
 
       /* create the <= -1 row with all negative signs */
-      sprintf(rowname, "%s_3", SCIPconsGetName(cons));
+      SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), -1.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, -1.0) );

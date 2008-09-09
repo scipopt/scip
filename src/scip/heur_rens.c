@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.16 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.17 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   heur_rens.c
  * @brief  RENS primal heuristic
@@ -27,6 +27,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_rens.h"
+#include "scip/misc.h"
 
 #define HEUR_NAME             "rens"
 #define HEUR_DESC             "LNS exploring fractional neighborhood of relaxation's optimum"
@@ -97,7 +98,7 @@ SCIP_RETCODE createSubproblem(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    /* get name of the original problem and add the string "_renssub" */
-   snprintf(consname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
+   SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -412,7 +413,7 @@ SCIP_RETCODE SCIPapplyRens(
 #if 0
    {
    char fname[SCIP_MAXSTRLEN];
-   snprintf(fname, SCIP_MAXSTRLEN, "test/%s.lp",SCIPgetProbName(scip));
+   SCIPsnprintf(fname, SCIP_MAXSTRLEN, "test/%s.lp",SCIPgetProbName(scip));
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
    SCIP_CALL( SCIPsolve(subscip) );
    SCIP_CALL( SCIPwriteMIP(subscip,fname,TRUE,TRUE) );

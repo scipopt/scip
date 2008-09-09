@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.5 2008/04/18 15:14:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.6 2008/09/09 16:23:53 bzfwanie Exp $"
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
 
@@ -28,6 +28,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "cons_linearordering.h"
+#include "scip/misc.h"
 
 #include <assert.h>
 #include <string.h>
@@ -90,7 +91,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	    SCIP_ROW *row;
 	    char s[SCIP_MAXSTRLEN];
 
-	    sprintf(s, "sym#%d#%d", i, j);
+	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -120,7 +121,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	       SCIP_ROW *row;
 	       char s[SCIP_MAXSTRLEN];
 
-	       sprintf(s, "triangle#%d#%d#%d", i, j, k);
+	       SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
 	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -239,7 +240,7 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
    }
 
    /* create constraint */
-   sprintf(s, "t_%s", SCIPconsGetName(sourcecons));
+   SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
 
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
@@ -287,7 +288,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	    char s[SCIP_MAXSTRLEN];
 	    SCIP_ROW* row;
 
-	    sprintf(s, "sym#%d#%d", i, j);
+	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, FALSE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[i][j], 1.0) );
@@ -429,7 +430,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	       SCIP_ROW *row;
 	       char s[SCIP_MAXSTRLEN];
 
-	       sprintf(s, "sym#%d#%d", i, j);
+	       SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
 	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -459,7 +460,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 		  SCIP_ROW *row;
 		  char s[SCIP_MAXSTRLEN];
 
-		  sprintf(s, "triangle#%d#%d#%d", i, j, k);
+		  SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
 		  SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 		  SCIP_CALL( SCIPcacheRowExtensions(scip, row) );

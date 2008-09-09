@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.162 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.163 2008/09/09 16:23:55 bzfwanie Exp $"
 
 /**@file   cons_knapsack.c
  * @brief  constraint handler for knapsack constraints
@@ -30,6 +30,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "knapsack"
@@ -1992,10 +1993,10 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             
             /* create LP row */
             if( cons != NULL )
-               sprintf(name, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons),
+               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons),
                   SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
             else
-               sprintf(name, "card_%d", j);
+               SCIPsnprintf(name, SCIP_MAXSTRLEN, "card_%d", j);
 
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
                   cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
@@ -3463,7 +3464,7 @@ SCIP_RETCODE tightenWeights(
                      for( k = 0; k < nnewweights; ++k )
                         cliquevars[k] = consdata->vars[newweightidxs[k]];
 
-                     sprintf(name, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, i);
+                     SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, i);
                      SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, nnewweights, cliquevars,
                            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),

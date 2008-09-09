@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.18 2008/04/17 17:49:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.19 2008/09/09 16:23:59 bzfwanie Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @brief  implied bounds separator
@@ -25,6 +25,7 @@
 #include <assert.h>
 
 #include "scip/sepa_impliedbounds.h"
+#include "scip/misc.h"
 
 
 #define SEPA_NAME              "impliedbounds"
@@ -71,7 +72,7 @@ SCIP_RETCODE addCut(
       char cutname[SCIP_MAXSTRLEN];
 
       /* create cut */
-      sprintf(cutname, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
+      SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
       SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var1, val1) );

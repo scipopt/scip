@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.14 2008/09/04 19:06:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.15 2008/09/09 16:23:59 bzfwanie Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -26,6 +26,7 @@
 
 #include "scip/sepa_flowcover.h"
 #include "scip/cons_knapsack.h"
+#include "scip/misc.h"
 
 
 #define SEPA_NAME              "flowcover"
@@ -1899,7 +1900,7 @@ SCIP_RETCODE addCut(
       char cutname[SCIP_MAXSTRLEN];
       
       /* creates the cut */
-      sprintf(cutname, "flowcover%d_%d", SCIPgetNLPs(scip), *ncuts);
+      SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "flowcover%d_%d", SCIPgetNLPs(scip), *ncuts);
       SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
             cutislocal, FALSE, sepadata->dynamiccuts) );
       SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );

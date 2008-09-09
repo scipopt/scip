@@ -83,12 +83,13 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
   ../../src/scip/presol_probing.h ../../src/scip/presol_trivial.h \
   ../../src/scip/prop_pseudoobj.h ../../src/scip/prop_rootredcost.h \
   ../../src/scip/reader_cip.h ../../src/scip/reader_cnf.h \
-  ../../src/scip/reader_fix.h ../../src/scip/reader_lp.h \
-  ../../src/scip/reader_mps.h ../../src/scip/reader_opb.h \
-  ../../src/scip/reader_ppm.h ../../src/scip/reader_rlp.h \
-  ../../src/scip/reader_sol.h ../../src/scip/reader_zpl.h \
-  ../../src/scip/sepa_clique.h ../../src/scip/sepa_cmir.h \
-  ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gomory.h \
-  ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
-  ../../src/scip/sepa_mcf.h ../../src/scip/sepa_redcost.h \
-  ../../src/scip/sepa_strongcg.h ../../src/scip/scipshell.h
+  ../../src/scip/reader_fix.h ../../src/scip/reader_ccg.h \
+  ../../src/scip/reader_lp.h ../../src/scip/reader_mps.h \
+  ../../src/scip/reader_opb.h ../../src/scip/reader_ppm.h \
+  ../../src/scip/reader_rlp.h ../../src/scip/reader_sol.h \
+  ../../src/scip/reader_zpl.h ../../src/scip/sepa_clique.h \
+  ../../src/scip/sepa_cmir.h ../../src/scip/sepa_flowcover.h \
+  ../../src/scip/sepa_gomory.h ../../src/scip/sepa_impliedbounds.h \
+  ../../src/scip/sepa_intobj.h ../../src/scip/sepa_mcf.h \
+  ../../src/scip/sepa_redcost.h ../../src/scip/sepa_strongcg.h \
+  ../../src/scip/scipshell.h

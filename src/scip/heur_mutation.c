@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.18 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.19 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   heur_mutation.c
  * @brief  mutation primal heuristic
@@ -26,6 +26,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_mutation.h"
+#include "scip/misc.h"
 
 #define HEUR_NAME             "mutation"
 #define HEUR_DESC             "mutation heuristic randomly fixing variables"
@@ -105,7 +106,7 @@ SCIP_RETCODE createSubproblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nbinvars+nintvars) );
 
    /* get name of the original problem and add the string "_mutationsub" */
-   snprintf(consname, SCIP_MAXSTRLEN, "%s_mutationsub", SCIPgetProbName(scip));
+   SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_mutationsub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );

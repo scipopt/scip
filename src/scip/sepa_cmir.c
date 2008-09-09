@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.78 2008/09/03 14:46:43 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.79 2008/09/09 16:23:59 bzfwanie Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -25,6 +25,7 @@
 #include <assert.h>
 
 #include "scip/sepa_cmir.h"
+#include "scip/misc.h"
 
 
 #define SEPA_NAME              "cmir"
@@ -218,7 +219,7 @@ SCIP_RETCODE addCut(
          SCIP_Bool success;
          
          /* create the cut */
-         sprintf(cutname, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
+         SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
          SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                cutislocal, FALSE, cutremovable) );
          SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );

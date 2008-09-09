@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.23 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.24 2008/09/09 16:23:58 bzfwanie Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -34,6 +34,7 @@
 #include "scip/prob.h"
 #include "scip/pricestore.h"
 #include "scip/scip.h"
+#include "scip/misc.h"
 #include "scip/pricer.h"
 
 #include "scip/struct_pricer.h"
@@ -114,8 +115,8 @@ SCIP_RETCODE SCIPpricerCreate(
    (*pricer)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "pricers/%s/priority", name);
-   sprintf(paramdesc, "priority of pricer <%s>", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "pricers/%s/priority", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of pricer <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*pricer)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
                   paramChgdPricerPriority, (SCIP_PARAMDATA*)(*pricer)) ); /*lint !e740*/

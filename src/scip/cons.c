@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.174 2008/08/27 08:36:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.175 2008/09/09 16:23:54 bzfwanie Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -35,6 +35,7 @@
 #include "scip/sepastore.h"
 #include "scip/cons.h"
 #include "scip/branch.h"
+#include "scip/misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_cons.h"
@@ -1881,37 +1882,37 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "constraints/%s/sepafreq", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for separating cuts (-1: never, 0: only in root node)",
          &(*conshdlr)->sepafreq, FALSE, sepafreq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "constraints/%s/propfreq", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/propfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for propagating domains (-1: never, 0: only in root node)",
          &(*conshdlr)->propfreq, FALSE, propfreq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "constraints/%s/eagerfreq", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/eagerfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)",
          &(*conshdlr)->eagerfreq, TRUE, eagerfreq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "constraints/%s/maxprerounds", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "maximal number of presolving rounds the constraint handler participates in (-1: no limit)",
          &(*conshdlr)->maxprerounds, TRUE, maxprerounds, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "constraints/%s/delaysepa", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should separation method be delayed, if other separators found cuts?",
          &(*conshdlr)->delaysepa, TRUE, delaysepa, NULL, NULL) ); /*lint !e740*/
 
-   sprintf(paramname, "constraints/%s/delayprop", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delayprop", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should propagation method be delayed, if other propagators found reductions?",
          &(*conshdlr)->delayprop, TRUE, delayprop, NULL, NULL) ); /*lint !e740*/
 
-   sprintf(paramname, "constraints/%s/delaypresol", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaypresol", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should presolving method be delayed, if other presolvers found reductions?",
          &(*conshdlr)->delaypresol, TRUE, delaypresol, NULL, NULL) ); /*lint !e740*/

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.57 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.58 2008/09/09 16:23:58 bzfwanie Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -33,6 +33,7 @@
 #include "scip/paramset.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
+#include "scip/misc.h"
 #include "scip/nodesel.h"
 
 #include "scip/struct_nodesel.h"
@@ -720,14 +721,14 @@ SCIP_RETCODE SCIPnodeselCreate(
    (*nodesel)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "nodeselection/%s/stdpriority", name);
-   sprintf(paramdesc, "priority of node selection rule <%s> in standard mode", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/stdpriority", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of node selection rule <%s> in standard mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/4, 
                   paramChgdNodeselStdPriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
-   sprintf(paramname, "nodeselection/%s/memsavepriority", name);
-   sprintf(paramdesc, "priority of node selection rule <%s> in memory saving mode", name);
+   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/memsavepriority", name);
+   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of node selection rule <%s> in memory saving mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*nodesel)->memsavepriority, TRUE, memsavepriority, INT_MIN/4, INT_MAX/4, 
                   paramChgdNodeselMemsavePriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/

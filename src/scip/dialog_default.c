@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.89 2008/09/05 15:28:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.90 2008/09/09 16:23:56 bzfwanie Exp $"
 
 /**@file   dialog_default.c
  * @brief  default user interface dialog
@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "scip/misc.h"
 #include "scip/dialog_default.h"
 
 
@@ -1152,7 +1153,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    switch( SCIPparamGetType(param) )
    {
    case SCIP_PARAMTYPE_BOOL:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %s, new value (TRUE/FALSE): ",
+      SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %s, new value (TRUE/FALSE): ",
          SCIPparamGetBool(param) ? "TRUE" : "FALSE");
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1175,7 +1176,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_INT:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value [%d,%d]: ",
+      SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value [%d,%d]: ",
          SCIPparamGetInt(param), SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1202,7 +1203,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %"SCIP_LONGINT_FORMAT", new value [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]: ",
+      SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %"SCIP_LONGINT_FORMAT", new value [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]: ",
          SCIPparamGetLongint(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1229,7 +1230,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_REAL:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value [%.15g,%.15g]: ",
+      SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value [%.15g,%.15g]: ",
          SCIPparamGetReal(param), SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1256,7 +1257,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_CHAR:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: <%c>, new value: ", SCIPparamGetChar(param));
+      SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: <%c>, new value: ", SCIPparamGetChar(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
       {
@@ -1282,7 +1283,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_STRING:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: <%s>, new value: ", SCIPparamGetString(param));
+      SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: <%s>, new value: ", SCIPparamGetString(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
       {
@@ -1324,31 +1325,31 @@ SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam)
    {
    case SCIP_PARAMTYPE_BOOL:
       if( SCIPparamGetBool(param) )
-         sprintf(valuestr, "TRUE");
+         SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "TRUE");
       else
-         sprintf(valuestr, "FALSE");
+         SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "FALSE");
       break;
 
    case SCIP_PARAMTYPE_INT:
-      sprintf(valuestr, "%d", SCIPparamGetInt(param));
+      SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%d", SCIPparamGetInt(param));
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      sprintf(valuestr, "%"SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
+      SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%"SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
       break;
 
    case SCIP_PARAMTYPE_REAL:
-      sprintf(valuestr, "%.15g", SCIPparamGetReal(param));
+      SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%.15g", SCIPparamGetReal(param));
       if( strchr(valuestr, '.') == NULL && strchr(valuestr, 'e') == NULL )
-         sprintf(valuestr, "%.1f", SCIPparamGetReal(param));
+         SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%.1f", SCIPparamGetReal(param));
       break;
 
    case SCIP_PARAMTYPE_CHAR:
-      sprintf(valuestr, "%c", SCIPparamGetChar(param));
+      SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%c", SCIPparamGetChar(param));
       break;
 
    case SCIP_PARAMTYPE_STRING:
-      snprintf(valuestr, SCIP_MAXSTRLEN, "%s", SCIPparamGetString(param));
+      SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%s", SCIPparamGetString(param));
       break;
 
    default:
@@ -1419,7 +1420,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
          SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
    }
-   snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", direction);
+   SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", direction);
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
    if( endoffile )
    {
@@ -1427,7 +1428,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
       return SCIP_OKAY;
    }
    SCIPescapeString(prompt, SCIP_MAXSTRLEN, SCIPvarGetName(var));
-   snprintf(prompt, SCIP_MAXSTRLEN, "%s %s", prompt, valuestr);
+   SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "%s %s", prompt, valuestr);
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1494,7 +1495,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
    }
 
    /* get new branching priority from user */
-   snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchPriority(var));
+   SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchPriority(var));
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
    if( endoffile )
    {
@@ -1502,7 +1503,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
       return SCIP_OKAY;
    }
    SCIPescapeString(prompt, SCIP_MAXSTRLEN, SCIPvarGetName(var));
-   snprintf(prompt, SCIP_MAXSTRLEN, "%s %s", prompt, valuestr);
+   SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "%s %s", prompt, valuestr);
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1539,7 +1540,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    }
 
    /* get new objective limit from user */
-   snprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value: ", SCIPgetObjlimit(scip));
+   SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value: ", SCIPgetObjlimit(scip));
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
    if( endoffile )
    {
@@ -1674,7 +1675,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
 
    /* adjust command and add to the history */
    SCIPescapeString(command, SCIP_MAXSTRLEN, filename);
-   sprintf(command, "%s %s", command, generic ? "TRUE" : "FALSE");
+   SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, generic ? "TRUE" : "FALSE");
 
    /* third ask if for adjusting the objective offset */
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
@@ -1694,7 +1695,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( error )
       return SCIP_OKAY;
 
-   sprintf(command, "%s %s", command, offset ? "TRUE" : "FALSE");
+   SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, offset ? "TRUE" : "FALSE");
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, command, FALSE) );
 
    /* execute command */
@@ -2302,7 +2303,7 @@ SCIP_RETCODE addParamDialog(
                /* if not yet existing, create an advanced sub menu */
                char desc[SCIP_MAXSTRLEN];
 
-               sprintf(desc, "advanced parameters");
+               SCIPsnprintf(desc, SCIP_MAXSTRLEN, "advanced parameters");
                SCIP_CALL( SCIPcreateDialog(scip, &advmenu, SCIPdialogExecMenu, NULL, NULL, "advanced", desc, TRUE, NULL) );
                SCIP_CALL( SCIPaddDialogEntry(scip, menu, advmenu) );
                SCIP_CALL( SCIPreleaseDialog(scip, &advmenu) );
@@ -2349,7 +2350,7 @@ SCIP_RETCODE addParamDialog(
       {
          char desc[SCIP_MAXSTRLEN];
 
-         sprintf(desc, "parameters for <%s>", dirname);
+         SCIPsnprintf(desc, SCIP_MAXSTRLEN, "parameters for <%s>", dirname);
          SCIP_CALL( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL, NULL, dirname, desc, TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, menu, submenu) );
          SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.229 2008/09/08 13:08:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.230 2008/09/09 16:23:59 bzfwanie Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -39,6 +39,7 @@
 #include "scip/cons.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
+#include "scip/misc.h"
 
 
 /*
@@ -1646,7 +1647,7 @@ SCIP_RETCODE varCreate(
    if( name == NULL )
    {
       char s[SCIP_MAXSTRLEN];
-      sprintf(s, "_var%d_", stat->nvaridx);
+      SCIPsnprintf(s, SCIP_MAXSTRLEN, "_var%d_", stat->nvaridx);
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*var)->name, s, strlen(s)+1) );
    }
    else
@@ -2450,7 +2451,7 @@ SCIP_RETCODE SCIPvarTransform(
    else
    {
       /* create transformed variable */
-      sprintf(name, "t_%s", origvar->name);
+      SCIPsnprintf(name, SCIP_MAXSTRLEN, "t_%s", origvar->name);
       SCIP_CALL( SCIPvarCreateTransformed(transvar, blkmem, set, stat, name,
             origvar->glbdom.lb, origvar->glbdom.ub, (SCIP_Real)objsense * origvar->obj,
             SCIPvarGetType(origvar), origvar->initial, origvar->removable,
@@ -3713,7 +3714,7 @@ SCIP_RETCODE SCIPvarNegate(
          return SCIP_INVALIDDATA;
       }
 
-      sprintf(negvarname, "%s_neg", var->name);
+      SCIPsnprintf(negvarname, SCIP_MAXSTRLEN, "%s_neg", var->name);
 
       /* create negated variable */
       SCIP_CALL( varCreate(negvar, blkmem, set, stat, negvarname, var->glbdom.lb, var->glbdom.ub, 0.0,

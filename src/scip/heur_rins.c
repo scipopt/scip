@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.27 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.28 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   heur_rins.c
  * @brief  RINS primal heuristic
@@ -26,6 +26,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_rins.h"
+#include "scip/misc.h"
 
 #define HEUR_NAME             "rins"
 #define HEUR_DESC             "relaxation induced neighbourhood search by Danna, Rothberg, and Le Pape"
@@ -94,7 +95,7 @@ SCIP_RETCODE createSubproblem(
    assert( bestsol != NULL );
 
    /* get name of the original problem and add the string "_rinssub" */
-   snprintf(consname, SCIP_MAXSTRLEN, "%s_rinssub", SCIPgetProbName(scip));
+   SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_rinssub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );

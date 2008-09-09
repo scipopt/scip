@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.19 2008/08/15 17:20:52 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.20 2008/09/09 16:23:54 bzfwanie Exp $"
 
 /**@file   cons_countsols.c
  * @brief  constraint handler for counting feasible solutions
@@ -34,6 +34,7 @@
 #include "scip/dialog_default.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_disp.h"
+#include "scip/misc.h"
 
 #ifdef WITH_GMP
 #include <gmp.h>
@@ -208,13 +209,14 @@ void multInt(
 static 
 void toString(
    Int      value,                          /**< number */
-   char**   buffer                          /**< pointer to buffer for storing the string */
+   char**   buffer,                         /**< pointer to buffer for storing the string */
+   int      buffersize                      /**< length of the buffer */
    )
 {
 #ifdef WITH_GMP
    mpz_get_str(*buffer, 10, value);
 #else
-   sprintf (*buffer, "%"SCIP_LONGINT_FORMAT"", value);
+   SCIPsnprintf (*buffer, buffersize, "%"SCIP_LONGINT_FORMAT"", value);
 #endif
 }
 
@@ -1506,7 +1508,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
    int maxroundsdualfix;
    
    int h;
-   char parametername[256];
+   char parametername[SCIP_MAXSTRLEN];
 
    SCIP_Bool valid;
    SCIP_Longint nsols;
@@ -1582,7 +1584,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
       for( h = 0; h < nheuristics; ++h )
       {
-         sprintf(parametername, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
+         SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
          heuristicfreqs[h] = SCIPheurGetFreq(heuristics[h]);
          
          if( heuristicfreqs[h] != -1 )
@@ -1669,7 +1671,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          /* reset parameters setting for heuristics */
          for( h = 0; h < nheuristics; ++h )
          {
-            sprintf(parametername, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
+            SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
             SCIP_CALL( SCIPsetIntParam(scip, parametername, heuristicfreqs[h]) );
          }
       }
@@ -1928,11 +1930,12 @@ void SCIPgetNCountedSolsstr(
 
 #ifdef WITH_GMP
    *requiredsize = mpz_sizeinbase( conshdlrdata->nsols, 10 );
-   toString(conshdlrdata->nsols, buffer);
+   if( *requiredsize <= buffersize)
+      toString(conshdlrdata->nsols, buffer, buffersize);
 #else
    if( conshdlrdata->nsols < pow(10.0, buffersize) )
    {
-      toString(conshdlrdata->nsols, buffer);
+      toString(conshdlrdata->nsols, buffer, buffersize);
       *requiredsize = strlen(*buffer);
    }
    else

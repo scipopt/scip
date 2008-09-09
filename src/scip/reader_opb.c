@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.18 2008/09/05 15:28:50 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.19 2008/09/09 16:23:58 bzfwanie Exp $"
 
 /**@file   reader_opb.c
  * @brief  pseudo-Boolean file reader (opb format)
@@ -79,6 +79,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/misc.h"
 
 #define READER_NAME             "opbreader"
 #define READER_DESC             "file reader for pseudo-Boolean problem in opb format"
@@ -157,7 +158,7 @@ void syntaxError(
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", opbinput->linebuf);
    }
-   snprintf(formatstr, 256, "         %%%ds\n", opbinput->linepos);
+   SCIPsnprintf(formatstr, 256, "         %%%ds\n", opbinput->linepos);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
    opbinput->haserror = TRUE;
 }
@@ -726,7 +727,7 @@ SCIP_RETCODE getVariable(
          SCIP_CONS* cons;
          char varname[128];
          
-         snprintf(varname, 128, "andresultant%d", opbinput->nandconss);
+         SCIPsnprintf(varname, 128, "andresultant%d", opbinput->nandconss);
          SCIP_CALL( createVariable(scip, var, varname) );
          assert( var != NULL );
         
@@ -1343,7 +1344,7 @@ void printRow(
       var = vars[v];
       assert( var != NULL );
       
-      snprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT" %s ", 
+      SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT" %s ", 
          (SCIP_Longint) (vals[v] * (*mult)), SCIPvarGetName(var) );
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -1352,7 +1353,7 @@ void printRow(
    if( SCIPisZero(scip, lhs) )
       lhs = 0.0;
    
-   snprintf(buffer, OPB_MAX_LINELEN, "%s %"SCIP_LONGINT_FORMAT" ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
+   SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %"SCIP_LONGINT_FORMAT" ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    
    writeBuffer(scip, file, linebuffer, &linecnt);
@@ -1548,7 +1549,7 @@ SCIP_RETCODE writeOpb(
          
          assert( linecnt != 0 );
          
-         snprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT" %s", 
+         SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT" %s", 
             (SCIP_Longint) (SCIPvarGetObj(var) * mult), SCIPvarGetName(var) );
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
       }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.30 2008/08/29 20:02:33 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.31 2008/09/09 16:23:56 bzfwanie Exp $"
 
 /**@file   heur_crossover.c
  * @brief  crossover primal heuristic
@@ -27,6 +27,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_crossover.h"
+#include "scip/misc.h"
 
 #define HEUR_NAME             "crossover"
 #define HEUR_DESC             "LNS heuristic that fixes all variables that are identic in a couple of solutions"
@@ -491,7 +492,7 @@ SCIP_RETCODE createSubproblem(
       return SCIP_OKAY;
 
    /* get name of the original problem and add the string "_crossoversub" */
-   snprintf(consname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
+   SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );

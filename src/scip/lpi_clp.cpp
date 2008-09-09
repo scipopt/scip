@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.45 2008/08/31 02:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.46 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   lpi_clp.cpp
  * @brief  LP interface for Clp
@@ -71,6 +71,7 @@ extern "C"
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
 #include "scip/message.h"
+#include "scip/misc.h"
 }
 
 
@@ -402,8 +403,7 @@ const char* SCIPlpiGetSolverName(
    )
 {
    // Currently Clp has no function to get version, so we hard code it ...
-   snprintf(clpname, SCIP_MAXSTRLEN-1, "Clp "VERSION"");
-   clpname[SCIP_MAXSTRLEN-1] = '\0';
+   SCIPsnprintf(clpname, SCIP_MAXSTRLEN, "Clp "VERSION"");
    return clpname;
 }
 

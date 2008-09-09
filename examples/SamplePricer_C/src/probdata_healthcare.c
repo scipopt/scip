@@ -14,10 +14,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_healthcare.c,v 1.3 2006/08/30 09:46:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: probdata_healthcare.c,v 1.4 2008/09/09 16:23:53 bzfwanie Exp $"
 
 #include "probdata_healthcare.h"
 #include "scip/cons_setppc.h"
+#include "scip/misc.h"
 
 
 struct SCIP_ProbData
@@ -120,7 +121,7 @@ SCIP_RETCODE HCPgenerateModel(
    {
       char consname[SCIP_MAXSTRLEN];
 
-      sprintf(consname, "servejobs_%d", i);
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "servejobs_%d", i);
       SCIP_CALL( SCIPcreateConsSetpart(scip, &probdata->cons_servejobs[i], consname, 
             0, NULL, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->cons_servejobs[i]) );
@@ -131,7 +132,7 @@ SCIP_RETCODE HCPgenerateModel(
    {
       char consname[SCIP_MAXSTRLEN];
 
-      sprintf(consname, "workers_%d", i);
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "workers_%d", i);
       SCIP_CALL( SCIPcreateConsSetpack(scip, &probdata->cons_workers[i], consname, 
             0, NULL, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->cons_workers[i]) );

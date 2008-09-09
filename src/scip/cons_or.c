@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.70 2008/08/15 17:23:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.71 2008/09/09 16:23:55 bzfwanie Exp $"
 
 /**@file   cons_or.c
  * @brief  constraint handler for or constraints
@@ -26,6 +26,7 @@
 
 #include "scip/cons_or.h"
 #include "scip/cons_and.h"
+#include "scip/misc.h"
 
 
 /* constraint handler properties */
@@ -682,7 +683,7 @@ SCIP_RETCODE createRelaxation(
    /* create operator rows */
    for( i = 0; i < nvars; ++i )
    {
-      sprintf(rowname, "%s_%d", SCIPconsGetName(cons), i);
+      SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
       SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[i], rowname, 0.0, SCIPinfinity(scip),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
@@ -690,7 +691,7 @@ SCIP_RETCODE createRelaxation(
    }
 
    /* create additional row */
-   sprintf(rowname, "%s_add", SCIPconsGetName(cons));
+   SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[nvars], rowname, -SCIPinfinity(scip), 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );

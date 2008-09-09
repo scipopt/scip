@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.18 2008/04/21 18:51:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.19 2008/09/09 16:23:54 bzfwanie Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @brief  constraint handler for bound disjunction constraints
@@ -26,6 +26,7 @@
 #include <limits.h>
 
 #include "scip/cons_bounddisjunction.h"
+#include "scip/misc.h"
 
 
 #define CONSHDLR_NAME          "bounddisjunction"
@@ -1557,7 +1558,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    /* create a constraint out of the conflict set */
    if( i == nbdchginfos )
    {
-      sprintf(consname, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );

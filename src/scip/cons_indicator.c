@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.23 2008/09/04 13:42:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.24 2008/09/09 16:23:54 bzfwanie Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -176,6 +176,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include <string.h>
+#include "scip/misc.h"
 
 
 /* constraint handler properties */
@@ -395,7 +396,7 @@ SCIP_RETCODE checkIIS(
 	       lb[v] = SCIPvarGetLbLocal(var);
 	       ub[v] = SCIPvarGetUbLocal(var);
 	       SCIP_CALL( SCIPallocBufferArray(scip, &(colnames[v]), SCIP_MAXSTRLEN) );
-	       snprintf(colnames[v], SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var));
+	       SCIPsnprintf(colnames[v], SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var));
 	    }
 
 	    /* now add columns */
@@ -2165,7 +2166,7 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
       ++(consdata->nFixedNonzero);
 
    /* create transformed constraint with the same flags */
-   snprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
+   SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
 	 SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
 	 SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
@@ -2413,7 +2414,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 	 if ( ub < maxCouplingValue )
 	 {
 #ifndef NDEBUG
-	    sprintf(name, "couple%d", c);
+	    SCIPsnprintf(name, 50, "couple%d", c);
 #else
 	    name[0] = '\0';
 #endif
@@ -3069,7 +3070,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    consdata->colIndex = -1;
 
    /* create slack variable */
-   snprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
+   SCIPsnprintf(s, SCIP_MAXSTRLEN, "indslack_%s", name);
    SCIP_CALL( SCIPcreateVar(scip, &slackvar, s, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
 	 NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, slackvar) );
@@ -3079,7 +3080,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, slackvar) );
 
    /* create linear constraint */
-   snprintf(s, SCIP_MAXSTRLEN, "indlin_%s", name);
+   SCIPsnprintf(s, SCIP_MAXSTRLEN, "indlin_%s", name);
 
    /* the constraint is inital, enforced, separated, and checked */
    SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, s, nvars, vars, vals, -SCIPinfinity(scip), rhs,

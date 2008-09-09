@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.31 2008/09/01 21:06:52 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.32 2008/09/09 16:23:59 bzfwanie Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "scip/sepa_strongcg.h"
+#include "scip/misc.h"
 
 
 #define SEPA_NAME              "strongcg"
@@ -458,7 +459,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                char cutname[SCIP_MAXSTRLEN];
 
                /* create the cut */
-               sprintf(cutname, "scg%d_%d", SCIPgetNLPs(scip), c);
+               SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_%d", SCIPgetNLPs(scip), c);
                SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                                              cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );

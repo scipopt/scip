@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.30 2008/04/17 17:49:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.31 2008/09/09 16:23:58 bzfwanie Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -310,6 +310,19 @@ int SCIPptrarrayGetMinIdx(
 extern
 int SCIPptrarrayGetMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
+   );
+
+/*
+ * Strings
+ */
+
+/** safe version of snprintf */
+extern
+int SCIPsnprintf(
+   char*            t,      /**< target string                */
+   int              length, /**< length of the string to copy */
+   const char*      s,      /**< source string                */
+   ...                      /**< further parameters           */
    );
 
 /*

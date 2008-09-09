@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  This file is part of the program and library             */
+/*                  This1 file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
 /*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.27 2008/04/17 17:49:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.28 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/message.h"
+#include "scip/misc.h"
 
 
 /** error message print method of default message handler */
@@ -344,7 +345,7 @@ void SCIPmessagePrintErrorHeader(
 {
    char msg[SCIP_MAXSTRLEN];
 
-   snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
+   SCIPsnprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
    messagePrintError(msg);
 }
 
@@ -356,9 +357,12 @@ void SCIPmessagePrintError(
 {
    char msg[SCIP_MAXSTRLEN];
    va_list ap;
+   int n;
 
    va_start(ap, formatstr); /*lint !e826*/
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); /*lint !e718 !e746*/
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); /*lint !e718 !e746*/
+   if( n < 0 || n >= SCIP_MAXSTRLEN )
+      msg[SCIP_MAXSTRLEN-1] = '\0';
    messagePrintError(msg);
    va_end(ap);
 }
@@ -371,7 +375,7 @@ void SCIPmessagePrintWarningHeader(
 {
    char msg[SCIP_MAXSTRLEN];
 
-   snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
+   SCIPsnprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
    messagePrintWarning(msg);
 }
 
@@ -383,11 +387,14 @@ void SCIPmessagePrintWarning(
 {
    char msg[SCIP_MAXSTRLEN];
    va_list ap;
+   int n;
 
    va_start(ap, formatstr); /*lint !e826*/
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
-   messagePrintWarning(msg);
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    va_end(ap);
+   if( n < 0 || n >= SCIP_MAXSTRLEN )
+      msg[SCIP_MAXSTRLEN-1] = '\0';
+   messagePrintWarning(msg);
 }
 
 /** prints a dialog message that requests user interaction, acting like the printf() command */
@@ -434,8 +441,11 @@ void SCIPmessageVFPrintDialog(
    )
 {
    char msg[SCIP_MAXSTRLEN];
+   int n;
 
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+   if( n < 0 || n >= SCIP_MAXSTRLEN )
+      msg[SCIP_MAXSTRLEN-1] = '\0';
    messagePrintDialog(file, msg);
 }
 
@@ -483,8 +493,11 @@ void SCIPmessageVFPrintInfo(
    )
 {
    char msg[SCIP_MAXSTRLEN];
+   int n;
 
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+   if( n < 0 || n >= SCIP_MAXSTRLEN )
+      msg[SCIP_MAXSTRLEN-1] = '\0';
    messagePrintInfo(file, msg);
 }
 
@@ -546,8 +559,11 @@ void SCIPmessageVFPrintVerbInfo(
    if( msgverblevel <= verblevel )
    {
       char msg[SCIP_MAXSTRLEN];
+      int n;
 
-      vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+      n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+      if( n < 0 || n >= SCIP_MAXSTRLEN )
+         msg[SCIP_MAXSTRLEN-1] = '\0';
       messagePrintInfo(file, msg);
    }
 }

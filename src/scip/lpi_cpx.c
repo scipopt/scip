@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.119 2008/08/31 02:09:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.120 2008/09/09 16:23:57 bzfwanie Exp $"
 
 /**@file   lpi_cpx.c
  * @brief  LP interface for CPLEX >= 8.0
@@ -27,6 +27,7 @@
 #include "scip/bitencode.h"
 #include "scip/lpi.h"
 #include "scip/message.h"
+#include "scip/misc.h"
 
 
 
@@ -858,7 +859,7 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   sprintf(cpxname, "CPLEX %.2f", (SCIP_Real)CPX_VERSION/100.0);
+   SCIPsnprintf(cpxname, SCIP_MAXSTRLEN, "CPLEX %.2f", (SCIP_Real)CPX_VERSION/100.0);
    return cpxname;
 }
 
