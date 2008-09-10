@@ -226,6 +226,7 @@ fixed bugs:
 - tried to fix memory leak in dialog.c occuring from different versions of the readline/history libraries
 - corrected bug in var.c occuring during applying boundchanges in varUpdateAggregationBounds method
 - replaced sprintf and snprintf by SCIPsnprintf fixed potential bug with overlong strings
+- fixed bug in SCIPlpSolveAndEval(): allow more than one extra simplex step for getting an objlimit exceeding solution with fastmip
 
 SCIP version 1.00
 =================

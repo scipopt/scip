@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.285 2008/09/09 16:23:57 bzfwanie Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.286 2008/09/10 15:42:08 bzfgamra Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10383,18 +10383,25 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             {
                SCIP_Real tmpcutoff;
                SCIP_Bool resolve;
-               
-               /* temporarily disable cutoffbound, which also disables the objective limit, and set an iteration limit of 1 */
+               int iters;
+
+               /* temporarily disable cutoffbound, which also disables the objective limit */
                tmpcutoff = lp->cutoffbound;
                lp->cutoffbound = SCIPlpiInfinity(lpi);
-               SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 1) );
+               iters = 1;
 
-               /* resolve LP */            
-               resolve = FALSE;
-               SCIP_CALL( lpSolveStable(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+               while ( objval < tmpcutoff - lp->looseobjval )
+               {
+                  /* set an iteration limit of 1 which will be multiplied by 2 each time, the new objvalue doesn't exceed the objective limit */
+                  SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, iters) );
+                  /* resolve LP */            
+                  resolve = FALSE;
+                  SCIP_CALL( lpSolveStable(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+                  SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+                  iters = iters * 2;
+               }
 
-               SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-               assert(SCIPsetIsGE(set, objval, tmpcutoff - lp->looseobjval));
+               assert( objval >= tmpcutoff - lp->looseobjval );
 
                /* reinstall old cutoff bound and iteration limits in LP solver */
                lp->cutoffbound = tmpcutoff;
@@ -10416,8 +10423,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* get new solution and objective value */
                SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
 
-               SCIPdebugMessage(" -> resolved objlim exceeding LP in 1 iteration (infeasible:%d, optimal:%d) objval: %f, objlimit: %f\n",
-                  SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsOptimal(lpi), 
+               SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (infeasible:%d, optimal:%d) objval: %f, objlimit: %f\n",
+                  iters/2, SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsOptimal(lpi), 
                   objval, lp->cutoffbound - lp->looseobjval);
             }
             else if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
