@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.55 2008/09/15 13:48:57 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.56 2008/09/15 17:26:59 bzfviger Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -2990,8 +2990,8 @@ SCIP_RETCODE setUncapacitatedArcs(
       SCIP_COL** rowcols;
       SCIP_Real* rowvals;
       int rowlen;
-      int r; // flow row
-      int i; // sparse column count of flow row
+      int r; /*// flow row*/
+      int i; /*// sparse column count of flow row*/
 
       r = flowcands[n];
       assert(0 <= r && r < nrows);
@@ -3067,8 +3067,8 @@ SCIP_RETCODE setUncapacitatedArcs(
       SCIP_COL** rowcols;
       SCIP_Real* rowvals;
       int rowlen;
-      int r; // flow row
-      int i; // sparse column count of flow row
+      int r; /*// flow row */
+      int i; /*// sparse column count of flow row */
 
       r = flowcands[n];
 
@@ -3739,7 +3739,7 @@ SCIP_RETCODE identifyComponent(
       compnodes[*ncompnodes] = v;
       (*ncompnodes)++;
 
-//       printf("\n\nNODE: %i\n", v);
+/*//       printf("\n\nNODE: %i\n", v); */
       /* go through the list of outgoing arcs */
       for( a = firstoutarcs[v]; a != -1; a = nextoutarcs[a] )
       {
@@ -3757,7 +3757,7 @@ SCIP_RETCODE identifyComponent(
 
          /* put arc to component */
 
-//          printf("    put out arc %i = (%i,%i) = (%i,%i) to component , number:%i\n",a, v, targetv, arcsources[a],arctargets[a], *ncomparcs +1 );
+/*//          printf("    put out arc %i = (%i,%i) = (%i,%i) to component , number:%i\n",a, v, targetv, arcsources[a],arctargets[a], *ncomparcs +1 );*/
          assert(*ncomparcs < mcfdata->narcs);
          comparcs[*ncomparcs] = a;
          (*ncomparcs)++;
@@ -3787,7 +3787,7 @@ SCIP_RETCODE identifyComponent(
          if( sourcev != -1 && nodevisited[sourcev] == VISITED )
             continue;
 
-//          printf("    put in arc %i = (%i,%i) = (%i,%i) to component , number:%i\n",a, sourcev, v, arcsources[a],arctargets[a], *ncomparcs +1 );
+/*//          printf("    put in arc %i = (%i,%i) = (%i,%i) to component , number:%i\n",a, sourcev, v, arcsources[a],arctargets[a], *ncomparcs +1 );*/
          /* put arc to component */
          assert(*ncomparcs < mcfdata->narcs);
          comparcs[*ncomparcs] = a;
