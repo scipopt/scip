@@ -227,6 +227,7 @@ fixed bugs:
 - corrected bug in var.c occuring during applying boundchanges in varUpdateAggregationBounds method
 - replaced sprintf and snprintf by SCIPsnprintf fixed potential bug with overlong strings
 - fixed bug in SCIPlpSolveAndEval(): allow more than one extra simplex step for getting an objlimit exceeding solution with fastmip
+- fixed bug in sepa_mir.c: size of testeddeltas-array was too small
 
 SCIP version 1.00
 =================
