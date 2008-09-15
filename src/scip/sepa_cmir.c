@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.79 2008/09/09 16:23:59 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.80 2008/09/15 16:30:23 bzfwolte Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -454,7 +454,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &mksetcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &testeddeltas, 2*(nintvars+1)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &testeddeltas, 3 + 2*(nintvars+2)) );
 
    /* As in Marchand's version. Use the absolute value of the coefficients of the integer variables (lying 
     * stricly between its bounds) in the constructed mixed knapsack set, i.e., 
