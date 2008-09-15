@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.301 2008/09/09 16:23:55 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.302 2008/09/15 20:18:33 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -654,6 +654,16 @@ SCIP_RETCODE consdataCreate(
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
+
+   if( SCIPisInfinity(scip, rhs) )
+      rhs = SCIPinfinity(scip);
+   else if( SCIPisInfinity(scip, -rhs) )
+      rhs = -SCIPinfinity(scip);
+  
+   if( SCIPisInfinity(scip, -lhs) )
+      lhs = -SCIPinfinity(scip);
+   else if( SCIPisInfinity(scip, lhs) )
+      lhs = SCIPinfinity(scip);
 
    if( SCIPisGT(scip, lhs, rhs) )
    {
@@ -5664,16 +5674,14 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
 
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
+   assert(consdata1->sorted);
+   assert(consdata2->sorted);
    scip = (SCIP*)userptr; 
    assert(scip != NULL);
    
    /* checks trivial case */
    if( consdata1->nvars != consdata2->nvars )
       return FALSE;
-
-   /* sorts the constraints */
-   SCIP_CALL( consdataSort(scip, consdata1) );
-   SCIP_CALL( consdataSort(scip, consdata2) );
 
    coefsequal = TRUE;
    coefsnegated = TRUE;
@@ -5708,6 +5716,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 {
+   SCIP* scip;
    SCIP_CONSDATA* consdata;
    unsigned int hashval;
    int minidx;
@@ -5717,8 +5726,13 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
-   assert(consdata->sorted);
    assert(consdata->nvars > 0);
+
+   scip = (SCIP*)userptr; 
+   assert(scip != NULL);
+
+   /* sorts the constraints */
+   SCIP_CALL( consdataSort(scip, consdata) );
 
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
@@ -5848,9 +5862,7 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(consdata0 != NULL && consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
          
-         /* sort the constraints */
-         SCIP_CALL( consdataSort(scip, consdata0) );
-         SCIP_CALL( consdataSort(scip, consdata1) );
+         assert(consdata0->sorted && consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
          if( SCIPisEQ(scip, consdata0->vals[0], consdata1->vals[0]) )

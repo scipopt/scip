@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.6 2008/04/17 17:49:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.7 2008/09/15 20:18:34 bzfwinkm Exp $"
 
 /**@file   heur_intshifting.c
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
@@ -172,20 +172,21 @@ SCIP_RETCODE updateActivities(
          /* update row activities */
          oldminactivity = minactivities[rowpos];
          oldmaxactivity = maxactivities[rowpos];
+
          if( !SCIPisInfinity(scip, -oldminactivity) )
          {
             newminactivity = oldminactivity + delta * colvals[r];
             minactivities[rowpos] = newminactivity;
          }
          else
-            newminactivity = oldminactivity;
+            newminactivity = -SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, oldmaxactivity) )
          {
             newmaxactivity = oldmaxactivity + delta * colvals[r];
             maxactivities[rowpos] = newmaxactivity;
          }
          else
-            newmaxactivity = oldmaxactivity;
+            newmaxactivity = SCIPinfinity(scip);
 
          /* update row violation arrays */
          updateViolations(scip, row, violrows, violrowpos, nviolrows, oldminactivity, oldmaxactivity,

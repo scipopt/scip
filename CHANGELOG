@@ -228,6 +228,9 @@ fixed bugs:
 - replaced sprintf and snprintf by SCIPsnprintf fixed potential bug with overlong strings
 - fixed bug in SCIPlpSolveAndEval(): allow more than one extra simplex step for getting an objlimit exceeding solution with fastmip
 - fixed bug in sepa_mir.c: size of testeddeltas-array was too small
+- removed bug for values greater than (-)infinity, heur_shifting.c, heur_intshifting.c, heur_rounding.c, heur_oneopt.c
+- removed bug for rhs/lhs greater than (-)infinity, cons_linear.c
+- removed bug caused by hashcomparison for non-sorted constraints, cons_linear.c
 
 SCIP version 1.00
 =================
