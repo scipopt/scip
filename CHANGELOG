@@ -233,6 +233,8 @@ fixed bugs:
 - removed bug for rhs/lhs greater than (-)infinity, cons_linear.c
 - removed bug caused by hashcomparison for non-sorted constraints, cons_linear.c
 - fixed bugs with wrong presolving due to cancellation in (res-)activities in cons_linear.c
+- removed possible memory leak in objdialog.cpp
+
 
 SCIP version 1.00
 =================
