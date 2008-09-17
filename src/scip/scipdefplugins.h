@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.21 2008/05/15 17:51:03 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.22 2008/09/17 15:05:28 bzfwanie Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -57,6 +57,7 @@
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"
+#include "scip/heur_dins.h"
 #include "scip/heur_feaspump.h"
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"

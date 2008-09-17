@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.258 2008/09/08 09:51:55 bzfheinz Exp $
+# $Id: Makefile,v 1.259 2008/09/17 15:05:28 bzfwanie Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -386,6 +386,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
+                        scip/heur_dins.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \

@@ -113,6 +113,7 @@ plugins:
 - pseudoobj propagator now also propagates the global lower (dual) bound
 - linear constraint handler now detects continuous variables that are implicit integer in dual presolve
 - the c-MIR separator now also tries to get rid of implicit integer variables by aggregation
+- new heuristic DINS (distance induced neighborhood search by Ghosh)
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),
