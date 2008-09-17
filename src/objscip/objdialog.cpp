@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.cpp,v 1.3 2008/05/06 13:58:25 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objdialog.cpp,v 1.4 2008/09/17 18:43:58 bzfpfets Exp $"
 
 /**@file   objdialog.cpp
  * @brief  C++ wrapper for dialogs
@@ -117,14 +117,7 @@ SCIP_RETCODE SCIPincludeObjDialog(
    SCIP_Bool             deleteobject        /**< should the dialog object be deleted when dialog is freed? */
    )
 {/*lint --e{429} */
-   SCIP_DIALOGDATA* dialogdata;
-   SCIP_DIALOG* dialog;
    SCIP_DIALOG* parentdialog;
-
-   /* create dialog data */
-   dialogdata = new SCIP_DIALOGDATA;
-   dialogdata->objdialog = objdialog;
-   dialogdata->deleteobject = deleteobject;
 
    /* get parent dialog */
    parentdialog = SCIPgetRootDialog(scip);
@@ -134,6 +127,14 @@ SCIP_RETCODE SCIPincludeObjDialog(
    /* create, include, and release dialog */
    if( !SCIPdialogHasEntry(parentdialog, objdialog->scip_name_) )
    {
+      SCIP_DIALOGDATA* dialogdata;
+      SCIP_DIALOG* dialog;
+
+      /* create dialog data */
+      dialogdata = new SCIP_DIALOGDATA;
+      dialogdata->objdialog = objdialog;
+      dialogdata->deleteobject = deleteobject;
+
       SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecObj, dialogDescObj, dialogFreeObj,
 				  objdialog->scip_name_, objdialog->scip_desc_, objdialog->scip_issubmenu_, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
