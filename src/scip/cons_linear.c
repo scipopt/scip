@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.303 2008/09/17 15:33:21 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.304 2008/09/18 09:51:51 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -5503,7 +5503,7 @@ SCIP_RETCODE dualPresolve(
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, FALSE);
                   recalculated = !SCIPisEQ(scip, oldminresactivity, minresactivity);
-		  isminsettoinfinity = TRUE; // here it means only that it was even calculated
+		  isminsettoinfinity = TRUE; /* // here it means only that it was even calculated */
                }
 
                /* check maxresactivity for reliablility */
@@ -5511,7 +5511,7 @@ SCIP_RETCODE dualPresolve(
                {
                   consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, FALSE);
                   recalculated = recalculated || !SCIPisEQ(scip, oldmaxresactivity, maxresactivity);
-		  ismaxsettoinfinity = TRUE; // here it means only that it was even calculated
+		  ismaxsettoinfinity = TRUE; /* // here it means only that it was even calculated */
                }
 
                /* minresactivity or maxresactivity wasn't reliable so recalculate min- and maxval*/
