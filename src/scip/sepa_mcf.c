@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.56 2008/09/15 17:26:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.57 2008/09/18 15:23:31 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -2305,7 +2305,6 @@ SCIP_RETCODE extractCapacities(
       }
       else
       {
-         mcfdata->capacityrows[mcfdata->narcs] = NULL;
          SCIPdebugMessage("no capacity row found for column x%d <%s> in commodity %d\n", c, SCIPvarGetName(SCIPcolGetVar(cols[c])), colcommodity[c]);
       }
    }
@@ -3098,7 +3097,7 @@ SCIP_RETCODE setUncapacitatedArcs(
             /* identify source and target of flow variable */
             getIncidentNodes(scip, mcfdata, rowcols[i], &s, &t);
 
-            SCIPdebugMessage("   col <%s>  (s,t):(%i,%i) count:%i\n", SCIPvarGetName(var), s, t, nodepaircount[s][t]);
+            printf/*???????????????????????????SCIPdebugMessage*/("   col <%s>  (s,t):(%i,%i) count:%i\n", SCIPvarGetName(var), s, t, nodepaircount[s][t]);
 
             if( s >= 0 && t >= 0 )
             {
@@ -3106,7 +3105,7 @@ SCIP_RETCODE setUncapacitatedArcs(
                /* Note: A flow variable should be counted twice for each active commodity
                 *       We want an uncapacitated arc to appear in at least UNCAPACITATEDARCSTRESHOLD*100 % of the commodities
                 */
-               if( nodepaircount[s][t] > SCIPceil(scip, 2 * (SCIP_Real)nactivecommodities * UNCAPACITATEDARCSTRESHOLD ) )
+               if( nodepaircount[s][t] >= SCIPceil(scip, 2 * (SCIP_Real)nactivecommodities * UNCAPACITATEDARCSTRESHOLD ) )
                {
 
                   if( nodepairarcid[s][t] == -1 )
