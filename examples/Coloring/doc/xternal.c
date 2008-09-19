@@ -24,4 +24,37 @@
  * @version  0.1
  * @author   Gerald Gamrath
  *
+ * This branch-and-price coloring code gives an example for 
+ * a pricer and associated modules.
+ *
+ * It implements the approach described in "A column generation approach
+ * for graph coloring" by Anuj Mehrotra and Micheal A. Trick, April 11, 1995.
+ *
+ * The coloring problem is the following:
+ *
+ * Given a graph G = (V,E), the goal is to assign a color to each vertex,
+ * such that no adjacent vertices have the same color. At the same time
+ * the number of used colors has to be minimized.
+ *
+ * We use the following integer programming model: We have binary
+ * variables \f$ x_{s}, s \in S\f$ where \f$S \subseteq \mathcal{P}(V)\f$ 
+ * is the set of all (inclusion-) maximal stable sets in the graph G.
+ * 
+ * 
+ * The basic model is then:
+ * \f[
+ *  \begin{array}[t]{rl}
+ *    \min & \sum_{s \in S} x_{s} \\
+ *         & \\
+ *    s.t. & \sum_{s \in S, v \in s} x_{s} \ge 1 \quad \forall v \in V \\
+ *  \end{array}
+ * \f]
+ *
+ * Since the number of stable sets is exponential in most cases, the algorithm starts
+ * with some subset \f$ \bar{S} \subseteq S\f$ of the stable sets and adds further
+ * stable sets during the solution process if they can improve the current LP solution.
+ *
+ * Further information about particular modules like the pricing routine and the 
+ * branching rule can be found in the corresponding .c-files.
+ *
  */
