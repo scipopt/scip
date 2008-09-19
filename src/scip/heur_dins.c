@@ -533,7 +533,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    assert( nvars > 0 );
    
    /* get name of the original problem and add the string "_dinssub" */
-   sprintf( probname, "%s_dinssub", SCIPgetProbName(scip) );
+   SCIPsnprintf( probname, SCIP_MAXSTRLEN, "%s_dinssub", SCIPgetProbName(scip) );
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
