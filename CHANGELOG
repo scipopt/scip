@@ -103,6 +103,7 @@ features:
 - the ZPL reader is now able to pass a starting solution to SCIP
 - revised lpi_clp.cpp (many small changes, in particular writing and reading of bases)
 - added FASTMIP settings in lpi_clp.cpp that try to improve the performance of Clp as much as possible
+- added coloring example in examples/Coloring
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
