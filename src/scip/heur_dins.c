@@ -26,6 +26,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_dins.h"
+#include "scip/misc.h"
 
 #define HEUR_NAME             "dins"
 #define HEUR_DESC             "distance induced neighborhood search by Ghosh"
@@ -245,7 +246,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    int nbinvars;
    int i;   
 
-   sprintf( consname, "%s_dinsLBcons", SCIPgetProbName(scip) );
+   SCIPsnprintf( consname, SCIP_MAXSTRLEN, "%s_dinsLBcons", SCIPgetProbName(scip) );
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData( scip, &vars, NULL, &nbinvars, NULL, NULL, NULL ) );   
@@ -371,23 +372,7 @@ SCIP_DECL_HEURFREE(heurFreeDins)
 }
 
 /** initialization method of primal heuristic (called after problem was transformed) */
-static
-SCIP_DECL_HEURINIT(heurInitDins)
-{  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
-   
-   assert( heur != NULL );
-   assert( scip != NULL );
-   
-   /* get heuristic's data */
-   heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
-
-   /* initialize data */
-   heurdata->usednodes = 0;
-   
-   return SCIP_OKAY;
-}
+#define heurInitDins NULL
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 #define heurExitDins NULL
@@ -406,6 +391,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolDins)
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
    
+   /* initialize data */
+   heurdata->usednodes = 0;
+  
    /* create flag array */
    heurdata->deltalength = SCIPgetNBinVars(scip);
 
@@ -481,6 +469,10 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    SCIP_Bool success;                        /* used to store whether new solution was found or not          */
    SCIP_Bool infeasible;                     /* stores whether the hard fixing of a variables was feasible or not */
+
+#ifdef NDEBUG
+    SCIP_RETCODE retstat;
+#endif
    
    assert( heur != NULL );
    assert( scip != NULL );
@@ -645,7 +637,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       if( SCIPisFeasEQ(scip,lpsolval,mipsolval) && SCIPisFeasEQ(scip,mipsolval,rootlpsolval) )
       {
          /* update delta */
-         delta[i]=TRUE;
          if( (nsols > 1) && (heurdata->lastnsolsfound != nsolsfound  ) && delta[i] ) /* no need to update delta[i] if already FALSE */
          {
             /* no need to update delta[i] if already FALSE or sols[i] already checked on previous run or worse than DINS-solution of last run */
@@ -711,7 +702,15 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    
    /* solve the subproblem */
    SCIPdebugMessage("solving DINS sub-MIP with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n", heurdata->neighborhoodsize, nsubnodes );
-   SCIP_CALL( SCIPsolve(subscip) ); 
+#ifdef NDEBUG
+   retstat = SCIPsolve(subscip);
+   if( retstat != SCIP_OKAY )
+   { 
+      SCIPwarningMessage("Error while solving subMIP in DINS heuristic; subSCIP terminated with code <%d>\n",retstat);
+   }
+#else
+   SCIP_CALL( SCIPsolve(subscip) );
+#endif
    heurdata->usednodes += SCIPgetNNodes(subscip);
    nsubsols = SCIPgetNSols(subscip);
    SCIPdebugMessage("DINS used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes and found %d solutions\n", SCIPgetNNodes(subscip), nsubnodes, nsubsols);
