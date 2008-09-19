@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.32 2008/09/09 16:23:59 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.33 2008/09/19 11:20:35 bzfberth Exp $"
 
 /**@file   sepa_strongcg.c
  * @brief  Strong CG Cuts (Letchford & Lodi)
@@ -55,7 +55,7 @@
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.95
 
-#define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
+#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
 
 /** separator data */

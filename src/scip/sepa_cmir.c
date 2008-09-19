@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.80 2008/09/15 16:30:23 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.81 2008/09/19 11:20:35 bzfberth Exp $"
 
 /**@file   sepa_cmir.c
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -73,7 +73,7 @@
 #define MAKECONTINTEGRAL          FALSE
 #define IMPLINTSARECONT
 
-#define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
+#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
 
 

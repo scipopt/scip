@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.58 2008/09/19 09:39:48 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.59 2008/09/19 11:20:35 bzfberth Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -80,7 +80,7 @@
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.999
 
-#define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
+#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
 #define MINCOMNODESFRACTION         0.5 /**< minimal size of commodity relative to largest commodity to keep it in the network */
 #define MINNODES                      3 /**< minimal number of nodes in network to keep it for separation */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.15 2008/09/09 16:23:59 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.16 2008/09/19 11:20:35 bzfberth Exp $"
 
 /**@file   sepa_flowcover.c
  * @brief  flow cover cuts separator
@@ -69,7 +69,7 @@
 #define MAXSCALE                 1000.0 
 #define MAXDYNPROGSPACE         1000000 
 
-#define MAXAGGRLEN(nvars)          (0.1*nvars+1000) /**< maximal length of base inequality */
+#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
 
 
