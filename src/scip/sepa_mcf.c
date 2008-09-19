@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.57 2008/09/18 15:23:31 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.58 2008/09/19 09:39:48 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/
 
@@ -2938,9 +2938,7 @@ SCIP_RETCODE setUncapacitatedArcs(
    int*              colarcid           = mcfdata-> colarcid;
    int               nnodes             = mcfdata-> nnodes;
    int               ncommodities       = mcfdata-> ncommodities;
-   int               nemptycommodities  = mcfdata-> nemptycommodities;
 
-   int               nactivecommodities = ncommodities - nemptycommodities;
 
    SCIP_ROW** rows;
    SCIP_COL** cols;
@@ -2953,9 +2951,13 @@ SCIP_RETCODE setUncapacitatedArcs(
    int n;
    int k;
 
-   if( nactivecommodities == 0 )
+   /* there should have been a cleanup already */
+   assert(mcfdata -> nemptycommodities == 0);
+
+   if( ncommodities == 0 )
       return SCIP_OKAY;
-   assert( nactivecommodities>=0 );
+
+   assert( ncommodities > 0 );
 
       /* get LP data */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
@@ -3105,7 +3107,7 @@ SCIP_RETCODE setUncapacitatedArcs(
                /* Note: A flow variable should be counted twice for each active commodity
                 *       We want an uncapacitated arc to appear in at least UNCAPACITATEDARCSTRESHOLD*100 % of the commodities
                 */
-               if( nodepaircount[s][t] >= SCIPceil(scip, 2 * (SCIP_Real)nactivecommodities * UNCAPACITATEDARCSTRESHOLD ) )
+               if( nodepaircount[s][t] >= SCIPceil(scip, 2 * (SCIP_Real)ncommodities * UNCAPACITATEDARCSTRESHOLD ) )
                {
 
                   if( nodepairarcid[s][t] == -1 )
@@ -3338,6 +3340,7 @@ SCIP_RETCODE cleanupNetwork(
                nodeisused[rownodeid[r]] = TRUE;
          }
       }
+
       mcfdata->ncommodities = newncommodities;
       ncommodities = newncommodities;
 
@@ -3432,6 +3435,9 @@ SCIP_RETCODE cleanupNetwork(
       SCIPfreeBufferArray(scip, &nodeisused);
       SCIPfreeBufferArray(scip, &arcisused);
    }
+
+   /* empty commodities have been removed here */
+   mcfdata -> nemptycommodities = 0;
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &perm);
