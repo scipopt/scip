@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.13 2008/08/25 12:25:47 bzfwanie Exp $
+# $Id: check_cluster.sh,v 1.14 2008/09/19 21:11:26 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -36,7 +36,8 @@ SETDIR=../settings
 # choose a queue for the cluster run 
 if test "$OPT" = "opt"
     then
-    QUEUE="gbe"
+#   QUEUE="gbe"
+    QUEUE="ib"
 else
     QUEUE="ib"
 fi
@@ -98,7 +99,7 @@ do
   echo set display freq $DISPFREQ        >> $TMPFILE
   echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
   echo set save $SETFILE                 >> $TMPFILE
-  echo read $i                           >> $TMPFILE
+  echo read /work/$i                     >> $TMPFILE
   echo optimize                          >> $TMPFILE
   echo display statistics                >> $TMPFILE
 #	    echo display solution                  >> $TMPFILE
