@@ -14,10 +14,10 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.6 2007/11/16 21:03:43 bzfpfets Exp $
+# $Id: Makefile,v 1.7 2008/09/19 14:15:16 bzfgamra Exp $
 
 #@file    Makefile
-#@brief   Makefile for C++ example project featuring a linear ordering solver
+#@brief   Makefile for C example project featuring a linear ordering solver
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #@author  Marc Pfetsch
