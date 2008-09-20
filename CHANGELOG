@@ -13,6 +13,7 @@ compiling:
 - replaced <string> by <cstring> in all C++-interfaces to get 'strlen()' included (gcc-4.3 gave an error)
 - Moved -rpath option for ld to linux-specific Makefiles.
 - Re-activated readline library on darwin/ppc.
+- added target spx132 for SoPlex version 1.3.2
 
 interface:
 - new method SCIPchgChildPrio() to change the node selection priority of the given child
@@ -235,6 +236,7 @@ fixed bugs:
 - removed bug caused by hashcomparison for non-sorted constraints, cons_linear.c
 - fixed bugs with wrong presolving due to cancellation in (res-)activities in cons_linear.c
 - removed possible memory leak in objdialog.cpp
+- fixed bug in preprocessing of SOS2 constraints (cons_sos2.c)
 
 
 SCIP version 1.00
