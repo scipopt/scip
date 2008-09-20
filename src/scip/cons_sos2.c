@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.18 2008/09/09 16:23:55 bzfwanie Exp $"
-
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.19 2008/09/20 20:52:05 bzfpfets Exp $"
+#define SCIP_DEBUG
 /**@file   cons_sos2.c
  * @brief  constraint handler for SOS type 2 constraints
  * @author Marc Pfetsch
@@ -1075,14 +1075,15 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
  *
  *  We perform the following presolving steps.
  *
- *  - If the bounds of one variable force it to be nonzero, we can fix
- *    all other variables with distance at least two to zero. If two
- *    variables are fixed to be nonzero, we can remove the constraint.
- *  - If a variable is fixed to zero, we can remove the variable.
+ *  - If the bounds of one variable force it to be nonzero, we can fix all other variables with
+ *    distance at least two to zero. If two variables are fixed to be nonzero, we can remove the
+ *    constraint.
+ *  - If a variable is fixed to zero, we can remove it if the variable if it is a the beginning or
+ *    end. Otherwise we cannot exploit this information.
  *  - We substitute appregated variables.
  *
- *  We could also handle the following:
- *  - If a variable appears thrice, it can be fixed to 0.
+ *  We currently do not handle the following:
+ *  - If a variable appears thwice, it can be fixed to 0.
  */
 static
 SCIP_DECL_CONSPRESOL(consPresolSOS2)
@@ -1122,30 +1123,28 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
       assert( consdata->nVars <= consdata->maxVars );
       assert( ! SCIPconsIsModifiable(cons) );
 
-      SCIPdebugMessage("Presolving SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
-
       *result = SCIP_DIDNOTFIND;
 
-      /* only run if sucess if possible */
-      if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+      /* only run if sucess is possible */
+      if ( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgcoefs > 0 || *nfixedvars > oldnfixedvars )
       {
 	 SCIP_VAR** Vars;
 	 int nFixedNonzero = 0;
 	 int lastFixedNonzero = -1;
 	 int j = 0;
 
+	 SCIPdebugMessage("Presolving SOS2 constraint <%s>.\n", SCIPconsGetName(cons) );
 	 Vars = consdata->Vars;
 
 	 /* check for variables fixed to 0 and bounds that fix a variable to be nonzero */
-	 while (j < consdata->nVars)
+	 for (j = 0; j < consdata->nVars; ++j)
 	 {
 	    SCIP_VAR* var;
 	    SCIP_Real lb,ub;
 	    SCIP_Real scalar = 1.0;
 	    SCIP_Real constant = 0.0;
 
-	    /* check for aggregation: if the constant is zero the variable is zero
-	     * iff the aggregated variable is 0 */
+	    /* check aggregation: if the constant is zero the variable is zero iff the aggregated variable is 0 */
 	    var = Vars[j];
 	    SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
 
@@ -1175,13 +1174,18 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
 
 	    /* if the variable is fixed to 0 */
 	    if ( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
-	    {
-	       ++removedvars;
-	       SCIPdebugMessage("deleting variable <%s> fixed to 0.\n", SCIPvarGetName(Vars[j]));
-	       SCIP_CALL( deleteVarSOS2(scip, cons, consdata, eventhdlr, j) );
-	    }
-	    else
-	       ++j;
+	       break;
+	 }
+
+	 /* if variable j is fixed to be 0, remove variable if it is at the beginning or end */
+	 if ( j == 0 || j == consdata->nVars-1 )
+	 {
+	    ++removedvars;
+	    ++(*nchgcoefs);
+	    SCIPdebugMessage("deleting variable <%s> fixed to 0.\n", SCIPvarGetName(Vars[j]));
+	    SCIP_CALL( deleteVarSOS2(scip, cons, consdata, eventhdlr, j) );
+	    *result = SCIP_SUCCESS;
+	    continue;
 	 }
 
 	 /* if the number of variables is less than 3 */
@@ -1802,18 +1806,16 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-			  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-			  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-			  CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-			  consFreeSOS2, consInitSOS2, consExitSOS2,
-			  consInitpreSOS2, consExitpreSOS2, consInitsolSOS2, consExitsolSOS2,
-			  consDeleteSOS2, consTransSOS2, consInitlpSOS2,
-			  consSepalpSOS2, consSepasolSOS2, consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2,
-			  consPropSOS2, consPresolSOS2, consRespropSOS2, consLockSOS2,
-			  consActiveSOS2, consDeactiveSOS2,
-			  consEnableSOS2, consDisableSOS2,
-			  consPrintSOS2,
-			  conshdlrdata) );
+	 CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+	 CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+	 CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+	 consFreeSOS2, consInitSOS2, consExitSOS2,
+	 consInitpreSOS2, consExitpreSOS2, consInitsolSOS2, consExitsolSOS2,
+	 consDeleteSOS2, consTransSOS2, consInitlpSOS2,
+	 consSepalpSOS2, consSepasolSOS2, consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2,
+	 consPropSOS2, consPresolSOS2, consRespropSOS2, consLockSOS2,
+	 consActiveSOS2, consDeactiveSOS2, consEnableSOS2, consDisableSOS2,
+	 consPrintSOS2, conshdlrdata) );
 
    return SCIP_OKAY;
 }
