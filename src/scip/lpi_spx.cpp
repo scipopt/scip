@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.81 2008/09/20 21:06:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.82 2008/09/20 21:08:36 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SoPlex 1.3.x
@@ -29,12 +29,6 @@
 /** use row representation (default is column representation) */
 /* #define SOPLEX_USE_ROW_REP  */
 
-
-
-/* turn off asserts; otherwise there is an assert(ptr == 0) failure at OneSpin Solutions */
-#ifndef NDEBUG
-#define NDEBUG
-#endif
 
 /* remember the original value of the SCIP_DEBUG define and undefine it */
 #ifdef SCIP_DEBUG
