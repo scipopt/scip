@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.17 2008/09/09 16:23:55 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.18 2008/09/20 20:51:27 bzfpfets Exp $"
 
 /**@file   cons_sos1.c
  * @brief  constraint handler for SOS type 1 constraints
@@ -526,20 +526,22 @@ SCIP_RETCODE propSOS1(
  *  We check whether the current solution is feasible, i.e., contains at most one nonzero
  *  variable. If not, we branch along the lines indicated by Beale and Tomlin:
  *
- *  We first compute \f$W = \sum_{j=1}^n |x_i|\f$ and \f$w =
- *  \sum_{j=1}^n j\, |x_i|\f$. Then we search for the index \f$k\f$ that
- *  satisfies
+ *  We first compute \f$W = \sum_{j=1}^n |x_i|\f$ and \f$w = \sum_{j=1}^n j\, |x_i|\f$. Then we
+ *  search for the index \f$k\f$ that satisfies
  *  \f[
  *        k \leq \frac{w}{W} < k+1.
  *  \f]
  *  The branches are then
  *  \f[
- *        x_1 = 0, \ldots, x_k = 0 \qquad \mbox{and}\qquad
- *        x_{k+1} = 0, \ldots, x_n = 0.
+ *        x_1 = 0, \ldots, x_k = 0 \qquad \mbox{and}\qquad x_{k+1} = 0, \ldots, x_n = 0.
  *  \f]
  *
- *  If the constraint contains two variables, the branching of course
- *  simplifies.
+ *  If the constraint contains two variables, the branching of course simplifies.
+ *
+ *  Depending on the parameters there are two ways to choose the branching constraint. Either the
+ *  constraint with the most number of nonzeros is choosen or the constraint with the largest
+ *  nonzero-variable weight. The later version allows the user to specify an order for the branching
+ *  importance of the constraints. Constraint branching can also be turned off.
  */
 static
 SCIP_RETCODE enforceSOS1(
