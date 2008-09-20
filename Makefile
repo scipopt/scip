@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.260 2008/09/18 07:34:52 bzfheinz Exp $
+# $Id: Makefile,v 1.261 2008/09/20 20:53:17 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -220,6 +220,18 @@ LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx121.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/b
 SOFTLINKS	+=	$(LIBDIR)/spx121inc
 SOFTLINKS	+=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/libsoplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
+endif
+
+LPSOPTIONS	+=	spx132
+ifeq ($(LPS),spx132)
+LINKER		=	CPP
+FLAGS		+=	-I$(LIBDIR)/spx132inc 
+LPSLDFLAGS	=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPILIBOBJ	=	scip/lpi_spx132.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC	=	$(SRCDIR)/scip/lpi_spx132.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+SOFTLINKS	+=	$(LIBDIR)/spx132inc
+SOFTLINKS	+=	$(LIBDIR)/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
 endif
 
 LPSOPTIONS	+=	clp
