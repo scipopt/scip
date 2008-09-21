@@ -71,6 +71,9 @@ interface:
   the NO_STRERROR_R flag switches between the use of strerror_r and strerror inside
 - new method SCIPgetRepropdepth() to get the depth of first node in active path that has to be propagated again 
 - new method SCIPsnprintf() safe version of snprintf (and sprintf)
+- Many changes in the SoPlex interface: The current one is tailored towards SoPlex 1.4 (aka 1.3.3). All SoPlex functions
+  (where applicable) should now have an exception handling. The Bugfix for adding columns has been moved to SoPlex. 
+  One can use ROW representation. Reading/writing of a basis has been implemented.
 
 features:
 - the MPS reader is now able to write a problem in MPS format
