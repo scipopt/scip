@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.41 2008/09/21 16:51:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.42 2008/09/21 19:51:06 bzfheinz Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -238,7 +238,7 @@ SCIP_RETCODE SCIPreaderWrite(
          /* compute length of the generic variable names:
 	  * - nvars + 1 to shift computation
 	  * - +3 (zero at end + 'x' + 1 because we round down)
-	  * Example: 10 -> need 4 chars ("c10\0") */
+	  * Example: 10 -> need 4 chars ("x10\0") */
          size = (int) log10(nvars+1) + 3;
 
          for( i = 0; i < nvars; ++i )
