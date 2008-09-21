@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.40 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.41 2008/09/21 16:51:04 bzfpfets Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -23,6 +23,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
 #include <strings.h>
@@ -234,9 +235,12 @@ SCIP_RETCODE SCIPreaderWrite(
          SCIP_ALLOC( BMSallocMemoryArray(&fixedvarnames, nfixedvars) );
          SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss) );
 
-         /* compute length of the generic variable names */
-         size = nvars % 10 + 2;
-         
+         /* compute length of the generic variable names:
+	  * - nvars + 1 to shift computation
+	  * - +3 (zero at end + 'x' + 1 because we round down)
+	  * Example: 10 -> need 4 chars ("c10\0") */
+         size = (int) log10(nvars+1) + 3;
+
          for( i = 0; i < nvars; ++i )
          {
             var = vars[i];
@@ -246,9 +250,9 @@ SCIP_RETCODE SCIPreaderWrite(
             SCIPsnprintf(name, size, "x%d", i);
             SCIPvarSetNamePointer(var, name);
          }  
-         
+
          /* compute length of the generic variable names */
-         size = nfixedvars % 10 + 2;
+         size = (int) log10(nfixedvars+1) + 3;
 
          for( i = 0; i < nfixedvars; ++i )
          {
@@ -259,10 +263,10 @@ SCIP_RETCODE SCIPreaderWrite(
             SCIPsnprintf(name, size, "y%d", i);
             SCIPvarSetNamePointer(var, name);
          }
-         
+
          /* compute length of the generic constraint names */
-         size = nconss % 10 + 2;
-         
+         size = (int) log10(nconss+1) + 3;
+
          for( i = 0; i < nconss; ++i )
          {
             cons = conss[i];
