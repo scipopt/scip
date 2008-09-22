@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.78 2008/04/17 17:49:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.79 2008/09/22 17:29:37 bzfpfets Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -262,6 +262,7 @@ struct SCIP_Set
    SCIP_Real             sepa_minorthoroot;  /**< minimal orthogonality for a cut to enter the LP in the root node */
    SCIP_Real             sepa_objparalfac;   /**< factor to scale objective parallelism of cut in separation score calc. */
    SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
+   char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
    char                  sepa_efficacynorm;  /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um,
                                               *   'd'iscrete) */
    int                   sepa_maxruns;       /**< maximal number of runs for which separation is enabled (-1: unlimited) */
