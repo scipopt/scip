@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.33 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.34 2008/09/22 18:51:57 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -106,11 +106,6 @@ void xlp_orderfile(FILE* fp, LpFormat format)
 }
 
 void xlp_mstfile(FILE* fp, LpFormat format)
-{  /*lint --e{715}*/
-   /* nothing to be done here */
-}
-
-void xlp_sosfile(FILE* fp, LpFormat format)
 {  /*lint --e{715}*/
    /* nothing to be done here */
 }
