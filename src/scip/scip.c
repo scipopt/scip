@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.474 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.475 2008/09/22 19:56:15 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -21,9 +21,10 @@
  * @author Thorsten Koch
  * @author Alexander Martin
  * @author Kati Wolter
+ *
+ *@todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
+ *@todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE 
  */
-/**@todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters */
-/**@todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
