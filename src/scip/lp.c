@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.286 2008/09/10 15:42:08 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.287 2008/09/22 17:34:26 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4897,20 +4897,82 @@ SCIP_Real SCIProwGetScalarProduct(
    return scalarprod;
 }
 
+/** returns the discrete scalar product of the coefficient vectors of the two given rows */
+static
+int SCIProwGetDiscreteScalarProduct(
+   SCIP_ROW*             row1,               /**< first LP row */
+   SCIP_ROW*             row2                /**< second LP row */
+   )
+{
+   int prod;
+   int i1;
+   int i2;
+
+   assert(row1 != NULL);
+   assert(row2 != NULL);
+
+   /* make sure, the rows are sorted */
+   SCIProwSort(row1);
+   assert(row1->lpcolssorted);
+   assert(row1->nonlpcolssorted);
+   SCIProwSort(row2);
+   assert(row2->lpcolssorted);
+   assert(row2->nonlpcolssorted);
+
+   /* calculate the scalar product */
+   prod = 0;
+   i1 = 0;
+   i2 = 0;
+   while( i1 < row1->len && i2 < row2->len )
+   {
+      assert(row1->cols[i1]->index == row1->cols_index[i1]);
+      assert(row2->cols[i2]->index == row2->cols_index[i2]);
+      assert((row1->cols[i1] == row2->cols[i2]) == (row1->cols_index[i1] == row2->cols_index[i2]));
+      if( row1->cols_index[i1] < row2->cols_index[i2] )
+         i1++;
+      else if( row1->cols_index[i1] > row2->cols_index[i2] )
+         i2++;
+      else
+      {
+         prod++;
+         i1++;
+         i2++;
+      }
+   }
+
+   return prod;
+}
+
 /** returns the degree of parallelism between the hyperplanes defined by the two row vectors v, w:
  *  p = |v*w|/(|v|*|w|);
  *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
  */
 SCIP_Real SCIProwGetParallelism(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row1,               /**< first LP row */
    SCIP_ROW*             row2                /**< second LP row */
    )
 {
+   SCIP_Real parallelism;
    SCIP_Real scalarprod;
 
-   scalarprod = SCIProwGetScalarProduct(row1, row2);
+   switch( set->sepa_orthofunc )
+   {
+   case 'e':
+      scalarprod = SCIProwGetScalarProduct(row1, row2);
+      parallelism = (REALABS(scalarprod) / (SCIProwGetNorm(row1) * SCIProwGetNorm(row2)));
+      break;
+   case 'd':
+      scalarprod = (SCIP_Real) SCIProwGetDiscreteScalarProduct(row1, row2);
+      parallelism = scalarprod / (sqrt((SCIP_Real) SCIProwGetNNonz(row1)) * sqrt((SCIP_Real) SCIProwGetNNonz(row2)));
+      break;
+   default:
+      SCIPerrorMessage("invalid orthogonality function parameter '%c'\n", set->sepa_orthofunc);
+      SCIPABORT();
+      parallelism = 0.0; /*lint !e527*/
+   }
    
-   return (REALABS(scalarprod) / (SCIProwGetNorm(row1) * SCIProwGetNorm(row2)));
+   return parallelism;
 }
 
 /** returns the degree of orthogonality between the hyperplanes defined by the two row vectors v, w:
@@ -4918,11 +4980,12 @@ SCIP_Real SCIProwGetParallelism(
  *  the hyperplanes are orthogonal, iff p = 1, they are parallel, iff p = 0
  */
 SCIP_Real SCIProwGetOrthogonality(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row1,               /**< first LP row */
    SCIP_ROW*             row2                /**< second LP row */
    )
 {
-   return 1.0 - SCIProwGetParallelism(row1, row2);
+   return 1.0 - SCIProwGetParallelism(set, row1, row2);
 }
 
 /** gets parallelism of row with objective function: if the returned value is 1, the row is parellel to the objective
