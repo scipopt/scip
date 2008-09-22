@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.4 2008/09/22 08:31:14 bzfheinz Exp $
+# $Id: evalcheck_cluster.sh,v 1.5 2008/09/22 10:37:58 bzfheinz Exp $
 export LANG=C
 
 AWKARGS=""
@@ -27,6 +27,7 @@ TEXFILE=$DIR/$EVALFILE.tex
 PAVFILE=$DIR/$EVALFILE.pav
 
 echo > $OUTFILE
+echo > $ERRFILE
 echo create overall output and error file
 for i in `cat $DIR/$EVALFILE.eval` DONE
   do
