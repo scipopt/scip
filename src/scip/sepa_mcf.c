@@ -12,15 +12,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.59 2008/09/19 11:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.60 2008/09/22 09:14:51 bzfraack Exp $"
 
-/*#define SCIP_DEBUG*/
+// #define SCIP_DEBUG
 
 /*//#define USECMIRDELTAS *//*????????????????????*/
 #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
 #define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
 #define SEPARATESINGLENODECUTS /*??????????????????*/
-#define UNCAPACITATEDARCS
+// #define UNCAPACITATEDARCS
 /*//#define STRICTCOLSPERCOMMODITYLIMIT *//*???????????????????*/
 /*//#define FORCECUTS *//*??????????????????????*/
 
@@ -61,7 +61,7 @@
 #define SEPA_NAME              "mcf"
 #define SEPA_DESC              "multi-commodity-flow network cut separator"
 #define SEPA_PRIORITY            -10000
-#define SEPA_FREQ                     0
+#define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
@@ -1298,7 +1298,7 @@ SCIP_RETCODE extractCapacityRows(
       else
          modeltype = SCIP_MCFMODELTYPE_UNDIRECTED;
 
-      printf/*????????????????SCIPdebugMessage*/("detected model type: %s (%g directed score, %g undirected score)\n",
+      SCIPdebugMessage("detected model type: %s (%g directed score, %g undirected score)\n",
                        modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected", directedcandsscore, undirectedcandsscore);
 
       if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
@@ -2963,7 +2963,7 @@ SCIP_RETCODE setUncapacitatedArcs(
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
-   printf/*??????????????????SCIPdebugMessage*/("UNCAPACITATED ARCS (arcs without arc id):------------------------------\n");
+   SCIPdebugMessage("UNCAPACITATED ARCS (arcs without arc id):------------------------------\n");
 
    /* allocate temporary memory for counting uncapacitated arcs (flow columns=nodepairs without arc-ids) */
    /* allocate temporary memory for arcids of nodepairs */
@@ -3037,7 +3037,7 @@ SCIP_RETCODE setUncapacitatedArcs(
             /* identify the (at most) two nodes which contain this flow variable */
             getIncidentNodes(scip, mcfdata, rowcols[i], &s, &t);
 
-            printf/*??????????????????SCIPdebugMessage*/("   col <%s> [%g,%g] (s,t):(%i,%i)\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),s,t);
+            SCIPdebugMessage("   col <%s> [%g,%g] (s,t):(%i,%i)\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),s,t);
 
             assert( -1 <= s && s < nnodes );
             assert( -1 <= t && t < nnodes );
@@ -3049,11 +3049,11 @@ SCIP_RETCODE setUncapacitatedArcs(
    }
 
 
-   printf/*??????????????????SCIPdebugMessage*/("END -- UNCAPACITATED ARCS (arcs without arc id):------------------------------\n");
+   SCIPdebugMessage("END -- UNCAPACITATED ARCS (arcs without arc id):------------------------------\n");
 
 
 
-   printf/*??????????????????SCIPdebugMessage*/("ASSIGN ARC IDS    ------------------------------\n");
+   SCIPdebugMessage("ASSIGN ARC IDS    ------------------------------\n");
 
     /*  2. go through flow conservation constraints AGAIN
     *     for colums without arc ids
@@ -3099,10 +3099,9 @@ SCIP_RETCODE setUncapacitatedArcs(
             /* identify source and target of flow variable */
             getIncidentNodes(scip, mcfdata, rowcols[i], &s, &t);
 
-            printf/*???????????????????????????SCIPdebugMessage*/("   col <%s>  (s,t):(%i,%i) count:%i\n", SCIPvarGetName(var), s, t, nodepaircount[s][t]);
-
             if( s >= 0 && t >= 0 )
             {
+               SCIPdebugMessage("   col <%s>  (s,t):(%i,%i) count:%i\n", SCIPvarGetName(var), s, t, nodepaircount[s][t]);
                assert( s != t );
                /* Note: A flow variable should be counted twice for each active commodity
                 *       We want an uncapacitated arc to appear in at least UNCAPACITATEDARCSTRESHOLD*100 % of the commodities
@@ -3114,17 +3113,17 @@ SCIP_RETCODE setUncapacitatedArcs(
                   {
                      nodepairarcid[s][t]   = mcfdata->narcs;
                      SCIP_CALL( createNewArc( scip, mcfdata, s, t) );
-                     printf/*???????????????????????SCIPdebugMessage*/("         -> NEW ARC: <%i> = (%i,%i)\n", mcfdata->narcs, s, t);
+                     SCIPdebugMessage("         -> NEW ARC: <%i> = (%i,%i)\n", mcfdata->narcs, s, t);
                   }
                   colarcid[c]    = nodepairarcid[s][t];
-                  printf/*???????????????????????SCIPdebugMessage*/("         -> Assign arcid:%i to column <%s>\n", nodepairarcid[s][t], SCIPvarGetName(var));
+                  SCIPdebugMessage("         -> Assign arcid:%i to column <%s>\n", nodepairarcid[s][t], SCIPvarGetName(var));
                }
             }
          }
       }
    }
 
-   printf/*???????????????????????SCIPdebugMessage*/("END -- ASSIGN ARC IDS    ------------------------------\n");
+   SCIPdebugMessage("END -- ASSIGN ARC IDS    ------------------------------\n");
 
 
 
@@ -3139,7 +3138,7 @@ SCIP_RETCODE setUncapacitatedArcs(
    SCIPfreeBufferArray(scip, &nodepairarcid);
    SCIPfreeBufferArray(scip, &nodepaircount);
 
-   printf/*???????????????SCIPdebugMessage*/("network after setting uncapacitated arcs has %d nodes, %d arcs, and %d commodities\n", mcfdata->nnodes, mcfdata->narcs, mcfdata->ncommodities);
+   SCIPdebugMessage("network after setting uncapacitated arcs has %d nodes, %d arcs, and %d commodities\n", mcfdata->nnodes, mcfdata->narcs, mcfdata->ncommodities);
 
    return SCIP_OKAY;
 }
@@ -3183,7 +3182,7 @@ SCIP_RETCODE cleanupNetwork(
    int a;
    int k;
 
-   printf/*???????????????SCIPdebugMessage*/("network before cleanup has %d nodes, %d arcs, and %d commodities\n", nnodes, narcs, ncommodities);
+   SCIPdebugMessage("network before cleanup has %d nodes, %d arcs, and %d commodities\n", nnodes, narcs, ncommodities);
 
    /* get LP data */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
@@ -3270,7 +3269,7 @@ SCIP_RETCODE cleanupNetwork(
    newncommodities = 0;
    for( k = 0; k < ncommodities; k++ )
    {
-      printf/*?????????????SCIPdebugMessage*/(" -> commodity %d: %d nodes, %d arcs\n", k, nnodespercom[k], narcspercom[k]);
+      SCIPdebugMessage(" -> commodity %d: %d nodes, %d arcs\n", k, nnodespercom[k], narcspercom[k]);
 
       /* only keep commodities of a certain size that have at least one arc */
       if( nnodespercom[k] >= nnodesthreshold && narcspercom[k] >= 1 )
@@ -3371,7 +3370,7 @@ SCIP_RETCODE cleanupNetwork(
       /* update remaining data structures to new arc ids */
       if( newnarcs < narcs )
       {
-         printf/*?????????????SCIPdebugMessage*/(" -> discarding %d of %d arcs\n", narcs - newnarcs, narcs);
+         SCIPdebugMessage(" -> discarding %d of %d arcs\n", narcs - newnarcs, narcs);
 
          for( c = 0; c < ncols; c++ )
          {
@@ -3411,7 +3410,7 @@ SCIP_RETCODE cleanupNetwork(
       /* update data structures to new node ids */
       if( newnnodes < nnodes )
       {
-         printf/*?????????????SCIPdebugMessage*/(" -> discarding %d of %d nodes\n", nnodes - newnnodes, nnodes);
+         SCIPdebugMessage(" -> discarding %d of %d nodes\n", nnodes - newnnodes, nnodes);
 
          for( i = 0; i < nflowcands; i++ )
          {
@@ -3445,7 +3444,7 @@ SCIP_RETCODE cleanupNetwork(
    SCIPfreeBufferArray(scip, &narcspercom);
    SCIPfreeBufferArray(scip, &nnodespercom);
 
-   printf/*???????????????SCIPdebugMessage*/("network after cleanup has %d nodes, %d arcs, and %d commodities\n", nnodes, narcs, ncommodities);
+   SCIPdebugMessage("network after cleanup has %d nodes, %d arcs, and %d commodities\n", nnodes, narcs, ncommodities);
 
    return SCIP_OKAY;
 }
@@ -3667,7 +3666,7 @@ SCIP_RETCODE identifySourcesTargets(
       mcfdata->ninconsistencies += totalnodecnt - bestsourcecnt - besttargetcnt;
    }
 
-   printf/*???????????????SCIPdebugMessage*/("extracted network has %d inconsistencies\n", mcfdata->ninconsistencies);
+   SCIPdebugMessage("extracted network has %d inconsistencies\n", mcfdata->ninconsistencies);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &touchednodes);
@@ -3744,7 +3743,6 @@ SCIP_RETCODE identifyComponent(
       compnodes[*ncompnodes] = v;
       (*ncompnodes)++;
 
-/*//       printf("\n\nNODE: %i\n", v); */
       /* go through the list of outgoing arcs */
       for( a = firstoutarcs[v]; a != -1; a = nextoutarcs[a] )
       {
@@ -3762,7 +3760,6 @@ SCIP_RETCODE identifyComponent(
 
          /* put arc to component */
 
-/*//          printf("    put out arc %i = (%i,%i) = (%i,%i) to component , number:%i\n",a, v, targetv, arcsources[a],arctargets[a], *ncomparcs +1 );*/
          assert(*ncomparcs < mcfdata->narcs);
          comparcs[*ncomparcs] = a;
          (*ncomparcs)++;
@@ -3792,7 +3789,6 @@ SCIP_RETCODE identifyComponent(
          if( sourcev != -1 && nodevisited[sourcev] == VISITED )
             continue;
 
-/*//          printf("    put in arc %i = (%i,%i) = (%i,%i) to component , number:%i\n",a, sourcev, v, arcsources[a],arctargets[a], *ncomparcs +1 );*/
          /* put arc to component */
          assert(*ncomparcs < mcfdata->narcs);
          comparcs[*ncomparcs] = a;
@@ -5309,7 +5305,8 @@ SCIP_RETCODE generateClusterCuts(
          {
             SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
             SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
-#if 0 /*????????????????????*/
+
+#ifdef SCIP_DEBUG
             for( a = 0; a < narcs; a++ )
             {
                printf(" -> arc %d, capacity row <%s>: weight=%g slack=%g prod=%g dual=%g\n", a,
@@ -5493,7 +5490,7 @@ SCIP_RETCODE separateCuts(
 
    assert(result != NULL);
 
-   printf("************** [%6.2f] MCF start\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+   SCIPdebugMessage("************** [%6.2f] MCF start\n", SCIPgetSolvingTime(scip));
    *result = SCIP_DIDNOTRUN;
    ncuts = 0;
 
@@ -5507,18 +5504,18 @@ SCIP_RETCODE separateCuts(
       *result = SCIP_DIDNOTFIND;
       SCIP_CALL( mcfnetworkExtract(scip, sepadata, &sepadata->mcfnetworks, &sepadata->nmcfnetworks) );
 
-      /*?????????????#ifdef SCIP_DEBUG*/
-      printf/*??????????????SCIPdebugMessage*/("extracted %d networks\n", sepadata->nmcfnetworks);
+#ifdef SCIP_DEBUG
+      SCIPdebugMessage("extracted %d networks\n", sepadata->nmcfnetworks);
       for( i = 0; i < sepadata->nmcfnetworks; i++ )
       {
-         printf/*??????????????SCIPdebugMessage*/(" -> extracted network %d has %d nodes, %d (%d) arcs (uncapacitated), and %d commodities (modeltype: %s, flowtype: %s)\n",
+         SCIPdebugMessage*/(" -> extracted network %d has %d nodes, %d (%d) arcs (uncapacitated), and %d commodities (modeltype: %s, flowtype: %s)\n",
                                                   i, sepadata->mcfnetworks[i]->nnodes, sepadata->mcfnetworks[i]->narcs, sepadata->mcfnetworks[i]->nuncapacitatedarcs,
                                                   sepadata->mcfnetworks[i]->ncommodities,
                                                   sepadata->mcfnetworks[i]->modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected",
                                                   sepadata->mcfnetworks[i]->flowtype == SCIP_MCFFLOWTYPE_CONTINUOUS ? "continuous" : "binary");
          SCIPdebug( mcfnetworkPrint(sepadata->mcfnetworks[i]) );
       }
-      /*?????????????#endif*/
+#endif
    }
    assert(sepadata->nmcfnetworks >= 0);
    assert(sepadata->mcfnetworks != NULL || sepadata->nmcfnetworks == 0);
@@ -5552,24 +5549,24 @@ SCIP_RETCODE separateCuts(
          assert(mcfnetwork->narcs >= 1);
 
 #ifdef SEPARATESINGLENODECUTS
-         printf("************** [%6.2f] MCF create single-node cuts\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+         SCIPdebugMessage("************** [%6.2f] MCF create single-node cuts\n", SCIPgetSolvingTime(scip));
          /* enumerate single node cuts */
          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, varsolvals, mcfnetwork, NULL, &ncuts) );
 #endif
 
-         printf("************** [%6.2f] MCF create node partition\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+         SCIPdebugMessage("************** [%6.2f] MCF create node partition\n", SCIPgetSolvingTime(scip));
          /* partition nodes into a small number of clusters */
          SCIP_CALL( nodepartitionCreate(scip, mcfnetwork, &nodepartition, sepadata->nclusters) );
          SCIPdebug( nodepartitionPrint(nodepartition) );
 
-         printf("************** [%6.2f] MCF generate cluster cuts\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+         SCIPdebugMessage("************** [%6.2f] MCF generate cluster cuts\n", SCIPgetSolvingTime(scip));
          /* enumerate cuts between subsets of the clusters */
          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, varsolvals, mcfnetwork, nodepartition, &ncuts) );
 
          /* free node partition */
          nodepartitionFree(scip, &nodepartition);
 
-         printf/*?????????????SCIPdebugMessage*/("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
+         SCIPdebugMessage("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
                                                  mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts);
 
          /* adjust result code */
@@ -5580,7 +5577,7 @@ SCIP_RETCODE separateCuts(
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &varsolvals);
    }
-   printf("************** [%6.2f] MCF end\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
+   SCIPdebugMessage("************** [%6.2f] MCF end\n", SCIPgetSolvingTime(scip)); /*????????????????????*/
 
    return SCIP_OKAY;
 }
@@ -5722,8 +5719,7 @@ SCIP_RETCODE SCIPincludeSepaMcf(
 {
    SCIP_SEPADATA* sepadata;
 
-#if 1
-   /* disabled, because separator is not yet finished */
+#if 0
    return SCIP_OKAY;
 #endif
 
