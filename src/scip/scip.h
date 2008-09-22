@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.328 2008/09/08 09:48:17 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.329 2008/09/22 19:25:10 bzfwanie Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -97,7 +97,6 @@
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
 #include "scip/set.h"
-#include "scip/misc.h"
 #include "scip/tree.h"
 #endif
 

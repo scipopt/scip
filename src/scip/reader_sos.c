@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.10 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.11 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   reader_sos.c
  * @ingroup FILEREADERS 
@@ -33,7 +33,7 @@
 #include "scip/reader_sos.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 #define READER_NAME             "sosreader"

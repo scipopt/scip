@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.35 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.36 2008/09/22 19:25:10 bzfwanie Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -35,7 +35,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 /* include the ZIMPL headers necessary to define the LP construction interface */
 #include "zimpl/bool.h"

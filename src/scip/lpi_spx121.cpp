@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.43 2008/09/22 19:16:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.44 2008/09/22 19:25:08 bzfwanie Exp $"
 
 /**@file   lpi_spx121.cpp
  * @ingroup LPIS
@@ -53,10 +53,6 @@
 
 #include <cassert>
 
-extern "C" 
-{
-#include "scip/misc.h"
-}
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
 /********************************************************************/
@@ -446,7 +442,7 @@ const char* SCIPlpiGetSolverName(
    int version;
 
    version = spx.version();
-   SCIPsnprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   snprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
    return spxname;
 }
 

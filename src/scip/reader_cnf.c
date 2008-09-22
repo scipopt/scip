@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.46 2008/09/22 19:16:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.47 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   reader_cnf.c
  * @ingroup FILEREADERS 
@@ -30,7 +30,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_setppc.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 #define READER_NAME             "cnfreader"

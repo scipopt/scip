@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.200 2008/09/22 17:29:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.201 2008/09/22 19:25:11 bzfwanie Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -30,7 +30,6 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/paramset.h"

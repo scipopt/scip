@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.91 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.92 2008/09/22 19:25:08 bzfwanie Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/dialog_default.h"
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.55 2008/09/09 16:23:56 bzfwanie Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.56 2008/09/22 19:25:08 bzfwanie Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -31,7 +31,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/scip.h"
 #include "scip/disp.h"
 

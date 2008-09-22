@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.164 2008/09/22 19:16:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.165 2008/09/22 19:25:06 bzfwanie Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -31,7 +31,6 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/pub_misc.h"
-#include "scip/misc.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "knapsack"

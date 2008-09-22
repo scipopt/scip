@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.67 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.68 2008/09/22 19:25:07 bzfwanie Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -25,7 +25,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/cons_xor.h"
 
 

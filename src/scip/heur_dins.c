@@ -27,7 +27,6 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_dins.h"
-#include "scip/misc.h"
 
 #define HEUR_NAME             "dins"
 #define HEUR_DESC             "distance induced neighborhood search by Ghosh"

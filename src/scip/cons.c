@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.175 2008/09/09 16:23:54 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.176 2008/09/22 19:25:05 bzfwanie Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -35,7 +35,7 @@
 #include "scip/sepastore.h"
 #include "scip/cons.h"
 #include "scip/branch.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_cons.h"

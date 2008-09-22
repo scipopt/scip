@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.100 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.101 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -45,7 +45,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #define READER_NAME             "mpsreader"
 #define READER_DESC             "file reader for MIPs in IBM's Mathematical Programming System format"

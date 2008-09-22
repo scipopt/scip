@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.100 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.101 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -28,7 +28,7 @@
 #include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"

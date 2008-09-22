@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.43 2008/09/22 10:19:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.44 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -32,7 +32,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/reader.h"
 #include "scip/prob.h"
 #include "scip/pub_var.h"

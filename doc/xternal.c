@@ -107,17 +107,28 @@
  *   asserts and avoids macros for several function in order to ease debugging. The default is
  *   <code>opt</code>, which enables the optimized mode.  
  *
- * - <code>LPS=\<clp|cpx|msk|spx|xprs\></code> This determines the LP-solver, which should have been
+ * - <code>LPS=\<clp|cpx|msk|spx|xprs|none\></code> This determines the LP-solver, which should have been
  *   installed separately from SCIP. The options are the following:
  *      - <code>clp</code>: COIN Clp LP-solver
  *      - <code>cpx</code>: CPLEX LP-solver
  *      - <code>msk</code>: Mosek LP-solver
  *      - <code>spx</code>: SoPlex LP-solver (default)
- *      - <code>xprs></code>: XPress LP-solver
- * .
- * - <code>ZIMPL=<true|false></code> Turns direct support of ZIMPL in SCIP on or off, respectively.
+ *      - <code>xprs</code>: XPress LP-solver
+ *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
+ * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available for SoPlex and CLP)
+ *
+ * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on or off, respectively.
+ * - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized or debug version of ZIMPL, if ZIMPL support is enabled.
  * 
- * - <code>READLINE=<true|false></code> Turns support via the readline library on or off, respectively.
+ * - <code>READLINE=\<true|false\></code> Turns support via the readline library on or off, respectively.
+ *
+ * There are additional parameters for Linux/Gnu compilers:
+ * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.
+ *   This way the code can be check via valgrind or similar tools.
+ * - <code>OPT=opt-shared</code> generates a shared object of the SCIP libraries.
+ *   (The binary uses these shared libraries as well.)
+ * - <code>OPT=prf</code> generates a profiling version of SCIP 
+ *   providing a detailed statistic of the time usage of every method of SCIP.
  *
  * The SCIP makefiles are structured as follows.
  *
@@ -125,15 +136,9 @@
  *   additional makefile information depending on the parameters set.
  * - <code>make/make.project</code> This file contains definitions that are useful for all codes
  *   that use SCIP, for instance, the examples.
- * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt\></code> These file contain system/compiler specific
+ * - <code>make.\<sys\>.\<machine\>.\<compiler\>.\<dbg|opt|prf\></code> These file contain system/compiler specific
  *   definitions. If you have a yet unsupported compiler, you could copy one of these and modify it
  *   accordingly.
- *
- * There is also a target <code>OPT=noblkmem</code> for Linux/Gnu compilers which turns off the
- * internal SCIP memory. This way the code can be check via valgrind or similar tools.
- *
- * Furthermore, with <code>OPT=opt-shared</code> you can generate a shared object of the SCIP
- * libraries (the binary uses these shared libraries as well).
  *
  * If your platform or compiler is not supported by SCIP you might try and copy one of the existing
  * makefile in the <code>make</code> directory and modify it. If you succeed, were are always

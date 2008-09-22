@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.230 2008/09/09 16:23:59 bzfwanie Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.231 2008/09/22 19:25:11 bzfwanie Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -39,7 +39,6 @@
 #include "scip/cons.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
-#include "scip/misc.h"
 
 
 /*

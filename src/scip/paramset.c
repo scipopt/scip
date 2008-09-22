@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.50 2008/09/05 15:28:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.51 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -32,7 +32,6 @@
 #include "scip/def.h"
 #include "scip/message.h"
 #include "scip/set.h"
-#include "scip/misc.h"
 #include "scip/paramset.h"
 
 #include "scip/struct_paramset.h"

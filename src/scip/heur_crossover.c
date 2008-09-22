@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.33 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.34 2008/09/22 19:25:08 bzfwanie Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -28,7 +28,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_crossover.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "crossover"
 #define HEUR_DESC             "LNS heuristic that fixes all variables that are identic in a couple of solutions"

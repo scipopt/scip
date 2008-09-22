@@ -13,7 +13,6 @@
 
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
-#include "scip/misc.h"
 #include <string.h>
 
 #if MSK_VERSION_MAJOR >= 5
@@ -196,7 +195,7 @@ void MSKAPI printstr (void                 *handle,
 {
   #if SUPRESS_NAME_ERROR && !FORCE_SILENCE
   char errstr[32];
-  SCIPsnprintf(errstr,32,"MOSEK Error %d",MSK_RES_ERR_DUP_NAME);
+  snprintf(errstr,32,"MOSEK Error %d",MSK_RES_ERR_DUP_NAME);
   if (0 == strncmp(errstr,str,strlen(errstr)))
       return;
   #endif
@@ -2762,7 +2761,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(SCIP_LPI*             lpi                 /**< L
   if( optimizecount > WRITE_ABOVE )
   {
     char fname[40];
-    SCIPsnprintf(fname,40,"primal_%d.mbt",optimizecount);
+    snprintf(fname,40,"primal_%d.mbt",optimizecount);
     printf("\nWriting mbt %s\n",fname);
     /*MOSEK_CALL( MSK_putintparam(lpi->task,MSK_IPAR_WRITE_GENERIC_NAMES,MSK_ON) );*/
     MSK_writedata(lpi->task,fname);
@@ -2899,7 +2898,7 @@ SCIP_RETCODE SCIPlpiSolveDual(SCIP_LPI*             lpi                 /**< LP 
   if( optimizecount > WRITE_ABOVE )
   {
     char fname[40];
-    SCIPsnprintf(fname,40,"dual_%d.mbt",optimizecount);
+    snprintf(fname,40,"dual_%d.mbt",optimizecount);
     printf("\nWriting mbt %s\n",fname);
     MSK_writedata(lpi->task,fname);
   }
@@ -3025,7 +3024,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(SCIP_LPI*             lpi,                 /**<
   if( optimizecount > WRITE_ABOVE )
   {
     char fname[40];
-    SCIPsnprintf(fname,40,"intpnt_%d.mbt",optimizecount);
+    snprintf(fname,40,"intpnt_%d.mbt",optimizecount);
     printf("\nWriting mbt %s\n",fname);
     /*MOSEK_CALL( MSK_putintparam(lpi->task,MSK_IPAR_WRITE_GENERIC_NAMES,MSK_ON) );*/
     MSK_writedata(lpi->task,fname);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.74 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.75 2008/09/22 19:25:10 bzfwanie Exp $"
 
 /**@file   sepa_gomory.c
  * @ingroup SEPARATORS
@@ -28,7 +28,7 @@
 #include <string.h>
 
 #include "scip/sepa_gomory.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "gomory"

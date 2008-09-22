@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.58 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.59 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -33,7 +33,7 @@
 #include "scip/paramset.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/nodesel.h"
 
 #include "scip/struct_nodesel.h"

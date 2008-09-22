@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.34 2008/09/22 19:16:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.35 2008/09/22 19:25:11 bzfwanie Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -27,7 +27,7 @@
 #include <string.h>
 
 #include "scip/sepa_strongcg.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "strongcg"

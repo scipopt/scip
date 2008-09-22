@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.66 2008/09/09 16:23:56 bzfwanie Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.67 2008/09/22 19:25:08 bzfwanie Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -32,7 +32,7 @@
 #include "scip/paramset.h"
 #include "scip/primal.h"
 #include "scip/scip.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/heur.h"
 
 #include "scip/struct_heur.h"

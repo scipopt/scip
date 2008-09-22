@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.21 2008/09/22 19:16:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.22 2008/09/22 19:25:06 bzfwanie Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -35,7 +35,7 @@
 #include "scip/dialog_default.h"
 #include "scip/pub_cons.h"
 #include "scip/pub_disp.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #ifdef WITH_GMP
 #include <gmp.h>

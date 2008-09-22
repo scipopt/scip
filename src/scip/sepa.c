@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.64 2008/09/09 16:23:59 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.65 2008/09/22 19:25:10 bzfwanie Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -34,7 +34,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/sepa.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_sepa.h"
 

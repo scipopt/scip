@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.44 2008/09/09 16:23:55 bzfwanie Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.45 2008/09/22 19:25:07 bzfwanie Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -35,7 +35,7 @@
 #include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/dialog.h"
 
 #include "scip/struct_dialog.h"

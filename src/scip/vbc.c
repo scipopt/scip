@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.29 2008/09/05 15:28:50 bzfgamra Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.30 2008/09/22 19:25:11 bzfwanie Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -29,7 +29,6 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
 #include "scip/var.h"
 #include "scip/tree.h"
 #include "scip/vbc.h"

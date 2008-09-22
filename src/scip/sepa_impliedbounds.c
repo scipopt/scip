@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.20 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.21 2008/09/22 19:25:10 bzfwanie Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS
@@ -26,7 +26,7 @@
 #include <assert.h>
 
 #include "scip/sepa_impliedbounds.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "impliedbounds"

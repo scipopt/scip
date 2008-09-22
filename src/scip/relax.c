@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.19 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.20 2008/09/22 19:25:10 bzfwanie Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -32,7 +32,7 @@
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/relax.h"
 
 #include "scip/struct_relax.h"

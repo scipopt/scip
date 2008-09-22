@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.24 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.25 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -34,7 +34,7 @@
 #include "scip/prob.h"
 #include "scip/pricestore.h"
 #include "scip/scip.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/pricer.h"
 
 #include "scip/struct_pricer.h"

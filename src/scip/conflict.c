@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.139 2008/09/09 16:23:54 bzfwanie Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.140 2008/09/22 19:25:05 bzfwanie Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -121,7 +121,7 @@
 #include "scip/clock.h"
 #include "scip/vbc.h"
 #include "scip/lpi.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/history.h"
 #include "scip/paramset.h"
 #include "scip/lp.h"

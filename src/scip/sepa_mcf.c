@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.63 2008/09/22 19:16:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.64 2008/09/22 19:25:10 bzfwanie Exp $"
 
 //#define SCIP_DEBUG
 
@@ -56,7 +56,7 @@
 #ifdef SEPARATEKNAPSACKCOVERS
 #include "scip/cons_knapsack.h"
 #endif
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "mcf"

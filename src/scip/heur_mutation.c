@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.21 2008/09/22 19:16:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.22 2008/09/22 19:25:08 bzfwanie Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -27,7 +27,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_mutation.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "mutation"
 #define HEUR_DESC             "mutation heuristic randomly fixing variables"

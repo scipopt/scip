@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.129 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.130 2008/09/22 19:25:07 bzfwanie Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -28,7 +28,7 @@
 
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 #define CONSHDLR_NAME          "setppc"

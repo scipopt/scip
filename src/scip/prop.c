@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.21 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.22 2008/09/22 19:25:09 bzfwanie Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -34,7 +34,7 @@
 #include "scip/var.h"
 #include "scip/scip.h"
 #include "scip/prop.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_prop.h"
 

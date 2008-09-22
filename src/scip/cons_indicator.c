@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.25 2008/09/22 19:16:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.26 2008/09/22 19:25:06 bzfwanie Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -177,7 +177,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include <string.h>
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 /* constraint handler properties */

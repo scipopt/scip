@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.306 2008/09/22 19:16:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.307 2008/09/22 19:25:06 bzfwanie Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -50,7 +50,7 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"

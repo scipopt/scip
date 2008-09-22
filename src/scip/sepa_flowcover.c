@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.17 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.18 2008/09/22 19:25:10 bzfwanie Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -27,7 +27,7 @@
 
 #include "scip/sepa_flowcover.h"
 #include "scip/cons_knapsack.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "flowcover"

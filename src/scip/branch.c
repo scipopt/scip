@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.80 2008/09/09 16:23:54 bzfwanie Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.81 2008/09/22 19:25:05 bzfwanie Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -38,7 +38,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_branch.h"
 

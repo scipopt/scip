@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.262 2008/09/03 00:54:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.263 2008/09/22 19:25:11 bzfwanie Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -31,7 +31,6 @@
 #include "scip/clock.h"
 #include "scip/vbc.h"
 #include "scip/interrupt.h"
-#include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"

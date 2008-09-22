@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.19 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.20 2008/09/22 19:25:07 bzfwanie Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -29,7 +29,7 @@
 #include "scip/cons_sos1.h"
 #include "scip/cons_linear.h"
 #include <string.h>
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 
 /* constraint handler properties */
