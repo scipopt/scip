@@ -14,13 +14,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.c,v 1.1 2008/09/19 14:19:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_col.c,v 1.2 2008/09/22 16:21:32 bzfgamra Exp $"
 
 /**@file   reader_col.c
  * @brief  COL file reader
  * @author Gerald Gamrath
  *
- * This file implements the reader for coloring files.
+ * This file implements the reader for coloring files in
+ * DIMACS standard format.
  *
  * Additionally, it provides two sorting functions and a method,
  * which ensures, that all nodes in the graph are covered by
@@ -29,8 +30,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-/*#define  SCIP_DEBUG*/
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
@@ -44,11 +43,6 @@
 #define READER_EXTENSION        "col"
 
 #define COL_MAX_LINELEN 1024
-
-/*
- * col reader internal methods
- */
-
 
 
 /*

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.h,v 1.1 2008/09/19 14:19:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.h,v 1.2 2008/09/22 16:21:32 bzfgamra Exp $"
 
 /**@file   probdata_coloring.h
  * @brief  problem data for coloring algorithm
@@ -219,13 +219,6 @@ SCIP_Bool COLORprobEqualSortedArrays(
    int*                  array2nodes,         /**< the nodes of the second set */
    int                   narray2nodes         /**< number of nodes in the second set */
    );
-
-extern
-/** checks correctness of the variables */
-void COLORprobCheckVars(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 
 
 /* create probdate */

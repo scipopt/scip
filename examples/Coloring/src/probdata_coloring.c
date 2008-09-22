@@ -14,11 +14,33 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.1 2008/09/19 14:19:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.2 2008/09/22 16:21:32 bzfgamra Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
  * @author Gerald Gamrath
+ *
+ * This file implements the problem data for the coloring algorithm.
+ *
+ * The problem data contains the original graph, preprocessing information,
+ * the preprocessed graph, the array with the node-constraints and 
+ * an array with all stable sets and corresponding variables.
+ *
+ * The preprocessing deletes nodes that have a lower degree than a maximum clique.
+ * Additionally, it also deletes nodes, that have a dominated neighbourhood. 
+ * For further information, look at the comments for the method preprocessGraph().
+ *
+ * The deleted nodes and the relation between the nodes of the original graph and
+ * the nodes of the preprocessed graph are stored in order to convert a solution
+ * of the preprocessed problem to a solution for the original graph and vice versa.
+ *
+ * Each variable has a pointer of type SCIP_VARDATA* that is used in this case to store
+ * an int representing the number of the stable set. With the aid of this int, the 
+ * corresponding stable set can be found in the array returned by COLORprobGetStableSets().
+ * This array contains all stable sets and is also used to check whether a stable set
+ * found by the pricer is really new, which can be done by calling COLORprobStableSetIsNew(). 
+ * All sets are sorted decreasingly and new candidates should also be sorted that way.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,16 +76,20 @@ struct SCIP_ProbData
  * Local methods
  */
 
-/** preprocessing of the graph, using 2 methods in order to find redundant nodes 
- *  that can be deleted and easily colored later 
+/** 
+ *  preprocessing of the graph, using 2 methods in order to find redundant nodes 
+ *  that can be deleted and easily colored later.
+ *
+ *  Foundation of these methods is the computation of a maximum clique C with M nodes. 
+ *  After this computation The following two steps are repeated until no node was deleted
+ *  in the last iteration:
  *  
  *  1: Low-Degree
- *  Iterativly delete all nodes v in the graph G with degree d(v) < M where M is the number of nodes in a maximum clique
- *  ( don't delete nodes of the max Clique )
+ *  Iterativly delete all nodes v in the graph G with degree d(v) < M ( don't delete nodes of C )
+ *
  *  2: Dominated Neighbourhood
- *  If the neighbourhood of one node is part of the neighbourhodd of another node, 
- *      
- *  Do this iterativly as long as nodes where deleted in the last iteration  
+ *  If the neighbourhood of one node v is part of the neighbourhood of another node w, v can 
+ *  be deleted, since it can later get the same color as w.
  */
 static 
 SCIP_RETCODE preprocessGraph( 
@@ -242,12 +268,11 @@ SCIP_RETCODE preprocessGraph(
                /* j is the node for which is checked whether it dominates i */
                for ( j = 0; j < currnnodes; j++ )
                {
-                  /* i must be distinct from j and there must be no edge between i and j */
+                  /* i must be distinct from j, there must be no edge between i and j, 
+                     j may not have been deleted due to degree in the last round */
                   if ( (j != i) && !tcliqueIsEdge(currgraph, i, j) 
                      && (!COLORprobIsNodeInArray(probdata->new2oldnode[j], probdata->deletednodes, ndeletednodes)) )
-                     /* ####################################################
-                        optimize: only check nodes deleted in the last round 
-                        #################################################### */
+                     /** @todo only check nodes deleted in the last round */
                   {
                      /* check whether nodes adjacent to i are also adjacent to j <-> j dominates i */
                      dominates = TRUE;
@@ -380,8 +405,6 @@ SCIP_DECL_PROBTRANS(probtransColoring)
    assert(scip != NULL);
    assert(sourcedata != NULL);
    assert(targetdata != NULL);
-
-   //printf("probtransColoring\n");
 
    /* allocate memory */
    SCIP_CALL( SCIPallocMemory(scip, targetdata) );
@@ -628,24 +651,6 @@ void COLORprobPrintStableSets(
    }
 }
 
-
-/** checks correctness of the variables */
-void COLORprobCheckVars(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_PROBDATA* probdata;
-   int i;
-
-   assert(scip != NULL);
-   probdata = SCIPgetProbData(scip);
-   assert(probdata != NULL);
-
-   for ( i = 0; i < probdata->nstablesets; i++ )
-   {
-      //assert( (SCIPvarGetUbLocal(probdata->stablesetvars[i]) == 0) ||  SCIPvarIsInLP(probdata->stablesetvars[i]) );
-   }
-}
 
 /** prints the requested stable set to standart output */
 void COLORprobPrintStableSet(

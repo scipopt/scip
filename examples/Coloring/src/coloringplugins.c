@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloringplugins.c,v 1.1 2008/09/19 14:19:48 bzfgamra Exp $"
+#pragma ident "@(#) $Id: coloringplugins.c,v 1.2 2008/09/22 16:21:32 bzfgamra Exp $"
 
 /**@file   coloringplugins.c
  * @brief  SCIP plugins for coloring
@@ -26,7 +26,7 @@
 #include "coloringplugins.h"
 #include "scip/debug.h"
 
-#define USEHEURS 0
+#define USEHEURS 1
 
 
 /** includes default plugins for coloring into SCIP */

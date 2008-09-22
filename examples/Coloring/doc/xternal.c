@@ -29,12 +29,13 @@
  *
  * It implements the approach described in "A column generation approach
  * for graph coloring" by Anuj Mehrotra and Micheal A. Trick, April 11, 1995.
+ * The input format for the graph files is the DIMACS standard format, the file must end with .col.
  *
  * The coloring problem is the following:
  *
  * Given a graph G = (V,E), the goal is to assign a color to each vertex,
  * such that no adjacent vertices have the same color. At the same time
- * the number of used colors has to be minimized.
+ * minimize the number of colors needed.
  *
  * We use the following integer programming model: We have binary
  * variables \f$ x_{s}, s \in S\f$ where \f$S \subseteq \mathcal{P}(V)\f$ 

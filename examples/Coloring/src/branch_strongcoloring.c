@@ -14,11 +14,25 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.1 2008/09/19 14:19:48 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.2 2008/09/22 16:21:31 bzfgamra Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
  * @author Gerald Gamrath
+ *
+ * This file implements an additional branching rule for the coloring algorithm.
+ *
+ * As we use column generation, we may not branch on the variables themselves,
+ * but on some sort of constraints that we introduce in the pricing problem.
+ *
+ * In our case, we choose two nodes v and w, that are not adjacent in the current 
+ * graph and regard the following two constraints: SAME(v,w) and DIFFER(v,w).
+ * SAME(v,w) requires that both nodes v and w get the same color, whereas DIFFER(v,w)
+ * interdicts this. For each pair of nodes, each feasible solution fulfills exactly 
+ * one of these constraints. Splitting the solution space into two parts, one fulfilling
+ * SAME(v,w) the other DIFFER(v,w), doesn't cut off any feasible solution and can therefore
+ * be used as the branching rule. 
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,7 +51,6 @@
 #define EPS 0.0000001
 
 /* default values for parameters */
-#define DEFAULT_SCOREMODE 1
 #define DEFAULT_BRANCHINGMODE 2 
 #define DEFAULT_FIXINGSSCOREMODE 3
 #define DEFAULT_MAXPRICINGROUNDS -1
@@ -64,8 +77,7 @@ struct SCIP_BranchruleData
    SCIP_Bool usetclique;         /* should the exact pricing with the tclique-algorithm be used for the strongbranchings? */
    int maxpricingrounds;         /* maximal number of pricing rounds used for each probing node in the strongbranching */
    int lookahead;                /* number of candidates to be considered in branchingmode 2 */
-   int fixingsscoremode;         /* */
-   int scoremode;                /* */
+   int fixingsscoremode;         /* determines the weightings of the two factors for prior sorting by fractional LP value */
    
 };
 
@@ -84,12 +96,7 @@ double computeScore(
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
 {
-   if ( branchruledata->scoremode == 1 )
       return 0.2 * MAX( val1, val2 ) + 0.8 * MIN( val1, val2 );
-   if ( branchruledata->scoremode == 2 )
-      return MIN( val1, val2 );
-   return MAX( val1, EPS ) * MAX( val2, EPS );
-   
 }
 
 /** computes a score for the fractional values of the variables that would be fixed to zero for a same- or differ-branching */
@@ -424,7 +431,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
       {
          branchruledata->combinedvalue[i] = computeFixingsScore(branchruledata->samevalue[i], branchruledata->differvalue[i], branchruledata);
       }
-      /* get permutation of indexes, so that the array is sorted TODO:could be improved by only getting the k best indexes */
+      /* get permutation of indexes, so that the array is sorted */
+      /** @todo could be improved by only getting the k best indexes */
       SCIPsort(branchruledata->permutation, consdataCompValues, branchruledata->combinedvalue, branchruledata->length);
 
       bestscore = -1;
@@ -484,7 +492,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
       bestsame = -1;
 
       SCIPsetBoolParam(scip, "pricers/coloring/usetclique", branchruledata->usetclique);
-      //SCIPsetIntParam(scip, "pricing/coloring/maxroundsnode", 3);
       node = SCIPgetCurrentNode(scip);
       currentcons = COLORconsGetActiveStoreGraphCons(scip);
        
@@ -575,7 +582,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
    node1 = bestnode1;
    node2 = bestnode2;
 
-   if ( branchruledata->branchingmode >= 1 )
+   /* branchingmode >= 1 --> only create nodes, that do not have a LP solution that is much bigger than the lower bound */
+   if ( branchruledata->branchingmode >= 1 && branchruledata->usetclique == TRUE )
    {
       *result = SCIP_CUTOFF;
       currentcons = COLORconsGetActiveStoreGraphCons(scip);
@@ -614,6 +622,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
          *result = SCIP_BRANCHED;
       }
    }
+   /* create both children */
    else
    {
       /* create the b&b-tree child-nodes of the current node */
@@ -745,13 +754,8 @@ SCIP_RETCODE SCIPincludeBranchruleStrongcoloring(
          &branchruledata->branchingmode, FALSE, DEFAULT_BRANCHINGMODE, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/strongcoloring/scoremode",
-         "!!!",
-         &branchruledata->scoremode, TRUE, DEFAULT_SCOREMODE, 0, 3, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip,
          "branching/strongcoloring/fixingsscoremode",
-         "!!!",
+         "determines the weightings of the two factors for prior sorting by fractional LP value",
          &branchruledata->fixingsscoremode, TRUE, DEFAULT_FIXINGSSCOREMODE, 0, 4, NULL, NULL) );
 
    return SCIP_OKAY;
