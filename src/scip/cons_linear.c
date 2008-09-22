@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.304 2008/09/18 09:51:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.305 2008/09/22 16:52:20 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @brief  constraint handler for linear constraints
@@ -3642,7 +3642,6 @@ SCIP_RETCODE analyzeConflict(
    return SCIP_OKAY;
 }
 
-#define BOUNDSCALETOL (1.0/(double)(1 << 20))  /* use a value with exact two-complement representation */
 /** tightens bounds of a single variable due to activity bounds */
 static
 SCIP_RETCODE tightenVarBounds(
@@ -3726,10 +3725,6 @@ SCIP_RETCODE tightenVarBounds(
 
             if( !activityunreliable )
             {
-               
-               /* adjust bound for numerical reasons */
-               newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
-               
                /* tighten upper bound */
                SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newub=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newub);
@@ -3775,9 +3770,6 @@ SCIP_RETCODE tightenVarBounds(
                if( SCIPisInfinity(scip, maxresactivity) || ((!SCIPvarIsIntegral(var) || !SCIPisFeasGT(scip, newlb, lb)) && !SCIPisLbBetter(scip, newlb, lb, ub)) )
                   return SCIP_OKAY;
             }
-
-            /* adjust bound for numerical reasons */
-            newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
 
             /* tighten lower bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
@@ -3830,9 +3822,6 @@ SCIP_RETCODE tightenVarBounds(
             
             if( !activityunreliable )
             {
-               /* adjust bound for numerical reasons */
-               newlb = SCIPfeasFloor(scip, newlb/BOUNDSCALETOL) * BOUNDSCALETOL;
-               
                /* tighten lower bound */
                SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g] -> newlb=%.15g\n",
                   SCIPconsGetName(cons), SCIPvarGetName(var), lb, ub, val, minresactivity, maxresactivity, lhs, rhs, newlb);
@@ -3878,9 +3867,6 @@ SCIP_RETCODE tightenVarBounds(
                if( SCIPisInfinity(scip, maxresactivity) || ((!SCIPvarIsIntegral(var) || !SCIPisFeasLT(scip, newub, ub)) && !SCIPisUbBetter(scip, newub, lb, ub)) )
                   return SCIP_OKAY;
             }
-
-            /* adjust bound for numerical reasons */
-            newub = SCIPfeasCeil(scip, newub/BOUNDSCALETOL) * BOUNDSCALETOL;
 
             /* tighten upper bound */
             SCIPdebugMessage("linear constraint <%s>: tighten <%s>, old bds=[%.15g,%.15g], val=%.15g, resactivity=[%.15g,%.15g], sides=[%.15g,%.15g], newub=%.15g\n",

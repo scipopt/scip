@@ -244,7 +244,8 @@ fixed bugs:
 - fixed bugs with wrong presolving due to cancellation in (res-)activities in cons_linear.c
 - removed possible memory leak in objdialog.cpp
 - fixed bug in preprocessing of SOS2 constraints (cons_sos2.c)
-
+- removed BOUNDSCALETOL adjustment in cons_linear.c. This fixes bug with slightly infeasible variable fixings in presolving;
+  reliable resactivities should make the BOUNDSCALETOL relaxation redundant.
 
 SCIP version 1.00
 =================
