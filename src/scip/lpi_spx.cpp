@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.83 2008/09/21 17:10:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.84 2008/09/22 19:10:45 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @brief  LP interface for SoPlex 1.3.x
@@ -254,47 +254,67 @@ public:
       SPxSolver::setTerminationValue(limit);
    }
 
-   virtual Status solve()
+   void trySolve()
    {
       try
       {
-         if ( getFromScratch() )
-	    SPxSolver::reLoad();
-	 if ( getLpInfo() )
-	    Param::setVerbose(5);
-	 else 
-	    Param::setVerbose(0);
-
-         /* in auto pricing, do the first 10000 iterations with devex, then switch to steepest edge */
-         if( m_autopricing && terminationIter() >= 100*AUTOPRICING_ITERSWITCH && SPxBasis::status() < SPxBasis::REGULAR )
-         {
-            int olditlim = terminationIter();
-
-            setAutoPricer(true);
-            setTerminationIter(AUTOPRICING_ITERSWITCH);
-            m_stat = SPxSolver::solve();
-            m_autophase1iters = SPxSolver::iterations();
-            setTerminationIter(olditlim);
-            setAutoPricer(false);
-         }
-         else
-            m_autophase1iters = 0;
-         m_stat = SPxSolver::solve();
+	 m_stat = SPxSolver::solve();
       }
       catch(SPxException x)
       {
-         std::string s = x.what();      
-         SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
-         m_stat = SPxSolver::status();
+	 std::string s = x.what();      
+	 SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+	 m_stat = SPxSolver::status();
+	 
+	 /* since it is not clear if the status in SoPlex are set correctly
+	  * we want to make sure that if an error is thrown the status is
+	     * not OPTIMAL anymore.
+	     */
+	 assert( m_stat != SPxSolver::OPTIMAL );
+      }
+   }
 
-         /* since it is not clear if the status in SoPlex are set correctly
-          * we want to make sure that if an error is thrown the status is
-          * not OPTIMAL anymore.
-          */
-         assert( m_stat != SPxSolver::OPTIMAL );
+   virtual Status solve()
+   {
+      if ( getFromScratch() )
+      {
+	 try
+	 {
+	    SPxSolver::reLoad();
+	 }
+	 catch(SPxException x)
+	 {
+	    std::string s = x.what();      
+	    SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+	    m_stat = SPxSolver::status();
+	    assert( m_stat != SPxSolver::OPTIMAL );
+	    return m_stat;
+	 }
       }
 
-      assert(rep() == COLUMN || rep() == ROW);
+      if ( getLpInfo() )
+	 Param::setVerbose(5);
+      else 
+	 Param::setVerbose(0);
+
+      /* in auto pricing, do the first 10000 iterations with devex, then switch to steepest edge */
+      if( m_autopricing && terminationIter() >= 100*AUTOPRICING_ITERSWITCH && SPxBasis::status() < SPxBasis::REGULAR )
+      {
+	 int olditlim = terminationIter();
+	 
+	 setAutoPricer(true);
+	 setTerminationIter(AUTOPRICING_ITERSWITCH);
+
+	 trySolve();
+
+	 m_autophase1iters = SPxSolver::iterations();
+	 setTerminationIter(olditlim);
+	 setAutoPricer(false);
+      }
+      else
+	 m_autophase1iters = 0;
+
+      trySolve();
       
       if( m_stat == OPTIMAL )
       {
