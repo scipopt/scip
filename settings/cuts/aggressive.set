@@ -545,3 +545,7 @@ separating/strongcg/maxweightrange = 10000
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/strongcg/dynamiccuts = TRUE
+
+# frequency for calling separator <mcf> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 0]
+separating/mcf/freq = 0
