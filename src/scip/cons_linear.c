@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.308 2008/09/22 21:15:52 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.309 2008/09/22 22:05:48 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -79,7 +79,7 @@
 #define DEFAULT_MAXROUNDSROOT          -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS            50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT       200 /**< maximal number of cuts separated per separation round in root node */
-#define DEFAULT_PRESOLPAIRWISE      FALSE /**< should pairwise constraint comparison be performed in presolving? */
+#define DEFAULT_PRESOLPAIRWISE       TRUE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_PRESOLUSEHASHING     TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define DEFAULT_MAXAGGRNORMSCALE      0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                            *   (0.0: disable constraint aggregation) */
@@ -95,6 +95,10 @@
 #define MAXSCALEDCOEF               1e+03 /**< maximal coefficient value after scaling */
 
 #define HASHSIZE_LINEARCONS        131101 /**< minimal size of hash table in linear constraint tables */
+
+#define NMINCOMPARISONS            200000 /**< number for minimal pairwise presol comparisons */
+#define MINGAINPERNMINCOMPARISONS   1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise 
+                                           *   comparison round */
 
 
 /** constraint data for linear constraints */
@@ -6545,14 +6549,14 @@ SCIP_RETCODE detectRedundantConstraints(
          hashGetKeyLinearcons, hashKeyEqLinearcons, hashKeyValLinearcons, (void*) scip) );
 
    /* check all constraints in the given set for redundancy */
-   for(c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c )
    {
       SCIP_CONS* cons0;
       SCIP_CONS* cons1;
 
       cons0 = conss[c];
 
-      if(!SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0))
+      if( !SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0) )
          continue;
 
       /* get constraint from current hash table with same variables as cons0 and with coefficients either equal or negated
@@ -8544,6 +8548,12 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             SCIP_CONS** usefulconss;
             int nusefulconss;
             int firstchangenew;
+            SCIP_Longint npaircomparisons;
+
+            npaircomparisons = 0;
+            oldndelconss = *ndelconss;
+            oldnchgsides = *nchgsides;
+            oldnchgcoefs = *nchgcoefs;
 
             /* allocate temporary memory */
             SCIP_CALL( SCIPallocBufferArray(scip, &usefulconss, nconss) );
@@ -8572,11 +8582,22 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
                if( usefulconss[c] == NULL )
                   continue;
               
+               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+
                assert(SCIPconsIsActive(usefulconss[c]) && !SCIPconsIsModifiable(usefulconss[c]));
                SCIP_CALL( preprocessConstraintPairs(scip, usefulconss, firstchange, c, conshdlrdata->maxaggrnormscale,
                                                     &cutoff, ndelconss, nchgsides, nchgcoefs) );
-            }
 
+               if( npaircomparisons > NMINCOMPARISONS )
+               {
+		  if( ((*ndelconss - oldndelconss) + (*nchgsides - oldnchgsides)/2 + (*nchgcoefs - oldnchgcoefs)/10) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                     break;
+		  oldndelconss = *ndelconss;
+                  oldnchgsides = *nchgsides;
+                  oldnchgcoefs = *nchgcoefs;
+		  npaircomparisons = 0;
+               }
+            }
             /* free temporary memory */
             SCIPfreeBufferArray(scip, &usefulconss);
          }

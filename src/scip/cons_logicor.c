@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.121 2008/09/22 19:25:07 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.122 2008/09/22 22:05:48 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -56,7 +56,12 @@
 #define CONFLICTHDLR_DESC      "conflict handler creating logic or constraints"
 #define CONFLICTHDLR_PRIORITY  LINCONSUPGD_PRIORITY
 
-#define DEFAULT_PRESOLPAIRWISE    FALSE /**< should pairwise constraint comparison be performed in presolving? */
+#define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
+
+#define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
+#define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presol comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presol comparisons to repeat pairwise comparison round */
 
 
 /**@todo make this a parameter setting */
@@ -73,6 +78,8 @@ struct SCIP_ConshdlrData
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
    SCIP_CONSHDLR*        conshdlrlinear;     /**< pointer to linear constraint handler or NULL if not included */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
+   SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
+
 };
 
 /** logic or constraint data */
@@ -482,6 +489,7 @@ SCIP_RETCODE disableCons(
 
 /**find pairs of negated variables in constraint: constraint is redundant */
 /**find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
+/**@todo expand following method for finding equal/pairs of negated and aggregated vars */
 static
 SCIP_RETCODE findpairsandsets(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -512,17 +520,16 @@ SCIP_RETCODE findpairsandsets(
    *correct = FALSE;
 
    /** check size of array entries and in case of return necessary size */
-   if (*nentries < SCIPgetNBinVars(scip))
+   if( *nentries < SCIPgetNBinVars(scip) )
    {
       *nentries = SCIPgetNBinVars(scip);
       return SCIP_OKAY;
    }
-   assert(consdata->nvars <= *nentries);
 
    *correct = TRUE;
 
    /** initialize entries array */
-   for( v = consdata->nvars - 1; v >= 0; --v)
+   for( v = consdata->nvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex(consdata->vars[v]) >= -1);
       assert(SCIPvarGetProbindex(consdata->vars[v]) < SCIPgetNBinVars(scip));
@@ -532,7 +539,7 @@ SCIP_RETCODE findpairsandsets(
    }
 
    /** check all vars for multiple entries*/
-   for( v = consdata->nvars - 1; v >= 0; --v)
+   for( v = consdata->nvars - 1; v >= 0; --v )
    {
       /** var is not active yet */
       if( SCIPvarGetProbindex(consdata->vars[v]) == -1 )
@@ -550,7 +557,9 @@ SCIP_RETCODE findpairsandsets(
             return SCIP_OKAY;
          }
          else 
+         {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         }
       }
       /** if var occurs second time in constraint, first time it was negated */
       else
@@ -561,7 +570,9 @@ SCIP_RETCODE findpairsandsets(
             return SCIP_OKAY;
          }
          else 
+         {
             SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+         }
       }
    }
 
@@ -1059,12 +1070,12 @@ SCIP_RETCODE consdataSort(
                if (tmp2 == NULL || consdata->watchedvar2 != -1)
                   break;
             }
-            else if ( consdata->vars[v] == tmp2 )
+            else if( consdata->vars[v] == tmp2 )
             {
                assert(consdata->watchedvar2 == -1);
                assert(consdata->vars[v] != NULL);
                consdata->watchedvar2 = v;
-               if (consdata->watchedvar1 != -1)
+               if( consdata->watchedvar1 != -1 )
                   break;
             }
          }
@@ -1076,23 +1087,88 @@ SCIP_RETCODE consdataSort(
    return SCIP_OKAY;
 }
 
-/** removes the redundant second constraint and updates the flags of the first one */
+/** gets the key of the given element */
 static
-SCIP_RETCODE removeRedundantCons(
+SCIP_DECL_HASHGETKEY(hashGetKeyLogicorcons)
+{
+   /* the key is the element itself */ 
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal; two constraints are equal if they have the same variables */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqLogicorcons)
+{
+   SCIP* scip;
+   SCIP_CONSDATA* consdata1;
+   SCIP_CONSDATA* consdata2;
+   SCIP_Bool coefsequal;
+   int i;
+
+   consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
+   consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
+   scip = (SCIP*)userptr; 
+   assert(scip != NULL);
+   
+   /* checks trivial case */
+   if( consdata1->nvars != consdata2->nvars )
+      return FALSE;
+
+   /* sorts the constraints */
+   SCIP_CALL( consdataSort(scip, consdata1) );
+   SCIP_CALL( consdataSort(scip, consdata2) );
+
+   coefsequal = TRUE;
+
+   for( i = 0; i < consdata1->nvars ; ++i )
+   {
+      /* tests if variables are equal */
+      if( consdata1->vars[i] != consdata2->vars[i] )
+      {
+         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 || 
+            SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
+         coefsequal = FALSE;
+         break;
+      }
+      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0); 
+   } 
+   
+   return coefsequal;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValLogicorcons)
+{
+   SCIP_CONSDATA* consdata;
+   unsigned int hashval;
+   int minidx;
+   int mididx;
+   int maxidx;
+   
+   consdata = SCIPconsGetData((SCIP_CONS*)key);
+   assert(consdata != NULL);
+   assert(consdata->sorted);
+   assert(consdata->nvars > 0);
+
+   minidx = SCIPvarGetIndex(consdata->vars[0]);
+   mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
+   maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
+   assert(minidx >= 0 && minidx <= maxidx);
+
+   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+
+   return hashval;
+}
+
+/** updates the flags of the first constraint according to the ones of the second constraint */
+static
+SCIP_RETCODE updateFlags(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons0,              /**< constraint that should stay */
-   SCIP_CONS*            cons1,              /**< constraint that should be deleted */
-   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   SCIP_CONS*            cons1               /**< constraint that should be deleted */
    )
 {
-   assert(ndelconss != NULL);
-
-   SCIPdebugMessage(" -> removing logicor constraint <%s> which is redundant to <%s>\n",
-      SCIPconsGetName(cons1), SCIPconsGetName(cons0));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
-
-   /* update flags of cons0 */
    if( SCIPconsIsInitial(cons1) )
    {
       SCIP_CALL( SCIPsetConsInitial(scip, cons0, TRUE) );
@@ -1125,6 +1201,114 @@ SCIP_RETCODE removeRedundantCons(
    {
       SCIP_CALL( SCIPsetConsStickingAtNode(scip, cons0, TRUE) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
+ *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table 
+ */
+static
+SCIP_RETCODE detectRedundantConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONS**           conss,              /**< constraint set */
+   int                   nconss,             /**< number of constraints in constraint set */
+   int*                  firstchange,        /**< pointer to store first changed constraint */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+)
+{
+   SCIP_HASHTABLE* hashtable;
+   int hashtablesize;
+   int c;
+
+   assert(conss != NULL);
+   assert(ndelconss != NULL);
+
+   /* create a hash table for the constraint set */
+   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = MAX(hashtablesize, HASHSIZE_LOGICORCONS);
+   SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
+         hashGetKeyLogicorcons, hashKeyEqLogicorcons, hashKeyValLogicorcons, (void*) scip) );
+
+   /* check all constraints in the given set for redundancy */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONS* cons0;
+      SCIP_CONS* cons1;
+      SCIP_CONSDATA* consdata0;
+
+      cons0 = conss[c];
+
+      if( !SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0) )
+         continue;
+
+      consdata0 = SCIPconsGetData(cons0);
+      /* sort the constraint */
+      SCIP_CALL( consdataSort(scip, consdata0) );
+
+      /* get constraint from current hash table with same variables as cons0 */
+      cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
+ 
+      if( cons1 != NULL )
+      {
+         SCIP_CONSDATA* consdata1;
+
+         assert(SCIPconsIsActive(cons1));
+         assert(!SCIPconsIsModifiable(cons1));
+      
+         consdata1 = SCIPconsGetData(cons1);
+         
+         assert(consdata0 != NULL && consdata1 != NULL);
+         assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
+         
+         assert(consdata0->sorted && consdata1->sorted);
+         assert(consdata0->vars[0] == consdata1->vars[0]);
+
+         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+
+         /* delete consdel */
+         SCIP_CALL( SCIPdelCons(scip, cons0) );
+         (*ndelconss)++;
+
+         /* update the first changed constraint to begin the next aggregation round with */
+         if( consdata0->changed && SCIPconsGetPos(cons1) < *firstchange )
+            *firstchange = SCIPconsGetPos(cons1);
+
+         assert(SCIPconsIsActive(cons1));
+      }
+      else
+      {
+         /* no such constraint in current hash table: insert cons0 into hash table */  
+         SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
+      }
+   }
+
+   /* free hash table */
+   SCIPhashtableFree(&hashtable);
+
+   return SCIP_OKAY;
+}
+
+/** removes the redundant second constraint and updates the flags of the first one */
+static
+SCIP_RETCODE removeRedundantCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons0,              /**< constraint that should stay */
+   SCIP_CONS*            cons1,              /**< constraint that should be deleted */
+   int*                  ndelconss           /**< pointer to count number of deleted constraints */
+   )
+{
+   assert(ndelconss != NULL);
+
+   SCIPdebugMessage(" -> removing logicor constraint <%s> which is redundant to <%s>\n",
+      SCIPconsGetName(cons1), SCIPconsGetName(cons0));
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons0, NULL) ) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
+
+   /* update flags of cons0 */
+   SCIP_CALL( updateFlags(scip, cons0, cons1) ); 
 
    /* delete cons1 */
    SCIP_CALL( SCIPdelCons(scip, cons1) );
@@ -1695,7 +1879,6 @@ SCIP_DECL_CONSPROP(consPropLogicor)
    return SCIP_OKAY;
 }
 
-
 /** presolving method of constraint handler */
 static
 SCIP_DECL_CONSPRESOL(consPresolLogicor)
@@ -1709,7 +1892,12 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    SCIP_Bool fixed;
    int c;
    int firstchange;
-   int nentries = SCIPgetNBinVars(scip);
+   int nentries;
+   int oldnfixedvars;
+   int oldnchgbds;
+   int oldndelconss;
+   int oldnupgdconss;
+
    
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1720,6 +1908,13 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   nentries = SCIPgetNBinVars(scip);
+
+   oldnfixedvars = *nfixedvars;
+   oldnchgbds = *nchgbds;
+   oldndelconss = *ndelconss;
+   oldnupgdconss = *nupgdconss;
 
    firstchange = INT_MAX;
 
@@ -1744,8 +1939,8 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       /* remove all variables that are fixed to zero, check redundancy due to fixed-to-one variable */
       SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &redundant) );
 
-      /**@todo find pairs of negated variables in constraint: constraint is redundant */
-      /**@todo find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
+      /* find pairs of negated variables in constraint: constraint is redundant */
+      /* find sets of equal variables in constraint: multiple entries of variable can be replaced by single entry */
       if( !redundant )
       {
          SCIP_Bool correct = FALSE;
@@ -1851,18 +2046,42 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
 
    }
    
-   /**@todo preprocess pairs of logic or constraints */
+   /* preprocess pairs of logic or constraints */
 
    assert(*result != SCIP_CUTOFF);
 
-   /* check constraints for redundancy */
-   if( conshdlrdata->presolpairwise )
+   if ( oldnfixedvars == *nfixedvars && oldnchgbds == *nchgbds && oldndelconss == *ndelconss && oldnupgdconss == *nupgdconss)
    {
-      for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
+      
+      if( firstchange < nconss && conshdlrdata->presolusehashing ) 
       {
-         if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+	 /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+         SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, ndelconss) );
+      }
+      
+      /* check constraints for redundancy */
+      if( conshdlrdata->presolpairwise )//&& oldndelconss == *ndelconss )
+      {
+	SCIP_Longint npaircomparisons;
+	npaircomparisons = 0;
+	oldndelconss = *ndelconss;
+
+	for( c = firstchange; c < nconss && !SCIPisStopped(scip); ++c )
          {
-            SCIP_CALL( removeRedundantConstraints(scip, conss, &firstchange, c, ndelconss) );
+            if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+            {
+               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+               
+               SCIP_CALL( removeRedundantConstraints(scip, conss, &firstchange, c, ndelconss) );
+               
+               if( npaircomparisons > NMINCOMPARISONS )
+               {
+		  if( (*ndelconss - oldndelconss) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                     break;
+		  oldndelconss = *ndelconss;
+		  npaircomparisons = 0;
+               }
+            }
          }
       }
    }
@@ -2304,6 +2523,10 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          "constraints/logicor/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/logicor/presolusehashing",
+         "should hash table be used for detecting redundant constraints in advance", 
+         &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -153,6 +153,9 @@ parameters:
 - new parameter "separating/cmir/densityoffset" to allow for more c-MIR cuts on small models
 - new parameter "heuristics/feaspump/beforecuts" to allow the feaspump to be called before cut separation
 - new parameter "separating/orthofunc" to choose function for scalar product computation in orthogonality test
+- new parameter "constraints/setppc/presolusehashing" to use hashing comparison in cons_setppc.c; default value is TRUE
+- new parameter "constraints/logicor/presolusehashing" to use hashing comparison in cons_logicor.c; default value is TRUE
+- new parameter "constraints/linear/presolusehashing" to use hashing comparison in cons_linear.c; default value is TRUE
 
 performance improvements:
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
@@ -167,6 +170,9 @@ performance improvements:
 - reworked strong branching in lpi_clp.cpp (scaling works now, bounds can be trusted)
 - improved performance of SCIPvarGetLPSol(), which affects many parts of the code, in particular Gomory and strong CG cuts
 - do not calculate MIR and StrongCG cut aggregations if number of nonzeros in aggregated row is too large
+- included detecting of redundant constraints with hash table in advance in cons_logicor.c and limit other pairwise presolving
+- included detecting of redundant constraints with hash table in advance in cons_setppc.c and limit other pairwise presolving
+- limit pairwise presolving in cons_linear.c
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
