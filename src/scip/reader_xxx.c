@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.c,v 1.18 2008/04/17 17:49:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_xxx.c,v 1.19 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   reader_xxx.c
+ * @ingroup FILEREADERS 
  * @brief  XXX file reader
  * @author Tobias Achterberg
  */

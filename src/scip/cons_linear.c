@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.305 2008/09/22 16:52:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.306 2008/09/22 19:16:27 bzfheinz Exp $"
 
 /**@file   cons_linear.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for linear constraints
  * @author Tobias Achterberg
  * @author Timo Berthold

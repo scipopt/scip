@@ -1,8 +1,9 @@
-/*  
-  MOSEK SCIP interface. 
-  
-  Heavily revised in feb. 2007 by Bo Jensen bo.jensen@mosek.com
-*/
+/**@file   lpi_msk.c
+ * @ingroup LPIS
+ * @brief  MOSEK SCIP interface
+ * @author Bo Jensen
+ * @note Heavily revised in feb. 2007 by Bo Jensen bo.jensen@mosek.com
+ */  
 
 #undef NDEBUG
 #include <assert.h>

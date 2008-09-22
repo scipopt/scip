@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_xxx.c,v 1.2 2008/04/17 17:49:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: dialog_xxx.c,v 1.3 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   dialog_xxx.c
+ * @ingroup DIALOGS
  * @brief  xxx user interface dialog
  * @author Kati Wolter
  */

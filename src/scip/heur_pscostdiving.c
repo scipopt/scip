@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.50 2008/04/17 17:49:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.51 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_pscostdiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings w.r.t. the pseudo cost values
  * @author Tobias Achterberg
  */

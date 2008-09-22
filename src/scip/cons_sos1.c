@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.18 2008/09/20 20:51:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.19 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   cons_sos1.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for SOS type 1 constraints
  * @author Marc Pfetsch
  *

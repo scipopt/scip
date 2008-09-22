@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.99 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.100 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   reader_mps.c
+ * @ingroup FILEREADERS 
  * @brief  (extended) MPS file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg

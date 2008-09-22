@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.34 2008/09/22 18:51:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.35 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
+ * @ingroup FILEREADERS 
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
  * @author Timo Berthold

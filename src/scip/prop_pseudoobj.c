@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.23 2008/09/03 00:54:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.24 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   prop_pseudoobj.c
+ * @ingroup PROPAGATORS
  * @brief  pseudoobj propagator
  * @author Tobias Achterberg
  */

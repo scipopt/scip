@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx132.cpp,v 1.1 2008/09/20 20:49:39 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx132.cpp,v 1.2 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   lpi_spx.cpp
+ * @ingroup LPIS
  * @brief  LP interface for SoPlex 1.3.2
  * @author Tobias Achterberg
  * @author Timo Berthold

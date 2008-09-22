@@ -12,10 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.c,v 1.25 2008/04/17 17:49:02 bzfpfets Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.c,v 1.26 2008/09/22 19:16:26 bzfheinz Exp $"
 
 /**@file   branch_mostinf.c
- * @brief  most infeasible LP branching rule
+ * @ingroup BRANCHINGRULES
+ * @brief  most infeasible LP branching rule
  * @author Tobias Achterberg
  */
 

@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.73 2008/09/19 11:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.74 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   sepa_gomory.c
+ * @ingroup SEPARATORS
  * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
  */

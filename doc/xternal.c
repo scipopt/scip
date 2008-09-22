@@ -47,7 +47,7 @@
  *
  * <b>General Information</b>
  *
- * - \ref FAQ     "Frequently asked questions"
+ * - \ref FAQ     "Frequently asked questions (FAQ)"
  * - \ref START   "How to start a new project"
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref MAKE    "Makefiles"
@@ -71,7 +71,9 @@
  * - \ref DISP    "How to add display columns"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
-*/
+ *
+ */
+
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CODE Coding style guidelines
@@ -183,7 +185,9 @@
  * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.
  * A single constraint handler is responsible for all the constraints belonging to his constraint class.
  * For example, there is one knapsack constraint handler that ensures that only solutions are accepted that
- * satisfy all the knapsack constraints in the model.
+ * satisfy all the knapsack constraints in the model. 
+ * \n
+ * A complete list of all constraint handles contained in this release can be found \ref CONSHDLRS "here".
  *
  * In the following, we explain how the user can add an own constraint handler.
  * For example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
@@ -811,7 +815,9 @@
  * A pricer performs the dynamic generation of new variables in a column generation algorithm.
  * It is an algorithmic representation of a (usually exponential) number of variables.
  * The \ref PRICERREDCOST and \ref PRICERFARKAS methods are called after each LP solve to generate additional
- * variables which may improve the objective value or decrease the LP infeasibility, respectively.
+ * variables which may improve the objective value or decrease the LP infeasibility, respectively. 
+ * \n
+ * A complete list of all pricers contained in this release can be found \ref PRICERS "here".
  *
  * If the pricer finds one or more variables with negative reduced costs or negative farkas value, it should
  * call SCIPcreateVar() and SCIPaddPricedVar() to create and add the variable to the problem. Additionally,
@@ -1038,7 +1044,9 @@
  * Presolvers are used to simplify the problem instance and to extract useful information in the presolving step.
  * Constraint based presolving is done in the CONSPRESOL callback methods of the constraint handlers, see \ref CONSPRESOL.
  * The presolver plugins complement the constraint based presolving by additional, usually optimality based, presolving
- * reductions.
+ * reductions. 
+ * \n 
+ * A complete list of all presolvers contained in this release can be found \ref PRESOLVERS "here".
  *
  * In the following, we explain how the user can add an own presolver.
  * Take the dual fixing presolver (src/scip/presol_dualfix.c) as an example.
@@ -1210,6 +1218,8 @@
  * valid inequalities or even facets of the polyhedron described by a single constraint or a subset of the constraints of
  * a single constraint class. In contrast, general purpose cuts do not require or exploit any knowledge about the 
  * underlying problem structure but use only the current LP relaxation and the integrality conditions. 
+ * \n
+ * A complete list of all separators contained in this release can be found \ref SEPARATORS "here".
  *
  * In the following, we explain how the user can add an own separator.
  * Take the separator for the class of Gomory mixed integer inequalities (src/scip/sepa_gomory.c) as an example.
@@ -1433,7 +1443,9 @@
  * Propagators are used to tighten the domains of the variables. Like for cutting planes, there are two different types of 
  * domain propagations. Constraint based (primal) domain propagation algorithms are part of the corresponding constraint
  * handlers, see \ref CONSPROP. In contrast, domain propagators usually provide dual propagations, i.e., propagations that can be
- * applied due to the objective function and the current best known primal solution.
+ * applied due to the objective function and the current best known primal solution. 
+ * \n
+ * A complete list of all propagators contained in this release can be found \ref PROPAGATORS "here".
  *
  * In the following, we explain how the user can add an own propagator.
  * Take the pseudo objective function propagator (src/scip/prop_pseudoobj.c) as an example.
@@ -1645,6 +1657,8 @@
  * Usually, a branching rule creates two subproblems by splitting a single variable's domain. It is also possible to 
  * implement much more general branching schemes, for example by creating more than two subproblems, or by adding 
  * additional constraints to the subproblems instead of tightening the domains of the variables. 
+ * \n 
+ * A complete list of all branching rules contained in this release can be found \ref BRANCHINGRULES "here".
  *
  * In the following, we explain how the user can add an own branching rule.
  * Take the most infeasible LP branching rule (src/scip/branch_mostinf.c) as an example.
@@ -1700,7 +1714,8 @@
  * \n
  * Note that this property only specifies the default value. The user can change this value arbitrarily.
  *
- * \par BRANCHRULE_MAXBOUNDDIST: the default value for the maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching.
+ * \par BRANCHRULE_MAXBOUNDDIST: the default value for the maximal relative distance from current node's dual bound to 
+ * primal bound compared to best node's dual bound for applying branching.
  * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound) 
  * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The branching method of 
  * the branching rule will only be applied at the node if this relative distance does not exceed BRANCHRULE_MAXBOUNDDIST. 
@@ -1899,7 +1914,9 @@
  *
  * Node selectors are used to decide which of the leaves in the current branching tree is selected as next subproblem 
  * to be processed. The ordering relation of the tree's leaves for storing them in the leave priority queue is also
- * defined by the node selectors.    
+ * defined by the node selectors.  
+ * \n
+ * A complete list of all propagators contained in this release can be found \ref NODESELECTORS "here".
  *
  * In the following, we explain how the user can add an own node selector.
  * Take the node selector for depth first search (src/scip/nodesel_dfs.c) as an example.
@@ -2097,6 +2114,8 @@
  * Feasible solutions can be found in two different ways during the traversal of the branch-and-bound tree. On the one 
  * hand, the solution of a node's relaxation may be feasible with respect to the constraints. On the other hand, feasible
  * solutions can be discovered by primal heuristics.  
+ * \n
+ * A complete list of all primal heuristics contained in this release can be found \ref PRIMALHEURISTICS "here".
  *
  * In the following, we explain how the user can add an own primal heuristic.
  * Take the simple and fast LP rounding heuristic (src/scip/heur_simplerounding.c) as an example.
@@ -2344,6 +2363,8 @@
  * However, the data to define a single relaxation must either be extracted by the relaxation handler itself (e.g., from
  * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation. 
+ * \n
+ * A complete list of all primal heuristics contained in this release can be found \ref RELAXSATORS "here".
  *
  * In the following, we explain how the user can add an own relaxation handler using the C interface. It is very easy to 
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion, 
@@ -2539,6 +2560,8 @@
  * Mainly, file readers are called to parse an input file and generate a constraint integer programming model. They create 
  * constraints and variables and activate variable pricers if necessary. However, they can also be called, for example, to parse an 
  * input file containing information about a primal solution or fixing of variables. 
+ * \n
+ * A complete list of all file readers contained in this release can be found \ref FILEREADERS "here".
  *
  * In the following, we explain how the user can add an own file reader.
  * Take the file reader for MIPs in IBM's Mathematical Programming System format (src/scip/reader_mps.c) as an example.
@@ -2684,6 +2707,8 @@
  * corresponding to the user's command in the shell. That is, the concept of a dialog handler is different to that 
  * of a constraint handler, which is used to manage objects of the same structure, see \ref CONS. In particular, SCIP 
  * features only one dialog handler, whereas there may exist different constraint handlers. 
+ * \n
+ * A complete list of all dialogs contained in this release can be found \ref DIALOGS "here".
  *
  * In the following, we explain how the user can extend the interactive shell by adding an own dialog.
  * We give the explanation for creating an own source file for each additional dialog. Of course, you can collect 
@@ -2878,6 +2903,8 @@
  * examples of such display columns. There already exists a wide variety of display columns which can be activated or 
  * deactivated on demand, see "src/scip/disp_default.c". Additionally, the user can implement his own display columns
  * in order to track problem or algorithm specific values.  
+ * \n
+ * A complete list of all displays contained in this release can be found \ref DISPLAYS "here".
  *
  * In the following, we explain how the user can add an own display column. 
  * We give the explanation for creating an own source file for each additional display column. Of course, you can collect 
@@ -3266,7 +3293,62 @@
  *  \arg <tt>optimal auto settings</tt> - Theoretical result for a solver that performed 'best of all' for every instance.
  */
 
-/**@page FAQ Frequently Asked Questions
+
+/**@page FAQ Frequently Asked Questions (FAQ)
  * \htmlinclude faqcss.inc  
  * \htmlinclude faq.inc  
  */
+
+
+/**@defgroup BRANCHINGRULES Branching Rules 
+ * @brief In the following you find a list of all branching rule which are currently available.
+ */
+
+/**@defgroup CONSHDLRS  Constraint Handler 
+ * @brief In the following you find a list of all constraint handlers which are currently available.
+ */
+
+/**@defgroup DIALOGS Dialogs 
+ * @brief In the following you find a list of all dialogs which are currently available.
+ */
+
+/**@defgroup DISPLAYS Displays 
+ * @brief In the following you find a list of all displays (output columns)  which are currently available.
+ */
+
+/**@defgroup FILEREADERS File Readers 
+ * @brief In the following you find a list of all file readers which are currently available.
+ */
+ 
+/**@defgroup LPIS LP Interfaces
+ * @brief In the following you find a list of all LP instances which are currently available.
+ */
+
+/**@defgroup NODESELECTORS Node Selectors
+ * @brief In the following you find a list of all node selectors which are currently available.
+ */
+
+/**@defgroup PRESOLVERS Presolvers
+ * @brief In the following you find a list of all presolvers which are currently available.
+ */
+
+/**@defgroup PRICERS Pricers
+ * @brief In the following you find a list of all pricers which are currently available.
+ */
+
+/**@defgroup PRIMALHEURISTICS Primal Heuristics
+ * @brief In the following you find a list of all primal heuristics which are currently available.
+ */
+
+/**@defgroup PROPAGATORS Propagators
+ * @brief In the following you find a list of all propagators which are currently available.
+ */
+
+/**@defgroup RELAXSATORS Relaxsators
+ * @brief In the following you find a list of all relaxsators which are currently available.
+ */
+
+/**@defgroup SEPARATORS Separators
+ * @brief In the following you find a list of all separators  which are currently available.
+ */
+

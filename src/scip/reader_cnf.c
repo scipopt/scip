@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.45 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.46 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   reader_cnf.c
+ * @ingroup FILEREADERS 
  * @brief  CNF file reader
  * @author Thorsten Koch
  * @author Tobias Achterberg

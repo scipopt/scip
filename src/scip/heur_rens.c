@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.18 2008/09/17 15:05:28 bzfwanie Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.19 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_rens.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  RENS primal heuristic
  * @author Timo Berthold
  */

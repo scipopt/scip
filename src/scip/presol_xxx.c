@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.21 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: presol_xxx.c,v 1.22 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   presol_xxx.c
+ * @ingroup PRESOLVERS
  * @brief  xxx presolver
  * @author Tobias Achterberg
  */

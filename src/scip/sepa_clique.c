@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.36 2008/09/09 16:23:59 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.37 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   sepa_clique.c
+ * @ingroup SEPARATORS
  * @brief  clique separator
  * @author Kati Wolter
  * @author Tobias Achterberg

@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.7 2008/04/17 17:49:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.8 2008/09/22 19:16:32 bzfheinz Exp $"
 
 /**@file   sepa_redcost.c
+ * @ingroup SEPARATORS
  * @brief  reduced cost strengthening separator
  * @author Tobias Achterberg
  */

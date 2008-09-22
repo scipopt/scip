@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi_xprs.c
+ * @ingroup LPIS
  * @brief  LP interface for Xpress-MP 16
  * @author Tobias Achterberg
  * @author Michael Perregaard

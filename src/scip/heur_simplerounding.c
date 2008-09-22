@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.29 2008/04/17 17:49:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.30 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_simplerounding.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  simple and fast LP rounding heuristic
  * @author Tobias Achterberg
  */

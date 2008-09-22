@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.24 2008/04/17 17:49:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.25 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   heur_fixandinfer.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  fix-and-infer primal heuristic
  * @author Tobias Achterberg
  */

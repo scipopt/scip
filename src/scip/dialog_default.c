@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.90 2008/09/09 16:23:56 bzfwanie Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.91 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   dialog_default.c
+ * @ingroup DIALOGS
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold

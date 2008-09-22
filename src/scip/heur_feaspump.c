@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.54 2008/09/02 19:50:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.55 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   heur_feaspump.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  feasibility pump primal heuristic
  * @author Timo Berthold
  */

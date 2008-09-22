@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rounding.c,v 1.56 2008/09/15 20:18:34 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_rounding.c,v 1.57 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_rounding.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities
  * @author Tobias Achterberg
  */

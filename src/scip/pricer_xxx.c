@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.17 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.18 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   pricer_xxx.c
+ * @ingroup PRICERS
  * @brief  xxx variable pricer
  * @author Tobias Achterberg
  */

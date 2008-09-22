@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.21 2008/04/17 17:49:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.22 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_octane.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
  * @author Timo Berthold
  */

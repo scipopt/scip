@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.71 2008/09/09 16:23:55 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.72 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   cons_or.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for or constraints
  * @author Tobias Achterberg
  */

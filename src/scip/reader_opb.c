@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.19 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.20 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   reader_opb.c
+ * @ingroup FILEREADERS 
  * @brief  pseudo-Boolean file reader (opb format)
  * @author Stefan Heinz
  * @author Michael Winkler

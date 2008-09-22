@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.56 2008/04/17 17:49:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.57 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   heur_coefdiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings w.r.t. the matrix coefficients
  * @author Tobias Achterberg
  */

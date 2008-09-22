@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.42 2008/04/17 17:49:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_guideddiving.c,v 1.43 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   heur_guideddiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings in direction of incumbent solutions
  * @author Tobias Achterberg
  */

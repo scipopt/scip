@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.41 2008/04/17 17:49:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.42 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_rootsoldiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
  * @author Kati Wolter
  */

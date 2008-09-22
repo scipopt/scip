@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.24 2008/09/09 16:23:54 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.25 2008/09/22 19:16:27 bzfheinz Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
 
 /**@file   cons_indicator.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *

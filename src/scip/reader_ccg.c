@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.3 2008/09/04 19:06:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.4 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   reader_ccg.c
+ * @ingroup FILEREADERS 
  * @brief  Graph file reader (actually, only a writer)
  * @author Marc Pfetsch
  *

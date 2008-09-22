@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.7 2008/09/15 20:18:34 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.8 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_intshifting.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
  *         solves a final LP to calculate feasible values for continuous variables
  * @author Tobias Achterberg

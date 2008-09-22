@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.h,v 1.11 2008/04/17 17:49:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.h,v 1.12 2008/09/22 19:16:26 bzfheinz Exp $"
 
 /**@file   branch_allfullstrong.h
- * @brief  all variables full strong LP branching rule
+ * @brief  all variables full strong LP branching rule
  * @author Tobias Achterberg
  */
 

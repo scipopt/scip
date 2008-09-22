@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.8 2008/04/17 17:49:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.9 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   prop_rootredcost.c
+ * @ingroup PROPAGATORS
  * @brief  reduced cost strengthening at the root node
  * @author Tobias Achterberg
  */

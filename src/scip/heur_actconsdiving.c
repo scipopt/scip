@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.9 2008/04/17 17:49:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_actconsdiving.c,v 1.10 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   heur_actconsdiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that chooses fixings w.r.t. the active constraints the variable appear in
  * @author Tobias Achterberg
  */

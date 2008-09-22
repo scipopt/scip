@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.41 2008/04/21 18:51:34 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.42 2008/09/22 19:16:27 bzfheinz Exp $"
 
 /**@file   cons_eqknapsack.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for eqknapsack constraints
  * @author Tobias Achterberg
  */

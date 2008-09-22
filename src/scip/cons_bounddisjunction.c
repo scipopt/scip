@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.19 2008/09/09 16:23:54 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.20 2008/09/22 19:16:27 bzfheinz Exp $"
 
 /**@file   cons_bounddisjunction.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for bound disjunction constraints
  * @author Tobias Achterberg
  */

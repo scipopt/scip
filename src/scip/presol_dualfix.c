@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.31 2008/05/14 14:31:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.32 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   presol_dualfix.c
+ * @ingroup PRESOLVERS
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  */

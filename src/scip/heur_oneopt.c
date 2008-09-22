@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.19 2008/09/15 20:18:34 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.20 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_oneopt.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  oneopt primal heuristic
  * @author Timo Berthold
  */

@@ -12,8 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.30 2008/04/17 17:49:18 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.31 2008/09/22 19:16:32 bzfheinz Exp $"
+
 /**@file   sepa_intobj.c
+ * @ingroup SEPARATORS
  * @brief  integer objective value separator
  * @author Tobias Achterberg
  * @author Timo Berthold

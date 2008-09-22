@@ -372,6 +372,8 @@ features:
   memory overhead (2 ints per node in the leaf queue); this improves performance quite a bit on instances that
   take a large number of branching nodes
 - slightly modified automatic constraint aging strategy
+- the documentation has now a TAB Modules; there you can find list of available constraint handles, presolvers, 
+  propagators, lpi interfaces, file readers, and so on
 
 fixed bugs:
 - fixed bug in rowScale() concerning deletion of almost zero coefficients

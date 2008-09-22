@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.163 2008/09/09 16:23:55 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.164 2008/09/22 19:16:27 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for knapsack constraints
  * @author Tobias Achterberg
  * @author Kati Wolter

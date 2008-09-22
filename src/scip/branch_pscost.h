@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.h,v 1.11 2008/04/17 17:49:02 bzfpfets Exp $"
+#pragma ident "@(#) $Id: branch_pscost.h,v 1.12 2008/09/22 19:16:26 bzfheinz Exp $"
 
 /**@file   branch_pscost.h
- * @brief  pseudo costs branching rule
+ * @brief  pseudo costs branching rule
  * @author Tobias Achterberg
  */
 

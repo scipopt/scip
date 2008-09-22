@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.6 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.7 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   presol_inttobinary.c
+ * @ingroup PRESOLVERS
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
  * @author Tobias Achterberg
  */

@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.15 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.16 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   reader_ppm.c
+ * @ingroup FILEREADERS 
  * @brief  PPM file reader
  * @author Michael Winkler
  *

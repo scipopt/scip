@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.30 2008/04/17 17:49:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.31 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   nodesel_restartdfs.c
+ * @ingroup NODESELECTORS
  * @brief  node selector for depth first search with periodical selection of the best node
  * @author Tobias Achterberg
  */

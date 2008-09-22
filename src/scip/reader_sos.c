@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.9 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.10 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   reader_sos.c
+ * @ingroup FILEREADERS 
  * @brief  SOS file reader
  * @author Marc Pfetsch
  *

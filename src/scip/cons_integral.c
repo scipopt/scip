@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.49 2008/04/18 14:02:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.50 2008/09/22 19:16:27 bzfheinz Exp $"
 
 /**@file   cons_integral.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
  */

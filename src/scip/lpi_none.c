@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_none.c,v 1.4 2008/04/17 17:49:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_none.c,v 1.5 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   lpi_none.c
+ * @ingroup LPIS
  * @brief  dummy interface for the case no LP solver is needed
  * @author Stefan Heinz
  */

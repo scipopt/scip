@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.120 2008/09/09 16:23:57 bzfwanie Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.121 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   lpi_cpx.c
+ * @ingroup LPIS
  * @brief  LP interface for CPLEX >= 8.0
  * @author Tobias Achterberg
  */

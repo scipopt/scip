@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.128 2008/09/09 16:23:55 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.129 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for the set partitioning / packing / covering constraints
  * @author Tobias Achterberg
  */

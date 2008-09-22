@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.16 2008/09/19 11:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.17 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   sepa_flowcover.c
+ * @ingroup SEPARATORS
  * @brief  flow cover cuts separator
  * @author Kati Wolter
  * @author Tobias Achterberg

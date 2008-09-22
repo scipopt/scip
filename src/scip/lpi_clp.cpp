@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.47 2008/09/17 13:53:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.48 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   lpi_clp.cpp
+ * @ingroup LPIS
  * @brief  LP interface for Clp
  * @author Stefan Heinz
  * @author Marc Pfetsch

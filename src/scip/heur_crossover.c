@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.32 2008/09/17 15:05:28 bzfwanie Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.33 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   heur_crossover.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  crossover primal heuristic
  * @author Timo Berthold
  */

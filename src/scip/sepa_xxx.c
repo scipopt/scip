@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.20 2008/04/17 17:49:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.21 2008/09/22 19:16:32 bzfheinz Exp $"
 
 /**@file   sepa_xxx.c
+ * @ingroup SEPARATORS
  * @brief  xxx separator
  * @author Tobias Achterberg
  */

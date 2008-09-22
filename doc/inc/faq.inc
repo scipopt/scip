@@ -18,7 +18,7 @@
       you can SCIP as a subroutine for solving MIPs from your own source code, 
       or you can use it as a framework in which you implement your own plugins&mdash;or for a combination
       of these three purposes.<br>
-      In this FAQ there are separate sections for the three usages of SCIP.
+      In this FAQ four are separate sections for the three usages of SCIP.
     <p class="q">
       <a name="Q2">When should I use SCIP?</a>
     </p>

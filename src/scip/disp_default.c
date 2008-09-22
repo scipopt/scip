@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.68 2008/05/05 10:46:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.69 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   disp_default.c
+ * @ingroup DISPLAYS
  * @brief  default display columns
  * @author Tobias Achterberg
  */

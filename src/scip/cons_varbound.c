@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.76 2008/08/27 08:36:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.77 2008/09/22 19:16:28 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for variable bound constraints
  * @author Tobias Achterberg
  * @author Timo Berthold

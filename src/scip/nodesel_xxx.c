@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.18 2008/04/17 17:49:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.19 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   nodesel_xxx.c
+ * @ingroup NODESELECTORS
  * @brief  xxx node selector
  * @author Tobias Achterberg
  */

@@ -15,6 +15,7 @@
 #pragma ident ""
 
 /**@file   heur_dins.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  DINS primal heuristic (according to Ghosh)
  * @author Robert Waniek
  */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.62 2008/09/22 18:42:01 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.63 2008/09/22 19:16:32 bzfheinz Exp $"
 
 //#define SCIP_DEBUG
 
@@ -25,6 +25,7 @@
 /*//#define FORCECUTS *//*??????????????????????*/
 
 /**@file   sepa_mcf.c
+ * @ingroup SEPARATORS
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
  * @author Christian Raack
@@ -4100,9 +4101,11 @@ SCIP_DECL_SORTPTRCOMP(compArcs)
 /** ---------------------------------------------------------------------------------------------------------------------------- */
 
 
-/**@todo we should rather maintain a queue of node-pair weights
-         the weight is the minimal slack of fwd and bwd arcs --> this is important in the directed case*/
-/** creates a priority queue and fills it with the given arc entries */
+/** creates a priority queue and fills it with the given arc entries
+ *
+ *@todo we should rather maintain a queue of node-pair weights
+ *      the weight is the minimal slack of fwd and bwd arcs --> this is important in the directed case
+ */
 static
 SCIP_RETCODE arcqueueCreate(
    SCIP*                 scip,               /**< SCIP data structure */

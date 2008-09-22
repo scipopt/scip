@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.473 2008/09/09 16:23:58 bzfwanie Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.474 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -86,8 +86,9 @@
  * Local methods
  */
 
-#ifndef NDEBUG
+
 /** checks, if SCIP is in one of the feasible stages */
+#ifndef NDEBUG
 static
 SCIP_RETCODE checkStage(
    SCIP*                 scip,               /**< SCIP data structure */

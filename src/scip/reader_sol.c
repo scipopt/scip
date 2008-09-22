@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.11 2008/05/05 14:21:40 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.12 2008/09/22 19:16:31 bzfheinz Exp $"
 
 /**@file   reader_sol.c
+ * @ingroup FILEREADERS 
  * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  * @author Timo Berthold

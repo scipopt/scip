@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.39 2008/04/17 17:49:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.40 2008/09/22 19:16:29 bzfheinz Exp $"
 
 /**@file   heur_objpscostdiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
  * @author Tobias Achterberg
  */

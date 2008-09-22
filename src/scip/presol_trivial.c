@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.31 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.32 2008/09/22 19:16:30 bzfheinz Exp $"
 
 /**@file   presol_trivial.c
+ * @ingroup PRESOLVERS
  * @brief  trivial presolver: round fractional bounds on integer variables, fix variables with equal bounds
  * @author Tobias Achterberg
  */
