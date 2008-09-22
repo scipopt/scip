@@ -14,6 +14,8 @@ compiling:
 - Moved -rpath option for ld to linux-specific Makefiles.
 - Re-activated readline library on darwin/ppc.
 - added target spx132 for SoPlex version 1.3.2
+- removed tag make testpre (useless without corresponding scripts)
+- added tag testcount (make testcount); this allows for testing counting problem 
 
 interface:
 - new method SCIPchgChildPrio() to change the node selection priority of the given child
@@ -108,6 +110,7 @@ features:
 - revised lpi_clp.cpp (many small changes, in particular writing and reading of bases)
 - added FASTMIP settings in lpi_clp.cpp that try to improve the performance of Clp as much as possible
 - added coloring example in examples/Coloring
+- added test scripts for testing counting (make testcount)
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})

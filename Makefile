@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.261 2008/09/20 20:53:17 bzfpfets Exp $
+# $Id: Makefile,v 1.262 2008/09/22 15:19:26 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -559,10 +559,10 @@ test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
-.PHONY: testpre
-testpre:		
+.PHONY: testcount
+testcount:		
 		cd check; \
-		$(SHELL) ./checkpre.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./checkcount.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcplex
 testcplex:		
