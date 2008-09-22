@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.61 2008/09/22 16:55:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.62 2008/09/22 18:42:01 bzfraack Exp $"
 
-// #define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 /*//#define USECMIRDELTAS *//*????????????????????*/
 #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
@@ -3008,9 +3008,6 @@ SCIP_RETCODE setUncapacitatedArcs(
       rowvals = SCIProwGetVals(rows[r]);
       rowlen  = SCIProwGetNLPNonz(rows[r]);
 
-
-      /**@todo check: A flow variable might appear in more than one flow row !!? */
-      /**@todo check: What to do if column has only source or  only target??? !!? */
       for( i = 0; i < rowlen; i++ )
       {
          int arcid;
@@ -3050,8 +3047,6 @@ SCIP_RETCODE setUncapacitatedArcs(
 
 
    SCIPdebugMessage("END -- UNCAPACITATED ARCS (arcs without arc id):------------------------------\n");
-
-
 
    SCIPdebugMessage("ASSIGN ARC IDS    ------------------------------\n");
 
@@ -3124,9 +3119,6 @@ SCIP_RETCODE setUncapacitatedArcs(
    }
 
    SCIPdebugMessage("END -- ASSIGN ARC IDS    ------------------------------\n");
-
-
-
 
    /* free temp arrays */
    for( n = 0; n < nnodes; n++ )
@@ -5508,7 +5500,7 @@ SCIP_RETCODE separateCuts(
       SCIPdebugMessage("extracted %d networks\n", sepadata->nmcfnetworks);
       for( i = 0; i < sepadata->nmcfnetworks; i++ )
       {
-         SCIPdebugMessage*/(" -> extracted network %d has %d nodes, %d (%d) arcs (uncapacitated), and %d commodities (modeltype: %s, flowtype: %s)\n",
+         SCIPdebugMessage(" -> extracted network %d has %d nodes, %d (%d) arcs (uncapacitated), and %d commodities (modeltype: %s, flowtype: %s)\n",
                                                   i, sepadata->mcfnetworks[i]->nnodes, sepadata->mcfnetworks[i]->narcs, sepadata->mcfnetworks[i]->nuncapacitatedarcs,
                                                   sepadata->mcfnetworks[i]->ncommodities,
                                                   sepadata->mcfnetworks[i]->modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected",
