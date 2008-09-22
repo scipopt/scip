@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.287 2008/09/22 17:34:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.288 2008/09/22 22:46:16 bzfberth Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4948,15 +4948,15 @@ int SCIProwGetDiscreteScalarProduct(
  *  the hyperplanes are parellel, iff p = 1, they are orthogonal, iff p = 0
  */
 SCIP_Real SCIProwGetParallelism(
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row1,               /**< first LP row */
-   SCIP_ROW*             row2                /**< second LP row */
+   SCIP_ROW*             row2,               /**< second LP row */
+   char                  orthofunc           /**< function used for calc. scalar prod. ('e'uclidean, 'd'iscrete) */
    )
 {
    SCIP_Real parallelism;
    SCIP_Real scalarprod;
 
-   switch( set->sepa_orthofunc )
+   switch( orthofunc )
    {
    case 'e':
       scalarprod = SCIProwGetScalarProduct(row1, row2);
@@ -4967,7 +4967,7 @@ SCIP_Real SCIProwGetParallelism(
       parallelism = scalarprod / (sqrt((SCIP_Real) SCIProwGetNNonz(row1)) * sqrt((SCIP_Real) SCIProwGetNNonz(row2)));
       break;
    default:
-      SCIPerrorMessage("invalid orthogonality function parameter '%c'\n", set->sepa_orthofunc);
+      SCIPerrorMessage("invalid orthogonality function parameter '%c'\n", orthofunc);
       SCIPABORT();
       parallelism = 0.0; /*lint !e527*/
    }
@@ -4980,12 +4980,12 @@ SCIP_Real SCIProwGetParallelism(
  *  the hyperplanes are orthogonal, iff p = 1, they are parallel, iff p = 0
  */
 SCIP_Real SCIProwGetOrthogonality(
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row1,               /**< first LP row */
-   SCIP_ROW*             row2                /**< second LP row */
+   SCIP_ROW*             row2,               /**< second LP row */
+   char                  orthofunc           /**< function used for calc. scalar prod. ('e'uclidean, 'd'iscrete) */
    )
 {
-   return 1.0 - SCIProwGetParallelism(set, row1, row2);
+   return 1.0 - SCIProwGetParallelism(row1, row2, orthofunc);
 }
 
 /** gets parallelism of row with objective function: if the returned value is 1, the row is parellel to the objective

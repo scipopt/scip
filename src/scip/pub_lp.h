@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.39 2008/09/22 17:33:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.40 2008/09/22 22:46:16 bzfberth Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -259,9 +259,9 @@ SCIP_Real SCIProwGetScalarProduct(
  */
 extern
 SCIP_Real SCIProwGetParallelism(
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row1,               /**< first LP row */
-   SCIP_ROW*             row2                /**< second LP row */
+   SCIP_ROW*             row2,               /**< second LP row */
+   char                  orthofunc           /**< function used for calc. scalar prod. ('e'uclidean, 'd'iscrete) */
    );
 
 /** returns the degree of orthogonality between the hyperplanes defined by the two row vectors v, w:
@@ -270,9 +270,9 @@ SCIP_Real SCIProwGetParallelism(
  */
 extern
 SCIP_Real SCIProwGetOrthogonality(
-   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row1,               /**< first LP row */
-   SCIP_ROW*             row2                /**< second LP row */
+   SCIP_ROW*             row2,               /**< second LP row */
+   char                  orthofunc           /**< function used for calc. scalar prod. ('e'uclidean, 'd'iscrete) */
    );
 
 /** output row to file stream */

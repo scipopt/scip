@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.60 2008/09/22 17:33:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.61 2008/09/22 22:46:16 bzfberth Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -561,7 +561,7 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
       SCIP_Real thisortho;
       
       /* update orthogonality */
-      thisortho = SCIProwGetOrthogonality(set, cut, sepastore->cuts[pos]);
+      thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[pos], set->sepa_orthofunc);
       if( thisortho < sepastore->orthogonalities[pos] )
       {
          if( thisortho < mincutorthogonality )
