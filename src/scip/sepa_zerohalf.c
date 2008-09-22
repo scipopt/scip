@@ -6521,7 +6521,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          {
             cutdataj = zerohalfcuts[sortedzerohalfcuts[sj]];
             if( cutdataj->cut != NULL && cutdataj->addedtolp )
-               if( SCIPisLT(scip, SCIProwGetOrthogonality(cutdatai->cut , cutdataj->cut), minorthogonality) )
+               if( SCIPisLT(scip, SCIProwGetOrthogonality(scip->set, cutdatai->cut, cutdataj->cut), minorthogonality) )
                   hasminorthogonality = FALSE;
          }
 
