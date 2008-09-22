@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.263 2008/09/22 19:25:11 bzfwanie Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.264 2008/09/22 21:19:53 bzfwinkm Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -31,6 +31,7 @@
 #include "scip/clock.h"
 #include "scip/vbc.h"
 #include "scip/interrupt.h"
+#include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -1508,7 +1509,7 @@ SCIP_RETCODE priceAndCutLoop(
                SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
 
                /* if we found something, solve LP again */
-               if( !lp->flushed )
+               if( !lp->flushed && !(*cutoff) )
                {
                   SCIPdebugMessage("    -> found reduction: resolve LP\n");
 
@@ -1538,23 +1539,24 @@ SCIP_RETCODE priceAndCutLoop(
             *lperror = *lperror || lp->resolvelperror;
          }
       }
-      assert(lp->flushed);
-      assert(lp->solved || *lperror);
+      assert(lp->flushed || *cutoff);
+      assert(lp->solved || *lperror || *cutoff);
 
       /* check, if we exceeded the separation round limit */
       mustsepa = mustsepa
          && stat->nseparounds < maxseparounds
-         && nsepastallrounds < maxnsepastallrounds;
+         && nsepastallrounds < maxnsepastallrounds
+         && !(*cutoff);
 
       /* if separators were delayed, we want to apply a final separation round with the delayed separators */
-      delayedsepa = delayedsepa && !mustsepa; /* if regular separation applies, we ignore delayed separators */
+      delayedsepa = delayedsepa && !mustsepa && !(*cutoff); /* if regular separation applies, we ignore delayed separators */
       mustsepa = mustsepa || delayedsepa;
 
       /* if the LP is infeasible, exceeded the objective limit or a global performance limit was reached, 
        * we don't need to separate cuts
        * (the global limits are only checked at the root node in order to not query system time too often)
        */
-      if( mustsepa || delayedsepa )
+      if( mustsepa )
       {
          if( !separate
              || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
