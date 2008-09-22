@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.14 2008/09/19 21:11:26 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.15 2008/09/22 08:31:14 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -80,7 +80,7 @@ do
   ERRFILE=$BASENAME.err
   SETFILE=$BASENAME.set
   
-  echo $BASENAME.out >> $EVALFILE
+  echo $BASENAME >> $EVALFILE
   
   echo > $TMPFILE
   if test $SETTINGS != "default"

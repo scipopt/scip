@@ -13,31 +13,38 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.3 2008/08/25 12:25:47 bzfwanie Exp $
+# $Id: evalcheck_cluster.sh,v 1.4 2008/09/22 08:31:14 bzfheinz Exp $
 export LANG=C
 
 AWKARGS=""
-FILES=""
 DIR=`dirname $1`
 EVALFILE=`basename $1 .eval`
 
 OUTFILE=$DIR/$EVALFILE.out 
+ERRFILE=$DIR/$EVALFILE.err
 RESFILE=$DIR/$EVALFILE.res
 TEXFILE=$DIR/$EVALFILE.tex
 PAVFILE=$DIR/$EVALFILE.pav
 
 echo > $OUTFILE
-echo create overall output file
+echo create overall output and error file
 for i in `cat $DIR/$EVALFILE.eval` DONE
   do
   if test "$i" = "DONE"
       then
       break
   fi
-  
-  if test -e $i
+
+  FILE=$i.out
+  if test -e $FILE
       then
-      cat $i >> $OUTFILE
+      cat $FILE >> $OUTFILE
+  fi
+
+  FILE=$i.err
+  if test -e $FILE
+      then
+      cat $FILE >> $ERRFILE
   fi
 done
 
