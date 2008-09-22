@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.17 2008/09/22 19:25:09 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.18 2008/09/22 22:14:50 bzfwinkm Exp $"
 
 /**@file   reader_ppm.c
  * @ingroup FILEREADERS 
@@ -36,7 +36,7 @@
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "ppmreader"
-#define READER_DESC             "file writer for ppm file format"
+#define READER_DESC             "file writer for portable pixmap file format (PPM), open with common graphic viewer programs (e.g. xview)"
 #define READER_EXTENSION        "ppm"
 
 /*
