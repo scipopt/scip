@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.22 2008/09/17 15:05:28 bzfwanie Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.23 2008/09/22 15:24:38 bzfheinz Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -83,6 +83,7 @@
 #include "scip/nodesel_estimate.h"
 #include "scip/nodesel_hybridestim.h"
 #include "scip/nodesel_restartdfs.h"
+#include "scip/presol_boundshift.h"
 #include "scip/presol_dualfix.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
