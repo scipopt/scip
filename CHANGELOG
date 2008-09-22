@@ -248,6 +248,8 @@ fixed bugs:
 - fixed bug in preprocessing of SOS2 constraints (cons_sos2.c)
 - removed BOUNDSCALETOL adjustment in cons_linear.c. This fixes bug with slightly infeasible variable fixings in presolving;
   reliable resactivities should make the BOUNDSCALETOL relaxation redundant.
+- corrected bug in the case when soplex threw an exception in autopricing
+
 
 SCIP version 1.00
 =================
