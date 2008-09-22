@@ -141,7 +141,7 @@
  *   accordingly.
  *
  * If your platform or compiler is not supported by SCIP you might try and copy one of the existing
- * makefile in the <code>make</code> directory and modify it. If you succeed, were are always
+ * makefile in the <code>make</code> directory and modify it. If you succeed, we are always
  * interested in including more Makefiles into the system.
  */
 
@@ -3349,8 +3349,8 @@
  * @brief In the following you find a list of all propagators which are currently available.
  */
 
-/**@defgroup RELAXSATORS Relaxsators
- * @brief In the following you find a list of all relaxsators which are currently available.
+/**@defgroup RELAXATORS Relaxsators
+ * @brief In the following you find a list of all relaxators which are currently available.
  */
 
 /**@defgroup SEPARATORS Separators

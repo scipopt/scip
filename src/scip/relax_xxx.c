@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax_xxx.c,v 1.11 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: relax_xxx.c,v 1.12 2008/09/22 19:59:45 bzfheinz Exp $"
 
 /**@file   relax_xxx.c
- * @ingroup RELAXSATORS
+ * @ingroup RELAXATORS
  * @brief  xxx relaxator
  * @author Tobias Achterberg
  */
