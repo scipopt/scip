@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.60 2008/09/22 09:14:51 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.61 2008/09/22 16:55:24 bzfpfend Exp $"
 
 // #define SCIP_DEBUG
 
@@ -32,11 +32,11 @@
  * We try to identify a multi-commodity flow structure in the LP relaxation of the
  * following type:
  *
- *  (1)  \sum_{a \in \delta^+(v)} f_a^k  - \sum_{a \in \delta^-(v)} f_a^k  <=  -d_v^k   for all v \in V and k \in K
- *  (2)  \sum_{k \in K} f_a^k - c_a x_a                                    <=  0        for all a \in A
+ *  (1)  sum_{a in delta^+(v)} f_a^k  - sum_{a in delta^-(v)} f_a^k  <=  -d_v^k   for all v in V and k in K
+ *  (2)  sum_{k in K} f_a^k - c_a x_a                                <=  0        for all a in A
  *
  * Constraints (1) are flow conservation constraints, which say that for each commodity k and node v the
- * outflow (\delta^+(v)) minus the inflow (\delta^-(v)) of a node v must not exceed the negative of the demand of
+ * outflow (delta^+(v)) minus the inflow (delta^-(v)) of a node v must not exceed the negative of the demand of
  * node v in commodity k. To say it the other way around, inflow minus outflow must be at least equal to the demand.
  * Constraints (2) are the arc capacity constraints, which say that the sum of all flow over an arc a must not
  * exceed its capacity c_a x_a, with x being a binary or integer variable.
