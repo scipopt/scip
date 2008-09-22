@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.70 2008/09/17 15:51:38 bzfberth Exp $
+# $Id: check.awk,v 1.71 2008/09/22 15:26:05 bzfheinz Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -496,8 +496,8 @@ BEGIN {
       {
          printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f \\\\\n",
                 pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f %s %s\n",
-            shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status, filename);
+         printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f %s\n",
+		shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status);
       }
 
       # PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
