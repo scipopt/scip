@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.307 2008/09/22 19:25:06 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.308 2008/09/22 21:15:52 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -50,7 +50,7 @@
 
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
-#include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
@@ -3226,7 +3226,8 @@ SCIP_RETCODE mergeMultiples(
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< linear constraint */
+   SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Bool*            infeasible          /**< pointer to store if infeasibility is detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3240,11 +3241,19 @@ SCIP_RETCODE applyFixings(
    int naggrvars;
    int i;
 
+   *infeasible = FALSE;
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    if( !consdata->removedfixings )
    {
+      SCIP_Real lhssubtrahend;
+      SCIP_Real rhssubtrahend;
+
+      lhssubtrahend = 0.0;
+      rhssubtrahend = 0.0;
+
       SCIPdebugMessage("applying fixings:\n");
       SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
 
@@ -3279,13 +3288,13 @@ SCIP_RETCODE applyFixings(
 		  }
 		  else
 		  {
-		     SCIP_CALL( chgLhs(scip, cons, SCIPinfinity(scip)) );
+                     /* if lhs gets infinity it means that the problem is infeasible */
+                     *infeasible = TRUE;
+                     return SCIP_OKAY;
 		  }
 	       }
 	       else
-	       {
-		  SCIP_CALL( chgLhs(scip, cons, consdata->lhs - val * fixedval) );
-	       }
+                  lhssubtrahend += val * fixedval;
             }
             if( !SCIPisInfinity(scip, consdata->rhs) )
             {
@@ -3293,7 +3302,9 @@ SCIP_RETCODE applyFixings(
 	       {
 		  if ( val * fixedval > 0.0 )
 		  {
-		     SCIP_CALL( chgRhs(scip, cons, -SCIPinfinity(scip)) );
+                     /* if rhs gets -infinity it means that the problem is infeasible */
+                     *infeasible = TRUE;
+                     return SCIP_OKAY;
 		  }
 		  else
 		  {
@@ -3301,9 +3312,7 @@ SCIP_RETCODE applyFixings(
 		  }
 	       }
 	       else
-	       {
-		  SCIP_CALL( chgRhs(scip, cons, consdata->rhs - val * fixedval) );
-	       }
+                  rhssubtrahend += val * fixedval;
             }
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
@@ -3311,14 +3320,12 @@ SCIP_RETCODE applyFixings(
          case SCIP_VARSTATUS_AGGREGATED:
             SCIP_CALL( addCoef(scip, cons, SCIPvarGetAggrVar(var), val * SCIPvarGetAggrScalar(var)) );
             aggrconst = SCIPvarGetAggrConstant(var);
+
             if( !SCIPisInfinity(scip, -consdata->lhs) )
-            {
-               SCIP_CALL( chgLhs(scip, cons, consdata->lhs - val * aggrconst) );
-            }
+               lhssubtrahend += val * aggrconst;
             if( !SCIPisInfinity(scip, consdata->rhs) )
-            {
-               SCIP_CALL( chgRhs(scip, cons, consdata->rhs - val * aggrconst) );
-            }
+               rhssubtrahend += val * aggrconst;
+
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
 
@@ -3332,28 +3339,24 @@ SCIP_RETCODE applyFixings(
                SCIP_CALL( addCoef(scip, cons, aggrvars[i], val * aggrscalars[i]) );
             }
             aggrconst = SCIPvarGetMultaggrConstant(var);
+
             if( !SCIPisInfinity(scip, -consdata->lhs) )
-            {
-               SCIP_CALL( chgLhs(scip, cons, consdata->lhs - val * aggrconst) );
-            }
+               lhssubtrahend += val * aggrconst;
             if( !SCIPisInfinity(scip, consdata->rhs) )
-            {
-               SCIP_CALL( chgRhs(scip, cons, consdata->rhs - val * aggrconst) );
-            }
+               rhssubtrahend += val * aggrconst;
+
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
 
          case SCIP_VARSTATUS_NEGATED:
             SCIP_CALL( addCoef(scip, cons, SCIPvarGetNegationVar(var), -val) );
             aggrconst = SCIPvarGetNegationConstant(var);
+
             if( !SCIPisInfinity(scip, -consdata->lhs) )
-            {
-               SCIP_CALL( chgLhs(scip, cons, consdata->lhs - val * aggrconst) );
-            }
+               lhssubtrahend += val * aggrconst;
             if( !SCIPisInfinity(scip, consdata->rhs) )
-            {
-               SCIP_CALL( chgRhs(scip, cons, consdata->rhs - val * aggrconst) );
-            }
+               rhssubtrahend += val * aggrconst;
+
             SCIP_CALL( delCoefPos(scip, cons, v) );
             break;
 
@@ -3362,6 +3365,30 @@ SCIP_RETCODE applyFixings(
             SCIPABORT();
          }
       }
+      
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         if( SCIPisFeasEQ(scip, lhssubtrahend, consdata->lhs ) )
+         {
+            SCIP_CALL( chgLhs(scip, cons, 0.0) );
+         }
+         else
+         {
+            SCIP_CALL( chgLhs(scip, cons, consdata->lhs - lhssubtrahend) );
+         }
+      }
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         if( SCIPisFeasEQ(scip, rhssubtrahend, consdata->rhs ) )
+         {
+            SCIP_CALL( chgRhs(scip, cons, 0.0) );
+         }
+         else
+         {
+            SCIP_CALL( chgRhs(scip, cons, consdata->rhs - rhssubtrahend) );
+         }
+      }
+      
       consdata->removedfixings = TRUE;
 
       SCIPdebugMessage("after fixings:\n");
@@ -5727,7 +5754,15 @@ SCIP_RETCODE fixVariables(
       }
    }
 
-   SCIP_CALL( applyFixings(scip, cons) );
+   SCIP_CALL( applyFixings(scip, cons, &infeasible) );
+
+   if( infeasible )
+   {
+      SCIPdebugMessage(" -> infeasible fixing\n");
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
    assert(consdata->removedfixings);
 
    return SCIP_OKAY;
@@ -5913,7 +5948,14 @@ SCIP_RETCODE aggregateVariables(
       if( success )
       {
          /* apply fixings and aggregation to successfully rerun this presolving step */
-         SCIP_CALL( applyFixings(scip, cons) );
+         SCIP_CALL( applyFixings(scip, cons, &infeasible) );
+
+         if( infeasible )
+         {
+            SCIPdebugMessage(" -> infeasible fixing\n");
+            *cutoff = TRUE;
+            return SCIP_OKAY;
+         }
          
          /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons) );
@@ -7759,9 +7801,13 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
    /* delete all linear constraints that were upgraded to a more specific constraint type;
     * make sure, only active variables remain in the remaining constraints
     */
+
+   *result = SCIP_FEASIBLE;
+
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
+      SCIP_Bool infeasible;
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
@@ -7772,11 +7818,16 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
       }
       else
       {
-         SCIP_CALL( applyFixings(scip, conss[c]) );
+         SCIP_CALL( applyFixings(scip, conss[c], &infeasible) );
+
+         if( infeasible )
+         {
+            SCIPdebugMessage(" -> infeasible fixing\n");
+            *result = SCIP_INFEASIBLE;
+            return SCIP_OKAY;
+         }
       }
    }
-
-   *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -8302,6 +8353,9 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
    {
       int npresolrounds;
+      SCIP_Bool infeasible;
+
+      infeasible = FALSE;
 
       cons = conss[c];
       assert(SCIPconsIsActive(cons));
@@ -8315,7 +8369,15 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       assert(consdata->propagated || !consdata->presolved);
 
       /* incorporate fixings and aggregations in constraint */
-      SCIP_CALL( applyFixings(scip, cons) );
+      SCIP_CALL( applyFixings(scip, cons, &infeasible) );
+      
+      if( infeasible )
+      {
+         SCIPdebugMessage(" -> infeasible fixing\n");
+         cutoff = TRUE;
+         break;
+      }
+
       assert(consdata->removedfixings);
 
       /* we can only presolve linear constraints, that are not modifiable */
