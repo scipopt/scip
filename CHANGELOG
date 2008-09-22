@@ -250,6 +250,7 @@ fixed bugs:
   reliable resactivities should make the BOUNDSCALETOL relaxation redundant.
 - corrected bug in the case when soplex threw an exception in autopricing
 - removed "epsilontic" bug in cons_linear.c due to adjusting left/right hand side in applyfixing 
+- fixed bug in SCIPvarGetOrigvarSum() concerning the corner case the a negated variable has no parent variable in original problem
 
 SCIP version 1.00
 =================

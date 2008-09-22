@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.231 2008/09/22 19:25:11 bzfwanie Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.232 2008/09/22 21:48:49 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2880,14 +2880,16 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          SCIP_CALL( SCIPsetDuplicateBufferArray(set, &multscalars, SCIPvarGetMultaggrScalars(var), nmultvars) );
          multvarssize = nmultvars;
 
-         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, mergemultiples) );
+         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, multvars, multscalars, &nmultvars, multvarssize, 
+               &multconstant, &multrequiredsize, mergemultiples) );
          if( multrequiredsize > multvarssize )
          {
             multvarssize = multrequiredsize;
             SCIP_CALL( SCIPsetReallocBufferArray(set, &multvars, multvarssize) );
             SCIP_CALL( SCIPsetReallocBufferArray(set, &multscalars, multvarssize) );
 
-            SCIP_CALL( SCIPvarGetActiveRepresentatives(set, multvars, multscalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, mergemultiples) );
+            SCIP_CALL( SCIPvarGetActiveRepresentatives(set, multvars, multscalars, &nmultvars, multvarssize, 
+                  &multconstant, &multrequiredsize, mergemultiples) );
             
             assert(multrequiredsize <= multvarssize );
          }
@@ -7814,7 +7816,16 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
       /* if the variable has no parent variables, it was generated during solving and has no corresponding original var */
       if( (*var)->nparentvars == 0 )
       {
-         *var = NULL;
+         if( SCIPvarGetStatus(*var) == SCIP_VARSTATUS_NEGATED  
+            && SCIPvarGetStatus((*var)->negatedvar) == SCIP_VARSTATUS_ORIGINAL )
+         {
+            *scalar *= -1.0;
+            *constant -= (*var)->data.negate.constant * (*scalar);
+            *var = (*var)->negatedvar;
+         }
+         else
+            *var = NULL;
+         
          return SCIP_OKAY;
       }
 
@@ -7853,7 +7864,8 @@ SCIP_RETCODE SCIPvarGetOrigvarSum(
          SCIPerrorMessage("unknown variable status\n");
          return SCIP_INVALIDDATA;
       }
-
+      
+      assert( parentvar != NULL );
       *var = parentvar;
    }
 
