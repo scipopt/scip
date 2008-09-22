@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.263 2008/09/22 15:24:37 bzfheinz Exp $
+# $Id: Makefile,v 1.264 2008/09/22 21:49:04 bzfberth Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -452,6 +452,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_mcf.o \
 			scip/sepa_redcost.o \
 			scip/sepa_strongcg.o \
+			scip/sepa_zerohalf.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o

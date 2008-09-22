@@ -124,6 +124,7 @@ plugins:
 - the c-MIR separator now also tries to get rid of implicit integer variables by aggregation
 - new heuristic DINS (distance induced neighborhood search by Ghosh)
 - new presolver boundshift (presol_boundshift.{c,h}); this presolver is currently turned off with default parameter setting
+- new separator sepa_zerohalf.{c,h}; separates {0,1/2}-Cuts according to Fischetti and Lodi
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),
