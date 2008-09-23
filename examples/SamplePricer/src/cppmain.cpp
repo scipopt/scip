@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.7 2007/11/13 17:21:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.8 2008/09/23 20:16:57 bzfheinz Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for p-median pricer example
@@ -79,7 +79,7 @@ SCIP_RETCODE fromCommandLine(
 
    printf("\nread problem <%s>\n", filename);
    printf("============\n\n");
-   SCIP_CALL( SCIPreadProb(scip, filename) );
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
 
    /*******************
