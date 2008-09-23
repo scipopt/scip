@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.30 2008/04/17 17:49:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.31 2008/09/23 18:50:32 bzfheinz Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -61,6 +61,7 @@ SCIP_RETCODE SCIPreaderRead(
    SCIP_READER*          reader,             /**< reader */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           filename,           /**< name of the input file */
+   const char*           extension,          /**< extension of the input file name */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

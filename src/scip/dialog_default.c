@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.93 2008/09/23 13:40:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.94 2008/09/23 18:50:31 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -26,7 +26,6 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/pub_misc.h"
 #include "scip/dialog_default.h"
 
 
@@ -134,6 +133,43 @@ SCIP_Bool parseBoolValue(
 }
 
 
+/* display the reader information */
+static
+void displayReaders(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             reader,             /**< display reader which can read */
+   SCIP_Bool             writer              /**< display reader which can write */
+   )
+{
+   SCIP_READER** readers;
+   int nreaders;
+   int r;
+
+   assert( scip != NULL );
+   
+   readers = SCIPgetReaders(scip);
+   nreaders = SCIPgetNReaders(scip);
+
+   /* display list of readers */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " file reader          extension  description\n");
+   SCIPdialogMessage(scip, NULL, " -----------          ---------  -----------\n");
+   for( r = 0; r < nreaders; ++r )
+   {
+      if( (reader && SCIPreaderCanRead(readers[r])) || (writer && SCIPreaderCanWrite(readers[r])) )
+      {
+         SCIPdialogMessage(scip, NULL, " %-20s ", SCIPreaderGetName(readers[r]));
+         if( strlen(SCIPreaderGetName(readers[r])) > 20 )
+            SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+         SCIPdialogMessage(scip, NULL, "%9s  ", SCIPreaderGetExtension(readers[r]));
+         SCIPdialogMessage(scip, NULL, "%s", SCIPreaderGetDesc(readers[r]));
+         SCIPdialogMessage(scip, NULL, "\n");
+      }
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+}
+
+
 /* writes problem to file */
 static
 SCIP_RETCODE writeProblem(
@@ -155,39 +191,80 @@ SCIP_RETCODE writeProblem(
       *nextdialog = NULL;
       return SCIP_OKAY;
    }
+
    if( filename[0] != '\0' )
    {
+      char* tmpfilename;
+      char* extension;
+
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
-      if( transformed )
+      /* copy filename */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+      extension = NULL;
+      
+      do
       {
-         retcode = SCIPwriteTransProblem(scip, filename, genericnames);
-      }
-      else
-      {
-         retcode = SCIPwriteOrigProblem(scip, filename, genericnames);
-      }
+         if( transformed )
+            retcode = SCIPwriteTransProblem(scip, tmpfilename, extension, genericnames);
+         else
+            retcode = SCIPwriteOrigProblem(scip, tmpfilename, extension, genericnames);
+      
+         if( retcode == SCIP_FILECREATEERROR )
+         {
+            SCIPdialogMessage(scip, NULL, "error creating the file <%s>\n", filename);
+            SCIPdialoghdlrClearBuffer(dialoghdlr);
+            break;
+         }         
+         else if(retcode == SCIP_WRITEERROR )
+         {
+            SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
+            SCIPdialoghdlrClearBuffer(dialoghdlr);
+            break;
+         }
+         else if ( retcode == SCIP_PLUGINNOTFOUND )
+         {
+            /* ask user once for a suitable reader */
+            if( extension == NULL )
+            {
+               SCIPdialogMessage(scip, NULL, "no reader for requested output format\n");
 
-      if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
-      {
-         SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
-         SCIPdialoghdlrClearBuffer(dialoghdlr);
+               SCIPdialogMessage(scip, NULL, "following readers are avaliable for writing:\n");
+               displayReaders(scip, FALSE, TRUE);
+         
+               SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+                     "select a suitable reader by extension (or return): ", &extension, &endoffile) );
+         
+               if( extension[0] == '\0' )
+                  break;
+            }
+            else
+            {
+               SCIPdialogMessage(scip, NULL, "no reader for output in <%s> format\n", extension);
+               extension = NULL;
+            }
+         }
+         else
+         {
+            /* check for unexpected errors */
+            SCIP_CALL( retcode );
+
+            /* print result message if writing was successful */
+            if ( transformed )
+               SCIPdialogMessage(scip, NULL, "written transformed problem to file <%s>\n", tmpfilename);
+            else
+               SCIPdialogMessage(scip, NULL, "written original problem to file <%s>\n", tmpfilename);
+            break;
+         }
       }
-      else if ( retcode == SCIP_OKAY )
-      {
-	 if ( transformed )
-	    SCIPdialogMessage(scip, NULL, "written transformed problem to file <%s>\n", filename);
-	 else
-	    SCIPdialogMessage(scip, NULL, "written original problem to file <%s>\n", filename);
-      }
-      else
-      {
-         SCIP_CALL( retcode );
-      }
+      while (extension != NULL );
+      
+      SCIPfreeBufferArray(scip, &tmpfilename);
    }
-
+   
    return SCIP_OKAY;
 }
+
 
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu)
@@ -650,32 +727,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
 /** dialog execution method for the display readers command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders)
 {  /*lint --e{715}*/
-   SCIP_READER** readers;
-   int nreaders;
-   int i;
-
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
-   readers = SCIPgetReaders(scip);
-   nreaders = SCIPgetNReaders(scip);
-
-   /* display list of readers */
-   SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " file reader          extension  description\n");
-   SCIPdialogMessage(scip, NULL, " -----------          ---------  -----------\n");
-   for( i = 0; i < nreaders; ++i )
-   {
-      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPreaderGetName(readers[i]));
-      if( strlen(SCIPreaderGetName(readers[i])) > 20 )
-         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
-      SCIPdialogMessage(scip, NULL, "%9s  ", SCIPreaderGetExtension(readers[i]));
-      SCIPdialogMessage(scip, NULL, "%s", SCIPreaderGetDesc(readers[i]));
-      SCIPdialogMessage(scip, NULL, "\n");
-   }
-   SCIPdialogMessage(scip, NULL, "\n");
-
+   /* print reader information */
+   displayReaders(scip, TRUE, TRUE);
+   
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
+   
    return SCIP_OKAY;
 }
 
@@ -1008,16 +1066,60 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
 
       if( SCIPfileExists(filename) )
       {
-         retcode = SCIPreadProb(scip, filename);
-         if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+         char* tmpfilename;
+         char* extension;
+
+         /* copy filename */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+         extension = NULL;
+         
+         do
          {
-            SCIPdialogMessage(scip, NULL, "error reading file <%s>\n", filename);
-            SCIP_CALL( SCIPfreeProb(scip) );
-         }
-         else
-         {
-            SCIP_CALL( retcode );
-         }
+            retcode = SCIPreadProb(scip, tmpfilename, extension);
+            if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+            {
+               if( extension == NULL )
+                  SCIPdialogMessage(scip, NULL, "error reading file <%s>\n", tmpfilename);
+               else
+                  SCIPdialogMessage(scip, NULL, "error reading file <%s> using <%s> file format\n", 
+                     tmpfilename, extension);
+               
+               SCIP_CALL( SCIPfreeProb(scip) );
+               break;
+            }
+            else if( retcode == SCIP_PLUGINNOTFOUND )
+            {
+               /* ask user once for a suitable reader */
+               if( extension == NULL )
+               {
+                  SCIPdialogMessage(scip, NULL, "no reader for input file <%s> available\n", tmpfilename);
+
+                  SCIPdialogMessage(scip, NULL, "following readers are avaliable for reading:\n");
+                  displayReaders(scip, TRUE, FALSE);
+               
+                  SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+                        "select a suitable reader by extension (or return): ", &extension, &endoffile) );
+               
+                  if( extension[0] == '\0' )
+                     break;
+               }
+               else
+               {
+                  SCIPdialogMessage(scip, NULL, "no reader for file extension <%s> available\n", extension);
+                  extension = NULL;
+               }
+            }
+            else
+            {
+               /* check if an unexpected error occurred during the reading process */
+               SCIP_CALL( retcode );
+               break;
+            }
+         }           
+         while (extension != NULL );
+             
+         /* free buffer array */
+         SCIPfreeBufferArray(scip, &tmpfilename);
       }
       else
       {

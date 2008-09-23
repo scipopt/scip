@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.36 2008/09/22 19:25:10 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.37 2008/09/23 18:50:32 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -540,7 +540,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
-         return SCIP_READERROR;
+         return SCIP_PARSEERROR;
       }
       if( path != NULL )
       {
@@ -560,7 +560,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       if( getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
-         return SCIP_READERROR;
+         return SCIP_PARSEERROR;
       }
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\nbase directory for ZIMPL parsing: <%s>\n\n", currentpath);
    }

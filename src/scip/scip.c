@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.476 2008/09/23 13:40:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.477 2008/09/23 18:50:32 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2555,36 +2555,51 @@ SCIP_RETCODE SCIPcreateProb(
 /** reads problem from file and initializes all solving data structures */
 SCIP_RETCODE SCIPreadProb(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< problem file name */
+   const char*           filename,           /**< problem file name */
+   const char*           extension           /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_RESULT result;
    int i;
-
+   char* tmpfilename;
+   char* fileextension;
+   
    assert(filename != NULL);
-
+   
    SCIP_CALL( checkStage(scip, "SCIPreadProb", TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
    /* try all readers until one could read the file */
    result = SCIP_DIDNOTRUN;
+
+   /* copy filename */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+   
+   if( extension == NULL )
+   {
+      /* get extension from filename */
+      SCIPsplitFilename(tmpfilename, NULL, NULL, &fileextension, NULL);
+   }
+   
+   assert( extension != NULL || fileextension != NULL );
+   
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
    {
-      SCIP_RETCODE retcode;
-
-      retcode = SCIPreaderRead(scip->set->readers[i], scip->set, filename, &result);
+      retcode = SCIPreaderRead(scip->set->readers[i], scip->set, filename, 
+         extension != NULL ? extension : fileextension, &result);
 
       /* check for reader errors */
-      if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
-         return retcode;
+      if( retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+         goto TERMINATE;
       SCIP_CALL( retcode );
    }
-
+   
    switch( result )
    {
    case SCIP_DIDNOTRUN:
-      SCIPwarningMessage("No reader for input file <%s> available\n", filename);
-      return SCIP_READERROR;
-
+      retcode = SCIP_PLUGINNOTFOUND;
+      break;
    case SCIP_SUCCESS:
       if( scip->origprob != NULL )
       {
@@ -2594,14 +2609,19 @@ SCIP_RETCODE SCIPreadProb(
             scip->origprob->nimplvars, scip->origprob->ncontvars,
             scip->origprob->nconss);
       }
-      return SCIP_OKAY;
-
+      retcode = SCIP_OKAY;
+      break;
    default:
       assert(i < scip->set->nreaders);
       SCIPerrorMessage("invalid result code <%d> from reader <%s> reading file <%s>\n",
          result, SCIPreaderGetName(scip->set->readers[i]), filename);
-      return SCIP_READERROR;
+      retcode = SCIP_READERROR;
    }  /*lint !e788*/
+
+ TERMINATE:
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &tmpfilename);
+   return retcode;
 }
 
 /* write original or transformed problem */
@@ -2609,40 +2629,54 @@ static
 SCIP_RETCODE writeProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    SCIP_Bool             transformed,        /**< output the transformed problem? */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
    SCIP_RETCODE retcode;
    char* tmpfilename;
-   char* extension = NULL;
+   char* fileextension = NULL;
+   char*  compression = NULL;
    FILE* file = NULL;
 
    assert(scip != NULL );
 
    if( filename != NULL &&  filename[0] != '\0' )
    {
-      /* get extension from filename */
-      SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
-      SCIPsplitFilename(tmpfilename, NULL, NULL, &extension, NULL);
-
       file = fopen(filename, "w");
       if( file == NULL )
       {
          SCIPerrorMessage("cannot create file <%s> for writing\n", filename);
          SCIPprintSysError(filename);
+         return SCIP_FILECREATEERROR;
+      }
+
+      /* get extension from filename */
+      SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
+      SCIPsplitFilename(tmpfilename, NULL, NULL, &fileextension, &compression);
+      
+      if( compression != NULL )
+      {
+         SCIPwarningMessage("currently it is not possible to write files with any compression\n");
 	 BMSfreeMemoryArray(&tmpfilename);
          return SCIP_FILECREATEERROR;
       }
+      
+      if( extension == NULL && fileextension == NULL )
+      {
+         SCIPwarningMessage("filename <%s> has no file extension, select default <cip> format for writing\n", filename);
+      }
    }
-
+   
    if( transformed )
    {
-      retcode = SCIPprintTransProblem(scip, file, extension, genericnames);
+      retcode = SCIPprintTransProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
    }
    else
    {
-      retcode =  SCIPprintOrigProblem(scip, file, extension, genericnames);
+      retcode =  SCIPprintOrigProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
    }
 
    if( filename != NULL &&  filename[0] != '\0' )
@@ -2652,7 +2686,7 @@ SCIP_RETCODE writeProblem(
 
 
    /* check for write errors */
-   if( retcode == SCIP_WRITEERROR )
+   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
       SCIP_CALL( retcode );
@@ -2664,6 +2698,8 @@ SCIP_RETCODE writeProblem(
 SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
@@ -2674,10 +2710,10 @@ SCIP_RETCODE SCIPwriteOrigProblem(
    assert( scip != NULL );
    assert( scip->origprob != NULL );
 
-   retcode = writeProblem(scip, filename, FALSE, genericnames);
+   retcode = writeProblem(scip, filename, extension, FALSE, genericnames);
 
    /* check for write errors */
-   if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
+   if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
       SCIP_CALL( retcode );
@@ -2689,6 +2725,8 @@ SCIP_RETCODE SCIPwriteOrigProblem(
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    )
 {
@@ -2699,10 +2737,10 @@ SCIP_RETCODE SCIPwriteTransProblem(
    assert( scip != NULL );
    assert( scip->transprob != NULL );
 
-   retcode = writeProblem(scip, filename, TRUE, genericnames);
+   retcode = writeProblem(scip, filename, extension, TRUE, genericnames);
 
    /* check for write errors */
-   if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
+   if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
       SCIP_CALL( retcode );
@@ -13865,8 +13903,7 @@ SCIP_RETCODE printProblem(
    switch( result )
    {
    case SCIP_DIDNOTRUN:
-      SCIPwarningMessage("No reader for output in <%s> format available\n", extension);
-      return SCIP_WRITEERROR;
+      return SCIP_PLUGINNOTFOUND;
 
    case SCIP_SUCCESS:
       return SCIP_OKAY;
@@ -13897,11 +13934,11 @@ SCIP_RETCODE SCIPprintOrigProblem(
    retcode = printProblem(scip, scip->origprob, file, extension, genericnames);
 
    /* check for write errors */
-   if( retcode == SCIP_WRITEERROR )
+   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
       SCIP_CALL( retcode );
-
+   
    return SCIP_OKAY;
 }
 
@@ -13923,7 +13960,7 @@ SCIP_RETCODE SCIPprintTransProblem(
    retcode = printProblem(scip, scip->transprob, file, extension, genericnames);
 
    /* check for write errors */
-   if( retcode == SCIP_WRITEERROR )
+   if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
       SCIP_CALL( retcode );

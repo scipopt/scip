@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_reader.h,v 1.16 2008/04/17 17:49:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: type_reader.h,v 1.17 2008/09/23 18:50:32 bzfheinz Exp $"
 
 /**@file   type_reader.h
  * @brief  type definitions for input file readers
@@ -49,7 +49,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
- *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERROR or SCIP_NOFILE.
+ *  If the reader detected an error in the input file, it should return with RETCODE SCIP_PARSEERROR or SCIP_NOFILE.
  */
 #define SCIP_DECL_READERREAD(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, const char* filename, SCIP_RESULT* result)
 

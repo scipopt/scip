@@ -76,13 +76,16 @@ interface:
 - Many changes in the SoPlex interface: The current one is tailored towards SoPlex 1.4 (aka 1.3.3). All SoPlex functions
   (where applicable) should now have an exception handling. The Bugfix for adding columns has been moved to SoPlex. 
   One can use ROW representation. Reading/writing of a basis has been implemented.
+- new parameters "extension" in SCIPreadProb() defining a desired file format or NULL if file extension should be use
+- new methods SCIPreaderCanRead() and SCIPreaderCanWrite() in pub_reader.h, these return TRUE if the corresponding 
+  reader is capable to read or write, respectively
 
 features:
 - the MPS reader is now able to write a problem in MPS format
 - new method SCIPwriteOrigProblem(), e.g., 
-  SCIPwriteOrigProblem(scip, "orig.lp", FALSE) prints the original problem in LP format in the file "orig.lp"
+  SCIPwriteOrigProblem(scip, "orig.lp", NULL, FALSE) prints the original problem in LP format in the file "orig.lp"
 - new method SCIPwriteTransProblem(), e.g.,
-  SCIPwriteOrigProblem(scip, NULL, FALSE) displays the transformed problem in CIP format 
+  SCIPwriteTransProblem(scip, NULL, NULL, FALSE) displays the transformed problem in CIP format 
 - new method SCIPgetProbvarLinearSum()
 - added SOS2 example
 - extended TSP example
@@ -112,6 +115,8 @@ features:
 - added coloring example in examples/Coloring
 - added test scripts for testing counting (make testcount)
 - allow cut selection based on support of inequality in orthogonality computation
+- advanced reading and writing dialog in interactive shell
+
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -262,6 +267,8 @@ fixed bugs:
 - corrected bug in the case when soplex threw an exception in autopricing
 - removed "epsilontic" bug in cons_linear.c due to adjusting left/right hand side in applyfixing 
 - fixed bug in SCIPvarGetOrigvarSum() concerning the corner case the a negated variable has no parent variable in original problem
+- fixed some SCIP_RETCODE bugs in reader_fix.c, reader_sol.c, reader_sos.c, and reader_zpl.c
+- fixed docu in type_reader.h
 
 SCIP version 1.00
 =================

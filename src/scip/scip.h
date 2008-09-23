@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.329 2008/09/22 19:25:10 bzfwanie Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.330 2008/09/23 18:50:32 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1296,7 +1296,9 @@ SCIP_RETCODE SCIPcreateProb(
 extern
 SCIP_RETCODE SCIPreadProb(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< problem file name */
+   const char*           filename,           /**< problem file name */
+   const char*           extension           /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    );
 
 /** writes original problem to file  */
@@ -1304,6 +1306,8 @@ extern
 SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
@@ -1312,6 +1316,8 @@ extern
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 

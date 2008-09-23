@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.11 2008/09/05 15:28:50 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.12 2008/09/23 18:50:32 bzfheinz Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -124,7 +124,7 @@ SCIP_RETCODE fromCommandLine(
 
    SCIPinfoMessage(scip, NULL, "\nread problem <%s>\n", filename);
    SCIPinfoMessage(scip, NULL, "============\n\n");
-   SCIP_CALL( SCIPreadProb(scip, filename) );
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
 
    /*******************

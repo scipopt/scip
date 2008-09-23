@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.44 2008/09/22 19:25:09 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.45 2008/09/23 18:50:31 bzfheinz Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -116,24 +116,17 @@ SCIP_RETCODE SCIPreaderRead(
    SCIP_READER*          reader,             /**< reader */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           filename,           /**< name of the input file */
+   const char*           extension,          /**< extension of the input file name */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    SCIP_RETCODE retcode;
-   char* tmpfilename;
-   char* path;
-   char* name;
-   char* extension;
-   char* compression;
 
    assert(reader != NULL);
    assert(set != NULL);
    assert(filename != NULL);
+   assert(extension != NULL);
    assert(result != NULL);
-
-   /* get path, name and extension from filename */
-   SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
-   SCIPsplitFilename(tmpfilename, &path, &name, &extension, &compression);
 
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerread != NULL )
@@ -147,11 +140,12 @@ SCIP_RETCODE SCIPreaderRead(
       retcode = SCIP_OKAY;
    }
 
-   BMSfreeMemoryArray(&tmpfilename);
-
    /* check for reader errors */
-   if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+   if( retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
       return retcode;
+
+   /* check if the result code is valid in case no reader error occurred */
+   assert( *result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS );
 
    SCIP_CALL( retcode );
 
@@ -378,4 +372,25 @@ const char* SCIPreaderGetExtension(
 
    return reader->extension;
 }
+
+/** return whether the reader can read files */
+SCIP_Bool SCIPreaderCanRead(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+   
+   return (reader->readerread != NULL);
+}
+
+/** return whether the reader can write files */
+SCIP_Bool SCIPreaderCanWrite(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   return (reader->readerwrite != NULL);
+}
+
 

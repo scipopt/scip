@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.11 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.12 2008/09/23 18:50:32 bzfheinz Exp $"
 
 /**@file   reader_fix.c
  * @ingroup FILEREADERS 
@@ -154,7 +154,7 @@ SCIP_RETCODE readSol(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "fixed %d variables from solution file <%s>\n", nfixed, filename);
 
    if( error )
-      return SCIP_READERROR;
+      return SCIP_PARSEERROR;
    else
       return SCIP_OKAY;
 }
@@ -182,7 +182,7 @@ SCIP_DECL_READERREAD(readerReadFix)
    {
       SCIPwarningMessage("reading of fixing file is only possible after a problem was created\n");
       *result = SCIP_DIDNOTRUN;
-      return SCIP_READERROR;
+      return SCIP_OKAY;
    }
 
    /* free transformed problem, s.t. fixings are applied to the original problem */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.21 2008/09/22 19:25:09 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.22 2008/09/23 18:50:32 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -145,11 +145,12 @@ void syntaxError(
    const char*           msg                 /**< error message */
    )
 {
+#if 0
    char formatstr[256];
-
+#endif
    assert(opbinput != NULL);
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s ('%s')\n",
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error in line %d: %s found <%s>\n",
       opbinput->linenumber, msg, opbinput->token);
    if( opbinput->linebuf[strlen(opbinput->linebuf)-1] == '\n' )
    {
@@ -159,8 +160,12 @@ void syntaxError(
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", opbinput->linebuf);
    }
+
+#if 0
    SCIPsnprintf(formatstr, 256, "         %%%ds\n", opbinput->linepos);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
+#endif
+
    opbinput->haserror = TRUE;
 }
 
@@ -672,6 +677,8 @@ SCIP_RETCODE getVariable(
    name = opbinput->token; 
    assert(name != NULL);
    
+
+   /* parse AND terms */
    while(!isdigit( *name ) && !isTokenChar(*name) && !opbinput->haserror )
    {
       negated = FALSE;
@@ -712,6 +719,10 @@ SCIP_RETCODE getVariable(
       name = opbinput->token;
    }
    
+   /* check if we found at least on variable */
+   if( nvars == 0 )
+      syntaxError(scip, opbinput, "expected a variable name");
+
    pushToken(opbinput);
    
    if( nvars > 1 )
@@ -728,7 +739,7 @@ SCIP_RETCODE getVariable(
          SCIP_CONS* cons;
          char varname[128];
          
-         SCIPsnprintf(varname, 128, "andresultant%d", opbinput->nandconss);
+         SCIPsnprintf(varname, SCIP_MAXSTRLEN, "andresultant%d", opbinput->nandconss);
          SCIP_CALL( createVariable(scip, var, varname) );
          assert( var != NULL );
         
@@ -748,8 +759,11 @@ SCIP_RETCODE getVariable(
          opbinput->andconss[opbinput->nandconss] = cons;
          opbinput->nandconss++;
 
+         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+         
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
       }
    }
    
@@ -790,11 +804,11 @@ SCIP_RETCODE readCoefficients(
    *ncoefs = 0;
    *newsection = FALSE;
 
-   /* read the first token, which may be the name of the line */
+   SCIPdebugMessage("read coefficients\n");
 
+   /* read the first token, which may be the name of the line */
    if( getNextToken(opbinput) )
    {
-
       /* remember the token in the token buffer */
       swapTokenBuffer(opbinput);
 
@@ -803,7 +817,7 @@ SCIP_RETCODE readCoefficients(
       {
          if( strcmp(opbinput->token, ":") == 0 )
          {
-            /* the second token was a colon: the first token is the line name */
+            /* the second token was a colon ':' the first token is a constraint name */
             strncpy(name, opbinput->tokenbuf, SCIP_MAXSTRLEN);
             name[SCIP_MAXSTRLEN-1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", opbinput->linenumber, name);
@@ -811,8 +825,7 @@ SCIP_RETCODE readCoefficients(
          else
          {
             /* the second token was no colon: push the tokens back onto the token stack and parse them as coefficients */
-            SCIPdebugMessage("token = %s\ntokenbuf = %s\n", opbinput->token, opbinput->tokenbuf);
-         
+            SCIPdebugMessage("(line %d) constraint has no name\n", opbinput->linenumber);
             pushToken(opbinput);
             pushBufferToken(opbinput);
          }
@@ -841,10 +854,10 @@ SCIP_RETCODE readCoefficients(
    havesign = FALSE;
    havevalue = FALSE;
    *ncoefs = 0;
-   while( getNextToken(opbinput) )
+   while( getNextToken(opbinput) && !hasError(opbinput) )
    {
       SCIP_VAR* var;
-
+      
       if( isEndLine(opbinput) )
       {
          *newsection = TRUE;
@@ -891,7 +904,7 @@ SCIP_RETCODE readCoefficients(
       SCIP_CALL( getVariable(scip, opbinput, &var) );
       
       /* insert the coefficient */
-      SCIPdebugMessage("(line %d) read coefficient: %+g<%s>\n", opbinput->linenumber, coefsign * coef, SCIPvarGetName(var));
+      SCIPdebugMessage("(line %d) found term: %+g<%s>\n", opbinput->linenumber, coefsign * coef, SCIPvarGetName(var));
       if( !SCIPisZero(scip, coef) )
       {
          /* resize the vars and coefs array if needed */
@@ -985,6 +998,7 @@ SCIP_RETCODE readConstraints(
 
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, opbinput, name, &vars, &coefs, &ncoefs, &newsection) );
+
    if( hasError(opbinput) || opbinput->eof )
       goto TERMINATE;
    if( newsection )
@@ -1109,7 +1123,7 @@ SCIP_RETCODE readOPBFile(
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-   while( !SCIPfeof( opbinput->file ) )
+   while( !SCIPfeof( opbinput->file ) && !hasError(opbinput) )
    {
       SCIP_CALL( readConstraints(scip, opbinput) );
    }
