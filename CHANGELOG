@@ -157,8 +157,9 @@ parameters:
 - new parameter "constraints/logicor/presolusehashing" to use hashing comparison in cons_logicor.c; default value is TRUE
 - new parameter "constraints/linear/presolusehashing" to use hashing comparison in cons_linear.c; default value is TRUE
 - disabled zerohalf cuts by default
-- adjusted all predefined setting files, e.g., settings/cuts/fast.set, such that they are constitent wrt 
+- adjusted all predefined settings files, e.g., settings/cuts/fast.set, such that they are consistent wrt 
   removed, added, and changed parameter values of scip.
+- added predefined settings file presolving/aggressive.set
 
 performance improvements:
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity

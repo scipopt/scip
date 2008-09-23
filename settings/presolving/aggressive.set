@@ -8,11 +8,11 @@ presolving/abortfac = 0.0001
 
 # maximal number of restarts (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: -1]
-presolving/maxrestarts = 0
+presolving/maxrestarts = -1
 
 # fraction of integer variables that were fixed in the root node triggering a restart with preprocessing after root node evaluation
 # [type: real, range: [0,1], default: 0.05]
-presolving/restartfac = 0.05
+presolving/restartfac = 0.03
 
 # fraction of integer variables that were fixed in the root node triggering an immediate restart with preprocessing
 # [type: real, range: [0,1], default: 0.2]
@@ -24,7 +24,7 @@ presolving/subrestartfac = 1
 
 # minimal fraction of integer variables removed after restart to allow for an additional restart
 # [type: real, range: [0,1], default: 0.1]
-presolving/restartminred = 0.1
+presolving/restartminred = 0.06
 
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -36,11 +36,15 @@ constraints/linear/delaypresol = FALSE
 
 # should pairwise constraint comparison be performed in presolving?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/linear/presolpairwise = FALSE
+constraints/linear/presolpairwise = TRUE
 
 # should hash table be used for detecting redundant constraints in advance
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/linear/presolusehashing = TRUE
+
+# maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+constraints/linear/maxaggrnormscale = 0
 
 # should presolving search for aggregations in equations
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -48,15 +52,11 @@ constraints/linear/aggregatevariables = TRUE
 
 # should presolving try to simplify inequalities
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/linear/simplifyinequalities = FALSE
+constraints/linear/simplifyinequalities = TRUE
 
 # should dual presolving steps be preformed?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/linear/dualpresolving = TRUE
-
-# maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)
-# [type: real, range: [0,1.79769313486232e+308], default: 0]
-constraints/linear/maxaggrnormscale = 0
 
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -68,7 +68,7 @@ constraints/and/delaypresol = FALSE
 
 # should pairwise constraint comparison be performed in presolving?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/and/presolpairwise = FALSE
+constraints/and/presolpairwise = TRUE
 
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -110,17 +110,13 @@ constraints/knapsack/maxprerounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/knapsack/delaypresol = FALSE
 
-# maximal number of cardinality inequalities lifted per separation round (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/knapsack/maxnumcardlift = 0
-
-# should disaggregation of knapsack constraints be allowed in preprocessing?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/knapsack/disaggregation = FALSE
-
 # enable linear upgrading for constraint handler <knapsack>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/linear/upgrade/knapsack = TRUE
+
+# should disaggregation of knapsack constraints be allowed in preprocessing?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/knapsack/disaggregation = TRUE
 
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -130,17 +126,17 @@ constraints/logicor/maxprerounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/logicor/delaypresol = FALSE
 
+# enable linear upgrading for constraint handler <logicor>
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/upgrade/logicor = TRUE
+
 # should pairwise constraint comparison be performed in presolving?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/logicor/presolpairwise = FALSE
+constraints/logicor/presolpairwise = TRUE
 
 # should hash table be used for detecting redundant constraints in advance
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/logicor/presolusehashing = TRUE
-
-# enable linear upgrading for constraint handler <logicor>
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/linear/upgrade/logicor = TRUE
 
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -158,17 +154,17 @@ constraints/setppc/maxprerounds = -1
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/setppc/delaypresol = FALSE
 
+# enable linear upgrading for constraint handler <setppc>
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/linear/upgrade/setppc = TRUE
+
 # should pairwise constraint comparison be performed in presolving?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/setppc/presolpairwise = FALSE
+constraints/setppc/presolpairwise = TRUE
 
 # should hash table be used for detecting redundant constraints in advance
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/setppc/presolusehashing = TRUE
-
-# enable linear upgrading for constraint handler <setppc>
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/linear/upgrade/setppc = TRUE
 
 # maximal number of presolving rounds the constraint handler participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -208,7 +204,7 @@ constraints/xor/delaypresol = FALSE
 
 # should pairwise constraint comparison be performed in presolving?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/xor/presolpairwise = FALSE
+constraints/xor/presolpairwise = TRUE
 
 # priority of presolver <boundshift>
 # [type: int, range: [-536870912,536870911], default: 7900000]
@@ -216,7 +212,7 @@ presolving/boundshift/priority = 7900000
 
 # maximal number of presolving rounds the presolver participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: 0]
-presolving/boundshift/maxrounds = 0
+presolving/boundshift/maxrounds = -1
 
 # should presolver be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -276,7 +272,7 @@ presolving/probing/priority = -100000
 
 # maximal number of presolving rounds the presolver participates in (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
-presolving/probing/maxrounds = 0
+presolving/probing/maxrounds = -1
 
 # should presolver be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -296,11 +292,11 @@ presolving/probing/maxfixings = 50
 
 # maximal number of successive probings without fixings, until probing is aborted (0: don't abort)
 # [type: int, range: [0,2147483647], default: 2000]
-presolving/probing/maxuseless = 2000
+presolving/probing/maxuseless = 3000
 
 # maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)
 # [type: int, range: [0,2147483647], default: 100]
-presolving/probing/maxtotaluseless = 100
+presolving/probing/maxtotaluseless = 150
 
 # maximal number of probings without fixings, until probing is aborted (0: don't abort)
 # [type: int, range: [0,2147483647], default: 0]
