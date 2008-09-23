@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cmain.c,v 1.5 2007/11/13 17:21:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cmain.c,v 1.6 2008/09/23 20:18:26 bzfheinz Exp $"
 
 /**@file   cmain.c
  * @brief  main file for healthcare pricer example
@@ -69,7 +69,7 @@ SCIP_RETCODE fromCommandLine(
 
    printf("\nread problem <%s>\n", filename);
    printf("============\n\n");
-   SCIP_CALL( SCIPreadProb(scip, filename) );
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
 
    /*******************
