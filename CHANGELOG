@@ -124,7 +124,7 @@ plugins:
 - the c-MIR separator now also tries to get rid of implicit integer variables by aggregation
 - new heuristic DINS (distance induced neighborhood search by Ghosh)
 - new presolver boundshift (presol_boundshift.{c,h}); this presolver is currently turned off with default parameter setting
-- new separator sepa_zerohalf.{c,h}; separates {0,1/2}-Cuts according to Fischetti and Lodi
+- new separator sepa_zerohalf.{c,h}; separates {0,1/2}-Cuts according to Caprara and Fischetti
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),
@@ -156,6 +156,7 @@ parameters:
 - new parameter "constraints/setppc/presolusehashing" to use hashing comparison in cons_setppc.c; default value is TRUE
 - new parameter "constraints/logicor/presolusehashing" to use hashing comparison in cons_logicor.c; default value is TRUE
 - new parameter "constraints/linear/presolusehashing" to use hashing comparison in cons_linear.c; default value is TRUE
+- disabled zerohalf cuts by default
 
 performance improvements:
 - improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity

@@ -48,7 +48,7 @@
  * - Alberto Caprara, Matteo Fischetti. ${0,1/2}$-{C}hv\'{a}tal-{G}omory cuts. Math. Programming, Volume 74, p221--235, 1996.
  * - Arie M. C. A. Koster, Adrian Zymolka and Manuel Kutschka. {A}lgorithms to separate $\{0,1/2}$-{C}hv\'{a}tal-{G}omory cuts. {A}lgorithms - {ESA} 2007: 15th {A}nnual {E}uropean {S}ymposium, Eilat, Israel, October 8-10, 2007, Proceedings. Lecture Notes in Computer Science, Volume 4698, p693--704, 2007.
  * - Arie M. C. A. Koster, Adrian Zymolka and Manuel Kutschka. {A}lgorithms to separate ${0,1/2}$-{C}hv\'{a}tal-{G}omory cuts (Extended Version). ZIB Report 07-10, Zuse Institute Berlin, 2007. http://www.zib.de/Publications/Reports/ZR-07-10.pdf
- * - Manuel Kutschka. Algorithmen zur Separierung von ${0,1/2}$-Schnitten. Diplomarbeit. Technische Universität Berlin, 2007.
+ * - Manuel Kutschka. Algorithmen zur Separierung von ${0,1/2}$-Schnitten. Diplomarbeit. Technische Universitaet Berlin, 2007.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -75,8 +75,8 @@
 
 #define SEPA_NAME                   "zerohalf"
 #define SEPA_DESC     "{0,1/2}-cuts separator"
-#define SEPA_PRIORITY                     -500
-#define SEPA_FREQ                            0 
+#define SEPA_PRIORITY                    -6000
+#define SEPA_FREQ                           -1
 #define SEPA_DELAY                       FALSE
 
 
@@ -113,7 +113,7 @@
 
 #define DEFAULT_MAXROUNDS                    5 /**< maximal number of zerohalf separation rounds per node
                                                   (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT               -1 /**< maximal number of zerohalf separation rounds in the root node
+#define DEFAULT_MAXROUNDSROOT               10 /**< maximal number of zerohalf separation rounds in the root node
                                                   (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS                 50 /**< maximal number of {0,1/2}-cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT            500 /**< maximal number of {0,1/2}-cuts separated per separation round
