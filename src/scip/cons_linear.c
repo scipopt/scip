@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.309 2008/09/22 22:05:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.310 2008/09/23 13:40:04 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -7432,13 +7432,18 @@ SCIP_RETCODE fullDualPresolve(
             SCIP_Bool ismaxsettoinfinity;
             int arrayindex;
 
-            /* we do not need to process binary variables */
             var = consdata->vars[i];
+            val = consdata->vals[i];
+
+            /* check if still all integer variables have integral coefficients */
+            if( SCIPvarIsIntegral(var) )
+               integralcoefs = integralcoefs && SCIPisIntegral(scip, val);
+
+            /* we do not need to process binary variables */
             if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
                continue;
 
             /* calculate residual activity bounds if variable would be fixed to zero */
-            val = consdata->vals[i];
             consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity, &isminsettoinfinity, &ismaxsettoinfinity);
 
             /* check minresactivity for reliablility */
@@ -7497,9 +7502,6 @@ SCIP_RETCODE fullDualPresolve(
                   newredlb = SCIPceil(scip, newredlb);
                if( !SCIPisInfinity(scip, -newredub) )
                   newredub = SCIPfloor(scip, newredub);
-
-               /* check if still all integer variables have integral coefficients */
-               integralcoefs = integralcoefs && SCIPisIntegral(scip, val);
             }
 
             /* update redundancy bounds */
@@ -7538,7 +7540,7 @@ SCIP_RETCODE fullDualPresolve(
                   isimplint[contv] = FALSE;
                }
             }
-            else if( nconscontvars == 1 )
+            else
             {
                SCIP_VAR* var;
                SCIP_Real val;
@@ -7549,6 +7551,7 @@ SCIP_RETCODE fullDualPresolve(
                 * this is the interesting case, and we have to check whether the coefficient is +/-1 and the corresponding
                 * side(s) of the constraint is integral
                 */
+               assert(nconscontvars == 1);
                assert(0 <= contvarpos && contvarpos < consdata->nvars);
                var = consdata->vars[contvarpos];
                val = consdata->vals[contvarpos];

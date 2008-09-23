@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.210 2008/08/29 16:05:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.211 2008/09/23 13:40:05 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1810,17 +1810,41 @@ SCIP_RETCODE treeApplyPendingBdchgs(
    npendingbdchgs = tree->npendingbdchgs;
    for( i = 0; i < npendingbdchgs; ++i )
    {
+      SCIP_VAR* var;
+
+      var = tree->pendingbdchgs[i].var;
       assert(SCIPnodeGetDepth(tree->pendingbdchgs[i].node) < tree->cutoffdepth);
-      assert(SCIPvarGetConflictingBdchgDepth(tree->pendingbdchgs[i].var, set, tree->pendingbdchgs[i].boundtype,
+      assert(SCIPvarGetConflictingBdchgDepth(var, set, tree->pendingbdchgs[i].boundtype,
             tree->pendingbdchgs[i].newbound) == -1);
 
-      SCIPdebugMessage("applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(tree->pendingbdchgs[i].var),
-         SCIPvarGetLbLocal(tree->pendingbdchgs[i].var), SCIPvarGetUbLocal(tree->pendingbdchgs[i].var), 
+      SCIPdebugMessage("applying pending bound change <%s>[%g,%g] %s %g\n", SCIPvarGetName(var),
+         SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
          tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
          tree->pendingbdchgs[i].newbound);
 
+      /* ignore bounds that are now redundant (for example, multiple entries in the pendingbdchgs for the same
+       * variable)
+       */
+      if( tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_LOWER )
+      {
+         SCIP_Real lb;
+
+         lb = SCIPvarGetLbLocal(var);
+         if( !SCIPsetIsGT(set, tree->pendingbdchgs[i].newbound, lb) )
+            continue;
+      }
+      else
+      {
+         SCIP_Real ub;
+
+         assert(tree->pendingbdchgs[i].boundtype == SCIP_BOUNDTYPE_UPPER);
+         ub = SCIPvarGetUbLocal(var);
+         if( !SCIPsetIsLT(set, tree->pendingbdchgs[i].newbound, ub) )
+            continue;
+      }
+
       SCIP_CALL( SCIPnodeAddBoundinfer(tree->pendingbdchgs[i].node, blkmem, set, stat, tree, lp, branchcand, eventqueue,
-            tree->pendingbdchgs[i].var, tree->pendingbdchgs[i].newbound, tree->pendingbdchgs[i].boundtype,
+            var, tree->pendingbdchgs[i].newbound, tree->pendingbdchgs[i].boundtype,
             tree->pendingbdchgs[i].infercons, tree->pendingbdchgs[i].inferprop, tree->pendingbdchgs[i].inferinfo,
             tree->pendingbdchgs[i].probingchange) );
       assert(tree->npendingbdchgs == npendingbdchgs); /* this time, the bound change can be applied! */

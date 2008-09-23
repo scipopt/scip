@@ -433,7 +433,10 @@ fixed bugs:
 - fixed bug with almost integral multi-aggregation in dual presolve of linear constraint handler
 - fixed bug with numerics in update of min/maxactivity in linear constraint handler
 - fixed bug with numerics in linear constraint handler due to non-representable BOUNDSCALETOL
-
+- SCIPwrite{LP,MIP} may no longer be called after solving, since the LP data structures may not be valid
+- fixed potential bug with non-existent LP in SCIPwrite{LP,MIP}
+- fixed bug with multiple pending bound changes on some variable
+- fixed bug with fractional coefficients of binary variables in cont --> impl int upgrading
 
 SCIP version 0.90
 =================

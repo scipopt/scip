@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.288 2008/09/22 22:46:16 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.289 2008/09/23 13:40:04 bzfberth Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -12644,7 +12644,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    SCIP_OBJSENSE         objsense,           /**< objective sense */
    
    SCIP_Real             objscale,           /**< objective scaling faktor */
-   SCIP_Real             objoffset           /**< objective offset, eg. caused by variable fixings in presolving */
+   SCIP_Real             objoffset           /**< objective offset, e.g., caused by variable fixings in presolving */
    )
 {
    FILE* file;

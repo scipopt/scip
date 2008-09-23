@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.475 2008/09/22 19:56:15 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.476 2008/09/23 13:40:05 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9810,10 +9810,18 @@ SCIP_RETCODE SCIPwriteLP(
    const char*           fname               /**< file name */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   SCIP_Bool cutoff;
+   
+   SCIP_CALL( checkStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
+   {
+      SCIP_CALL( SCIPconstructCurrentLP(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+         scip->pricestore, scip->sepastore, scip->branchcand, scip->eventqueue, &cutoff) );
+   }
 
    SCIP_CALL( SCIPlpWrite(scip->lp, fname) );
-
+   
    return SCIP_OKAY;
 }
 
@@ -9826,7 +9834,7 @@ SCIP_RETCODE SCIPwriteMIP(
    SCIP_Bool             origobj             /**< should the original objective function be used? */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPwriteMIP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpWriteMip(scip->lp, scip->set, fname, genericnames,
          origobj, scip->origprob->objsense, scip->transprob->objscale, scip->transprob->objoffset) );

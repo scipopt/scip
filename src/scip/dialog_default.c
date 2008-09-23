@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.92 2008/09/22 19:25:08 bzfwanie Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.93 2008/09/23 13:40:04 bzfberth Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -1591,7 +1591,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
       return SCIP_OKAY;
    }
-   if( SCIPgetStage(scip) > SCIP_STAGE_SOLVED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
    {
       SCIPdialogMessage(scip, NULL, "There is no node LP relaxation after problem was solved\n");
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1638,7 +1638,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
       SCIPdialogMessage(scip, NULL, "There is no node MIP relaxation before solving starts\n");
       return SCIP_OKAY;
    }
-   if( SCIPgetStage(scip) > SCIP_STAGE_SOLVED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
    {
       SCIPdialogMessage(scip, NULL, "There is no node MIP relaxation after problem was solved\n");
       return SCIP_OKAY;
