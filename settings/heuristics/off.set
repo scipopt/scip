@@ -154,6 +154,54 @@ heuristics/crossover/minimprove = 0.01
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/crossover/randomization = TRUE
 
+# priority of heuristic <dins>
+# [type: int, range: [-536870912,536870911], default: -1105000]
+heuristics/dins/priority = -1105000
+
+# frequency for calling primal heuristic <dins> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/dins/freq = -1
+
+# frequency offset for calling primal heuristic <dins>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/dins/freqofs = 0
+
+# maximal depth level to call primal heuristic <dins> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/dins/maxdepth = -1
+
+# number of nodes added to the contingent of the total nodes
+# [type: longint, range: [0,9223372036854775807], default: 5000]
+heuristics/dins/nodesofs = 5000
+
+# contingent of sub problem nodes in relation to the number of nodes of the original problem
+# [type: real, range: [0,1], default: 0.05]
+heuristics/dins/nodesquot = 0.05
+
+# minimum number of nodes required to start the subproblem
+# [type: longint, range: [0,9223372036854775807], default: 500]
+heuristics/dins/minnodes = 500
+
+# number of pool-solutions to be checked for flag array update (for hard fixing of binary variables)
+# [type: int, range: [1,2147483647], default: 5]
+heuristics/dins/solnum = 5
+
+# radius (using Manhattan metric) of the incumbent's neighborhood to be searched
+# [type: int, range: [1,2147483647], default: 18]
+heuristics/dins/neighborhoodsize = 18
+
+# maximum number of nodes to regard in the subproblem
+# [type: longint, range: [0,9223372036854775807], default: 5000]
+heuristics/dins/maxnodes = 5000
+
+# factor by which DINS should at least improve the incumbent  
+# [type: real, range: [0,1], default: 0.01]
+heuristics/dins/minimprove = 0.01
+
+# number of nodes without incumbent change that heuristic should wait
+# [type: longint, range: [0,2147483647], default: 0]
+heuristics/dins/nwaitingnodes = 0
+
 # priority of heuristic <feaspump>
 # [type: int, range: [-536870912,536870911], default: -1000000]
 heuristics/feaspump/priority = -1000000
@@ -179,8 +227,8 @@ heuristics/feaspump/maxlpiterquot = 0.01
 heuristics/feaspump/maxlpiterofs = 1000
 
 # total number of feasible solutions found up to which heuristic is called (-1: no limit)
-# [type: int, range: [-1,2147483647], default: 5]
-heuristics/feaspump/maxsols = 5
+# [type: int, range: [-1,2147483647], default: 2]
+heuristics/feaspump/maxsols = 2
 
 # factor by which the regard of the objective is decreased in each round, 1.0 for dynamic
 # [type: real, range: [0,1], default: 1]
@@ -205,6 +253,10 @@ heuristics/feaspump/cyclelength = 3
 # number of iterations until a random perturbation is forced
 # [type: int, range: [1,2147483647], default: 100]
 heuristics/feaspump/perturbfreq = 100
+
+# should the feasibility pump be called at root node before cut separation?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+heuristics/feaspump/beforecuts = FALSE
 
 # priority of heuristic <fixandinfer>
 # [type: int, range: [-536870912,536870911], default: -500000]
@@ -529,6 +581,10 @@ heuristics/mutation/nodesquot = 0.1
 # percentage of integer variables that have to be fixed 
 # [type: real, range: [1e-06,0.999999], default: 0.8]
 heuristics/mutation/minfixingrate = 0.8
+
+# factor by which Mutation should at least improve the incumbent
+# [type: real, range: [0,1], default: 0.01]
+heuristics/mutation/minimprove = 0.01
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1004000]

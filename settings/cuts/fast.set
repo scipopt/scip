@@ -26,6 +26,10 @@ separating/objparalfac = 0.0001
 # [type: real, range: [0,1e+98], default: 1]
 separating/orthofac = 1
 
+# function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete)
+# [type: char, range: {ed}, default: e]
+separating/orthofunc = e
+
 # row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um, 'd'iscrete)
 # [type: char, range: {emsd}, default: e]
 separating/efficacynorm = e
@@ -114,13 +118,33 @@ constraints/and/delaysepa = FALSE
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/bounddisjunction/sepafreq = -1
 
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/bounddisjunction/delaysepa = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/conjunction/sepafreq = -1
 
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/conjunction/delaysepa = FALSE
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/countsols/sepafreq = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/countsols/delaysepa = FALSE
+
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/integral/sepafreq = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/integral/delaysepa = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -184,6 +208,22 @@ constraints/setppc/delaysepa = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
+constraints/SOS1/sepafreq = 0
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/SOS1/delaysepa = FALSE
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 0]
+constraints/SOS2/sepafreq = 0
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/SOS2/delaysepa = FALSE
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 0]
 constraints/varbound/sepafreq = 0
 
 # should separation method be delayed, if other separators found cuts?
@@ -197,6 +237,10 @@ constraints/xor/sepafreq = 0
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/xor/delaysepa = FALSE
+
+# priority of separator <clique>
+# [type: int, range: [-536870912,536870911], default: -5000]
+separating/clique/priority = -5000
 
 # frequency for calling separator <clique> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -237,6 +281,10 @@ separating/clique/cliquetablemem = 20000
 # minimal density of cliques to use a dense clique table
 # [type: real, range: [0,1], default: 0.05]
 separating/clique/cliquedensity = 0.05
+
+# priority of separator <cmir>
+# [type: int, range: [-536870912,536870911], default: -3000]
+separating/cmir/priority = -3000
 
 # frequency for calling separator <cmir> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -314,6 +362,10 @@ separating/cmir/maxaggdensity = 0.2
 # [type: real, range: [0,1], default: 0.05]
 separating/cmir/maxrowdensity = 0.05
 
+# additional number of variables allowed in row on top of density
+# [type: int, range: [0,2147483647], default: 100]
+separating/cmir/densityoffset = 100
+
 # maximal row aggregation factor
 # [type: real, range: [0,1.79769313486232e+308], default: 10000]
 separating/cmir/maxrowfac = 10000
@@ -321,10 +373,6 @@ separating/cmir/maxrowfac = 10000
 # maximal number of different deltas to try (-1: unlimited)
 # [type: int, range: [-1,2147483647], default: -1]
 separating/cmir/maxtestdelta = -1
-
-# maximal number of different deltas to try in the root node (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/cmir/maxtestdeltaroot = -1
 
 # maximal number of active continuous variables in aggregated row
 # [type: int, range: [0,2147483647], default: 10]
@@ -349,6 +397,10 @@ separating/cmir/fixintegralrhs = TRUE
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/cmir/dynamiccuts = TRUE
+
+# priority of separator <flowcover>
+# [type: int, range: [-536870912,536870911], default: -4000]
+separating/flowcover/priority = -4000
 
 # frequency for calling separator <flowcover> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -422,6 +474,10 @@ separating/flowcover/multbyminusone = TRUE
 # [type: int, range: [0,2147483647], default: 10]
 separating/flowcover/maxtestdelta = 10
 
+# priority of separator <gomory>
+# [type: int, range: [-536870912,536870911], default: -1000]
+separating/gomory/priority = -1000
+
 # frequency for calling separator <gomory> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 separating/gomory/freq = 0
@@ -458,6 +514,10 @@ separating/gomory/maxweightrange = 10000
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/gomory/dynamiccuts = TRUE
 
+# priority of separator <impliedbounds>
+# [type: int, range: [-536870912,536870911], default: -50]
+separating/impliedbounds/priority = -50
+
 # frequency for calling separator <impliedbounds> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 separating/impliedbounds/freq = 0
@@ -470,6 +530,10 @@ separating/impliedbounds/maxbounddist = 0
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/impliedbounds/delay = FALSE
 
+# priority of separator <intobj>
+# [type: int, range: [-536870912,536870911], default: -100]
+separating/intobj/priority = -100
+
 # frequency for calling separator <intobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
 separating/intobj/freq = -1
@@ -481,6 +545,58 @@ separating/intobj/maxbounddist = 0
 # should separator be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/intobj/delay = FALSE
+
+# priority of separator <mcf>
+# [type: int, range: [-536870912,536870911], default: -10000]
+separating/mcf/priority = -10000
+
+# frequency for calling separator <mcf> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/mcf/freq = -1
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <mcf> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/mcf/maxbounddist = 0
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/mcf/delay = FALSE
+
+# number of clusters to generate in the shrunken network
+# [type: int, range: [2,32], default: 6]
+separating/mcf/nclusters = 6
+
+# maximal valid range max(|weights|)/min(|weights|) of row weights
+# [type: real, range: [1,1.79769313486232e+308], default: 1000000]
+separating/mcf/maxweightrange = 1000000
+
+# maximal number of different deltas to try (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/mcf/maxtestdelta = -1
+
+# model type of network (0: auto, 1:directed, 2:undirected)
+# [type: int, range: [0,2], default: 0]
+separating/mcf/modeltype = 0
+
+# type of flow variables in the network (0: auto, 1:continuous/integer, 2:binary)
+# [type: int, range: [0,2], default: 0]
+separating/mcf/flowtype = 0
+
+# should negative values also be tested in scaling?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/mcf/trynegscaling = FALSE
+
+# should an additional variable be complemented if f0 = 0?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/fixintegralrhs = TRUE
+
+# should generated cuts be removed from the LP if they are no longer tight?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/dynamiccuts = TRUE
+
+# priority of separator <redcost>
+# [type: int, range: [-536870912,536870911], default: 10000000]
+separating/redcost/priority = 10000000
 
 # frequency for calling separator <redcost> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -497,6 +613,10 @@ separating/redcost/delay = FALSE
 # should reduced cost fixing be also applied to continuous variables?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/redcost/continuous = FALSE
+
+# priority of separator <strongcg>
+# [type: int, range: [-536870912,536870911], default: -2000]
+separating/strongcg/priority = -2000
 
 # frequency for calling separator <strongcg> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
@@ -534,3 +654,157 @@ separating/strongcg/maxweightrange = 10000
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/strongcg/dynamiccuts = TRUE
 
+# priority of separator <zerohalf>
+# [type: int, range: [-536870912,536870911], default: -6000]
+separating/zerohalf/priority = -6000
+
+# frequency for calling separator <zerohalf> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/zerohalf/freq = -1
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <zerohalf> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 0]
+separating/zerohalf/maxbounddist = 0
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/delay = FALSE
+
+# maximal number of zerohalf separation rounds per node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 5]
+separating/zerohalf/maxrounds = 5
+
+# maximal number of zerohalf separation rounds in the root node (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/zerohalf/maxroundsroot = 10
+
+# maximal number of {0,1/2}-cuts separated per separation round
+# [type: int, range: [0,2147483647], default: 50]
+separating/zerohalf/maxsepacuts = 50
+
+# maximal number of {0,1/2}-cuts separated per separation round in the root node
+# [type: int, range: [0,2147483647], default: 500]
+separating/zerohalf/maxsepacutsroot = 500
+
+# should generated cuts be removed from the LP if they are no longer tight?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/dynamiccuts = TRUE
+
+# maximal number of {0,1/2}-cuts determined per separation round 
+   #                      (this includes separated but inefficacious cuts)
+# [type: int, range: [0,2147483647], default: 100]
+separating/zerohalf/maxcutsfound = 100
+
+# maximal number of {0,1/2}-cuts determined per separation round in the root node
+   #                      (this includes separated but inefficacious cuts)
+# [type: int, range: [0,2147483647], default: 1000]
+separating/zerohalf/maxcutsfoundroot = 1000
+
+# separating cuts only if depth <= maxdepth (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/zerohalf/maxdepth = -1
+
+# maximal number of calls (-1: unlimited)
+# [type: longint, range: [-1,9223372036854775807], default: -1]
+separating/zerohalf/maxncalls = -1
+
+# should continuous variables be relaxed by adding variable bounds?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/relaxcontvars = FALSE
+
+# should rows be scaled to make fractional coefficients integer?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/scalefraccoeffs = FALSE
+
+# should zerohalf cuts found in previous callbacks ignored?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/ignoreprevzhcuts = FALSE
+
+# should only original LP rows be considered (i.e. ignore previously added LP rows)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/onlyorigrows = FALSE
+
+# should zerohalf cuts be filtered using a cutpool?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/usezhcutpool = TRUE
+
+# should problem be decomposed into subproblems (if possible) before applying preprocessing?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/preprocessing/decomposeproblem = TRUE
+
+# value of delta parameter used in preprocessing method 'd'
+# [type: real, range: [0,1], default: 0.5]
+separating/zerohalf/preprocessing/delta = 0.5
+
+# preprocessing methods and ordering:
+   #                      'd' columns with small LP solution,
+   #                      'G' modified Gaussian elimination,
+   #                      'i' identical columns,
+   #                      'I' identical rows,
+   #                      'L' large slack rows,
+   #                      'M' large slack rows (minslack),
+   #                      's' column singletons,
+   #                      'X' add trivial zerohalf cuts,
+   #                      'z' zero columns,
+   #                      'Z' zero rows,
+   #                      'C' fast {'z','s'},
+   #                      'R' fast {'Z','L','I'}
+   #                      
+   #                      '-' no preprocessing
+   #                     
+# [type: string, default: "CXRGXIM"]
+separating/zerohalf/preprocessing/ppmethods = "CXRGXIM"
+
+# should the cuts be forced to enter the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/separating/forcecutstolp = FALSE
+
+# should the cuts be forced to enter SCIP's sepastore?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/separating/forcecutstosepastore = FALSE
+
+# minimal violation of a {0,1/2}-cut to be separated
+# [type: real, range: [0.001,0.5], default: 0.3]
+separating/zerohalf/separating/minviolation = 0.3
+
+# separating methods and ordering:
+   #                      '!' stop further processing if a cut was found,
+   #                      '2' exact polynomial time algorithm (only if matrix has max 2 odd entries per row),
+   #                      'e' enumeration heuristics (k=1: try all preprocessed rows),
+   #                      'E' enumeration heuristics (k=2: try all combinations of up to two preprocessed rows),
+   #                      'g' Extended Gaussian elimination heuristics,
+   #                      's' auxiliary IP heuristics (i.e. number of solved nodes is limited)
+   #                      'S' auxiliary IP exact      (i.e. unlimited number of nodes)
+   #                      
+   #                      '-' no processing
+   #                     
+# [type: string, default: "2g"]
+separating/zerohalf/separating/sepamethods = "2g"
+
+# optional settings file of the auxiliary IP (-: none)
+# [type: string, default: "-"]
+separating/zerohalf/separating/auxip/settingsfile = "-"
+
+# limits/solutions setting of the auxiliary IP
+# [type: int, range: [-1,2147483647], default: -1]
+separating/zerohalf/separating/auxip/sollimit = -1
+
+# penalty factor used with objective function 'p' of auxiliary IP
+# [type: real, range: [0,1], default: 0.001]
+separating/zerohalf/separating/auxip/penaltyfactor = 0.001
+
+# should all (proper) solutions of the auxiliary IP be used to generate cuts instead of using only the best?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/separating/auxip/useallsols = TRUE
+
+# auxiliary IP objective:
+   #                      'v' maximize cut violation,
+   #                      'u' minimize number of aggregated rows in cut,
+   #                      'w' minimize number of aggregated rows in cut
+   #                          weighted by the number of rows in the aggregation,
+   #                      'p' maximize cut violation and penalize a high number
+   #                          of aggregated rows in the cut weighted by the number
+   #                          of rows in the aggregation and the penalty factor p
+   #                     
+# [type: char, range: {uvwp}, default: v]
+separating/zerohalf/separating/auxip/objective = v
