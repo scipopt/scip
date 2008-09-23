@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.6 2008/09/09 16:23:53 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.7 2008/09/23 16:11:22 bzfberth Exp $"
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
 
@@ -28,7 +28,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "cons_linearordering.h"
-#include "scip/misc.h"
 
 #include <assert.h>
 #include <string.h>

@@ -40,17 +40,17 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
   ../../src/scip/type_pricestore.h ../../src/scip/type_sepastore.h \
   ../../src/scip/set.h ../../src/scip/buffer.h \
   ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
-  ../../src/scip/misc.h ../../src/scip/tree.h \
-  ../../src/objscip/objconshdlr.h ../../src/objscip/objdialog.h \
-  ../../src/objscip/objdisp.h ../../src/objscip/objeventhdlr.h \
-  ../../src/objscip/objheur.h ../../src/objscip/objmessagehdlr.h \
-  ../../src/objscip/objnodesel.h ../../src/objscip/objpresol.h \
-  ../../src/objscip/objpricer.h ../../src/objscip/objprobdata.h \
-  ../../src/objscip/objprop.h ../../src/objscip/objreader.h \
-  ../../src/objscip/objrelax.h ../../src/objscip/objsepa.h \
-  ../../src/objscip/objvardata.h ../../src/objscip/objscipdefplugins.h \
-  ../../src/objscip/objscip.h ../../src/scip/scipdefplugins.h \
-  ../../src/scip/scip.h ../../src/scip/branch_allfullstrong.h \
+  ../../src/scip/tree.h ../../src/objscip/objconshdlr.h \
+  ../../src/objscip/objdialog.h ../../src/objscip/objdisp.h \
+  ../../src/objscip/objeventhdlr.h ../../src/objscip/objheur.h \
+  ../../src/objscip/objmessagehdlr.h ../../src/objscip/objnodesel.h \
+  ../../src/objscip/objpresol.h ../../src/objscip/objpricer.h \
+  ../../src/objscip/objprobdata.h ../../src/objscip/objprop.h \
+  ../../src/objscip/objreader.h ../../src/objscip/objrelax.h \
+  ../../src/objscip/objsepa.h ../../src/objscip/objvardata.h \
+  ../../src/objscip/objscipdefplugins.h ../../src/objscip/objscip.h \
+  ../../src/scip/scipdefplugins.h ../../src/scip/scip.h \
+  ../../src/scip/branch_allfullstrong.h \
   ../../src/scip/branch_fullstrong.h ../../src/scip/branch_inference.h \
   ../../src/scip/branch_mostinf.h ../../src/scip/branch_leastinf.h \
   ../../src/scip/branch_pscost.h ../../src/scip/branch_random.h \
@@ -64,10 +64,10 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
   ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
   ../../src/scip/dialog_default.h ../../src/scip/disp_default.h \
   ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_coefdiving.h \
-  ../../src/scip/heur_crossover.h ../../src/scip/heur_feaspump.h \
-  ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
-  ../../src/scip/heur_guideddiving.h ../../src/scip/heur_intdiving.h \
-  ../../src/scip/heur_intshifting.h \
+  ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
+  ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+  ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
+  ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
   ../../src/scip/heur_linesearchdiving.h \
   ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
   ../../src/scip/heur_objpscostdiving.h ../../src/scip/heur_octane.h \
@@ -78,18 +78,19 @@ $(OBJDIR)/cppmain.o: src/cppmain.cpp ../../src/objscip/objscip.h \
   ../../src/scip/heur_veclendiving.h ../../src/scip/nodesel_bfs.h \
   ../../src/scip/nodesel_dfs.h ../../src/scip/nodesel_estimate.h \
   ../../src/scip/nodesel_hybridestim.h \
-  ../../src/scip/nodesel_restartdfs.h ../../src/scip/presol_dualfix.h \
-  ../../src/scip/presol_implics.h ../../src/scip/presol_inttobinary.h \
-  ../../src/scip/presol_probing.h ../../src/scip/presol_trivial.h \
-  ../../src/scip/prop_pseudoobj.h ../../src/scip/prop_rootredcost.h \
-  ../../src/scip/reader_cip.h ../../src/scip/reader_cnf.h \
-  ../../src/scip/reader_fix.h ../../src/scip/reader_ccg.h \
-  ../../src/scip/reader_lp.h ../../src/scip/reader_mps.h \
-  ../../src/scip/reader_opb.h ../../src/scip/reader_ppm.h \
-  ../../src/scip/reader_rlp.h ../../src/scip/reader_sol.h \
-  ../../src/scip/reader_zpl.h ../../src/scip/sepa_clique.h \
-  ../../src/scip/sepa_cmir.h ../../src/scip/sepa_flowcover.h \
-  ../../src/scip/sepa_gomory.h ../../src/scip/sepa_impliedbounds.h \
-  ../../src/scip/sepa_intobj.h ../../src/scip/sepa_mcf.h \
-  ../../src/scip/sepa_redcost.h ../../src/scip/sepa_strongcg.h \
+  ../../src/scip/nodesel_restartdfs.h ../../src/scip/presol_boundshift.h \
+  ../../src/scip/presol_dualfix.h ../../src/scip/presol_implics.h \
+  ../../src/scip/presol_inttobinary.h ../../src/scip/presol_probing.h \
+  ../../src/scip/presol_trivial.h ../../src/scip/prop_pseudoobj.h \
+  ../../src/scip/prop_rootredcost.h ../../src/scip/reader_cip.h \
+  ../../src/scip/reader_cnf.h ../../src/scip/reader_fix.h \
+  ../../src/scip/reader_ccg.h ../../src/scip/reader_lp.h \
+  ../../src/scip/reader_mps.h ../../src/scip/reader_opb.h \
+  ../../src/scip/reader_ppm.h ../../src/scip/reader_rlp.h \
+  ../../src/scip/reader_sol.h ../../src/scip/reader_zpl.h \
+  ../../src/scip/sepa_clique.h ../../src/scip/sepa_cmir.h \
+  ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gomory.h \
+  ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
+  ../../src/scip/sepa_mcf.h ../../src/scip/sepa_redcost.h \
+  ../../src/scip/sepa_strongcg.h ../../src/scip/sepa_zerohalf.h \
   ../../src/scip/scipshell.h

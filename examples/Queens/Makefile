@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.1 2008/02/27 20:33:11 bzfpfets Exp $
+# $Id: Makefile,v 1.2 2008/09/23 16:11:22 bzfberth Exp $
 
 #@file    Makefile
 #@brief   Makefile for the SCIP tutorial example by Cornelius Schwarz
@@ -42,8 +42,8 @@ include $(SCIPDIR)/make/make.project
 
 MAINNAME	=	queens
 MAINOBJ		=	queens_main.o queens.o
-MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
-MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
+MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.cpp))
+MAINDEP		=	$(SRCDIR)/depend.cppmain.$(OPT)
 
 MAIN		=	$(MAINNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINFILE	=	$(BINDIR)/$(MAIN)
@@ -88,8 +88,8 @@ clean:
 
 .PHONY: depend
 depend:		$(SCIPDIR)
-		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).cpp|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.cpp|g'\'' \
 		>$(MAINDEP)'
 
 -include	$(MAINDEP)
@@ -105,9 +105,6 @@ else
 		-L$(SCIPDIR)/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -o $@
 endif
-
-genRandomLOPInstance: $(BINDIR)
-		$(CC) -o $(BINDIR)/genRandomLOPInstance $(SRCDIR)/genRandomLOPInstance.c
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
