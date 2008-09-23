@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.264 2008/09/22 21:49:04 bzfberth Exp $
+# $Id: Makefile,v 1.265 2008/09/23 19:21:15 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -31,7 +31,7 @@ include make/make.detecthost
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		:=	1.00.9
+VERSION		:=	1.10.0
 
 TIME     	=  	3600
 NODES           =       2100000000

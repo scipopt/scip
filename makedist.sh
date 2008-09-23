@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.xx".
 # For development versions, use VERSION="x.xx.xx" with subversion number.
-VERSION="1.00.9"
+VERSION="1.10"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
