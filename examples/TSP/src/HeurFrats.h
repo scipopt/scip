@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_frats.h
- * @brief  frats primal heuristic
+/**@file   HeurFrats.h
+ * @brief  fractional travelling salesman heuristic - Rounding heuristic for TSP
  * @author Timo Berthold
  */
 

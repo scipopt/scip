@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.4 2008/04/17 19:08:00 bzfpfets Exp $"
+#pragma ident "@(#) $Id: HeurFrats.cpp,v 1.5 2008/09/23 17:44:28 bzfberth Exp $"
 
-/**@file   heur_frats.c
- * @brief  fractional travelling salesman heuristic
+/**@file   HeurFrats.cpp
+ * @brief  fractional travelling salesman heuristic - Rounding heuristic for TSP
  * @author Timo Berthold
  */
 
