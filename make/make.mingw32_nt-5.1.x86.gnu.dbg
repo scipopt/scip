@@ -1,5 +1,5 @@
-#--- $Id: make.mingw32_nt-5.1.x86.gnu.dbg,v 1.5 2008/01/28 14:31:08 bzfheinz Exp $
-FLAGS		+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R
+#--- $Id: make.mingw32_nt-5.1.x86.gnu.dbg,v 1.6 2008/09/24 09:54:18 bzfwanie Exp $
+FLAGS		+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -D_NOSTRERROR_R
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
