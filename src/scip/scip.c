@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.478 2008/09/24 20:38:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.479 2008/09/24 20:52:32 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -413,19 +413,25 @@ SCIP_Real SCIPversion(
 }
 
 /** returns SCIP major version */
-int SCIPmajorVersion(void)
+int SCIPmajorVersion(
+   void
+   )
 {
    return SCIP_VERSION/100;
 }
 
 /** returns SCIP minor version */
-int SCIPminorVersion(void)
+int SCIPminorVersion(
+   void
+   )
 {
    return (SCIP_VERSION/10) % 10;
 }
 
 /** returns SCIP technical version */
-int SCIPtechVersion(void)
+int SCIPtechVersion(
+   void
+   )
 {
    return SCIP_VERSION % 10;
 }

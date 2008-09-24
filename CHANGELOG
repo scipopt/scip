@@ -79,6 +79,7 @@ interface:
 - new parameters "extension" in SCIPreadProb() defining a desired file format or NULL if file extension should be use
 - new methods SCIPreaderCanRead() and SCIPreaderCanWrite() in pub_reader.h, these return TRUE if the corresponding 
   reader is capable to read or write, respectively
+- new methods SCIPmajorVersion, SCIPminorVersion, and SCIPtechVersion() returning the corresponding version
 
 features:
 - the MPS reader is now able to write a problem in MPS format
