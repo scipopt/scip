@@ -586,22 +586,22 @@ typedef struct Zerohalf_LPData ZEROHALF_LPDATA;
  *      s.t.       (b (mod 2))^T v         - 2q     = 1   "odd rhs"
  *                 (A (mod 2))^T v -     y -    -2r = 0   "column sum"
  *
- *                 v \in {0,1}^m
- *                 y \in {0,1}^n
- *                 r \in Z^n_+ 
- *                 q \in Z_+  
+ *                 v \\in {0,1}^m
+ *                 y \\in {0,1}^n
+ *                 r \\in Z^n_+ 
+ *                 q \\in Z_+  
  *  (2) minimize (weighted) number of aggregated rows
  *      min   z :=           w^T v
  *      s.t.                 s^T v + x^T y          < 1   "feasibility"
  *                 (b (mod 2))^T v         - 2q     = 1   "odd rhs"
  *                 (A (mod 2))^T v -     y -    -2r = 0   "column sum"
  *
- *                 v \in {0,1}^m
- *                 y \in {0,1}^n
- *                 r \in Z^n_+ 
- *                 q \in Z_+
+ *                 v \\in {0,1}^m
+ *                 y \\in {0,1}^n
+ *                 r \\in Z^n_+ 
+ *                 q \\in Z_+
  *
- *      with w \in \Rset^m
+ *      with w \\in \\Rset^m
  */
 struct Zerohalf_AuxIPData
 {
@@ -4278,15 +4278,15 @@ SCIP_Real calcObjWeight(
 
 
 /** creates a "subscip" representing the following auxiliary IP (AuxIP):
-    min   z :=           s^T v + x^T y
-    s.t.       (b (mod 2))^T v         - 2q     = 1 
-    (A (mod 2))^T v -     y -    -2r = 0 
-
-    v \in {0,1}^nrowsind
-    y \in {0,1}^ncolsind
-    r \in Z^ncolsind_+
-    q \in Z_+  
-*/
+ *  min   z :=           s^T v + x^T y
+ *  s.t.       (b (mod 2))^T v         - 2q     = 1 
+ *  (A (mod 2))^T v -     y -    -2r = 0 
+ *
+ *  v \\in {0,1}^nrowsind
+ *  y \\in {0,1}^ncolsind
+ *  r \\in Z^ncolsind_+
+ *  q \\in Z_+  
+ */
 #define BRANCHPRIORITY__AVOID_BRANCHING    0
 #define BRANCHPRIORITY__PREFER_BRANCHING   0
 static

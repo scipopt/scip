@@ -12,7 +12,9 @@ tar --no-recursion -cvzhf release/$NAME.tgz \
 --exclude="*cvs*" \
 --exclude="*~" \
 --exclude=".*" \
-$NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile $NAME/doc/* $NAME/lib \
+$NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
+$NAME/doc/* $NAME/doc/inc/faq.inc $NAME/doc/inc/faqcss.inc \
+$NAME/lib \
 $NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
 $NAME/check/check_cplex.sh $NAME/check/evalcheck_cplex.sh $NAME/check/check_cplex.awk \

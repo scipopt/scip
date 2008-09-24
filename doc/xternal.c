@@ -2369,7 +2369,7 @@
  * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation. 
  * \n
- * A complete list of all primal heuristics contained in this release can be found \ref RELAXSATORS "here".
+ * A complete list of all primal heuristics contained in this release can be found \ref RELAXATORS "here".
  *
  * In the following, we explain how the user can add an own relaxation handler using the C interface. It is very easy to 
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion, 
@@ -3349,7 +3349,7 @@
  * @brief In the following you find a list of all propagators which are currently available.
  */
 
-/**@defgroup RELAXATORS Relaxsators
+/**@defgroup RELAXATORS Relaxators
  * @brief In the following you find a list of all relaxators which are currently available.
  */
 
