@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.477 2008/09/23 18:50:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.478 2008/09/24 20:38:29 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -412,6 +412,24 @@ SCIP_Real SCIPversion(
    return (SCIP_Real)(SCIP_VERSION)/100.0;
 }
 
+/** returns SCIP major version */
+int SCIPmajorVersion(void)
+{
+   return SCIP_VERSION/100;
+}
+
+/** returns SCIP minor version */
+int SCIPminorVersion(void)
+{
+   return (SCIP_VERSION/10) % 10;
+}
+
+/** returns SCIP technical version */
+int SCIPtechVersion(void)
+{
+   return SCIP_VERSION % 10;
+}
+
 /** returns SCIP sub version number */
 int SCIPsubversion(
    void
@@ -425,13 +443,14 @@ void SCIPprintVersion(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
+   SCIPmessageFPrintInfo(file, "SCIP version %d.%d.%d",
+      SCIPmajorVersion(), SCIPminorVersion(), SCIPtechVersion());
 #if SCIP_SUBVERSION > 0
-   SCIPmessageFPrintInfo(file, "SCIP version %.2f.%d [precision: %d byte]",
-      SCIPversion(), SCIPsubversion(), (int)sizeof(SCIP_Real));
-#else
-   SCIPmessageFPrintInfo(file, "SCIP version %.2f [precision: %d byte]",
-      SCIPversion(), (int)sizeof(SCIP_Real));
+   SCIPmessageFPrintInfo(file, ".%d", SCIPsubversion());
 #endif
+   
+   SCIPmessageFPrintInfo(file, " [precision: %d byte]", (int)sizeof(SCIP_Real));
+
 #ifndef BMS_NOBLOCKMEM
    SCIPmessageFPrintInfo(file, " [memory: block]");
 #else
