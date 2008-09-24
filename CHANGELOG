@@ -269,6 +269,7 @@ fixed bugs:
 - fixed bug in SCIPvarGetOrigvarSum() concerning the corner case the a negated variable has no parent variable in original problem
 - fixed some SCIP_RETCODE bugs in reader_fix.c, reader_sol.c, reader_sos.c, and reader_zpl.c
 - fixed docu in type_reader.h
+- fixed bug with multi-aggregated variables which are de facto aggregated or fixed after flattening the aggregation tree
 
 SCIP version 1.00
 =================

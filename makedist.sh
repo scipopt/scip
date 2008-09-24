@@ -29,7 +29,7 @@ $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.cpp $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.cpp $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
-$NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* \
+$NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
 $NAME/examples/Coloring/src/depend.* \
 $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* \

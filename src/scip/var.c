@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.232 2008/09/22 21:48:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.233 2008/09/24 20:49:43 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3586,8 +3586,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       var->data.multaggr.nvars = naggvars;
       var->data.multaggr.varssize = naggvars;
 
-      SCIP_CALL( SCIPvarFlattenAggregationGraph(var, blkmem, set) );
-
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
       SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );
 
@@ -3633,6 +3631,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
        * variables and the problem's objective offset
        */
       SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, prob, primal, tree, lp, eventqueue, obj) );
+
+      SCIP_CALL( SCIPvarFlattenAggregationGraph(var, blkmem, set) );
 
       *aggregated = TRUE;
       break;
@@ -8145,7 +8145,9 @@ SCIP_Real SCIPvarGetLPSol_rec(
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
-      assert(var->data.multaggr.nvars >= 2);
+      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
+       * assert(var->data.multaggr.nvars >= 2); 
+       */
       primsol = var->data.multaggr.constant;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
          primsol += var->data.multaggr.scalars[i] * SCIPvarGetLPSol(var->data.multaggr.vars[i]);
@@ -8198,7 +8200,9 @@ SCIP_Real SCIPvarGetPseudoSol(
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
-      assert(var->data.multaggr.nvars >= 2);
+      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
+       * assert(var->data.multaggr.nvars >= 2); 
+       */
       pseudosol = var->data.multaggr.constant;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
          pseudosol += var->data.multaggr.scalars[i] * SCIPvarGetPseudoSol(var->data.multaggr.vars[i]);
@@ -8280,7 +8284,9 @@ SCIP_Real SCIPvarGetRootSol(
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
-      assert(var->data.multaggr.nvars >= 2);
+      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
+       * assert(var->data.multaggr.nvars >= 2); 
+       */
       rootsol = var->data.multaggr.constant;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
          rootsol += var->data.multaggr.scalars[i] * SCIPvarGetRootSol(var->data.multaggr.vars[i]);
@@ -8369,7 +8375,9 @@ SCIP_Real SCIPvarGetAvgSol(
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
-      assert(var->data.multaggr.nvars >= 2);
+      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
+       * assert(var->data.multaggr.nvars >= 2); 
+       */
       avgsol = var->data.multaggr.constant;
       for( i = 0; i < var->data.multaggr.nvars; ++i )
          avgsol += var->data.multaggr.scalars[i] * SCIPvarGetAvgSol(var->data.multaggr.vars[i]);
@@ -8584,7 +8592,9 @@ SCIP_RETCODE SCIPvarAddToRow(
       assert(!var->donotmultaggr);
       assert(var->data.multaggr.vars != NULL);
       assert(var->data.multaggr.scalars != NULL);
-      assert(var->data.multaggr.nvars >= 2);
+      /* Due to method SCIPvarFlattenAggregationGraph(), this assert is no longer correct
+       * assert(var->data.multaggr.nvars >= 2); 
+       */
       for( i = 0; i < var->data.multaggr.nvars; ++i )
       {
          SCIP_CALL( SCIPvarAddToRow(var->data.multaggr.vars[i], blkmem, set, stat, prob, lp,
