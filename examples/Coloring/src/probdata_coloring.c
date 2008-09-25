@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.2 2008/09/22 16:21:32 bzfgamra Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.3 2008/09/25 09:00:49 bzfwolte Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
@@ -819,7 +819,8 @@ SCIP_Bool COLORprobStableSetIsNew(
 }
 
 /** adds a new stable set, the set must be sorted descendingly, 
-    attention: you need to check whether it is new before adding it*/
+ *  attention: you need to check whether it is new before adding it
+ */
 SCIP_RETCODE COLORprobAddNewStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  stablesetnodes,     /**< array of nodes in the stable set */
