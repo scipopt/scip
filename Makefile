@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.270 2008/09/25 20:02:55 bzfberth Exp $
+# $Id: Makefile,v 1.271 2008/09/25 20:47:05 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -789,7 +789,7 @@ echosoftlinks:
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."
 		@echo "* The links will be installed in the 'lib' directory."
-		@echo "* See the INSTALL file for more information."
+		@echo "* For more information and if you experience problems see the INSTALL file."
 		@echo
 		@echo -e $(LPIINSTMSG)
 
@@ -809,6 +809,7 @@ ifeq ($(MAKESOFTLINKS), true)
 				BASENAMEA=`basename $@ .$(STATICLIBEXT)` ; \
 				BASENAMESO=`basename $@ .$(SHAREDLIBEXT)` ; \
 				echo ; \
+				echo "- preparing missing soft-link \"$@\":" ; \
 				if test -e $$DIRNAME/$$BASENAMEA.$(SHAREDLIBEXT) ; \
 				then \
 					echo "* this soft-link is not necessarily needed since \"$$DIRNAME/$$BASENAMEA.$(SHAREDLIBEXT)\" already exists - press return to skip" ; \
@@ -819,7 +820,9 @@ ifeq ($(MAKESOFTLINKS), true)
 				fi ; \
 				echo "> Enter soft-link target file or directory for \"$@\" (return if not needed): " ; \
 				echo -n "> " ; \
+				cd $(LIBDIR) ; \
 				eval $(READ) TARGET ; \
+				cd .. ; \
 				if test "$$TARGET" != "" ; \
 				then \
 					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
