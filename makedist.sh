@@ -38,6 +38,10 @@ $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
 $NAME/examples/MIPSolver/* $NAME/examples/MIPSolver/doc/* \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.c $NAME/examples/MIPSolver/src/*.cpp $NAME/examples/MIPSolver/src/*.h \
+$NAME/examples/Queens/* \
+$NAME/examples/Quenns/src/depend.* \
+$NAME/examples/Queens/src/*.c $NAME/examples/Queens/src/*.cpp \
+$NAME/examples/Queens/src/*.h $NAME/examples/Queens/src/*.hpp \
 $NAME/examples/SamplePricer/* $NAME/examples/SamplePricer/doc/* \
 $NAME/examples/SamplePricer/src/depend.* \
 $NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/examples/SamplePricer/src/*.h \
@@ -48,7 +52,7 @@ $NAME/examples/TSP/* $NAME/examples/TSP/doc/* \
 $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.c $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
-$NAME/examples/VRP/* $NAME/examples/VRP/doc/* \
+$NAME/examples/VRP/* $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
 $NAME/check/IP/miplib/bell3a.mps \
