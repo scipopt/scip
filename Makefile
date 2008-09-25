@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.269 2008/09/25 17:46:46 bzfpfets Exp $
+# $Id: Makefile,v 1.270 2008/09/25 20:02:55 bzfberth Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -90,6 +90,8 @@ CPLEX		=	cplex
 CBC		=	cbc
 
 SHELL		= 	bash
+READ		=	read -e
+
 
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF
 OFLAGS		=
@@ -817,7 +819,7 @@ ifeq ($(MAKESOFTLINKS), true)
 				fi ; \
 				echo "> Enter soft-link target file or directory for \"$@\" (return if not needed): " ; \
 				echo -n "> " ; \
-				read -e TARGET ; \
+				eval $(READ) TARGET ; \
 				if test "$$TARGET" != "" ; \
 				then \
 					echo "-> creating softlink \"$@\" -> \"$$TARGET\"" ; \
