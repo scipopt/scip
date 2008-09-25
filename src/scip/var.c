@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.234 2008/09/25 09:29:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.235 2008/09/25 14:25:09 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -955,7 +955,7 @@ SCIP_RETCODE SCIPdomchgMakeStatic(
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.boundchgs,
                   (*domchg)->domchgdyn.boundchgssize, (*domchg)->domchgdyn.nboundchgs) );
             SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(*domchg)->domchgdyn.holechgs,
-                           (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
+                  (*domchg)->domchgdyn.holechgssize, (*domchg)->domchgdyn.nholechgs) );
 
             /* convert into static domain change */
             SCIP_ALLOC( BMSreallocBlockMemorySize(blkmem, domchg, sizeof(SCIP_DOMCHGDYN), sizeof(SCIP_DOMCHGBOTH)) );
@@ -3009,6 +3009,26 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
       SCIP_CALL( SCIPvarGetActiveRepresentatives(set, var->data.multaggr.vars, var->data.multaggr.scalars, &nmultvars, multvarssize, &multconstant, &multrequiredsize, FALSE) );
       assert( multrequiredsize <= multvarssize );
    }
+   /**@note After the flattening the multi aggregation might resolve
+    * to be in fact an aggregation (or even a fixing?).  This issue is
+    * not resolved right now, since var->data.multaggr.nvars < 2
+    * should not cause toubles.  However, one may loose performance
+    * hereby, since aggregated variables are easier to handle.
+    * 
+    * Note, that there are two cases where
+    * SCIPvarFlattenAggregationGraph() is called: The easier one is
+    * that it is called while installing the multi-aggregation. in
+    * principle, the described issue could be handled straightforward
+    * in this case by aggregating or fixing the variable instead.  The
+    * more complicated case is the one, when the multiaggregation is
+    * used, e.g., in linear presolving (and the variable is already
+    * declared to be multiaggregatied).
+    *
+    * By now, it is not allowed to fix or aggregate multi-aggregated
+    * variables which would be necessary in this case.
+    *
+    * The same issue appears in the SCIPvarGetProbvar...() methods.
+    */
 
    var->data.multaggr.constant = multconstant;
    var->data.multaggr.nvars = nmultvars;
@@ -3524,7 +3544,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    else if( naggvars == 1)
       return SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
          aggvars[0], scalars[0], constant, infeasible, aggregated);
-    SCIPdebugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
+   SCIPdebugMessage("multi-aggregate variable <%s> == ...%d vars... %+g\n", var->name, naggvars, constant);
 
    *infeasible = FALSE;
    *aggregated = FALSE;
@@ -3802,7 +3822,7 @@ void SCIPvarSetProbindex(
  *  result in a memory leakage */
 void SCIPvarSetNamePointer(
    SCIP_VAR*             var,                /**< problem variable */
-    const char*          name                /**< new name of variable */
+   const char*          name                /**< new name of variable */
    )
 {
    assert(var != NULL);
@@ -4048,7 +4068,7 @@ SCIP_RETCODE SCIPvarAddObj(
          for( i = 0; i < var->data.multaggr.nvars; ++i )
          {
             SCIP_CALL( SCIPvarAddObj(var->data.multaggr.vars[i], blkmem, set, stat, prob, primal, tree, lp, 
-                           eventqueue, var->data.multaggr.scalars[i] * addobj) );
+                  eventqueue, var->data.multaggr.scalars[i] * addobj) );
          }
          break;
 
@@ -7564,7 +7584,9 @@ SCIP_DECL_SORTPTRCOMP(SCIPvarComp)
    return SCIPvarCompare((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
 }
 
-/** gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
+/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *    SCIPvarFlattenAggregationGraph()
+ *  gets corresponding active, fixed, or multi-aggregated problem variable of a variable */
 SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -7602,7 +7624,9 @@ SCIP_VAR* SCIPvarGetProbvar(
    }
 }
 
-/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
+/**  @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *    SCIPvarFlattenAggregationGraph()
+ * gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
  *  negation status
  */
 SCIP_RETCODE SCIPvarGetProbvarBinary(
@@ -7658,7 +7682,9 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
    return SCIP_INVALIDDATA;
 }
 
-/** transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
+/**  @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *    SCIPvarFlattenAggregationGraph()
+ * transforms given variable, boundtype and bound to the corresponding active, fixed, or multi-aggregated variable
  *  values
  */
 SCIP_RETCODE SCIPvarGetProbvarBound(
@@ -7730,7 +7756,9 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
    return SCIP_OKAY;
 }
 
-/** transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
+/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *    SCIPvarFlattenAggregationGraph()
+ * transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
  *  scalar and constant;
  *  if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
  *  in "constant"
@@ -8658,7 +8686,7 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    case SCIP_VARSTATUS_AGGREGATED:
       assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
       SCIP_CALL( SCIPvarUpdatePseudocost(var->data.aggregate.var, set, stat,
-                     solvaldelta/var->data.aggregate.scalar, objdelta, weight) );
+            solvaldelta/var->data.aggregate.scalar, objdelta, weight) );
       return SCIP_OKAY;
       
    case SCIP_VARSTATUS_MULTAGGR:
