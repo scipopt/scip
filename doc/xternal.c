@@ -3093,18 +3093,29 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
- *  Data objects (variables, constraints, rows) are subject to reference counting
- *  to avoid expensive copying operations. Creating such an object will set the
- *  reference count to one. Capturing an object increases the reference counter,
- *  releasing it decreases the counter. If the reference counter gets zero, the
- *  object is destroyed.
+ *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
+ *  to avoid expensive copying operations. This concept is similar to smart pointers.
+ *  Creating such an object (e.g., by calling SCIPcreateVar()) will set the
+ *  reference counter to one. Capturing an object (e.g., by calling SCIPcaptureVar()) increases the reference counter,
+ *  releasing it (e.g., by calling SCIPreleaseVar()) decreases the counter. If the reference counter gets zero, the
+ *  object will be destroyed automatically.
  *
  *  Remember that a created data object is automatically captured. If the user
- *  doesn't need the object anymore, he has to call the object's release() method.
+ *  doesn't need the object anymore, he has to call the object's release method.
  *
- *  When a data object is added to SCIP, it is captured again, such that a
- *  release() call does not destroy the object. If SCIP doesn't need the object
+ *  When a data object is added to SCIP (e.g., by calling SCIPaddVar()) , it is captured again, such that a
+ *  release call does not destroy the object. If SCIP doesn't need the object
  *  anymore, it is automatically released.
+ *  
+ *  E.g., if the user calls
+ * \code
+ *  SCIPcreateVar(); // reference counter 1
+ *  SCIPaddVar(); // reference counter 2
+ *  SCIPreleaseVar(); // reference counter 1
+ * \endcode
+ *  the reference counter will be 1 afterwards, and the variable will be destroyed, if SCIP frees the problem.
+ *  If the user wants to use this variable, e.g. for extracting statistics after SCIP was finished, the user must not call
+ *  SCIPreleaseVar() right after adding the variable, but before terminating the program.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3137,8 +3148,12 @@
  * 
  *  - Use the debug mode (<code>make OPT=dbg</code>, see \ref MAKE) and run the code.
  *  - Use asserts in your code (see \ref CODE).
- *  - Turn on additional debug output by placing <code>\#define SCIP_DEBUG</code> at the top of your
- *    files. This will output messages included in the code using <code>SCIPdebugMessage()</code>.
+ *  - Turn on additional debug output by placing <code>\#define SCIP_DEBUG</code> at the top of SCIP files you
+ *    want to analyze. This will output messages included in the code using <code>SCIPdebugMessage()</code> (see \ref EXAMPLE_1).
+ *    We recommend to also use <code>SCIPdebugMessage()</code> in your own code for being able to activate 
+ *    debug output in the same way. 
+ *  - If available on your system, we recommend to use a debugger like gdb to trace all function calls on the stack,
+ *    display values of certain expressions, manually break the running code, and so forth.
  *  - If available on your system, you can use software like valgrind to check for uninitialized
  *    values or segmentation faults.
  *  - For checking the usage of SCIP memory, you can use
@@ -3146,9 +3161,94 @@
  *    almost always only useful after a <code>SCIPfree()</code> call.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
- *    containing a solution in SCIP format. This solution is the read and it is check for every cut,
- *    whether the solution violates the cut.
+ *    containing a solution in SCIP format (see \ref EXAMPLE_2). 
+ *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
  * 
+ *  @section EXAMPLE_1 How to activate debug messages
+ *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of heur_oneopt.c and recompile in DBG mode, 
+ *    and run the scip interactive shell to solve p0033.mps from the miplib, we get some output like:
+ * \code
+ * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
+ * Copyright (c) 2002-2008 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * 
+ * user parameter file <scip.set> not found - using default parameters
+ * 
+ * SCIP> read check/IP/miplib/p0033.mps
+ * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
+ * SCIP> optimize
+ * ...
+ *  0.1s|     1 |     0 |   132 | 257k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.347000e+03 |  10.59%
+ * [src/scip/heur_oneopt.c:332] debug: Row <R122> has activity 110
+ * [src/scip/heur_oneopt.c:332] debug: Row <R123> has activity 216
+ * ...
+ * [src/scip/heur_oneopt.c:101] debug: Try to shift down variable <t_C157> with
+ * [src/scip/heur_oneopt.c:102] debug:     lb:<-0> <= val:<1> <= ub:<1> and obj:<171> by at most: <1>
+ * [src/scip/heur_oneopt.c:135] debug:  -> The shift value had to be reduced to <0>, because of row <R122>.
+ * [src/scip/heur_oneopt.c:137] debug:     lhs:<-1e+20> <= act:<110> <= rhs:<148>, colval:<-60>
+ * ...
+ * [src/scip/heur_oneopt.c:383] debug:  Only one shiftcand found, var <t_C167>, which is now shifted by<-1.0>
+ * k 0.1s|     1 |     0 |   132 | 258k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.164000e+03 |   4.54%
+ * [src/scip/heur_oneopt.c:436] debug: found feasible shifted solution:
+ * objective value:                     3164.00000000012
+ * C157                                                1   (obj:171)
+ * C163                                                1   (obj:163)
+ * C164                                                1   (obj:69)
+ * C170                                                1   (obj:49)
+ * C172                                                1   (obj:258)
+ * C174                                                1   (obj:250)
+ * C175                                                1   (obj:500)
+ * C179                                                1   (obj:318)
+ * C181                                                1   (obj:318)
+ * C182                                                1   (obj:159)
+ * C183                                 1.00000000000038   (obj:318)
+ * C184                                                1   (obj:159)
+ * C185                                                1   (obj:318)
+ * C186                                                1   (obj:114)
+ * [src/scip/heur_oneopt.c:498] debug: Finished 1-opt heuristic
+ * ...
+ * \endcode 
+ *
+ *  @section EXAMPLE_2 How to add a debug solution
+ * Continuing the example above, we finish the solving process.
+ * The optimal solution can now be written to a file:
+ * \code
+ * SCIP> display solution
+ * 
+ * objective value:                                 3089
+ * C157                                                1   (obj:171)
+ * C163                                                1   (obj:163)
+ * C164                                                1   (obj:69)
+ * C166                                                1   (obj:183)
+ * C170                                                1   (obj:49)
+ * C174                                                1   (obj:250)
+ * C177                                                1   (obj:500)
+ * C179                                                1   (obj:318)
+ * C181                                                1   (obj:318)
+ * C182                                                1   (obj:159)
+ * C183                                                1   (obj:318)
+ * C184                                                1   (obj:159)
+ * C185                                                1   (obj:318)
+ * C186                                                1   (obj:114)
+ * 
+ * SCIP> write solution check/p0033.sol
+ * 
+ * written solution information to file <check/p0033.sol>
+ * \endcode
+ * 
+ * If we afterwards comment in 
+ * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
+ * it will output 
+ * \code
+ * SCIP> read check/IP/miplib/p0033.mps
+ * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
+ * SCIP> optimize
+ * 
+ * presolving:
+ * ***** debug: reading solution file <check/p0033.sol>
+ * ***** debug: read 15 non-zero entries
+ * \endcode
+ * Further debug output would only appear, if the solution was cut off in the solving process.
+ * Of course, this is not the case! Hopefully...otherwise, please send a bug report ;-)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
