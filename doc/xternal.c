@@ -2142,13 +2142,17 @@
 /**@page HEUR How to add primal heuristics
  *
  * Feasible solutions can be found in two different ways during the traversal of the branch-and-bound tree. On the one 
- * hand, the solution of a node's relaxation may be feasible with respect to the constraints. On the other hand, feasible
- * solutions can be discovered by primal heuristics.  
+ * hand, the solution of a node's relaxation may be feasible with respect to the constraints (including the integrality). 
+ * On the other hand, feasible solutions can be discovered by primal heuristics.  
  * \n
  * A complete list of all primal heuristics contained in this release can be found \ref PRIMALHEURISTICS "here".
  *
  * In the following, we explain how the user can add an own primal heuristic.
  * Take the simple and fast LP rounding heuristic (src/scip/heur_simplerounding.c) as an example.
+ * The idea of simple rounding is to iterate over all fractional variables of an LP solution and round them down,
+ * if the variables appears only with nonnegative coefficients in the system Ax <= b and round them up if
+ * the variables appears only with nonpositive coefficients.
+ * If one of both conditions applies for each of the fractional variables, this will give a feasible solution.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjHeur wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_HEUR... callback methods.
  *
@@ -2172,6 +2176,8 @@
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the primal heuristic properties by calling the constructor
  * of the abstract base class ObjHeur from within your constructor.
+ * Of course, all of them are of relevance, but the most important ones for controling the performance
+ * usually are HEUR_FREQ and HEUR_TIMING.
  * The properties you have to set have the following meaning:
  *
  * \par HEUR_NAME: the name of the primal heuristic.
@@ -2180,11 +2186,11 @@
  * Names have to be unique: no two primal heuristics may have the same name.
  *
  * \par HEUR_DESC: the description of the primal heuristic.
- * This string is printed as description of the primal heuristic in the interactive shell.
+ * This string is printed as description of the primal heuristic in the interactive shell when you call "display heuristics".
  *
  * \par HEUR_DISPCHAR: the display character of the primal heuristic.
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal 
- * heuristic found the feasible solution belonging to the primal bound. Note that a star stands for an integral 
+ * heuristic found the feasible solution belonging to the primal bound. Note that a star '*' stands for an integral 
  * LP-relaxation.
  * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
  * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
@@ -2196,18 +2202,18 @@
  * \n
  * The priority of a primal heuristic should be set according to the complexity of the heuristic and the likelihood to find
  * feasible solutions: primal heuristics that provide fast algorithms that often succeed in finding a feasible solution should have
- * a high priority. In addition, the interaction between different types of primal heuristics should be taken into account.
- * For example, improvement heuristics, which try to generate improved solutions  by inspecting one or more of the feasible
- * solutions that have already been found, should have a small priority.
+ * a high priority (like simple rounding). In addition, the interaction between different types of primal heuristics should be taken into account.
+ * For example, improvement heuristics, which try to generate improved solutions by inspecting one or more of the feasible
+ * solutions that have already been found, should have a small priority (like Crossover which by default needs at least 3 feasible solutions).
  *
  * \par HEUR_FREQ: the default frequency for executing the primal heuristic.
  * The frequency together with the frequency offset (see HEUR_FREQOFS) defines the depth levels at which the execution
  * method of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequence offset 
  * of 5 means, that the \ref HEUREXEC callback is executed for subproblems that are in depth 5, 12, 19, ... of the branching tree. A 
  * frequency of 0 together with a frequence offset of 3 means, that the execution method is only called at those nodes that are in
- * depth level 3 (i.e., at most for \f$2^3 = 8\f$ nodes if binary branching is applied). A frequency of 0 and an offset of 0 means that
- * the heuristic is only called at the root node. 
- * A frequency of -1 disables the heuristic.
+ * depth level 3 (i.e., at most for \f$2^3 = 8\f$ nodes if binary branching is applied).
+ * Typical cases are: A frequency of 0 and an offset of 0 which means that
+ * the heuristic is only called at the root node and a frequency of -1 which disables the heuristic.
  * \n
  * The frequency can be adjusted by the user. The property of the primal heuristic only defines the default value of the 
  * frequency. If you want to have a more flexible control of when to execute the primal heuristic, you have to assign
@@ -2225,7 +2231,7 @@
  *
  * \par HEUR_MAXDEPTH: the maximal depth level for executing the primal heuristic.
  * This parameter denotes the maximal depth level in the branching tree up to which the execution method of the primal 
- * heuristic is called. Use -1 for no limit. 
+ * heuristic is called. Use -1 for no limit (a usual case). 
  *
  * \par HEUR_TIMING: the execution timing of the primal heuristic.
  * Primal heuristics have different entry points during the solving process and the execution timing parameter defines the
@@ -2242,8 +2248,9 @@
  * - after the processing of the last node in the current plunge was finished, <em>and only if the LP was not solved 
  *   for this node</em> (SCIP_HEURTIMING_AFTERPSEUDOPLUNGE).
  * \par
- * These flags can be combined as or concatenations to call the heuristic at multiple times. Two useful combinations
- * are already predefined:
+ * A plunge is the successive solving of child and sibling nodes in the search tree.
+ * The flags listed above can be combined to call the heuristic at multiple times by concatenating them with a bitwise OR. 
+ * Two useful combinations are already predefined:
  * - after the processing of a node was finished (SCIP_HEURTIMING_AFTERNODE; combines SCIP_HEURTIMING_AFTERLPNODE and
  *   SCIP_HEURTIMING_AFTERPSEUDONODE)
  * - after the processing of the last node in the current plunge was finished (SCIP_HEURTIMING_AFTERPLUNGE; combines
@@ -2259,12 +2266,8 @@
  * cut-and-price loop". Rounding heuristics, like the simple and fast LP rounding heuristic 
  * (src/scip/heur_simplerounding.c), belong to this group of primal heuristics. 
  * \n
- * Most heuristics, however, are called either after the cut-and-price loop was finished, after a node was completely
- * processed, or even only after a full plunge was finished. These points correspond to the situation where a node was completely
- * processed, but differ by the type of node and by whether an LP solution is needed. For example, diving heuristics,
- * like the LP diving heuristic (src/scip/heur_fracdiving.c), are often executed after the last node in the current
- * plunge has been processed. A plunge is the successive solving of child and sibling nodes in the search tree. A plunge is
- * finished, if the node selection selects an unrelated node from the queue of open subproblems, see \ref NODESEL.
+ * Most heuristics, however, are called either after a node was completely processed 
+ * (e.g. expensive rounding heuristics like RENS), or even only after a full plunge was finished (e.g., diving heuristics). 
  *
  * Computational experiments seem to indicate that for the overall performance of a MIP solver, it is important to evenly 
  * spread the application of the heuristics across the branch-and-bound tree. Thus, the assignment of the parameters 
@@ -2274,14 +2277,14 @@
  * heuristics have already been called at the current node. This can be done by comparing SCIPgetLastDivenode(scip) and
  * SCIPgetNNodes(scip). If the two are equal, and if the current node is not the root node (SCIPgetDepth(scip) > 0), diving
  * heuristics should be delayed by returning the result code 'SCIP_DELAYED'. This is an additional contribution to the goal of
- * not calling multiple heuristics at the same node.
+ * not calling multiple similar heuristics at the same node.
  *
  *
  * @section HEUR_DATA Primal Heuristic Data
  *
  * Below the header "Data structures" you can find a struct which is called "struct SCIP_HeurData".
  * In this data structure, you can store the data of your primal heuristic. For example, you should store the adjustable 
- * parameters of the primal heuristic in this data structure. 
+ * parameters of the primal heuristic or a working solution in this data structure. 
  * If you are using C++, you can add primal heuristic data as usual as object variables to your class.
  * \n
  * Defining primal heuristic data is optional. You can leave the struct empty.
@@ -2305,7 +2308,7 @@
  * You also have to initialize the fields in struct SCIP_HeurData afterwards.
  *
  * You may also add user parameters for your primal heuristic, see the method SCIPincludeHeurFeaspump() in 
- * src/scip/heur_feaspump.c for an example.
+ * src/scip/heur_oneopt.c for an example where a single Boolean parameter is added.
  *
  * 
  * @section HEUR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Primal Heuristic
@@ -2325,7 +2328,11 @@
  * methods SCIPcreateSol() and SCIPsetSolVal() can be used. Afterwards, the solution can be added to the storage by 
  * calling the method SCIPtrySolFree() (or SCIPtrySol() and SCIPfreeSol()).
  *
- * The HEUREXEC callback has the following options:
+ * The HEUREXEC callback gets a SCIP pointer, a pointer to the heuristic itself, the current point in the 
+ * solve loop and a result pointer as input (see "type_heur.h").
+ *
+ * The heuristic has to set the result pointer appropriately!
+ * Therefore it has the following options:
  *  - finding at least one feasible solution (result SCIP_FOUNDSOL)
  *  - stating that the primal heuristic searched, but did not find a feasible solution (result SCIP_DIDNOTFIND)
  *  - stating that the primal heuristic was skipped (result SCIP_DIDNOTRUN)
