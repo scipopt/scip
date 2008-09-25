@@ -80,6 +80,8 @@ interface:
 - new methods SCIPreaderCanRead() and SCIPreaderCanWrite() in pub_reader.h, these return TRUE if the corresponding 
   reader is capable to read or write, respectively
 - new methods SCIPmajorVersion, SCIPminorVersion, and SCIPtechVersion() returning the corresponding version
+- changed default frequency parameters for RINS, Local Branching, Crossover and Mutation heuristic
+  This should not change the performance but happened just for consistency reasons
 
 features:
 - the MPS reader is now able to write a problem in MPS format

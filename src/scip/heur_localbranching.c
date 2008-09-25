@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.29 2008/09/22 19:25:08 bzfwanie Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.30 2008/09/25 16:48:17 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -32,7 +32,7 @@
 #define HEUR_NAME             "localbranching"
 #define HEUR_DESC             "local branching heuristic by Fischetti and Lodi"
 #define HEUR_DISPCHAR         'L'
-#define HEUR_PRIORITY         -1010000
+#define HEUR_PRIORITY         -1102000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1

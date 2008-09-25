@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.22 2008/09/22 19:25:08 bzfwanie Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.23 2008/09/25 16:48:17 bzfberth Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -32,7 +32,7 @@
 #define HEUR_NAME             "mutation"
 #define HEUR_DESC             "mutation heuristic randomly fixing variables"
 #define HEUR_DISPCHAR         'M'
-#define HEUR_PRIORITY         -1020000
+#define HEUR_PRIORITY         -1103000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          8
 #define HEUR_MAXDEPTH         -1

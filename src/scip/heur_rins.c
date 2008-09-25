@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.c,v 1.31 2008/09/22 19:25:08 bzfwanie Exp $"
+#pragma ident "@(#) $Id: heur_rins.c,v 1.32 2008/09/25 16:48:17 bzfberth Exp $"
 
 /**@file   heur_rins.c
  * @ingroup PRIMALHEURISTICS
@@ -32,7 +32,7 @@
 #define HEUR_NAME             "rins"
 #define HEUR_DESC             "relaxation induced neighbourhood search by Danna, Rothberg, and Le Pape"
 #define HEUR_DISPCHAR         'N'
-#define HEUR_PRIORITY         -1009000
+#define HEUR_PRIORITY         -1101000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          5
 #define HEUR_MAXDEPTH         -1
