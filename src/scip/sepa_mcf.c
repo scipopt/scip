@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.64 2008/09/22 19:25:10 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.65 2008/09/25 09:41:56 bzfwolte Exp $"
 
 //#define SCIP_DEBUG
 
@@ -89,7 +89,7 @@
 #define MAXCAPACITYSLACK            0.1 /**< maximal slack of weighted capacity constraints to use in aggregation */
 #define UNCAPACITATEDARCSTRESHOLD   0.8 /**< treshold for the percentage of commodities an uncapacitated arc should appear in */
 
-/*#define OUTPUTGRAPH*/                     /**< should a .gml graph of the network be generated for debugging purposes? */
+/*#define OUTPUTGRAPH*/                     /* should a .gml graph of the network be generated for debugging purposes? */
 
 
 
