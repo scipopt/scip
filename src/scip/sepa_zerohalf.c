@@ -45,10 +45,15 @@
  *
  *
  * References:
- * - Alberto Caprara, Matteo Fischetti. ${0,1/2}$-{C}hv\'{a}tal-{G}omory cuts. Math. Programming, Volume 74, p221--235, 1996.
- * - Arie M. C. A. Koster, Adrian Zymolka and Manuel Kutschka. {A}lgorithms to separate $\{0,1/2}$-{C}hv\'{a}tal-{G}omory cuts. {A}lgorithms - {ESA} 2007: 15th {A}nnual {E}uropean {S}ymposium, Eilat, Israel, October 8-10, 2007, Proceedings. Lecture Notes in Computer Science, Volume 4698, p693--704, 2007.
- * - Arie M. C. A. Koster, Adrian Zymolka and Manuel Kutschka. {A}lgorithms to separate ${0,1/2}$-{C}hv\'{a}tal-{G}omory cuts (Extended Version). ZIB Report 07-10, Zuse Institute Berlin, 2007. http://www.zib.de/Publications/Reports/ZR-07-10.pdf
- * - Manuel Kutschka. Algorithmen zur Separierung von ${0,1/2}$-Schnitten. Diplomarbeit. Technische Universitaet Berlin, 2007.
+ * - Alberto Caprara, Matteo Fischetti. {0,1/2}-Chvatal-Gomory cuts. Math. Programming, Volume 74, p221--235, 1996.
+ * - Arie M. C. A. Koster, Adrian Zymolka and Manuel Kutschka. \n
+ *   Algorithms to separate {0,1/2}-Chvatal-Gomory cuts. 
+ *   Algorithms - ESA 2007: 15th Annual European Symposium, Eilat, Israel, October 8-10, 2007, \n
+ *   Proceedings. Lecture Notes in Computer Science, Volume 4698, p. 693--704, 2007.
+ * - Arie M. C. A. Koster, Adrian Zymolka and Manuel Kutschka. \n
+ *   Algorithms to separate {0,1/2}-Chvatal-Gomory cuts (Extended Version). \n
+ *   ZIB Report 07-10, Zuse Institute Berlin, 2007. http://www.zib.de/Publications/Reports/ZR-07-10.pdf
+ * - Manuel Kutschka. Algorithmen zur Separierung von {0,1/2}-Schnitten. Diplomarbeit. Technische Universitaet Berlin, 2007.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
