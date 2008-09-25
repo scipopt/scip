@@ -217,10 +217,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "subtour".
  * -# Adjust the properties of the constraint handler (see \ref CONS_PROPERTIES).
- * -# Define the constraint data and the constraint handler data (see \ref CONS_DATA).
+ * -# Define the constraint data and the constraint handler data (see \ref CONS_DATA). This is optional.
  * -# Implement the interface methods (see \ref CONS_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref CONS_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref CONS_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref CONS_ADDITIONALCALLBACKS). This is optional.
  *
  * 
  * @section CONS_PROPERTIES Properties of a Constraint Handler
@@ -853,10 +853,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
- * -# Define the pricer data (see \ref PRICER_DATA).
+ * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
  * -# Implement the interface methods (see \ref PRICER_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref PRICER_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref PRICER_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref PRICER_ADDITIONALCALLBACKS).  This is optional.
  *
  * 
  * @section PRICER_PROPERTIES Properties of a Pricer
@@ -1495,10 +1495,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
- * -# Define the propagator data (see \ref PROP_DATA).
+ * -# Define the propagator data (see \ref PROP_DATA). This is optional.
  * -# Implement the interface methods (see \ref PROP_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref PROP_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref PROP_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref PROP_ADDITIONALCALLBACKS). This is optional.
  *
  * @section PROP_PROPERTIES Properties of a Propagator
  *
@@ -1708,10 +1708,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
- * -# Define the branching rule data (see \ref BRANCHRULE_DATA).
+ * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
  * -# Implement the interface methods (see \ref BRANCHRULE_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref BRANCHRULE_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref BRANCHRULE_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref BRANCHRULE_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section BRANCHRULE_PROPERTIES Properties of a Branching Rule
@@ -1966,10 +1966,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
- * -# Define the node selector data (see \ref NODESEL_DATA).
+ * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
  * -# Implement the interface methods (see \ref NODESEL_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref NODESEL_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref NODESEL_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref NODESEL_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section NODESEL_PROPERTIES Properties of a Node Selector
@@ -1989,9 +1989,10 @@
  * This string is printed as description of the node selector in the interactive shell.
  *
  * \par NODESEL_STDPRIORITY: the default priority of the node selector in the standard mode.
- *
  * The first step of each iteration of the main solving loop is the selection of the next subproblem to be processed. 
  * The node selector of highest priority (the active node selector) is called to do this selection. 
+ * In particular, if you implemented an own node selector plugin which you want to be applied, you should choose a priority
+ * which is greater then all priorities of the SCIP default node selectors.
  * Note that SCIP has two different operation modes: the standard mode and the memory saving mode. If the memory 
  * limit - given as a parameter by the user - is almost reached, SCIP switches from the standard mode to the memory saving 
  * mode in which different priorities for the node selectors are applied. NODESEL_STDPRIORITY is the priority of the 
@@ -2001,7 +2002,6 @@
  * adjusting the corresponding parameter setting.
  *
  * \par NODESEL_MEMSAVEPRIORITY: the default priority of the node selector in the memory saving mode.
- *
  * The priority NODESEL_MEMSAVEPRIORITY of the node selector has the same meaning as the priority NODESEL_STDPRIORITY, but 
  * is used in the memory saving mode.
  * Usually, you want the best performing node selector, for example best estimate search, to have maximal
@@ -2169,10 +2169,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
- * -# Define the primal heuristic data (see \ref HEUR_DATA).
+ * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
  * -# Implement the interface methods (see \ref HEUR_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref HEUR_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref HEUR_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref HEUR_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section HEUR_PROPERTIES Properties of a Primal Heuristic
@@ -2421,10 +2421,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
- * -# Define the relaxation handler data (see \ref RELAX_DATA).
+ * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
  * -# Implement the interface methods (see \ref RELAX_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref RELAX_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref RELAX_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref RELAX_ADDITIONALCALLBACKS). This is optional.
  *
  * 
  * @section RELAX_PROPERTIES Properties of a Relaxation Handler
@@ -2618,10 +2618,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myreader".
  * -# Adjust the properties of the file reader (see \ref READER_PROPERTIES).
- * -# Define the file reader data (see \ref READER_DATA).
+ * -# Define the file reader data (see \ref READER_DATA). This is optional.
  * -# Implement the interface methods (see \ref READER_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref READER_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref READER_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref READER_ADDITIONALCALLBACKS). This is optional.
  *
  * 
  * @section READER_PROPERTIES Properties of a File Reader
@@ -2768,10 +2768,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydialog".
  * -# Adjust the properties of the dialog (see \ref DIALOG_PROPERTIES).
- * -# Define the dialog data (see \ref DIALOG_DATA).
+ * -# Define the dialog data (see \ref DIALOG_DATA). This is optional.
  * -# Implement the interface methods (see \ref DIALOG_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref DIALOG_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref DIALOG_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref DIALOG_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section DIALOG_PROPERTIES Properties of a Dialog
@@ -2965,10 +2965,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydisplaycolumn".
  * -# Adjust the properties of the display column (see \ref DISP_PROPERTIES).
- * -# Define the display column data (see \ref DISP_DATA).
+ * -# Define the display column data (see \ref DISP_DATA). This is optional.
  * -# Implement the interface methods (see \ref DISP_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref DISP_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref DISP_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref DISP_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section DISP_PROPERTIES Properties of a Display Column
