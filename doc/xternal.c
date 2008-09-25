@@ -72,6 +72,11 @@
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
  *
+ * <b>Changes between different versions of SCIP</b>
+ *
+ * - \ref CHG1    "Changes between version 0.9 and 1.0"
+ * - \ref CHG2    "Changes between version 1.0 and 1.1"
+ *
  */
 
 
@@ -3430,6 +3435,23 @@
  *  \arg <tt>optimal auto settings</tt> - Theoretical result for a solver that performed 'best of all' for every instance.
  */
 
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG1 Changes between SCIP 0.9 and SCIP 1.0
+ *
+ *  @section CHGPARAM New parameters
+ * 
+ * - All functions SCIP<datatype>Param() got a new parameter "isadvanced".
+ *   \n
+ *   This does not influence the performance of SCIP, but the position of the parameter in the settings menu. 
+ *   Hence, if you do not care about this, you can assign any value to it. 
+ *   You should add the corresponding flag to the SCIP<datatype>Param() calls in your own source code. 
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG2 Changes between SCIP 1.0 and SCIP 1.1
+ *
+ */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
  * \htmlinclude faqcss.inc  

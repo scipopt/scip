@@ -123,19 +123,13 @@
       please read the SCIP INSTALL file first.                                                     
     </p>
     <p class="q">
-      <a name="Q8">I changed to version 1.0 and now compiling breaks with some error like:<br>
-	&quot;scip/src/scip/scip.h:343: error: too few arguments to function 'SCIP_RETCODE 
-	SCIPaddIntParam(SCIP*, const char*, const char*, int*, unsigned int, int, int, int, 
-	SCIP_RETCODE (*)(SCIP*, SCIP_PARAM*), SCIP_PARAMDATA*)'&quot;<br>
-	What's going on?</a>
+      <a name="Q8">I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
+	Do you have a general hint on that?</a>
     </p>
     <p class="a">
-      The SCIPadd&lt;datatype&gt;Param() functions got a new parameter flag 
-      &quot;isadvanced&quot;. This has no influence to the performance, but only to the 
-      position of the parameter in the settings menu. Hence, if you do not care about this,
-      you can assign any value to it.<br>
-      You should add the corresponding flag to the SCIPadd&lt;datatype&gt;Param() calls in your
-      own source code. 
+      Maybe the parameters of a function in SCIP changed. Relevant changes between version 0.9 to 1.0 can be
+      found <a href="http://scip.zib.de/doc/html/CHG1.html">here</a> and the ones between version 1.0 and 1.1
+      are listed <a href="http://scip.zib.de/doc/html/CHG1.html">here</a>.
     </p>
     <p class="q">
       <a name="Q18">Can I use SCIP as a pure CP-Solver?</a>
