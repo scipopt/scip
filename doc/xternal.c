@@ -177,7 +177,7 @@
  *   The documentation of "scip.h" is grouped into several blocks, each dealing with methods for a specific kind of
  *   object.
  *   For example, all methods operating on variables are grouped together.
- * - The files "pub_<...>.h" contains methods that perform "easy" operations that only affect the corresponding
+ * - The files "pub_<...>.h" contain methods that perform "easy" operations that only affect the corresponding
  *   objects.
  *   Usually, with these methods you can access the data of the object.
  *   For example, in "pub_var.h" you find methods to get information about a variable.
