@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_rlp.c,v 1.8 2008/09/22 19:16:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.9 2008/09/25 09:29:52 bzfwolte Exp $"
 
-/**@file   reader_rlp.h
+/**@file   reader_rlp.c
  * @ingroup FILEREADERS 
  * @brief  RLP file reader (LP format with generic variables and row names)
  * @author Stefan Heinz

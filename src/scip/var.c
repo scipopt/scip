@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.233 2008/09/24 20:49:43 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.234 2008/09/25 09:29:52 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -4363,7 +4363,7 @@ void varIncRootboundchgs(
 
 /* forward declaration, because both methods call each other recursively */
 
-/** performs the current change in upper bound, changes all parents accordingly */
+/* performs the current change in upper bound, changes all parents accordingly */
 static            
 SCIP_RETCODE varProcessChgUbGlobal(
    SCIP_VAR*             var,                /**< problem variable to change */
@@ -5019,7 +5019,7 @@ SCIP_RETCODE varEventUbChanged(
 
 /* forward declaration, because both methods call each other recursively */
 
-/** performs the current change in upper bound, changes all parents accordingly */
+/* performs the current change in upper bound, changes all parents accordingly */
 static            
 SCIP_RETCODE varProcessChgUbLocal(
    SCIP_VAR*             var,                /**< problem variable to change */

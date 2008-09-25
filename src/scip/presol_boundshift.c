@@ -14,9 +14,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_boundshift.c,v 1.2 2008/09/22 19:16:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_boundshift.c,v 1.3 2008/09/25 09:29:52 bzfwolte Exp $"
 
-/**@file   presol_boundshift.h
+/**@file   presol_boundshift.c
  * @ingroup PRESOLVERS
  * @brief  presolver that converts variables with domain [a,b] to variables with domain [0,b-a]
  * @author Stefan Heinz
