@@ -271,6 +271,7 @@ fixed bugs:
 - fixed some SCIP_RETCODE bugs in reader_fix.c, reader_sol.c, reader_sos.c, and reader_zpl.c
 - fixed docu in type_reader.h
 - fixed bug with multi-aggregated variables which are de facto aggregated or fixed after flattening the aggregation tree
+- fixed bug with bound changes of variables in modifiable constraints during full dual presolving of linear conshdlr
 
 SCIP version 1.00
 =================

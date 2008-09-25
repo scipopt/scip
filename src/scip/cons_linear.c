@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.310 2008/09/23 13:40:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.311 2008/09/25 12:44:22 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5697,7 +5697,7 @@ SCIP_RETCODE dualPresolve(
       }
       else
       {
-	 SCIPdebugMessage("aggregation non succesfull!\n");
+	 SCIPdebugMessage("aggregation non successful!\n");
       }
    }
 
@@ -7419,7 +7419,8 @@ SCIP_RETCODE fullDualPresolve(
          contvarpos = -1;
          nconscontvars = 0;
          hasimpliedpotential = FALSE;
-         integralcoefs = TRUE;
+         integralcoefs = !SCIPconsIsModifiable(conss[c]);
+         
          for( i = 0; i < consdata->nvars; ++i )
          {
             SCIP_VAR* var;
@@ -7443,16 +7444,26 @@ SCIP_RETCODE fullDualPresolve(
             if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
                continue;
 
-            /* calculate residual activity bounds if variable would be fixed to zero */
-            consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity, &isminsettoinfinity, &ismaxsettoinfinity);
-
-            /* check minresactivity for reliablility */
-            if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastglbminactivity) )
-               consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, TRUE);
-
-            /* check maxresactivity for reliablility */
-            if( !ismaxsettoinfinity && isNewActivityUnreliable(scip, maxresactivity, consdata->lastglbmaxactivity) )
-               consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, TRUE);
+            if( SCIPconsIsModifiable(conss[c]) )
+            {
+               minresactivity = -SCIPinfinity(scip);
+               maxresactivity =  SCIPinfinity(scip);
+               isminsettoinfinity = TRUE;
+               ismaxsettoinfinity = TRUE;
+            }
+            else
+            {
+               /* calculate residual activity bounds if variable would be fixed to zero */
+               consdataGetGlbActivityResiduals(scip, consdata, var, val, &minresactivity, &maxresactivity, &isminsettoinfinity, &ismaxsettoinfinity);
+               
+               /* check minresactivity for reliablility */
+               if( !isminsettoinfinity && isNewActivityUnreliable(scip, minresactivity, consdata->lastglbminactivity) )
+                  consdataGetReliableResidualActivity(scip, consdata, var, &minresactivity, TRUE, TRUE);
+               
+               /* check maxresactivity for reliablility */
+               if( !ismaxsettoinfinity && isNewActivityUnreliable(scip, maxresactivity, consdata->lastglbmaxactivity) )
+                  consdataGetReliableResidualActivity(scip, consdata, var, &maxresactivity, FALSE, TRUE);
+            }
 
             arrayindex = SCIPvarGetProbindex(var) - nbinvars;
 

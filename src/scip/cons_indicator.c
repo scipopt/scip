@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.26 2008/09/22 19:25:06 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.27 2008/09/25 12:44:22 bzfberth Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3009,7 +3009,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
 /** creates and captures a indicator constraint
  *
- *  We set the constraint to not be modifable. If the weights are non
+ *  We set the constraint to not be modifiable. If the weights are non
  *  NULL, the variables are ordered according to these weights (in
  *  ascending order).
  */
