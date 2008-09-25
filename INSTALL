@@ -214,6 +214,9 @@ make[1]: Leaving directory `/sw/scip'
    appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_STRERROR_R".
    Make sure, the file "src/scip/misc.c" is recompiled.
 
+   On some systems, the option [-e] is not available for the read command.
+   You have to compile with READ=read.
+
    If you encounter other compiler or linker errors, you should recompile with
    "make VERBOSE=true ..." in order to get the full compiler invocation. This might help to
    fix the corresponding machine dependent makefile in the make subdirectory.
