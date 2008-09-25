@@ -401,17 +401,19 @@
     <p class="a">
       Note that a constraint handler is defined by the type of constraints that it manages. For
       constraint handlers, always think in terms of constraint programming. For example, the
-      &quot;nosubtour&quot; constraint handler in the TSP manages &quot;nosubtour&quot; constraints, which demand
+      &quot;nosubtour&quot; constraint handler in the TSP
+      (see "ConshdlrSubtour.cpp" in the directory "scip/examples/TSP/src/")
+      manages &quot;nosubtour&quot; constraints, which demand
       that in a given graph no feasible solution can contain a tour that does not contain all
       cities. In the usual TSP problem, there is only one &quot;nosubtour&quot; constraint, because there
       is only one graph for which subtours have to be ruled out.
       The &quot;nosubtour&quot; constraint handler has various ways of enforcing the &quot;nosubtour&quot; property
       of the solutions. A simple way is to just check each integral solution candidate (in the
-      CHECK, ENFOLP, and ENFOPS callback methods) for subtours. If there is a subtour, the
+      CONSCHECK, CONSENFOLP, and CONSENFOPS callback methods) for subtours. If there is a subtour, the
       solution is rejected. A more elaborate way includes the generation of &quot;subtour elimination
-      cuts&quot; in the SEPALP callback method of the constraint handler. Additionally, the
+      cuts&quot; in the CONSSEPALP callback method of the constraint handler. Additionally, the
       constraint handler may want to separate other types of cutting planes like comb
-      inequalities in its SEPALP callback.
+      inequalities in its CONSSEPALP callback.
       </p>  
     <p class="q">
       <a name="Q21">Can I remove unnecessary display columns or&mdash;even better&mdash;add my own ones? 
@@ -453,8 +455,8 @@
       SCIProwGetNNonz(),SCIProwGetCols() then give you information about each row, 
       see <a href="#Q22">previous question</a>.<br>
       You get a columnwise representation by calling SCIPgetColsData(). 
-      The methods SCIPcolGetLb() and SCIPcolGetUb() give you the locally valid bounds of the LP relaxation
-      in the current branch-and-bound-node.<br>
+      The methods SCIPcolGetLb() and SCIPcolGetUb() give you the locally valid bounds of a column in the LP relaxation
+      of the current branch-and-bound-node.<br>
       If you are interested in global information, you have to call SCIPcolGetVar() to get the variable 
       associated to a column (see <a href="#Q24">next question</a>), which you can ask for global bounds
       via SCIPvarGetLbGlobal() and SCIPvarGetUbGlobal() as well as the type of the variable 
@@ -481,8 +483,9 @@
       <a name="Q25">Are the variables and rows sorted in any particular order?</a>
     </p>
     <p class="a">The variable array which you get by SCIPgetVars() is internally sorted by variable types.
-      The binary variables are stored at position [0,...,nbinvars-1], 
-      the general integers at [nbinvars,...,nbinvars+nintvars-1]. 
+      The ordering is binary, integer, implicit integer, and continuous variables, i.e., 
+      the binary variables are stored at position [0,...,nbinvars-1], 
+      the general integers at [nbinvars,...,nbinvars+nintvars-1], and so on. 
       It holds that nvars = nbinvars + ninitvars + nimplvars + ncontvars.
       There is no further sorting within these sections, as well as there is no sorting for the rows.
       But each column and each row has a unique index, 
