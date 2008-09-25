@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.29 2008/08/29 20:20:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.30 2008/09/25 20:13:49 bzfberth Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -25,7 +25,7 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define SCIP_DEBUG_SOLUTION "check/lseu.sol"*/
+/* #define SCIP_DEBUG_SOLUTION "check/p0033.sol" */
 
 /** uncomment this define to activate debugging the LP interface  */
 /*#define SCIP_DEBUG_LP_INTERFACE*/
