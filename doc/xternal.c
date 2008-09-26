@@ -2045,9 +2045,16 @@
  *
  * 
  * @section NODESEL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Node Selector
+
+fulll two requirements: Selecting a node to be processed
+next and, given two nodes, deciding which of them is favored by its selection rule. The rst
+task is implemented in the NODESELSELECT callback, the second one in the NODESELCOMP
  *
  * Node selector plugins have two fundamental callback methods, namely the NODESELSELECT method and the NODESELCOMP method.
  * These methods have to be implemented for every node selector; the other callback methods are optional.
+ * They implement the two requirements every node selector has to fulfill: Selecting a node from the queue to be processed
+ * next and, given two nodes, deciding which of both is favored by the node selector's selection rule. The first
+ * task is implemented in the NODESELSELECT callback, the second one in the NODESELCOMP callback.
  * In the C++ wrapper class ObjNodesel, the scip_select() method and the scip_comp() method (which correspond to the 
  * NODESELSELECT callback and the NODESELCOMP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your node selector class.
@@ -2057,20 +2064,32 @@
  * @subsection NODESELSELECT
  *
  * The NODESELSELECT callback is the first method called in each iteration in the main solving loop. It should decide 
- * which of the leaves in the current branching tree is selected as next subproblem to be processed. It can decide between 
- * the current node's children and siblings, and the "best" of the remaining leaves stored in the tree. This choice can 
+ * which of the leaves in the current branching tree is selected as next subproblem to be processed. 
+ * It can arbitraily decide between all leaves stored in the tree, but for performance reasons,
+ * the current node's children and siblings are often treated different from the remaining leaves. 
+ * This is mainly due to the warm start capabilities of the simplex algorithm and the expectation that the bases of 
+ * neighboring vertices in the branching tree very similar.
+ * The node selector's choice of the next node to process can 
  * have a large impact on the solver's performance, because it influences the finding of feasible solutions and the 
  * development of the global dual bound. 
  *
- * The following methods provide access to the various leaf nodes:
+ * Besides the ranking of the node selector, every node gets assigned a node selection priority by the branching rule, 
+ * which created the node. See the \ref BRANCHEXECLP and \ref BRANCHEXECPS callbacks of the branching rules for details. 
+ * For example, the node where the branching went in the same way as the deviation from the branching variable's 
+ * root solution could be assigned a higher priority as the node where the branching went in the opposite direction. 
+ *
+ * The following methods provide access to the various types of leaf nodes:
  * - SCIPgetPrioChild() returns the child of the current node with the largest node selection priority, as assigned by the
- *   branching rule, see the \ref BRANCHEXECLP and \ref BRANCHEXECPS callbacks of the branching rules. If no child is
+ *   branching rule, 
+ *   If no child is
  *   available (for example, because the current node was pruned), a NULL pointer is returned.
  * - SCIPgetBestChild() returns the best child of the current node with respect to the node selector's ordering relation as
  *   defined by the \ref NODESELCOMP callback. If no child is available, a NULL pointer is returned.
  * - SCIPgetPrioSibling() returns the sibling of the current node with the largest node selection priority.
  *   If no sibling is available (for example, because all siblings of the current node have already been processed), a NULL
  *   pointer is returned.
+ *   Note that in binary branching every node has at most one sibling, but since SCIP supports arbitrary branching rules, 
+ *   this might not always be the case.
  * - SCIPgetBestSibling() returns the best sibling of the current node with respect to the node selector's ordering relation
  *   as defined by the \ref NODESELCOMP callback. If no sibling is available, a NULL pointer is returned.
  * - SCIPgetBestNode() returns the best leaf from the tree (children, siblings, or other leaves) with respect to the node
