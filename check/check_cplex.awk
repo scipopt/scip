@@ -1,4 +1,4 @@
-#!/bin/gawk -f
+#!/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.35 2008/09/03 07:31:34 bzfheinz Exp $
+# $Id: check_cplex.awk,v 1.36 2008/09/26 16:33:40 bzfberth Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator

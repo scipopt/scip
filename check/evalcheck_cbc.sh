@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cbc.sh,v 1.4 2008/04/17 19:30:45 bzfpfets Exp $
+# $Id: evalcheck_cbc.sh,v 1.5 2008/09/26 16:33:40 bzfberth Exp $
 
 export LANG=C
 
@@ -53,5 +53,5 @@ do
     fi
     fi
 
-    gawk -f check_cbc.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
+    awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" $AWKARGS $SOLUFILE $OUTFILE | tee $RESFILE
 done

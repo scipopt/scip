@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.5 2008/09/22 10:37:58 bzfheinz Exp $
+# $Id: evalcheck_cluster.sh,v 1.6 2008/09/26 16:33:40 bzfberth Exp $
 export LANG=C
 
 AWKARGS=""
@@ -69,5 +69,5 @@ else
     SOLUFILE=""
 fi
 fi
-gawk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 

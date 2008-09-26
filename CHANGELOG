@@ -119,7 +119,7 @@ features:
 - added test scripts for testing counting (make testcount)
 - allow cut selection based on support of inequality in orthogonality computation
 - advanced reading and writing dialog in interactive shell
-
+- replaced tcsh by bash and gawk by awk in all check scripts to achieve higher compatibility
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})

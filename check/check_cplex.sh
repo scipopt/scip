@@ -122,7 +122,7 @@ do
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
-	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 1000 M; $CPLEXBIN < $TMPFILE" 2>>$ERRFILE
+	    bash -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 1000 M; $CPLEXBIN < $TMPFILE" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
@@ -147,7 +147,7 @@ date >>$ERRFILE
 
 if test -f $TSTNAME.solu
 then
-    gawk -f check_cplex.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+    awk -f check_cplex.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
 else
-    gawk -f check_cplex.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
+    awk -f check_cplex.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
 fi

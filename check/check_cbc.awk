@@ -1,4 +1,4 @@
-#!/bin/gawk -f
+#!/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.5 2008/08/11 17:53:07 bzfheinz Exp $
+# $Id: check_cbc.awk,v 1.6 2008/09/26 16:33:40 bzfberth Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator

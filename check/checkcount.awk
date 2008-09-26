@@ -1,4 +1,4 @@
-#!/bin/gawk -f
+#!/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: checkcount.awk,v 1.1 2008/09/22 15:19:26 bzfheinz Exp $
+# $Id: checkcount.awk,v 1.2 2008/09/26 16:33:40 bzfberth Exp $
 #
 #@file    checkcount.awk
 #@brief   SCIP Check Report Generator for counting tests
