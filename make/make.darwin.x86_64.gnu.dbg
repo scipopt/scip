@@ -1,0 +1,13 @@
+#--- $Id: make.darwin.x86_64.gnu.dbg,v 1.1 2008/09/26 23:34:00 bzfheinz Exp $
+FLAGS		+=	-DNO_REMOVE_HISTORY # -DROUNDING_FE
+OFLAGS		+=	-O0 -g -m64
+CFLAGS		+=	$(GCCWARN)
+CXXFLAGS	+=	$(GXXWARN)
+ARFLAGS		=	crs
+LDFLAGS		+=	-L/sw/lib
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

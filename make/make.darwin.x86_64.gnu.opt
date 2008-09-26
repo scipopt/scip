@@ -1,0 +1,13 @@
+#--- $Id: make.darwin.x86_64.gnu.opt,v 1.1 2008/09/26 23:34:00 bzfheinz Exp $
+FLAGS		+=	-DNDEBUG -DNO_REMOVE_HISTORY # -DROUNDING_FE
+OFLAGS		+=	-O2 -m64 -fomit-frame-pointer
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=	-L/sw/lib
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses
