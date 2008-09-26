@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.44 2008/09/22 19:16:27 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.45 2008/09/26 20:56:58 bzfheinz Exp $"
 
 /**@file   cons_binpack.c
  * @ingroup CONSHDLRS 
@@ -46,7 +46,7 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define LINCONSUPGD_PRIORITY    +000000
+#define LINCONSUPGD_PRIORITY    +000000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 
 

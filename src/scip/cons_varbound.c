@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.77 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.78 2008/09/26 20:56:58 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -50,7 +50,7 @@
 #define EVENTHDLR_NAME         "varbound"
 #define EVENTHDLR_DESC         "bound change event handler for variable bound constraints"
 
-#define LINCONSUPGD_PRIORITY     +50000
+#define LINCONSUPGD_PRIORITY     +50000 /**< priority of the constraint handler for upgrading of linear constraints */
 
 
 /** variable bound constraint data */
