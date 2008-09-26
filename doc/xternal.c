@@ -207,15 +207,16 @@
  * type_cons.h.
  *
  * Here is what you have to do (assuming your constraint handler should be named "subtour"):
- * -# Copy the template files "src/scip/cons_xxx.c" and "src/scip/cons_xxx.h" into files "cons_subtour.c"
+ * -# Copy the template files src/scip/cons_xxx.c and src/scip/cons_xxx.h into files "cons_subtour.c"
  *    and "cons_subtour.h".
+      \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "subtour".
- * -# Adjust the properties of the constraint handler (see \ref CONS_PROPERTIES).
- * -# Define the constraint data and the constraint handler data (see \ref CONS_DATA).
- * -# Implement the interface methods (see \ref CONS_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref CONS_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref CONS_ADDITIONALCALLBACKS).
+ * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
+ * -# Define the \ref CONS_DATA "constraint data and the constraint handler data".
+ * -# Implement the \ref CONS_INTERFACE "interface methods".
+ * -# Implement the \ref CONS_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref CONS_ADDITIONALCALLBACKS "additional callback methods".
  *
  * 
  * @section CONS_PROPERTIES Properties of a Constraint Handler
@@ -326,7 +327,7 @@
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
  * This property is analoguos to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
- * \par CONSHDLR_NEEDSCONS: indicates whether the constraint handler be should skipped, if no constraints are available.
+ * \par CONSHDLR_NEEDSCONS: indicates whether the constraint handler should be skipped, if no constraints are available.
  * Usually, a constraint handler is only executed if there are constraints of its corresponding class in the model.
  * For those constraint handlers, the NEEDSCONS flag should be set to TRUE.
  * However, some constraint handlers must be called without having a constraint of the class in the model, because
@@ -335,6 +336,12 @@
  * integrality constraint in the model.
  * The integrality conditions are attached to the variables, and the integrality constraint handler has to check
  * all variables that are marked to be integer for integral values.
+ *
+ * \par LINCONSUPGD_PRIORITY(optional): priority of the constraint handler for upgrading of linear constraints
+ * This property is only needed if a certain linear constraint can be upgraded to a more specific one. In one of 
+ * the first presolving rounds SCIP tries to upgrade linear constraints to more specialized constraints such as, 
+ * knapsack constraints. The upgrading calls a processed in the order of decreasing priority. 
+ * 
  *
  *
  * @section CONS_DATA Constraint Data and Constraint Handler Data
@@ -383,54 +390,64 @@
  * \endcode
  * of the linear constraint handler (see cons_linear.h).
  *
- * You may also add user parameters for your constraint handler.
- * An example for this can be found in src/scip/cons_knapsack.c.
+ * You may also add user parameters for your constraint handler.  An
+ * example for this and the automatic linear upgrading mechanism can be
+ * found in src/scip/cons_knapsack.c.
  *
  * The method SCIPcreateConsSubtour() is called to create a single constraint of the constraint handler's constraint
  * class.
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
- * Take a look at the following example from the logicor constraint handler:
+ * Take a look at the following example from the knapsack constraint handler:
  * \code
- * SCIP_RETCODE SCIPcreateConsLogicor(
- *    SCIP*                 scip,
- *    SCIP_CONS**           cons,
- *    const char*           name,
- *    int                   nvars,
- *    SCIP_VAR**            vars,
- *    SCIP_Bool             initial,
- *    SCIP_Bool             separate,
- *    SCIP_Bool             enforce,
- *    SCIP_Bool             check,
- *    SCIP_Bool             propagate,
- *    SCIP_Bool             local,
- *    SCIP_Bool             modifiable,
- *    SCIP_Bool             dynamic,
- *    SCIP_Bool             removable,
- *    SCIP_Bool             stickingatnode
- *    )
+ * SCIP_RETCODE SCIPcreateConsKnapsack(
+ *   SCIP*                 scip,          
+ *   SCIP_CONS**           cons,          
+ *   const char*           name,          
+ *   int                   nvars,         
+ *   SCIP_VAR**            vars,          
+ *   SCIP_Longint*         weights,       
+ *   SCIP_Longint          capacity,      
+ *   SCIP_Bool             initial,       
+ *   SCIP_Bool             separate,      
+ *   SCIP_Bool             enforce,       
+ *   SCIP_Bool             check,         
+ *   SCIP_Bool             propagate,     
+ *   SCIP_Bool             local,         
+ *   SCIP_Bool             modifiable,    
+ *   SCIP_Bool             dynamic,       
+ *   SCIP_Bool             removable,     
+ *   SCIP_Bool             stickingatnode 
+ *   )
  * {
+ *    SCIP_CONSHDLRDATA* conshdlrdata;
  *    SCIP_CONSHDLR* conshdlr;
  *    SCIP_CONSDATA* consdata;
- * 
- *    assert(scip != NULL);
- * 
+ *   
  *    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
  *    if( conshdlr == NULL )
  *    {
- *       SCIPerrorMessage("logic or constraint handler not found\n");
- *       return SCIP_INVALIDCALL;
+ *       SCIPerrorMessage("knapsack constraint handler not found\n");
+ *       return SCIP_PLUGINNOTFOUND;
  *    }
- * 
- *    SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars) );
- * 
+ *
+ *    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+ *    assert(conshdlrdata != NULL);
+ *    assert(conshdlrdata->eventhdlr != NULL);
+ *
+ *    SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, weights, capacity) );
+ *         
  *    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
  *          local, modifiable, dynamic, removable, stickingatnode) );
- * 
+ *
  *    return SCIP_OKAY;
  * }
  * \endcode
- * In this example, consdataCreate() is a local method that allocates memory for the given consdata and fills the
- * data with the given vars array.
+ * In this example, consdataCreate() is a local method that allocates memory for the given consdata 
+ * and fills the data with the given vars array. For allocating memory for the constarint data you
+ * can use the method:
+ * \code
+ * SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
+ * \endcode
  *
  * 
  * @section CONS_FUNDAMENTALCALLBACKS Fundamental Callback Methods
@@ -454,8 +471,8 @@
  *
  * @subsection CONSCHECK
  *
- * The CONSCHECK callback gets a primal solution candidate in a SOL* data structure and has to check this solution
- * for global feasibility.
+ * The CONSCHECK callback gets a primal solution candidate in a SCIP_SOL* data structure 
+ * and has to check this solution for global feasibility.
  * It has to return a result SCIP_FEASIBLE, if the solution satisfies all the constraints of the constraint handler,
  * and a result SCIP_INFEASIBLE if there is at least one constraint that is violated.
  * The callback is used by primal heuristics to check a constructed solution for feasibility.
@@ -478,7 +495,7 @@
  * The CONSENFOLP method is called after the price-and-cut loop was finished and an LP solution is available.
  * Like the CHECK method, the ENFOLP method should check the solution (in this case, the LP solution) for
  * feasibility.
- * However, the solution is not given as a SOL* data structure.
+ * However, the solution is not given as a SCIP_SOL* data structure.
  *
  * The value of a variable \em var in the LP solution can be accessed by calling
  * \code
@@ -544,15 +561,15 @@
  *  - If the constraint may get violated by changing the variable in any direction, it should call
  *    SCIPaddVarLocks(scip, var, nlockspos + nlocksneg, nlockspos + nlocksneg).
  *
- *  Consider the linear constraint "3x -5y +2z <= 7" as an example. The CONSLOCK callback method of the
+ *  Consider the linear constraint \f$3x -5y +2z \leq 7\f$ as an example. The CONSLOCK callback method of the
  *  linear constraint handler should call SCIPaddVarLocks(scip, x, nlocksneg, nlockspos), 
  *  SCIPaddVarLocks(scip, y, nlockspos, nlocksneg) and SCIPaddVarLocks(scip, z, nlocksneg, nlockspos) to tell SCIP,
  *  that rounding up of x and z and rounding down of y can destroy the feasibility of the constraint, while rounding
- *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation "3x -5y +2z > 7".
- *  A linear constraint "2 <= 3x -5y +2z <= 7" should call
+ *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation \f$3x -5y +2z > 7\f$.
+ *  A linear constraint \f$2 \leq 3x -5y +2z \leq 7\f$ should call
  *  SCIPaddVarLocks(scip, ..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, since rounding in both
  *  directions of each variable can destroy both the feasibility of the constraint and it's negation
- *  "3x -5y +2z < 2  or  3x -5y +2z > 7".
+ *  \f$3x -5y +2z < 2\f$  or  \f$3x -5y +2z > 7\f$.
  * 
  *
  * @section CONS_ADDITIONALCALLBACKS Additional Callback Methods
@@ -655,29 +672,42 @@
  * Here is an example, which is taken from the logicor constraint handler:
  * \code
  * static
- * SCIP_DECL_CONSTRANS(consTransLogicor)
- * {
+ * SCIP_DECL_CONSTRANS(consTransKnapsack)
+ * {  
+ *    SCIP_CONSHDLRDATA* conshdlrdata;
  *    SCIP_CONSDATA* sourcedata;
  *    SCIP_CONSDATA* targetdata;
- * 
+ *
+ *    assert(conshdlr != NULL);
+ *    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+ *    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
+ *    assert(sourcecons != NULL);
+ *    assert(targetcons != NULL);
+ *
  *    sourcedata = SCIPconsGetData(sourcecons);
- * 
- *    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars) );
- * 
+ *    assert(sourcedata != NULL);
+ *    assert(sourcedata->row == NULL);
+ *
+ *    conshdlrdata = SCIPconshdlrGetData(conshdlr);
+ *    assert(conshdlrdata != NULL);
+ *    assert(conshdlrdata->eventhdlr != NULL);
+ *
+ *    SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
+ *          sourcedata->nvars, sourcedata->vars, sourcedata->weights, sourcedata->capacity) ); 
+ *
  *    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
  *          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
  *          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
  *          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
- *          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
- *          SCIPconsIsStickingAtNode(sourcecons)) );
- * 
+ *          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+ *
  *    return SCIP_OKAY;
  * }
  * \endcode
  * 
  * @subsection CONSINITLP
  *
- * The CONSINITLP callback is executed at the root node before the first LP relaxation is solved.
+ * The CONSINITLP callback is executed before the first LP relaxation is solved.
  * It should add the LP relaxations of all "initial" constraints to the LP. The method should scan the constraints
  * array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
  * of all initial constraints to the LP with calls to SCIPaddCut().
@@ -754,16 +784,17 @@
  * rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
  * by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
  *
- * For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE (i.e., changes the lower bound of z
- * to 1.0), if both, x and y, are assigned to FALSE (i.e., if the upper bounds of these variables are 0.0). It uses
+ * For example, the logicor constraint \f$c = x \vee y \vee z\f$ fixes variable \f$z\f$ 
+ * to TRUE (i.e., changes the lower bound of \f$z\f$
+ * to 1.0), if both, \f$x\f$ and \f$y\f$, are assigned to FALSE (i.e., if the upper bounds of these variables are 0.0). It uses
  * SCIPinferVarLbCons(scip, z, 1.0, c, 0) to apply this assignment (an inference information tag is not needed by the
  * constraint handler and is set to 0).
- * In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
- * constraint c, that was applied at a time given by a bound change index "bdchgidx".
- * With a call to SCIPvarGetLbAtIndex(z, bdchgidx), the handler can find out, that the lower bound of variable z was
+ * In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on \f$z\f$ with
+ * constraint \f$c\f$, that was applied at a time given by a bound change index "bdchgidx".
+ * With a call to SCIPvarGetLbAtIndex(z, bdchgidx), the handler can find out, that the lower bound of variable \f$z\f$ was
  * set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
- * SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
- * the reason for the deduction of the lower bound of z.
+ * SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were
+ * the reason for the deduction of the lower bound of \f$z\f$.
  *
  * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.
  * Although this is viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod,
@@ -778,9 +809,19 @@
  * handler, delete redundant constraints, aggregate and fix variables if possible, and upgrade constraints to a more
  * specific type.
  *
- * If the CONSPRESOL callback applies changes to the constraint data, you also have to implement the CONSTRANS callback
+ * If the CONSPRESOL callback applies changes to the constraint data, you also have to implement the \ref CONSTRANS callback
  * in order to copy the constraint data to the transformed problem space and protect the original problem from the
  * preprocessing changes.
+ *
+ * To inform SCIP that the presolving method found a reduction the result pointer has to be set in a proper way. 
+ * The following options are possible:
+ *
+ *  - SCIP_UNBOUNED   : at least one variable is not bounded by any constraint in obj. direction
+ *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds
+ *  - SCIP_SUCCESS    : the presolver found a reduction
+ *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
+ *  - SCIP_DIDNOTRUN  : the presolver was skipped
+ *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  *
  * @subsection CONSACTIVE
  *
@@ -806,9 +847,10 @@
  *
  * @subsection CONSPRINT
  *
- * The CONSPRINT callback method is called, when the user asks SCIP to display the problem to the screen or save
- * the problem into a file.
- * The constraint handler should display the data of the constraint in an appropriate form.
+ * The CONSPRINT callback method is called, when the user asks SCIP to display the problem to the screen 
+ * or save the problem into a file. This is, however, only the case if the user requested the CIP format. 
+ * For more detail to reading and writing with SCIP we refer to the \ref READER "file readers". In this 
+ * callback method the constraint handler should display the data of the constraint in an appropriate form.
  * The output format that is defined by the CONSPRINT callbacks is called CIP format.
  * In later versions of SCIP, the constraint handlers should also be able to parse (i.e., read) constraints
  * which are given in CIP format.
