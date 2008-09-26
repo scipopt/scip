@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.13 2008/04/17 18:00:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.14 2008/09/26 16:52:02 bzfberth Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -46,6 +46,8 @@ struct SCIP_RelaxData
  * Callback methods of relaxator
  */
 
+extern "C"
+{
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_RELAXFREE(relaxFreeObj)
@@ -154,7 +156,7 @@ SCIP_DECL_RELAXEXEC(relaxExecObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

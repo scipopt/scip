@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdisp.cpp,v 1.2 2008/04/17 18:00:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objdisp.cpp,v 1.3 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objdisp.cpp
  * @brief  C++ wrapper for display column
@@ -46,6 +46,8 @@ struct SCIP_DispData
  * Callback methods of display column
  */
 
+extern "C"
+{
 /** destructor of display column to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_DISPFREE(dispFreeObj)
@@ -154,7 +156,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

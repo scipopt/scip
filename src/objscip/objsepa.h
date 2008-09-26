@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.27 2008/04/17 18:00:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.28 2008/09/26 16:52:02 bzfberth Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -76,8 +76,8 @@ public:
         scip_maxbounddist_(maxbounddist),
         scip_delay_(delay)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */

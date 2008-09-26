@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.21 2008/04/17 18:00:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.22 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -46,6 +46,8 @@ struct SCIP_BranchruleData
  * Callback methods of branching rule
  */
 
+extern "C"
+{
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_BRANCHFREE(branchFreeObj)
@@ -170,7 +172,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

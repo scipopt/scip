@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.9 2008/04/17 18:00:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.10 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objeventhdlr.cpp
  * @brief  C++ wrapper for event handlers
@@ -46,6 +46,8 @@ struct SCIP_EventhdlrData
  * Callback methods of event handler
  */
 
+extern "C"
+{
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_EVENTFREE(eventhdlrFreeObj)
@@ -171,7 +173,7 @@ SCIP_DECL_EVENTEXEC(eventhdlrExecObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

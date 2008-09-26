@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.cpp,v 1.13 2008/04/17 18:00:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objprobdata.cpp,v 1.14 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objprobdata.cpp
  * @brief  C++ wrapper for user problem data
@@ -46,6 +46,8 @@ struct SCIP_ProbData
  * Callback methods of user problem data
  */
 
+extern "C"
+{
 /** frees user data of original problem (called when the original problem is freed) */
 static
 SCIP_DECL_PROBDELORIG(probDelorigObj)
@@ -144,7 +146,7 @@ SCIP_DECL_PROBEXITSOL(probExitsolObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

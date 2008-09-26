@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.cpp,v 1.4 2008/09/17 18:43:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objdialog.cpp,v 1.5 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objdialog.cpp
  * @brief  C++ wrapper for dialogs
@@ -46,6 +46,8 @@ struct SCIP_DialogData
  * Callback methods of dialog
  */
 
+extern "C"
+{
 /** destructor of dialog to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_DIALOGFREE(dialogFreeObj)
@@ -102,7 +104,7 @@ SCIP_DECL_DIALOGEXEC(dialogExecObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

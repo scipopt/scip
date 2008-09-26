@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.20 2008/04/17 18:00:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.21 2008/09/26 16:52:02 bzfberth Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -41,11 +41,12 @@ struct SCIP_SepaData
 
 
 
-
 /*
  * Callback methods of cut separator
  */
 
+extern "C"
+{
 /** destructor of cut separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeObj)
@@ -171,7 +172,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.20 2008/04/17 18:00:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.21 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -46,6 +46,8 @@ struct SCIP_PricerData
  * Callback methods of variable pricer
  */
 
+extern "C"
+{
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRICERFREE(pricerFreeObj)
@@ -171,7 +173,7 @@ SCIP_DECL_PRICERREDCOST(pricerFarkasObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.37 2008/04/18 14:02:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.38 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -46,6 +46,8 @@ struct SCIP_ConshdlrData
  * Callback methods of constraint handler
  */
 
+extern "C"
+{
 /** destructor of constraint handler to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeObj)
@@ -466,7 +468,7 @@ SCIP_DECL_CONSPRINT(consPrintObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.24 2008/04/17 18:00:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.25 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -46,6 +46,8 @@ struct SCIP_HeurData
  * Callback methods of primal heuristic
  */
 
+extern "C"
+{
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeObj)
@@ -154,7 +156,7 @@ SCIP_DECL_HEUREXEC(heurExecObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

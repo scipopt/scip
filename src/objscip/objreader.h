@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.22 2008/04/17 18:00:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.23 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -58,9 +58,9 @@ public:
         scip_desc_(0),
         scip_extension_(0)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_extension_, extension, strlen(extension)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_extension_, extension, std::strlen(extension)+1) );
    }
 
    /** destructor */

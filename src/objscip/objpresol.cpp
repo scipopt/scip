@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.18 2008/04/17 18:00:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.19 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -46,6 +46,8 @@ struct SCIP_PresolData
  * Callback methods of presolver
  */
 
+extern "C"
+{
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRESOLFREE(presolFreeObj)
@@ -158,7 +160,7 @@ SCIP_DECL_PRESOLEXEC(presolExecObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

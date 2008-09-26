@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.24 2008/04/17 18:00:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.25 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -68,8 +68,8 @@ public:
         scip_maxrounds_(maxrounds),
         scip_delay_(delay)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */

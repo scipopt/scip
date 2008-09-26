@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.14 2008/04/17 18:00:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objprop.cpp,v 1.15 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators
@@ -46,6 +46,8 @@ struct SCIP_PropData
  * Callback methods of propagator
  */
 
+extern "C"
+{
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PROPFREE(propFreeObj)
@@ -171,7 +173,7 @@ SCIP_DECL_PROPRESPROP(propRespropObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

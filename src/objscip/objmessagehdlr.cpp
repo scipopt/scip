@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objmessagehdlr.cpp,v 1.7 2008/04/17 18:00:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objmessagehdlr.cpp,v 1.8 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objmessagehdlr.cpp
  * @brief  C++ wrapper for message handlers
@@ -46,6 +46,8 @@ struct SCIP_MessagehdlrData
  * Callback methods of file reader
  */
 
+extern "C"
+{
 /** error message print method of message handler */
 static
 SCIP_DECL_MESSAGEERROR(messagehdlrErrorObj)
@@ -104,7 +106,7 @@ SCIP_DECL_MESSAGEINFO(messagehdlrInfoObj)
    /* call virtual method of messagehdlr object */
    messagehdlrdata->objmessagehdlr->scip_info(messagehdlr, file, msg);
 }
-
+}
 
 
 

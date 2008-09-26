@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objvardata.cpp,v 1.13 2008/04/17 18:00:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objvardata.cpp,v 1.14 2008/09/26 16:52:02 bzfberth Exp $"
 
 /**@file   objvardata.cpp
  * @brief  C++ wrapper for user variable data
@@ -46,6 +46,8 @@ struct SCIP_VarData
  * Callback methods of user variable data
  */
 
+extern "C"
+{
 /** frees user data of original variable (called when the original variable is freed) */
 static
 SCIP_DECL_VARDELORIG(varDelorigObj)
@@ -116,7 +118,7 @@ SCIP_DECL_VARDELTRANS(varDeltransObj)
    
    return SCIP_OKAY;
 }
-
+}
 
 
 

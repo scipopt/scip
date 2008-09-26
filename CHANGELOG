@@ -274,6 +274,8 @@ fixed bugs:
 - fixed docu in type_reader.h
 - fixed bug with multi-aggregated variables which are de facto aggregated or fixed after flattening the aggregation tree
 - fixed bug with bound changes of variables in modifiable constraints during full dual presolving of linear conshdlr
+- increased compiler compatibility for C++ wrapper classed by adding extern "C" in obj*.cpp files and 
+  changing strlen calls to std::strlen
 
 SCIP version 1.00
 =================

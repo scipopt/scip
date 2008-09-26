@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.17 2008/04/17 18:00:23 bzfpfets Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.18 2008/09/26 16:52:01 bzfberth Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -46,6 +46,8 @@ struct SCIP_ReaderData
  * Callback methods of file reader
  */
 
+extern "C"
+{
 /** destructor of file reader to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_READERFREE(readerFreeObj)
@@ -106,7 +108,7 @@ SCIP_DECL_READERWRITE(readerWriteObj)
    
    return SCIP_OKAY;
 }
-
+}
 
 
 /*
