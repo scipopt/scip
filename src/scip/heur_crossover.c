@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.35 2008/09/25 16:48:17 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.36 2008/09/26 18:20:35 bzfberth Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -877,6 +877,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* solve the subproblem */
    SCIPdebugMessage("Solve Crossover subMIP\n");
  
+   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    */
 #ifdef NDEBUG
    retstat = SCIPsolve(subscip);
    if( retstat != SCIP_OKAY )

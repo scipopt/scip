@@ -1,4 +1,4 @@
-#!/bin/awk -f
+#!/bin/gawk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.72 2008/09/26 16:33:40 bzfberth Exp $
+# $Id: check.awk,v 1.73 2008/09/26 18:20:34 bzfberth Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator

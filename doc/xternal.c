@@ -2406,7 +2406,7 @@
  * This string is printed as description of the relaxation handler in the interactive shell.
  *
  * \par RELAX_PRIORITY: the priority of the relaxation handler.
- * In each relaxation solving round during the subproblem processing, the included relaxation handlers and the 
+ * During each relaxation solving round, the included relaxation handlers and the 
  * price-and-cut loop for solving the LP relaxation are called in a predefined order, which is given by the priorities 
  * of the relaxation handlers. 
  * First, the relaxation handlers with non-negative priority are called in the order of decreasing priority.
@@ -2416,8 +2416,8 @@
  * Usually, you will have only one relaxation handler in your application and thus only have to decide whether it should 
  * be called before or after solving the LP relaxation. For this decision you should consider the complexity of 
  * the relaxation solving algorithm and the impact of the resulting solution: if your relaxation handler provides a fast 
- * algorithm that usually has a high impact (i.e., the relaxation is a good approximation of the convex hull of the 
- * feasible region of the subproblem and the solution severely reduces the primal-dual gap), it should have a non-negative 
+ * algorithm that usually has a high impact (i.e., the relaxation is a good approximation of the 
+ * feasible region of the subproblem and the solution severely improves dual bound), it should have a non-negative 
  * priority.
  * \n
  * Note that for certain applications, it is useful to disable the LP relaxation and only use your custom relaxation.
@@ -2472,7 +2472,7 @@
  * Additional documentation to the callback methods can be found in "type_relax.h".
  *
  * @subsection RELAXEXEC
- * The RELAXEXEC is called in each relaxation solving round during node processing. It should solve the current 
+ * The RELAXEXEC is called in each relaxation solving round. It should solve the current 
  * subproblem's relaxation.  
  *
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding 

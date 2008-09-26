@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.20 2008/09/22 19:25:08 bzfwanie Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.21 2008/09/26 18:20:35 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -399,14 +399,17 @@ SCIP_RETCODE SCIPapplyRens(
    }
 
    /* solve the subproblem */
+   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    */
 #ifdef NDEBUG
-      retstat = SCIPpresolve(subscip);
-      if( retstat != SCIP_OKAY )
-      { 
-         SCIPwarningMessage("Error while presolving subMIP in RENS heuristic; subSCIP terminated with code <%d>\n",retstat);
-      }
+   retstat = SCIPpresolve(subscip);
+   if( retstat != SCIP_OKAY )
+   { 
+      SCIPwarningMessage("Error while presolving subMIP in RENS heuristic; subSCIP terminated with code <%d>\n",retstat);
+   }
 #else
-      SCIP_CALL( SCIPpresolve(subscip) );
+   SCIP_CALL( SCIPpresolve(subscip) );
 #endif
 
 

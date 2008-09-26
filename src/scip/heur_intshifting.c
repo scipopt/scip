@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.8 2008/09/22 19:16:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.9 2008/09/26 18:20:35 bzfberth Exp $"
 
 /**@file   heur_intshifting.c
  * @ingroup PRIMALHEURISTICS
@@ -898,6 +898,9 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       SCIP_Bool lperror;
       int nintvars;
       int v;
+#ifdef NDEBUG
+      SCIP_RETCODE retstat;
+#endif
 
       SCIPdebugMessage("shifted solution is potentially feasible -> solve LP to fix continuous variables\n");
 
@@ -928,7 +931,20 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       
       /* solve LP */
       SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+
+      /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       */
+#ifdef NDEBUG
+      retstat = SCIPsolveDiveLP(scip, -1, &lperror);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving LP in Intshifting heuristic; LP solve terminated with code <%d>\n",retstat);
+      }
+#else
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
+#endif
+
       SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
       SCIPdebugMessage(" -> error=%d, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.42 2008/09/22 19:16:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.43 2008/09/26 18:20:35 bzfberth Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @ingroup PRIMALHEURISTICS
@@ -296,6 +296,10 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIP_Real hardroundingnewbd;
       SCIP_Bool boundschanged;
 
+#ifdef NDEBUG
+      SCIP_RETCODE retstat;
+#endif
+
       /* create solution from diving LP and try to round it */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
       SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success) );
@@ -442,7 +446,20 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    SOLVEAGAIN:
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
+
+      /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       */
+#ifdef NDEBUG
+      retstat = SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving LP in Rootsoldiving heuristic; LP solve terminated with code <%d>\n",retstat);
+      }
+#else
       SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+#endif
+
       if( lperror )
          break;
 

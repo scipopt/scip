@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.55 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.56 2008/09/26 18:20:35 bzfberth Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -490,6 +490,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    {
       SCIP_Longint nlpiterationsleft;
       int iterlimit;
+#ifdef NDEBUG
+      SCIP_RETCODE retstat;
+#endif
 
       nloops++;
       alpha *= objfactor;
@@ -624,7 +627,20 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       nlpiterationsleft = adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops) - heurdata->nlpiterations;
       iterlimit = MAX((int)nlpiterationsleft, MINLPITER);
       SCIPdebugMessage(" -> solve LP with iteration limit %d\n", iterlimit);
+
+      /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       */
+#ifdef NDEBUG
+      retstat = SCIPsolveDiveLP(scip, iterlimit, &lperror);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving LP in Feaspump heuristic; LP solve terminated with code <%d>\n",retstat);
+      }
+#else
       SCIP_CALL( SCIPsolveDiveLP(scip, iterlimit, &lperror) );
+#endif
+
       lpsolstat = SCIPgetLPSolstat(scip);
 
       /* update iteration count */

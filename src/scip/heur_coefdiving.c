@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.57 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.58 2008/09/26 18:20:35 bzfberth Exp $"
 
 /**@file   heur_coefdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -492,8 +492,22 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
          if( !cutoff )
          {
             /* resolve the diving LP */
+            /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+             * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+             */
+#ifdef NDEBUG
+            SCIP_RETCODE retstat;
+            nlpiterations = SCIPgetNLPIterations(scip);
+            retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+            if( retstat != SCIP_OKAY )
+            { 
+               SCIPwarningMessage("Error while solving LP in Coefdiving heuristic; LP solve terminated with code <%d>\n",retstat);
+            }
+#else
             nlpiterations = SCIPgetNLPIterations(scip);
             SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+#endif
+
             if( lperror )
                break;
 

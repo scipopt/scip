@@ -276,6 +276,7 @@ fixed bugs:
 - fixed bug with bound changes of variables in modifiable constraints during full dual presolving of linear conshdlr
 - increased compiler compatibility for C++ wrapper classed by adding extern "C" in obj*.cpp files and 
   changing strlen calls to std::strlen
+- fixed bug with errors occurring in heuristic LPs. In opt mode a warning will be printed, abort in dbg mode
 
 SCIP version 1.00
 =================
