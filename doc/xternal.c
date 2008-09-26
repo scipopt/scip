@@ -36,6 +36,7 @@
  * @author   Alexander Martin
  * @author   Marc Pfetsch
  * @author   Christian Raack
+ * @author   Robert Waniek
  * @author   Michael Winkler
  * @author   Kati Wolter
  *
@@ -123,8 +124,8 @@
  * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available for SoPlex and CLP)
  *
  * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on or off, respectively.
- * - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized or debug version of ZIMPL, if ZIMPL support is enabled.
- * If ZIMPL-support is disabled, the GMP-library is no longer needed and linked to SCIP.
+ *      - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized or debug version of ZIMPL, if ZIMPL support is enabled.
+ *      - If ZIMPL-support is disabled, the GMP-library is no longer needed and linked to SCIP.
  * 
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on or off, respectively.
  *

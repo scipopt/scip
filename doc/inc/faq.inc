@@ -196,11 +196,12 @@
 	during the solving process of SCIP?</a>
     </p>
     <p class="a">
-      Type "display display" in the interactive shell to get an explanation of them. 
+      Type "display display" in the interactive shell to get an explanation of them.<br> 
       By the way: If a letter appears in front of a display row, it indicates, 
       which heuristic found the new primal bound, a star representing an integral LP-relaxation.<br>
       Typing "display statistics" after finishing or interrupting the solving process gives 
-      you plenty of extra information about the solving process.
+      you plenty of extra information about the solving process.<br>
+      (Typing "display heuristics" gives you a list of the heuristics including their letters.)
     </p>
     <p class="q">
       <a name="Q10">How do I change the behavior of SCIP?</a>
@@ -239,7 +240,7 @@
     </p>
   <h4><a name="Section3">Using SCIP included in another source code</a></h4>
     <p class="q">
-      <a name="Q12">How Do I construct a problem instance in SCIP?</a>
+      <a name="Q12">How do I construct a problem instance in SCIP?</a>
     </p>
     <p class="a">
       First you have to create a SCIP object via SCIPcreate(), 
