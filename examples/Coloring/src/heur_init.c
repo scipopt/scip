@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_init.c,v 1.1 2008/09/19 14:19:48 bzfgamra Exp $"
+#pragma ident "@(#) $Id: heur_init.c,v 1.2 2008/09/26 13:27:45 bzfgamra Exp $"
 
 /**@file   heur_init.c
  * @brief  initial primal heuristic for coloring
@@ -630,7 +630,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          
          /* create variable for the stable set and add it to SCIP*/
          SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, SCIPinfinity(scip), 1, SCIP_VARTYPE_INTEGER, 
-               TRUE, FALSE, NULL, NULL, NULL, (SCIP_VARDATA*)setnumber) );
+               TRUE, FALSE, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
          COLORprobAddVarForStableSet(scip, setnumber, var);
          SCIP_CALL( SCIPaddVar(scip, var) );
          

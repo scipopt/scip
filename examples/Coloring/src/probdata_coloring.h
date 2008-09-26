@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.h,v 1.3 2008/09/25 09:00:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.h,v 1.4 2008/09/26 13:27:46 bzfgamra Exp $"
 
 /**@file   probdata_coloring.h
  * @brief  problem data for coloring algorithm
@@ -42,7 +42,7 @@ int COLORprobGetNStableSets(
 extern
 void COLORprobGetStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   index,              /**< index of the stable set */
+   int                   setindex,           /**< index of the stable set */
    int**                 stableset,          /**< return value: pointer to the stable set */
    int*                  nelements           /**< return value: number of elements in the stable set */
    );
@@ -63,7 +63,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  cliquenodes,        /**< array of nodes in the stable set */
    int                   ncliquenodes,       /**< number of nodes in the stable set */
-   int*                  index               /**< return value: index of the stable set, -i-1 if set was not new 
+   int*                  setindex            /**< return value: index of the stable set, -i-1 if set was not new 
                                               *   and is already saved as set i */
    );
 
@@ -71,7 +71,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
 extern
 void COLORprobAddVarForStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   index,              /**< index of the stable set */
+   int                   setindex,              /**< index of the stable set */
    SCIP_VAR*             var                 /**< pointer to the variable */
    );
 
@@ -79,7 +79,7 @@ void COLORprobAddVarForStableSet(
 extern
 SCIP_VAR* COLORprobGetVarForStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   index               /**< index of the stable set */
+   int                   setindex            /**< index of the stable set */
    );
 
 /** checks whether the given stable set is new, returns TRUE if the stable is new and 
@@ -119,7 +119,7 @@ void COLORprobPrintStableSet(
 extern
 SCIP_Bool COLORprobIsNodeInStableSet( 
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   index,              /**< index of the stable set */
+   int                   setindex,           /**< index of the stable set */
    int                   node                /**< number of the node */
    );
 

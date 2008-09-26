@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.3 2008/09/25 09:00:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.4 2008/09/26 13:27:46 bzfgamra Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
@@ -445,7 +445,6 @@ SCIP_DECL_PROBTRANS(probtransColoring)
    /* tranform constraints */
    SCIP_CALL( SCIPtransformConss(scip, tcliqueGetNNodes(sourcedata->graph), sourcedata->constraints,
          (*targetdata)->constraints) );
-   SCIPdebugMessage("Transformierte Constraints gespeichert...\n");
    /* copy the graph */
    tcliqueAddNode((*targetdata)->graph, tcliqueGetNNodes(sourcedata->graph)-1, 0);
    for ( i = 0; i < tcliqueGetNNodes(sourcedata->graph); i++ )
@@ -683,7 +682,7 @@ void COLORprobPrintStableSet(
 /** adds a variable that belongs to a given stable set */
 void COLORprobAddVarForStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   index,              /**< index of the stable set */
+   int                   setindex,           /**< index of the stable set */
    SCIP_VAR*             var                 /**< pointer to the variable */
    )
 {
@@ -692,16 +691,16 @@ void COLORprobAddVarForStableSet(
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
-   assert((index >= 0) && (index < probdata->nstablesets));
+   assert((setindex >= 0) && (setindex < probdata->nstablesets));
 
-   probdata->stablesetvars[index] = var;
+   probdata->stablesetvars[setindex] = var;
 }
 
 
 /** gets the variable belonging to a given stable set */
 SCIP_VAR* COLORprobGetVarForStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   index               /**< index of the stable set */
+   int                   setindex            /**< index of the stable set */
    )
 {
    SCIP_PROBDATA* probdata;
@@ -709,16 +708,16 @@ SCIP_VAR* COLORprobGetVarForStableSet(
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
-   assert ( (index >= 0) && (index < probdata->nstablesets));
+   assert ( (setindex >= 0) && (setindex < probdata->nstablesets));
 
-   return probdata->stablesetvars[index];
+   return probdata->stablesetvars[setindex];
 }
 
 
 /** checks whether a node is in a given stable set, returns true iff it is */
 SCIP_Bool COLORprobIsNodeInStableSet( 
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   index,              /**< index of the stable set */
+   int                   setindex,           /**< index of the stable set */
    int                   node                /**< number of the node */
    )
 {
@@ -732,19 +731,19 @@ SCIP_Bool COLORprobIsNodeInStableSet(
    assert(probdata != NULL);
 
    l = 0;
-   u = probdata->stablesetlengths[index]-1;
+   u = probdata->stablesetlengths[setindex]-1;
    while ( l <= u )
    {
       m = (l+u)/2;
-      if ( probdata->stablesets[index][m] == node )
+      if ( probdata->stablesets[setindex][m] == node )
       {
          return TRUE;
       }
-      if ( probdata->stablesets[index][m] > node )
+      if ( probdata->stablesets[setindex][m] > node )
       {
          l = m+1;
       }
-      if ( probdata->stablesets[index][m] < node )
+      if ( probdata->stablesets[setindex][m] < node )
       {
          u = m-1;
       }
@@ -825,7 +824,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  stablesetnodes,     /**< array of nodes in the stable set */
    int                   nstablesetnodes,    /**< number of nodes in the stable set */
-   int*                  index               /**< return value: index of the stable set */
+   int*                  setindex            /**< return value: index of the stable set */
    )
 {
    SCIP_PROBDATA* probdata; 
@@ -866,7 +865,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
       assert(stablesetnodes[i] >= 0);
       probdata->stablesets[probdata->nstablesets][i] = stablesetnodes[i];
    }
-   *index =  probdata->nstablesets;
+   *setindex =  probdata->nstablesets;
 
    probdata->nstablesets++;
 
@@ -877,7 +876,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
 /** returns the stable set with the given index */
 void COLORprobGetStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   index,              /**< index of the stable set */
+   int                   setindex,            /**< index of the stable set */
    int**                 stableset,          /**< return value: pointer to the stable set */
    int*                  nelements           /**< return value: number of elements in the stable set */
    )
@@ -888,8 +887,8 @@ void COLORprobGetStableSet(
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   *stableset = probdata->stablesets[index];
-   *nelements = probdata->stablesetlengths[index];
+   *stableset = probdata->stablesets[setindex];
+   *nelements = probdata->stablesetlengths[setindex];
 }
 
 

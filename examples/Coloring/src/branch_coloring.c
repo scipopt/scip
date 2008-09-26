@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.c,v 1.2 2008/09/22 16:21:31 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_coloring.c,v 1.3 2008/09/26 13:27:45 bzfgamra Exp $"
 
 /**@file   branch_coloring.c
  * @brief  coloring branching rule
@@ -147,7 +147,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
 
    /* s1 = column belonging to bestcand */
    s1 = lpcands[bestcand];
-   setindex = (int) SCIPvarGetData(s1);
+   setindex = (int)(size_t) SCIPvarGetData(s1);
 
    /* get stable set corresponding to variable s1 */
    COLORprobGetStableSet(scip, setindex, &set1, &setlength1);
@@ -170,7 +170,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
          if ( vars[j] != s1 && !SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[j])) )
          {
             s2 = vars[j];
-            setindex = (int) SCIPvarGetData(s2);
+            setindex = (int)(size_t) SCIPvarGetData(s2);
             /* get Stable Set corresponding to Variable s2 */
             COLORprobGetStableSet(scip, setindex, &set2, &setlength2);
             /* for all nodes in set1 */

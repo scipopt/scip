@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.2 2008/09/22 16:21:31 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.3 2008/09/26 13:27:45 bzfgamra Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -240,7 +240,7 @@ SCIP_RETCODE computeBranchingPriorities(
    {
       assert(SCIPisFeasPositive(scip, lpcandsfrac[i]));
       var = lpcands[i];
-      setindex = (int) SCIPvarGetData(var);
+      setindex = (int)(size_t) SCIPvarGetData(var);
       COLORprobGetStableSet(scip, setindex, &set, &setlength);
       for ( j = 0; j < setlength; j++ )
       {
