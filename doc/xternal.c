@@ -204,7 +204,7 @@
  * base class.
  *
  * Additional documentation for the callback methods of a constraint handler can be found in the file
- * "type_cons.h".
+ * type_cons.h.
  *
  * Here is what you have to do (assuming your constraint handler should be named "subtour"):
  * -# Copy the template files "src/scip/cons_xxx.c" and "src/scip/cons_xxx.h" into files "cons_subtour.c"
@@ -450,7 +450,7 @@
  * methods with slightly modified parameters.
  * The fourth method provides dual information that is used for example in preprocessing.
  *
- * Additional documentation to the callback methods can be found in "type_cons.h".
+ * Additional documentation to the callback methods can be found in type_cons.h.
  *
  * @subsection CONSCHECK
  *
@@ -840,7 +840,7 @@
  * base class.
  *
  * Additional documentation for the callback methods of a pricer can be found in the file
- * "type_pricer.h".
+ * type_pricer.h.
  *
  * Here is what you have to do to implement a pricer:
  * -# Copy the template files "src/scip/pricer_xxx.c" and "src/scip/pricer_xxx.h" into files "pricer_mypricer.c"
@@ -937,7 +937,7 @@
  * The other fundamental method scip_farkas() has an empty default implementation, but if it may happen in your application
  * that infeasible LP relaxations are encountered, you have to overwrite this method as well.
  *
- * Additional documentation to the callback methods can be found in "type_pricer.h".
+ * Additional documentation to the callback methods can be found in type_pricer.h.
  *
  * @subsection PRICERREDCOST
  *
@@ -1058,7 +1058,7 @@
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjPresol wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL... callback methods.
  *
- * Additional documentation for the callback methods of a presolver can be found in the file "type_presol.h".
+ * Additional documentation for the callback methods of a presolver can be found in the file type_presol.h.
  *
  * Here is what you have to do to implement a presolver:
  * -# Copy the template files "src/scip/presol_xxx.c" and "src/scip/presol_xxx.h" into files named "presol_mypresolver.c"
@@ -1152,7 +1152,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your presolver class.
  *
- * Additional documentation to the callback methods can be found in "type_presol.h".
+ * Additional documentation to the callback methods can be found in type_presol.h.
  *
  * @subsection PRESOLEXEC
  *
@@ -1231,7 +1231,7 @@
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjSepa wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_SEPA... callback methods.
  *
- * Additional documentation for the callback methods of a separator can be found in the file "type_sepa.h".
+ * Additional documentation for the callback methods of a separator can be found in the file type_sepa.h.
  *
  * Here is what you have to do to implement a separator:
  * -# Copy the template files "src/scip/sepa_xxx.c" and "src/scip/sepa_xxx.h" into files "sepa_myseparator.c"
@@ -1343,7 +1343,7 @@
  * Separator plugins do not have any fundamental callback methods. All callback methods are optional.
  * Most probably, you want to use at least the \ref SEPAEXECLP callback to separate LP solutions.
  *
- * Additional documentation to the callback methods can be found in "type_sepa.h".
+ * Additional documentation to the callback methods can be found in type_sepa.h.
  *
  * @section SEPA_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
  *
@@ -1457,7 +1457,7 @@
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjProp wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PROP... callback methods.
  *
- * Additional documentation for the callback methods of a propagator can be found in the file "type_prop.h".
+ * Additional documentation for the callback methods of a propagator can be found in the file type_prop.h.
  *
  * Here is what you have to do to implement a propagator:
  * -# Copy the template files "src/scip/prop_xxx.c" and "src/scip/prop_xxx.h" into files named "prop_mypropagator.c"
@@ -1557,7 +1557,7 @@
  * PROPEXEC callback and PROPRESPROP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your propagator class.
  *
- * Additional documentation to the callback methods can be found in "type_prop.h".
+ * Additional documentation to the callback methods can be found in type_prop.h.
  *
  * @subsection PROPEXEC
  *
@@ -1670,7 +1670,7 @@
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjBranchrule wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_BRANCH... callback methods.
  *
- * Additional documentation for the callback methods of a branching rule can be found in the file "type_branch.h".
+ * Additional documentation for the callback methods of a branching rule can be found in the file type_branch.h.
  *
  * Here is what you have to do to implement a branching rule:
  * -# Copy the template files "src/scip/branch_xxx.c" and "src/scip/branch_xxx.h" into files named 
@@ -1779,7 +1779,7 @@
  * The most important callback methods are the \ref BRANCHEXECLP and \ref BRANCHEXECPS methods, which perform the
  * actual task of generating a branching.
  *
- * Additional documentation to the callback methods can be found in "type_branch.h".
+ * Additional documentation to the callback methods can be found in type_branch.h.
  *
  * @subsection BRANCHEXECLP
  *
@@ -1928,7 +1928,7 @@
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjNodesel wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_NODESEL... callback methods.
  *
- * Additional documentation for the callback methods of a node selector can be found in the file "type_nodesel.h".
+ * Additional documentation for the callback methods of a node selector can be found in the file type_nodesel.h.
  *
  * Here is what you have to do to implement a node selector:
  * -# Copy the template files "src/scip/nodesel_xxx.c" and "src/scip/nodesel_xxx.h" into files named "nodesel_mynodeselector.c"
@@ -2022,7 +2022,7 @@
  * NODESELSELECT callback and the NODESELCOMP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your node selector class.
  *
- * Additional documentation to the callback methods can be found in "type_nodesel.h".
+ * Additional documentation to the callback methods can be found in type_nodesel.h.
  *
  * @subsection NODESELSELECT
  *
@@ -2127,7 +2127,7 @@
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjHeur wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_HEUR... callback methods.
  *
- * Additional documentation for the callback methods of a primal heuristic can be found in the file "type_heur.h".
+ * Additional documentation for the callback methods of a primal heuristic can be found in the file type_heur.h.
  *
  * Here is what you have to do to implement a primal heuristic:
  * -# Copy the template files "src/scip/heur_xxx.c" and "src/scip/heur_xxx.h" into files named "heur_myheuristic.c"
@@ -2291,7 +2291,7 @@
  * abstract member function. You have to implement it in order to be able to construct an object of your primal heuristic 
  * class.
  *
- * Additional documentation to the callback methods can be found in "type_heur.h".
+ * Additional documentation to the callback methods can be found in type_heur.h.
  *
  * @subsection HEUREXEC
  *
@@ -2375,7 +2375,7 @@
  * reimplement the corresponding virtual member function of the abstract ObjRelax wrapper base class.
  * Unfortunately, SCIP does not contain a default relaxation handler plugin, which could be used as an example.
  *
- * Additional documentation for the callback methods of a relaxation handler can be found in the file "type_relax.h".
+ * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
  *
  * Here is what you have to do to implement a relaxation handler:
  * -# Copy the template files "src/scip/relax_xxx.c" and "src/scip/relax_xxx.h" into files named "relax_myrelaxator.c"
@@ -2469,7 +2469,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your relaxation handler class.
  *
- * Additional documentation to the callback methods can be found in "type_relax.h".
+ * Additional documentation to the callback methods can be found in type_relax.h.
  *
  * @subsection RELAXEXEC
  * The RELAXEXEC is called in each relaxation solving round. It should solve the current 
@@ -2564,27 +2564,39 @@
  *
  * Mainly, file readers are called to parse an input file and generate a constraint integer programming model. They create 
  * constraints and variables and activate variable pricers if necessary. However, they can also be called, for example, to parse an 
- * input file containing information about a primal solution or fixing of variables. 
+ * input file containing information about a primal solution or fixing of variables. Besides that it is possible to use some of them 
+ * for writing (exporting) the problem in a specific format. 
  * \n
  * A complete list of all file readers contained in this release can be found \ref FILEREADERS "here".
+ *
+ * Since a file reader is also responsible for writing a file, the user may
+ * ask why the readers have not the name "filehandler". This name whould
+ * represent this plugin much better than the used one. 
+ * \n 
+ * The used name "readers" is historically grown. In the beginning of SCIP
+ * there was no need to write/export problems. Therefore, the the plugin
+ * name "readers" was best fitting for this plugin since only reading was essential.  
+ * It turned out, however, that it is quite nice to write/export certain subproblem during
+ * the solving process mainly for debugging. Therefore, a writing callback
+ * was added to the "readers" plugin. 
  *
  * In the following, we explain how the user can add an own file reader.
  * Take the file reader for MIPs in IBM's Mathematical Programming System format (src/scip/reader_mps.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjReader wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_READER... callback methods.
  *
- * Additional documentation for the callback methods of a file reader can be found in the file "type_reader.h".
+ * Additional documentation for the callback methods of a file reader can be found in the file type_reader.h.
  *
- * Here is what you have to do to implement a file reader:
- * -# Copy the template files "src/scip/reader_xxx.c" and "src/scip/reader_xxx.h" into files named "reader_myreader.c"
- *    and "reader_myreader.h".
+ * Here is what you have to do to implement a file reader named "myreader" in C:
+ * -# Copy the template files src/scip/reader_xxx.c and src/scip/reader_xxx.h into files named 
+      "reader_myreader.c" and "reader_myreader.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myreader".
- * -# Adjust the properties of the file reader (see \ref READER_PROPERTIES).
- * -# Define the file reader data (see \ref READER_DATA).
- * -# Implement the interface methods (see \ref READER_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref READER_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref READER_ADDITIONALCALLBACKS).
+ * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
+ * -# Define the \ref READER_DATA "file reader data". This is optional.
+ * -# Implement the \ref READER_INTERFACE "interface methods".
+ * -# Implement the \ref READER_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref READER_ADDITIONALCALLBACKS "additional callback methods". This is optional.
  *
  * 
  * @section READER_PROPERTIES Properties of a File Reader
@@ -2608,6 +2620,11 @@
  * file of corresponding name. The extensions of the different file readers have to be unique.
  * Note that the additional extension '.gz', '.z', or '.Z' (indicating a gzip compressed file) are ignored for assigning
  * an input file to a reader.
+ * \n
+ * It is not possible to hook up a (single) file reader with more than one file extension. 
+ * It is, however, not necessary to implement the same (parsing/writing) methods more than once, if you want to 
+ * support several file extension with the same parser. To do so look at the files reader_lp.c 
+ * and reader_rlp.c. Both support the LP format.
  *
  *
  * @section READER_DATA File Reader Data
@@ -2642,24 +2659,38 @@
  *
  * @section READER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a File Reader
  *
- * File reader plugins have only one fundamental callback method, namely the \ref READERREAD method.
- * This method has to be implemented for every file reader; the other callback method is optional.
- * In the C++ wrapper class ObjReader, the scip_read() method (which corresponds to the \ref READERREAD callback) is a virtual
- * abstract member function.
- * You have to implement it in order to be able to construct an object of your file reader class.
+ * File reader plugins have no fundamental callback methods. This is due to
+ * the fact that a file reader can be used for reading and/or writing a
+ * file. A file reader is only useful if the reader method \ref READERREAD
+ * and/or the writing method \ref READERWRITE is implemented.  One of these
+ * methods should be implemented for every file reader; the other callback
+ * method \READERFREE is optional.  In the C++ wrapper class ObjReader, the
+ * scip_read() and scip_write() methods (which corresponds to the \ref
+ * READERREAD and \ref READERWRITE callback) are virtual member
+ * functions. At least one of them should be implemented.
  *
- * Additional documentation to the callback methods can be found in "type_reader.h".
+ * Additional documentation to the callback methods can be found in type_reader.h.
+ *
+ *
+ * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
+ *
+ * File reader plugins contain only additional callback methods, namely the methods \ref READERREAD, 
+ * \ref READERWRITE, and \ref READERFREE. Therefore, these are not needed to be implemented. However, 
+ * at least \ref READERREAD or/and \ref READERWRITE should be implemented (see notes 
+ * \ref READER_FUNDAMENTALCALLBACKS "above").
+ *
  *
  * @subsection READERREAD
  *
  * The READERREAD callback is called when the user invokes SCIP to read in a file with file name extension 
  * corresponding to the READER_EXTENSION property of the file reader. This is usually triggered by a call to the method
- * SCIPreadProb() or by an interactive shell command. The READERREAD callback should parse the input file and perform
- * the desired action, which usually means to generate a constraint integer programming model, to add a primal solution, or
- * to fix variables in an existing model.
+ * SCIPreadProb() or by an interactive shell command.
+ * The READERREAD callback should parse the input file and perform the desired action, which usually means to 
+ * generate a constraint integer programming model, to add a primal solution, or to fix variables 
+ * in an existing model.
  * \n
- * Typical methods called by a file reader which is used to generate constraint integer programming models are, 
- * for example, 
+ * Typical methods called by a file reader which is used to read/generate constraint 
+ * integer programming models are, for example, 
  *
  * - creating an empty problem: SCIPcreateProb() 
  * - creating the variables: SCIPcreateVar(), SCIPchgVarType(), SCIPchgVarLb(), SCIPchgVarUb(), SCIPaddVar(), and 
@@ -2671,11 +2702,25 @@
  * Primal solutions can only be created for the transformed problem. Therefore, the user has to call SCIPtransformProb()
  * before he reads in the file containing the solution and adds it to the solution pool via the method SCIPreadSol(). 
  *
+ * Typical methods called by a file reader which is used to generate constraint integer programming models are, 
+ * for example, 
  * 
- * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
+ * @subsection READERWRITE
  *
- * File reader plugins have only one additional callback method, namely the READERFREE method. It needs not to be 
- * implemented in every case.
+ * The READERWRITE callback is called when the user invokes SCIP to write a problem (original or transformed) 
+ * in the format the reader supports. This is only possible if this callback is implemented. To write the problem 
+ * all necessary information are given through the parameters of this callback method (see type_reader.h). These 
+ * information should be used to output the problem in the requested format. This callback method is usually 
+ * triggered by the call of the methods SCIPwriteOrigProblem(), SCIPwriteTransProblem(), SCIPprintOrigProblem(), 
+ * or SCIPprintTransProblem().
+ * \n
+ * A Typical method called by a file reader which is used to write/export a constraint 
+ * integer programming model is SCIPinfoMessage(). This method outputs a given string into a file 
+ * or into stdout. 
+ * \n
+ * For an example we refer to the writing method of the MPS reader (see reader_mps.c).
+ *
+ *
  * 
  * @subsection READERFREE
  *
@@ -2723,7 +2768,7 @@
  * adapt the code by using the ObjDialog wrapper base class and implement the scip_...() virtual methods instead of the
  * SCIP_DECL_DIALOG... callback methods.
  *
- * Additional documentation for the callback methods of a dialog can be found in the file "type_dialog.h".
+ * Additional documentation for the callback methods of a dialog can be found in the file type_dialog.h.
  *
  * Here is what you have to do to add a dialog:
  * -# Copy the template files "src/scip/dialog_xxx.c" and "src/scip/dialog_xxx.h" into files named "dialog_mydialog.c"
@@ -2849,7 +2894,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your dialog class.
  * 
- * Additional documentation to the callback methods can be found in "type_dialog.h".
+ * Additional documentation to the callback methods can be found in type_dialog.h.
  *
  * @subsection DIALOGEXEC
  *
@@ -2920,7 +2965,7 @@
  * instead of the SCIP_DECL_DISP... callback methods.
  * 
  *
- * Additional documentation for the callback methods of a display column can be found in the file "type_disp.h".
+ * Additional documentation for the callback methods of a display column can be found in the file type_disp.h.
  *
  * Here is what you have to do to implement a display column:
  * -# Copy the template files "src/scip/disp_xxx.c" and "src/scip/disp_xxx.h" into files named "disp_mydisplaycolumn.c"
@@ -3014,7 +3059,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your display column class.
  *
- * Additional documentation to the callback methods can be found in "type_disp.h".
+ * Additional documentation to the callback methods can be found in type_disp.h.
  *
  * @subsection DISPOUTPUT
  *
