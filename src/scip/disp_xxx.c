@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_xxx.c,v 1.3 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp_xxx.c,v 1.4 2008/09/27 22:50:33 bzfheinz Exp $"
 
 /**@file   disp_xxx.c
  * @ingroup DISPLAYS
@@ -27,13 +27,14 @@
 #include "scip/disp_xxx.h"
 
 
-#define DISP_NAME               "xxx"
+#define DISP_NAME               "xxx"                
 #define DISP_DESC               "xxx display column"
-#define DISP_HEADER             "xxx"
-#define DISP_WIDTH              14
-#define DISP_PRIORITY           110000
-#define DISP_POSITION           30100
-#define DISP_STRIPLINE          TRUE
+#define DISP_HEADER             "xxx" 
+#define DISP_WIDTH              14      /**< the width of the display column */
+#define DISP_PRIORITY           110000  /**< the priority of the display column */
+#define DISP_POSITION           30100   /**< the relative position of the display column */
+#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated 
+                                         *   with a line from its right neighbor */
 
 
 
