@@ -2873,13 +2873,13 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * different dialogs are managed by a dialog handler, which, in particular, is responsible for executing the dialog 
  * corresponding to the user's command in the shell. That is, the concept of a dialog handler is different to that 
  * of a constraint handler, which is used to manage objects of the same structure, see \ref CONS. In particular, SCIP 
- * features only one dialog handler, whereas there may exist different constraint handlers. 
+ * features only one dialog handler (dialog_default.h), whereas there may exist different constraint handlers. 
  * \n
  * A complete list of all dialogs contained in this release can be found \ref DIALOGS "here".
  *
  * In the following, we explain how the user can extend the interactive shell by adding an own dialog.
  * We give the explanation for creating an own source file for each additional dialog. Of course, you can collect 
- * different dialogs in one source file. Take "src/scip/dialog_default.c", where all default dialog plugins are collected, as an 
+ * different dialogs in one source file. Take src/scip/dialog_default.c, where all default dialog plugins are collected, as an 
  * example.
  * As all other default plugins, the default dialog plungins and the template dialog are written in C. C++ users can easily
  * adapt the code by using the ObjDialog wrapper base class and implement the scip_...() virtual methods instead of the
@@ -2887,16 +2887,17 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  * Additional documentation for the callback methods of a dialog can be found in the file type_dialog.h.
  *
- * Here is what you have to do to add a dialog:
- * -# Copy the template files "src/scip/dialog_xxx.c" and "src/scip/dialog_xxx.h" into files named "dialog_mydialog.c"
+ * Here is what you have to do to add a dialog (assuming  your dialog is named "mydialog"):
+ * -# Copy the template files src/scip/dialog_xxx.c and src/scip/dialog_xxx.h into files named "dialog_mydialog.c"
  *    and "dialog_mydialog.h".
+      \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydialog".
- * -# Adjust the properties of the dialog (see \ref DIALOG_PROPERTIES).
- * -# Define the dialog data (see \ref DIALOG_DATA). This is optional.
- * -# Implement the interface methods (see \ref DIALOG_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref DIALOG_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref DIALOG_ADDITIONALCALLBACKS). This is optional.
+ * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
+ * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
+ * -# Implement the \ref DIALOG_INTERFACE "interface methods".
+ * -# Implement the \ref DIALOG_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref DIALOG_ADDITIONALCALLBACKS "additional callback methods". This is optional.
  *
  *
  * @section DIALOG_PROPERTIES Properties of a Dialog
@@ -2913,8 +2914,8 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * Names within one menu have to be unique: no two dialogs in the same menu may have the same name.
  *
  * \par DIALOG_DESC: the description of the dialog.
- * This string is printed as description of the dialog in the interactive shell if the DIALOGDESC callback
- * is not implemented.
+ * This string is printed as description of the dialog in the interactive shell if the additional 
+ * callback method \ref DIALOGDESC is not implemented.
  *
  * \par DIALOG_ISSUBMENU: whether the dialog is a (sub)menu.
  * This parameter states whether the dialog is a menu in the interactive shell, i.e., is the parent of further 
@@ -2940,7 +2941,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * \code
  * if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
  * {
- *    SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecXxx, dialogDescXxx, dialogFreeXxx,
+ *    SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecMydialog, dialogDescMydialog, dialogFreeMydialog,
  *          DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
  *
  *    SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
@@ -2949,14 +2950,31 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * }
  * \endcode
  * Here "parentdialog" has to be an existing dialog which is defined to be a menu (see DIALOG_ISSUBMENU), e.g., 
- * the default root dialog.   
+ * the default root dialog. The method SCIPgetRootDialog() returns the root dialog. 
  *
  * The interface method is called by the user, if he wants to include the dialog, i.e., if he wants to use the dialog in 
  * his application. 
- * Note that in order to be able to link the new dialog to an existing default dialog it has to be included <b>after the 
- * default dialogs plugin</b>, i.e., the SCIPincludeDialogMydialog() call has to occure after the 
+ * Note that in order to be able to link the new dialog to an existing default dialog 
+ * (except the root dialog) it has to be included <b>after the 
+ * default dialogs plugin</b>, i.e., the SCIPincludeDialogMydialog() call has to occur after the 
  * SCIPincludeDialogDefault() call. The SCIPincludeDialogDefault() method is called from within the SCIPincludeDefaultPlugins()
  * method. Therefore, it suffices to include your dialog plugins after you have called SCIPincludeDefaultPlugins().
+ * In case you want to add a dialog to the <b>root dialog</b>, you just use the following 
+ * lines of code to get/create the root dialog.
+ *
+ * \code
+ * SCIP_DIALOG* root;
+ *
+ * root = SCIPgetRootDialog(scip);
+ * if( root == NULL )
+ * {
+ *    SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
+ * }
+ * assert( root != NULL );
+ * \endcode
+ *
+ * Therefore, in this case you do not have to worry about the calls of 
+ * SCIPincludeDialogDefault() and SCIPincludeDefaultPlugins() .
  *
  * If you are using dialog data, you have to allocate the memory for the data at this point.
  * You can do this by calling
@@ -2980,13 +2998,10 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *    root = SCIPgetRootDialog(scip);
  *    if( root == NULL )
  *    {
- *       SCIP_CALL( SCIPcreateDialog(scip, &root, SCIPdialogExecMenuLazy, NULL, NULL,
- *             "SCIP", "SCIP's main menu", TRUE, NULL) );
- *       SCIP_CALL( SCIPsetRootDialog(scip, root) );
- *       SCIP_CALL( SCIPreleaseDialog(scip, &root) );
- *       root = SCIPgetRootDialog(scip);
+ *       SCIP_CALL( SCIPcreateRootDialog(scip, &root) );
  *    }
- * 
+ *    assert( root != NULL );
+ *
  *    if( !SCIPdialogHasEntry(root, "drawgraph") )
  *    {
  *       SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecDrawgraph, NULL, NULL,
@@ -3017,9 +3032,9 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  * The DIALOGEXEC method is invoked, if the user selected the dialog's command name in the parent's menu. It should 
  * execute what is stated in DIALOG_DESC, e.g., the display constraint handlers dialog should display information about 
- * the constraint handlers included in SCIP, see "src/scip/dialog_default.c". 
+ * the constraint handlers included in SCIP, see src/scip/dialog_default.c. 
  *
- * For typical methods called by the execution method, have a look at "src/scip/dialog_default.c".
+ * For typical methods called by the execution method, have a look at src/scip/dialog_default.c.
  * 
  * The callback has to return which dialog should be processed next. This can be, for example, the root dialog 
  * (SCIPdialoghdlrGetRoot()), the parent dialog (SCIPdialogGetParent()) or NULL, which stands for closing the interactive 
