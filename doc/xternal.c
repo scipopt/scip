@@ -889,8 +889,9 @@
  * type_pricer.h.
  *
  * Here is what you have to do to implement a pricer:
- * -# Copy the template files "src/scip/pricer_xxx.c" and "src/scip/pricer_xxx.h" into files "pricer_mypricer.c"
+ * -# Copy the template files src/scip/pricer_xxx.c and src/scip/pricer_xxx.h into files "pricer_mypricer.c"
  *    and "pricer_mypricer.h".
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
@@ -1116,8 +1117,9 @@
  * can be found in the file type_presol.h.
  *
  * Here is what you have to do to implement a presolver:
- * -# Copy the template files "src/scip/presol_xxx.c" and "src/scip/presol_xxx.h" into files named "presol_mypresolver.c"
+ * -# Copy the template files src/scip/presol_xxx.c and src/scip/presol_xxx.h into files named "presol_mypresolver.c"
  *    and "presol_mypresolver.h".
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
@@ -1302,8 +1304,9 @@
  * can be found in the file type_sepa.h.
  *
  * Here is what you have to do to implement a separator:
- * -# Copy the template files "src/scip/sepa_xxx.c" and "src/scip/sepa_xxx.h" into files "sepa_myseparator.c"
+ * -# Copy the template files src/scip/sepa_xxx.c and src/scip/sepa_xxx.h into files "sepa_myseparator.c"
  *    and "sepa_myseparator.h".
+      \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
@@ -1541,8 +1544,9 @@
  * Additional documentation for the callback methods of a propagator can be found in the file type_prop.h.
  *
  * Here is what you have to do to implement a propagator:
- * -# Copy the template files "src/scip/prop_xxx.c" and "src/scip/prop_xxx.h" into files named "prop_mypropagator.c"
+ * -# Copy the template files src/scip/prop_xxx.c and src/scip/prop_xxx.h into files named "prop_mypropagator.c"
  *    and "prop_mypropagator.h".
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
@@ -1756,8 +1760,9 @@
  * Additional documentation for the callback methods of a branching rule can be found in the file type_branch.h.
  *
  * Here is what you have to do to implement a branching rule:
- * -# Copy the template files "src/scip/branch_xxx.c" and "src/scip/branch_xxx.h" into files named 
+ * -# Copy the template files src/scip/branch_xxx.c and src/scip/branch_xxx.h into files named 
  *    "branch_mybranchingrule.c" and "branch_mybranchingrule.h".
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
@@ -2016,8 +2021,9 @@
  * Additional documentation for the callback methods of a node selector can be found in the file type_nodesel.h.
  *
  * Here is what you have to do to implement a node selector:
- * -# Copy the template files "src/scip/nodesel_xxx.c" and "src/scip/nodesel_xxx.h" into files named "nodesel_mynodeselector.c"
+ * -# Copy the template files src/scip/nodesel_xxx.c and src/scip/nodesel_xxx.h into files named "nodesel_mynodeselector.c"
  *    and "nodesel_mynodeselector.h".
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
@@ -2240,8 +2246,9 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * Additional documentation for the callback methods of a primal heuristic can be found in the file type_heur.h.
  *
  * Here is what you have to do to implement a primal heuristic:
- * -# Copy the template files "src/scip/heur_xxx.c" and "src/scip/heur_xxx.h" into files named "heur_myheuristic.c"
+ * -# Copy the template files src/scip/heur_xxx.c and src/scip/heur_xxx.h into files named "heur_myheuristic.c"
  *    and "heur_myheuristic.h".
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
@@ -2494,8 +2501,9 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
  *
  * Here is what you have to do to implement a relaxation handler:
- * -# Copy the template files "src/scip/relax_xxx.c" and "src/scip/relax_xxx.h" into files named "relax_myrelaxator.c"
+ * -# Copy the template files src/scip/relax_xxx.c and src/scip/relax_xxx.h into files named "relax_myrelaxator.c"
  *    and "relax_myrelaxator.h".
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
@@ -2706,7 +2714,8 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  * Here is what you have to do to implement a file reader named "myreader" in C:
  * -# Copy the template files src/scip/reader_xxx.c and src/scip/reader_xxx.h into files named 
-      "reader_myreader.c" and "reader_myreader.h".
+ *    "reader_myreader.c" and "reader_myreader.h".
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
@@ -2781,7 +2790,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * file. A file reader is only useful if the reader method \ref READERREAD
  * and/or the writing method \ref READERWRITE is implemented.  One of these
  * methods should be implemented for every file reader; the other callback
- * method \READERFREE is optional.  In the C++ wrapper class ObjReader, the
+ * method \ref READERFREE is optional.  In the C++ wrapper class ObjReader, the
  * scip_read() and scip_write() methods (which corresponds to the \ref
  * READERREAD and \ref READERWRITE callback) are virtual member
  * functions. At least one of them should be implemented.
@@ -2887,10 +2896,10 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  * Additional documentation for the callback methods of a dialog can be found in the file type_dialog.h.
  *
- * Here is what you have to do to add a dialog (assuming  your dialog is named "mydialog"):
+ * Here is what you have to do to add a dialog (assuming your dialog is named "mydialog"):
  * -# Copy the template files src/scip/dialog_xxx.c and src/scip/dialog_xxx.h into files named "dialog_mydialog.c"
  *    and "dialog_mydialog.h".
-      \n
+ *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
@@ -3085,7 +3094,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * While solving a constraint integer program, SCIP displays status information in a column-like fashion. The current 
  * number of processed branching tree nodes, the solving time, and the relative gap between primal and dual bound are 
  * examples of such display columns. There already exists a wide variety of display columns which can be activated or 
- * deactivated on demand, see "src/scip/disp_default.c". Additionally, the user can implement his own display columns
+ * deactivated on demand, see src/scip/disp_default.c. Additionally, the user can implement his own display columns
  * in order to track problem or algorithm specific values.  
  * \n
  * A complete list of all displays contained in this release can be found \ref DISPLAYS "here".
@@ -3093,7 +3102,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * In the following, we explain how the user can add an own display column. 
  * We give the explanation for creating an own source file for each additional display column. Of course, you can collect 
  * different additional display columns in one source file.
- * Take "src/scip/disp_default.c", where all default display columns are collected, as an example.
+ * Take src/scip/disp_default.c, where all default display columns are collected, as an example.
  * As all other default plugins, the default display column plugins and the display column template are written in C.
  * C++ users can easily adapt the code by using the ObjDisp wrapper base class and implement the scip_...() virtual methods
  * instead of the SCIP_DECL_DISP... callback methods.
@@ -3101,16 +3110,17 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  * Additional documentation for the callback methods of a display column can be found in the file type_disp.h.
  *
- * Here is what you have to do to implement a display column:
- * -# Copy the template files "src/scip/disp_xxx.c" and "src/scip/disp_xxx.h" into files named "disp_mydisplaycolumn.c"
+ * Here is what you have to do to implement a display column (assuming your display column is named "mydisplaycolumn"):
+ * -# Copy the template files src/scip/disp_xxx.c and src/scip/disp_xxx.h into files named "disp_mydisplaycolumn.c"
  *    and "disp_mydisplaycolumn.h".
+      \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydisplaycolumn".
- * -# Adjust the properties of the display column (see \ref DISP_PROPERTIES).
- * -# Define the display column data (see \ref DISP_DATA). This is optional.
- * -# Implement the interface methods (see \ref DISP_INTERFACE).
- * -# Implement the fundamental callback methods (see \ref DISP_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref DISP_ADDITIONALCALLBACKS). This is optional.
+ * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
+ * -# Define the  \ref DISP_DATA "display column data". This is optional.
+ * -# Implement the \ref DISP_INTERFACE "interface methods".
+ * -# Implement the \ref DISP_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref DISP_ADDITIONALCALLBACKS "additional callback methods". This is optional.
  *
  *
  * @section DISP_PROPERTIES Properties of a Display Column
@@ -3171,8 +3181,6 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  * The interface method is called by the user, if he wants to include the display column, i.e., if he wants to use the display column in his 
  * application. 
- * Note that additional display column plugins have to be included <b>before the default display columns plugin</b>, i.e.,
- * the SCIPincludeDispMydisplaycolumn() call has to occure before the SCIPincludeDispDefault() call.  
  *
  * If you are using display column data, you have to allocate the memory for the data at this point.
  * You can do this by calling
@@ -3187,9 +3195,9 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * 
  * @section DISP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Display Column
  *
- * Display column plugins have only one fundamental callback method, namely the DISPOUTPUT method.
+ * Display column plugins have only one fundamental callback method, namely the \ref DISPOUTPUT method.
  * This method has to be implemented for every display column; the other callback methods are optional.
- * In the C++ wrapper class ObjDisp, the scip_output() method (which corresponds to the DISPOUTPUT callback) is a virtual
+ * In the C++ wrapper class ObjDisp, the scip_output() method (which corresponds to the \ref DISPOUTPUT callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your display column class.
  *
@@ -3244,7 +3252,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  * The DISPEXIT callback is executed before the transformed problem is freed.
  * In this method, the display column should free all resources that have been allocated for the solving process in 
- * DISPINIT.
+ * \ref DISPINIT.
  *
  * @subsection DISPINITSOL
  *
