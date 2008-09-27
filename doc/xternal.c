@@ -199,10 +199,10 @@
  * For example, there is one knapsack constraint handler that ensures that only solutions are accepted that
  * satisfy all the knapsack constraints in the model. 
  * \n
- * A complete list of all constraint handles contained in this release can be found \ref CONSHDLRS "here".
+ * A complete list of all constraint handlers contained in this release can be found \ref CONSHDLRS "here".
  *
  * In the following, we explain how the user can add an own constraint handler.
- * For example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
+ * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
  * TSP example project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
@@ -243,7 +243,7 @@
  * This string is printed as description of the constraint handler in the interactive shell.
  *
  * \par CONSHDLR_SEPAPRIORITY: the priority of the constraint handler for separation.
- * In each separation round during the price-and-cut loop of the subproblem processing or the separation loop
+ * In each separation round during the price-and-cut loop of the subproblem processing or during the separation loop
  * of the primal solution separation, the separators and separation methods of the constraint handlers are called in
  * a predefined order, which is given by the priorities of the separators and the separation priorities of the
  * constraint handlers.
@@ -281,7 +281,7 @@
  * That means, constraint handlers with negative checking priorities only have to deal with integral solutions.
  * 
  * \par CONSHDLR_SEPAFREQ: the default frequency for separating cuts.
- * The separation frequency define the depth levels at which the constraint handler's separation methods \ref CONSSEPALP
+ * The separation frequency defines the depth levels at which the constraint handler's separation methods \ref CONSSEPALP
  * and \ref CONSSEPASOL are called.
  * For example, a separation frequency of 7 means, that the separation callback is executed for subproblems that are
  * in depth 0, 7, 14, ... of the branching tree.
@@ -329,7 +329,7 @@
  * cheap separation methods have been executed.
  *
  * \par CONSHDLR_DELAYPROP: the default for whether the propagation method should be delayed, if other propagators found reductions.
- * This property is analoguos to the DELAYSEPA flag, but deals with the propagation method of the constraint handler.
+ * This property is analogous to the DELAYSEPA flag, but deals with the propagation method of the constraint handler.
  *
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
  * This property is analoguos to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
@@ -346,8 +346,8 @@
  *
  * \par LINCONSUPGD_PRIORITY(optional): priority of the constraint handler for upgrading of linear constraints
  * This property is only needed if a certain linear constraint can be upgraded to a more specific one. In one of 
- * the first presolving rounds SCIP tries to upgrade linear constraints to more specialized constraints such as, 
- * knapsack constraints. The upgrading calls a processed in the order of decreasing priority. 
+ * the first presolving rounds SCIP tries to upgrade linear constraints to more specialized constraints, such as 
+ * knapsack constraints. The upgrading calls are processed in the order of decreasing priority. 
  * 
  *
  *
@@ -731,7 +731,7 @@
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPALP callback has the following options:
- *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result SCIP_CUTOFF)
  *  - adding an additional constraint (result SCIP_CONSADDED)
  *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
  *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
@@ -752,7 +752,7 @@
  * However, the callback may also produce domain reductions or add other constraints.
  *
  * The CONSSEPASOL callback has the following options:
- *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result SCIP_CUTOFF)
  *  - adding an additional constraint (result SCIP_CONSADDED)
  *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
  *  - adding a cutting plane to the LP (result SCIP_SEPARATED)
@@ -770,7 +770,7 @@
  * Integer Programming community.
  *
  * The CONSPROP callback has the following options:
- *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result SCIP_CUTOFF)
  *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
  *  - stating that the propagator searched, but did not find domain reductions, cutting planes, or cut constraints
  *    (result SCIP_DIDNOTFIND)
@@ -782,7 +782,7 @@
  * If the constraint handler should support conflict analysis, it has to supply a CONSRESPROP method.
  * It also should call SCIPinferVarLbCons() or SCIPinferVarUbCons() in domain propagation instead of SCIPchgVarLb() or
  * SCIPchgVarUb() in order to deduce bound changes on variables.
- * In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint, that deduced the
+ * In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint that deduced the
  * variable's bound change, and an integer value "inferinfo" that can be arbitrarily chosen.
  *
  * The propagation conflict resolving method CONSRESPROP must then be implemented, to provide the "reasons" for the bound
@@ -804,7 +804,7 @@
  * the reason for the deduction of the lower bound of \f$z\f$.
  *
  * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.
- * Although this is viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod,
+ * Although this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod,
  * it will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check
  * how effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
  * consider to implement the conflict resolving method.
@@ -832,25 +832,25 @@
  *
  * @subsection CONSACTIVE
  *
- * The CONSACTIVE callback method is called each time, a constraint of the constraint handler is activated.
+ * The CONSACTIVE callback method is called each time a constraint of the constraint handler is activated.
  * For example, if a constraint is added locally to a subproblem, the CONSACTIVE callback is called whenever the
  * search enters the subtree where the constraint exists.
  *
  * @subsection CONSDEACTIVE
  *
- * The CONSDEACTIVE callback method is called each time, a constraint of the constraint handler is deactivated.
+ * The CONSDEACTIVE callback method is called each time a constraint of the constraint handler is deactivated.
  * For example, if a constraint is added locally to a subproblem, the CONSDEACTIVE callback is called whenever the
  * search leaves the subtree where the constraint exists.
  *
  * @subsection CONSENABLE
  *
- * The CONSENABLE callback method is called each time, a constraint of the constraint handler is enabled.
+ * The CONSENABLE callback method is called each time a constraint of the constraint handler is enabled.
  * Constraints might be active without being enabled. In this case, only the feasibility checks are executed,
  * but domain propagation and separation is skipped.
  *
  * @subsection CONSDISABLE
  *
- * The CONSDISABLE callback method is called each time, a constraint of the constraint handler is disabled.
+ * The CONSDISABLE callback method is called each time a constraint of the constraint handler is disabled.
  *
  * @subsection CONSPRINT
  *
