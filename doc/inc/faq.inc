@@ -16,10 +16,10 @@
     <p class="a">
       SCIP is a standalone MIP-Solver as well as a branch-cut-and-price-framework.<br> 
       You can use the precompiled binaries with which you can solve MIPs in *.mps or *.lp file format,
-      you can SCIP as a subroutine for solving MIPs from your own source code, 
+      you can use SCIP as a subroutine for solving MIPs from your own source code, 
       or you can use it as a framework in which you implement your own plugins&mdash;or for a combination
       of these three purposes.<br>
-      In this FAQ four are separate sections for the three usages of SCIP.
+      This FAQ consists of four separate sections treating these three usages of SCIP.
     <p class="q">
       <a name="Q2">When should I use SCIP?</a>
     </p>
@@ -32,7 +32,7 @@
       <a name="Q3">I heard something about licenses. Do I have to pay for using SCIP?</a>
     </p>
     <p class="a"> 
-      As long as you use it for academical, non-commercial purposes: No. 
+      As long as you use it for academic, non-commercial purposes: No. 
       This will not change. For the other cases, check the explanation of the 
       <a href="http://zibopt.zib.de/ZIBLicence.shtml">ZIB academic license</a>.
     </p>
@@ -62,8 +62,8 @@
     <p class="a">
       An easy way is to use the SCIP-binaries and call SCIP from a shell. 
       For that, you just have to download one of the precompiled binaries from the 
-      <a href="http://scip.zib.de/download.shtml">download section</a> or the zipped source code and compile it 
-      with your favorite settings. This describe in detail in the <tt>INSTALL</tt> file in the SCIP main directory.
+      <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
+      with your favorite settings. This is described in detail in the <tt>INSTALL</tt> file in the SCIP main directory.
     </p>
     <p class="a">
       Another way is to use SCIP as a solver integrated into your own program source code. 
@@ -120,7 +120,7 @@
       As a summary, the call of 'make ZIMPL=false ZLIB=false READLINE=false' should work on most systems.
     </p>
     <p class="a">
-      If you have any problems while use an LP-solver different from SoPlex,
+      If you have any problems while using an LP-solver different from SoPlex,
       please read the SCIP INSTALL file first.                                                     
     </p>
     <p class="q">
