@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.22 2008/09/22 19:25:06 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.23 2008/09/27 23:02:13 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1745,7 +1745,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputSols)
    
    if( !valid )
    {
-      SCIPmessageFPrintInfo(file, "ToMany");
+      SCIPinfoMessage(scip, file, "ToMany");
    }
    else
    {
