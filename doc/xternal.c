@@ -156,13 +156,22 @@
 /**@page START How to start a new project
  *
  * If you want to use SCIP to write your own branch-and-cut or branch-and-cut-and-price code, below
- * you find some hints of how to get started.
+ * you find some hints of how to start a new project.
  *
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
- *   directory). For branch-and-cut, the linear ordering example <code>LOP</code> should be a good
- *   starting point. If you use column generation have a look at <code>SamplePricer</code>.
- * - Edit the makefile according to your needs - in particular, include a correct path to the SCIP
- *   root at the top. Moreover, you should rename the targets and source file names.
+ *   directory). Depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose 
+ *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project
+ *   we suggest the use one of the following examples as starting point:
+ *     - <code>SamplePricer</code> should be used if your focus is <b>branch-and-cut-and-price</b>
+ *       (column generation) and you want to use <b>C++</b>.
+ *     - <code>SamplePricer_C</code> should be used if your focus is <b>branch-and-cut-and-price</b>
+ *       (column generation) and you want to use <b>C</b>.
+ *     - <code>TSP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C++</b>.
+ *     - <code>LOP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C</b>.
+ * - Edit the makefile according to your needs -- in particular: 
+ *    - include a correct path to the SCIP root at the top (<code>SCIPDIR</code>)
+ *    - you should rename the targets name (<code>MAINNAME</code>)
+ *    - and you should adjust the source file names (<code>MAINOBJ</code>).
  * - Once you have edited the makefile, you can use all the flags that can be used in SCIP to
  *   compile your code, see \ref MAKE.
  *
