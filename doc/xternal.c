@@ -36,6 +36,7 @@
  * @author   Alexander Martin
  * @author   Marc Pfetsch
  * @author   Christian Raack
+ * @author   Robert Waniek
  * @author   Michael Winkler
  * @author   Kati Wolter
  *
@@ -71,6 +72,11 @@
  * - \ref DISP    "How to add display columns"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
+ *
+ * <b>Changes between different versions of SCIP</b>
+ *
+ * - \ref CHG1    "Changes between version 0.9 and 1.0"
+ * - \ref CHG2    "Changes between version 1.0 and 1.1"
  *
  */
 
@@ -118,7 +124,8 @@
  * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available for SoPlex and CLP)
  *
  * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on or off, respectively.
- * - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized or debug version of ZIMPL, if ZIMPL support is enabled.
+ *      - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized or debug version of ZIMPL, if ZIMPL support is enabled.\n
+ * If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
  * 
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on or off, respectively.
  *
@@ -172,7 +179,7 @@
  *   The documentation of "scip.h" is grouped into several blocks, each dealing with methods for a specific kind of
  *   object.
  *   For example, all methods operating on variables are grouped together.
- * - The files "pub_<...>.h" contains methods that perform "easy" operations that only affect the corresponding
+ * - The files "pub_<...>.h" contain methods that perform "easy" operations that only affect the corresponding
  *   objects.
  *   Usually, with these methods you can access the data of the object.
  *   For example, in "pub_var.h" you find methods to get information about a variable.
@@ -204,19 +211,18 @@
  * base class.
  *
  * Additional documentation for the callback methods of a constraint handler can be found in the file
- * type_cons.h.
+ * "type_cons.h".
  *
  * Here is what you have to do (assuming your constraint handler should be named "subtour"):
- * -# Copy the template files src/scip/cons_xxx.c and src/scip/cons_xxx.h into files "cons_subtour.c"
+ * -# Copy the template files "src/scip/cons_xxx.c" and "src/scip/cons_xxx.h" into files "cons_subtour.c"
  *    and "cons_subtour.h".
-      \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "subtour".
- * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
- * -# Define the \ref CONS_DATA "constraint data and the constraint handler data".
- * -# Implement the \ref CONS_INTERFACE "interface methods".
- * -# Implement the \ref CONS_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref CONS_ADDITIONALCALLBACKS "additional callback methods".
+ * -# Adjust the properties of the constraint handler (see \ref CONS_PROPERTIES).
+ * -# Define the constraint data and the constraint handler data (see \ref CONS_DATA). This is optional.
+ * -# Implement the interface methods (see \ref CONS_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref CONS_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref CONS_ADDITIONALCALLBACKS). This is optional.
  *
  * 
  * @section CONS_PROPERTIES Properties of a Constraint Handler
@@ -233,7 +239,7 @@
  * Names have to be unique: no two constraint handlers may have the same name.
  *
  * \par CONSHDLR_DESC: the description of the constraint handler.
- * This string is printed as description of the constraint handler in the interactive shell.
+ * This string is printed as description of the constraint handler in the interactive shell of SCIP.
  *
  * \par CONSHDLR_SEPAPRIORITY: the priority of the constraint handler for separation.
  * In each separation round during the price-and-cut loop of the subproblem processing or the separation loop
@@ -327,7 +333,7 @@
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
  * This property is analoguos to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
- * \par CONSHDLR_NEEDSCONS: indicates whether the constraint handler should be skipped, if no constraints are available.
+ * \par CONSHDLR_NEEDSCONS: indicates whether the constraint handler be should skipped, if no constraints are available.
  * Usually, a constraint handler is only executed if there are constraints of its corresponding class in the model.
  * For those constraint handlers, the NEEDSCONS flag should be set to TRUE.
  * However, some constraint handlers must be called without having a constraint of the class in the model, because
@@ -336,12 +342,6 @@
  * integrality constraint in the model.
  * The integrality conditions are attached to the variables, and the integrality constraint handler has to check
  * all variables that are marked to be integer for integral values.
- *
- * \par LINCONSUPGD_PRIORITY(optional): priority of the constraint handler for upgrading of linear constraints
- * This property is only needed if a certain linear constraint can be upgraded to a more specific one. In one of 
- * the first presolving rounds SCIP tries to upgrade linear constraints to more specialized constraints such as, 
- * knapsack constraints. The upgrading calls a processed in the order of decreasing priority. 
- * 
  *
  *
  * @section CONS_DATA Constraint Data and Constraint Handler Data
@@ -390,64 +390,54 @@
  * \endcode
  * of the linear constraint handler (see cons_linear.h).
  *
- * You may also add user parameters for your constraint handler.  An
- * example for this and the automatic linear upgrading mechanism can be
- * found in src/scip/cons_knapsack.c.
+ * You may also add user parameters for your constraint handler.
+ * An example for this can be found in src/scip/cons_knapsack.c.
  *
  * The method SCIPcreateConsSubtour() is called to create a single constraint of the constraint handler's constraint
  * class.
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
- * Take a look at the following example from the knapsack constraint handler:
+ * Take a look at the following example from the logicor constraint handler:
  * \code
- * SCIP_RETCODE SCIPcreateConsKnapsack(
- *   SCIP*                 scip,          
- *   SCIP_CONS**           cons,          
- *   const char*           name,          
- *   int                   nvars,         
- *   SCIP_VAR**            vars,          
- *   SCIP_Longint*         weights,       
- *   SCIP_Longint          capacity,      
- *   SCIP_Bool             initial,       
- *   SCIP_Bool             separate,      
- *   SCIP_Bool             enforce,       
- *   SCIP_Bool             check,         
- *   SCIP_Bool             propagate,     
- *   SCIP_Bool             local,         
- *   SCIP_Bool             modifiable,    
- *   SCIP_Bool             dynamic,       
- *   SCIP_Bool             removable,     
- *   SCIP_Bool             stickingatnode 
- *   )
+ * SCIP_RETCODE SCIPcreateConsLogicor(
+ *    SCIP*                 scip,
+ *    SCIP_CONS**           cons,
+ *    const char*           name,
+ *    int                   nvars,
+ *    SCIP_VAR**            vars,
+ *    SCIP_Bool             initial,
+ *    SCIP_Bool             separate,
+ *    SCIP_Bool             enforce,
+ *    SCIP_Bool             check,
+ *    SCIP_Bool             propagate,
+ *    SCIP_Bool             local,
+ *    SCIP_Bool             modifiable,
+ *    SCIP_Bool             dynamic,
+ *    SCIP_Bool             removable,
+ *    SCIP_Bool             stickingatnode
+ *    )
  * {
- *    SCIP_CONSHDLRDATA* conshdlrdata;
  *    SCIP_CONSHDLR* conshdlr;
  *    SCIP_CONSDATA* consdata;
- *   
+ * 
+ *    assert(scip != NULL);
+ * 
  *    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
  *    if( conshdlr == NULL )
  *    {
- *       SCIPerrorMessage("knapsack constraint handler not found\n");
- *       return SCIP_PLUGINNOTFOUND;
+ *       SCIPerrorMessage("logic or constraint handler not found\n");
+ *       return SCIP_INVALIDCALL;
  *    }
- *
- *    conshdlrdata = SCIPconshdlrGetData(conshdlr);
- *    assert(conshdlrdata != NULL);
- *    assert(conshdlrdata->eventhdlr != NULL);
- *
- *    SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, weights, capacity) );
- *         
+ * 
+ *    SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars) );
+ * 
  *    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
  *          local, modifiable, dynamic, removable, stickingatnode) );
- *
+ * 
  *    return SCIP_OKAY;
  * }
  * \endcode
- * In this example, consdataCreate() is a local method that allocates memory for the given consdata 
- * and fills the data with the given vars array. For allocating memory for the constarint data you
- * can use the method:
- * \code
- * SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
- * \endcode
+ * In this example, consdataCreate() is a local method that allocates memory for the given consdata and fills the
+ * data with the given vars array.
  *
  * 
  * @section CONS_FUNDAMENTALCALLBACKS Fundamental Callback Methods
@@ -467,12 +457,12 @@
  * methods with slightly modified parameters.
  * The fourth method provides dual information that is used for example in preprocessing.
  *
- * Additional documentation to the callback methods can be found in type_cons.h.
+ * Additional documentation to the callback methods can be found in "type_cons.h".
  *
  * @subsection CONSCHECK
  *
- * The CONSCHECK callback gets a primal solution candidate in a SCIP_SOL* data structure 
- * and has to check this solution for global feasibility.
+ * The CONSCHECK callback gets a primal solution candidate in a SOL* data structure and has to check this solution
+ * for global feasibility.
  * It has to return a result SCIP_FEASIBLE, if the solution satisfies all the constraints of the constraint handler,
  * and a result SCIP_INFEASIBLE if there is at least one constraint that is violated.
  * The callback is used by primal heuristics to check a constructed solution for feasibility.
@@ -495,7 +485,7 @@
  * The CONSENFOLP method is called after the price-and-cut loop was finished and an LP solution is available.
  * Like the CHECK method, the ENFOLP method should check the solution (in this case, the LP solution) for
  * feasibility.
- * However, the solution is not given as a SCIP_SOL* data structure.
+ * However, the solution is not given as a SOL* data structure.
  *
  * The value of a variable \em var in the LP solution can be accessed by calling
  * \code
@@ -561,15 +551,15 @@
  *  - If the constraint may get violated by changing the variable in any direction, it should call
  *    SCIPaddVarLocks(scip, var, nlockspos + nlocksneg, nlockspos + nlocksneg).
  *
- *  Consider the linear constraint \f$3x -5y +2z \leq 7\f$ as an example. The CONSLOCK callback method of the
+ *  Consider the linear constraint "3x -5y +2z <= 7" as an example. The CONSLOCK callback method of the
  *  linear constraint handler should call SCIPaddVarLocks(scip, x, nlocksneg, nlockspos), 
  *  SCIPaddVarLocks(scip, y, nlockspos, nlocksneg) and SCIPaddVarLocks(scip, z, nlocksneg, nlockspos) to tell SCIP,
  *  that rounding up of x and z and rounding down of y can destroy the feasibility of the constraint, while rounding
- *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation \f$3x -5y +2z > 7\f$.
- *  A linear constraint \f$2 \leq 3x -5y +2z \leq 7\f$ should call
+ *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation "3x -5y +2z > 7".
+ *  A linear constraint "2 <= 3x -5y +2z <= 7" should call
  *  SCIPaddVarLocks(scip, ..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, since rounding in both
  *  directions of each variable can destroy both the feasibility of the constraint and it's negation
- *  \f$3x -5y +2z < 2\f$  or  \f$3x -5y +2z > 7\f$.
+ *  "3x -5y +2z < 2  or  3x -5y +2z > 7".
  * 
  *
  * @section CONS_ADDITIONALCALLBACKS Additional Callback Methods
@@ -598,6 +588,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your constraint handler data, remember to free this memory 
+ * before freeing the constraint handler data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -672,42 +664,29 @@
  * Here is an example, which is taken from the logicor constraint handler:
  * \code
  * static
- * SCIP_DECL_CONSTRANS(consTransKnapsack)
- * {  
- *    SCIP_CONSHDLRDATA* conshdlrdata;
+ * SCIP_DECL_CONSTRANS(consTransLogicor)
+ * {
  *    SCIP_CONSDATA* sourcedata;
  *    SCIP_CONSDATA* targetdata;
- *
- *    assert(conshdlr != NULL);
- *    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
- *    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
- *    assert(sourcecons != NULL);
- *    assert(targetcons != NULL);
- *
+ * 
  *    sourcedata = SCIPconsGetData(sourcecons);
- *    assert(sourcedata != NULL);
- *    assert(sourcedata->row == NULL);
- *
- *    conshdlrdata = SCIPconshdlrGetData(conshdlr);
- *    assert(conshdlrdata != NULL);
- *    assert(conshdlrdata->eventhdlr != NULL);
- *
- *    SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
- *          sourcedata->nvars, sourcedata->vars, sourcedata->weights, sourcedata->capacity) ); 
- *
+ * 
+ *    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->nvars, sourcedata->vars) );
+ * 
  *    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
  *          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
  *          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
  *          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons), 
- *          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
- *
+ *          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons),
+ *          SCIPconsIsStickingAtNode(sourcecons)) );
+ * 
  *    return SCIP_OKAY;
  * }
  * \endcode
  * 
  * @subsection CONSINITLP
  *
- * The CONSINITLP callback is executed before the first LP relaxation is solved.
+ * The CONSINITLP callback is executed at the root node before the first LP relaxation is solved.
  * It should add the LP relaxations of all "initial" constraints to the LP. The method should scan the constraints
  * array for constraints that are marked initial via calls to SCIPconsIsInitial() and put the LP relaxation
  * of all initial constraints to the LP with calls to SCIPaddCut().
@@ -784,17 +763,16 @@
  * rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
  * by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
  *
- * For example, the logicor constraint \f$c = x \vee y \vee z\f$ fixes variable \f$z\f$ 
- * to TRUE (i.e., changes the lower bound of \f$z\f$
- * to 1.0), if both, \f$x\f$ and \f$y\f$, are assigned to FALSE (i.e., if the upper bounds of these variables are 0.0). It uses
+ * For example, the logicor constraint c = "x or y or z" fixes variable z to TRUE (i.e., changes the lower bound of z
+ * to 1.0), if both, x and y, are assigned to FALSE (i.e., if the upper bounds of these variables are 0.0). It uses
  * SCIPinferVarLbCons(scip, z, 1.0, c, 0) to apply this assignment (an inference information tag is not needed by the
  * constraint handler and is set to 0).
- * In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on \f$z\f$ with
- * constraint \f$c\f$, that was applied at a time given by a bound change index "bdchgidx".
- * With a call to SCIPvarGetLbAtIndex(z, bdchgidx), the handler can find out, that the lower bound of variable \f$z\f$ was
+ * In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
+ * constraint c, that was applied at a time given by a bound change index "bdchgidx".
+ * With a call to SCIPvarGetLbAtIndex(z, bdchgidx), the handler can find out, that the lower bound of variable z was
  * set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
- * SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were
- * the reason for the deduction of the lower bound of \f$z\f$.
+ * SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
+ * the reason for the deduction of the lower bound of z.
  *
  * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.
  * Although this is viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod,
@@ -809,19 +787,9 @@
  * handler, delete redundant constraints, aggregate and fix variables if possible, and upgrade constraints to a more
  * specific type.
  *
- * If the CONSPRESOL callback applies changes to the constraint data, you also have to implement the \ref CONSTRANS callback
+ * If the CONSPRESOL callback applies changes to the constraint data, you also have to implement the CONSTRANS callback
  * in order to copy the constraint data to the transformed problem space and protect the original problem from the
  * preprocessing changes.
- *
- * To inform SCIP that the presolving method found a reduction the result pointer has to be set in a proper way. 
- * The following options are possible:
- *
- *  - SCIP_UNBOUNED   : at least one variable is not bounded by any constraint in obj. direction
- *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds
- *  - SCIP_SUCCESS    : the presolver found a reduction
- *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
- *  - SCIP_DIDNOTRUN  : the presolver was skipped
- *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  *
  * @subsection CONSACTIVE
  *
@@ -847,10 +815,9 @@
  *
  * @subsection CONSPRINT
  *
- * The CONSPRINT callback method is called, when the user asks SCIP to display the problem to the screen 
- * or save the problem into a file. This is, however, only the case if the user requested the CIP format. 
- * For more detail to reading and writing with SCIP we refer to the \ref READER "file readers". In this 
- * callback method the constraint handler should display the data of the constraint in an appropriate form.
+ * The CONSPRINT callback method is called, when the user asks SCIP to display the problem to the screen or save
+ * the problem into a file.
+ * The constraint handler should display the data of the constraint in an appropriate form.
  * The output format that is defined by the CONSPRINT callbacks is called CIP format.
  * In later versions of SCIP, the constraint handlers should also be able to parse (i.e., read) constraints
  * which are given in CIP format.
@@ -873,16 +840,13 @@
  * are generated by a pricer have to be flagged as "modifiable" in the SCIPcreateCons() call.
  *
  * In the following, we explain how the user can add an own pricer.
- * For example, look into the distance pricer for the p-median problem (examples/SamplePricer/src/pricer_distance.h) of the
- * SamplePricer example project.
- * The example is written in C++ and uses the C++ wrapper classes.
- * However, we will explain the implementation of a pricer using the C interface.
- * It is very easy to transfer the C explanation to C++: whenever a method should be implemented using the
- * SCIP_DECL_PRICER... notion, reimplement the corresponding virtual member function of the abstract ObjPricer
- * base class.
+ * For example, look into the stable set pricer for the coloring problem (examples/Coloring/src/pricer_coloring.c) of the
+ * Coloring example project.
+ * The example is written in C. C++ users can easily adapt the code by using the ObjPricer wrapper base class and 
+ * implement the scip_...() virtual methods instead of the SCIP_DECL_PRICER... callback methods.
  *
  * Additional documentation for the callback methods of a pricer can be found in the file
- * type_pricer.h.
+ * "type_pricer.h".
  *
  * Here is what you have to do to implement a pricer:
  * -# Copy the template files "src/scip/pricer_xxx.c" and "src/scip/pricer_xxx.h" into files "pricer_mypricer.c"
@@ -890,10 +854,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
- * -# Define the pricer data (see \ref PRICER_DATA).
+ * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
  * -# Implement the interface methods (see \ref PRICER_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref PRICER_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref PRICER_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref PRICER_ADDITIONALCALLBACKS).  This is optional.
  *
  * 
  * @section PRICER_PROPERTIES Properties of a Pricer
@@ -901,7 +865,7 @@
  * At the top of the new file "pricer_mypricer.c" you can find the pricer properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the pricer properties by calling the constructor
- * of the abstract base class ObjPricer from within your constructor (see the SamplePricer example).
+ * of the abstract base class ObjPricer from within your constructor.
  * The properties you have to set have the following meaning:
  *
  * \par PRICER_NAME: the name of the pricer.
@@ -955,7 +919,11 @@
  * It is responsible for notifying SCIP of the presence of the pricer by calling the method
  * SCIPincludePricer().
  * It is called by the user, if he wants to include the pricer, i.e., if he wants to solve a model for which variables should
- * be generated by this pricer.
+ * be generated by this pricer. In addition, the pricer has to be activated before the solution process starts, like it is done 
+ * in the reader of the Coloring example (examples/Coloring/src/reader_col.c) by calling
+ * \code
+ * SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "coloring")) );
+ * \endcode
  *
  * If you are using pricer data, you have to allocate the memory for the data at this point.
  * You can do this by calling
@@ -964,22 +932,21 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_PricerData afterwards.
  *
- * You may also add user parameters for your pricer, see the method SCIPincludeConshdlrKnapsack() in the knapsack constraint handler
- * src/scip/cons_knapsack.c for an example of how to add user parameters.
+ * You may also add user parameters for your pricer, see the method SCIPincludePricerColoring() in the pricer of the Coloring example
+ * for an example of how to add user parameters.
  *
  * 
  * @section PRICER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Pricer
  *
  * The fundamental callback methods have to be implemented in order to obtain an operational algorithm.
- * In the case of a pricer, the fundamental callbacks are the two variable pricing callbacks which search and add
- * new variables to the problem.
- * In the C++ wrapper class ObjPricer, the scip_redcost() method (which corresponds to the PRICERREDCOST callback) is a virtual
- * abstract member function.
- * You have to implement it in order to be able to construct an object of your pricer class.
- * The other fundamental method scip_farkas() has an empty default implementation, but if it may happen in your application
- * that infeasible LP relaxations are encountered, you have to overwrite this method as well.
+ * In the case of a pricer, there is only one fundamental callback method, namely the PRICERREDCOST method 
+ * which searches and adds new variables to the problem.
+ * This method has to be implemented for every pricer; the other callback methods are optional. 
+ * In the C++ wrapper class ObjPricer, the scip_redcost() method (which corresponds to the PRICERREDCOST callback) 
+ * is a virtual abstract member function. You have to implement it in order to be able to construct an object of your 
+ * pricer class.
  *
- * Additional documentation to the callback methods can be found in type_pricer.h.
+ * Additional documentation to the callback methods can be found in "type_pricer.h".
  *
  * @subsection PRICERREDCOST
  *
@@ -995,12 +962,19 @@
  * methods of the constraint handlers to add the necessary variable entries to the constraints.
  *
  * Pricers usually need the dual LP solution as input for the pricing algorithm.
- * Since SCIP does not know the semantics of the individual constranits in the problem, the dual solution
+ * Since SCIP does not know the semantics of the individual constraints in the problem, the dual solution
  * has to be provided by the constraint handlers.
  * For example, the setppc constraint handler that deals with set partitioning, packing, and covering constraints provides
  * the method SCIPgetDualsolSetppc() (defined in cons_setppc.h) to access the dual solution value for a single constraint.
  * Similarly, the dual solution of a linear constraint can be queried with the method SCIPgetDualsolLinear() of cons_linear.h.
  * The reduced costs of the existing variables can be accessed with the method SCIPgetVarRedcost().
+ *
+ *
+ * @section PRICER_ADDITIONALCALLBACKS Additional Callback Methods of a Pricer
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * However, some of them have to be implemented for most applications.
+ *
  *
  * @subsection PRICERFARKAS
  *
@@ -1034,12 +1008,6 @@
  * algorithm in order to identify whether it is reduced cost or farkas pricing. Then, the algorithm would just call the appropriate
  * methods to access the dual solution or objective function, depending on the Boolean flag.
  *
- *
- * @section PRICER_ADDITIONALCALLBACKS Additional Callback Methods of a Pricer
- *
- * The additional callback methods need not to be implemented in every case.
- * However, some of them have to be implemented for most applications.
- *
  * @subsection PRICERFREE
  *
  * If you are using pricer data, you have to implement this method in order to free the pricer data.
@@ -1060,6 +1028,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your pricer data, remember to free this memory 
+ * before freeing the pricer data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -1088,19 +1058,22 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page PRESOL How to add presolvers
  *
- * Presolvers are used to simplify the problem instance and to extract useful information in the presolving step.
+ * Presolvers are used to reduce the size of the model by removing irrelevant information like redundant constraints,
+ * to strengthen the LP relaxation by exploiting integrality information, and to extract useful information in the 
+ * presolving step.
  * Constraint based presolving is done in the CONSPRESOL callback methods of the constraint handlers, see \ref CONSPRESOL.
  * The presolver plugins complement the constraint based presolving by additional, usually optimality based, presolving
  * reductions. 
  * \n 
  * A complete list of all presolvers contained in this release can be found \ref PRESOLVERS "here".
  *
- * In the following, we explain how the user can add an own presolver.
+ * In the following, we explain how the user can add its own presolver.
  * Take the dual fixing presolver (src/scip/presol_dualfix.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjPresol wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL... callback methods.
  *
- * Additional documentation for the callback methods of a presolver can be found in the file type_presol.h.
+ * Additional documentation for the callback methods of a presolver, in particular for their input parameters, 
+ * can be found in the file "type_presol.h".
  *
  * Here is what you have to do to implement a presolver:
  * -# Copy the template files "src/scip/presol_xxx.c" and "src/scip/presol_xxx.h" into files named "presol_mypresolver.c"
@@ -1108,15 +1081,15 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
- * -# Define the presolver data (see \ref PRESOL_DATA).
+ * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
  * -# Implement the interface methods (see \ref PRESOL_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref PRESOL_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref PRESOL_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref PRESOL_ADDITIONALCALLBACKS). This is optional.
  *
  * 
  * @section PRESOL_PROPERTIES Properties of a Presolver
  *
- * At the top of the new file "presol_mypresolver.c" you can find the presolver properties.
+ * At the top of the new file "presol_mypresolver.c", you can find the presolver properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the presolver properties by calling the constructor
  * of the abstract base class ObjPresol from within your constructor.
@@ -1133,15 +1106,17 @@
  * \par PRESOL_PRIORITY: the priority of the presolver.
  * In each presolving round, the presolvers and presolving methods of the constraint handlers are called in
  * a predefined order, which is given by the priorities of the presolvers and the check priorities of the
- * constraint handlers.
+ * constraint handlers, see \ref CONS_PROPERTIES.
  * First, the presolvers with non-negative priority are called in the order of decreasing priority.
  * Next, the presolving methods of the different constraint handlers are called in the order of decreasing check
  * priority.
  * Finally, the presolvers with negative priority are called in the order of decreasing priority.
  * \n
  * The priority of the presolver should be set according to the complexity of the presolving algorithm and the impact of the reduction:
- * presolvers that provide fast algorithms that usually have a high impact (i.e., remove lots of variables or tighten many bounds)
- * should have a high priority.
+ * presolvers that provide fast algorithms that usually have a high impact (i.e., remove lots of variables or tighten 
+ * bounds of many variables) should have a high priority. An easy way to list the 
+ * priorities of all presolvers and constraint handlers is to type "display presolvers" and "display conshdlrs" in 
+ * the interactive shell of SCIP.
  *
  * \par PRESOL_MAXROUNDS: the default maximal number of rounds the presolver participates in.
  * The presolving is conducted in rounds: the presolvers and presolving methods of the constraint handlers
@@ -1150,7 +1125,7 @@
  * presolver is called. The PRESOL_MAXROUNDS property specifies the default value for this parameter.
  * A value of -1 represents an unlimited number of rounds.
  *
- * \par PRESOL_DELAYPRESOL: the default for whether the presolver should be delayed, if other presolvers found reductions.
+ * \par PRESOL_DELAY: the default for whether the presolver should be delayed, if other presolvers found reductions.
  * If the presolver is marked to be delayed, it is only executed if no other presolvers found a reduction during the current
  * presolving round.
  * If the presolver is very expensive, you may want to mark it to be delayed until all cheap presolving methods have been executed.
@@ -1160,41 +1135,46 @@
  *
  * Below the header "Data structures" you can find a struct which is called "struct SCIP_PresolData".
  * In this data structure, you can store the data of your presolver. For example, you should store the adjustable parameters
- * of the presolver in this data structure.
+ * of the presolver in this data structure.  
  * If you are using C++, you can add presolver data as usual as object variables to your class.
  * \n
- * Defining presolver data is optional. You can leave the struct empty.
+ * Defining presolver data is optional. You can leave this struct empty.
  *
  *
  * @section PRESOL_INTERFACE Interface Methods
  *
- * At the bottom of "presol_mypresolver.c" you can find the interface method SCIPincludePresolMypresolver(), which also appears in "presol_mypresolver.h".
+ * At the bottom of "presol_mypresolver.c", you can find the interface method SCIPincludePresolMypresolver(), 
+ * which also appears in "presol_mypresolver.h".
  * \n
  * This method has only to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the presolver by calling the method
- * SCIPincludePresol().
- * It is called by the user, if he wants to include the presolver, i.e., if he wants to use the presolver in his application.
+ * SCIPincludePresol(). 
+ * SCIPincludePresolMypresolver() is called by the user, if he wants to include the presolver, 
+ * i.e., if he wants to use the presolver in his application.
  *
  * If you are using presolver data, you have to allocate the memory for the data at this point.
  * You can do this by calling
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
  * \endcode
- * You also have to initialize the fields in struct SCIP_PresolData afterwards.
+ * You also have to initialize the fields in struct SCIP_PresolData afterwards. For freeing the 
+ * presolver data, see \ref PRESOLFREE.
  *
- * You may also add user parameters for your presolver, see the method SCIPincludePresolProbing() in src/scip/presol_probing.c
- * for an example.
+ * You may also add user parameters for your presolver, see \ref PARAM for how to add user parameters and 
+ * the method SCIPincludePresolProbing() in src/scip/presol_probing.c for an example.
  *
  * 
  * @section PRESOL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Presolver
  *
- * Presolver plugins have only one fundamental callback method, namely the PRESOLEXEC method.
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain 
+ * an operational algorithm. Presolver plugins have only one fundamental callback method, namely the PRESOLEXEC method.
  * This method has to be implemented for every presolver; the other callback methods are optional.
  * In the C++ wrapper class ObjPresol, the scip_exec() method (which corresponds to the PRESOLEXEC callback) is a virtual
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your presolver class.
  *
- * Additional documentation to the callback methods can be found in type_presol.h.
+ * Additional documentation to the callback methods, in particular to their input parameters, 
+ * can be found in "type_presol.h".
  *
  * @subsection PRESOLEXEC
  *
@@ -1214,7 +1194,7 @@
  *
  * @subsection PRESOLFREE
  *
- * If you are using presolver data, you have to implement this method in order to free the presolver data.
+ * If you are using presolver data (see \ref PRESOL_DATA and \ref PRESOL_INTERFACE), you have to implement this method in order to free the presolver data.
  * This can be done by the following procedure:
  * \code
  * static
@@ -1232,6 +1212,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your presolver data, remember to free this memory 
+ * before freeing the presolver data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -1239,6 +1221,8 @@
  *
  * The PRESOLINIT callback is executed after the problem was transformed.
  * The presolver may, e.g., use this call to initialize his presolver data.
+ * The difference between the original and the transformed problem is explained in 
+ * "What is this thing with the original and the transformed problem about?" on \ref FAQ. 
  *
  * @subsection PRESOLEXIT
  *
@@ -1264,16 +1248,18 @@
  * CONSSEPASOL callback methods of the constraint handlers, see \ref CONSSEPALP and \ref CONSSEPASOL. These cuts are 
  * valid inequalities or even facets of the polyhedron described by a single constraint or a subset of the constraints of
  * a single constraint class. In contrast, general purpose cuts do not require or exploit any knowledge about the 
- * underlying problem structure but use only the current LP relaxation and the integrality conditions. 
+ * underlying problem structure but use only the current LP relaxation and the integrality conditions. See also
+ * "When should I implement a constraint handler, when should I implement a separator?" on \ref FAQ.
  * \n
  * A complete list of all separators contained in this release can be found \ref SEPARATORS "here".
  *
- * In the following, we explain how the user can add an own separator.
+ * In the following, we explain how the user can add its own separator.
  * Take the separator for the class of Gomory mixed integer inequalities (src/scip/sepa_gomory.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjSepa wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_SEPA... callback methods.
  *
- * Additional documentation for the callback methods of a separator can be found in the file type_sepa.h.
+ * Additional documentation for the callback methods of a separator, in particular for the input parameters, 
+ * can be found in the file "type_sepa.h".
  *
  * Here is what you have to do to implement a separator:
  * -# Copy the template files "src/scip/sepa_xxx.c" and "src/scip/sepa_xxx.h" into files "sepa_myseparator.c"
@@ -1281,15 +1267,15 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
- * -# Define the separator data (see \ref SEPA_DATA).
+ * -# Define the separator data (see \ref SEPA_DATA). This is optional.
  * -# Implement the interface methods (see \ref SEPA_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref SEPA_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref SEPA_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref SEPA_ADDITIONALCALLBACKS).  This is optional.
  *
  *
  * @section SEPA_PROPERTIES Properties of a Separator
  *
- * At the top of the new file "sepa_myseparator.c" you can find the separator properties.
+ * At the top of the new file "sepa_myseparator.c", you can find the separator properties.
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the separator properties by calling the constructor
  * of the abstract base class ObjSepa from within your constructor.
@@ -1306,17 +1292,19 @@
  * \par SEPA_PRIORITY: the priority of the separator.
  * In each separation round during the price-and-cut loop of the subproblem processing or the separation loop
  * of the primal solution separation, the separators and separation methods of the constraint handlers are called in
- * a predefined order, which is given by the priorities of the separators and the separation priorities of the
- * constraint handlers.
+ * a predefined order, which is given by the priorities of the separators and the separation priorities 
+ * of the constraint handlers (see \ref CONS_PROPERTIES).
  * First, the separators with non-negative priority are called in the order of decreasing priority.
- * Next, the separation methods of the different constraint handlers are called in the order of decreasing separation
+ * Next, the separation methods of the constraint handlers are called in the order of decreasing separation
  * priority.
- * Finally, the separators with negative priority are called in the order of decreasing priority.
+ * Finally, the separators with negative priority are called in the order of decreasing priority. An easy way to list the 
+ * priorities of all separators and constraint handlers is to type "display separators" and "display conshdlrs" in 
+ * the interactive shell.
  * \n
  * The priority of the separator should be set according to the complexity of the cut separation algorithm and the 
  * impact of the resulting cuts: separators that provide fast algorithms that usually have a high impact (i.e., cut off 
  * a large portion of the LP relaxation) should have a high priority.
- * See \ref SEPAEXECLP and \ref SEPAEXECSOL for further details of the separation callbacks.
+ * See \ref SEPAEXECLP and \ref SEPAEXECSOL for further details of the separation callbacks. 
  *
  * \par SEPA_FREQ: the default frequency for separating cuts.
  * The frequency defines the depth levels at which the separation methods \ref SEPAEXECLP and \ref SEPAEXECSOL are called.
@@ -1326,13 +1314,14 @@
  * \n
  * The frequency can be adjusted by the user. The property of the separator only defines the default value of the frequency.
  * If you want to have a more flexible control of when to execute the separation algorithm, you have to assign
- * a frequency of 1 and implement a check at the beginning of your separation algorithm whether you really 
- * want to execute the separation or not. If you do not want to execute it, set the result code to SCIP_DIDNOTRUN.
+ * a frequency of 1 and implement a check at the beginning of your separation methods whether you really want to execute 
+ * the separation or not. If you do not want to execute it, set the result code of 
+ * \ref SEPAEXECLP and \ref SEPAEXECSOL to SCIP_DIDNOTRUN.
  *
- * \par SEPA_MAXBOUNDDIST: the default maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separation.
+ * \par SEPA_MAXBOUNDDIST: the default maximal relative distance from the current node's dual bound to primal bound compared to best node's dual bound for applying separation.
  * At the current branch-and-bound node, the relative distance from its dual bound (local dual bound) 
  * to the primal bound compared to the best node's dual bound (global dual bound) is considered. The separation method 
- * of the separator will only be applied at the node if this relative distance does not exceed SEPA_MAXBOUNDDIST. 
+ * of the separator will only be applied at the current node if this relative distance does not exceed SEPA_MAXBOUNDDIST. 
  * \n
  * For example, if the global dual bound is 50 and the primal bound is 60, SEPA_MAXBOUNDDIST = 0.25 means that separation 
  * is only applied if the current node's dual bound is in the first quarter of the interval [50,60], i.e., if it is less 
@@ -1343,7 +1332,7 @@
  * dual bound, 0.0 is probably a good choice for SEPA_MAXBOUNDDIST.
  * Note that separators with a frequency of SEPA_FREQ = 0 are only applied at the root node.
  * Obviously, at the root node the local dual bound is equal to the global dual bound and thus, the separator is called
- * for any value of the SEPA_MAXBOUNDDIST setting.
+ * for any value of SEPA_MAXBOUNDDIST.
  *
  * \par SEPA_DELAY: the default for whether the separation method should be delayed, if other separators or constraint handlers found cuts.
  * If the separator's separation method is marked to be delayed, it is only executed after no other separator
@@ -1354,8 +1343,9 @@
  * @section SEPA_DATA Separator Data
  *
  * Below the header "Data structures" you can find a struct which is called "struct SCIP_SepaData".
- * In this data structure, you can store the data of your separator. For example, you should store the adjustable parameters
- * of the separator in this data structure.
+ * In this data structure, you can store the data of your separator. For example, you should store the adjustable 
+ * parameters of the separator in this data structure. In a separator, user parameters for the maximal number of 
+ * separation rounds per node and for the maximal number of cuts separated per separation round might be useful. 
  * If you are using C++, you can add separator data as usual as object variables to your class.
  * \n
  * Defining separator data is optional. You can leave the struct empty.
@@ -1367,31 +1357,36 @@
  * \n
  * This method has only to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the separator by calling the method SCIPincludeSepa().
- * It is called by the user, if he wants to include the separator, i.e., if he wants to use the separator in his application.
+ * SCIPincludeSepaMyseparator() is called by the user, if he wants to include the separator, i.e., if he wants to use 
+ * the separator in his application.
  *
- * If you are using separator data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * If you are using separator data, you have to allocate the memory 
+ * for the data at this point. You can do this by calling
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
  * \endcode
- * You also have to initialize the fields in struct SCIP_SepaData afterwards.
+ * You also have to initialize the fields in "struct SCIP_SepaData" afterwards. For freeing the 
+ * separator data, see \ref SEPAFREE.
  *
- * You may also add user parameters for your separator, see the method SCIPincludeSepaGomory() 
- * in src/scip/sepa_gomory.c for an example.
+ * You may also add user parameters for your separator, see \ref PARAM for how to add user parameters and 
+ * the method SCIPincludeSepaGomory() in src/scip/sepa_gomory.c for an example.
  *
  * 
  * @section SEPA_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Separator
  *
- * Separator plugins do not have any fundamental callback methods. All callback methods are optional.
- * Most probably, you want to use at least the \ref SEPAEXECLP callback to separate LP solutions.
+ * The fundamental callback methods of the plugins are the ones that have to be implemented in order to obtain 
+ * an operational algorithm. Separator plugins do not have any fundamental callback methods, i.e., all 
+ * callback methods are optional. But, most probably, you want to use at least the optional callback \ref SEPAEXECLP
+ * to separate LP solutions.
  *
- * Additional documentation to the callback methods can be found in type_sepa.h.
+ * Additional documentation to the callback methods, in particular to their input parameters, 
+ * can be found in "type_sepa.h".
  *
  * @section SEPA_ADDITIONALCALLBACKS Additional Callback Methods of a Separator
  *
  * The additional callback methods need not to be implemented in every case.
  * They can be used, for example, to initialize and free private data.
- * The main functions of the separator are the \ref SEPAEXECLP and \ref SEPAEXECSOL callbacks.
+ * The main functions of separators are the \ref SEPAEXECLP and \ref SEPAEXECSOL callbacks.
  *
  * @subsection SEPAEXECLP
  *
@@ -1401,10 +1396,10 @@
  *
  * Usually, the callback searches and produces cuts, that are added with a call to SCIPaddCut().
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
- * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
+ * In addition to LP rows, the callback may also produce domain reductions or add additional constraints.
  *
- * Overall, the SEPAEXECLP callback has the following options, which is indicated by the return value of
- * the 'result' variable:
+ * Overall, the SEPAEXECLP callback has the following options, which is indicated by the possible return values of
+ * the 'result' variable (see "type_sepa.h"):
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
  *  - adding an additional constraint (result SCIP_CONSADDED)
  *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
@@ -1429,8 +1424,8 @@
  * If the cut should be added to the global cut pool, it calls SCIPaddPoolCut().
  * In addition to LP rows, the callback may also produce domain reductions or add other constraints.
  *
- * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the return value of
- * the 'result' variable:
+ * Overall, the SEPAEXECSOL callback has the following options, which is indicated by the possible return values of
+ * the 'result' variable (see "type_sepa.h"):
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
  *  - adding an additional constraint (result SCIP_CONSADDED)
  *  - reducing a variable's domain (result SCIP_REDUCEDDOM)
@@ -1442,8 +1437,8 @@
  *
  * @subsection SEPAFREE
  *
- * If you are using separator data, you have to implement this method in order to free the separator data.
- * This can be done by the following procedure:
+ * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this method 
+ * in order to free the separator data. This can be done by the following procedure:
  * \code
  * static
  * SCIP_DECL_SEPAFREE(sepaFreeMyseparator)
@@ -1460,13 +1455,17 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your separator data, remember to free this memory 
+ * before freeing the separator data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
  * @subsection SEPAINIT
  *
  * The SEPAINIT callback is executed after the problem was transformed.
- * The separator may, e.g., use this call to initialize his separator data.
+ * The separator may, e.g., use this call to initialize his separator data. 
+ * The difference between the original and the transformed problem is explained in 
+ * "What is this thing with the original and the transformed problem about?" on \ref FAQ. 
  *
  * @subsection SEPAEXIT
  *
@@ -1475,13 +1474,13 @@
  *
  * @subsection SEPAINITSOL
  *
- * The SEPAINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
- * begin. The separator may use this call to initialize its branch and bound specific data.
+ * The SEPAINITSOL callback is executed when the presolving was finished and the branch-and-bound process is about to 
+ * begin. The separator may use this call to initialize its branch-and-bound specific data.
  *
  * @subsection SEPAEXITSOL
  *
- * The SEPAEXITSOL callback is executed before the branch and bound process is freed. The separator should use this call 
- * to clean up its branch and bound data, in particular to release all LP rows that he has created or captured.
+ * The SEPAEXITSOL callback is executed before the branch-and-bound process is freed. The separator should use this call 
+ * to clean up its branch-and-bound data, in particular to release all LP rows that he has created or captured.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1499,7 +1498,7 @@
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjProp wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PROP... callback methods.
  *
- * Additional documentation for the callback methods of a propagator can be found in the file type_prop.h.
+ * Additional documentation for the callback methods of a propagator can be found in the file "type_prop.h".
  *
  * Here is what you have to do to implement a propagator:
  * -# Copy the template files "src/scip/prop_xxx.c" and "src/scip/prop_xxx.h" into files named "prop_mypropagator.c"
@@ -1507,10 +1506,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
- * -# Define the propagator data (see \ref PROP_DATA).
+ * -# Define the propagator data (see \ref PROP_DATA). This is optional.
  * -# Implement the interface methods (see \ref PROP_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref PROP_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref PROP_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref PROP_ADDITIONALCALLBACKS). This is optional.
  *
  * @section PROP_PROPERTIES Properties of a Propagator
  *
@@ -1599,7 +1598,7 @@
  * PROPEXEC callback and PROPRESPROP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your propagator class.
  *
- * Additional documentation to the callback methods can be found in type_prop.h.
+ * Additional documentation to the callback methods can be found in "type_prop.h".
  *
  * @subsection PROPEXEC
  *
@@ -1665,6 +1664,8 @@
  *   return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your propagator data, remember to free this memory 
+ * before freeing the propagator data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -1708,11 +1709,11 @@
  * A complete list of all branching rules contained in this release can be found \ref BRANCHINGRULES "here".
  *
  * In the following, we explain how the user can add an own branching rule.
- * Take the most infeasible LP branching rule (src/scip/branch_mostinf.c) as an example.
+ * Take the most infeasible LP branching rule (src/scip/branch_mostinf.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjBranchrule wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_BRANCH... callback methods.
  *
- * Additional documentation for the callback methods of a branching rule can be found in the file type_branch.h.
+ * Additional documentation for the callback methods of a branching rule can be found in the file "type_branch.h".
  *
  * Here is what you have to do to implement a branching rule:
  * -# Copy the template files "src/scip/branch_xxx.c" and "src/scip/branch_xxx.h" into files named 
@@ -1720,10 +1721,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
- * -# Define the branching rule data (see \ref BRANCHRULE_DATA).
+ * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
  * -# Implement the interface methods (see \ref BRANCHRULE_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref BRANCHRULE_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref BRANCHRULE_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref BRANCHRULE_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section BRANCHRULE_PROPERTIES Properties of a Branching Rule
@@ -1821,7 +1822,7 @@
  * The most important callback methods are the \ref BRANCHEXECLP and \ref BRANCHEXECPS methods, which perform the
  * actual task of generating a branching.
  *
- * Additional documentation to the callback methods can be found in type_branch.h.
+ * Additional documentation to the callback methods can be found in "type_branch.h".
  *
  * @subsection BRANCHEXECLP
  *
@@ -1930,6 +1931,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your branching rule data, remember to free this memory 
+ * before freeing the branching rule data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -1970,7 +1973,7 @@
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjNodesel wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_NODESEL... callback methods.
  *
- * Additional documentation for the callback methods of a node selector can be found in the file type_nodesel.h.
+ * Additional documentation for the callback methods of a node selector can be found in the file "type_nodesel.h".
  *
  * Here is what you have to do to implement a node selector:
  * -# Copy the template files "src/scip/nodesel_xxx.c" and "src/scip/nodesel_xxx.h" into files named "nodesel_mynodeselector.c"
@@ -1978,10 +1981,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
- * -# Define the node selector data (see \ref NODESEL_DATA).
+ * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
  * -# Implement the interface methods (see \ref NODESEL_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref NODESEL_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref NODESEL_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref NODESEL_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section NODESEL_PROPERTIES Properties of a Node Selector
@@ -2001,9 +2004,10 @@
  * This string is printed as description of the node selector in the interactive shell.
  *
  * \par NODESEL_STDPRIORITY: the default priority of the node selector in the standard mode.
- *
  * The first step of each iteration of the main solving loop is the selection of the next subproblem to be processed. 
  * The node selector of highest priority (the active node selector) is called to do this selection. 
+ * In particular, if you implemented an own node selector plugin which you want to be applied, you should choose a priority
+ * which is greater then all priorities of the SCIP default node selectors.
  * Note that SCIP has two different operation modes: the standard mode and the memory saving mode. If the memory 
  * limit - given as a parameter by the user - is almost reached, SCIP switches from the standard mode to the memory saving 
  * mode in which different priorities for the node selectors are applied. NODESEL_STDPRIORITY is the priority of the 
@@ -2013,7 +2017,6 @@
  * adjusting the corresponding parameter setting.
  *
  * \par NODESEL_MEMSAVEPRIORITY: the default priority of the node selector in the memory saving mode.
- *
  * The priority NODESEL_MEMSAVEPRIORITY of the node selector has the same meaning as the priority NODESEL_STDPRIORITY, but 
  * is used in the memory saving mode.
  * Usually, you want the best performing node selector, for example best estimate search, to have maximal
@@ -2057,32 +2060,51 @@
  *
  * 
  * @section NODESEL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Node Selector
+
+fulll two requirements: Selecting a node to be processed
+next and, given two nodes, deciding which of them is favored by its selection rule. The rst
+task is implemented in the NODESELSELECT callback, the second one in the NODESELCOMP
  *
  * Node selector plugins have two fundamental callback methods, namely the NODESELSELECT method and the NODESELCOMP method.
  * These methods have to be implemented for every node selector; the other callback methods are optional.
+ * They implement the two requirements every node selector has to fulfill: Selecting a node from the queue to be processed
+ * next and, given two nodes, deciding which of both is favored by the node selector's selection rule. The first
+ * task is implemented in the NODESELSELECT callback, the second one in the NODESELCOMP callback.
  * In the C++ wrapper class ObjNodesel, the scip_select() method and the scip_comp() method (which correspond to the 
  * NODESELSELECT callback and the NODESELCOMP callback, respectively) are virtual abstract member functions.
  * You have to implement them in order to be able to construct an object of your node selector class.
  *
- * Additional documentation to the callback methods can be found in type_nodesel.h.
+ * Additional documentation to the callback methods can be found in "type_nodesel.h".
  *
  * @subsection NODESELSELECT
  *
  * The NODESELSELECT callback is the first method called in each iteration in the main solving loop. It should decide 
- * which of the leaves in the current branching tree is selected as next subproblem to be processed. It can decide between 
- * the current node's children and siblings, and the "best" of the remaining leaves stored in the tree. This choice can 
+ * which of the leaves in the current branching tree is selected as next subproblem to be processed. 
+ * It can arbitraily decide between all leaves stored in the tree, but for performance reasons,
+ * the current node's children and siblings are often treated different from the remaining leaves. 
+ * This is mainly due to the warm start capabilities of the simplex algorithm and the expectation that the bases of 
+ * neighboring vertices in the branching tree very similar.
+ * The node selector's choice of the next node to process can 
  * have a large impact on the solver's performance, because it influences the finding of feasible solutions and the 
  * development of the global dual bound. 
  *
- * The following methods provide access to the various leaf nodes:
+ * Besides the ranking of the node selector, every node gets assigned a node selection priority by the branching rule, 
+ * which created the node. See the \ref BRANCHEXECLP and \ref BRANCHEXECPS callbacks of the branching rules for details. 
+ * For example, the node where the branching went in the same way as the deviation from the branching variable's 
+ * root solution could be assigned a higher priority as the node where the branching went in the opposite direction. 
+ *
+ * The following methods provide access to the various types of leaf nodes:
  * - SCIPgetPrioChild() returns the child of the current node with the largest node selection priority, as assigned by the
- *   branching rule, see the \ref BRANCHEXECLP and \ref BRANCHEXECPS callbacks of the branching rules. If no child is
+ *   branching rule, 
+ *   If no child is
  *   available (for example, because the current node was pruned), a NULL pointer is returned.
  * - SCIPgetBestChild() returns the best child of the current node with respect to the node selector's ordering relation as
  *   defined by the \ref NODESELCOMP callback. If no child is available, a NULL pointer is returned.
  * - SCIPgetPrioSibling() returns the sibling of the current node with the largest node selection priority.
  *   If no sibling is available (for example, because all siblings of the current node have already been processed), a NULL
  *   pointer is returned.
+ *   Note that in binary branching every node has at most one sibling, but since SCIP supports arbitrary branching rules, 
+ *   this might not always be the case.
  * - SCIPgetBestSibling() returns the best sibling of the current node with respect to the node selector's ordering relation
  *   as defined by the \ref NODESELCOMP callback. If no sibling is available, a NULL pointer is returned.
  * - SCIPgetBestNode() returns the best leaf from the tree (children, siblings, or other leaves) with respect to the node
@@ -2128,6 +2150,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your node selector data, remember to free this memory 
+ * before freeing the node selector data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -2159,17 +2183,21 @@
 /**@page HEUR How to add primal heuristics
  *
  * Feasible solutions can be found in two different ways during the traversal of the branch-and-bound tree. On the one 
- * hand, the solution of a node's relaxation may be feasible with respect to the constraints. On the other hand, feasible
- * solutions can be discovered by primal heuristics.  
+ * hand, the solution of a node's relaxation may be feasible with respect to the constraints (including the integrality). 
+ * On the other hand, feasible solutions can be discovered by primal heuristics.  
  * \n
  * A complete list of all primal heuristics contained in this release can be found \ref PRIMALHEURISTICS "here".
  *
  * In the following, we explain how the user can add an own primal heuristic.
  * Take the simple and fast LP rounding heuristic (src/scip/heur_simplerounding.c) as an example.
+ * The idea of simple rounding is to iterate over all fractional variables of an LP solution and round them down,
+ * if the variables appears only with nonnegative coefficients in the system Ax <= b and round them up if
+ * the variables appears only with nonpositive coefficients.
+ * If one of both conditions applies for each of the fractional variables, this will give a feasible solution.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjHeur wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_HEUR... callback methods.
  *
- * Additional documentation for the callback methods of a primal heuristic can be found in the file type_heur.h.
+ * Additional documentation for the callback methods of a primal heuristic can be found in the file "type_heur.h".
  *
  * Here is what you have to do to implement a primal heuristic:
  * -# Copy the template files "src/scip/heur_xxx.c" and "src/scip/heur_xxx.h" into files named "heur_myheuristic.c"
@@ -2177,10 +2205,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
- * -# Define the primal heuristic data (see \ref HEUR_DATA).
+ * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
  * -# Implement the interface methods (see \ref HEUR_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref HEUR_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref HEUR_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref HEUR_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section HEUR_PROPERTIES Properties of a Primal Heuristic
@@ -2189,6 +2217,8 @@
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the primal heuristic properties by calling the constructor
  * of the abstract base class ObjHeur from within your constructor.
+ * Of course, all of them are of relevance, but the most important ones for controling the performance
+ * usually are HEUR_FREQ and HEUR_TIMING.
  * The properties you have to set have the following meaning:
  *
  * \par HEUR_NAME: the name of the primal heuristic.
@@ -2197,11 +2227,11 @@
  * Names have to be unique: no two primal heuristics may have the same name.
  *
  * \par HEUR_DESC: the description of the primal heuristic.
- * This string is printed as description of the primal heuristic in the interactive shell.
+ * This string is printed as description of the primal heuristic in the interactive shell when you call "display heuristics".
  *
  * \par HEUR_DISPCHAR: the display character of the primal heuristic.
  * In the interactive shell, this character is printed in the first column of a status information row, if the primal 
- * heuristic found the feasible solution belonging to the primal bound. Note that a star stands for an integral 
+ * heuristic found the feasible solution belonging to the primal bound. Note that a star '*' stands for an integral 
  * LP-relaxation.
  * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
  * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
@@ -2213,18 +2243,18 @@
  * \n
  * The priority of a primal heuristic should be set according to the complexity of the heuristic and the likelihood to find
  * feasible solutions: primal heuristics that provide fast algorithms that often succeed in finding a feasible solution should have
- * a high priority. In addition, the interaction between different types of primal heuristics should be taken into account.
- * For example, improvement heuristics, which try to generate improved solutions  by inspecting one or more of the feasible
- * solutions that have already been found, should have a small priority.
+ * a high priority (like simple rounding). In addition, the interaction between different types of primal heuristics should be taken into account.
+ * For example, improvement heuristics, which try to generate improved solutions by inspecting one or more of the feasible
+ * solutions that have already been found, should have a small priority (like Crossover which by default needs at least 3 feasible solutions).
  *
  * \par HEUR_FREQ: the default frequency for executing the primal heuristic.
  * The frequency together with the frequency offset (see HEUR_FREQOFS) defines the depth levels at which the execution
  * method of the primal heuristic \ref HEUREXEC is called. For example, a frequency of 7 together with a frequence offset 
  * of 5 means, that the \ref HEUREXEC callback is executed for subproblems that are in depth 5, 12, 19, ... of the branching tree. A 
  * frequency of 0 together with a frequence offset of 3 means, that the execution method is only called at those nodes that are in
- * depth level 3 (i.e., at most for \f$2^3 = 8\f$ nodes if binary branching is applied). A frequency of 0 and an offset of 0 means that
- * the heuristic is only called at the root node. 
- * A frequency of -1 disables the heuristic.
+ * depth level 3 (i.e., at most for \f$2^3 = 8\f$ nodes if binary branching is applied).
+ * Typical cases are: A frequency of 0 and an offset of 0 which means that
+ * the heuristic is only called at the root node and a frequency of -1 which disables the heuristic.
  * \n
  * The frequency can be adjusted by the user. The property of the primal heuristic only defines the default value of the 
  * frequency. If you want to have a more flexible control of when to execute the primal heuristic, you have to assign
@@ -2242,7 +2272,7 @@
  *
  * \par HEUR_MAXDEPTH: the maximal depth level for executing the primal heuristic.
  * This parameter denotes the maximal depth level in the branching tree up to which the execution method of the primal 
- * heuristic is called. Use -1 for no limit. 
+ * heuristic is called. Use -1 for no limit (a usual case). 
  *
  * \par HEUR_TIMING: the execution timing of the primal heuristic.
  * Primal heuristics have different entry points during the solving process and the execution timing parameter defines the
@@ -2259,8 +2289,9 @@
  * - after the processing of the last node in the current plunge was finished, <em>and only if the LP was not solved 
  *   for this node</em> (SCIP_HEURTIMING_AFTERPSEUDOPLUNGE).
  * \par
- * These flags can be combined as or concatenations to call the heuristic at multiple times. Two useful combinations
- * are already predefined:
+ * A plunge is the successive solving of child and sibling nodes in the search tree.
+ * The flags listed above can be combined to call the heuristic at multiple times by concatenating them with a bitwise OR. 
+ * Two useful combinations are already predefined:
  * - after the processing of a node was finished (SCIP_HEURTIMING_AFTERNODE; combines SCIP_HEURTIMING_AFTERLPNODE and
  *   SCIP_HEURTIMING_AFTERPSEUDONODE)
  * - after the processing of the last node in the current plunge was finished (SCIP_HEURTIMING_AFTERPLUNGE; combines
@@ -2276,12 +2307,8 @@
  * cut-and-price loop". Rounding heuristics, like the simple and fast LP rounding heuristic 
  * (src/scip/heur_simplerounding.c), belong to this group of primal heuristics. 
  * \n
- * Most heuristics, however, are called either after the cut-and-price loop was finished, after a node was completely
- * processed, or even only after a full plunge was finished. These points correspond to the situation where a node was completely
- * processed, but differ by the type of node and by whether an LP solution is needed. For example, diving heuristics,
- * like the LP diving heuristic (src/scip/heur_fracdiving.c), are often executed after the last node in the current
- * plunge has been processed. A plunge is the successive solving of child and sibling nodes in the search tree. A plunge is
- * finished, if the node selection selects an unrelated node from the queue of open subproblems, see \ref NODESEL.
+ * Most heuristics, however, are called either after a node was completely processed 
+ * (e.g. expensive rounding heuristics like RENS), or even only after a full plunge was finished (e.g., diving heuristics). 
  *
  * Computational experiments seem to indicate that for the overall performance of a MIP solver, it is important to evenly 
  * spread the application of the heuristics across the branch-and-bound tree. Thus, the assignment of the parameters 
@@ -2291,14 +2318,14 @@
  * heuristics have already been called at the current node. This can be done by comparing SCIPgetLastDivenode(scip) and
  * SCIPgetNNodes(scip). If the two are equal, and if the current node is not the root node (SCIPgetDepth(scip) > 0), diving
  * heuristics should be delayed by returning the result code 'SCIP_DELAYED'. This is an additional contribution to the goal of
- * not calling multiple heuristics at the same node.
+ * not calling multiple similar heuristics at the same node.
  *
  *
  * @section HEUR_DATA Primal Heuristic Data
  *
  * Below the header "Data structures" you can find a struct which is called "struct SCIP_HeurData".
  * In this data structure, you can store the data of your primal heuristic. For example, you should store the adjustable 
- * parameters of the primal heuristic in this data structure. 
+ * parameters of the primal heuristic or a working solution in this data structure. 
  * If you are using C++, you can add primal heuristic data as usual as object variables to your class.
  * \n
  * Defining primal heuristic data is optional. You can leave the struct empty.
@@ -2322,7 +2349,7 @@
  * You also have to initialize the fields in struct SCIP_HeurData afterwards.
  *
  * You may also add user parameters for your primal heuristic, see the method SCIPincludeHeurFeaspump() in 
- * src/scip/heur_feaspump.c for an example.
+ * src/scip/heur_oneopt.c for an example where a single Boolean parameter is added.
  *
  * 
  * @section HEUR_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Primal Heuristic
@@ -2333,7 +2360,7 @@
  * abstract member function. You have to implement it in order to be able to construct an object of your primal heuristic 
  * class.
  *
- * Additional documentation to the callback methods can be found in type_heur.h.
+ * Additional documentation to the callback methods can be found in "type_heur.h".
  *
  * @subsection HEUREXEC
  *
@@ -2342,7 +2369,11 @@
  * methods SCIPcreateSol() and SCIPsetSolVal() can be used. Afterwards, the solution can be added to the storage by 
  * calling the method SCIPtrySolFree() (or SCIPtrySol() and SCIPfreeSol()).
  *
- * The HEUREXEC callback has the following options:
+ * The HEUREXEC callback gets a SCIP pointer, a pointer to the heuristic itself, the current point in the 
+ * solve loop and a result pointer as input (see "type_heur.h").
+ *
+ * The heuristic has to set the result pointer appropriately!
+ * Therefore it has the following options:
  *  - finding at least one feasible solution (result SCIP_FOUNDSOL)
  *  - stating that the primal heuristic searched, but did not find a feasible solution (result SCIP_DIDNOTFIND)
  *  - stating that the primal heuristic was skipped (result SCIP_DIDNOTRUN)
@@ -2374,6 +2405,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your primal heuristic data, remember to free this memory 
+ * before freeing the primal heuristic data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -2403,7 +2436,7 @@
 /**@page RELAX How to add relaxation handlers
  *
  * SCIP provides specific support for LP relaxations of constraint integer programs. In addition, relaxation handlers, 
- * also called relaxators, can be used to include other relaxations, e.g. Lagrange relaxations or semidefinite 
+ * also called relaxators, can be used to include other relaxations, e.g., Lagrange relaxations or semidefinite 
  * relaxations. The relaxation handler manages the necessary data structures and calls the relaxation solver to generate dual 
  * bounds and primal solution candidates.
  * \n
@@ -2411,13 +2444,14 @@
  * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation. 
  * \n
+ * A complete list of all primal heuristics contained in this release can be found \ref RELAXATORS "here".
  *
  * In the following, we explain how the user can add an own relaxation handler using the C interface. It is very easy to 
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion, 
  * reimplement the corresponding virtual member function of the abstract ObjRelax wrapper base class.
  * Unfortunately, SCIP does not contain a default relaxation handler plugin, which could be used as an example.
  *
- * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
+ * Additional documentation for the callback methods of a relaxation handler can be found in the file "type_relax.h".
  *
  * Here is what you have to do to implement a relaxation handler:
  * -# Copy the template files "src/scip/relax_xxx.c" and "src/scip/relax_xxx.h" into files named "relax_myrelaxator.c"
@@ -2425,10 +2459,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
- * -# Define the relaxation handler data (see \ref RELAX_DATA).
+ * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
  * -# Implement the interface methods (see \ref RELAX_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref RELAX_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref RELAX_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref RELAX_ADDITIONALCALLBACKS). This is optional.
  *
  * 
  * @section RELAX_PROPERTIES Properties of a Relaxation Handler
@@ -2437,7 +2471,7 @@
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the relaxation handler properties by calling the constructor
  * of the abstract base class ObjRelax from within your constructor.
- * The properties you have to set are:
+ * The properties you have to set have the following meaning:
  *
  * \par RELAX_NAME: the name of the relaxation handler.
  * This name is used in the interactive shell to address the relaxation handler.
@@ -2448,7 +2482,7 @@
  * This string is printed as description of the relaxation handler in the interactive shell.
  *
  * \par RELAX_PRIORITY: the priority of the relaxation handler.
- * During each relaxation solving round, the included relaxation handlers and the 
+ * In each relaxation solving round during the subproblem processing, the included relaxation handlers and the 
  * price-and-cut loop for solving the LP relaxation are called in a predefined order, which is given by the priorities 
  * of the relaxation handlers. 
  * First, the relaxation handlers with non-negative priority are called in the order of decreasing priority.
@@ -2458,8 +2492,8 @@
  * Usually, you will have only one relaxation handler in your application and thus only have to decide whether it should 
  * be called before or after solving the LP relaxation. For this decision you should consider the complexity of 
  * the relaxation solving algorithm and the impact of the resulting solution: if your relaxation handler provides a fast 
- * algorithm that usually has a high impact (i.e., the relaxation is a good approximation of the 
- * feasible region of the subproblem and the solution severely improves dual bound), it should have a non-negative 
+ * algorithm that usually has a high impact (i.e., the relaxation is a good approximation of the convex hull of the 
+ * feasible region of the subproblem and the solution severely reduces the primal-dual gap), it should have a non-negative 
  * priority.
  * \n
  * Note that for certain applications, it is useful to disable the LP relaxation and only use your custom relaxation.
@@ -2511,10 +2545,10 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your relaxation handler class.
  *
- * Additional documentation to the callback methods can be found in type_relax.h.
+ * Additional documentation to the callback methods can be found in "type_relax.h".
  *
  * @subsection RELAXEXEC
- * The RELAXEXEC is called in each relaxation solving round. It should solve the current 
+ * The RELAXEXEC is called in each relaxation solving round during node processing. It should solve the current 
  * subproblem's relaxation.  
  *
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding 
@@ -2529,8 +2563,7 @@
  * If you want to branch with respect to your relaxation solution, you have to implement your own branching rule and
  * extract the primal solution vector from the relaxation directly.
  *
- * Usually, the RELAXEXEC callback only solves the relaxation and provides a lower (dual) bound with a call to 
- * SCIPupdateLocalLowerbound().
+ * Usually, the callback only solves the relaxation and provides a lower (dual) bound with a call to SCIPupdateLocalLowerbound().
  * However, it may also produce domain reductions, add additional constraints or generate cutting planes. It has the
  * following options:
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
@@ -2542,7 +2575,7 @@
  *    relaxation (result SCIP_SEPARATED)
  *  - stating that the relaxation handler solved the relaxation and should not be called again on the same relaxation 
  *    (result SCIP_SUCCESS)
- *  - interrupting the solving process to wait for additional input, e.g., cutting planes (result SCIP_SUSPENDED) 
+ *  - interrupting the solving process to wait for additional input, e.g., cutting planes (SCIP_SUSPENDED) 
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN).
  *
  * In the above criteria, "the same relaxation" means that the LP relaxation stayed unmodified. This means in particular
@@ -2576,6 +2609,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your realxation handler data, remember to free this memory 
+ * before freeing the relaxation handler data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -2606,39 +2641,27 @@
  *
  * Mainly, file readers are called to parse an input file and generate a constraint integer programming model. They create 
  * constraints and variables and activate variable pricers if necessary. However, they can also be called, for example, to parse an 
- * input file containing information about a primal solution or fixing of variables. Besides that it is possible to use some of them 
- * for writing (exporting) the problem in a specific format. 
+ * input file containing information about a primal solution or fixing of variables. 
  * \n
  * A complete list of all file readers contained in this release can be found \ref FILEREADERS "here".
- *
- * Since a file reader is also responsible for writing a file, the user may
- * ask why the readers have not the name "filehandler". This name whould
- * represent this plugin much better than the used one. 
- * \n 
- * The used name "readers" is historically grown. In the beginning of SCIP
- * there was no need to write/export problems. Therefore, the the plugin
- * name "readers" was best fitting for this plugin since only reading was essential.  
- * It turned out, however, that it is quite nice to write/export certain subproblem during
- * the solving process mainly for debugging. Therefore, a writing callback
- * was added to the "readers" plugin. 
  *
  * In the following, we explain how the user can add an own file reader.
  * Take the file reader for MIPs in IBM's Mathematical Programming System format (src/scip/reader_mps.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjReader wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_READER... callback methods.
  *
- * Additional documentation for the callback methods of a file reader can be found in the file type_reader.h.
+ * Additional documentation for the callback methods of a file reader can be found in the file "type_reader.h".
  *
- * Here is what you have to do to implement a file reader named "myreader" in C:
- * -# Copy the template files src/scip/reader_xxx.c and src/scip/reader_xxx.h into files named 
-      "reader_myreader.c" and "reader_myreader.h".
+ * Here is what you have to do to implement a file reader:
+ * -# Copy the template files "src/scip/reader_xxx.c" and "src/scip/reader_xxx.h" into files named "reader_myreader.c"
+ *    and "reader_myreader.h".
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "myreader".
- * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
- * -# Define the \ref READER_DATA "file reader data". This is optional.
- * -# Implement the \ref READER_INTERFACE "interface methods".
- * -# Implement the \ref READER_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref READER_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ * -# Adjust the properties of the file reader (see \ref READER_PROPERTIES).
+ * -# Define the file reader data (see \ref READER_DATA). This is optional.
+ * -# Implement the interface methods (see \ref READER_INTERFACE).
+ * -# Implement the fundamental callback methods (see \ref READER_FUNDAMENTALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref READER_ADDITIONALCALLBACKS). This is optional.
  *
  * 
  * @section READER_PROPERTIES Properties of a File Reader
@@ -2662,11 +2685,6 @@
  * file of corresponding name. The extensions of the different file readers have to be unique.
  * Note that the additional extension '.gz', '.z', or '.Z' (indicating a gzip compressed file) are ignored for assigning
  * an input file to a reader.
- * \n
- * It is not possible to hook up a (single) file reader with more than one file extension. 
- * It is, however, not necessary to implement the same (parsing/writing) methods more than once, if you want to 
- * support several file extension with the same parser. To do so look at the files reader_lp.c 
- * and reader_rlp.c. Both support the LP format.
  *
  *
  * @section READER_DATA File Reader Data
@@ -2701,38 +2719,24 @@
  *
  * @section READER_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a File Reader
  *
- * File reader plugins have no fundamental callback methods. This is due to
- * the fact that a file reader can be used for reading and/or writing a
- * file. A file reader is only useful if the reader method \ref READERREAD
- * and/or the writing method \ref READERWRITE is implemented.  One of these
- * methods should be implemented for every file reader; the other callback
- * method \READERFREE is optional.  In the C++ wrapper class ObjReader, the
- * scip_read() and scip_write() methods (which corresponds to the \ref
- * READERREAD and \ref READERWRITE callback) are virtual member
- * functions. At least one of them should be implemented.
+ * File reader plugins have only one fundamental callback method, namely the \ref READERREAD method.
+ * This method has to be implemented for every file reader; the other callback method is optional.
+ * In the C++ wrapper class ObjReader, the scip_read() method (which corresponds to the \ref READERREAD callback) is a virtual
+ * abstract member function.
+ * You have to implement it in order to be able to construct an object of your file reader class.
  *
- * Additional documentation to the callback methods can be found in type_reader.h.
- *
- *
- * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
- *
- * File reader plugins contain only additional callback methods, namely the methods \ref READERREAD, 
- * \ref READERWRITE, and \ref READERFREE. Therefore, these are not needed to be implemented. However, 
- * at least \ref READERREAD or/and \ref READERWRITE should be implemented (see notes 
- * \ref READER_FUNDAMENTALCALLBACKS "above").
- *
+ * Additional documentation to the callback methods can be found in "type_reader.h".
  *
  * @subsection READERREAD
  *
  * The READERREAD callback is called when the user invokes SCIP to read in a file with file name extension 
  * corresponding to the READER_EXTENSION property of the file reader. This is usually triggered by a call to the method
- * SCIPreadProb() or by an interactive shell command.
- * The READERREAD callback should parse the input file and perform the desired action, which usually means to 
- * generate a constraint integer programming model, to add a primal solution, or to fix variables 
- * in an existing model.
+ * SCIPreadProb() or by an interactive shell command. The READERREAD callback should parse the input file and perform
+ * the desired action, which usually means to generate a constraint integer programming model, to add a primal solution, or
+ * to fix variables in an existing model.
  * \n
- * Typical methods called by a file reader which is used to read/generate constraint 
- * integer programming models are, for example, 
+ * Typical methods called by a file reader which is used to generate constraint integer programming models are, 
+ * for example, 
  *
  * - creating an empty problem: SCIPcreateProb() 
  * - creating the variables: SCIPcreateVar(), SCIPchgVarType(), SCIPchgVarLb(), SCIPchgVarUb(), SCIPaddVar(), and 
@@ -2744,25 +2748,11 @@
  * Primal solutions can only be created for the transformed problem. Therefore, the user has to call SCIPtransformProb()
  * before he reads in the file containing the solution and adds it to the solution pool via the method SCIPreadSol(). 
  *
- * Typical methods called by a file reader which is used to generate constraint integer programming models are, 
- * for example, 
  * 
- * @subsection READERWRITE
+ * @section READER_ADDITIONALCALLBACKS Additional Callback Methods of a File Reader
  *
- * The READERWRITE callback is called when the user invokes SCIP to write a problem (original or transformed) 
- * in the format the reader supports. This is only possible if this callback is implemented. To write the problem 
- * all necessary information are given through the parameters of this callback method (see type_reader.h). These 
- * information should be used to output the problem in the requested format. This callback method is usually 
- * triggered by the call of the methods SCIPwriteOrigProblem(), SCIPwriteTransProblem(), SCIPprintOrigProblem(), 
- * or SCIPprintTransProblem().
- * \n
- * A Typical method called by a file reader which is used to write/export a constraint 
- * integer programming model is SCIPinfoMessage(). This method outputs a given string into a file 
- * or into stdout. 
- * \n
- * For an example we refer to the writing method of the MPS reader (see reader_mps.c).
- *
- *
+ * File reader plugins have only one additional callback method, namely the READERFREE method. It needs not to be 
+ * implemented in every case.
  * 
  * @subsection READERFREE
  *
@@ -2784,6 +2774,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your file reader data, remember to free this memory 
+ * before freeing the file reader data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  */
@@ -2810,7 +2802,7 @@
  * adapt the code by using the ObjDialog wrapper base class and implement the scip_...() virtual methods instead of the
  * SCIP_DECL_DIALOG... callback methods.
  *
- * Additional documentation for the callback methods of a dialog can be found in the file type_dialog.h.
+ * Additional documentation for the callback methods of a dialog can be found in the file "type_dialog.h".
  *
  * Here is what you have to do to add a dialog:
  * -# Copy the template files "src/scip/dialog_xxx.c" and "src/scip/dialog_xxx.h" into files named "dialog_mydialog.c"
@@ -2818,10 +2810,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydialog".
  * -# Adjust the properties of the dialog (see \ref DIALOG_PROPERTIES).
- * -# Define the dialog data (see \ref DIALOG_DATA).
+ * -# Define the dialog data (see \ref DIALOG_DATA). This is optional.
  * -# Implement the interface methods (see \ref DIALOG_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref DIALOG_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref DIALOG_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref DIALOG_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section DIALOG_PROPERTIES Properties of a Dialog
@@ -2936,7 +2928,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your dialog class.
  * 
- * Additional documentation to the callback methods can be found in type_dialog.h.
+ * Additional documentation to the callback methods can be found in "type_dialog.h".
  *
  * @subsection DIALOGEXEC
  *
@@ -2976,6 +2968,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your dialog data, remember to free this memory 
+ * before freeing the dialog data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -3007,7 +3001,7 @@
  * instead of the SCIP_DECL_DISP... callback methods.
  * 
  *
- * Additional documentation for the callback methods of a display column can be found in the file type_disp.h.
+ * Additional documentation for the callback methods of a display column can be found in the file "type_disp.h".
  *
  * Here is what you have to do to implement a display column:
  * -# Copy the template files "src/scip/disp_xxx.c" and "src/scip/disp_xxx.h" into files named "disp_mydisplaycolumn.c"
@@ -3015,10 +3009,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "mydisplaycolumn".
  * -# Adjust the properties of the display column (see \ref DISP_PROPERTIES).
- * -# Define the display column data (see \ref DISP_DATA).
+ * -# Define the display column data (see \ref DISP_DATA). This is optional.
  * -# Implement the interface methods (see \ref DISP_INTERFACE).
  * -# Implement the fundamental callback methods (see \ref DISP_FUNDAMENTALCALLBACKS).
- * -# Implement the additional callback methods (see \ref DISP_ADDITIONALCALLBACKS).
+ * -# Implement the additional callback methods (see \ref DISP_ADDITIONALCALLBACKS). This is optional.
  *
  *
  * @section DISP_PROPERTIES Properties of a Display Column
@@ -3101,7 +3095,7 @@
  * abstract member function.
  * You have to implement it in order to be able to construct an object of your display column class.
  *
- * Additional documentation to the callback methods can be found in type_disp.h.
+ * Additional documentation to the callback methods can be found in "type_disp.h".
  *
  * @subsection DISPOUTPUT
  *
@@ -3138,6 +3132,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your display column data, remember to free this memory 
+ * before freeing the display column data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -3166,18 +3162,29 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
- *  Data objects (variables, constraints, rows) are subject to reference counting
- *  to avoid expensive copying operations. Creating such an object will set the
- *  reference count to one. Capturing an object increases the reference counter,
- *  releasing it decreases the counter. If the reference counter gets zero, the
- *  object is destroyed.
+ *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
+ *  to avoid expensive copying operations. This concept is similar to smart pointers.
+ *  Creating such an object (e.g., by calling SCIPcreateVar()) will set the
+ *  reference counter to one. Capturing an object (e.g., by calling SCIPcaptureVar()) increases the reference counter,
+ *  releasing it (e.g., by calling SCIPreleaseVar()) decreases the counter. If the reference counter gets zero, the
+ *  object will be destroyed automatically.
  *
  *  Remember that a created data object is automatically captured. If the user
- *  doesn't need the object anymore, he has to call the object's release() method.
+ *  doesn't need the object anymore, he has to call the object's release method.
  *
- *  When a data object is added to SCIP, it is captured again, such that a
- *  release() call does not destroy the object. If SCIP doesn't need the object
+ *  When a data object is added to SCIP (e.g., by calling SCIPaddVar()) , it is captured again, such that a
+ *  release call does not destroy the object. If SCIP doesn't need the object
  *  anymore, it is automatically released.
+ *  
+ *  E.g., if the user calls
+ * \code
+ *  SCIPcreateVar(); // reference counter 1
+ *  SCIPaddVar(); // reference counter 2
+ *  SCIPreleaseVar(); // reference counter 1
+ * \endcode
+ *  the reference counter will be 1 afterwards, and the variable will be destroyed, if SCIP frees the problem.
+ *  If the user wants to use this variable, e.g. for extracting statistics after SCIP was finished, the user must not call
+ *  SCIPreleaseVar() right after adding the variable, but before terminating the program.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3200,6 +3207,13 @@
  *     The user should not interfere with this internal memory management. Accessing
  *     the string parameter through the given valueptr is okay as long as it does not
  *     involve reallocating memory for the string.
+ *
+ *  In some cases, it is necessary to change other fields if the value of a parameter was changed, 
+ *  for instance to adjust the length of an array. 
+ *  If this is the case, the user can define a method by the PARAMCHGD callback and use this method as
+ *  the *paramchgd parameter of the SCIPaddXxxParam() method, also giving a pointer to the data, which is
+ *  needed in this method, as the paramdata. If this method is not NULL, it is called every time 
+ *  the value of the parameter is changed.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3210,8 +3224,12 @@
  * 
  *  - Use the debug mode (<code>make OPT=dbg</code>, see \ref MAKE) and run the code.
  *  - Use asserts in your code (see \ref CODE).
- *  - Turn on additional debug output by placing <code>\#define SCIP_DEBUG</code> at the top of your
- *    files. This will output messages included in the code using <code>SCIPdebugMessage()</code>.
+ *  - Turn on additional debug output by placing <code>\#define SCIP_DEBUG</code> at the top of SCIP files you
+ *    want to analyze. This will output messages included in the code using <code>SCIPdebugMessage()</code> (see \ref EXAMPLE_1).
+ *    We recommend to also use <code>SCIPdebugMessage()</code> in your own code for being able to activate 
+ *    debug output in the same way. 
+ *  - If available on your system, we recommend to use a debugger like gdb to trace all function calls on the stack,
+ *    display values of certain expressions, manually break the running code, and so forth.
  *  - If available on your system, you can use software like valgrind to check for uninitialized
  *    values or segmentation faults.
  *  - For checking the usage of SCIP memory, you can use
@@ -3219,9 +3237,94 @@
  *    almost always only useful after a <code>SCIPfree()</code> call.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
- *    containing a solution in SCIP format. This solution is the read and it is check for every cut,
- *    whether the solution violates the cut.
+ *    containing a solution in SCIP format (see \ref EXAMPLE_2). 
+ *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
  * 
+ *  @section EXAMPLE_1 How to activate debug messages
+ *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of heur_oneopt.c and recompile in DBG mode, 
+ *    and run the scip interactive shell to solve p0033.mps from the miplib, we get some output like:
+ * \code
+ * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
+ * Copyright (c) 2002-2008 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * 
+ * user parameter file <scip.set> not found - using default parameters
+ * 
+ * SCIP> read check/IP/miplib/p0033.mps
+ * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
+ * SCIP> optimize
+ * ...
+ *  0.1s|     1 |     0 |   132 | 257k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.347000e+03 |  10.59%
+ * [src/scip/heur_oneopt.c:332] debug: Row <R122> has activity 110
+ * [src/scip/heur_oneopt.c:332] debug: Row <R123> has activity 216
+ * ...
+ * [src/scip/heur_oneopt.c:101] debug: Try to shift down variable <t_C157> with
+ * [src/scip/heur_oneopt.c:102] debug:     lb:<-0> <= val:<1> <= ub:<1> and obj:<171> by at most: <1>
+ * [src/scip/heur_oneopt.c:135] debug:  -> The shift value had to be reduced to <0>, because of row <R122>.
+ * [src/scip/heur_oneopt.c:137] debug:     lhs:<-1e+20> <= act:<110> <= rhs:<148>, colval:<-60>
+ * ...
+ * [src/scip/heur_oneopt.c:383] debug:  Only one shiftcand found, var <t_C167>, which is now shifted by<-1.0>
+ * k 0.1s|     1 |     0 |   132 | 258k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.164000e+03 |   4.54%
+ * [src/scip/heur_oneopt.c:436] debug: found feasible shifted solution:
+ * objective value:                     3164.00000000012
+ * C157                                                1   (obj:171)
+ * C163                                                1   (obj:163)
+ * C164                                                1   (obj:69)
+ * C170                                                1   (obj:49)
+ * C172                                                1   (obj:258)
+ * C174                                                1   (obj:250)
+ * C175                                                1   (obj:500)
+ * C179                                                1   (obj:318)
+ * C181                                                1   (obj:318)
+ * C182                                                1   (obj:159)
+ * C183                                 1.00000000000038   (obj:318)
+ * C184                                                1   (obj:159)
+ * C185                                                1   (obj:318)
+ * C186                                                1   (obj:114)
+ * [src/scip/heur_oneopt.c:498] debug: Finished 1-opt heuristic
+ * ...
+ * \endcode 
+ *
+ *  @section EXAMPLE_2 How to add a debug solution
+ * Continuing the example above, we finish the solving process.
+ * The optimal solution can now be written to a file:
+ * \code
+ * SCIP> display solution
+ * 
+ * objective value:                                 3089
+ * C157                                                1   (obj:171)
+ * C163                                                1   (obj:163)
+ * C164                                                1   (obj:69)
+ * C166                                                1   (obj:183)
+ * C170                                                1   (obj:49)
+ * C174                                                1   (obj:250)
+ * C177                                                1   (obj:500)
+ * C179                                                1   (obj:318)
+ * C181                                                1   (obj:318)
+ * C182                                                1   (obj:159)
+ * C183                                                1   (obj:318)
+ * C184                                                1   (obj:159)
+ * C185                                                1   (obj:318)
+ * C186                                                1   (obj:114)
+ * 
+ * SCIP> write solution check/p0033.sol
+ * 
+ * written solution information to file <check/p0033.sol>
+ * \endcode
+ * 
+ * If we afterwards comment in 
+ * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
+ * it will output 
+ * \code
+ * SCIP> read check/IP/miplib/p0033.mps
+ * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
+ * SCIP> optimize
+ * 
+ * presolving:
+ * ***** debug: reading solution file <check/p0033.sol>
+ * ***** debug: read 15 non-zero entries
+ * \endcode
+ * Further debug output would only appear, if the solution was cut off in the solving process.
+ * Of course, this is not the case! Hopefully...otherwise, please send a bug report ;-)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3234,27 +3337,30 @@
  *
  *  @section SETUP Setting up the test environment
  *
- *  Suppose we have a test set of one or more "lp" files. These test instances have to accessible in
- *  the @c check directory; you can also set a link to the instances. Once this is done, we have
+ *  Suppose we have a test set of one or more "lp" files. These test instances have to be accessible in
+ *  the directory <code>scip/check</code>; you can also set a link to the instances. Once this is done, we have
  *  to create a @em test file within the @c check directory that specifies the location of our test
  *  instances. In our example, we have three "lp" files, <tt>one.lp</tt>, <tt>two.lp</tt>, and
- *  <tt>three.lp</tt>, stored in the directory <code>check/testrun</code>, a sample @em test file
+ *  <tt>three.lp</tt>, stored in the directory <code>scip/check/testrun</code>, a sample @em test file
  *  <tt>testrun.test</tt> would look like this
  *
  *  - <tt>testrun/one.lp</tt>
  *  - <tt>testrun/two.lp</tt>
  *  - <tt>testrun/three.lp</tt>
  *
- *  Optionally, we can provide a "solu" file in the "check" directory containing the best known
+ *  Optionally, we can provide a "solu" file in the @c check directory containing the best known
  *  objective values for our test instances. SCIP can use these values to verify the results. The
- *  file has to have the same basename as the @em test file, i.e. in our case
+ *  file has to have the same basename as the @em test file, i.e., in our case
  *  <tt>testrun.solu</tt>. The file content may look as follows
  * 
  *  - <tt>=opt=    one.lp     73389.09</tt>
  *  - <tt>=opt=    two.lp     153183.89</tt>
  *  - <tt>=best=  three.lp   234234.21</tt>
  *
- *  The string <tt>=best=</tt> indicates that the objective value may not be optimal.
+ *  The string <tt>=best=</tt> indicates that the objective value may not be optimal. 
+ *  See the files "shortmiplib.test" and "shortmiplib.solu" in the @c check directory for an example of a 
+ *  "test" file and its corresponding "solu" file.
+ * 
  *
  *
  *  @section STARTING Starting a test run
@@ -3265,41 +3371,43 @@
  *
  *  in the SCIP root directory. Note that <tt>testrun</tt> is exactly the basename of our @em test
  *  file. This will cause SCIP to solve our test instances one after another and to create various
- *  output files (see @ref EVAL "Evaluating a test run for details").
+ *  output files (see \ref EVAL).
  *
  * 
  *  @section EVAL Evaluating a test run
  *
- *  During computation, SCIP automatically creates the following output files in the <code>check/result</code>
- *  directory.
+ *  During computation, SCIP automatically creates the directory <code>scip/check/results</code> 
+ *  (if it does not yet exist) and the stores the following output files there.
  *
  *  \arg <tt>*.out</tt> - output of <tt>stdout</tt>
  *  \arg <tt>*.err</tt> - output of <tt>stderr</tt>
  *  \arg <tt>*.set</tt> - copy of the settings file used
  *
- *  In order to obtain a summary of the computational results, we call the <tt>evalcheck.sh</tt>
- *  script in the @c check directory with the "out" file as argument. This produces the following
- *  files in the <code>check/result</code> directory"
- *
  *  \arg <tt>*.res</tt> - ASCII table containing a summary of the computational results
  *  \arg <tt>*.tex</tt> - TeX table containing a summary of the computational results
  *  \arg <tt>*.pav</tt> - <a href="http://www.gamsworld.org/performance/paver">PAVER</a> output
  *
+ *  The last three files in the above list, i.e., the files containing a summary of the computational results,
+ *  can also be generated manually by the user. For that, he has to call the <tt>evalcheck.sh</tt> script in the 
+ *  @c check directory with the "out" file as argument. For example, this may be useful if the user stopped the 
+ *  test before it was finished, as in this case, the last three files will not automatically be generated by SCIP.
+ *
+ *
  *  @b Note The basename of each output file allows us to reconstruct the test setting. Suppose, for
  *  example, the output file is
  *
- *      <tt>check.testrun.scip_binary.machine.fast.out</tt>
+ *      <tt>check.testrun.scip_binary.machine.default.out</tt>
  *
  *  Then <tt>testrun</tt> is the basename of the @em test file and <tt>scip_binary</tt> is the name of
  *  the SCIP binary file. Furthermore, <tt>machine</tt> denotes the machine on which the test was
- *  run and <tt>fast</tt> is the basename of the settings file used.
+ *  run and <tt>default</tt> indicates that SCIP was run with its default settings.
  *
  *
  *  @section USING Using customized setting files
  *
- *  It is possible to use customized settings files for the test run. These have to be placed in the
- *  @c settings directory. Note that the access to settings files in subfolders of the @c settings
- *  directory is currently not possible.
+ *  It is possible to use customized settings files for the test run instead of testing SCIP with default settings. 
+ *  These have to be placed in the directory <code>scip/check/settings</code>. Note that accessing setting files 
+ *  in subfolders of the @c settings directory is currently not supported.
  *
  *  To run SCIP with a custom settings file, say <tt>fast.set</tt>, we call
  *
@@ -3327,29 +3435,31 @@
  *
  *  Suppose, we performed our test run with two different settings, say <tt>fast.set</tt> and
  *  <tt>slow.set</tt>. Assuming that all other parameters (including the SCIP binary), were the same,
- *  we may have the following "res" files in the <code>check/result</code> directory
+ *  we may have the following "res" files in the directory <code>scip/check/results</code> 
  *
  *  <tt>check.testrun.scip_binary.machine.fast.res</tt> and @n
  *  <tt>check.testrun.scip_binary.machine.slow.res</tt>
  *
- *  For a comparison of both computations we simply call
+ *  For a comparison of both computations, we simply call
  *
  *  <code>allcmpres.sh results/check.testrun.scip_binary.machine.fast.res results/check.testrun.scip_binary.machine.slow.res</code>
  *
  *  in the @c check directory. This produces two ASCII tables on the console that provide a detailed
  *  performance comparison of both test runs. Note that the first "res" file serves as the reference
- *  computation. In the following list explains the output, where we use the term "solver" for the
- *  combination of SCIP with a specific settings file.
+ *  computation. The following list explains the output. We use the term "solver" for the
+ *  combination of SCIP with a specific setting file.
  *
- *  \arg <tt>Nodes</tt> - Number of nodes processed.
+ *  \arg <tt>Nodes</tt> - Number of branch-and-bound nodes processed.
  *  \arg <tt>Time</tt>  - Computation time in seconds.
- *  \arg <tt>F</tt>     - If no feasible solutions were found, then '#', empty otherwise.
+ *  \arg <tt>F</tt>     - If no feasible solution was found, then '#', empty otherwise.
  *  \arg <tt>NodQ</tt>  - Equals Nodes(i) / Nodes(0), where 'i' denotes the current solver and '0' stands for the reference solver.
  *  \arg <tt>TimQ</tt>  - Equals Time(i) / Time(0).
  *  \arg <tt>bounds check</tt> - Status of the primal and dual bound check.
  *
  *  \arg <tt>proc</tt> - Number of instances processed.
- *  \arg <tt>eval</tt> - Number of instances evaluated (bounds check = "ok"). Only these instances are used in the calculation of the mean values.
+ *  \arg <tt>eval</tt> - Number of instances evaluated (bounds check = "ok", i.e., solved to optimality 
+ *      within the time and memory limit and result is correct). Only these instances are used in the calculation 
+ *      of the mean values.
  *  \arg <tt>fail</tt> - Number of instances with bounds check = "fail".
  *  \arg <tt>time</tt> - Number of instances with timeout.
  *  \arg <tt>solv</tt> - Number of instances correctly solved within the time limit.
@@ -3358,13 +3468,13 @@
  * 	primal bound in case the instance was not solved by any solver within
  *	the time limit).
  *  \arg <tt>bett</tt>    - Number of instances on which the solver was better than the
- *	reference solver (i.e. more than 10% faster).
+ *	reference solver (i.e., more than 10% faster).
  *  \arg <tt>wors</tt>    - Number of instances on which the solver was worse than the
- *	reference solver (i.e. more than 10% slower).
+ *	reference solver (i.e., more than 10% slower).
  *  \arg <tt>bobj</tt>    - Number of instances on which the solver had a better primal
- *	bound than the reference solver (i.e. a difference larger than 10%).
+ *	bound than the reference solver (i.e., a difference larger than 10%).
  *  \arg <tt>wobj</tt>    - Number of instances on which the solver had a worse primal
- *	bound than the reference solver (i.e. a difference larger than 10%).
+ *	bound than the reference solver (i.e., a difference larger than 10%).
  *  \arg <tt>feas</tt>    - Number of instances for which a feasible solution was found.
  *  \arg <tt>nodes</tt>   - Geometric mean of the processed nodes over all evaluated instances.
  *  \arg <tt>shnodes</tt> - Shifted geometric mean of the processed nodes over all evaluated instances.
@@ -3378,13 +3488,31 @@
  *  \arg <tt>score</tt>   - N/A
  *
  *  \arg <tt>all</tt>   - All solvers.
- *  \arg <tt>diff</tt>  - Solvers with instances that differ from the reference solver in the number of processed nodes or number of iterations.
- *  \arg <tt>equal</tt> - Solvers with instances whose number of processed nodes and number of
- *       iteration is equal to the reference solver (including a 10% tolerance) and where no timeout
+ *  \arg <tt>diff</tt>  - Solvers with instances that differ from the reference solver in the number of 
+ *       processed nodes or in the total number of simplex iterations.
+ *  \arg <tt>equal</tt> - Solvers with instances whose number of processed nodes and total number of
+ *       simplex iterations is equal to the reference solver (including a 10% tolerance) and where no timeout
  *       occured.
  *  \arg <tt>optimal auto settings</tt> - Theoretical result for a solver that performed 'best of all' for every instance.
  */
 
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG1 Changes between SCIP 0.9 and SCIP 1.0
+ *
+ *  @section CHGPARAM New parameters
+ * 
+ * - All functions SCIP<datatype>Param() got a new parameter "isadvanced".
+ *   \n
+ *   This does not influence the performance of SCIP, but the position of the parameter in the settings menu. 
+ *   Hence, if you do not care about this, you can assign any value to it. 
+ *   You should add the corresponding flag to the SCIP<datatype>Param() calls in your own source code. 
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG2 Changes between SCIP 1.0 and SCIP 1.1
+ *
+ */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
  * \htmlinclude faqcss.inc  
