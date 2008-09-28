@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.3 2008/09/26 13:27:45 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.4 2008/09/28 21:44:54 bzfviger Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -168,11 +168,11 @@ void index2nodes(
    int*                  node2               /**< return value: the second node */
    )
 {
-   assert(scip != NULL);
-   assert(node2 != NULL && node1 != NULL);
-
    int nnodes;
    int value;
+
+   assert(scip != NULL);
+   assert(node2 != NULL && node1 != NULL);
 
    nnodes = COLORprobGetNNodes(scip);
    *node1 = 0;

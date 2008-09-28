@@ -597,9 +597,9 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveStoreGraph)
 
 #ifdef SCIP_DEBUG
    consdata = SCIPconsGetData(cons);
-#endif
 
    SCIPdebugMessage("Deactivating store graph constraint: <%s(%d,%d)> [stack size: %d].\n", SCIPconsGetName(cons), (consdata->node1+1), (consdata->node2+1), conshdlrData->nstack-1);
+#endif
 
    /* remove constraint from the stack */
    --conshdlrData->nstack;

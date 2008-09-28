@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.4 2008/09/26 13:27:46 bzfgamra Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.5 2008/09/28 21:44:54 bzfviger Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
@@ -116,6 +116,7 @@ SCIP_RETCODE preprocessGraph(
    int*  lastedge;                      /* pointer for the edges in the graph */
    int i;
    int j;
+   char opt;
 
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
@@ -164,7 +165,7 @@ SCIP_RETCODE preprocessGraph(
    /* compute maximum clique */
    tcliqueMaxClique(NULL, NULL, NULL, NULL, currgraph, NULL, NULL, maxcliquenodes,
       &nmaxcliquenodes, &maxcliqueweight, 0, 0, 50000, 0, INT_MAX, -1, &status);
-   char opt = ( status == TCLIQUE_OPTIMAL ? ' ' : '*' );
+   opt = ( status == TCLIQUE_OPTIMAL ? ' ' : '*' );
    printf("size of the maximum clique: %d%c \n", nmaxcliquenodes, opt);
 
    ndeletednodes = 0;
