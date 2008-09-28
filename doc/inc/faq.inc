@@ -14,12 +14,16 @@
       <a name="Q1">What is SCIP?</a>
     </p>
     <p class="a">
-      SCIP is a standalone MIP-Solver as well as a branch-cut-and-price-framework.<br> 
-      You can use the precompiled binaries with which you can solve MIPs in *.mps or *.lp file format,
-      you can use SCIP as a subroutine for solving MIPs from your own source code, 
-      or you can use it as a framework in which you implement your own plugins&mdash;or for a combination
-      of these three purposes.<br>
-      This FAQ consists of four separate sections treating these three usages of SCIP.
+      SCIP is a constraint integer program solver and contain all necessary pulgin to be a <b>standalone MIP-Solver</b> 
+      as well as a <b>branch-cut-and-price-framework</b>.<br> 
+    <ul>
+      <li>You can use the <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>
+          with which you can solve MIPs in *.mps, *.lp, or others file format</li>
+      <li>You can use SCIP as a subroutine for solving MIPs from your own source code.</li>
+      <li>You can use SCIP as a framework in which you implement your own plugins.</li> 
+      <li>You can use SCIP in any combination of the three purposes above.</li>
+   </ul>
+      This FAQ consists of four separate sections treating these usages of SCIP.
     <p class="q">
       <a name="Q2">When should I use SCIP?</a>
     </p>
@@ -34,7 +38,7 @@
     <p class="a"> 
       As long as you use it for academic, non-commercial purposes: No. 
       This will not change. For the other cases, check the explanation of the 
-      <a href="http://zibopt.zib.de/ZIBLicence.shtml">ZIB academic license</a>.
+      <a href="http://zibopt.zib.de/ZIBLicence.shtml">ZIB academic license</a> and always feel free to ask us.
     </p>
     <p class="q">
       <a name="Q4">Do I need any extra software?</a>
@@ -42,19 +46,20 @@
     <p class="a">
       Except if you want to use SCIP as a pure CP-Solver (see <a href="#Q18">here</a>), 
       you need an underlying LP-Solver which has first to be installed and linked to the libraries 
-      (see the &quot;INSTALL&quot; file in the SCIP root directory). 
+      (see the <tt>INSTALL</tt>; file in the SCIP root directory). 
       LP-solvers currently supported by SCIP are: 
     </p>
     <ul>
-      <li><a href="http://www.zib.de/berthold/soplex/">SoPlex</a></li>
+      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
       <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
       <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
       <li><a href="http://www.coin-or.org/Clp/">CLP</a></li>
       <li><a href="http://www.mosek.com/">Mosek</a></li>
     </ul>
     <p class="a">
-      You also might need a modeling language like <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a> to generate *.mps 
-    or *.lp files. ZIMPL files can also directly be read by SCIP.
+      We also provide some <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>. Besides that,
+      you might need a modeling language like <a href="http://www.zib.de/koch/zimpl/">ZIMPL</a> to generate *.mps 
+      or *.lp files. ZIMPL files can also directly be read by SCIP.
     </p>
     <p class="q">
       <a name="Q5">How do I get started?</a>
@@ -96,7 +101,7 @@
       In fact, there is a slight difference: SCIPvarGetSol() is also able to return pseudo solution values.
       If you do not have an idea, what pseudo solutions are, SCIPgetVarSol() should be just fine.<br>
       This should be the only case of 'duplicate methods'. 
-      However, if you find another one, please contact us.
+      If you find, however, another one, please contact us.
     </p>
      <p class="q">
        <a name="Q27">I have installation problems. What can I do?</a>
@@ -115,13 +120,13 @@
         <li>Readline (libreadline.a)</li>
     </ol>
     <p class="a">
-      If you do not have all of these libraries, read the INSTALL file in the ZIB Optimization
+      If you do not have all of these libraries, read the <tt>INSTALL</tt> file in the ZIB Optimization
       Suite directory.<br>
       As a summary, the call of 'make ZIMPL=false ZLIB=false READLINE=false' should work on most systems.
     </p>
     <p class="a">
       If you have any problems while using an LP-solver different from SoPlex,
-      please read the SCIP INSTALL file first.                                                     
+      please read the SCIP <tt>INSTALL</tt> file first.                                                     
     </p>
     <p class="q">
       <a name="Q8">I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
@@ -189,7 +194,8 @@
       <a name="Q28">The output is too wide for my terminal window. What can I do?</a>
     </p>
     <p class="a">
-      Type &quot;set display width&quot; followed by an appropriate number into the interactive shell.
+      In the interactive shell you can set the width of the output with the follwing command
+      &quot;set display width&quot; followed by an appropriate number.
       See also the <a href="#Q9">next question</a>.		      
     </p>
     <p class="q">
@@ -209,7 +215,7 @@
     </p>
     <p class="a">
       You can find a variety of different general settings for SCIP in the directory "settings". 
-      They can be loaded via "set load settings/&#42;/&#42;.set". 
+      They can be loaded via "set load settings/&#42;/&#42;.set" in the interactive shell. 
       You can combine the general settings for cuts, presolving, and heuristics arbitrarily.<br>
       "display parameters" shows you which settings currently differ from their default, 
       "set default" resets them all. 
@@ -221,23 +227,57 @@
 	I want to disable it / weaken its influence / intensify its influence. How do I do this?</a>
     </p>
     <p class="a">
-      For using a <b class="grey">non-default branching rule or node selection strategy</b> as standard, 
-      you just have to give it the highest priority, using, e.g., 
-      &quot;set branching mostinf priority 9999999&quot;.<br>
-      If you want to completely <b class="grey">disable a heuristic or a separator</b> you have to set its 
-      frequency to -1 and the sepafreq to -1 for separation by constraint handlers, respectively.<br>
-      For <b class="grey">disabling a presolver</b>, you have to set its maxrounds parameter to 0.<br>
-      If you want to <b class="grey">intensify</b> the usage of a <b class="grey">heuristic</b>, 
-      you can reduce its frequency to some smaller, positive value, and/or raise the quotient and 
-      offset values (maxlpiter for diving heuristics, nodes for LNS heuristics).<br>
-      For <b class="grey">intensifying</b> the usage of a <b class="grey">separator</b>, 
-      you can raise its maxroundsroot and maxsepacutsroot values. 
-      If you also want to use this separator locally, you have to set its frequency to a positive value 
-      and possibly raise maxrounds and maxsepacuts.
-      Compare the parameters of the heuristic/separator in the appropriate aggressive setting 
-      (see <a href="#Q10">previous question</a>).<br>
-      For <b class="grey">weakening</b>, you should just do the opposite operation, i.e. reducing the values 
-      you would raise for intensification and vice versa.
+    <ul>
+      <li>For using a <b class="grey">non-default branching rule or node selection strategy</b> as
+          standard, you just have to give it the highest priority, using
+      <ul>
+         <li>set branching &lt;name of a branching rule&gt; priority 9999999</li>
+         <li>set nodeselectors &lt;name of a node selector&gt; priority 9999999</li>
+      </ul> 
+          With the commands
+      <ul>
+         <li>display branching</li>
+         <li>display nodeselectors</li>
+      </ul> 
+          you get a list of all branching rules and node selectors, respectively.
+          These lists give information about the different priorities.</li>
+      <li>If you want to completely <b class="grey">disable a heuristic or a separator</b> you have
+          to set its frequency to -1 and the sepafreq to -1 for separation by constraint handlers,
+          respectively. The commands looks like this:
+      <ul>
+         <li>set heuristics &lt;name of a heuristic&gt; freq -1</li>
+         <li>set separators &lt;name of a separator&gt; freq -1</li>
+         <li>set constraints &lt;name of a constraint handler&gt; sepafreq -1</li>
+      </ul></li> 
+      <li>For <b class="grey">disabling a presolver</b>, you have to set its maxrounds parameter to 0.
+      <ul>
+         <li>set presolvers &lt;name of a presolver&gt; maxrounds 0</li>
+      </ul></li> 
+      <li>If you want to <b class="grey">intensify</b> the usage of a <b class="grey">heuristic</b>, 
+          you can reduce its frequency to some smaller, positive value, and/or raise the quotient and 
+          offset values (maxlpiterquot for diving heuristics, nodes for LNS heuristics).
+      <ul>
+         <li>set heuristics &lt;name of a heuristic&gt; freq &lt;some value&gt;</li>
+         <li>set heuristic &lt;name of a diving heuristic&gt; maxlpiterquot &lt;some value&gt;</li>
+         <li>set heuristic &lt;name of a LNS heuristic&gt; nodesquot &lt;some value&gt;</li>
+      </ul></li>
+      <li>For <b class="grey">intensifying</b> the usage of a <b class="grey">separator</b>, 
+          you can raise its maxroundsroot and maxsepacutsroot values.
+      <ul>
+         <li>set separators &lt;name of a separator&gt; maxroundsroot &lt;some value&gt;</li>
+         <li>set separators &lt;name of a separator&gt; maxrounds &lt;some value&gt;</li>
+      </ul>
+         If you also want to use this separator locally, you have to set its frequency to a positive value 
+         and possibly raise maxrounds and maxsepacuts.
+      <ul>
+         <li>set separators &lt;name of a separator&gt; freq &lt;some value&gt;</li>
+         <li>set separators &lt;name of a separator&gt; maxsepacuts &lt;some value&gt;</li>
+      </ul>
+         Compare the parameters of the heuristic/separator in the appropriate aggressive setting 
+         (see <a href="#Q10">previous question</a>).</li>
+      <li>For <b class="grey">weakening</b>, you should just do the opposite operation, i.e.,
+          reducing the values  you would raise for intensification and vice versa.</li>
+    </ul>
     </p>
   <h4><a name="Section3">Using SCIP included in another source code</a></h4>
     <p class="q">
