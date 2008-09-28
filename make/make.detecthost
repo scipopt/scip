@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.detecthost,v 1.1 2007/08/16 10:24:24 bzfpfend Exp $
+# $Id: make.detecthost,v 1.2 2008/09/28 19:19:41 bzfheinz Exp $
 
 #@file    Makefile include to detect host system
 #@brief   SCIP Makefile
@@ -26,6 +26,7 @@ ARCH            :=      $(shell uname -m | \
                         sed \
 			-e 's/sun../sparc/' \
 			-e 's/i.86/x86/' \
+			-e 's/i86pc/x86/' \
                         -e 's/[0-9]86/x86/' \
 			-e 's/IP../mips/' \
 			-e 's/9000..../hppa/' \
