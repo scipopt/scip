@@ -76,8 +76,12 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-HARDTIMELIMIT=`echo $TIMELIMIT*1.1 | bc`
-HARDMEMLIMIT=`echo $MEMLIMIT*1.2 | bc`
+# we add 60 seconds to the hard time limit
+HARDTIMELIMIT=`expr $TIMELIMIT + 60`
+
+# we add 100kb to the hard memory limit
+HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` \* 1024`
+
 echo hard time limit: $HARDTIMELIMIT >>$OUTFILE
 echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
 
@@ -120,7 +124,7 @@ do
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
-	    bash -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 1000 M; $CBCBIN < $TMPFILE" 2>>$ERRFILE
+	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CBCBIN < $TMPFILE" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
