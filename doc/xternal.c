@@ -214,7 +214,7 @@
  *
  * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.
  * A single constraint handler is responsible for all the constraints belonging to his constraint class.
- * For example, there is one knapsack constraint handler that ensures that only solutions are accepted that
+ * For example, there is one \ref cons_knapsack.c "knapsack constraint handler" that ensures that only solutions are accepted that
  * satisfy all the knapsack constraints in the model. 
  * \n
  * A complete list of all constraint handlers contained in this release can be found \ref CONSHDLRS "here".
@@ -417,12 +417,13 @@
  *
  * You may also add user parameters for your constraint handler.  An
  * example for this and the automatic linear upgrading mechanism can be
- * found in src/scip/cons_knapsack.c.
+ * found in the \ref cons_knapsack.c "knapsack constraint handler".
  *
- * The method SCIPcreateConsSubtour() is called to create a single constraint of the constraint handler's constraint
- * class.
+ * The method SCIPcreateConsSubtour() is called to create a single constraint of the constraint 
+ * handler's constraint class.
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
- * Take a look at the following example from the knapsack constraint handler:
+ * Take a look at the following example from the \ref cons_knapsack.c "knapsack constraint handler":
+ *
  * \code
  * SCIP_RETCODE SCIPcreateConsKnapsack(
  *   SCIP*                 scip,          
@@ -467,6 +468,7 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ *
  * In this example, consdataCreate() is a local method that allocates memory for the given consdata 
  * and fills the data with the given vars array. For allocating memory for the constraint data you
  * can use the method:
@@ -509,8 +511,8 @@
  * SCIPgetSolVal(scip, sol, var)
  * \endcode
  *
- * For example, the knapsack constraint handler loops over his constraints and calculates the scalar product
- * \f$w^T x\f$ of weights \f$w\f$ with the solution vector \f$x\f$.
+ * For example, the \ref cons_knapsack.c "knapsack constraint handler" loops over his constraints and 
+ * calculates the scalar product \f$w^T x\f$ of weights \f$w\f$ with the solution vector \f$x\f$.
  * This scalar product is compared with the capacity of the knapsack constraint.
  * If it exceeds the capacity, the CONSCHECK method is immediately aborted with the result SCIP_INFEASIBLE.
  * If all knapsack constraints are satisfied, a result SCIP_FEASIBLE is returned.
@@ -585,18 +587,43 @@
  *    infeasible.
  *  - If the constraint may get violated by changing the variable in any direction, it should call
  *    SCIPaddVarLocks(scip, var, nlockspos + nlocksneg, nlockspos + nlocksneg).
- *  (Here nlockspos and nlocksneg are member variables of the constraint data storing the number of times
- *  the constraint, respectively its negation, locked rounding of its variables.)
  *
- *  Consider the linear constraint \f$3x -5y +2z \leq 7\f$ as an example. The CONSLOCK callback method of the
- *  linear constraint handler should call SCIPaddVarLocks(scip, x, nlocksneg, nlockspos), 
- *  SCIPaddVarLocks(scip, y, nlockspos, nlocksneg) and SCIPaddVarLocks(scip, z, nlocksneg, nlockspos) to tell SCIP,
- *  that rounding up of x and z and rounding down of y can destroy the feasibility of the constraint, while rounding
- *  down of x and z and rounding up of y can destroy the feasibility of the constraint's negation \f$3x -5y +2z > 7\f$.
- *  A linear constraint \f$2 \leq 3x -5y +2z \leq 7\f$ should call
- *  SCIPaddVarLocks(scip, ..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, since rounding in both
- *  directions of each variable can destroy both the feasibility of the constraint and it's negation
- *  \f$3x -5y +2z < 2\f$  or  \f$3x -5y +2z > 7\f$.
+ *  <b>Note:</b> You do not have to worry about nlockspos and nlocksneg. These integer values are given as 
+ *  parameter of the CONSLOCK callback (see type_cons.h). Just use these variables in the above described 
+ *  fashion <b>without</b> adding or  subtracting anything to them. In case of the knapsack constrints this
+ *  method looks like this.
+ *
+ *  \code
+ *  static
+ *  SCIP_DECL_CONSLOCK(consLockKnapsack)
+ *  {
+ *     SCIP_CONSDATA* consdata;
+ *     int i;
+ *
+ *     consdata = SCIPconsGetData(cons);
+ *     assert(consdata != NULL);
+ *  
+ *     for( i = 0; i < consdata->nvars; i++)
+ *     {
+ *        SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+ *     }
+ *  
+ *     return SCIP_OKAY;
+ *  }
+ * \endcode
+ *
+ *  To give same more intuition, consider the linear constraint \f$3x -5y +2z \leq 7\f$ as an example. 
+ *  The CONSLOCK callback method of the linear constraint handler should call 
+ *  SCIPaddVarLocks(scip, x, nlocksneg, nlockspos), SCIPaddVarLocks(scip, y, nlockspos, nlocksneg),
+ *  and SCIPaddVarLocks(scip, z, nlocksneg, nlockspos) to tell SCIP,  that rounding up of \f$x\f$ 
+ *  and \f$z\f$ and rounding down of \f$y\f$ can destroy the feasibility of the constraint, while rounding
+ *  down of \f$x\f$ and \f$z\f$ and rounding up of \f$y\f$ can destroy the feasibility of the 
+ *  constraint's negation \f$3x -5y +2z > 7\f$.
+ *  \n
+ *  A linear constraint \f$2 \leq 3x -5y +2z \leq 7\f$ should call 
+ *  SCIPaddVarLocks(scip, ..., nlockspos + nlocksneg, nlockspos + nlocksneg) on all variables, 
+ *  since rounding in both directions of each variable can destroy both the feasibility of the 
+ *  constraint and it's negation \f$3x -5y +2z < 2\f$  or  \f$3x -5y +2z > 7\f$.
  * 
  *
  * @section CONS_ADDITIONALCALLBACKS Additional Callback Methods
@@ -606,9 +633,10 @@
  *
  * @subsection CONSFREE
  *
- * If you are using constraint handler data, you have to implement this method in order to free the constraint handler
- * data.
- * This can be done by the following procedure (which is taken from the knapsack constraint handler):
+ * If you are using constraint handler data, you have to implement this method in order to free the 
+ * constraint handler data. This can be done by the following procedure (which is taken from the 
+ * \ref cons_knapsack.c "knapsack constraint handler"):
+ *
  * \code
  * static
  * SCIP_DECL_CONSFREE(consFreeKnapsack)
@@ -625,6 +653,7 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ *
  * If you have allocated memory for fields in your constraint handler data, remember to free this memory
  * before freeing the constraint handler data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -2598,7 +2627,7 @@
  * You also have to initialize the fields in struct SCIP_RelaxData afterwards.
  *
  * You may also add user parameters for your relaxation handler, see the method SCIPincludeConshdlrKnapsack() in 
- * the knapsack constraint handler src/scip/cons_knapsack.c for an example of how to add user parameters.
+ * the \ref cons_knapsack.c "knapsack constraint handler" for an example of how to add user parameters.
  *
  *
  * @section RELAX_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Relaxation Handler
@@ -3209,7 +3238,7 @@
  * You also have to initialize the fields in struct SCIP_DispData afterwards.
  *
  * Although this is very uncommon, you may also add user parameters for your display column, see the method
- * SCIPincludeConshdlrKnapsack() in the knapsack constraint handler src/scip/cons_knapsack.c for an example.
+ * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.c "knapsack constraint handler" for an example.
  *
  * 
  * @section DISP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Display Column
