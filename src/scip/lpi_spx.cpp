@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.85 2008/09/22 19:16:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.86 2008/09/28 13:34:24 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -2847,29 +2847,8 @@ SCIP_RETCODE SCIPlpiReadState(
 {
    SCIPdebugMessage("calling SCIPlpiReadState()\n");
 
-   /* init names */
-   int nRows = lpi->spx->nRows();
-   int nCols = lpi->spx->nCols();
-   char name [255];
-
-   NameSet rowNames;
-   rowNames.reMax(nRows);
-   for (int i = 0; i < nRows; ++i)
-   {
-      snprintf(name, 255, "C%d", i+1);
-      rowNames.add(name);
-   }
-
-   NameSet colNames;
-   colNames.reMax(nCols);
-   for (int j = 0; j < nCols; ++j)
-   {
-      snprintf(name, 255, "x%d", j);
-      colNames.add(name);
-   }
-
    bool res;
-   SOPLEX_TRY( res = lpi->spx->readBasisFile(fname, rowNames, colNames) );
+   SOPLEX_TRY( res = lpi->spx->readBasisFile(fname, 0, 0) );
 
    if ( ! res )
       return SCIP_ERROR;
@@ -2886,29 +2865,8 @@ SCIP_RETCODE SCIPlpiWriteState(
 {
    SCIPdebugMessage("calling SCIPlpiWriteState()\n");
 
-   /* init names */
-   int nRows = lpi->spx->nRows();
-   int nCols = lpi->spx->nCols();
-   char name [255];
-
-   NameSet rowNames;
-   rowNames.reMax(nRows);
-   for (int i = 0; i < nRows; ++i)
-   {
-      snprintf(name, 255, "C%d", i+1);
-      rowNames.add(name);
-   }
-
-   NameSet colNames;
-   colNames.reMax(nCols);
-   for (int j = 0; j < nCols; ++j)
-   {
-      snprintf(name, 255, "x%d", j);
-      colNames.add(name);
-   }
-
    bool res;
-   SOPLEX_TRY( res = lpi->spx->writeBasisFile(fname, rowNames, colNames) );
+   SOPLEX_TRY( res = lpi->spx->writeBasisFile(fname, 0, 0) );
 
    if ( ! res )
       return SCIP_ERROR;
