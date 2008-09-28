@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.c,v 1.3 2008/09/26 13:27:46 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_col.c,v 1.4 2008/09/28 21:17:40 bzfviger Exp $"
 
 /**@file   reader_col.c
  * @brief  COL file reader
@@ -65,11 +65,12 @@ long getNextNumber(
    char**                s                   /**< pointer to the pointer of the current position in the string */
    )
 {
+  long tmp;
   /* skip whitespaces */
   while ( isspace(**s) )
     ++(*s);
   /* read number */
-  long tmp = atol(*s);
+  tmp = atol(*s);
   /* skip whitespaces */
   while ( (**s != 0) && (!isspace(**s)) )
     ++(*s);

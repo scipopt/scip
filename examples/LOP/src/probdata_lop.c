@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.5 2008/09/09 16:23:53 bzfwanie Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.6 2008/09/28 21:17:40 bzfviger Exp $"
 
 #include "probdata_lop.h"
 
@@ -311,10 +311,10 @@ SCIP_RETCODE LOPevalSolution(
 	 int deg = 0;
 	 for (j = 0; j < n; ++j)
 	 {
+	    SCIP_Real val = 0.0;
 	    if (j == i)
 	       continue;
 
-	    SCIP_Real val = 0.0;
 	    val = SCIPgetSolVal(scip, sol, Vars[i][j]);
 	    assert( SCIPisIntegral(scip, val) );
 	    if ( val < 0.5 )
