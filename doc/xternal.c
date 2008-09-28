@@ -123,19 +123,28 @@
  *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
  * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available for SoPlex and CLP)
  *
- * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on or off, respectively.
- *      - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized or debug version of ZIMPL, if ZIMPL support is enabled.\n
+ * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on(default) or off, respectively.
+ *      - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized(default) or debug version of ZIMPL, if ZIMPL support is enabled.\n
  * If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
  * 
- * - <code>READLINE=\<true|false\></code> Turns support via the readline library on or off, respectively.
+ * - <code>READLINE=\<true|false\></code> Turns support via the readline library on(default) or off, respectively.
  *
  * There are additional parameters for Linux/Gnu compilers:
+ *
  * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.
  *   This way the code can be check via valgrind or similar tools.
  * - <code>OPT=opt-shared</code> generates a shared object of the SCIP libraries.
  *   (The binary uses these shared libraries as well.)
  * - <code>OPT=prf</code> generates a profiling version of SCIP 
  *   providing a detailed statistic of the time usage of every method of SCIP.
+ *
+ * You can use other compilers:
+ *
+ * - <code>COMP=intel</code> Uses of the Intel® compiler. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
+ *
+ * There is the possibility to watch the compilation more precisely:
+ *
+ * - <code>VERBOSE=\<true|false\></code> Turns the extensive output on or off(default).
  *
  * The SCIP makefiles are structured as follows.
  *
@@ -2151,8 +2160,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * The following methods provide access to the various types of leaf nodes:
  * - SCIPgetPrioChild() returns the child of the current node with the largest node selection priority, as assigned by the
  *   branching rule, 
- *   If no child is
- *   available (for example, because the current node was pruned), a NULL pointer is returned.
+ *   If no child is available (for example, because the current node was pruned), a NULL pointer is returned.
  * - SCIPgetBestChild() returns the best child of the current node with respect to the node selector's ordering relation as
  *   defined by the \ref NODESELCOMP callback. If no child is available, a NULL pointer is returned.
  * - SCIPgetPrioSibling() returns the sibling of the current node with the largest node selection priority.
@@ -2290,7 +2298,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * heuristic found the feasible solution belonging to the primal bound. Note that a star '*' stands for an integral 
  * LP-relaxation.
  * In order to avoid confusion, display characters should be unique: no two primal heuristics should have the same display character.
- * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the
+ * You can get a list of all primal heuristics along with their display characters by entering "display heuristics" in the 
  * SCIP interactive shell.
  *
  * \par HEUR_PRIORITY: the priority of the primal heuristic.

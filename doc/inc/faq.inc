@@ -352,7 +352,7 @@
      difference is that constraints can be &quot;model constraints&quot;, while cutting planes are only
      additional LP rows that strengthen the LP relaxation.
      A model constraint is a constraint that is important for the feasibility of the integral
-     solutions. If you deleted a model constraint, some infeasible integral vectors would
+     solutions. If you delete a model constraint, some infeasible integral vectors would
      suddenly become feasible in the reduced model.
      A cutting plane is redundant w.r.t. integral solutions. The set of feasible integral
      vectors does not change if the cutting plane is removed. You can, however, relax this
@@ -479,7 +479,7 @@
       <a name="Q25">Are the variables and rows sorted in any particular order?</a>
     </p>
     <p class="a">The variable array which you get by SCIPgetVars() is internally sorted by variable types.
-      The ordering is binary, integer, implicit integer, and continuous variables, i.e., 
+      The ordering is binary, integer, implicit integer and continuous variables, i.e., 
       the binary variables are stored at position [0,...,nbinvars-1], 
       the general integers at [nbinvars,...,nbinvars+nintvars-1], and so on. 
       It holds that nvars = nbinvars + ninitvars + nimplvars + ncontvars.
@@ -526,7 +526,7 @@
       particular in branch-and-price, the variables generated at one node in the tree are not 
       included in the LP relaxation of a different node (if the other node is not a descendant 
       of the first node). But even if you are still at the same node or at a descendant node, 
-      SCIP can remove columns from the LP if they are at 0 in the LP relaxation. This dynamic 
+      SCIP can remove columns from the LP if they are 0 in the LP relaxation. This dynamic 
       column deletion can be avoided by setting the "removable" flag to FALSE in the 
       SCIPcreateVar() call.
     </p>
