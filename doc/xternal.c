@@ -468,7 +468,7 @@
  * }
  * \endcode
  * In this example, consdataCreate() is a local method that allocates memory for the given consdata 
- * and fills the data with the given vars array. For allocating memory for the constarint data you
+ * and fills the data with the given vars array. For allocating memory for the constraint data you
  * can use the method:
  * \code
  * SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
@@ -585,6 +585,8 @@
  *    infeasible.
  *  - If the constraint may get violated by changing the variable in any direction, it should call
  *    SCIPaddVarLocks(scip, var, nlockspos + nlocksneg, nlockspos + nlocksneg).
+ *  (Here nlockspos and nlocksneg are member variables of the constraint data storing the number of times
+ *  the constraint, respectively its negation, locked rounding of its variables.)
  *
  *  Consider the linear constraint \f$3x -5y +2z \leq 7\f$ as an example. The CONSLOCK callback method of the
  *  linear constraint handler should call SCIPaddVarLocks(scip, x, nlocksneg, nlockspos), 
