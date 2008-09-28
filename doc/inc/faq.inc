@@ -535,6 +535,57 @@
     </p>
     <p class="a">
 
-    </p>      
-      <!-- FAQ Punkt: Verhaeltnis zu CPLEX callable library, concert, Coin... ????????? -->
+    </p>
+    <p class="q">
+      <a name="Q31">How can I delete variables?</a>
+    </p>
+    <p class="a">
+      Currently, it is not possible to delete variables during solving. A variable can be removed
+      from the problem by SCIPdelVar(), but it remains in the corresponding constraints. Instead of that,
+      you should fix the variable to zero by using SCIPfixVar(). We are working on this problem
+      and expect to provide functionalities for the deletion of variables in the next release.
+    </p>
+    <p class="q">
+      <a name="Q32">How can I store branching decisions?</a>
+    </p>
+    <p class="a">
+      This is a very common problem in Branch-And-Price, which you can deal nicely with using SCIP.
+      There are basically three different options for dealing with that. The first one is to add
+      binary variables to the problem that capture the branching decision (link). The second one
+      is the introduction of "marker constraints" that are added to the branching nodes and
+      store all the information needed. (link)
+      The third way to deal with this is the usage of an event handler (link).
+    </p>
+    <p class="q">
+      <a name="Q33">How can I capture branching decisions in binary variables?</a>
+    </p>
+    <p class="a">
+
+    </p>
+    <p class="q">
+      <a name="Q34">I want to store informations at the nodes. How can I do that?</a>
+    </p>
+    <p class="a">
+
+    </p>
+    <p class="q">
+      <a name="Q35">How can an event handler help me with my branching?</a>
+    </p>
+    <p class="a">
+
+    </p>
+    <p class="q">
+      <a name="Q36">My pricer generates the same column twice in one pricing round. How can I solve this problem?</a>
+    </p>
+    <p class="a">
+
+    </p>
+    <p class="q">
+      <a name="Q37">I wrote a branch-and-price code, but SCIP claims to have found an optimal solution in
+           the root node which is definitely not optimal. What went wrong?</a>
+    </p>
+    <p class="a">
+
+    </p>
+          <!-- FAQ Punkt: Verhaeltnis zu CPLEX callable library, concert, Coin... ????????? -->
 </div>
