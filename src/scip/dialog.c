@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.45 2008/09/22 19:25:07 bzfwanie Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.46 2008/09/28 21:16:53 bzfviger Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -119,7 +119,7 @@ SCIP_RETCODE removeHistory(
 #else
    if ( entry != NULL )
    {
-      free(entry->line);
+      free((void*)entry->line);
       free(entry);
    }
 #endif
