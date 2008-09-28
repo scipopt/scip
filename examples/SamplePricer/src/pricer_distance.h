@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.7 2008/09/09 16:23:53 bzfwanie Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.8 2008/09/28 22:05:42 bzfviger Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -46,6 +46,7 @@ extern "C"
     Generate a derived class of ObjPricer.
 ***/
 
+#include <string>
 using namespace std;
 using namespace scip;
 
@@ -123,12 +124,14 @@ public:
 //     SCIP_CALL(SCIP
 //     SCIP_CALL(SCIPprintBestTransSol(scip, NULL, NULL));
     int nofRows;
+    int* basisIndexVec;
     SCIP_CALL(SCIPgetLPRowsData(scip, 0, &nofRows));
-    int basisIndexVec[nofRows];
+    basisIndexVec = new int[nofRows];
     SCIP_CALL(SCIPgetLPBasisInd(scip, basisIndexVec));
     for (int i = 0; i < nofRows; ++i) {
       cout << "basisIndexVec[" << i << "] = " << basisIndexVec[i] << endl;
     }
+    delete basisIndexVec;
     for (unsigned int i = 0; i < _var_name_vec.size(); ++i) {
       SCIP_VAR* variable = SCIPfindVar(scip, _var_name_vec[i].c_str());
       double value = SCIPgetSolVal(scip, 0, variable);
