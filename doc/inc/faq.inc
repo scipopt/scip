@@ -226,13 +226,13 @@
       <li>For using a <b class="grey">non-default branching rule or node selection strategy</b> as
           standard, you just have to give it the highest priority, using
       <ul>
-         <li>set branching &lt;name of a branching rule&gt; priority 9999999</li>
-         <li>set nodeselectors &lt;name of a node selector&gt; priority 9999999</li>
+         <li><code> SCIP&gt; set branching &lt;name of a branching rule&gt; priority 9999999</code></li>
+         <li><code> SCIP&gt; set nodeselectors &lt;name of a node selector&gt; priority 9999999</code></li>
       </ul> 
           With the commands
       <ul>
-         <li>display branching</li>
-         <li>display nodeselectors</li>
+         <li><code> SCIP&gt; display branching</code></li>
+         <li><code> SCIP&gt; display nodeselectors</code></li>
       </ul> 
           you get a list of all branching rules and node selectors, respectively.
           These lists give information about the different priorities.</li>
@@ -240,33 +240,33 @@
           to set its frequency to -1 and the sepafreq to -1 for separation by constraint handlers,
           respectively. The commands looks like this:
       <ul>
-         <li>set heuristics &lt;name of a heuristic&gt; freq -1</li>
-         <li>set separators &lt;name of a separator&gt; freq -1</li>
-         <li>set constraints &lt;name of a constraint handler&gt; sepafreq -1</li>
+         <li><code> SCIP&gt; set heuristics &lt;name of a heuristic&gt; freq -1</code></li>
+         <li><code> SCIP&gt; set separators &lt;name of a separator&gt; freq -1</code></li>
+         <li><code> SCIP&gt; set constraints &lt;name of a constraint handler&gt; sepafreq -1</code></li>
       </ul></li> 
       <li>For <b class="grey">disabling a presolver</b>, you have to set its maxrounds parameter to 0.
       <ul>
-         <li>set presolvers &lt;name of a presolver&gt; maxrounds 0</li>
+         <li><code> SCIP&gt; set presolvers &lt;name of a presolver&gt; maxrounds 0</code></li>
       </ul></li> 
       <li>If you want to <b class="grey">intensify</b> the usage of a <b class="grey">heuristic</b>, 
           you can reduce its frequency to some smaller, positive value, and/or raise the quotient and 
           offset values (maxlpiterquot for diving heuristics, nodes for LNS heuristics).
       <ul>
-         <li>set heuristics &lt;name of a heuristic&gt; freq &lt;some value&gt;</li>
-         <li>set heuristic &lt;name of a diving heuristic&gt; maxlpiterquot &lt;some value&gt;</li>
-         <li>set heuristic &lt;name of a LNS heuristic&gt; nodesquot &lt;some value&gt;</li>
+         <li><code> SCIP&gt; set heuristics &lt;name of a heuristic&gt; freq &lt;some value&gt;</code></li>
+         <li><code> SCIP&gt; set heuristic &lt;name of a diving heuristic&gt; maxlpiterquot &lt;some value&gt;</code></li>
+         <li><code> SCIP&gt; set heuristic &lt;name of a LNS heuristic&gt; nodesquot &lt;some value&gt;</code></li>
       </ul></li>
       <li>For <b class="grey">intensifying</b> the usage of a <b class="grey">separator</b>, 
           you can raise its maxroundsroot and maxsepacutsroot values.
       <ul>
-         <li>set separators &lt;name of a separator&gt; maxroundsroot &lt;some value&gt;</li>
-         <li>set separators &lt;name of a separator&gt; maxrounds &lt;some value&gt;</li>
+         <li><code> SCIP&gt; set separators &lt;name of a separator&gt; maxroundsroot &lt;some value&gt;</code></li>
+         <li><code> SCIP&gt; set separators &lt;name of a separator&gt; maxrounds &lt;some value&gt;</code></li>
       </ul>
          If you also want to use this separator locally, you have to set its frequency to a positive value 
          and possibly raise maxrounds and maxsepacuts.
       <ul>
-         <li>set separators &lt;name of a separator&gt; freq &lt;some value&gt;</li>
-         <li>set separators &lt;name of a separator&gt; maxsepacuts &lt;some value&gt;</li>
+         <li><code> SCIP&gt; set separators &lt;name of a separator&gt; freq &lt;some value&gt;</code></li>
+         <li><code> SCIP&gt; set separators &lt;name of a separator&gt; maxsepacuts &lt;some value&gt;</code></li>
       </ul>
          Compare the parameters of the heuristic/separator in the appropriate aggressive setting 
          (see <a href="#Q10">previous question</a>).</li>
