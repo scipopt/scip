@@ -31,6 +31,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <string>
 
 // scip includes
 #include "objscip/objscip.h"
@@ -167,7 +168,7 @@ int read_problem( const char*            filename,
             for ( int j = 0; j < i; ++j ) {
                int dx = x[i] - x[j];
                int dy = y[i] - y[j];
-               distance[i][j] = int( sqrt(dx*dx + dy*dy) + 0.5 );
+               distance[i][j] = int( sqrt((double)dx*dx + dy*dy) + 0.5 );
             }
          }
       }
