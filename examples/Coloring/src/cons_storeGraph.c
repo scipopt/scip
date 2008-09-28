@@ -582,7 +582,9 @@ static
 SCIP_DECL_CONSDEACTIVE(consDeactiveStoreGraph)
 {
    SCIP_CONSHDLRDATA* conshdlrData;
+#ifdef SCIP_DEBUG
    SCIP_CONSDATA*     consdata;
+#endif
 
    assert(scip != NULL);
    assert(conshdlr != NULL);

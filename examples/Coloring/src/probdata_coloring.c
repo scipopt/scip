@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.5 2008/09/28 21:44:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.6 2008/09/28 22:59:28 bzfviger Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
@@ -108,7 +108,7 @@ SCIP_RETCODE preprocessGraph(
    int actnewnode;                      /* the number of nodes yet marked for beeing in the graph in the next round */
    int* newnodes;                       /* the nodes that will be in the graph in the next round */
    int* degrees;                        /* the degrees of the nodes */
-   int round;                           /* the number of the current round */
+   int myround;                         /* the number of the current round */
    int ndeletednodes;                   /* the total number of deleted nodes */
    int nnodesdeleteddegreethisround;    /* the number of nodes deleted due to low degree in the current round */
    int nnodesdeletedneighbourthisround; /* the number of nodes deleted due to neighbourhood in the current round */
@@ -171,12 +171,12 @@ SCIP_RETCODE preprocessGraph(
    ndeletednodes = 0;
    nnodesdeleteddegreethisround = 1;
    nnodesdeletedneighbourthisround = 1;
-   round = 0;
+   myround = 0;
 
    /* main loop */
    while ( (nnodesdeleteddegreethisround > 0) || (nnodesdeletedneighbourthisround > 0) ) 
    {
-      round++;
+      myround++;
       nnodesdeleteddegreethisround = 0;
       nnodesdeletedneighbourthisround = 0;
       changed = TRUE;
@@ -366,7 +366,7 @@ SCIP_RETCODE preprocessGraph(
          }
       } /* end of loop for finding dominated neighbourhoods */
       
-      printf("Round %d of preprocessing:\n", round);
+      printf("Round %d of preprocessing:\n", myround);
       printf("   deleted low degree vertices: %d\n", nnodesdeleteddegreethisround);
       printf("   deleted almost cliques:      %d\n", nnodesdeletedneighbourthisround);
 
