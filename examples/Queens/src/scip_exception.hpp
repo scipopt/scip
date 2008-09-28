@@ -142,7 +142,7 @@ public:
     *
     * @return stored SCIP_RETCODE
     */
-   const SCIP_RETCODE getRetcode(void)const{return _retcode;}
+   SCIP_RETCODE getRetcode(void)const{return _retcode;}
 
    /** destructor */
    ~SCIPException(void) throw(){}
