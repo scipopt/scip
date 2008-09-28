@@ -2625,7 +2625,8 @@
  * If you want to branch with respect to your relaxation solution, you have to implement your own branching rule and
  * extract the primal solution vector from the relaxation directly.
  *
- * Usually, the callback only solves the relaxation and provides a lower (dual) bound with a call to SCIPupdateLocalLowerbound().
+ * Usually, the RELAXEXEC callback only solves the relaxation and provides a lower (dual) bound with a call to
+ * SCIPupdateLocalLowerbound().
  * However, it may also produce domain reductions, add additional constraints or generate cutting planes. It has the
  * following options:
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
