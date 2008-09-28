@@ -3445,35 +3445,57 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page TEST How to run automated tests with SCIP
  *
- *  SCIP comes along with a set of useful tools that allow us to perform automated tests. The
+ *  SCIP comes along with a set of useful tools that allow to perform automated tests. The
  *  following is a step-by-step guide from setting up the test environment to evaluation and
  *  customization of test runs.
  *
  *
  *  @section SETUP Setting up the test environment
  *
- *  Suppose we have a test set of one or more "lp" files. These test instances have to be accessible in
- *  the directory <code>scip/check</code>; you can also set a link to the instances. Once this is done, we have
- *  to create a @em test file within the @c check directory that specifies the location of our test
- *  instances. In our example, we have three "lp" files, <tt>one.lp</tt>, <tt>two.lp</tt>, and
- *  <tt>three.lp</tt>, stored in the directory <code>scip/check/testrun</code>, a sample @em test file
- *  <tt>testrun.test</tt> would look like this
+ *  The first thing you should do is to create a file which contains all
+ *  problems which should be part of the test. This file has be located in
+ *  the the directory <code>scip/check/</code> and has to have the file extension ".test",
+ *  e.g., "testrun.test", in order to be found by the <code>scip/check/chech.sh</code> script. 
+ *  \n
+ *  All test problems have to be listed by a relative path, e.g., "../../problems/instance1.lp" 
+ *  or absolute path, e.g., "/home/problems/instance2.mps" in this file. Thereby, 
+ *  only one problem pre line (since the command <code>cat</code> is used to parse this file). 
+ *  Note that these problem have to be readable for SCIP in order to solve them. 
+ *  However, you can merge different file formats.
  *
- *  - <tt>testrun/one.lp</tt>
- *  - <tt>testrun/two.lp</tt>
- *  - <tt>testrun/three.lp</tt>
+ *  Optionally, you can provide a "solu" file in the <code>scip/check/</code> directory containing 
+ *  known information about the feasibility and the best known objective values for the test instances.
+ *  SCIP can use these values to verify the results. The file has to have the same basename as the 
+ *  @em test file, i.e., in our case <tt>testrun.solu</tt>. One line can only contain information 
+ *  about one test instance. A line has to start with the type of information given:
  *
- *  Optionally, we can provide a "solu" file in the @c check directory containing the best known
- *  objective values for our test instances. SCIP can use these values to verify the results. The
- *  file has to have the same basename as the @em test file, i.e., in our case
- *  <tt>testrun.solu</tt>. The file content may look as follows
+ *  - <tt>=opt=</tt> stating that a problem name with an (optional) optimal objective value follows
+ *  - <tt>=best=</tt> stating that a problem name with a best know objective value follows
+ *  - <tt>=inf=</tt> stating that a problem name follows which is infeasible
  * 
- *  - <tt>=opt=    one.lp     73389.09</tt>
- *  - <tt>=opt=    two.lp     153183.89</tt>
- *  - <tt>=best=  three.lp   234234.21</tt>
+ *  With these there information types you can code for an instance named "instance1.lp" the following
+ *  information.
+ *  - a known optimal (objective) values of 10 
+ *   \code
+ *   =opt=  instance1 10
+ *   \endcode
+ *  - the instance is feasible 
+ *   \code
+ *   =opt=  instance1
+ *   \endcode
+ *   Note that the third filed (objective value) is omitted.
+ *  - the best known objective value is 15 
+ *   \code
+ *   =best=  instance1 15
+ *   \endcode
+ *  - the instance is infeasible
+ *   \code
+ *   =inf=  instance1
+ *   \endcode
  *
- *  The string <tt>=best=</tt> indicates that the objective value may not be optimal. 
- *  See the files "shortmiplib.test" and "shortmiplib.solu" in the @c check directory for an example of a 
+ * <b>Note that the in all lines the file extension of the file name is omitted.</b>
+ *  \n
+ *  See the files "scip/check/shortmiplib.test" and "scip/check/shortmiplib.solu" for an example of a 
  *  "test" file and its corresponding "solu" file.
  * 
  *
@@ -3491,8 +3513,8 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * 
  *  @section EVAL Evaluating a test run
  *
- *  During computation, SCIP automatically creates the directory <code>scip/check/results</code> 
- *  (if it does not yet exist) and the stores the following output files there.
+ *  During computation, SCIP automatically creates the directory <code>scip/check/results/</code> 
+ *  (if it does not exist yet) and stores the following output files there.
  *
  *  \arg <tt>*.out</tt> - output of <tt>stdout</tt>
  *  \arg <tt>*.err</tt> - output of <tt>stderr</tt>
@@ -3504,29 +3526,39 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  *  The last three files in the above list, i.e., the files containing a summary of the computational results,
  *  can also be generated manually by the user. For that, he has to call the <tt>evalcheck.sh</tt> script in the 
- *  @c check directory with the "out" file as argument. For example, this may be useful if the user stopped the 
+ *  @c check directory with the corresponding "out" file as argument. For example, this may be useful if the user stopped the 
  *  test before it was finished, as in this case, the last three files will not automatically be generated by SCIP.
  *
  *
- *  @b Note The basename of each output file allows us to reconstruct the test setting. Suppose, for
- *  example, the output file is
+ *  @b Note The <tt>basename</tt> of all these files is the same and has the following structure 
+ *  which allows us to reconstruct the test run.
  *
- *      <tt>check.testrun.scip_binary.machine.default.out</tt>
+ *  \code
+ *  check.<test name>.<scip binary>.<machine>.<setting name>
+ *  \endcode
  *
- *  Then <tt>testrun</tt> is the basename of the @em test file and <tt>scip_binary</tt> is the name of
- *  the SCIP binary file. Furthermore, <tt>machine</tt> denotes the machine on which the test was
- *  run and <tt>default</tt> indicates that SCIP was run with its default settings.
+ *  - "test name" indicates the name of the the test file, e.g., "testrun"
+ *  - "scip binary" defines the use scip binary, e.g., "scip-1.1.0.linux.x86.gnu.opt.spx"
+ *  - "machine" tells the name of the machine, e.g., "mycomputer"
+ *  - "setting name" denote the name of the used settings, e.g., "default" 
+ *    means the SCIP default setting are used
+ *
+ *  Using the examples out of the previous listing the six file names would have the name:
+ *
+ *  \code
+ *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.default.<out,err,set,res,tex,pav>
+ *  \endcode
  *
  *
  *  @section USING Using customized setting files
  *
  *  It is possible to use customized settings files for the test run instead of testing SCIP with default settings. 
- *  These have to be placed in the directory <code>scip/check/settings</code>. Note that accessing setting files 
+ *  These have to be placed in the directory <code>scip/check/settings/</code>. Note that accessing setting files 
  *  in subfolders of the @c settings directory is currently not supported.
  *
- *  To run SCIP with a custom settings file, say <tt>fast.set</tt>, we call
+ *  To run SCIP with a custom settings file, say for example <tt>fast.set</tt>, we call
  *
- *      <tt>make TEST=testrun SETTING=fast test</tt>
+ *  <code> make TEST=testrun SETTING=fast test</code>
  *
  *  in the SCIP root directory.
  *
@@ -3539,8 +3571,11 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *  \arg <tt>TIME</tt>  - time limit for each test instance in seconds [default: 3600]
  *  \arg <tt>NODES</tt> - node limit [default: 2100000000]
  *  \arg <tt>MEM</tt>   -  memory limit in MB [default: 1536]
- *  \arg <tt>CONTINUE</tt> - continue test run [default: "false"]
- *
+ *  \arg <tt>DISPFREQ</tt> - display frequency of the output [default: 10000]
+ *  \arg <tt>FEASTOL</tt> - LP feasibility tolerance for constraints [default: "default"]
+ *  \arg <tt>LOCK</tt> - should the test run be locked to avoid other machines to preforme the same test run [default: "false"]
+ *  \arg <tt>CONTINUE</tt> - continue the test run if it was previously aborted [default: "false"]
+
  * 
  *  @section COMPARE Comparing test runs for different settings
  *
@@ -3550,14 +3585,18 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  *  Suppose, we performed our test run with two different settings, say <tt>fast.set</tt> and
  *  <tt>slow.set</tt>. Assuming that all other parameters (including the SCIP binary), were the same,
- *  we may have the following "res" files in the directory <code>scip/check/results</code> 
+ *  we may have the following "res" files in the directory <code>scip/check/results/</code> 
  *
- *  <tt>check.testrun.scip_binary.machine.fast.res</tt> and @n
- *  <tt>check.testrun.scip_binary.machine.slow.res</tt>
+ *  \code
+ *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res
+ *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.slow.res
+ *  \endcode
  *
  *  For a comparison of both computations, we simply call
  *
- *  <code>allcmpres.sh results/check.testrun.scip_binary.machine.fast.res results/check.testrun.scip_binary.machine.slow.res</code>
+ *  <code>allcmpres.sh results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res \
+ *                     results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.slow.res</code>
+ *
  *
  *  in the @c check directory. This produces two ASCII tables on the console that provide a detailed
  *  performance comparison of both test runs. Note that the first "res" file serves as the reference
