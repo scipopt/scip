@@ -40,11 +40,24 @@
  * @author   Michael Winkler
  * @author   Kati Wolter
  *
- * SCIP is a program and library to solve constraint integer programs (CIPs).
+ * <b>Waht is SCIP?</b>
+ *
+ * SCIP is a framework to solve constraint integer programs (CIPs). In particular,
+ *
+ * - SCIP is a branch-and-cut-and-price framework,
+ * - incorporates a full-scale mixed integer programming (MIP) solver,
+ * - is also a constraint programming (CP) solver, and
+ * - incorporates SAT-solving features (conflict analysis, restarts).
  *
  * SCIP is based on SIP (Solving Integer Programs) by Alexander Martin. The main developer of SCIP
  * was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati Wolter. The
- * persons listed above have contributed or are currently contributing to SCIP.
+ * persons listed above contributed or are currently contributing to SCIP.
+ *
+ * SCIP is developed together with TU Darmstadt and has approx. 220.000 lines of C code. See the web
+ * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to
+ * download SCIP.
+ *
+ * This documention provides extensive information about SCIP.
  *
  * <b>General Information</b>
  *
@@ -121,30 +134,40 @@
  *      - <code>spx</code>: SoPlex LP-solver (default)
  *      - <code>xprs</code>: XPress LP-solver
  *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
- *      - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available for SoPlex and CLP)
+ *      .
+ * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available
+ *   for SoPlex and CLP)
  *
- *      - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on(default) or off, respectively.
- *      - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized(default) or debug version of ZIMPL, if ZIMPL support is enabled.\n
- *      - If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
+ * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on (default) or off, respectively.
+ * - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized (default) or debug version of ZIMPL, if ZIMPL support is enabled.\n
+ *   If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
  * 
- *      - <code>READLINE=\<true|false\></code> Turns support via the readline library on(default) or off, respectively.
+ * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
  * There are additional parameters for Linux/Gnu compilers:
  *
- * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.
- *   This way the code can be check via valgrind or similar tools.
- * - <code>OPT=opt-shared</code> generates a shared object of the SCIP libraries.
- *   (The binary uses these shared libraries as well.)
- * - <code>OPT=prf</code> generates a profiling version of SCIP 
- *   providing a detailed statistic of the time usage of every method of SCIP.
+ * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.  This way the code can be checked via valgrind or
+ *   similar tools.
+ * - <code>OPT=opt-shared</code> generates a shared object of the SCIP libraries.  (The binary uses these shared
+ *   libraries as well.)
+ * - <code>OPT=prf</code> generates a profiling version of SCIP providing a detailed statistic of the time usage of
+ *   every method of SCIP.
  *
- * You can use other compilers:
+ * You can use other compilers - depending on the system:
  *
- * - <code>COMP=intel</code> Uses of the Intel® compiler. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
+ * - <code>COMP=intel</code> Uses of the Intel compiler. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
  *
  * There is the possibility to watch the compilation more precisely:
  *
- * - <code>VERBOSE=\<true|false\></code> Turns the extensive output on or off(default).
+ * - <code>VERBOSE=\<true|false\></code> Turns the extensive output on or off (default).
+ *
+ * The SCIP makefile supports several targets (used via <code>make ... "target"</code>):
+ *
+ * - <code>links</code> Reconfigures the links in the "lib" directory.
+ * - <code>doc</code> Creates documention in the "doc" directory.
+ * - <code>clean</code> Removes all object files.
+ * - <code>depend</code> Creates dependencies files. This is only needed if you add files to SCIP.
+ * - <code>check</code> Runs the check script, see \ref TEST.
  *
  * The SCIP makefiles are structured as follows.
  *
@@ -177,7 +200,7 @@
  *       (column generation) and you want to use <b>C</b>.
  *     - <code>TSP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C++</b>.
  *     - <code>LOP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C</b>.
- * - Edit the makefile according to your needs -- in particular: 
+ * - Edit the makefile according to your needs - in particular: 
  *    - include a correct path to the SCIP root at the top (<code>SCIPDIR</code>)
  *    - you should rename the targets name (<code>MAINNAME</code>)
  *    - and you should adjust the source file names (<code>MAINOBJ</code>).
@@ -836,28 +859,31 @@
  * In the SCIPinferVarLbCons() and SCIPinferVarUbCons() calls, the handler provides the constraint that deduced the
  * variable's bound change, and an integer value "inferinfo" that can be arbitrarily chosen.
  *
- * The propagation conflict resolving method CONSRESPROP must then be implemented, to provide the "reasons" for the bound
- * changes, i.e., the bounds of variables at the time of the propagation, that forced the constraint to set the
- * conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
- * rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
- * by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+ * The propagation conflict resolving method CONSRESPROP must then be implemented to provide the "reasons" for the bound
+ * changes, i.e., the bounds of variables at the time of the propagation, which forced the constraint to set the
+ * conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation rule
+ * and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided by
+ * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
  *
- * For example, the logicor constraint \f$c = x \vee y \vee z\f$ fixes variable \f$z\f$ 
- * to TRUE (i.e., changes the lower bound of \f$z\f$
- * to 1.0), if both, \f$x\f$ and \f$y\f$, are assigned to FALSE (i.e., if the upper bounds of these variables are 0.0). It uses
- * SCIPinferVarLbCons(scip, z, 1.0, c, 0) to apply this assignment (an inference information tag is not needed by the
- * constraint handler and is set to 0).
- * In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on \f$z\f$ with
- * constraint \f$c\f$, that was applied at a time given by a bound change index "bdchgidx".
- * With a call to SCIPvarGetLbAtIndex(z, bdchgidx), the handler can find out, that the lower bound of variable \f$z\f$ was
- * set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
- * SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were
- * the reason for the deduction of the lower bound of \f$z\f$.
+ * <b>Note.</b> That "inferinfo" is an integer is a compromise between space and speed. Sometimes a propagator would
+ * need more information to efficiently infer the original propagation steps that lead to the conflict. This would,
+ * however, require too much space. In the extreme, the original propagation steps have to be repeated.
  *
- * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.
- * Although this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod,
- * it will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check
- * how effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
+ * For example, the logicor constraint \f$c = x \vee y \vee z\f$ fixes variable \f$z\f$ to TRUE (i.e., changes the lower
+ * bound of \f$z\f$ to 1.0), if both, \f$x\f$ and \f$y\f$, are assigned to FALSE (i.e., if the upper bounds of these
+ * variables are 0.0). It uses <code>SCIPinferVarLbCons(scip, z, 1.0, c, 0)</code> to apply this assignment (an
+ * inference information tag is not needed by the constraint handler and is set to 0).  In the conflict analysis, the
+ * constraint handler may be asked to resolve the lower bound change on \f$z\f$ with constraint \f$c\f$, that was
+ * applied at a time given by a bound change index "bdchgidx".  With a call to <code>SCIPvarGetLbAtIndex(z,
+ * bdchgidx)</code>, the handler can find out, that the lower bound of variable \f$z\f$ was set to 1.0 at the given
+ * point of time, and should call <code>SCIPaddConflictUb(scip, x, bdchgidx)</codE> and <code>SCIPaddConflictUb(scip, y,
+ * bdchgidx)</code> to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were the reason for
+ * the deduction of the lower bound of \f$z\f$.
+ *
+ * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.  Although
+ * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod, it
+ * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
+ * effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
  * consider to implement the conflict resolving method.
  *
  * @subsection CONSPRESOL
@@ -1580,17 +1606,18 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page PROP How to add propagators
  *
- * Propagators are used to tighten the domains of the variables. Like for cutting planes, there are two different types of 
- * domain propagations. Constraint based (primal) domain propagation algorithms are part of the corresponding constraint
- * handlers, see \ref CONSPROP. In contrast, domain propagators usually provide dual propagations, i.e., propagations that can be
- * applied due to the objective function and the current best known primal solution. 
- * \n
+ * Propagators are used to tighten the domains of the variables. Like for cutting planes, there are two different types
+ * of domain propagations. Constraint based (primal) domain propagation algorithms are part of the corresponding
+ * constraint handlers, see \ref CONSPROP. In contrast, domain propagators usually provide dual propagations, i.e.,
+ * propagations that can be applied using the objective function and the current best known primal solution. This
+ * section deals with such propagators.
+ * 
  * A complete list of all propagators contained in this release can be found \ref PROPAGATORS "here".
  *
- * In the following, we explain how the user can add an own propagator.
- * Take the pseudo objective function propagator (src/scip/prop_pseudoobj.c) as an example.
- * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the ObjProp wrapper
- * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PROP... callback methods.
+ * In the following, we explain how the user can add an own propagator.  Take the pseudo objective function propagator
+ * (src/scip/prop_pseudoobj.c) as an example.  As all other default plugins, it is written in C. C++ users can easily
+ * adapt the code by using the scip::ObjProp wrapper base class and implement the @c scip_...() virtual methods instead
+ * of the @c SCIP_DECL_PROP... callback methods.
  *
  * Additional documentation for the callback methods of a propagator can be found in the file type_prop.h.
  *
@@ -1608,57 +1635,53 @@
  *
  * @section PROP_PROPERTIES Properties of a Propagator
  *
- * At the top of the new file "prop_mypropagator.c" you can find the propagator properties.
- * These are given as compiler defines.
- * In the C++ wrapper class, you have to provide the propagator properties by calling the constructor
- * of the abstract base class ObjProp from within your constructor.
- * The properties you have to set have the following meaning:
+ * At the top of the new file "prop_mypropagator.c" you can find the propagator properties. These are given as compiler
+ * defines.  In the C++ wrapper class, you have to provide the propagator properties by calling the constructor of the
+ * abstract base class scip::ObjProp from within your constructor.  The properties you have the following meaning:
  *
  * \par PROP_NAME: the name of the propagator.
- * This name is used in the interactive shell to address the propagator.
- * Additionally, if you are searching for a propagator with SCIPfindProp(), this name is looked up.
- * Names have to be unique: no two propagators may have the same name.
+ * This name is used in the interactive shell to address the propagator.  Additionally, if you are searching for a
+ * propagator with SCIPfindProp(), this name is search for.  Names have to be unique: no two propagators may have the
+ * same name.
  *
  * \par PROP_DESC: the description of the propagator.
  * This string is printed as description of the propagator in the interactive shell.
  *
  * \par PROP_PRIORITY: the priority of the propagator.
- * In each propagation round, the propagators and propagation methods of the constraint handlers are called in
- * a predefined order, which is given by the priorities of the propagators and the check priorities of the
- * constraint handlers.
- * First, the propagators with non-negative priority are called in the order of decreasing priority.
- * Next, the propagation methods of the different constraint handlers are called in the order of decreasing check
- * priority.
- * Finally, the propagators with negative priority are called in the order of decreasing priority.
- * \n
- * The priority of the propagators should be set according to the complexity of the propagation algorithm and the impact 
- * of the domain propagations: propagators that provide fast algorithms that usually have a high impact (i.e., tighten 
- * many bounds) should have a high priority.
+ * In each propagation round, the propagators and propagation methods of the constraint handlers are called in a
+ * predefined order, which is given by the priorities of the propagators and the check priorities of the constraint
+ * handlers.  First, the propagators with non-negative priority are called in order of decreasing priority.  Next, the
+ * propagation methods of the different constraint handlers are called in order of decreasing check priority.  Finally,
+ * the propagators with negative priority are called in order of decreasing priority.  \n The priority of the
+ * propagators should be set according to the complexity of the propagation algorithm and the impact of the domain
+ * propagations: propagators providing fast algorithms that usually have a high impact (i.e., tighten many bounds)
+ * should have a high priority.
  *
  * \par PROP_FREQ: the default frequency for propagating domains.
- * The frequency defines the depth levels at which the propagation method \ref PROPEXEC is called.
- * For example, a frequency of 7 means, that the propagation callback is executed for subproblems that are in depth 
- * 0, 7, 14, ... of the branching tree. A frequency of 0 means that propagation is only applied in preprocessing and 
- * at the root node. A frequency of -1 disables the propagator.
+ * The frequency defines the depth levels at which the propagation method \ref PROPEXEC is called.  For example, a
+ * frequency of 7 means, that the propagation callback is executed for subproblems that are in depth 0, 7, 14, ... of
+ * the branching tree. A frequency of 0 means that propagation is only applied in preprocessing and at the root node. A
+ * frequency of -1 disables the propagator.
  * \n
  * The frequency can be adjusted by the user. The property of the propagator only defines the default value of the 
- * frequency. If you want to have a more flexible control of when to execute the propagation algorithm, you have to assign
- * a frequency of 1 and implement a check at the beginning of your propagation algorithm whether you really 
- * want to execute the domain propagation or not. If you do not want to execute it, set the result code to SCIP_DIDNOTRUN.
+ * frequency.\n
+ * <b>Note:</b> If you want to have a more flexible control of when to execute the propagation algorithm, you have to
+ * assign a frequency of 1 and implement a check at the beginning of your propagation algorithm whether you really want
+ * to execute the domain propagation or not. If you do not want to execute it, set the result code to SCIP_DIDNOTRUN.
  *
- * \par PROP_DELAY: the default for whether the propagation method should be delayed, if other propagators or constraint handlers found domain reductions?
- * If the propagator's propagation method is marked to be delayed, it is only executed after no other propagator or 
- * constraint handler found a domain reduction in the current iteration of the domain propagation loop.
- * If the propagation method of the propagator is very expensive, you may want to mark it to be delayed until all cheap 
+ * \par PROP_DELAY: the default for whether the propagation method should be delayed, if other propagators or constraint handlers found domain reductions.
+ * If the propagator's propagation method is marked to be delayed, it is only executed after no other propagator or
+ * constraint handler found a domain reduction in the current iteration of the domain propagation loop.  If the
+ * propagation method of the propagator is very expensive, you may want to mark it to be delayed until all cheap
  * propagation methods have been executed.
  *
  *
  * @section PROP_DATA Propagator Data
  *
- * Below the header "Data structures" you can find a struct which is called "struct SCIP_PropData".
- * In this data structure, you can store the data of your propagator. For example, you should store the adjustable 
- * parameters of the propagator in this data structure.
- * If you are using C++, you can add propagator data as usual as object variables to your class.
+ * Below the title "Data structures" you can find a struct called <code>struct SCIP_PropData</code>.  In this data
+ * structure, you can store the data of your propagator. For example, you should store the adjustable parameters of the
+ * propagator in this data structure.  If you are using C++, you can add propagator data as object variables to your
+ * class as usual .
  * \n
  * Defining propagator data is optional. You can leave the struct empty.
  * 
@@ -1668,42 +1691,40 @@
  * At the bottom of "prop_mypropagator.c" you can find the interface method SCIPincludePropMypropagator(), which also 
  * appears in "prop_mypropagator.h".
  * \n
- * This method has only to be adjusted slightly.
- * It is responsible for notifying SCIP of the presence of the propagator by calling the method
- * SCIPincludeProp().
- * It is called by the user, if he wants to include the propagator, i.e., if he wants to use the propagator in his 
- * application.
+ * This method has only to be adjusted slightly.  It is responsible for notifying SCIP of the presence of the propagator
+ * by calling the method SCIPincludeProp(). It is called by the user, if he wants to include the propagator, i.e., if he
+ * wants to use the propagator in his application.
  *
- * If you are using propagator data, you have to allocate the memory for the data at this point.
- * You can do this by calling
+ * If you are using propagator data, you have to allocate the memory for the data at this point.  You can do this by
+ * calling
  * \code
  * SCIP_CALL( SCIPallocMemory(scip, &propdata) );
  * \endcode
- * You also have to initialize the fields in struct SCIP_PropData afterwards.
+ * You also have to initialize the fields in <code>struct SCIP_PropData</code> afterwards.
  *
- * You may also add user parameters for your propagator, see the method SCIPincludePropPseudoobj() in 
+ * You may also add user parameters for your propagator, see the method SCIPincludePropPseudoobj() in
  * src/scip/prop_pseudoobj.c for an example.
  *
  *
  * @section PROP_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Propagator
  *
- * Propagator plugins have two fundamental callback methods, namely the PROPEXEC method and the PROPRESPROP method.
- * These methods have to be implemented for every propagator; the other callback methods are optional.
- * In the C++ wrapper class ObjProp, the scip_exec() method and the scip_resprop() method (which correspond to the 
- * PROPEXEC callback and PROPRESPROP callback, respectively) are virtual abstract member functions.
- * You have to implement them in order to be able to construct an object of your propagator class.
+ * Propagator plugins have two fundamental callback methods, namely the \ref PROPEXEC method and the \ref PROPRESPROP
+ * method.  These methods have to be implemented for every propagator; the other callback methods are optional.  In the
+ * C++ wrapper class scip::ObjProp, the scip_exec() method and the scip_resprop() method (which correspond to the \ref
+ * PROPEXEC callback and \ref PROPRESPROP callback, respectively) are virtual abstract member functions. You have to
+ * implement them in order to be able to construct an object of your propagator class.
  *
  * Additional documentation to the callback methods can be found in type_prop.h.
  *
  * @subsection PROPEXEC
  *
- * The PROPEXEC callback is called during presolving and during the subproblem processing. 
- * It should perform the actual domain propagation, which means that it should tighten the variables' bounds.
- * The technique of domain propagation, which is the main workhorse of constraint programming, is called "node preprocessing" in the
- * Integer Programming community.
+ * The PROPEXEC callback is called during presolving and during the subproblem processing. It should perform the actual
+ * domain propagation, which means that it should tighten the variables' bounds.  The technique of domain propagation,
+ * which is the main workhorse of constraint programming, is called "node preprocessing" in the Integer Programming
+ * community.
  *
  * The PROPEXEC callback has the following options:
- *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
+ *  - detecting that the node is infeasible in the variables' bounds and can be cut off (result SCIP_CUTOFF)
  *  - reducing (i.e, tightening) the domains of some variables (result SCIP_REDUCEDDOM)
  *  - stating that the propagator searched, but did not find domain reductions, cutting planes, or cut constraints
  *    (result SCIP_DIDNOTFIND)
@@ -1712,32 +1733,31 @@
  * 
  * @subsection PROPRESPROP
  *
- * If the propagator wants to support conflict analysis, it has to supply the PROPRESPROP method.
- * It also should call SCIPinferVarLbProp() or SCIPinferVarUbProp() in the domain propagation instead of SCIPchgVarLb() 
- * or SCIPchgVarUb() in order to deduce bound changes on variables.
- * In the SCIPinferVarLbProp() and SCIPinferVarUbProp() calls, the propagator provides a pointer to itself and an integer 
- * value "inferinfo" that can be arbitrarily chosen.
+ * If the propagator wants to support conflict analysis, it has to supply the PROPRESPROP method.  It also should call
+ * SCIPinferVarLbProp() or SCIPinferVarUbProp() in the domain propagation instead of SCIPchgVarLb() or SCIPchgVarUb() in
+ * order to deduce bound changes on variables.  In the SCIPinferVarLbProp() and SCIPinferVarUbProp() calls, the
+ * propagator provides a pointer to itself and an integer value "inferinfo" that can be arbitrarily chosen.
  *  
- * The propagation conflict resolving method PROPRESPROP must then be implemented, to provide the "reasons" for the bound
- * changes, i.e., the bounds of variables at the time of the propagation, that forced the propagator to set the
- * conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation
- * rule and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided
- * by calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
+ * The propagation conflict resolving method PROPRESPROP must then be implemented to provide the "reasons" for the bound
+ * changes, i.e., the bounds of variables at the time of the propagation, which forced the propagator to set the
+ * conflict variable's bound to its current value. It can use the "inferinfo" tag to identify its own propagation rule
+ * and thus identify the "reason" bounds. The bounds that form the reason of the assignment must then be provided by
+ * calls to SCIPaddConflictLb() and SCIPaddConflictUb() in the propagation conflict resolving method.
  *
  * See the description of the propagation conflict resolving method \ref CONSRESPROP of constraint handlers for 
  * further details.
  *
- * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.
- * Although this is viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod,
- * it will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check
- * how effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
+ * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.  Although
+ * this is viable approach to circumvent the implementation of the usually rather complex conflict resolving method, it
+ * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
+ * effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
  * consider to implement the conflict resolving method.
  *
  *
  * @section PROP_ADDITIONALCALLBACKS Additional Callback Methods of a Propagator
  *
- * The additional callback methods need not to be implemented in every case.
- * They can be used, for example, to initialize and free private data.
+ * The additional callback methods do not have to be implemented in every case.  They can be used, for example, to
+ * initialize and free private data.
  *
  * @subsection PROPFREE
  *
@@ -1752,11 +1772,11 @@
  *    propdata = SCIPpropGetData(prop);
  *    assert(propdata != NULL);
  *
- *   SCIPfreeMemory(scip, &propdata);
+ *    SCIPfreeMemory(scip, &propdata);
  *
- *   SCIPpropSetData(prop, NULL);
+ *    SCIPpropSetData(prop, NULL);
  *
- *   return SCIP_OKAY;
+ *    return SCIP_OKAY;
  * }
  * \endcode
  * If you have allocated memory for fields in your propagator data, remember to free this memory 
@@ -1766,8 +1786,8 @@
  *
  * @subsection PROPINIT
  *
- * The PROPINIT callback is executed after the problem was transformed.
- * The propagator may, e.g., use this call to initialize his propagator data.
+ * The PROPINIT callback is executed after the problem was transformed.  The propagator may, e.g., use this call to
+ * initialize its propagator data.
  *
  * @subsection PROPEXIT
  *
@@ -3374,7 +3394,7 @@
 /**@page DEBUG Debugging
  *
  *  If you want to debug your own code that uses SCIP, there are some tricks that we collect as
- *  follows - check whether one of these helps in your case.
+ *  in the following - check whether one of these helps in your case.
  * 
  *  - Use the debug mode (<code>make OPT=dbg</code>, see \ref MAKE) and run the code.
  *  - Use asserts in your code (see \ref CODE).
@@ -3390,7 +3410,7 @@
  *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use. This is
  *    almost always only useful after a <code>SCIPfree()</code> call.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
- *    you define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
+ *    you can define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
  *    containing a solution in SCIP format (see \ref EXAMPLE_2). 
  *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
  * 
@@ -3465,7 +3485,7 @@
  * written solution information to file <check/p0033.sol>
  * \endcode
  * 
- * If we afterwards comment in 
+ * If we afterwards use
  * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
  * it will output 
  * \code
@@ -3690,7 +3710,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page CHG1 Changes between SCIP 0.9 and SCIP 1.0
+/**@page CHG1 Interface changes between SCIP 0.9 and SCIP 1.0
  *
  *  @section CHGPARAM New parameters
  * 
@@ -3703,8 +3723,24 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page CHG2 Changes between SCIP 1.0 and SCIP 1.1
+/**@page CHG2 Interface changes between SCIP 1.0 and SCIP 1.1
  *
+ * - <code>SCIPcreateChild()</code> has a new last parameter giving an estimate for value of best feasible solution in
+ *   the subtree to be created. One possibility is to use <code>SCIPgetLocalOrigEstimate(scip)</code> for this value.
+ * 
+ * - The callback \ref CONSCHECK in the constraint handlers now has a new parameter <code>printreason</code> that tells
+ *   a constraint handler to output the reason for a possible infeasibility of the solution to be checked using
+ *   <code>SCIPinfoMessage()</code>. Have a look at one of the constraint handlers implemented in SCIP to see how it
+ *   works. This methodolgy makes it possible to output the reason of a violation in human readable form, for instance,
+ *   for the check at the end of a SCIP run, where the obtained best solution is checked against the original formulation.\n
+ *   This change often has little effect on C-implementations, since this parameter can be safely ignored with respect to
+ *   the correctness of the code. The corresponding C++ method <code>scip::ObjConshdlr::scip_check()</code>, however, has
+ *   to be extended and will not compile otherwise.
+ *
+ * - <code>SCIPcheckSolOrig()</code> is restructured. The last two parameters have changed. They are now bools indicating
+ *   whether the reason for the violation should be printed to the standard output and whether all violations should be
+ *   printed. This reflects the changes in the constraint handlers above, which allow the automization of the feasibility
+ *   test. The pointers to store the constraint handler or constraint are not needed anymore.
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
