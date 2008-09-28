@@ -590,7 +590,7 @@
  *
  *  <b>Note:</b> You do not have to worry about nlockspos and nlocksneg. These integer values are given as 
  *  parameter of the CONSLOCK callback (see type_cons.h). Just use these variables in the above described 
- *  fashion <b>without</b> adding or  subtracting anything to them. In case of the knapsack constrints this
+ *  fashion <b>without</b> adding or subtracting anything to them. In case of the knapsack constraints this
  *  method looks like this.
  *
  *  \code
