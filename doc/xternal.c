@@ -727,7 +727,7 @@
  * If you want to implement preprocessing methods or other methods that modify the constraint data, you have to
  * implement the CONSTRANS method and create a copy of the constraint data.
  *
- * Here is an example, which is taken from the logicor constraint handler:
+ * Here is an example, which is taken from the \ref cons_knapsack.c "knapsack constraint handler":
  * \code
  * static
  * SCIP_DECL_CONSTRANS(consTransKnapsack)
