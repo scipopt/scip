@@ -121,13 +121,13 @@
  *      - <code>spx</code>: SoPlex LP-solver (default)
  *      - <code>xprs</code>: XPress LP-solver
  *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
- * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available for SoPlex and CLP)
+ *      - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available for SoPlex and CLP)
  *
- * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on(default) or off, respectively.
+ *      - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on(default) or off, respectively.
  *      - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized(default) or debug version of ZIMPL, if ZIMPL support is enabled.\n
- * If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
+ *      - If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
  * 
- * - <code>READLINE=\<true|false\></code> Turns support via the readline library on(default) or off, respectively.
+ *      - <code>READLINE=\<true|false\></code> Turns support via the readline library on(default) or off, respectively.
  *
  * There are additional parameters for Linux/Gnu compilers:
  *
@@ -238,10 +238,10 @@
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Open the new files with a text editor and replace all occurrences of "xxx" by "subtour".
  * -# Adjust the \ref CONS_PROPERTIES "properties of the constraint handler".
- * -# Define the \ref CONS_DATA "constraint data and the constraint handler data".
+ * -# Define the \ref CONS_DATA "constraint data and the constraint handler data". This is optional.
  * -# Implement the \ref CONS_INTERFACE "interface methods".
  * -# Implement the \ref CONS_FUNDAMENTALCALLBACKS "fundamental callback methods".
- * -# Implement the \ref CONS_ADDITIONALCALLBACKS "additional callback methods".
+ * -# Implement the \ref CONS_ADDITIONALCALLBACKS "additional callback methods". This is optional.
  *
  * 
  * @section CONS_PROPERTIES Properties of a Constraint Handler
@@ -258,7 +258,7 @@
  * Names have to be unique: no two constraint handlers may have the same name.
  *
  * \par CONSHDLR_DESC: the description of the constraint handler.
- * This string is printed as description of the constraint handler in the interactive shell.
+ * This string is printed as description of the constraint handler in the interactive shell of SCIP.
  *
  * \par CONSHDLR_SEPAPRIORITY: the priority of the constraint handler for separation.
  * In each separation round during the price-and-cut loop of the subproblem processing or during the separation loop
@@ -623,6 +623,8 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your constraint handler data, remember to free this memory
+ * before freeing the constraint handler data itself.
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  *
@@ -2124,10 +2126,6 @@
  *
  * 
  * @section NODESEL_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Node Selector
-
-fulll two requirements: Selecting a node to be processed
-next and, given two nodes, deciding which of them is favored by its selection rule. The rst
-task is implemented in the NODESELSELECT callback, the second one in the NODESELCOMP
  *
  * Node selector plugins have two fundamental callback methods, namely the NODESELSELECT method and the NODESELCOMP method.
  * These methods have to be implemented for every node selector; the other callback methods are optional.
@@ -2159,7 +2157,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *
  * The following methods provide access to the various types of leaf nodes:
  * - SCIPgetPrioChild() returns the child of the current node with the largest node selection priority, as assigned by the
- *   branching rule, 
+ *   branching rule.
  *   If no child is available (for example, because the current node was pruned), a NULL pointer is returned.
  * - SCIPgetBestChild() returns the best child of the current node with respect to the node selector's ordering relation as
  *   defined by the \ref NODESELCOMP callback. If no child is available, a NULL pointer is returned.
@@ -2281,7 +2279,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * These are given as compiler defines.
  * In the C++ wrapper class, you have to provide the primal heuristic properties by calling the constructor
  * of the abstract base class ObjHeur from within your constructor.
- * Of course, all of them are of relevance, but the most important ones for controling the performance
+ * Of course, all of them are of relevance, but the most important ones for controlling the performance
  * usually are HEUR_FREQ and HEUR_TIMING.
  * The properties you have to set have the following meaning:
  *
@@ -2500,7 +2498,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
 /**@page RELAX How to add relaxation handlers
  *
  * SCIP provides specific support for LP relaxations of constraint integer programs. In addition, relaxation handlers, 
- * also called relaxators, can be used to include other relaxations, e.g., Lagrange relaxations or semidefinite 
+ * also called relaxators, can be used to include other relaxations, e.g. Lagrange relaxations or semidefinite 
  * relaxations. The relaxation handler manages the necessary data structures and calls the relaxation solver to generate dual 
  * bounds and primal solution candidates.
  * \n
@@ -2508,7 +2506,6 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * the user defined problem data, the LP information, or the integrality conditions), or be provided by the constraint
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation. 
  * \n
- * A complete list of all primal heuristics contained in this release can be found \ref RELAXATORS "here".
  *
  * In the following, we explain how the user can add an own relaxation handler using the C interface. It is very easy to 
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion, 
@@ -2547,7 +2544,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * This string is printed as description of the relaxation handler in the interactive shell.
  *
  * \par RELAX_PRIORITY: the priority of the relaxation handler.
- * In each relaxation solving round during the subproblem processing, the included relaxation handlers and the 
+ * During each relaxation solving round, the included relaxation handlers and the 
  * price-and-cut loop for solving the LP relaxation are called in a predefined order, which is given by the priorities 
  * of the relaxation handlers. 
  * First, the relaxation handlers with non-negative priority are called in the order of decreasing priority.
@@ -2557,8 +2554,8 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * Usually, you will have only one relaxation handler in your application and thus only have to decide whether it should 
  * be called before or after solving the LP relaxation. For this decision you should consider the complexity of 
  * the relaxation solving algorithm and the impact of the resulting solution: if your relaxation handler provides a fast 
- * algorithm that usually has a high impact (i.e., the relaxation is a good approximation of the convex hull of the 
- * feasible region of the subproblem and the solution severely reduces the primal-dual gap), it should have a non-negative 
+ * algorithm that usually has a high impact (i.e. the relaxation is a good approximation of the 
+ * feasible region of the subproblem and the solution severely improves the dual bound), it should have a non-negative 
  * priority.
  * \n
  * Note that for certain applications, it is useful to disable the LP relaxation and only use your custom relaxation.
@@ -2613,7 +2610,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  * Additional documentation to the callback methods can be found in type_relax.h.
  *
  * @subsection RELAXEXEC
- * The RELAXEXEC is called in each relaxation solving round during node processing. It should solve the current 
+ * The RELAXEXEC is called in each relaxation solving round. It should solve the current 
  * subproblem's relaxation.  
  *
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding 
@@ -2640,7 +2637,7 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *    relaxation (result SCIP_SEPARATED)
  *  - stating that the relaxation handler solved the relaxation and should not be called again on the same relaxation 
  *    (result SCIP_SUCCESS)
- *  - interrupting the solving process to wait for additional input, e.g., cutting planes (SCIP_SUSPENDED) 
+ *  - interrupting the solving process to wait for additional input, e.g., cutting planes (result SCIP_SUSPENDED) 
  *  - stating that the separator was skipped (result SCIP_DIDNOTRUN).
  *
  * In the above criteria, "the same relaxation" means that the LP relaxation stayed unmodified. This means in particular
@@ -2885,6 +2882,8 @@ task is implemented in the NODESELSELECT callback, the second one in the NODESEL
  *    return SCIP_OKAY;
  * }
  * \endcode
+ * If you have allocated memory for fields in your file reader data, remember to free this memory
+ * before freeing the file reader data itself.
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
  */
