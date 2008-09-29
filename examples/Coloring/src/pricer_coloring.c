@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.c,v 1.2 2008/09/26 13:27:46 bzfgamra Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.c,v 1.3 2008/09/29 13:25:07 bzfgamra Exp $"
 
 /**@file   pricer_coloring.c
  * @brief  coloring variable pricer
@@ -26,8 +26,8 @@
  * variables can improve the current LP solution.
  * This is done by computing a maximal weighted stable set on the current 
  * graph with dual-variables of the node constraints as weights.
- * A stable set can improve the solution, if the weigth of the set is larger one,
- * since it then has negative reduced costs, which are 1 - weigth of the set.
+ * A stable set can improve the solution, if the weight of the set is larger one,
+ * since it then has negative reduced costs, which are 1 - weight of the set.
  *
  * At first, a greedy-method tries to compute such a stable set, if it fails,
  * the tclique-algorithm is used on the complementary graph, 

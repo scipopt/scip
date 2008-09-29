@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_csol.c,v 1.3 2008/09/28 21:44:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_csol.c,v 1.4 2008/09/29 13:25:07 bzfgamra Exp $"
 
 /**@file   reader_csol.c
  * @brief  CSOL file writer
@@ -25,7 +25,7 @@
  * These files have the following structure:
  * The first line contains the name of the problem, the number of colors used in the
  * solution and - optional - the name of the algorithm that computed this solution.
- * The second line lists the colors of the nodes, seperated by spaces.
+ * The second line lists the colors of the nodes, separated by spaces.
  * It is sorted increasingly by the node ids, the numbers for the colors start with 0.
  */
 

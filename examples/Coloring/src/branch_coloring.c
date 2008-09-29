@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.c,v 1.3 2008/09/26 13:27:45 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_coloring.c,v 1.4 2008/09/29 13:25:07 bzfgamra Exp $"
 
 /**@file   branch_coloring.c
  * @brief  coloring branching rule
@@ -37,9 +37,9 @@
  * branch-and-bound node, choose the most fractional variable and the corresponding 
  * stable set s1. Now choose two nodes v, w and another stable set s2, such that
  * v is part of both stable sets, whereas w is part of exactly one of the stable sets.
- * Now create two sons of the current node, one with the restriction SAME(v,w), 
+ * Create two sons of the current node, one with the restriction SAME(v,w), 
  * the other one with restriction DIFFER(v,w). Therefor, each node gets a constraint
- * of type cons_storeGraph, that considers the branching decision and assures, that 
+ * of type cons_storeGraph, that enforces the branching decision and assures, that 
  * each coloring in the respective subgraph colors both nodes in the same color / 
  * in different colors by fixing stable sets to 0 that violate this constraint.
  *

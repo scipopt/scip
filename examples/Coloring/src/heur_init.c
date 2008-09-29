@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_init.c,v 1.2 2008/09/26 13:27:45 bzfgamra Exp $"
+#pragma ident "@(#) $Id: heur_init.c,v 1.3 2008/09/29 13:25:07 bzfgamra Exp $"
 
 /**@file   heur_init.c
  * @brief  initial primal heuristic for coloring
@@ -36,7 +36,7 @@
  * that cause the greatest reduction of the number of violated edges, or if no such combination
  * exists, the node and color that cause the smallest increase of that number.
  * The former color of the node is forbidden for a couple of iterations in order to give the 
- * possibility to leave al local minimum.
+ * possibility to leave a local minimum.
  * 
  * As long as the tabu-search finds a solution with the given number of colors, this number is reduced
  * by 1 and the tabu-search is called another time. If no coloring was found after a given number
@@ -50,7 +50,7 @@
  * changed by the param <heuristics/initcol/maxiter>. 
  * A great effect is also obtained by changing the parameters <heuristics/initcol/tabubase> and 
  * <heuristics/initcol/tabugamma>, which distinguish the number of iterations for which the former color of 
- * a node is forbidden, more precisely this number is <tabubase> + ncritical * <tabugamma>, where 
+ * a node is forbidden, more precisely this number is \<tabubase\> + ncritical * \<tabugamma\>, where 
  * ncritical is the number of nodes, that are incedent to violated edges.
  * Finally, the level of output and the frequency of status lines can be changed by <heuristics/initcol/output>
  * and <heuristics/initcol/dispfreq>.

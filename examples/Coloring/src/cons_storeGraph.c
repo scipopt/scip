@@ -27,33 +27,34 @@
  * and the two nodes on which this restriction is applied.
  * When the node corresponding to the constraint is examined the first time, the constraint
  * creates a graph, that takes into account all the restrictions, that are active at this node.
- * For this, it takes the graph of the constraint related to the branch-and-bound father of the
- * current node. At the root, this is the original (preprocessed) graph. At any other node, 
- * this graph takes into account all restrictions up to this node, so that only the last one,
- * the one saved at the current node, must be added. 
+ * At the root, this is the original (preprocessed) graph.
+ * At any other node, it takes the graph of the constraint related to the branch-and-bound father of the
+ * current node and modifies it so that all restrictions up to this node are respected.
+ * Since the graph in the branch-and-bound father respects all restrictions down to that node,
+ * only the last requirement, the one saved at the current node, must be added. 
  * This is done as follows: Adding a DIFFER(v,w) constraint is easy, since it suffices to add 
  * an edge between v and w. For a SAME(v,w) constraint, the original idea is to collapse the 
  * nodes v and w into one single vertex. Since this is not possible in the tclique-graph 
- * datastructure, we introduce new edges in the graph, so that v and w have the same neighbourhood.
+ * data structure, we introduce new edges in the graph, so that v and w have the same neighborhood.
  * Hence, in the pricing routine, each new stable set will either contain both nodes or none of them,
- * since we create (inclusion-) minimal sets. 
+ * since we create (inclusion-) maximal sets. 
  *
  * This does of course not hold for sets created in a higher level of the branch-and-bound tree 
  * or in another subtree. In order to forbid all of these sets that don't fulfill the current 
- * restriction, a propagation is started when the node is entered the first time and later, if 
- * it is reentered after the creation of new variables in another subtree. The propagation
+ * restrictions, a propagation is started when the node is entered the first time and repeated later, if 
+ * the node is reentered after the creation of new variables in another subtree. The propagation
  * simply fixes all variables to 0 that represent a stable set, that does not fulfill the 
  * restriction at the current node.
  *
  * The information about all fusions of nodes is stored, so that the nodes constituting a union 
  * can be accessed easily. Each union has a representative and a set of nodes, whereas each
  * node knows the representative of the union it belongs to. At the beginning, each node forms
- * its own union and therefore each node also represents this union, consisting of onlx this node.
- * Lateron, some nodes represent unions of several nodes, while other nodes are part of a union which
+ * its own union and therefore each node also represents this union, consisting of only this node.
+ * Later on, some nodes represent unions of several nodes, while other nodes are part of a union which
  * they don't represent, so they have another node as representative. The representatives of 
  * the nodes are returned by the methods COLORconsGetRepresentative() / COLORconsGetRepresentatives(),
  * the union represented by a node is returned by COLORconsGetUnion(), the array of unions,
- * indexed by the representing node is returned by COLORconsGetUnions().
+ * indexed by the representing node, is returned by COLORconsGetUnions().
  * 
  */
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.5 2008/09/29 08:38:54 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.6 2008/09/29 13:25:07 bzfgamra Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -25,7 +25,7 @@
  * We are looking for two nodes v and w, that are not adjacent in the current 
  * graph and regard the following two constraints: SAME(v,w) and DIFFER(v,w).
  * More information about the meaning of these constraints can be found in the
- * documentation of the other branchrule in branch_coloring.c.
+ * documentation of the other branching rule in branch_coloring.c.
  *
  * This branching rule puts some more effort into the choice of the two nodes and 
  * performs a strongbranching, which means, that for every possible choice of two nodes,
@@ -46,7 +46,7 @@
  * are investigated with strongbranching.
  *
  * This code is not optimized and in most cases inferior to the standard branching rule,
- * it is only a demonstration of how to perform strongbranchings on constraints!
+ * it is only a demonstration of how to perform strongbranching on constraints!
  *  
  */
 

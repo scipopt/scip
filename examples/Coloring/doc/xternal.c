@@ -60,6 +60,22 @@
  * stable sets during the solution process if they can improve the current LP solution.
  *
  * Further information about particular modules like the pricing routine and the 
- * branching rule can be found in the corresponding (pricer_coloring.c and branch_coloring.c).
+ * branching rule can be found in the documentation of the corresponding files.
+ *
+ * The pricer <a href="pricer__coloring_8c.html#_details">pricer_coloring.c</a> shows how to 
+ * perform column generation in SCIP.
+ * The constraint handler <a href="cons__storeGraph_8c.html#_details">cons_storeGraph.c</a> demonstrates
+ * how to store branching decisions at nodes und enforce them by propagation.
+ * The default branching rule <a href="branch__coloring_8c.html#_details">branch_coloring.c</a> describes 
+ * how these constraints are added to the branch-and-bound nodes.
+ * Some more sophisticated approaches for the branching, especially a strongbranching on these constraints,
+ * can be found in the second branching rule <a href="branch__strongcoloring_8c.html#_details">branch_strongcoloring.c</a>.
+ * The starting solution is computed by a starting heuristic which is described in 
+ * <a href="heur__init_8c.html#_details">heur_init.c</a>.
+ * The organization of the data for the problem is described in the problem data file 
+ * (<a href="probdata__coloring_8c.html#_details">probdata_coloring.c</a>).
+ * The file readers are described in <a href="reader__col_8c.html#_details">reader_col.c</a>
+ * and <a href="reader__csol_8c.html#_details">reader_csol.c</a>.
+ * 
  *
  */

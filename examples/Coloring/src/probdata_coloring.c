@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.6 2008/09/28 22:59:28 bzfviger Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.7 2008/09/29 13:25:07 bzfgamra Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
@@ -27,7 +27,7 @@
  * an array with all stable sets and corresponding variables.
  *
  * The preprocessing deletes nodes that have a lower degree than a maximum clique.
- * Additionally, it also deletes nodes, that have a dominated neighbourhood. 
+ * Additionally, it also deletes nodes, that have a dominated neighborhood. 
  * For further information, look at the comments for the method preprocessGraph().
  *
  * The deleted nodes and the relation between the nodes of the original graph and
@@ -35,7 +35,7 @@
  * of the preprocessed problem to a solution for the original graph and vice versa.
  *
  * Each variable has a pointer of type SCIP_VARDATA* that is used in this case to store
- * an int representing the number of the stable set. With the aid of this int, the 
+ * an integer representing the number of the stable set. With the aid of this int, the 
  * corresponding stable set can be found in the array returned by COLORprobGetStableSets().
  * This array contains all stable sets and is also used to check whether a stable set
  * found by the pricer is really new, which can be done by calling COLORprobStableSetIsNew(). 
@@ -81,7 +81,7 @@ struct SCIP_ProbData
  *  that can be deleted and easily colored later.
  *
  *  Foundation of these methods is the computation of a maximum clique C with M nodes. 
- *  After this computation The following two steps are repeated until no node was deleted
+ *  After this computation the following two steps are repeated until no node was deleted
  *  in the last iteration:
  *  
  *  1: Low-Degree
