@@ -1,11 +1,11 @@
-#--- $Id: make.sunos.sparc.sun.opt,v 1.9 2008/09/25 19:55:28 bzfberth Exp $
+#--- $Id: make.sunos.sparc.sun.opt,v 1.10 2008/09/29 13:21:29 bzfberth Exp $
 CC		=	cc
 CXX		=	CC
 LINKCC		=	cc
 LINKCXX		=	CC
-FLAGS		+=	-DNDEBUG -I/client/include -errtags=yes -erroff=E_STATEMENT_NOT_REACHED # -DROUNDING_FE
+FLAGS		+=	-DNDEBUG -I/client/include # -DROUNDING_FE
 OFLAGS		+=	-xO5 -xprefetch=auto -xipo=2
-CFLAGS		+=	-Xa
+CFLAGS		+=	-Xa -errtags=yes -erroff=E_STATEMENT_NOT_REACHED
 CXXFLAGS	+=
 AR		=	CC
 ARFLAGS		=	$(FLAGS) $(CXXFLAGS) -xar -o
