@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sorttpl.c,v 1.11 2008/08/29 16:44:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sorttpl.c,v 1.12 2008/09/29 16:53:06 bzfberth Exp $"
 
 /**@file   sorttpl.c
  * @brief  template functions for sorting
@@ -134,7 +134,6 @@
       x = y;        \
       y = temp;     \
    }
-
 
 
 /** shellsort an array of data elements; use it only for arrays smaller than 25 entries */
