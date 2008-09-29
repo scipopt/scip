@@ -551,14 +551,14 @@
       <a name="Q29">Why are not all variables in the LP?</a>
     </p>
     <p class="a">
-      With SCIPgetLPColsData() you are getting the columns of the current LP relaxation. It is 
+      With <code>SCIPgetLPColsData()</code> you are getting the columns of the current LP relaxation. It is 
       correct that not all variables are necessarily part of the current LP relaxation. In 
       particular in branch-and-price, the variables generated at one node in the tree are not 
       included in the LP relaxation of a different node (if the other node is not a descendant 
       of the first node). But even if you are still at the same node or at a descendant node, 
       SCIP can remove columns from the LP if they are 0 in the LP relaxation. This dynamic 
       column deletion can be avoided by setting the "removable" flag to FALSE in the 
-      SCIPcreateVar() call.
+      <code>SCIPcreateVar()</code> call.
     </p>
     <p class="q">
       <a name="Q30">I only implemented one pricer, why is there a second one, called variable pricer?</a>
@@ -567,16 +567,19 @@
       As described in the <a href="#Q29">previous question</a>, it may happen, that some variables are not in the
       current LP relaxation.
       Nevertheless, these variables still exist, and SCIP can calculate reduced costs and add them
-      to the LP again if necessary. This is the job of the variable pricer.
+      to the LP again if necessary. This is the job of the variable pricer. It is done, before all
+      other pricers are called.
     </p>
     <p class="q">
       <a name="Q31">How can I delete variables?</a>
     </p>
     <p class="a">
       Currently, it is not possible to delete variables during solving. A variable can be removed
-      from the problem by SCIPdelVar(), but it remains in the corresponding constraints. Instead of that,
-      you can either fix the variable to zero by SCIPfixVar(), which fixes the variable globally or
-      use SCIPchgVarUbNode() and SCIPchgVarLBNode() which changes the bounds only for the current subtree.
+      from the problem by <code>SCIPdelVar()</code>, but it remains in the corresponding constraints. Instead of that,
+      you should either fix the variable to zero by <code>SCIPfixVar()</code>, which fixes the variable globally or
+      use <code>SCIPchgVarUbNode()</code> and <code>SCIPchgVarLBNode()</code> which changes the bounds only for the current subtree.
+    </p>
+    <p class="a">
       We are working on this problem and expect to provide functionalities for the deletion of
       variables in the next release.
     </p>
@@ -585,14 +588,21 @@
     </p>
     <p class="a">
       This is a very common problem in Branch-And-Price, which you can deal nicely with using SCIP.
-      There are basically three different options for dealing with that. The first one is to add
+      There are basically three different options for dealing with that.
+    </p>
+    <p class="a">
+      The first one is to add
       binary variables to the problem that capture the branching decisions and add constraints that
       describe their meaning in order to enforce them.
-      The second one is the introduction of "marker constraints"
-      that are added to the branching nodes and store all the information needed
-      (see the <a href="#Q34">next question</a>)
+    </p>
+    <p class="a">
+      If you have complex pricer data like a graph and need to update it after each branching decision,
+      you should introduce "marker constraints" that are added to the branching nodes and store
+      all the information needed (see the <a href="#Q34">next question</a>).
+    </p>
+    <p class="a">
       The third way to deal with this is the usage of an event handler like described in 
-      <a href="#Q35">this question</a>.
+      <a href="#Q35">How can an event handler help me with my branching?</a>.
     </p>
     <p class="q">
       <a name="Q34">I want to store some information at the nodes and update my pricer's data structures
@@ -601,24 +611,32 @@
     <p class="a">
       This can be done by creating a new constraint handler with constraint data that can
       store the information and do/undo changes in the pricer's data structures.
+    </p>
+    <p class="a">
       In general, all methods of the constraint handler (check, enforcing, separation, ...) should
       be empty (which means to always return status = SCIP_FEASIBLE for the fundamental callbacks),
       just as if all constraints of this type are always feasible. The important callbacks are the 
       CONSACTIVE and CONSDEACTIVE methods.
+    </p>
+    <p class="a">
       The CONSACTIVE method is always called when a node is entered on which the constraint has 
       been added. Here, you will apply the changes to your pricing data structures. The CONSDEACTIVE
       method will be called if the node is left again. Since the CONSACTIVE and CONSDEACTIVE methods of different 
       constraints are always called in a stack-like fashion, this should be exactly what you need.
-                                                                                               
+    </p>
+    <p class="a">
       If you have such a constraint handler, just create constraints of this type and add them to the 
-      child nodes of your branching by SCIPaddConsNode(). Make sure to set the "stickingatnode" flag
-      to TRUE in order to prevent SCIP from moving the constraint around in the tree and set the
-      "initial" flag to FALSE so that the constraint will not be part of the LP.
+      child nodes of your branching by <code>SCIPaddConsNode()</code>. Make sure to set the "stickingatnode" flag
+      to TRUE in order to prevent SCIP from moving the constraint around in the tree.
+    </p>
+    <p class="a">
       If you need to fix variables for enforcing your branching decision, this can be done
       in the propagation callback of the constraint handler. In this case, since in general, each node is
       only propagated once, you will have to check in your CONSACTIVE method, whether new variables where
       added after your last propagation of this node. If this is the case, you will have to mark this node
-      for repropagation by SCIPrepropagateNode().
+      for repropagation by <code>SCIPrepropagateNode()</code>.
+    </p>
+    <p class="a">
       You can look into the constraint handler of the coloring problem (examples/Coloring/src/cons_storeGraph.c)
       to get a sample for a constraint handler that does all these things.
     </p>
@@ -637,14 +655,16 @@
     <p class="a">
       If your pricer works correct and makes sure that the same column is added at most once in one
       pricing round, this behavior is probably caused by the PRICER_DELAY property of your pricer.
+    </p>
+    <p class="a">
       If it is set to FALSE, the following may have happened: The variable pricer
       (see <a href="#Q30">this question</a>) found a variable with negative dual feasibility that
       was not part of the current LP relaxation and added it to the LP. In the same pricing round,
       your own pricer found the same column and created a new variable for it. This might happen,
       since your pricer uses the same dual values as the variable pricer. To avoid this behavior,
-      set PRICER_DALAY to TRUE, so that the LP is reoptimized after the variable pricer added
-      variables to the LP. You can find some more information about the PRICER_DALAY property
-      at <a href="PRICER.html">How to add variable pricers </a>.
+      set PRICER_DELAY to TRUE, so that the LP is reoptimized after the variable pricer added
+      variables to the LP. You can find some more information about the PRICER_DELAY property
+      at <a href="http://scip.zib.de/doc/html/PRICER.html#PRICER_PROPERTIES">How to add variable pricers </a>.
     </p>
     <p class="q">
       <a name="Q37">Which default plugins should be deactivated in order to get a working branch-and price code?</a>
@@ -653,7 +673,7 @@
       In most cases, you should deactivate separators, since cutting planes that are added to your master problem
       may destroy your pricing problem. Additionally, it may be necessary to deactivate some presolvers,
       mainly the dual fixing presolver. This can be done by not including these plugins into SCIP, namely
-      removing the SCIPincludeSepa***() and SCIPincludePresol***() calls in scipdefplugins.c or your own 
+      removing the <code>SCIPincludeSepaXXX()</code> and <code>SCIPincludePresolXXX()</code> calls in scipdefplugins.c or your own 
       plugins-including files. Alternatively, you can set the parameters maxrounds and 
       maxroundsroot to zero for all separators and maxrounds to zero for the presolvers.
     </p>
