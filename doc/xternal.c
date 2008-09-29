@@ -2941,11 +2941,11 @@
 /**@page DIALOG How to add dialogs
  *
  * SCIP comes with a command line shell which allows the user to read in problem instances, modify the solver's 
- * parameters, initiate the optimization, and display certain statistics and solution information. This shell consists 
+ * parameters, initiate the optimization and display certain statistics and solution information. This shell consists 
  * of dialogs, which are organized as a tree in SCIP. A node of this tree which is not a leaf represents a menu in 
  * the shell and the children of this node correspond to the entries of this menu (which can again be menus). All 
  * different dialogs are managed by a dialog handler, which, in particular, is responsible for executing the dialog 
- * corresponding to the user's command in the shell. That is, the concept of a dialog handler is different to that 
+ * corresponding to the user's command in the shell. The concept of a dialog handler is different to that 
  * of a constraint handler, which is used to manage objects of the same structure, see \ref CONS. In particular, SCIP 
  * features only one dialog handler (dialog_default.h), whereas there may exist different constraint handlers. 
  * \n
@@ -2955,7 +2955,7 @@
  * We give the explanation for creating an own source file for each additional dialog. Of course, you can collect 
  * different dialogs in one source file. Take src/scip/dialog_default.c, where all default dialog plugins are collected, as an 
  * example.
- * As all other default plugins, the default dialog plungins and the template dialog are written in C. C++ users can easily
+ * As all other default plugins, the default dialog plugin and the template dialog are written in C. C++ users can easily
  * adapt the code by using the ObjDialog wrapper base class and implement the scip_...() virtual methods instead of the
  * SCIP_DECL_DIALOG... callback methods.
  *
