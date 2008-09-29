@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.68 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.69 2008/09/29 23:12:42 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -1617,14 +1617,14 @@ SCIP_RETCODE readLPFile(
 /** hash key retrieval function for variables */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyVar)
-{
+{  /*lint --e{715}*/
    return elem;
 }
 
 /** returns TRUE iff the indices of both variables are equal */
 static
 SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
-{
+{  /*lint --e{715}*/
    if ( key1 == key2 )
       return TRUE;
    return FALSE;
@@ -1633,7 +1633,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqVar)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValVar)
-{
+{  /*lint --e{715}*/
    assert( SCIPvarGetIndex((SCIP_VAR*) key) >= 0 );
    return (unsigned int) SCIPvarGetIndex((SCIP_VAR*) key);
 }
