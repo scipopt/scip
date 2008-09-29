@@ -1,4 +1,4 @@
-x<div id="faq">
+<div id="faq">
 
     <h4><a name="Section0">Sections</a></h4>
     <ul>
