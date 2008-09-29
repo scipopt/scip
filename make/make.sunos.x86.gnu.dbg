@@ -1,0 +1,13 @@
+#--- $Id: make.sunos.x86.gnu.dbg,v 1.1 2008/09/29 08:55:24 bzfviger Exp $
+FLAGS		+=	# -DROUNDING_FE
+OFLAGS		+=	-O0 -g
+CFLAGS		+=	$(GCCWARN) -funit-at-a-time
+CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
+ARFLAGS		=	crs
+LDFLAGS		+=      -Bstatic
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses
