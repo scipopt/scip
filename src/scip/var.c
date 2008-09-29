@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.237 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.238 2008/09/29 21:33:03 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -40,6 +40,8 @@
 #include "scip/prop.h"
 #include "scip/debug.h"
 
+#define MAXIMPLSCLOSURE 100  /**< maximal number of descendants of implied variable for building closure
+                              *   in implication graph */
 
 /*
  * hole, holelist, and domain methods
@@ -6183,6 +6185,10 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
    implvars = SCIPimplicsGetVars(implvar->implics, implvarfixing);
    impltypes = SCIPimplicsGetTypes(implvar->implics, implvarfixing);
    implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
+
+   /* if variable has too many implications, the implication graph may become too dense */
+   if( nimpls > MAXIMPLSCLOSURE )
+      return SCIP_OKAY;
 
    /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
     * implvars[i] is fixed, s.t. the implication y == varfixing -> z <= b / z >= b is deleted; this affects the
