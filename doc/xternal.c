@@ -97,13 +97,14 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CODE Coding style guidelines
  *
- * Here we explain how your code should look like, so it is easy for us to include it into the SCIP distribution.
+ * We follow the following coding style guidlines and we recommend to use it in your code.
  *
  * - Indentation is 3 spaces. No tabs anywhere in the code.
  * - Always only one declaration in a line.
  * - Braces are on a new line and not indented.
  * - Spaces around all operators.
  * - No spaces between control structure keywords like "if", "for", "while", "switch" and the corresponding brackets.
+ * - No spaces between a function name and the parenthesis in both the definition and function calls.
  * - Use assert() to show preconditions for the parameters, invariants and postconditions.
  * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a method name
  *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPisFeasEQ().
@@ -111,7 +112,7 @@
  * - Variable names should be all lower case.
  * - For each structure there is a typedef with the name in all upper case.
  * - Defines should be named all upper case.
- * - Document functions, parameters and variables doxygen conform.
+ * - Document functions, parameters, and variables in a doxygen conform way.
  *
  * As an example have a look at tree.c .
  */
