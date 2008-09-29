@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.312 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.313 2008/09/29 23:13:31 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -827,14 +827,16 @@ void consdataPrint(
    else
    {
       for( v = 0; v < consdata->nvars; ++v )
+      {
 #if 0
          SCIPinfoMessage(scip, file, "%+.15g<%s> ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]));
 #else
-      SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]),
-         SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY ? 'B' :
-         SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_INTEGER ? 'I' :
-         SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
+         SCIPinfoMessage(scip, file, "%+.15g<%s>[%c] ", consdata->vals[v], SCIPvarGetName(consdata->vars[v]),
+            SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_BINARY ? 'B' :
+            SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_INTEGER ? 'I' :
+            SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_IMPLINT ? 'I' : 'C');
 #endif
+      }
    }
    
    /* print right hand side */
@@ -6378,7 +6380,7 @@ SCIP_RETCODE aggregateConstraints(
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyLinearcons)
-{
+{  /*lint --e{715}*/
    /* the key is the element itself */ 
    return elem;
 }
@@ -6456,7 +6458,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    assert(scip != NULL);
 
    /* sorts the constraints */
-   SCIP_CALL( consdataSort(scip, consdata) );
+   SCIP_CALL_ABORT( consdataSort(scip, consdata) );
 
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
@@ -6987,7 +6989,6 @@ SCIP_RETCODE preprocessConstraintPairs(
          SCIP_CONSDATA* consdatadel;
          SCIP_Real lhs;
          SCIP_Real rhs;
-         int consindstay;
          int consinddel;
          
 
@@ -7025,7 +7026,6 @@ SCIP_RETCODE preprocessConstraintPairs(
             assert(!consdata1->upgraded);
             consstay = cons1;
             consdatastay = consdata1;
-            consindstay = c;
 
             consdel = cons0;
             consdatadel = consdata0;
@@ -7035,7 +7035,6 @@ SCIP_RETCODE preprocessConstraintPairs(
          {
             consstay = cons0;
             consdatastay = consdata0;
-            consindstay = chkind;
 
             consdel = cons1;
             consdatadel = consdata1;

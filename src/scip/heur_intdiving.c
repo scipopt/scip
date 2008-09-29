@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intdiving.c,v 1.20 2008/09/26 18:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_intdiving.c,v 1.21 2008/09/29 23:13:31 bzfheinz Exp $"
 
 /**@file   heur_intdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -518,16 +518,16 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
                 * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
                 */
 #ifdef NDEBUG
-            SCIP_RETCODE retstat;
-            nlpiterations = SCIPgetNLPIterations(scip);
-            retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
-            if( retstat != SCIP_OKAY )
-            { 
-               SCIPwarningMessage("Error while solving LP in Intdiving heuristic; LP solve terminated with code <%d>\n",retstat);
-            }
+               SCIP_RETCODE retstat;
+               nlpiterations = SCIPgetNLPIterations(scip);
+               retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+               if( retstat != SCIP_OKAY )
+               { 
+                  SCIPwarningMessage("Error while solving LP in Intdiving heuristic; LP solve terminated with code <%d>\n",retstat);
+               }
 #else
-            nlpiterations = SCIPgetNLPIterations(scip);
-            SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+               nlpiterations = SCIPgetNLPIterations(scip);
+               SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
 #endif
 
                if( lperror )

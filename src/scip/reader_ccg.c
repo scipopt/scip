@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.4 2008/09/22 19:16:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.5 2008/09/29 23:13:31 bzfheinz Exp $"
 
 /**@file   reader_ccg.c
  * @ingroup FILEREADERS 
@@ -50,7 +50,7 @@
 /*
  * Data structures
  */
-#define CCG_MAX_LINELEN               71      /**< the maximum length of any line is 70 + '\\0' = 71*/
+
 
 /* graph data structure */
 struct sparseGraph
@@ -202,11 +202,9 @@ SCIP_RETCODE getActiveVariables(
 static
 SCIP_RETCODE createEdgesFromRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_VAR**            vars,               /**< array of constraint variables */
    SCIP_Real*            vals,               /**< array of constraint values */
    int                   nvars,              /**< number of constraint variables */
-   int                   ntotalvars,         /**< number of variables */
    SparseGraph*          G                   /**< graph */
    )
 {
@@ -324,7 +322,7 @@ SCIP_RETCODE handleLinearCons(
    SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
 
    /* print constraint */
-   SCIP_CALL( createEdgesFromRow(scip, file, activevars, activevals, nactivevars, ncompletevars, G) );
+   SCIP_CALL( createEdgesFromRow(scip, activevars, activevals, nactivevars, G) );
 
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &activevars);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.133 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.134 2008/09/29 23:13:31 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -1418,7 +1418,7 @@ SCIP_RETCODE enforcePseudo(
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeySetppccons)
-{
+{  /*lint --e{715}*/
    /* the key is the element itself */ 
    return elem;
 }
@@ -1481,7 +1481,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    assert(scip != NULL);
 
    /* sorts the constraints */
-   SCIP_CALL( consdataSort(scip, consdata) );
+   SCIP_CALL_ABORT( consdataSort(scip, consdata) );
 
    minidx = SCIPvarGetIndex(consdata->vars[0]);
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);

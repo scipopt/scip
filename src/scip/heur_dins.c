@@ -132,7 +132,7 @@ SCIP_RETCODE createReboundedVariables(
       mipsol = SCIPgetSolVal(scip, bestsol, vars[i]);
             
       /* if the solution values differ by 0.5 or more, the variable is rebounded, otherwise it is just copied */
-      if( abs(lpsol-mipsol) >= 0.5 )
+      if( REALABS(lpsol-mipsol) >= 0.5 )
       {
          /* get the bounds for each variable */
          lb = SCIPvarGetLbGlobal(vars[i]);
@@ -617,7 +617,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    assert( nsols > 0 );
    
    /* create fixing flag array */
-   SCIPallocBufferArray( scip, &fixed, nbinvars );
+   SCIP_CALL( SCIPallocBufferArray( scip, &fixed, nbinvars ) );
 
    /* fixing for binary variables */
    /* hard fixing for some with mipsol(s)=lpsolval=rootlpsolval and preparation for soft fixing for the remaining */
@@ -794,7 +794,7 @@ SCIP_RETCODE SCIPincludeHeurDins(
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL ) );
    SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/dins/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
-         &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, INT_MAX, NULL, NULL ) );
+         &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, SCIP_LONGINT_MAX, NULL, NULL ) );
 
    return SCIP_OKAY;
 }

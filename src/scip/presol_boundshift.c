@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_boundshift.c,v 1.5 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_boundshift.c,v 1.6 2008/09/29 23:13:31 bzfheinz Exp $"
 
 /**@file   presol_boundshift.c
  * @ingroup PRESOLVERS
@@ -165,7 +165,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
       ub = SCIPvarGetUbGlobal(var);
 
       assert( SCIPisLE(scip, lb, ub) );
-      if( lb == ub )
+      if( SCIPisEQ(scip, lb, ub) )
          continue;
       if (presoldata->integer && !SCIPisIntegral(scip, ub - lb)) 
          continue;
@@ -177,7 +177,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 #if 0
          SCIPisLT(scip, ub - lb, SCIPinfinity(scip)) &&         /* interval length less than SCIPinfinity(scip) */
 #endif
-         SCIPisLT(scip, ub - lb, presoldata->maxshift) )        /* less than max shifting */
+         SCIPisLT(scip, ub - lb, (SCIP_Real) presoldata->maxshift) )        /* less than max shifting */
       {
          SCIP_VAR* newvar;
          char newvarname[SCIP_MAXSTRLEN];

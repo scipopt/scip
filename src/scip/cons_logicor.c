@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.124 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.125 2008/09/29 23:13:31 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -1090,7 +1090,7 @@ SCIP_RETCODE consdataSort(
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyLogicorcons)
-{
+{  /*lint --e{715}*/
    /* the key is the element itself */ 
    return elem;
 }
@@ -1115,8 +1115,8 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLogicorcons)
       return FALSE;
 
    /* sorts the constraints */
-   SCIP_CALL( consdataSort(scip, consdata1) );
-   SCIP_CALL( consdataSort(scip, consdata2) );
+   SCIP_CALL_ABORT( consdataSort(scip, consdata1) );
+   SCIP_CALL_ABORT( consdataSort(scip, consdata2) );
 
    coefsequal = TRUE;
 
@@ -1139,7 +1139,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLogicorcons)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValLogicorcons)
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    unsigned int hashval;
    int minidx;
