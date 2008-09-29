@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.43 2008/09/22 19:25:09 bzfwanie Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.44 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -104,18 +104,18 @@ SCIP_RETCODE SCIPpresolCreate(
    (*presol)->initialized = FALSE;
 
    /* add parameters */
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/priority", name);
-   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of presolver <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of presolver <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*presol)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdPresolPriority, (SCIP_PARAMDATA*)(*presol)) ); /*lint !e740*/
 
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname,
          "maximal number of presolving rounds the presolver participates in (-1: no limit)",
          &(*presol)->maxrounds, FALSE, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/delay", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should presolver be delayed, if other presolvers found reductions?",
          &(*presol)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/

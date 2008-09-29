@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_boundshift.c,v 1.4 2008/09/29 16:50:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_boundshift.c,v 1.5 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   presol_boundshift.c
  * @ingroup PRESOLVERS
@@ -188,7 +188,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          SCIPdebugMessage("convert range <%s>[%g,%g] to [%g,%g]\n", SCIPvarGetName(var), lb, ub, 0.0, (ub - lb) );
 
          /* create new variable */
-         SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_shift", SCIPvarGetName(var));
+         (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_shift", SCIPvarGetName(var));
          SCIP_CALL( SCIPcreateVar(scip, &newvar, newvarname, 0.0, (ub - lb), 0.0, SCIPvarGetType(var),
                SCIPvarIsInitial(var), SCIPvarIsRemovable(var), NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, newvar) );

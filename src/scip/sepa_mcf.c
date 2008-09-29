@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.65 2008/09/25 09:41:56 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.66 2008/09/29 20:41:26 bzfheinz Exp $"
 
 //#define SCIP_DEBUG
 
@@ -4505,9 +4505,9 @@ SCIP_RETCODE outputGraph(
 
    /* open file */
    if( nodepartition == NULL )
-      SCIPsnprintf(filename, SCIP_MAXSTRLEN, "mcf-node-%d.gml", partition);
+      (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "mcf-node-%d.gml", partition);
    else
-      SCIPsnprintf(filename, SCIP_MAXSTRLEN, "mcf-part-%d.gml", partition);
+      (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "mcf-part-%d.gml", partition);
    SCIPinfoMessage(scip, NULL, "creating GML output file <%s>...\n", filename);
    file = fopen(filename, "w");
    if( file == NULL )
@@ -4530,9 +4530,9 @@ SCIP_RETCODE outputGraph(
       SCIP_Bool inpartition;
 
       if( mcfnetwork->nodeflowrows[v][0] != NULL )
-         SCIPsnprintf(label, SCIP_MAXSTRLEN, "%s", SCIProwGetName(mcfnetwork->nodeflowrows[v][0]));
+         (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "%s", SCIProwGetName(mcfnetwork->nodeflowrows[v][0]));
       else
-         SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", v);
+         (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", v);
       inpartition = nodeInPartition(nodepartition, partition, v);
 
       fprintf(file, "        node\n");
@@ -4655,9 +4655,9 @@ SCIP_RETCODE outputGraph(
       char label[SCIP_MAXSTRLEN];
 
       if( mcfnetwork->arccapacityrows[a] != NULL )
-         SCIPsnprintf(label, SCIP_MAXSTRLEN, "%s", SCIProwGetName(mcfnetwork->arccapacityrows[a]));
+         (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "%s", SCIProwGetName(mcfnetwork->arccapacityrows[a]));
       else
-         SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", a);
+         (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", a);
 
       hasfractional = FALSE;
       row = mcfnetwork->arccapacityrows[a];
@@ -4761,7 +4761,7 @@ SCIP_RETCODE addCut(
 #endif
 
    /* create the cut */
-   SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
    SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs,
                                  cutislocal, FALSE, sepadata->dynamiccuts) );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.67 2008/09/22 19:25:09 bzfwanie Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.68 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -133,7 +133,7 @@ void syntaxError(
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "  input: %s\n", lpinput->linebuf);
    }
-   SCIPsnprintf(formatstr, 256, "         %%%ds\n", lpinput->linepos);
+   (void) SCIPsnprintf(formatstr, 256, "         %%%ds\n", lpinput->linepos);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
    lpinput->section  = LP_END;
    lpinput->haserror = TRUE;
@@ -1421,7 +1421,7 @@ SCIP_RETCODE readSos(
 	 swapTokenBuffer(lpinput);
 
 	 /* set artificial name */
-	 SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
+	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
       }
 
       /* check whether it is type 1 or type 2 */
@@ -1820,7 +1820,7 @@ void printRow(
    /* print row name */
    if ( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
    {
-      SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
+      (void) SCIPsnprintf(consname, LP_MAX_NAMELEN + 1, "%s%s:", rowname, rownameextension);
       appendLine(scip, file, linebuffer, &linecnt, consname);
    }
 
@@ -1834,8 +1834,8 @@ void printRow(
       if (linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, " ");
 
-      SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", vals[v], varname);
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", vals[v], varname);
       
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -1844,7 +1844,7 @@ void printRow(
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
 
-   SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %+.15g", type, rhs);
+   (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s %+.15g", type, rhs);
 
    /* we start a new line; therefore we tab this line */
    if (linecnt == 0 )
@@ -1972,22 +1972,22 @@ void printSosCons(
 
    if ( strlen(rowname) > 0 )
    {
-      SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "%s:", rowname);
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, "%s:", rowname);
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
 
    /* SOS type */
-   SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " S%d::", type);
+   (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " S%d::", type);
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
    for (v = 0; v < nvars; ++v)
    {
-      SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[v]));
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(vars[v]));
 
       if ( weights != NULL )
-         SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s:%.15g", varname, weights[v]);
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s:%.15g", varname, weights[v]);
       else
-         SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s:%d", varname, v);
+         (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s:%d", varname, v);
 
       if (linecnt == 0 )
       {
@@ -2084,7 +2084,7 @@ SCIP_RETCODE printAggregatedCons(
       ++nactivevars;
 
       /* output constraint */
-      SCIPsnprintf(consname, LP_MAX_NAMELEN, "aggr_%s", SCIPvarGetName(aggregatedVars[j]));
+      (void) SCIPsnprintf(consname, LP_MAX_NAMELEN, "aggr_%s", SCIPvarGetName(aggregatedVars[j]));
       printRow(scip, file, consname, "", "=", activevars, activevals, nactivevars, - activeconstant);
    }
 
@@ -2386,8 +2386,8 @@ SCIP_RETCODE SCIPwriteLp(
          /* we start a new line; therefore we tab this line */
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
-      SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", SCIPvarGetObj(var), varname );
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %+.15g %s", SCIPvarGetObj(var), varname );
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -2413,7 +2413,7 @@ SCIP_RETCODE SCIPwriteLp(
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
 
-      SCIPsnprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons));
+      (void) SCIPsnprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons));
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
@@ -2538,7 +2538,7 @@ SCIP_RETCODE SCIPwriteLp(
    {
       var = vars[v];
       assert( var != NULL );
-      SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
 
       if( transformed )
       {
@@ -2587,7 +2587,7 @@ SCIP_RETCODE SCIPwriteLp(
    {
       var = aggregatedVars[v];
       assert( var != NULL );
-      SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+      (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
 
       SCIPinfoMessage(scip, file, " %s free\n", varname);
    }
@@ -2610,8 +2610,8 @@ SCIP_RETCODE SCIPwriteLp(
 
 	 if ( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
 	 {
-            SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
 	 }
       }
@@ -2631,8 +2631,8 @@ SCIP_RETCODE SCIPwriteLp(
 
          if ( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER )
 	 {
-            SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
-            SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
+            (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(var) );
+            (void) SCIPsnprintf(buffer, LP_MAX_PRINTLEN, " %s", varname);
             appendLine(scip, file, linebuffer, &linecnt, buffer);
 	 }
       }
@@ -2653,7 +2653,7 @@ SCIP_RETCODE SCIPwriteLp(
 	 nconsvars = SCIPgetNVarsSOS1(scip, cons);
 	 weights = SCIPgetWeightsSOS1(scip, cons);
 
-         SCIPsnprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
+         (void) SCIPsnprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
          printSosCons(scip, file, consname, consvars, weights, nconsvars, 1);
       }
 
@@ -2665,7 +2665,7 @@ SCIP_RETCODE SCIPwriteLp(
 	 nconsvars = SCIPgetNVarsSOS2(scip, cons);
 	 weights = SCIPgetWeightsSOS2(scip, cons);
 
-         SCIPsnprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
+         (void) SCIPsnprintf(consname, LP_MAX_NAMELEN, "%s", SCIPconsGetName(cons) );
          printSosCons(scip, file, consname, consvars, weights, nconsvars, 2);
       }
    }

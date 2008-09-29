@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.84 2008/09/29 16:50:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.85 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -219,7 +219,7 @@ SCIP_RETCODE addCut(
          SCIP_Bool success;
          
          /* create the cut */
-         SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
+         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
          SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                cutislocal, FALSE, cutremovable) );
          SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );

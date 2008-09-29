@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.45 2008/09/23 18:50:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.46 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -241,7 +241,7 @@ SCIP_RETCODE SCIPreaderWrite(
             varnames[i] = SCIPvarGetName(var);
             
             SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
-            SCIPsnprintf(name, size, "x%d", i);
+            (void) SCIPsnprintf(name, size, "x%d", i);
             SCIPvarSetNamePointer(var, name);
          }  
 
@@ -254,7 +254,7 @@ SCIP_RETCODE SCIPreaderWrite(
             fixedvarnames[i] = SCIPvarGetName(var);
             
             SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
-            SCIPsnprintf(name, size, "y%d", i);
+            (void) SCIPsnprintf(name, size, "y%d", i);
             SCIPvarSetNamePointer(var, name);
          }
 
@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPreaderWrite(
             consnames[i] = SCIPconsGetName(cons);
 
             SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
-            SCIPsnprintf(name, size, "c%d", i);
+            (void) SCIPsnprintf(name, size, "c%d", i);
             SCIPconsSetNamePointer(cons, name);
          }
       }

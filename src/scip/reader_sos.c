@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.12 2008/09/23 18:50:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.13 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   reader_sos.c
  * @ingroup FILEREADERS 
@@ -502,7 +502,7 @@ SCIP_RETCODE readSOS(
 	    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 	 }
 	 /* create new name, since we do not get a name from the file */
-	 SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
+	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
 
 	 /* create new SOS1 constraint */
 	 if ( type == 1 )

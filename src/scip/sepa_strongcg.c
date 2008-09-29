@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.35 2008/09/22 19:25:11 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.36 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -460,7 +460,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                char cutname[SCIP_MAXSTRLEN];
 
                /* create the cut */
-               SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_%d", SCIPgetNLPs(scip), c);
+               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_%d", SCIPgetNLPs(scip), c);
                SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                                              cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );

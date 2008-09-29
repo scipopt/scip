@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.38 2008/09/22 19:25:10 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.39 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -1081,7 +1081,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          assert(vars != NULL);
 
          /* create the cut */
-         SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
+         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
          SCIP_CALL_ABORT( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
 
          SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );

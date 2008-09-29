@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.18 2008/09/22 22:14:50 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.19 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   reader_ppm.c
  * @ingroup FILEREADERS 
@@ -284,7 +284,7 @@ void printRow(
    varindex = -1;
    maxvarindex = 0;
 
-   SCIPsnprintf(white, 4, "%c%c%c", max, max, max);
+   (void) SCIPsnprintf(white, 4, "%c%c%c", max, max, max);
    clearLine(linebuffer, &linecnt);
 
    /* calculate maximum index of the variables in this constraint */
@@ -326,10 +326,10 @@ void printRow(
 	 if (red == 35 || red == 0) red++;
 	 if (green==35 || green == 0) green++;
 	 if (blue==35 || blue == 0) blue++;
-	 SCIPsnprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (char)red, (char)green, (char)blue);
+	 (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (char)red, (char)green, (char)blue);
       }
       else
-         SCIPsnprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
+         (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
       
       appendLine(scip, file, readerdata, linebuffer, &linecnt, buffer);
       i++;

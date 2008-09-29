@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.480 2008/09/29 19:33:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.481 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7887,7 +7887,7 @@ SCIP_RETCODE aggregateActiveIntVars(
     * - aggregate variable y =  a*z + y'
     * - the bounds of z are calculated automatically during aggregation
     */
-   SCIPsnprintf(aggvarname, SCIP_MAXSTRLEN, "agg%d", scip->stat->nvaridx);
+   (void) SCIPsnprintf(aggvarname, SCIP_MAXSTRLEN, "agg%d", scip->stat->nvaridx);
    SCIP_CALL( SCIPvarCreateTransformed(&aggvar, scip->mem->solvemem, scip->set, scip->stat,
          aggvarname, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER,
          SCIPvarIsInitial(varx) || SCIPvarIsInitial(vary), SCIPvarIsRemovable(varx) && SCIPvarIsRemovable(vary),
@@ -15146,15 +15146,15 @@ void SCIPprintReal(
    assert(scip != NULL);
 
    if( SCIPsetIsInfinity(scip->set, val) )
-      SCIPsnprintf(s, SCIP_MAXSTRLEN, "+infinity");
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "+infinity");
    else if( SCIPsetIsInfinity(scip->set, -val) )
-      SCIPsnprintf(s, SCIP_MAXSTRLEN, "-infinity");
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "-infinity");
    else
    {
-      SCIPsnprintf(strformat, SCIP_MAXSTRLEN, "%%.%dg", precision);
-      SCIPsnprintf(s, SCIP_MAXSTRLEN, strformat, val);
+      (void) SCIPsnprintf(strformat, SCIP_MAXSTRLEN, "%%.%dg", precision);
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, strformat, val);
    }
-   SCIPsnprintf(strformat, SCIP_MAXSTRLEN, "%%%ds", width);
+   (void) SCIPsnprintf(strformat, SCIP_MAXSTRLEN, "%%%ds", width);
    SCIPmessageFPrintInfo(file, strformat, s);
 }
 

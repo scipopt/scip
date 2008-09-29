@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.75 2008/09/22 19:25:10 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.76 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   sepa_gomory.c
  * @ingroup SEPARATORS
@@ -465,9 +465,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
                /* create the cut */
                if( c >= 0 )
-                  SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
                else
-                  SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
                SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                                              cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );

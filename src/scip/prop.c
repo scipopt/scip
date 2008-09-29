@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.22 2008/09/22 19:25:09 bzfwanie Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.23 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -111,18 +111,18 @@ SCIP_RETCODE SCIPpropCreate(
    (*prop)->initialized = FALSE;
 
    /* add parameters */
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/priority", name);
-   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of propagator <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of propagator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*prop)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdPropPriority, (SCIP_PARAMDATA*)(*prop)) ); /*lint !e740*/
 
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/freq", name);
-   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/freq", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*prop)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/delay", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should propagator be delayed, if other propagators found reductions?",
          &(*prop)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/

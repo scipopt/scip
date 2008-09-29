@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.20 2008/09/22 19:25:10 bzfwanie Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.21 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -105,13 +105,13 @@ SCIP_RETCODE SCIPrelaxCreate(
    (*relax)->initialized = FALSE;
 
    /* add parameters */
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
-   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of relaxator <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of relaxator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*relax)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdRelaxPriority, (SCIP_PARAMDATA*)(*relax)) ); /*lint !e740*/
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/freq", name);
-   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling relaxator <%s> (-1: never, 0: only in root node)", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/freq", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling relaxator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*relax)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 

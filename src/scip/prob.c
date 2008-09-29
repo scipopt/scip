@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.101 2008/09/22 19:25:09 bzfwanie Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.102 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -352,7 +352,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIPdebugMessage("transform problem: original has %d variables\n", source->nvars);
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
-   SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
+   (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
    SCIP_CALL( SCIPprobCreate(target, blkmem, transname, NULL, NULL, source->probdeltrans, 
                   source->probinitsol, source->probexitsol, NULL, TRUE) );
    SCIPprobSetObjsense(*target, source->objsense);

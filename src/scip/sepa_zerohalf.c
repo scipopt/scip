@@ -1255,29 +1255,52 @@ char* getconstantname(
 {
    switch (value)
    {
-   case IRRELEVANT: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IRRELEVANT"); break;
-   case ZERO_ROW: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ZEROROW"); break;
-   case IDENT_TO_ROW_WITH_SMALLER_SLACK: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IDENTROW"); break;
-   case SLACK_GREATER_THAN_MAXSLACK: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SLACK>MAXSLACK"); break;
-   case DEFINES_VIOLATED_ZEROHALF_CUT: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ISZHCUT"); break;
-   case ROW_IN_SUBPROB_WITHOUT_ODD_RHS: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSROW"); break;
-   case NONEXISTENT_ROW: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "DOESNOTEXIST"); break;
-   case NO_RELEVANT_COLUMNS: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "HASNORELEVANTCOLS"); break;
-   case SLACK_GREATER_THAN_MSL_MINUS_SODD: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SLACK+SODD>MAXSLACK"); break;
-   case LARGE_COL_EXISTS: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SCOL+SODD>MAXSLACK"); break; 
-   case ZERO_COLUMN: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ZEROCOLUMN"); break;
-   case IDENT_TO_ANOTHER_COLUMN: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IDENTCOLUMN"); break;
-   case ZERO_LP_SOL: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=0"); break;
-   case LP_SOL_EQUALS_EVEN_LB: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=EVENLB"); break;
-   case LP_SOL_EQUALS_ODD_LB: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=ODDLB"); break;
-   case LP_SOL_EQUALS_EVEN_UB: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=EVENUB"); break;
-   case LP_SOL_EQUALS_ODD_UB: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=ODDUB"); break;
-   case SINGLETON_COLUMN: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SINGLETONCOLUMN"); break;
-   case CONTINUOUS_VARIABLE: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "CONTCOLUMN"); break;
-   case SMALL_FRACSOL_HEUR: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SUMFRACSOL<DELTA"); break;
-   case ALL_MATRIX_ROWS_DELETED: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOROWSLEFT"); break;
-   case COLUMN_IN_SUBPROB_WITHOUT_ODD_RHS: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSCOL"); break;
-   default: SCIP_ABORT();
+   case IRRELEVANT: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IRRELEVANT"); break;
+   case ZERO_ROW: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ZEROROW"); break;
+   case IDENT_TO_ROW_WITH_SMALLER_SLACK: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IDENTROW"); break;
+   case SLACK_GREATER_THAN_MAXSLACK:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SLACK>MAXSLACK"); break;
+   case DEFINES_VIOLATED_ZEROHALF_CUT:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ISZHCUT"); break;
+   case ROW_IN_SUBPROB_WITHOUT_ODD_RHS: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSROW"); break;
+   case NONEXISTENT_ROW: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "DOESNOTEXIST"); break;
+   case NO_RELEVANT_COLUMNS:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "HASNORELEVANTCOLS"); break;
+   case SLACK_GREATER_THAN_MSL_MINUS_SODD: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SLACK+SODD>MAXSLACK"); break;
+   case LARGE_COL_EXISTS: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SCOL+SODD>MAXSLACK"); break; 
+   case ZERO_COLUMN: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ZEROCOLUMN"); break;
+   case IDENT_TO_ANOTHER_COLUMN:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IDENTCOLUMN"); break;
+   case ZERO_LP_SOL: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=0"); break;
+   case LP_SOL_EQUALS_EVEN_LB:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=EVENLB"); break;
+   case LP_SOL_EQUALS_ODD_LB:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=ODDLB"); break;
+   case LP_SOL_EQUALS_EVEN_UB:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=EVENUB"); break;
+   case LP_SOL_EQUALS_ODD_UB:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=ODDUB"); break;
+   case SINGLETON_COLUMN: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SINGLETONCOLUMN"); break;
+   case CONTINUOUS_VARIABLE: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "CONTCOLUMN"); break;
+   case SMALL_FRACSOL_HEUR: 
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SUMFRACSOL<DELTA"); break;
+   case ALL_MATRIX_ROWS_DELETED:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOROWSLEFT"); break;
+   case COLUMN_IN_SUBPROB_WITHOUT_ODD_RHS:
+      (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSCOL"); break;
+   default: 
+      SCIP_ABORT();
    }
 
    return buffer;
@@ -2771,7 +2794,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
                || SCIPisEfficacious(scip, cutdata->efficacy) )
             {    
                /* create cut */
-               SCIPsnprintf(cutname, SCIP_MAXSTRLEN,"zerohalf%d_%d", SCIPgetNLPs(scip), nzerohalfcuts);
+               (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN,"zerohalf%d_%d", SCIPgetNLPs(scip), nzerohalfcuts);
                SCIP_CALL(SCIPcreateEmptyRow(scip, &(cutdata->cut), cutname, -SCIPinfinity(scip), cutdata->rhs, 
                      cutdata->islocal, FALSE, sepadata->dynamiccuts));
                SCIP_CALL(SCIPaddVarsToRow(scip, cutdata->cut, cutdata->nnonz, cutvars, cutvals));
@@ -4500,7 +4523,7 @@ SCIP_RETCODE createSubscip(
    /* r */
    for( j = 0 ; j < auxipdata->n ; ++j)
    {
-      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "r_colsind%d(rcols%d)", j, mod2data->colsind[j]);
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "r_colsind%d(rcols%d)", j, mod2data->colsind[j]);
       SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->r[j]), varname, 0.0, SCIPinfinity(auxipdata->subscip),
          0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->r[j]) );
@@ -4512,7 +4535,7 @@ SCIP_RETCODE createSubscip(
       SCIP_Real objcoef;
       assert(mod2data->rows[mod2data->rowsind[i]] != NULL);
 
-      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "v_rowsind%d(rrows%d)", i, mod2data->rowsind[i]);    
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "v_rowsind%d(rrows%d)", i, mod2data->rowsind[i]);    
       if( isfeasip )
       {
          if( isweighted ) 
@@ -4540,7 +4563,7 @@ SCIP_RETCODE createSubscip(
    for( j = 0 ; j < auxipdata->n ; ++j)
    {
       SCIP_Real objcoef;
-      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "y_%d(%d)", j, mod2data->colsind[j]);
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "y_%d(%d)", j, mod2data->colsind[j]);
       if( isfeasip )
          objcoef = 0.0;
       else
@@ -4610,7 +4633,7 @@ SCIP_RETCODE createSubscip(
       consvars[nconsvars] = auxipdata->r[j];
       nconsvars++;
 
-      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "col_%d(%d)_sum", j, mod2data->colsind[j]);
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "col_%d(%d)_sum", j, mod2data->colsind[j]);
       SCIP_CALL( SCIPcreateConsLinear(auxipdata->subscip, &(auxipdata->columnsumcons[j]) , consname, nconsvars, consvars, consvals, 0.0, 0.0,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(auxipdata->subscip, auxipdata->columnsumcons[j]) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.21 2008/09/22 19:25:10 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.22 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS
@@ -73,7 +73,7 @@ SCIP_RETCODE addCut(
       char cutname[SCIP_MAXSTRLEN];
 
       /* create cut */
-      SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
       SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var1, val1) );

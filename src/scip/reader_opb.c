@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.22 2008/09/23 18:50:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.23 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -162,7 +162,7 @@ void syntaxError(
    }
 
 #if 0
-   SCIPsnprintf(formatstr, 256, "         %%%ds\n", opbinput->linepos);
+   (void) SCIPsnprintf(formatstr, 256, "         %%%ds\n", opbinput->linepos);
    SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, formatstr, "^");
 #endif
 
@@ -739,7 +739,7 @@ SCIP_RETCODE getVariable(
          SCIP_CONS* cons;
          char varname[128];
          
-         SCIPsnprintf(varname, SCIP_MAXSTRLEN, "andresultant%d", opbinput->nandconss);
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "andresultant%d", opbinput->nandconss);
          SCIP_CALL( createVariable(scip, var, varname) );
          assert( var != NULL );
         
@@ -1359,7 +1359,7 @@ void printRow(
       var = vars[v];
       assert( var != NULL );
       
-      SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT" %s ", 
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT" %s ", 
          (SCIP_Longint) (vals[v] * (*mult)), SCIPvarGetName(var) );
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -1368,7 +1368,7 @@ void printRow(
    if( SCIPisZero(scip, lhs) )
       lhs = 0.0;
    
-   SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %"SCIP_LONGINT_FORMAT" ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
+   (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %"SCIP_LONGINT_FORMAT" ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    
    writeBuffer(scip, file, linebuffer, &linecnt);
@@ -1564,7 +1564,7 @@ SCIP_RETCODE writeOpb(
          
          assert( linecnt != 0 );
          
-         SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT" %s", 
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT" %s", 
             (SCIP_Longint) (SCIPvarGetObj(var) * mult), SCIPvarGetName(var) );
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
       }

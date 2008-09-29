@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.29 2008/09/21 16:51:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.30 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -346,7 +346,7 @@ void SCIPmessagePrintErrorHeader(
    char msg[SCIP_MAXSTRLEN];
 
    /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
-   snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
+   (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
    msg[SCIP_MAXSTRLEN-1] = '\0';
    messagePrintError(msg);
 }
@@ -378,7 +378,7 @@ void SCIPmessagePrintWarningHeader(
    char msg[SCIP_MAXSTRLEN];
 
    /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
-   snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
+   (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
    msg[SCIP_MAXSTRLEN-1] = '\0';   
    messagePrintWarning(msg);
 }

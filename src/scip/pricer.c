@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.25 2008/09/22 19:25:09 bzfwanie Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.26 2008/09/29 20:41:26 bzfheinz Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -115,8 +115,8 @@ SCIP_RETCODE SCIPpricerCreate(
    (*pricer)->initialized = FALSE;
 
    /* add parameters */
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "pricers/%s/priority", name);
-   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of pricer <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "pricers/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of pricer <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*pricer)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
                   paramChgdPricerPriority, (SCIP_PARAMDATA*)(*pricer)) ); /*lint !e740*/
