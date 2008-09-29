@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.271 2008/09/25 20:47:05 bzfpfets Exp $
+# $Id: Makefile,v 1.272 2008/09/29 22:08:15 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -296,10 +296,6 @@ ZLIBSRC		:=	$(shell cat $(ZLIBDEP))
 ifeq ($(ZLIB_LDFLAGS),)
 ZLIB		=	false
 endif
-ifeq ($(ZLIB),true)
-FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
-LDFLAGS		+=	$(ZLIB_LDFLAGS)
-endif
 
 GMPDEP		:=	$(SRCDIR)/depend.gmp
 GMPSRC		:=	$(shell cat $(GMPDEP))
@@ -309,19 +305,11 @@ endif
 ifeq ($(GMP_LDFLAGS),)
 GMP		=	false
 endif
-ifeq ($(GMP),true)
-FLAGS		+=	-DWITH_GMP $(GMP_FLAGS)
-LDFLAGS		+=	$(GMP_LDFLAGS)
-endif
 
 READLINEDEP	:=	$(SRCDIR)/depend.readline
 READLINESRC	:=	$(shell cat $(READLINEDEP))
 ifeq ($(READLINE_LDFLAGS),)
 READLINE	=	false
-endif
-ifeq ($(READLINE),true)
-FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
-LDFLAGS		+=	$(READLINE_LDFLAGS)
 endif
 
 ZIMPLDEP	:=	$(SRCDIR)/depend.zimpl
@@ -343,6 +331,20 @@ LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIM
 LPIINSTMSG	+=	" -> \"libzimpl.*\" is the path to the ZIMPL library, e.g., \"../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a\""
 endif
 
+ifeq ($(READLINE),true)
+FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
+LDFLAGS		+=	$(READLINE_LDFLAGS)
+endif
+
+ifeq ($(GMP),true)
+FLAGS		+=	-DWITH_GMP $(GMP_FLAGS)
+LDFLAGS		+=	$(GMP_LDFLAGS)
+endif
+
+ifeq ($(ZLIB),true)
+FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
+LDFLAGS		+=	$(ZLIB_LDFLAGS)
+endif
 
 #-----------------------------------------------------------------------------
 # SCIP Library
