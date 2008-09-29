@@ -47,10 +47,6 @@ $NAME/examples/SamplePricer_C/Makefile $NAME/examples/SamplePricer_C/INSTALL \
 $NAME/examples/SamplePricer/doc/* \
 $NAME/examples/SamplePricer/src/depend.* \
 $NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/examples/SamplePricer/src/*.h \
-$NAME/examples/SamplePricer_C/Makefile $NAME/examples/SamplePricer_C/INSTALL \
-$NAME/examples/SamplePricer_C/doc/* \
-$NAME/examples/SamplePricer_C/src/depend.* \
-$NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.h \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \
