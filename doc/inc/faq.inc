@@ -586,19 +586,13 @@
     <p class="a">
       This is a very common problem in Branch-And-Price, which you can deal nicely with using SCIP.
       There are basically three different options for dealing with that. The first one is to add
-      binary variables to the problem that capture the branching decision (see the
-      <a href="#Q33">next question</a>) and add constraints that describe their meaning.
+      binary variables to the problem that capture the branching decisions and add constraints that
+      describe their meaning in order to enforce them.
       The second one is the introduction of "marker constraints"
       that are added to the branching nodes and store all the information needed
-      (see <a href="#Q34">this question</a>)
+      (see the <a href="#Q34">next question</a>)
       The third way to deal with this is the usage of an event handler like described in 
       <a href="#Q35">this question</a>.
-    </p>
-    <p class="q">
-      <a name="Q33">How can I capture branching decisions in binary variables?</a>
-    </p>
-    <p class="a">
-      Kommt morgen :-)
     </p>
     <p class="q">
       <a name="Q34">I want to store some information at the nodes and update my pricer's data structures
@@ -641,7 +635,8 @@
       <a name="Q36">My pricer generates the same column twice. How can I solve this problem?</a>
     </p>
     <p class="a">
-      This can be due to the PRICER_DELAY property of your pricer.
+      If your pricer works correct and makes sure that the same column is added at most once in one
+      pricing round, this behavior is probably caused by the PRICER_DELAY property of your pricer.
       If it is set to FALSE, the following may have happened: The variable pricer
       (see <a href="#Q30">this question</a>) found a variable with negative dual feasibility that
       was not part of the current LP relaxation and added it to the LP. In the same pricing round,
