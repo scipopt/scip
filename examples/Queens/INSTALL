@@ -64,7 +64,7 @@ using SCIP as a library running:
    point to the directory that contains SCIP.
 
 3. Compile the queens example project:
-   In the main directory Coloring, enter "make OPT=<...> LPS=<...> COMP=<...>"
+   In the main directory Queens, enter "make OPT=<...> LPS=<...> COMP=<...>"
    with the following options:
    - "OPT=opt"       to use optimized compilation mode (default)
    - "OPT=dbg"       to use debug compilation mode
