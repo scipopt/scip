@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.290 2008/09/29 21:24:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.291 2008/09/29 22:26:40 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7629,8 +7629,6 @@ void roundMIRRow(
    )
 {
    SCIP_Real onedivoneminusf0;
-   int nbinvars;
-   int nintvars;
    int i;
 
    assert(prob != NULL);
@@ -7643,8 +7641,6 @@ void roundMIRRow(
    assert(0.0 < f0 && f0 < 1.0);
 
    onedivoneminusf0 = 1.0 / (1.0 - f0);
-   nbinvars = prob->nbinvars;
-   nintvars = prob->nvars - prob->ncontvars;
 
    /* Loop backwards to be able to delete coefficients from the sparsity pattern. Additionally, the variable bound
     * substitutions are only used in such a way that a variable of higher index is substituted by a variable of a
