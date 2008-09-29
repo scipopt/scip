@@ -673,7 +673,7 @@
       In most cases, you should deactivate separators, since cutting planes that are added to your master problem
       may destroy your pricing problem. Additionally, it may be necessary to deactivate some presolvers,
       mainly the dual fixing presolver. This can be done by not including these plugins into SCIP, namely
-      removing the <code>SCIPincludeSepaXXX()</code> and <code>SCIPincludePresolXXX()</code> calls in scipdefplugins.c or your own 
+      removing the <code>SCIPincludeSepaXxx()</code> and <code>SCIPincludePresolXxx()</code> calls in scipdefplugins.c or your own 
       plugins-including files. Alternatively, you can set the parameters maxrounds and 
       maxroundsroot to zero for all separators and maxrounds to zero for the presolvers.
     </p>
