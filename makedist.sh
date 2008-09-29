@@ -35,7 +35,8 @@ $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
 $NAME/examples/LOP/src/depend.* \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
-$NAME/examples/MIPSolver/* $NAME/examples/MIPSolver/doc/* \
+$NAME/examples/MIPSolver/Makefile  $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
+$NAME/examples/MIPSolver/doc/* \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.c $NAME/examples/MIPSolver/src/*.cpp $NAME/examples/MIPSolver/src/*.h \
 $NAME/examples/Queens/* \
@@ -50,7 +51,10 @@ $NAME/examples/SamplePricer_C/Makefile $NAME/examples/SamplePricer_C/INSTALL \
 $NAME/examples/SamplePricer_C/doc/* \
 $NAME/examples/SamplePricer_C/src/depend.* \
 $NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.h \
-$NAME/examples/TSP/* $NAME/examples/TSP/doc/* \
+$NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
+$NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
+$NAME/examples/TSP/sciptsp.set \
+$NAME/examples/TSP/doc/* \
 $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.c $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
