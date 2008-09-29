@@ -22,7 +22,6 @@
  * @author Mathias Kinder
  * @author Marc Pfetsch
  * @author Kati Wolter
- * @author Gerald Gamrath
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,7 +40,7 @@
  * @author   Michael Winkler
  * @author   Kati Wolter
  *
- * <b>What is SCIP?</b>
+ * <b>Waht is SCIP?</b>
  *
  * SCIP is a framework to solve constraint integer programs (CIPs). In particular,
  *
@@ -140,8 +139,8 @@
  *   for SoPlex and CLP)
  *
  * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on (default) or off, respectively.
- * - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized (default) or debug version of ZIMPL, if ZIMPL support is enabled.\n
- *   If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
+ * - <code>ZIMPLOPT=\<opt|dbg\></code> Chooses the optimized (default) or debug version of ZIMPL, if ZIMPL support is enabled. \n
+ * If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
  * 
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
@@ -2895,26 +2894,23 @@
  * Primal solutions can only be created for the transformed problem. Therefore, the user has to call SCIPtransformProb()
  * before he reads in the file containing the solution and adds it to the solution pool via the method SCIPreadSol(). 
  *
- * Typical methods called by a file reader which is used to generate constraint integer programming models are, 
- * for example, 
  * 
  * @subsection READERWRITE
  *
  * The READERWRITE callback is called when the user invokes SCIP to write a problem (original or transformed) 
  * in the format the reader supports. This is only possible if this callback is implemented. To write the problem 
- * all necessary information are given through the parameters of this callback method (see type_reader.h). These 
- * information should be used to output the problem in the requested format. This callback method is usually 
+ * all necessary informations are given through the parameters of this callback method (see type_reader.h). These 
+ * informations should be used to output the problem in the requested format. This callback method is usually 
  * triggered by the call of the methods SCIPwriteOrigProblem(), SCIPwriteTransProblem(), SCIPprintOrigProblem(), 
  * or SCIPprintTransProblem().
  * \n
- * A Typical method called by a file reader which is used to write/export a constraint 
+ * A typical method called by a file reader which is used to write/export a constraint 
  * integer programming model is SCIPinfoMessage(). This method outputs a given string into a file 
  * or into stdout. 
  * \n
  * For an example we refer to the writing method of the MPS reader (see reader_mps.c).
  *
  *
- * 
  * @subsection READERFREE
  *
  * If you are using file reader data, you have to implement this method in order to free the file reader data.
