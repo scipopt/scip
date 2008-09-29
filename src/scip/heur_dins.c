@@ -246,7 +246,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    int nbinvars;
    int i;   
 
-   SCIPsnprintf( consname, SCIP_MAXSTRLEN, "%s_dinsLBcons", SCIPgetProbName(scip) );
+   (void) SCIPsnprintf( consname, SCIP_MAXSTRLEN, "%s_dinsLBcons", SCIPgetProbName(scip) );
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData( scip, &vars, NULL, &nbinvars, NULL, NULL, NULL ) );   
@@ -533,7 +533,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    assert( nvars > 0 );
    
    /* get name of the original problem and add the string "_dinssub" */
-   SCIPsnprintf( probname, SCIP_MAXSTRLEN, "%s_dinssub", SCIPgetProbName(scip) );
+   (void) SCIPsnprintf( probname, SCIP_MAXSTRLEN, "%s_dinssub", SCIPgetProbName(scip) );
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );

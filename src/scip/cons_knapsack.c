@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.166 2008/09/26 20:56:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.167 2008/09/29 21:24:09 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -1993,10 +1993,10 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
             
             /* create LP row */
             if( cons != NULL )
-               SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons),
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons),
                   SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
             else
-               SCIPsnprintf(name, SCIP_MAXSTRLEN, "card_%d", j);
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "card_%d", j);
 
             SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
                   cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
@@ -3464,7 +3464,7 @@ SCIP_RETCODE tightenWeights(
                      for( k = 0; k < nnewweights; ++k )
                         cliquevars[k] = consdata->vars[newweightidxs[k]];
 
-                     SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, i);
+                     (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_clq_%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons), consdata->capacity, i);
                      SCIP_CALL( SCIPcreateConsSetpack(scip, &cliquecons, name, nnewweights, cliquevars,
                            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),

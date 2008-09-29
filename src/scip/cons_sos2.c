@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.22 2008/09/22 19:25:07 bzfwanie Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.23 2008/09/29 21:24:09 bzfheinz Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS 
@@ -1043,7 +1043,7 @@ SCIP_DECL_CONSTRANS(consTransSOS2)
    }
 
    /* create transformed constraint with the same flags */
-   SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
+   (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
 	 SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
 	 SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),

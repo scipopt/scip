@@ -6,13 +6,13 @@
 /*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.12 2008/09/23 18:50:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.13 2008/09/29 21:24:10 bzfheinz Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface

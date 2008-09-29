@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.56 2008/09/22 19:25:08 bzfwanie Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.57 2008/09/29 21:24:09 bzfheinz Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -104,8 +104,8 @@ SCIP_RETCODE SCIPdispCreate(
    (*disp)->active = (dispstatus == SCIP_DISPSTATUS_ON);
 
    /* add parameters */
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "display/%s/active", name);
-   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "display/%s/active", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          (int*)(&(*disp)->dispstatus), FALSE, (int)dispstatus, 0, 2, SCIPparamChgdDispActive, NULL) );
 
@@ -516,7 +516,7 @@ void SCIPdispLongint(
          decpower++;
          val /= 1000;
       }
-      SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
          SCIPmessageFPrintInfo(file, "-%c", decpowerchar[decpower]);
@@ -578,9 +578,9 @@ void SCIPdispTime(
          val /= timepowerval[timepower];
       }
       if( REALABS(val) + 0.05 < maxval/100 ) /*lint !e653*/
-         SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.1f%c", width-1, timepowerchar[timepower]);
+         (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.1f%c", width-1, timepowerchar[timepower]);
       else
-         SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.0f%c", width-1, timepowerchar[timepower]);
+         (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.0f%c", width-1, timepowerchar[timepower]);
 
       if( width == 2 && val < 0.0 )
          SCIPmessageFPrintInfo(file, "-%c", timepowerchar[timepower]);

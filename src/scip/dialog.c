@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.47 2008/09/29 16:50:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.48 2008/09/29 21:24:09 bzfheinz Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -433,7 +433,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       {
          /* use current dialog's path as prompt */
          SCIPdialogGetPath(dialog, '/', path);
-         SCIPsnprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
+         (void) SCIPsnprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
          prompt = p;
       }
 
@@ -608,7 +608,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
          strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
       else
       {
-         SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s %s", dialog->name, h);
+         (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s %s", dialog->name, h);
          (void)strncpy(h, s, SCIP_MAXSTRLEN-1);
       }
       dialog = dialog->parent;
@@ -945,9 +945,9 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
 
    /* display the dialog's name */
    if( dialog->issubmenu )
-      SCIPsnprintf(name, SCIP_MAXSTRLEN, "<%s>", dialog->name);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "<%s>", dialog->name);
    else
-      SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", dialog->name);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", dialog->name);
    SCIPmessagePrintDialog("  %-21s ", name);
    if( strlen(name) > 21 )
    {
@@ -1013,8 +1013,8 @@ void SCIPdialogGetPath(
    dialog = dialog->parent;
    while( dialog != NULL )
    {
-      SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
-      (void)strncpy(path, s, SCIP_MAXSTRLEN);
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
+      (void) strncpy(path, s, SCIP_MAXSTRLEN);
       dialog = dialog->parent;
    }
 }

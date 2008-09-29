@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.31 2008/09/26 18:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.32 2008/09/29 21:24:09 bzfheinz Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -101,7 +101,7 @@ SCIP_RETCODE createSubproblem(
    assert(bestsol != NULL);
 
    /* get name of the original problem and add the string "_localbranchsub" */
-   SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -183,7 +183,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    SCIP_Real* consvals;
    char consname[SCIP_MAXSTRLEN];
 
-   SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_localbranchcons", SCIPgetProbName(scip));
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_localbranchcons", SCIPgetProbName(scip));
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, NULL, NULL, NULL) );   

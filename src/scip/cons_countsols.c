@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.23 2008/09/27 23:02:13 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.24 2008/09/29 21:24:09 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -217,7 +217,7 @@ void toString(
 #ifdef WITH_GMP
    mpz_get_str(*buffer, 10, value);
 #else
-   SCIPsnprintf (*buffer, buffersize, "%"SCIP_LONGINT_FORMAT"", value);
+   (void) SCIPsnprintf (*buffer, buffersize, "%"SCIP_LONGINT_FORMAT"", value);
 #endif
 }
 
@@ -1585,7 +1585,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
       for( h = 0; h < nheuristics; ++h )
       {
-         SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
+         (void) SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
          heuristicfreqs[h] = SCIPheurGetFreq(heuristics[h]);
          
          if( heuristicfreqs[h] != -1 )
@@ -1672,7 +1672,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          /* reset parameters setting for heuristics */
          for( h = 0; h < nheuristics; ++h )
          {
-            SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
+            (void) SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
             SCIP_CALL( SCIPsetIntParam(scip, parametername, heuristicfreqs[h]) );
          }
       }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.140 2008/09/22 19:25:05 bzfwanie Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.141 2008/09/29 21:24:09 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -223,7 +223,7 @@ void confgraphCreate(
    assert(conflict != NULL);
    assert(confgraphfile == NULL);
 
-   SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%d.gml", conflict->count);
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "conf%d.gml", conflict->count);
    printf("storing conflict graph in file <%s>\n", fname);
    confgraphfile = fopen(fname, "w");
    if( confgraphfile == NULL )
@@ -289,10 +289,10 @@ void confgraphAddBdchg(
    }
 
    if( SCIPbdchginfoGetDepth(bdchginfo) == INT_MAX )
-      SCIPsnprintf(depth, SCIP_MAXSTRLEN, "dive");
+      (void) SCIPsnprintf(depth, SCIP_MAXSTRLEN, "dive");
    else
-      SCIPsnprintf(depth, SCIP_MAXSTRLEN, "%d", SCIPbdchginfoGetDepth(bdchginfo));
-   SCIPsnprintf(label, SCIP_MAXSTRLEN, "%s %s %g\n[%s:%d]", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
+      (void) SCIPsnprintf(depth, SCIP_MAXSTRLEN, "%d", SCIPbdchginfoGetDepth(bdchginfo));
+   (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "%s %s %g\n[%s:%d]", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfo)),
       SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
       SCIPbdchginfoGetNewbound(bdchginfo), depth, SCIPbdchginfoGetPos(bdchginfo));
    confgraphWriteNode(bdchginfo, label, "ellipse", colors[col], "#000000");
@@ -329,7 +329,7 @@ void confgraphMarkConflictset(
    assert(conflictset != NULL);
 
    confgraphnconflictsets++;
-   SCIPsnprintf(label, SCIP_MAXSTRLEN, "conf %d (%d)", confgraphnconflictsets, conflictset->validdepth);
+   (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "conf %d (%d)", confgraphnconflictsets, conflictset->validdepth);
    confgraphWriteNode((void*)confgraphnconflictsets, label, "rectangle", "#ff00ff", "#000000");
    for( i = 0; i < conflictset->nbdchginfos; ++i )
       confgraphWriteEdge((void*)confgraphnconflictsets, conflictset->bdchginfos[i], "#ff00ff");
@@ -402,8 +402,8 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    (*conflicthdlr)->initialized = FALSE;
 
    /* add parameters */
-   SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "conflict/%s/priority", name);
-   SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of conflict handler <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "conflict/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of conflict handler <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*conflicthdlr)->priority, TRUE, priority, INT_MIN, INT_MAX,
          paramChgdConflicthdlrPriority, (SCIP_PARAMDATA*)(*conflicthdlr)) ); /*lint !e740*/
