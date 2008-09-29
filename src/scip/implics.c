@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.30 2008/09/29 16:50:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.31 2008/09/29 22:26:15 bzfheinz Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1685,14 +1685,14 @@ SCIP_RETCODE SCIPcliquetableAdd(
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashgetkeyClique)
-{
+{  /*lint --e{715}*/
    return elem;
 }
 
 /** returns TRUE iff both keys are equal */
 static
 SCIP_DECL_HASHKEYEQ(hashkeyeqClique)
-{
+{  /*lint --e{715}*/
    SCIP_CLIQUE* clique1;
    SCIP_CLIQUE* clique2;
    int i;
@@ -1718,7 +1718,7 @@ SCIP_DECL_HASHKEYEQ(hashkeyeqClique)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
-{
+{  /*lint --e{715}*/
    SCIP_CLIQUE* clique;
    unsigned int hashval;
    int i;
