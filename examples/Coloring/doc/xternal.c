@@ -56,6 +56,6 @@
  * stable sets during the solution process if they can improve the current LP solution.
  *
  * Further information about particular modules like the pricing routine and the 
- * branching rule can be found in the corresponding .c-files.
+ * branching rule can be found in the corresponding (pricer_coloring.c and branch_coloring.c).
  *
  */

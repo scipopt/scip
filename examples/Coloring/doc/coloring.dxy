@@ -25,7 +25,7 @@ DOXYFILE_ENCODING      = UTF-8
 # The PROJECT_NAME tag is a single word (or a sequence of words surrounded 
 # by quotes) that should identify the project.
 
-PROJECT_NAME           = SCIP
+PROJECT_NAME           = Coloring Example
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. 
 # This could be handy for archiving the generated documentation or 
@@ -478,11 +478,7 @@ WARN_LOGFILE           =
 # with spaces.
 
 INPUT                  = . \
-                         ../src \
-                         ../src/scip \
-                         ../src/objscip \
-                         ../src/tclique \
-                         ../src/blockmemshell
+                         ../src
 
 # This tag can be used to specify the character encoding of the source files that 
 # doxygen parses. Internally doxygen uses the UTF-8 encoding, which is also the default 
@@ -499,6 +495,7 @@ INPUT_ENCODING         = UTF-8
 # *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.py
 
 FILE_PATTERNS          = *.h \
+                         *.hpp \
                          *.c \
                          *.cpp
 
@@ -539,7 +536,7 @@ EXCLUDE_SYMBOLS        =
 # directories that contain example code fragments that are included (see 
 # the \include command).
 
-EXAMPLE_PATH           = inc/
+EXAMPLE_PATH           = 
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the 
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
