@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.481 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.482 2008/09/29 22:22:43 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2601,13 +2601,12 @@ SCIP_RETCODE SCIPreadProb(
    /* copy filename */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
    
+   fileextension = NULL;
    if( extension == NULL )
    {
       /* get extension from filename */
       SCIPsplitFilename(tmpfilename, NULL, NULL, &fileextension, NULL);
    }
-   
-   assert( extension != NULL || fileextension != NULL );
    
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
    {
@@ -8204,7 +8203,6 @@ SCIP_RETCODE SCIPmultiaggregateVar(
 }
 
 /** marks the variable to not to be multi-aggregated */
-extern
 SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to delete */
@@ -12951,23 +12949,21 @@ SCIP_RETCODE SCIPrepropagateNode(
 }
 
 /** returns depth of first node in active path that is marked being cutoff */
-extern
 int SCIPgetCutoffdepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetCutoffdepth", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetCutoffdepth", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->tree->cutoffdepth;
 }
 
 /** returns depth of first node in active path that has to be propagated again */
-extern
 int SCIPgetRepropdepth(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPgetRepropdepth", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRepropdepth", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->tree->repropdepth;
 }
