@@ -27,32 +27,36 @@
  * This branch-and-price coloring code gives an example for 
  * a pricer and associated modules.
  *
- * It implements the approach described in "A column generation approach
- * for graph coloring" by Anuj Mehrotra and Micheal A. Trick, April 11, 1995.
- * The input format for the graph files is the DIMACS standard format, the file must end with .col.
+ * It implements the approach described in
+ *
+ * "A column generation approach for graph coloring"@n
+ * by Anuj Mehrotra and Micheal A. Trick,@n
+ * INFORMS J. Comput. 8, no. 4, 1995, pp. 344-354.
+ *
+ * The input format for the graph files is the DIMACS standard format, the file must end with ".col".
  *
  * The coloring problem is the following:
  *
- * Given a graph G = (V,E), the goal is to assign a color to each vertex,
+ * Given a graph \f$G = (V,E)\f$, the goal is to assign a color to each vertex,
  * such that no adjacent vertices have the same color. At the same time
  * minimize the number of colors needed.
  *
  * We use the following integer programming model: We have binary
- * variables \f$ x_{s}, s \in S\f$ where \f$S \subseteq \mathcal{P}(V)\f$ 
- * is the set of all (inclusion-) maximal stable sets in the graph G.
+ * variables \f$ x_{s}, s \in \mathcal{S}\f$ where \f$\mathcal{S}\f$ 
+ * is the set of all (inclusion-) maximal stable sets in the graph \f$G\f$.
  * 
  * 
  * The basic model is then:
  * \f[
  *  \begin{array}[t]{rl}
- *    \min & \sum_{s \in S} x_{s} \\
+ *    \min & \sum_{s \in \mathcal{S}} x_{s} \\
  *         & \\
- *    s.t. & \sum_{s \in S, v \in s} x_{s} \ge 1 \quad \forall v \in V \\
+ *    s.t. & \sum_{s \in \mathcal{S}, v \in s} x_{s} \ge 1 \quad \forall v \in V \\
  *  \end{array}
  * \f]
  *
  * Since the number of stable sets is exponential in most cases, the algorithm starts
- * with some subset \f$ \bar{S} \subseteq S\f$ of the stable sets and adds further
+ * with some subset \f$ \bar{\mathcal{S}} \subseteq \mathcal{S}\f$ of the stable sets and adds further
  * stable sets during the solution process if they can improve the current LP solution.
  *
  * Further information about particular modules like the pricing routine and the 
