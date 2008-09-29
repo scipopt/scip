@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.2 2008/04/17 19:07:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.3 2008/09/29 07:57:02 bzfheinz Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -48,7 +48,7 @@
 #if 0
 #include "scip/cons_linear.h"
 
-#define LINCONSUPGD_PRIORITY          0
+#define LINCONSUPGD_PRIORITY          0 /**< priority of the constraint handler for upgrading of linear constraints */
 #endif
 
 
