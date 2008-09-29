@@ -14,18 +14,16 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.c,v 1.4 2008/09/28 21:17:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_col.c,v 1.5 2008/09/29 19:04:02 bzfpfets Exp $"
 
 /**@file   reader_col.c
  * @brief  COL file reader
  * @author Gerald Gamrath
  *
- * This file implements the reader for coloring files in
- * DIMACS standard format.
+ * This file implements the reader for coloring files in DIMACS standard format.
  *
- * Additionally, it provides two sorting functions and a method,
- * which ensures, that all nodes in the graph are covered by
- * at least one stable set.
+ * Additionally, it provides two sorting functions and a method, which ensures that all nodes in the
+ * graph are covered by at least one stable set.
  *
  */
 

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.c,v 1.3 2008/09/29 13:25:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.c,v 1.4 2008/09/29 19:04:02 bzfpfets Exp $"
 
 /**@file   pricer_coloring.c
  * @brief  coloring variable pricer
@@ -22,20 +22,17 @@
  *
  * This file implements the pricer for the coloring algorithm.
  * 
- * It computes maximal stable sets in the current graph whose corresponding 
- * variables can improve the current LP solution.
- * This is done by computing a maximal weighted stable set on the current 
- * graph with dual-variables of the node constraints as weights.
- * A stable set can improve the solution, if the weight of the set is larger one,
- * since it then has negative reduced costs, which are 1 - weight of the set.
+ * It computes maximal stable sets in the current graph whose corresponding variables can improve
+ * the current LP solution.  This is done by computing a maximum weighted stable set in the current
+ * graph with dual-variables of the node constraints as weights. A stable set can improve the
+ * solution, if the weight of the set is larger than 1, since it then has negative reduced costs,
+ * which are (1 - weight of the set).
  *
- * At first, a greedy-method tries to compute such a stable set, if it fails,
- * the tclique-algorithm is used on the complementary graph, 
- * a branch-and-bound algorithm for maximal cliques, included in SCIP.
- * In this case, not only the best solution is added to the LP, as well all
- * other stable sets found during the branch-and-bound process that could improve 
- * the current LP solution are added, limited to a maximal number that can be changed
- * by a parameter.
+ * First, a greedy-method tries to compute such a stable set. If it fails, the tclique-algorithm is
+ * used on the complementary graph. This is a branch-and-bound based algorithm for maximal cliques,
+ * included in SCIP.  In this case, not only the best solution is added to the LP, as well all other
+ * stable sets found during the branch-and-bound process that could improve the current LP solution
+ * are added, limited to a maximal number that can be changed by a parameter.
  *
  */
 

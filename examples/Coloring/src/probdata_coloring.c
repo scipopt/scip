@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.c,v 1.7 2008/09/29 13:25:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.c,v 1.8 2008/09/29 19:04:02 bzfpfets Exp $"
 
 /**@file   probdata_coloring.c
  * @brief  problem data for coloring algorithm
@@ -22,24 +22,24 @@
  *
  * This file implements the problem data for the coloring algorithm.
  *
- * The problem data contains the original graph, preprocessing information,
- * the preprocessed graph, the array with the node-constraints and 
- * an array with all stable sets and corresponding variables.
+ * The problem data contains the original graph, preprocessing information, the preprocessed graph,
+ * the array with the node-constraints, and an array with all stable sets and corresponding
+ * variables.
  *
- * The preprocessing deletes nodes that have a lower degree than a maximum clique.
- * Additionally, it also deletes nodes, that have a dominated neighborhood. 
- * For further information, look at the comments for the method preprocessGraph().
+ * The preprocessing deletes nodes that have a lower degree than the size of a maximum clique.
+ * Additionally, it also deletes nodes that have a dominated neighborhood. For further information,
+ * look at the comments for the method preprocessGraph().
  *
- * The deleted nodes and the relation between the nodes of the original graph and
- * the nodes of the preprocessed graph are stored in order to convert a solution
- * of the preprocessed problem to a solution for the original graph and vice versa.
+ * The deleted nodes and the relation between the nodes of the original graph and the nodes of the
+ * preprocessed graph are stored in order to convert a solution of the preprocessed problem to a
+ * solution for the original graph and vice versa.
  *
- * Each variable has a pointer of type SCIP_VARDATA* that is used in this case to store
- * an integer representing the number of the stable set. With the aid of this int, the 
- * corresponding stable set can be found in the array returned by COLORprobGetStableSets().
- * This array contains all stable sets and is also used to check whether a stable set
- * found by the pricer is really new, which can be done by calling COLORprobStableSetIsNew(). 
- * All sets are sorted decreasingly and new candidates should also be sorted that way.
+ * Each variable has a pointer of type SCIP_VARDATA* that is used in this case to store an integer
+ * representing the number of the stable set. With the aid of this, the corresponding stable set can
+ * be found in the array returned by COLORprobGetStableSets().  This array contains all stable sets
+ * and is also used to check whether a stable set found by the pricer is really new. This can be
+ * done by calling COLORprobStableSetIsNew(). All sets are sorted decreasingly with respect to the
+ * indices of the nodes. New candidates should also be sorted that way.
  *
  */
 

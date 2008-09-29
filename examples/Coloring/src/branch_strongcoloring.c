@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.6 2008/09/29 13:25:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.7 2008/09/29 19:04:02 bzfpfets Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -22,32 +22,29 @@
  *
  * This file implements an additional branching rule for the coloring algorithm.
  *
- * We are looking for two nodes v and w, that are not adjacent in the current 
- * graph and regard the following two constraints: SAME(v,w) and DIFFER(v,w).
- * More information about the meaning of these constraints can be found in the
- * documentation of the other branching rule in branch_coloring.c.
+ * We are looking for two nodes v and w, which are not adjacent in the current graph, and consider
+ * the following two constraints: SAME(v,w) and DIFFER(v,w). More information about the meaning of
+ * these constraints can be found in the documentation of the branching rule in branch_coloring.c.
  *
- * This branching rule puts some more effort into the choice of the two nodes and 
- * performs a strongbranching, which means, that for every possible choice of two nodes,
- * it solves the LPs of the created children and computes a score with respect to 
- * the increase of the lower bound in both nodes. After that, it takes the
- * combination of nodes, that has the best score. The interesting point is, that the
- * strongbranching is not performed for each variable, as it is done in some 
- * default branching rules of scip and supported by the LP solver, but is done 
- * for a constraint, since we are branching on constraints. Look at 
- * executeStrongBranching() to see how it is done. There are also some improvements,
- * since testing all possible combination of nodes is very expensive.
- * The first possibility to avoid that is to stop the computation of scores once 
- * a possible branching is found that has only one feasible child. This results in
- * more restrictions in this child without increasing the number of unprocessed nodes.
+ * This branching rule puts some more effort into the choice of the two nodes and performs a
+ * strongbranching. This means that for every possible choice of two nodes, it solves the LPs of the
+ * created children and computes a score with respect to the increase of the lower bound in both
+ * nodes. After that, it takes the combination of nodes yielding the best score. The interesting
+ * point is that the strongbranching is not performed for each variable, as it is done in some
+ * default branching rules of SCIP and supported by the LP-solver, but is done for a constraint,
+ * since we are branching on constraints. Look at executeStrongBranching() to see how it is
+ * done. There are also some improvements, since testing all possible combination of nodes is very
+ * expensive.  The first possibility to avoid this is to stop the computation of scores once a
+ * possible branching is found that has only one feasible child. This results in more restrictions
+ * in this child without increasing the number of unprocessed nodes.
  *
- * The second improvement is to compute a priority for all the possible combinations,
- * w.r.t. the fractional values of the variables. Then, only first best k combinations
- * are investigated with strongbranching.
+ * The second improvement is to compute a priority for all the possible combinations, w.r.t. the
+ * fractional values of the variables. Then, only the first best k combinations are investigated by
+ * strongbranching.
  *
- * This code is not optimized and in most cases inferior to the standard branching rule,
- * it is only a demonstration of how to perform strongbranching on constraints!
- *  
+ * This code is not optimized and in most cases inferior to the standard branching rule. It is only
+ * a demonstration of how to perform strongbranching on constraints!
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

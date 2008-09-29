@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_csol.c,v 1.4 2008/09/29 13:25:07 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_csol.c,v 1.5 2008/09/29 19:04:02 bzfpfets Exp $"
 
 /**@file   reader_csol.c
  * @brief  CSOL file writer
@@ -22,11 +22,10 @@
  *
  * This file implements the reader and writer for coloring solution files.
  *
- * These files have the following structure:
- * The first line contains the name of the problem, the number of colors used in the
- * solution and - optional - the name of the algorithm that computed this solution.
- * The second line lists the colors of the nodes, separated by spaces.
- * It is sorted increasingly by the node ids, the numbers for the colors start with 0.
+ * These files have the following structure:@n The first line contains the name of the problem, the
+ * number of colors used in the solution, and - optional - the name of the algorithm that computed
+ * this solution.  The second line lists the colors of the nodes, separated by spaces. It is sorted
+ * increasingly by the node indices. The number for the colors start with 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
