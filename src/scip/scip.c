@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.479 2008/09/24 20:52:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.480 2008/09/29 19:33:32 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2662,11 +2662,15 @@ SCIP_RETCODE writeProblem(
 {
    SCIP_RETCODE retcode;
    char* tmpfilename;
-   char* fileextension = NULL;
-   char*  compression = NULL;
-   FILE* file = NULL;
+   char* fileextension;
+   char* compression;
+   FILE* file;
 
    assert(scip != NULL );
+
+   fileextension = NULL;
+   compression = NULL;
+   file = NULL;
 
    if( filename != NULL &&  filename[0] != '\0' )
    {
@@ -2686,6 +2690,7 @@ SCIP_RETCODE writeProblem(
       {
          SCIPwarningMessage("currently it is not possible to write files with any compression\n");
 	 BMSfreeMemoryArray(&tmpfilename);
+         fclose(file);
          return SCIP_FILECREATEERROR;
       }
       
@@ -2707,8 +2712,8 @@ SCIP_RETCODE writeProblem(
    if( filename != NULL &&  filename[0] != '\0' )
    {
       BMSfreeMemoryArray(&tmpfilename);
+      fclose(file);
    }
-
 
    /* check for write errors */
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )

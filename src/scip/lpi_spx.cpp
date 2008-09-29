@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.87 2008/09/29 08:46:41 bzfgleix Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.88 2008/09/29 19:33:32 bzfberth Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -81,37 +81,37 @@ using namespace soplex;
 /** Macro for a single SoPlex call for which exceptions have to be catched - return an LP error. We
  *  make no distinction between different exception types, e.g., between memory allocation and other
  *  exceptions. */
-#define SOPLEX_TRY(x)  do                                                                                     \
-                       {                                                                                      \
-			  try                                                                                 \
-			  {                                                                                   \
-			     (x);                                      	                                      \
-			  }                                                                                   \
-			  catch(SPxException E)                                                               \
-			  {                                                                                   \
-			     std::string s = E.what();                                                        \
-			     SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());                \
-			     return SCIP_LPERROR;                                                             \
-			  }                                                                                   \
-                       }                                                                                      \
-                       while( FALSE )
+#define SOPLEX_TRY(x)  do                                               \
+   {                                                                    \
+      try                                                               \
+      {                                                                 \
+         (x);                                                           \
+      }                                                                 \
+      catch(SPxException E)                                             \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str()); \
+         return SCIP_LPERROR;                                           \
+      }                                                                 \
+   }                                                                    \
+   while( FALSE )
 
 /* Macro for a single SoPlex call for which exceptions have to be catched - abort if they
  * arise. SCIP_ABORT() is not accessible here.*/
-#define SOPLEX_TRY_ABORT(x)  do                                                                               \
-                       {                                                                                      \
-			  try                                                                                 \
-			  {                                                                                   \
-			     (x);                                      	                                      \
-			  }                                                                                   \
-			  catch(SPxException E)                                                               \
-			  {                                                                                   \
-			     std::string s = E.what();                                                        \
-			     SCIPerrorMessage("SoPlex threw an exception: %s\n", s.c_str());                  \
-			     abort();			                                                      \
-			  }                                                                                   \
-                       }                                                                                      \
-                       while( FALSE )
+#define SOPLEX_TRY_ABORT(x)  do                                         \
+   {                                                                    \
+      try                                                               \
+      {                                                                 \
+         (x);                                                           \
+      }                                                                 \
+      catch(SPxException E)                                             \
+      {                                                                 \
+         std::string s = E.what();                                      \
+         SCIPerrorMessage("SoPlex threw an exception: %s\n", s.c_str()); \
+         abort();                                                       \
+      }                                                                 \
+   }                                                                    \
+   while( FALSE )
 
 
 
@@ -137,16 +137,16 @@ public:
 #ifdef SOPLEX_USE_ROW_REP
       : SPxSolver(ENTER, ROW),
 #else
-      : SPxSolver(LEAVE, COLUMN),
+        : SPxSolver(LEAVE, COLUMN),
 #endif
-        m_probname(0),
-        m_fromscratch(false),
-        m_objLoLimit(-soplex::infinity),
-        m_objUpLimit(soplex::infinity),
-        m_stat(NO_PROBLEM),
-        m_lpinfo(false),
-        m_autopricing(true),
-        m_autophase1iters(0)
+          m_probname(0),
+          m_fromscratch(false),
+          m_objLoLimit(-soplex::infinity),
+          m_objUpLimit(soplex::infinity),
+          m_stat(NO_PROBLEM),
+          m_lpinfo(false),
+          m_autopricing(true),
+          m_autophase1iters(0)
    {
       setSolver(&m_slu);
       setTester(&m_ratio);
@@ -269,8 +269,8 @@ public:
 	 
 	 /* since it is not clear if the status in SoPlex are set correctly
 	  * we want to make sure that if an error is thrown the status is
-	     * not OPTIMAL anymore.
-	     */
+          * not OPTIMAL anymore.
+          */
 	 assert( m_stat != SPxSolver::OPTIMAL );
       }
    }
@@ -597,15 +597,25 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   SPxSCIP spx("tmp");
-   int version;
-
-   version = spx.version();
+   try
+   {
+      SPxSCIP spx("tmp");
+      int version;
+      
+      version = spx.version();
 #ifdef SOPLEX_USE_ROW_REP
-   snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex (row) %d.%d.%d", version/100, (version % 100)/10, version % 10);
+      snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex (row) %d.%d.%d", version/100, (version % 100)/10, version % 10);
 #else
-   snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex %d.%d.%d", version/100, (version % 100)/10, version % 10);
+      snprintf(spxname, SCIP_MAXSTRLEN, "SoPlex %d.%d.%d", version/100, (version % 100)/10, version % 10);
 #endif
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return NULL;
+   }
+
    return spxname;
 }
 
@@ -717,23 +727,32 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    invalidateSolution(lpi);
 
-   SPxSCIP* spx = lpi->spx;
-   LPRowSet rows(nrows);
-   DSVector emptyVector(0);
-   int i;
+   try
+   {
+      SPxSCIP* spx = lpi->spx;
+      LPRowSet rows(nrows);
+      DSVector emptyVector(0);
+      int i;
 
-   SOPLEX_TRY( spx->clear() );
+      spx->clear();
 
-   /* set objective sense */
-   spx->changeSense(spxObjsen(objsen));
+      /* set objective sense */
+      spx->changeSense(spxObjsen(objsen));
 
-   /* create empty rows with given sides */
-   for( i = 0; i < nrows; ++i )
-      rows.add(lhs[i], emptyVector, rhs[i]);
-   SOPLEX_TRY( spx->addRows(rows) );
+      /* create empty rows with given sides */
+      for( i = 0; i < nrows; ++i )
+         rows.add(lhs[i], emptyVector, rhs[i]);
+      spx->addRows(rows);
    
-   /* create column vectors with coefficients and bounds */
-   SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
+      /* create column vectors with coefficients and bounds */
+      SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, colnames, nnonz, beg, ind, val) );
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -766,25 +785,34 @@ SCIP_RETCODE SCIPlpiAddCols(
    invalidateSolution(lpi);
 
    SPxSCIP* spx = lpi->spx;
-   LPColSet cols(ncols);
-   DSVector colVector(ncols);
-   int last;
-   int i;
-   int j;
-
-   /* create column vectors with coefficients and bounds */
-   for( i = 0; i < ncols; ++i )
+   try
    {
-      colVector.clear();
-      if( nnonz > 0 )
+      LPColSet cols(ncols);
+      DSVector colVector(ncols);
+      int last;
+      int i;
+      int j;
+
+      /* create column vectors with coefficients and bounds */
+      for( i = 0; i < ncols; ++i )
       {
-         last = (i == ncols-1 ? nnonz : beg[i+1]);
-         for( j = beg[i]; j < last; ++j )
-            colVector.add(ind[j], val[j]);
+         colVector.clear();
+         if( nnonz > 0 )
+         {
+            last = (i == ncols-1 ? nnonz : beg[i+1]);
+            for( j = beg[i]; j < last; ++j )
+               colVector.add(ind[j], val[j]);
+         }
+         cols.add(obj[i], lb[i], colVector, ub[i]);
       }
-      cols.add(obj[i], lb[i], colVector, ub[i]);
+      spx->addCols(cols);
    }
-   SOPLEX_TRY( spx->addCols(cols) );
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
  
    return SCIP_OKAY;
 }
@@ -863,26 +891,35 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    invalidateSolution(lpi);
 
-   SPxSCIP* spx = lpi->spx;
-   LPRowSet rows(nrows);
-   DSVector rowVector;
-   int last;
-   int i;
-   int j;
-
-   /* create row vectors with given sides */
-   for( i = 0; i < nrows; ++i )
+   try
    {
-      rowVector.clear();
-      if( nnonz > 0 )
+      SPxSCIP* spx = lpi->spx;
+      LPRowSet rows(nrows);
+      DSVector rowVector;
+      int last;
+      int i;
+      int j;
+
+      /* create row vectors with given sides */
+      for( i = 0; i < nrows; ++i )
       {
-         last = (i == nrows-1 ? nnonz : beg[i+1]);
-         for( j = beg[i]; j < last; ++j )
-            rowVector.add(ind[j], val[j]);
+         rowVector.clear();
+         if( nnonz > 0 )
+         {
+            last = (i == nrows-1 ? nnonz : beg[i+1]);
+            for( j = beg[i]; j < last; ++j )
+               rowVector.add(ind[j], val[j]);
+         }
+         rows.add(lhs[i], rowVector, rhs[i]);
       }
-      rows.add(lhs[i], rowVector, rhs[i]);
+      spx->addRows(rows);
    }
-   SOPLEX_TRY( spx->addRows(rows) );
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -1124,37 +1161,46 @@ SCIP_RETCODE SCIPlpiScaleRow(
    assert(lpi->spx != NULL);
    assert(scaleval != 0.0);
 
-   invalidateSolution(lpi);
-
-   /* get the row vector and the row's sides */
-   SVector rowvec = lpi->spx->rowVector(row);
-   lhs = lpi->spx->lhs(row);
-   rhs = lpi->spx->rhs(row);
-
-   /* scale the row vector */
-   rowvec *= scaleval;
-
-   /* adjust the sides */
-   if( lhs > -soplex::infinity )
-      lhs *= scaleval;
-   else if( scaleval < 0.0 )
-      lhs = soplex::infinity;
-   if( rhs < soplex::infinity )
-      rhs *= scaleval;
-   else if( scaleval < 0.0 )
-      rhs = -soplex::infinity;
-   if( scaleval < 0.0 )
+   try 
    {
-      SCIP_Real oldlhs = lhs;
-      lhs = rhs;
-      rhs = oldlhs;
-   }
+      invalidateSolution(lpi);
 
-   /* create the new row */
-   LPRow lprow(lhs, rowvec, rhs);
+      /* get the row vector and the row's sides */
+      SVector rowvec = lpi->spx->rowVector(row);
+      lhs = lpi->spx->lhs(row);
+      rhs = lpi->spx->rhs(row);
+
+      /* scale the row vector */
+      rowvec *= scaleval;
+
+      /* adjust the sides */
+      if( lhs > -soplex::infinity )
+         lhs *= scaleval;
+      else if( scaleval < 0.0 )
+         lhs = soplex::infinity;
+      if( rhs < soplex::infinity )
+         rhs *= scaleval;
+      else if( scaleval < 0.0 )
+         rhs = -soplex::infinity;
+      if( scaleval < 0.0 )
+      {
+         SCIP_Real oldlhs = lhs;
+         lhs = rhs;
+         rhs = oldlhs;
+      }
+
+      /* create the new row */
+      LPRow lprow(lhs, rowvec, rhs);
    
-   /* change the row in the LP */
-   SOPLEX_TRY( lpi->spx->changeRow(row, lprow) );
+      /* change the row in the LP */
+      lpi->spx->changeRow(row, lprow);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -1178,41 +1224,50 @@ SCIP_RETCODE SCIPlpiScaleCol(
    assert(lpi->spx != NULL);
    assert(scaleval != 0.0);
 
-   invalidateSolution(lpi);
-
-   /* get the col vector and the col's bounds and objective value */
-   SVector colvec = lpi->spx->colVector(col);
-   obj = lpi->spx->obj(col);
-   lb = lpi->spx->lower(col);
-   ub = lpi->spx->upper(col);
-
-   /* scale the col vector */
-   colvec *= scaleval;
-
-   /* scale the objective value */
-   obj *= scaleval;
-
-   /* adjust the bounds */
-   if( lb > -soplex::infinity )
-      lb /= scaleval;
-   else if( scaleval < 0.0 )
-      lb = soplex::infinity;
-   if( ub < soplex::infinity )
-      ub /= scaleval;
-   else if( scaleval < 0.0 )
-      ub = -soplex::infinity;
-   if( scaleval < 0.0 )
+   try
    {
-      SCIP_Real oldlb = lb;
-      lb = ub;
-      ub = oldlb;
-   }
+      invalidateSolution(lpi);
 
-   /* create the new col (in LPCol's constructor, the upper bound is given first!) */
-   LPCol lpcol(obj, colvec, ub, lb);
+      /* get the col vector and the col's bounds and objective value */
+      SVector colvec = lpi->spx->colVector(col);
+      obj = lpi->spx->obj(col);
+      lb = lpi->spx->lower(col);
+      ub = lpi->spx->upper(col);
+
+      /* scale the col vector */
+      colvec *= scaleval;
+
+      /* scale the objective value */
+      obj *= scaleval;
+
+      /* adjust the bounds */
+      if( lb > -soplex::infinity )
+         lb /= scaleval;
+      else if( scaleval < 0.0 )
+         lb = soplex::infinity;
+      if( ub < soplex::infinity )
+         ub /= scaleval;
+      else if( scaleval < 0.0 )
+         ub = -soplex::infinity;
+      if( scaleval < 0.0 )
+      {
+         SCIP_Real oldlb = lb;
+         lb = ub;
+         ub = oldlb;
+      }
+
+      /* create the new col (in LPCol's constructor, the upper bound is given first!) */
+      LPCol lpcol(obj, colvec, ub, lb);
    
-   /* change the col in the LP */
-   SOPLEX_TRY( lpi->spx->changeCol(col, lpcol) );
+      /* change the col in the LP */
+      lpi->spx->changeCol(col, lpcol);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -2126,25 +2181,34 @@ SCIP_RETCODE SCIPlpiGetSol(
    if( objval != NULL )
       *objval = lpi->spx->value();
 
-   if( primsol != NULL )
+   try
    {
-      Vector tmp(lpi->spx->nCols(), primsol);
-      SOPLEX_TRY( (void)lpi->spx->getPrimal(tmp) );
+      if( primsol != NULL )
+      {
+         Vector tmp(lpi->spx->nCols(), primsol);
+         (void)lpi->spx->getPrimal(tmp);
+      }
+      if( dualsol != NULL )
+      {
+         Vector tmp(lpi->spx->nRows(), dualsol);
+         (void)lpi->spx->getDual(tmp);
+      }
+      if( activity != NULL )
+      {
+         Vector tmp(lpi->spx->nRows(), activity);
+         (void)lpi->spx->getSlacks(tmp);  /* in SoPlex, the activities are called "slacks" */
+      }
+      if( redcost != NULL )
+      {
+         Vector tmp(lpi->spx->nCols(), redcost);
+         (void)lpi->spx->getRedCost(tmp);
+      }
    }
-   if( dualsol != NULL )
+   catch(SPxException x)
    {
-      Vector tmp(lpi->spx->nRows(), dualsol);
-      SOPLEX_TRY( (void)lpi->spx->getDual(tmp) );
-   }
-   if( activity != NULL )
-   {
-      Vector tmp(lpi->spx->nRows(), activity);
-      SOPLEX_TRY( (void)lpi->spx->getSlacks(tmp) );  /* in SoPlex, the activities are called "slacks" */
-   }
-   if( redcost != NULL )
-   {
-      Vector tmp(lpi->spx->nCols(), redcost);
-      SOPLEX_TRY( (void)lpi->spx->getRedCost(tmp) );
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
    }
 
    return SCIP_OKAY;
@@ -2177,8 +2241,17 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   Vector tmp(lpi->spx->nRows(), dualfarkas);
-   SOPLEX_TRY( (void)lpi->spx->getDualfarkas(tmp) );
+   try
+   {
+      Vector tmp(lpi->spx->nRows(), dualfarkas);
+      (void)lpi->spx->getDualfarkas(tmp);
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -2477,58 +2550,59 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 static
 SCIP_RETCODE prepareFactorization(
    SCIP_LPI*   lpi
-)
+   )
 {
    SCIPdebugMessage("Preparing factorization for computation of basis inverse.\n");
 
-   /* if the factorization has not been set up, we compute a new factorization */
-   if ( lpi->factorization == 0 )
+   try
    {
-      SPxSolver* spx = lpi->spx;
+      /* if the factorization has not been set up, we compute a new factorization */
+      if ( lpi->factorization == 0 )
+      {
+         SPxSolver* spx = lpi->spx;
 
-      /* matrix to store columns */
-      DataArray <const SVector*> matrix(spx->nRows());
+         /* matrix to store columns */
+         DataArray <const SVector*> matrix(spx->nRows());
       
-      int k = 0;
-      for (int i = 0; i < spx->nRows(); ++i)
-      {
-	 if ( ! spx->isRowBasic(i) )
-	 {
-	    int row = spx->number(spx->id(i));
-	    matrix[k++] = new UnitVector(row);
-	 }
-      }
-      for (int j = 0; j < spx->nCols(); ++j)
-      {
-	 if ( ! spx->isColBasic(j) )
-	 {
-	    int col = spx->number(spx->coId(j));
-	    matrix[k++] = &spx->colVector(col);
-	 }
-      }
-      assert( k == spx->nRows() );
-      assert( k == matrix.size() );
+         int k = 0;
+         for (int i = 0; i < spx->nRows(); ++i)
+         {
+            if ( ! spx->isRowBasic(i) )
+               matrix[k++] = new UnitVector(i);
+         }
+         for (int j = 0; j < spx->nCols(); ++j)
+         {
+            if ( ! spx->isColBasic(j) )
+               matrix[k++] = &spx->colVector(j);
+         }
+         assert( k == spx->nRows() );
+         assert( k == matrix.size() );
 
-      /* compute factorization */
-      lpi->factorization = new SLUFactor;
+         /* compute factorization */
+         lpi->factorization = new SLUFactor;
 #ifndef NDEBUG
-      SLinSolver::Status status;
-      SOPLEX_TRY( status = lpi->factorization->load(matrix.get_ptr(), k) );
+         SLinSolver::Status status = lpi->factorization->load(matrix.get_ptr(), k);
 #else
-      SOPLEX_TRY( (void) lpi->factorization->load(matrix.get_ptr(), k) );
+         (void) lpi->factorization->load(matrix.get_ptr(), k);
 #endif
-      assert( status == SLinSolver::OK );
-      assert( k == lpi->factorization->dim() );
+         assert( status == SLinSolver::OK );
+         assert( k == lpi->factorization->dim() );
 
-      /* delete matrix columns corresponding to unit vectors */
-      k = 0;
-      for (int i = 0; i < spx->nRows(); ++i)
-      {
-	 if ( ! spx->isRowBasic(i) )
-	    delete matrix[k++];
+         /* delete matrix columns corresponding to unit vectors */
+         k = 0;
+         for (int i = 0; i < spx->nRows(); ++i)
+         {
+            if ( ! spx->isRowBasic(i) )
+               delete matrix[k++];
+         }
       }
    }
-
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
+   }
    return SCIP_OKAY;
 }
 
@@ -2541,37 +2615,46 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvRow()\n");
 
-   assert(lpi != NULL);
-   assert(lpi->spx != NULL);
-   SPxSolver* spx = lpi->spx;
-
-   Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
-   DVector e(spx->nRows());      /* prepare unit vector */
-   e.clear();
-   e[r] = 1.0;
-
-   /* in the column case use the existing factorization */
-   if ( spx->rep() == SPxSolver::COLUMN )
+   try
    {
-      assert( spx->dim() == spx->nRows() );
-      assert( spx->coDim() == spx->nCols() );
+      assert(lpi != NULL);
+      assert(lpi->spx != NULL);
+      SPxSolver* spx = lpi->spx;
 
-      /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
-      SOPLEX_TRY( spx->basis().coSolve(x, e) );
-   }
-   else
-   {
-      assert( spx->rep() == SPxSolver::ROW );
-      assert( spx->dim() == spx->nCols() );
-      assert( spx->coDim() == spx->nRows() );
+      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
+      DVector e(spx->nRows());      /* prepare unit vector */
+      e.clear();
+      e[r] = 1.0;
 
-      /* factorization is deleted in invalidateSolution() */
-      SCIP_CALL( prepareFactorization(lpi) );
-      assert( lpi->factorization != 0 );
-      assert( lpi->factorization->dim() == spx->nRows() );
+      /* in the column case use the existing factorization */
+      if ( spx->rep() == SPxSolver::COLUMN )
+      {
+         assert( spx->dim() == spx->nRows() );
+         assert( spx->coDim() == spx->nCols() );
+
+         /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
+         spx->basis().coSolve(x, e);
+      }
+      else
+      {
+         assert( spx->rep() == SPxSolver::ROW );
+         assert( spx->dim() == spx->nCols() );
+         assert( spx->coDim() == spx->nRows() );
+
+         /* factorization is deleted in invalidateSolution() */
+         SCIP_CALL( prepareFactorization(lpi) );
+         assert( lpi->factorization != 0 );
+         assert( lpi->factorization->dim() == spx->nRows() );
       
-      /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
-      SOPLEX_TRY( lpi->factorization->solveLeft(x, e) );
+         /* solve system "x = e_r^T * B^-1" to get r'th row of B^-1 */
+         lpi->factorization->solveLeft(x, e);
+      }
+   }
+   catch(SPxException x)
+   {
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
    }
 
    return SCIP_OKAY;
@@ -2590,37 +2673,46 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
 
-   assert(lpi != NULL);
-   assert(lpi->spx != NULL);
-   SPxSolver* spx = lpi->spx;
-
-   Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
-   DVector e(spx->nRows());      /* prepare unit vector */
-   e.clear();
-   e[c] = 1.0;
-
-   /* in the column case use the existing factorization */
-   if ( spx->rep() == SPxSolver::COLUMN )
+   try
    {
-      assert( spx->dim() == spx->nRows() );
-      assert( spx->coDim() == spx->nCols() );
+      assert(lpi != NULL);
+      assert(lpi->spx != NULL);
+      SPxSolver* spx = lpi->spx;
 
-      /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
-      SOPLEX_TRY( spx->basis().solve(x, e) );
+      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
+      DVector e(spx->nRows());      /* prepare unit vector */
+      e.clear();
+      e[c] = 1.0;
+
+      /* in the column case use the existing factorization */
+      if ( spx->rep() == SPxSolver::COLUMN )
+      {
+         assert( spx->dim() == spx->nRows() );
+         assert( spx->coDim() == spx->nCols() );
+
+         /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
+         spx->basis().solve(x, e);
+      }
+      else
+      {
+         assert( spx->rep() == SPxSolver::ROW );
+         assert( spx->dim() == spx->nCols() );
+         assert( spx->coDim() == spx->nRows() );
+      
+         /* factorization is deleted in invalidateSolution() */
+         SCIP_CALL( prepareFactorization(lpi) );
+         assert( lpi->factorization != 0 );
+         assert( lpi->factorization->dim() == spx->nRows() );
+      
+         /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
+         lpi->factorization->solveRight(x, e);
+      }
    }
-   else
+   catch(SPxException x)
    {
-      assert( spx->rep() == SPxSolver::ROW );
-      assert( spx->dim() == spx->nCols() );
-      assert( spx->coDim() == spx->nRows() );
-      
-      /* factorization is deleted in invalidateSolution() */
-      SCIP_CALL( prepareFactorization(lpi) );
-      assert( lpi->factorization != 0 );
-      assert( lpi->factorization->dim() == spx->nRows() );
-      
-      /* solve system "x = B^-1 * e_c" to get c'th column of B^-1 */
-      SOPLEX_TRY( lpi->factorization->solveRight(x, e) );
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
    }
 
    return SCIP_OKAY;
@@ -2682,38 +2774,47 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 {
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
 
-   assert(lpi != NULL);
-   assert(lpi->spx != NULL);
-   SPxSolver* spx = lpi->spx;
-
-   Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
-   DVector col(lpi->spx->nRows());
-
-   /* extract column c of A */
-   col = lpi->spx->colVector(c);
-
-   /* in the column case use the existing factorization */
-   if ( spx->rep() == SPxSolver::COLUMN )
+   try 
    {
-      assert( spx->dim() == spx->nRows() );
-      assert( spx->coDim() == spx->nCols() );
+      assert(lpi != NULL);
+      assert(lpi->spx != NULL);
+      SPxSolver* spx = lpi->spx;
 
-      /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
-      SOPLEX_TRY( lpi->spx->basis().solve(x, col) );
+      Vector x(spx->nRows(), coef); /* row of B^-1 has nrows entries - note that x is based on coef */
+      DVector col(lpi->spx->nRows());
+
+      /* extract column c of A */
+      col = lpi->spx->colVector(c);
+
+      /* in the column case use the existing factorization */
+      if ( spx->rep() == SPxSolver::COLUMN )
+      {
+         assert( spx->dim() == spx->nRows() );
+         assert( spx->coDim() == spx->nCols() );
+
+         /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
+         lpi->spx->basis().solve(x, col);
+      }
+      else
+      {
+         assert( spx->rep() == SPxSolver::ROW );
+         assert( spx->dim() == spx->nCols() );
+         assert( spx->coDim() == spx->nRows() );
+
+         /* factorization is deleted in invalidateSolution() */      
+         SCIP_CALL( prepareFactorization(lpi) );
+         assert( lpi->factorization != 0 );
+         assert( lpi->factorization->dim() == spx->nRows() );
+
+         /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
+         lpi->factorization->solveRight(x, col);
+      }
    }
-   else
+   catch(SPxException x)
    {
-      assert( spx->rep() == SPxSolver::ROW );
-      assert( spx->dim() == spx->nCols() );
-      assert( spx->coDim() == spx->nRows() );
-
-      /* factorization is deleted in invalidateSolution() */      
-      SCIP_CALL( prepareFactorization(lpi) );
-      assert( lpi->factorization != 0 );
-      assert( lpi->factorization->dim() == spx->nRows() );
-
-      /* solve system "x = B^-1 * A_c" to get c'th column of B^-1 * A */
-      SOPLEX_TRY( lpi->factorization->solveRight(x, col) );
+      std::string s = x.what();      
+      SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
+      return SCIP_LPERROR;
    }
 
    return SCIP_OKAY;
