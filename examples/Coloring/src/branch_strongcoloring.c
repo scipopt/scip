@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.8 2008/09/29 19:49:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.9 2008/09/29 20:37:21 bzfgamra Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -307,13 +307,13 @@ SCIP_RETCODE computeBranchingPriorities(
 
 
 
-
+/** computes the lower bound that would a child node with the given branching decision would have */
 static 
 SCIP_Real executeStrongBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   COLOR_CONSTYPE        constype,           /**< the data of the branching rule */
-   int                   node1,
-   int                   node2,
+   COLOR_CONSTYPE        constype,           /**< the type of the contraint: SAME or DIFFER */
+   int                   node1,              /**< the first node for the branching constraint */
+   int                   node2,              /**< the second node for the branching constraint */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< the data of the branching rule */
    )
 {
@@ -354,7 +354,7 @@ SCIP_Real executeStrongBranching(
 }
 
 
-/** index comparison method of linear constraints: compares two indices of the variable set in the linear constraint */
+/** index comparison method two values in a real array */
 static
 SCIP_DECL_SORTINDCOMP(consdataCompValues)
 {  
