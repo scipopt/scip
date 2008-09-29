@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.h,v 1.3 2008/07/09 08:21:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.h,v 1.4 2008/09/29 16:50:48 bzfberth Exp $"
 
 /**@file   sepa_mcf.h
  * @brief  multi-commodity-flow network cut separator
@@ -24,7 +24,6 @@
 
 #ifndef __SCIP_SEPA_MCF_H__
 #define __SCIP_SEPA_MCF_H__
-
 
 #include "scip/scip.h"
 

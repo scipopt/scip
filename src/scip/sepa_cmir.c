@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.83 2008/09/22 19:25:10 bzfwanie Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.84 2008/09/29 16:50:48 bzfberth Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -75,7 +75,6 @@
 #define IMPLINTSARECONT
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
-
 
 
 /*

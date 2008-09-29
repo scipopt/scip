@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.39 2008/07/10 14:43:53 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.40 2008/09/29 16:50:48 bzfberth Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -23,6 +23,7 @@
 
 #ifndef __SCIP_CONS_KNAPSACK_H__
 #define __SCIP_CONS_KNAPSACK_H__
+
 
 
 #include "scip/scip.h"

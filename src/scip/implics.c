@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.29 2008/08/29 16:44:05 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.30 2008/09/29 16:50:48 bzfberth Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -36,7 +36,6 @@
 #ifndef NDEBUG
 #include "scip/struct_implics.h"
 #endif
-
 
 
 

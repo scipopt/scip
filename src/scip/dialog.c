@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.46 2008/09/28 21:16:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.47 2008/09/29 16:50:48 bzfberth Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -1009,12 +1009,12 @@ void SCIPdialogGetPath(
 
    assert(dialog != NULL);
 
-   (void)strcpy(path, dialog->name);
+   (void)strncpy(path, dialog->name, SCIP_MAXSTRLEN);
    dialog = dialog->parent;
    while( dialog != NULL )
    {
       SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
-      (void)strcpy(path, s);
+      (void)strncpy(path, s, SCIP_MAXSTRLEN);
       dialog = dialog->parent;
    }
 }

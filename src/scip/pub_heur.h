@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.17 2008/08/30 21:10:44 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.18 2008/09/29 16:50:48 bzfberth Exp $"
 
 /**@file   pub_heur.h
  * @brief  public methods for primal heuristics
@@ -132,6 +132,5 @@ extern
 SCIP_Real SCIPheurGetTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
-
 
 #endif

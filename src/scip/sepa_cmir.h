@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.h,v 1.13 2008/07/04 10:07:28 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.h,v 1.14 2008/09/29 16:50:48 bzfberth Exp $"
 
 /**@file   sepa_cmir.h
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -51,7 +51,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    const char*           cutclassname,       /**< name of cut class to use for row names */
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    );
-
 
 /** creates the cmir separator and includes it in SCIP */
 extern

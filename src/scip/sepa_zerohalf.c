@@ -1013,7 +1013,9 @@ SCIP_RETCODE ZerohalfAuxIPDataFree(
    assert(*auxipdata != NULL);
 
    if( (*auxipdata)->subscip != NULL )
-      SCIPfree(&((*auxipdata)->subscip));
+   {
+      SCIP_CALL( SCIPfree(&((*auxipdata)->subscip)) );
+   }
 
    if( (*auxipdata)->v != NULL )
       SCIPfreeMemoryArray(scip, &((*auxipdata)->v));
@@ -1253,29 +1255,29 @@ char* getconstantname(
 {
    switch (value)
    {
-   case IRRELEVANT: sprintf(buffer, "IRRELEVANT"); break;
-   case ZERO_ROW: sprintf(buffer, "ZEROROW"); break;
-   case IDENT_TO_ROW_WITH_SMALLER_SLACK: sprintf(buffer, "IDENTROW"); break;
-   case SLACK_GREATER_THAN_MAXSLACK: sprintf(buffer, "SLACK>MAXSLACK"); break;
-   case DEFINES_VIOLATED_ZEROHALF_CUT: sprintf(buffer, "ISZHCUT"); break;
-   case ROW_IN_SUBPROB_WITHOUT_ODD_RHS: sprintf(buffer, "NOODDRHSROW"); break;
-   case NONEXISTENT_ROW: sprintf(buffer, "DOESNOTEXIST"); break;
-   case NO_RELEVANT_COLUMNS: sprintf(buffer, "HASNORELEVANTCOLS"); break;
-   case SLACK_GREATER_THAN_MSL_MINUS_SODD: sprintf(buffer, "SLACK+SODD>MAXSLACK"); break;
-   case LARGE_COL_EXISTS: sprintf(buffer, "SCOL+SODD>MAXSLACK"); break; 
-   case ZERO_COLUMN: sprintf(buffer, "ZEROCOLUMN"); break;
-   case IDENT_TO_ANOTHER_COLUMN: sprintf(buffer, "IDENTCOLUMN"); break;
-   case ZERO_LP_SOL: sprintf(buffer, "PRIMSOL=0"); break;
-   case LP_SOL_EQUALS_EVEN_LB: sprintf(buffer, "PRIMSOL=EVENLB"); break;
-   case LP_SOL_EQUALS_ODD_LB: sprintf(buffer, "PRIMSOL=ODDLB"); break;
-   case LP_SOL_EQUALS_EVEN_UB: sprintf(buffer, "PRIMSOL=EVENUB"); break;
-   case LP_SOL_EQUALS_ODD_UB: sprintf(buffer, "PRIMSOL=ODDUB"); break;
-   case SINGLETON_COLUMN: sprintf(buffer, "SINGLETONCOLUMN"); break;
-   case CONTINUOUS_VARIABLE: sprintf(buffer, "CONTCOLUMN"); break;
-   case SMALL_FRACSOL_HEUR: sprintf(buffer, "SUMFRACSOL<DELTA"); break;
-   case ALL_MATRIX_ROWS_DELETED: sprintf(buffer, "NOROWSLEFT"); break;
-   case COLUMN_IN_SUBPROB_WITHOUT_ODD_RHS: sprintf(buffer, "NOODDRHSCOL"); break;
-   default: assert(FALSE);
+   case IRRELEVANT: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IRRELEVANT"); break;
+   case ZERO_ROW: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ZEROROW"); break;
+   case IDENT_TO_ROW_WITH_SMALLER_SLACK: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IDENTROW"); break;
+   case SLACK_GREATER_THAN_MAXSLACK: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SLACK>MAXSLACK"); break;
+   case DEFINES_VIOLATED_ZEROHALF_CUT: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ISZHCUT"); break;
+   case ROW_IN_SUBPROB_WITHOUT_ODD_RHS: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSROW"); break;
+   case NONEXISTENT_ROW: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "DOESNOTEXIST"); break;
+   case NO_RELEVANT_COLUMNS: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "HASNORELEVANTCOLS"); break;
+   case SLACK_GREATER_THAN_MSL_MINUS_SODD: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SLACK+SODD>MAXSLACK"); break;
+   case LARGE_COL_EXISTS: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SCOL+SODD>MAXSLACK"); break; 
+   case ZERO_COLUMN: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "ZEROCOLUMN"); break;
+   case IDENT_TO_ANOTHER_COLUMN: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "IDENTCOLUMN"); break;
+   case ZERO_LP_SOL: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=0"); break;
+   case LP_SOL_EQUALS_EVEN_LB: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=EVENLB"); break;
+   case LP_SOL_EQUALS_ODD_LB: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=ODDLB"); break;
+   case LP_SOL_EQUALS_EVEN_UB: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=EVENUB"); break;
+   case LP_SOL_EQUALS_ODD_UB: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "PRIMSOL=ODDUB"); break;
+   case SINGLETON_COLUMN: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SINGLETONCOLUMN"); break;
+   case CONTINUOUS_VARIABLE: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "CONTCOLUMN"); break;
+   case SMALL_FRACSOL_HEUR: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "SUMFRACSOL<DELTA"); break;
+   case ALL_MATRIX_ROWS_DELETED: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOROWSLEFT"); break;
+   case COLUMN_IN_SUBPROB_WITHOUT_ODD_RHS: SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSCOL"); break;
+   default: SCIP_ABORT();
    }
 
    return buffer;
@@ -2769,7 +2771,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
                || SCIPisEfficacious(scip, cutdata->efficacy) )
             {    
                /* create cut */
-               sprintf(cutname, "zerohalf%d_%d", SCIPgetNLPs(scip), nzerohalfcuts);
+               SCIPsnprintf(cutname, SCIP_MAXSTRLEN,"zerohalf%d_%d", SCIPgetNLPs(scip), nzerohalfcuts);
                SCIP_CALL(SCIPcreateEmptyRow(scip, &(cutdata->cut), cutname, -SCIPinfinity(scip), cutdata->rhs, 
                      cutdata->islocal, FALSE, sepadata->dynamiccuts));
                SCIP_CALL(SCIPaddVarsToRow(scip, cutdata->cut, cutdata->nnonz, cutvars, cutvals));
@@ -4153,61 +4155,61 @@ SCIP_RETCODE preprocess(
       {
       case MODGAUSSIANELIMINATION:
          SCIP_CALL(preprocessModGaussElim(scip, sepadata, lpdata, mod2data));
-         strcpy(ppname,"gauss");
+         strncpy(ppname,"gauss",SCIP_MAXSTRLEN);
          break;
       case DELETEZEROROWS:
          SCIP_CALL(preprocessRows(scip, sepadata, lpdata, mod2data,
                0, mod2data->nrowsind, TRUE, FALSE, FALSE));
-         strcpy(ppname,"zero rows");
+         strncpy(ppname,"zero rows",SCIP_MAXSTRLEN);
          break;
       case DELETEZEROCOLS:
          SCIP_CALL(preprocessColumns(scip, sepadata, lpdata, mod2data,
                0, mod2data->ncolsind, TRUE, FALSE, FALSE));
-         strcpy(ppname,"zero columns");
+         strncpy(ppname,"zero columns",SCIP_MAXSTRLEN);
          break;
       case DELETECOLSINGLETONS:
          SCIP_CALL(preprocessColumns(scip, sepadata, lpdata, mod2data,
                0, mod2data->ncolsind, FALSE, TRUE, TRUE));
-         strcpy(ppname,"col singletons");
+         strncpy(ppname,"col singletons",SCIP_MAXSTRLEN);
          break;
       case ADDTRIVIALCUTS:
          SCIP_CALL(preprocessTrivialZerohalfCuts(scip, sepadata, lpdata, mod2data,
                0, mod2data->nrowsind, normtype, maxsepacuts, maxcuts, nsepacuts,
                nzerohalfcuts, zerohalfcuts, varsolvals, PPZEROONEROW, result));      
-         strcpy(ppname,"trivial cuts");
+         strncpy(ppname,"trivial cuts",SCIP_MAXSTRLEN);
          break;
       case DELETEIDENTROWS:
          SCIP_CALL(preprocessRows(scip, sepadata, lpdata, mod2data,
                0, mod2data->nrowsind, FALSE, FALSE, TRUE));
-         strcpy(ppname,"identical rows");
+         strncpy(ppname,"identical rows",SCIP_MAXSTRLEN);
          break;
       case MERGEIDENTCOLS: 
          SCIP_CALL(preprocessIdenticalColums(scip, mod2data));
-         strcpy(ppname,"identical cols");
+         strncpy(ppname,"identical cols",SCIP_MAXSTRLEN);
          break;
       case DELETELARGESLACKROWS:
          SCIP_CALL(preprocessRows(scip, sepadata, lpdata, mod2data,
                0, mod2data->nrowsind, FALSE, TRUE, FALSE));
-         strcpy(ppname,"sl>maxsl rows");
+         strncpy(ppname,"sl>maxsl rows",SCIP_MAXSTRLEN);
          break;
       case PPCOLUMNS:
          SCIP_CALL(preprocessColumns(scip, sepadata, lpdata, mod2data,
                0, mod2data->ncolsind, TRUE, TRUE, TRUE));
-         strcpy(ppname,"(pp cols)");
+         strncpy(ppname,"(pp cols)",SCIP_MAXSTRLEN);
          break;
       case PPROWS:
          SCIP_CALL(preprocessRows(scip, sepadata, lpdata, mod2data,
                0, mod2data->nrowsind, TRUE, TRUE, TRUE));
-         strcpy(ppname,"(pp rows)");
+         strncpy(ppname,"(pp rows)",SCIP_MAXSTRLEN);
          break;      
       case DELETESMALLFRACSOLCOLS:
          SCIP_CALL(preprocessColumnsWithSmallFracsol(scip, sepadata, mod2data,
                sepadata->ppdelta));
-         strcpy(ppname,"delta heur");
+         strncpy(ppname,"delta heur",SCIP_MAXSTRLEN);
          break;
       case DELETEROWSWRTMINSLACK:
          SCIP_CALL(preprocessConsiderMinSlack(scip, sepadata, lpdata, mod2data, TRUE, TRUE));
-         strcpy(ppname,"s_odd");
+         strncpy(ppname,"s_odd",SCIP_MAXSTRLEN);
          break;
       default:
          SCIPerrorMessage("invalid preprocessing method '%c'\n", sepadata->ppmethods[i]);
@@ -4398,10 +4400,10 @@ SCIP_RETCODE createSubscip(
 
    /* create and initialize framework */
 
-   SCIPcreate(&(auxipdata->subscip));
-   SCIPincludeDefaultPlugins(auxipdata->subscip);  
-   SCIP_CALL(SCIPcreateProb(auxipdata->subscip, "sepa_zerohalf auxiliary IP (AuxIP)",
-         NULL , NULL , NULL , NULL , NULL , NULL));
+   SCIP_CALL( SCIPcreate(&(auxipdata->subscip)) );
+   SCIP_CALL( SCIPincludeDefaultPlugins(auxipdata->subscip) );  
+   SCIP_CALL( SCIPcreateProb(auxipdata->subscip, "sepa_zerohalf auxiliary IP (AuxIP)",
+         NULL , NULL , NULL , NULL , NULL , NULL) );
 
    settingsfileexists = TRUE;
    if( strlen(sepadata->subscipsettings) == 0 )
@@ -4491,20 +4493,18 @@ SCIP_RETCODE createSubscip(
 
    /* create variables and set objective */ 
    /* q */
-   SCIPcreateVar(auxipdata->subscip, &(auxipdata->q), "q", 0.0, SCIPinfinity(auxipdata->subscip),
-      0.0, SCIP_VARTYPE_INTEGER,
-      TRUE, FALSE, NULL, NULL, NULL, NULL);
-   SCIPaddVar(auxipdata->subscip, auxipdata->q);
-   SCIP_CALL(SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__AVOID_BRANCHING));
+   SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->q), "q", 0.0, SCIPinfinity(auxipdata->subscip),
+      0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->q) );
+   SCIP_CALL( SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__AVOID_BRANCHING) );
    /* r */
    for( j = 0 ; j < auxipdata->n ; ++j)
    {
-      sprintf(varname, "r_colsind%d(rcols%d)", j, mod2data->colsind[j]);
-      SCIPcreateVar(auxipdata->subscip, &(auxipdata->r[j]), varname, 0.0, SCIPinfinity(auxipdata->subscip),
-         0.0, SCIP_VARTYPE_INTEGER,
-         TRUE, FALSE, NULL, NULL, NULL, NULL);
-      SCIPaddVar(auxipdata->subscip, auxipdata->r[j]);
-      SCIP_CALL(SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__AVOID_BRANCHING));
+      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "r_colsind%d(rcols%d)", j, mod2data->colsind[j]);
+      SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->r[j]), varname, 0.0, SCIPinfinity(auxipdata->subscip),
+         0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->r[j]) );
+      SCIP_CALL( SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__AVOID_BRANCHING) );
    }
    /* v */
    for( i = 0 ; i < auxipdata->m ; ++i)
@@ -4512,7 +4512,7 @@ SCIP_RETCODE createSubscip(
       SCIP_Real objcoef;
       assert(mod2data->rows[mod2data->rowsind[i]] != NULL);
 
-      sprintf(varname, "v_rowsind%d(rrows%d)", i, mod2data->rowsind[i]);    
+      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "v_rowsind%d(rrows%d)", i, mod2data->rowsind[i]);    
       if( isfeasip )
       {
          if( isweighted ) 
@@ -4531,26 +4531,23 @@ SCIP_RETCODE createSubscip(
       else
          objcoef = mod2data->slacks[mod2data->rowsind[i]];
       assert(!SCIPisFeasNegative(scip, objcoef));
-      SCIPcreateVar(auxipdata->subscip, &(auxipdata->v[i]), varname, 0, 1, objcoef,
-         SCIP_VARTYPE_BINARY,
-         TRUE, FALSE, NULL, NULL, NULL, NULL);
-      SCIPaddVar(auxipdata->subscip, auxipdata->v[i]);
+      SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->v[i]), varname, 0, 1, objcoef,
+            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->v[i]) );
       SCIP_CALL(SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__PREFER_BRANCHING));
    }
    /* y */
    for( j = 0 ; j < auxipdata->n ; ++j)
    {
       SCIP_Real objcoef;
-      sprintf(varname, "y_%d(%d)", j, mod2data->colsind[j]);
+      SCIPsnprintf(varname, SCIP_MAXSTRLEN, "y_%d(%d)", j, mod2data->colsind[j]);
       if( isfeasip )
          objcoef = 0.0;
       else
          objcoef = mod2data->fracsol[mod2data->colsind[j]];
-      SCIPcreateVar(auxipdata->subscip, &(auxipdata->y[j]), varname, 0, 1,
-         objcoef,
-         SCIP_VARTYPE_BINARY,
-         TRUE, FALSE, NULL, NULL, NULL, NULL);
-      SCIPaddVar(auxipdata->subscip, auxipdata->y[j]);
+      SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->y[j]), varname, 0, 1, objcoef,
+            SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->y[j]) );
    }
 
    /* create constraints */
@@ -4570,10 +4567,10 @@ SCIP_RETCODE createSubscip(
          consvars[nconsvars] = auxipdata->y[j];
          nconsvars++;
       }
-      SCIPcreateConsLinear(auxipdata->subscip, &(auxipdata->oddrhscons), "feas",
-         nconsvars, consvars, consvals, 0.0, auxipdata->objectivelimit,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE);
-      SCIPaddCons(auxipdata->subscip, auxipdata->oddrhscons);
+      SCIP_CALL( SCIPcreateConsLinear(auxipdata->subscip, &(auxipdata->oddrhscons), "feas",
+            nconsvars, consvars, consvals, 0.0, auxipdata->objectivelimit,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(auxipdata->subscip, auxipdata->oddrhscons) );
    }
    /* "odd rhs" */
    nconsvars = 0;
@@ -4587,10 +4584,10 @@ SCIP_RETCODE createSubscip(
    consvals[nconsvars] = -2.0;
    consvars[nconsvars] = auxipdata->q;
    nconsvars++;
-   SCIPcreateConsLinear(auxipdata->subscip, &(auxipdata->oddrhscons), "odd_rhs",
-      nconsvars, consvars, consvals, 1.0, 1.0,
-      TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE);
-   SCIPaddCons(auxipdata->subscip, auxipdata->oddrhscons);
+   SCIP_CALL( SCIPcreateConsLinear(auxipdata->subscip, &(auxipdata->oddrhscons), "odd_rhs",
+         nconsvars, consvars, consvals, 1.0, 1.0,
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( SCIPaddCons(auxipdata->subscip, auxipdata->oddrhscons) );
    /* "column sum" */
    for( j = 0 ; j < auxipdata->n ; ++j)
    {
@@ -4613,10 +4610,10 @@ SCIP_RETCODE createSubscip(
       consvars[nconsvars] = auxipdata->r[j];
       nconsvars++;
 
-      sprintf(consname, "col_%d(%d)_sum", j, mod2data->colsind[j]);
-      SCIPcreateConsLinear(auxipdata->subscip, &(auxipdata->columnsumcons[j]) , consname, nconsvars, consvars, consvals, 0.0, 0.0,
-         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE);
-      SCIPaddCons(auxipdata->subscip, auxipdata->columnsumcons[j]);
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "col_%d(%d)_sum", j, mod2data->colsind[j]);
+      SCIP_CALL( SCIPcreateConsLinear(auxipdata->subscip, &(auxipdata->columnsumcons[j]) , consname, nconsvars, consvars, consvals, 0.0, 0.0,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(auxipdata->subscip, auxipdata->columnsumcons[j]) );
    }
   
    /* free temporary memory */
@@ -5988,7 +5985,7 @@ SCIP_RETCODE process(
          {
             stop = TRUE;
          }      
-         strcpy(sepaname,"nsepcuts>0 ?");
+         strncpy(sepaname,"nsepcuts>0 ?",SCIP_MAXSTRLEN);
          break;
       case SOLVEAUXSCIP: 
       case SOLVEAUXSCIPEXACT:
@@ -5996,7 +5993,7 @@ SCIP_RETCODE process(
          SCIP_CALL(separateBySolvingAuxIP(scip, sepadata, lpdata, mod2data, normtype,
                maxsepacuts, maxcuts, (sepamethod == SOLVEAUXSCIP),
                nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result));
-         strcpy(sepaname,"auxiliary ip");
+         strncpy(sepaname,"auxiliary ip",SCIP_MAXSTRLEN);
          if( *nzerohalfcuts == ncutsfoundbefore )
          {
             /* no violated cut has been found. hence a proof of non-existance is given */
@@ -6006,23 +6003,23 @@ SCIP_RETCODE process(
       case ENUMHEURNMAX1:
          SCIP_CALL(separateByEnumerationHeuristics(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts,
                maxcuts, nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result, 1));
-         strcpy(sepaname,"enum k=1");
+         strncpy(sepaname,"enum k=1",SCIP_MAXSTRLEN);
          break;
       case ENUMHEURNMAX2:
          SCIP_CALL(separateByEnumerationHeuristics(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts,
                maxcuts, nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result, 2));
-         strcpy(sepaname,"enum k=1..2");
+         strncpy(sepaname,"enum k=1..2",SCIP_MAXSTRLEN);
          break;
       case GAUSSHEUR:
          SCIP_CALL(separateByGaussHeuristics(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
                nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result));
-         strcpy(sepaname,"gauss heur");
+         strncpy(sepaname,"gauss heur",SCIP_MAXSTRLEN);
          break;
       case MAX2ODDENTRIESPERROW:
          ncutsfoundbefore = *nzerohalfcuts;
          SCIP_CALL(separateByAuxGraph(scip, sepadata, lpdata, mod2data, normtype, maxsepacuts, maxcuts,
                nsepacuts, nzerohalfcuts, zerohalfcuts, varsolvals, result, &wrongstructure));
-         strcpy(sepaname,"auxgraph");
+         strncpy(sepaname,"auxgraph",SCIP_MAXSTRLEN);
          if( ! wrongstructure )
          {
             if( *nzerohalfcuts == ncutsfoundbefore )
