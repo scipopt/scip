@@ -79,8 +79,8 @@ using SCIP as a library running:
    - "COMP=gnu"      to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
 
-4. To run the program enter "bin/coloring.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
-   (e.g. "bin/coloring.linux.x86.gnu.opt.spx") or "bin/coloring" which is a link
+4. To run the program enter "bin/lop.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
+   (e.g. "bin/coloring.linux.x86.gnu.opt.spx") or "bin/lop" which is a link
    to last compiled version
 
 5. To generate the documentation, you need to have doxygen installed, and
