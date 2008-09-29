@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.36 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.37 2008/09/29 23:12:13 bzfheinz Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -415,7 +415,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
          /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
-         SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
+         SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);

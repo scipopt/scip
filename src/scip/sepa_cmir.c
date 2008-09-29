@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.85 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.86 2008/09/29 23:12:13 bzfheinz Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -373,7 +373,7 @@ SCIP_RETCODE tryDelta(
 
       /* create a MIR cut out of the weighted LP rows */
       SCIP_CALL( SCIPcalcMIR(scip, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, 
-            MAXAGGRLEN(nvars), maxweightrange, minfrac, maxfrac, rowweights, delta, mksetcoefs, cutcoefs, &cutrhs, &cutact, 
+            (int) MAXAGGRLEN(nvars), maxweightrange, minfrac, maxfrac, rowweights, delta, mksetcoefs, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       SCIPdebugMessage("delta = %g  -> success: %d, cutact: %g, cutrhs: %g, vio: %g\n",
@@ -563,7 +563,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
 
       /* generate cut with bestdelta and best boundswitch value */
       SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, fixintegralrhs, NULL, NULL, 
-            MAXAGGRLEN(nvars), maxweightrange, MINFRAC, MAXFRAC, rowweights, bestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
+            (int) MAXAGGRLEN(nvars), maxweightrange, MINFRAC, MAXFRAC, rowweights, bestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 

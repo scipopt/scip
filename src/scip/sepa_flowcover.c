@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.19 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.20 2008/09/29 23:12:13 bzfheinz Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -2183,7 +2183,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and delta */
       SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
-            MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, cutcoefs, &cutrhs, &cutact, 
+            (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       
@@ -2228,7 +2228,7 @@ SCIP_RETCODE cutGenerationHeuristic(
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and bestdelta */
       SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
-            MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
+            (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 
