@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.235 2008/09/25 14:25:09 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.236 2008/09/29 16:45:22 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6153,6 +6153,65 @@ SCIP_RETCODE varAddImplic(
    return SCIP_OKAY;
 }
 
+/** adds transitive closure for binary implication x = a -> y = b */
+static
+SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
+   SCIP_VAR*             implvar,            /**< variable y in implication y <= b or y >= b */
+   SCIP_Bool             implvarfixing,      /**< fixing b in implication */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
+   int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
+   )
+{
+   SCIP_VAR** implvars;
+   SCIP_BOUNDTYPE* impltypes;
+   SCIP_Real* implbounds;
+   int nimpls;
+   int i;
+
+   *infeasible = FALSE;
+
+   /* binary variable: implications of implvar */
+   nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
+   implvars = SCIPimplicsGetVars(implvar->implics, implvarfixing);
+   impltypes = SCIPimplicsGetTypes(implvar->implics, implvarfixing);
+   implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
+
+   /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
+    * implvars[i] is fixed, s.t. the implication y == varfixing -> z <= b / z >= b is deleted; this affects the
+    * array over which we currently iterate; the only thing that can happen, is that elements of the array are
+    * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
+    * only thing that can happen is that we add the same implication twice - this does no harm
+    */
+   for( i = nimpls-1; i >= 0 && !(*infeasible); --i )
+   {
+      SCIP_Bool added;
+
+      assert(implvars[i] != implvar);
+
+      /* we have x == varfixing -> y == implvarfixing -> z <= b / z >= b:
+       * add implication x == varfixing -> z <= b / z >= b to the implications list of x 
+       */
+      if( SCIPvarIsActive(implvars[i]) )
+      {
+         SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
+               varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs, &added) );
+         assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
+         nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
+         i = MIN(i, nimpls); /* some elements from the array could have been removed */
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds given implication to the variable's implication list, and adds all implications directly implied by this
  *  implication to the variable's implication list;
  *  if the implication is conflicting, the variable is fixed to the opposite value;
@@ -6197,41 +6256,19 @@ SCIP_RETCODE varAddTransitiveImplic(
    /* add transitive closure */
    if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
    {
-      SCIP_VAR** implvars;
-      SCIP_BOUNDTYPE* impltypes;
-      SCIP_Real* implbounds;
-      int nimpls;
       SCIP_Bool implvarfixing;
-      int i;
 
       implvarfixing = (impltype == SCIP_BOUNDTYPE_LOWER);
 
       /* binary variable: implications of implvar */
-      nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
-      implvars = SCIPimplicsGetVars(implvar->implics, implvarfixing);
-      impltypes = SCIPimplicsGetTypes(implvar->implics, implvarfixing);
-      implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
-      /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
-       * implvars[i] is fixed, s.t. the implication y == varfixing -> z <= b / z >= b is deleted; this affects the
-       * array over which we currently iterate; the only thing that can happen, is that elements of the array are
-       * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
-       * only thing that can happen is that we add the same implication twice - this does no harm
-       */
-      for( i = nimpls-1; i >= 0 && !(*infeasible); --i )
-      {
-         assert(implvars[i] != implvar);
+      SCIP_CALL( varAddTransitiveBinaryClosureImplic(var, blkmem, set, stat, lp, branchcand, eventqueue,
+            varfixing, implvar, implvarfixing, infeasible, nbdchgs) );
 
-         /* we have x == varfixing -> y == implvarfixing -> z <= b / z >= b:
-          * add implication x == varfixing -> z <= b / z >= b to the implications list of x 
-          */
-         if( SCIPvarIsActive(implvars[i]) )
-         {
-            SCIP_CALL( varAddImplic(var, blkmem, set, stat, lp, branchcand, eventqueue, 
-                  varfixing, implvars[i], impltypes[i], implbounds[i], infeasible, nbdchgs, &added) );
-            assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
-            nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
-            i = MIN(i, nimpls); /* some elements from the array could have been removed */
-         }
+      /* inverse implication */
+      if( !(*infeasible) )
+      {
+         SCIP_CALL( varAddTransitiveBinaryClosureImplic(implvar, blkmem, set, stat, lp, branchcand, eventqueue,
+               !implvarfixing, var, !varfixing, infeasible, nbdchgs) );
       }
    }
    else
