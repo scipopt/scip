@@ -1,4 +1,4 @@
-<div id="faq">
+x<div id="faq">
 
     <h4><a name="Section0">Sections</a></h4>
     <ul>
@@ -14,7 +14,7 @@
       <a name="Q1">What is SCIP?</a>
     </p>
     <p class="a">
-      SCIP is a constraint integer program solver and contain all necessary pulgin to be a <b>standalone MIP-Solver</b> 
+      SCIP is a constraint integer program solver and contain all necessary plugin to be a <b>standalone MIP-Solver</b> 
       as well as a <b>branch-cut-and-price-framework</b>.<br> 
     <ul>
       <li>You can use the <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>
@@ -189,7 +189,7 @@
       <a name="Q28">The output is too wide for my terminal window. What can I do?</a>
     </p>
     <p class="a">
-      In the interactive shell you can set the width of the output with the follwing command
+      In the interactive shell you can set the width of the output with the following command
       &quot;set display width&quot; followed by an appropriate number.
       See also the <a href="#Q9">next question</a>.		      
     </p>

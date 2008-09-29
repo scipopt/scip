@@ -40,7 +40,7 @@
  * @author   Michael Winkler
  * @author   Kati Wolter
  *
- * <b>Waht is SCIP?</b>
+ * <b>What is SCIP?</b>
  *
  * SCIP is a framework to solve constraint integer programs (CIPs). In particular,
  *
@@ -57,7 +57,7 @@
  * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to
  * download SCIP.
  *
- * This documention provides extensive information about SCIP.
+ * This documentation provides extensive information about SCIP.
  *
  * <b>General Information</b>
  *
@@ -106,7 +106,7 @@
  * - No spaces between control structure keywords like "if", "for", "while", "switch" and the corresponding brackets.
  * - Use assert() to show preconditions for the parameters, invariants and postconditions.
  * - All global functions start with "SCIP". In the usual naming scheme this is followed by the object and a method name
- *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPlpiIsOptimal().
+ *   like in SCIPlpAddRow(). Functions return TRUE or FALSE should be named like SCIPisFeasEQ().
  * - Make all functions that are not used outside the module 'static'. Naming should start with a lower case letter.
  * - Variable names should be all lower case.
  * - For each structure there is a typedef with the name in all upper case.
@@ -164,7 +164,7 @@
  * The SCIP makefile supports several targets (used via <code>make ... "target"</code>):
  *
  * - <code>links</code> Reconfigures the links in the "lib" directory.
- * - <code>doc</code> Creates documention in the "doc" directory.
+ * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
  * - <code>depend</code> Creates dependencies files. This is only needed if you add files to SCIP.
  * - <code>check</code> Runs the check script, see \ref TEST.
@@ -196,8 +196,8 @@
  *   we suggest the use one of the following examples as starting point:
  *     - <code>SamplePricer</code> should be used if your focus is <b>branch-and-cut-and-price</b>
  *       (column generation) and you want to use <b>C++</b>.
- *     - <code>SamplePricer_C</code> should be used if your focus is <b>branch-and-cut-and-price</b>
- *       (column generation) and you want to use <b>C</b>.
+ *     - <code>SamplePricer_C</code> or <code>Coloring</code> (more complex)  should be used if your focus is 
+ *       <b>branch-and-cut-and-price</b> (column generation) and you want to use <b>C</b>.
  *     - <code>TSP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C++</b>.
  *     - <code>LOP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C</b>.
  * - Edit the makefile according to your needs - in particular: 
@@ -373,7 +373,7 @@
  * This property is analogous to the DELAYSEPA flag, but deals with the propagation method of the constraint handler.
  *
  * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
- * This property is analoguos to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
+ * This property is analogous to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
  * \par CONSHDLR_NEEDSCONS: indicates whether the constraint handler should be skipped, if no constraints are available.
  * Usually, a constraint handler is only executed if there are constraints of its corresponding class in the model.
@@ -560,7 +560,7 @@
  *
  * Like the CHECK call, the ENFOLP method should return a result SCIP_FEASIBLE, if the solution satisfies all the
  * constraints.
- * However, the behaviour should be different, if the solution violates one or more constraints.
+ * However, the behavior should be different, if the solution violates one or more constraints.
  * The constraint handler may return a result SCIP_INFEASIBLE in this situation, but this is not the best what
  * one can do.
  * The ENFOLP method has the possibility of \em resolving the infeasibility by
@@ -876,12 +876,12 @@
  * constraint handler may be asked to resolve the lower bound change on \f$z\f$ with constraint \f$c\f$, that was
  * applied at a time given by a bound change index "bdchgidx".  With a call to <code>SCIPvarGetLbAtIndex(z,
  * bdchgidx)</code>, the handler can find out, that the lower bound of variable \f$z\f$ was set to 1.0 at the given
- * point of time, and should call <code>SCIPaddConflictUb(scip, x, bdchgidx)</codE> and <code>SCIPaddConflictUb(scip, y,
+ * point of time, and should call <code>SCIPaddConflictUb(scip, x, bdchgidx)</code> and <code>SCIPaddConflictUb(scip, y,
  * bdchgidx)</code> to tell SCIP, that the upper bounds of \f$x\f$ and \f$y\f$ at this point of time were the reason for
  * the deduction of the lower bound of \f$z\f$.
  *
  * If conflict analysis should not be supported, the method has to set the result code to SCIP_DIDNOTFIND.  Although
- * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving mehod, it
+ * this is a viable approach to circumvent the implementation of the usually rather complex conflict resolving method, it
  * will make the conflict analysis less effective. We suggest to first omit the conflict resolving method and check how
  * effective the propagation method is. If it produces a lot of propagations for your application, you definitely should
  * consider to implement the conflict resolving method.
@@ -900,7 +900,7 @@
  * To inform SCIP that the presolving method found a reduction the result pointer has to be set in a proper way. 
  * The following options are possible:
  *
- *  - SCIP_UNBOUNED   : at least one variable is not bounded by any constraint in obj. direction
+ *  - SCIP_UNBOUNDED  : at least one variable is not bounded by any constraint in objective direction
  *  - SCIP_CUTOFF     : at least one constraint is infeasible in the variable's bounds
  *  - SCIP_SUCCESS    : the presolver found a reduction
  *  - SCIP_DIDNOTFIND : the presolver searched, but did not find a presolving change
@@ -2193,7 +2193,7 @@
  *
  * The NODESELSELECT callback is the first method called in each iteration in the main solving loop. It should decide 
  * which of the leaves in the current branching tree is selected as next subproblem to be processed. 
- * It can arbitraily decide between all leaves stored in the tree, but for performance reasons,
+ * It can arbitrarily decide between all leaves stored in the tree, but for performance reasons,
  * the current node's children and siblings are often treated different from the remaining leaves. 
  * This is mainly due to the warm start capabilities of the simplex algorithm and the expectation that the bases of 
  * neighboring vertices in the branching tree very similar.
@@ -2723,7 +2723,7 @@
  *    return SCIP_OKAY;
  * }
  * \endcode
- * If you have allocated memory for fields in your realxation handler data, remember to free this memory 
+ * If you have allocated memory for fields in your relaxation handler data, remember to free this memory 
  * before freeing the relaxation handler data itself. 
  * If you are using the C++ wrapper class, this method is not available.
  * Instead, just use the destructor of your class to free the member variables of your class.
@@ -3379,11 +3379,10 @@
  *     the string parameter through the given valueptr is okay as long as it does not
  *     involve reallocating memory for the string.
  *
- *  In some cases, it is necessary to change other fields if the value of a parameter was changed, 
- *  for instance to adjust the length of an array. 
+ *  In some cases, it is necessary to keep track of changes in a parameter. 
  *  If this is the case, the user can define a method by the PARAMCHGD callback and use this method as
- *  the *paramchgd parameter of the SCIPaddXxxParam() method, also giving a pointer to the data, which is
- *  needed in this method, as the paramdata. If this method is not NULL, it is called every time 
+ *  the @c paramchgd parameter of the @c SCIPaddXxxParam() method, also giving a pointer to the data, which is
+ *  needed in this method, as @c paramdata. If this method is not NULL, it is called every time 
  *  the value of the parameter is changed.
  */
 
@@ -3629,7 +3628,7 @@
  *  \arg <tt>MEM</tt>   -  memory limit in MB [default: 1536]
  *  \arg <tt>DISPFREQ</tt> - display frequency of the output [default: 10000]
  *  \arg <tt>FEASTOL</tt> - LP feasibility tolerance for constraints [default: "default"]
- *  \arg <tt>LOCK</tt> - should the test run be locked to avoid other machines to preforme the same test run [default: "false"]
+ *  \arg <tt>LOCK</tt> - should the test run be locked to avoid other machines to perform the same test run [default: "false"]
  *  \arg <tt>CONTINUE</tt> - continue the test run if it was previously aborted [default: "false"]
 
  * 
@@ -3728,7 +3727,7 @@
  * - The callback \ref CONSCHECK in the constraint handlers now has a new parameter <code>printreason</code> that tells
  *   a constraint handler to output the reason for a possible infeasibility of the solution to be checked using
  *   <code>SCIPinfoMessage()</code>. Have a look at one of the constraint handlers implemented in SCIP to see how it
- *   works. This methodolgy makes it possible to output the reason of a violation in human readable form, for instance,
+ *   works. This methodology makes it possible to output the reason of a violation in human readable form, for instance,
  *   for the check at the end of a SCIP run, where the obtained best solution is checked against the original formulation.\n
  *   This change often has little effect on C-implementations, since this parameter can be safely ignored with respect to
  *   the correctness of the code. The corresponding C++ method <code>scip::ObjConshdlr::scip_check()</code>, however, has
@@ -3736,7 +3735,7 @@
  *
  * - <code>SCIPcheckSolOrig()</code> is restructured. The last two parameters have changed. They are now bools indicating
  *   whether the reason for the violation should be printed to the standard output and whether all violations should be
- *   printed. This reflects the changes in the constraint handlers above, which allow the automization of the feasibility
+ *   printed. This reflects the changes in the constraint handlers above, which allow the automation of the feasibility
  *   test. The pointers to store the constraint handler or constraint are not needed anymore.
  */
 
