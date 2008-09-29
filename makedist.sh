@@ -32,7 +32,7 @@ $NAME/src/objscip/*.c $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
 $NAME/examples/Coloring/src/depend.* \
 $NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
-$NAME/examples/LOP/* $NAME/examples/LOP/doc/* \
+$NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
 $NAME/examples/LOP/src/depend.* \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
 $NAME/examples/MIPSolver/* $NAME/examples/MIPSolver/doc/* \
