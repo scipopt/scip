@@ -1,29 +1,39 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*  Main file for capacitated VRP                                            */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License.             */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: main_vrp.cpp,v 1.4 2008/09/29 19:49:59 bzfheinz Exp $"
 
 /**@file   
  * @brief  main file for VRP pricer example
  * @author Andreas Bley
  *
  * We want to solve the vehicle routing problem on a graph G = (V,E) with
- * V = J \cup {d}, where d is the depot and the distances are given by the
- * length function l_e: E -> R_{\ge 0}.
+ * V = J cup {d}, where d is the depot and the distances are given by the
+ * length function l_e: E -> R_{<= 0}.
  * 
  * Consider the MIP formulation
  * 
- *   min  \sum_{e \in E} l_e y_e
- *   s.t. -y_e + \sum_{t \in T_k} a^t_e x_t <= 0,   for all e \in E
- *               \sum_{t \in T_k} a^t_j x_t == 1,   for all j \in J
- *         y(\delta(j))                     == 2,   for all j \in J
- *         y_e                       \in {0,1,2},   for all e \in E
- *                              x_t  \in [0,1],     for all t \in T_k
+ *   min  sum_{e in E} l_e y_e
+ *   s.t. -y_e + sum_{t in T_k} a^t_e x_t <= 0,   for all e in E
+ *               sum_{t in T_k} a^t_j x_t == 1,   for all j in J
+ *         y(delta(j))                     == 2,   for all j in J
+ *         y_e                       in {0,1,2},   for all e in E
+ *                              x_t  in [0,1],     for all t in T_k
  * 
  * where T_k is the set of tours visiting at most k customers
  * with repetitions of customers allowed and a^t_e (a^t_j) counts how often
- * edge e (node j) is traversed in t \in T_k.
+ * edge e (node j) is traversed in t in T_k.
  */
 
 // standard library includes

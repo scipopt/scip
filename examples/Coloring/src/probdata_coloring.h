@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2006 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.h,v 1.4 2008/09/26 13:27:46 bzfgamra Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.h,v 1.5 2008/09/29 19:49:58 bzfheinz Exp $"
 
 /**@file   probdata_coloring.h
  * @brief  problem data for coloring algorithm

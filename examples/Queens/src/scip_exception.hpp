@@ -1,5 +1,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
+/*                  This file is part of the examples to                     */
+/*                         An introduction to SCIP                           */
 /*                                                                           */
 /*    Copyright (C) 2007 Cornelius Schwarz                                   */
 /*                                                                           */

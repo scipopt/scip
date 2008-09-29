@@ -1,13 +1,22 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*  Pricer for tour variables in capacitated VRP                             */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License.             */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: pricer_vrp.h,v 1.2 2008/09/29 19:49:59 bzfheinz Exp $"
 
 /**@file   
  * @brief  VRP pricer plugin
  * @author Andreas Bley
- * @full   Implementation of a pricing plugin for VRP
  */
 
 

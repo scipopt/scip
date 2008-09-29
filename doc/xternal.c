@@ -196,7 +196,7 @@
  *   we suggest the use one of the following examples as starting point:
  *     - <code>SamplePricer</code> should be used if your focus is <b>branch-and-cut-and-price</b>
  *       (column generation) and you want to use <b>C++</b>.
- *     - <code>SamplePricer_C</code> or <code>Coloring</code> (more complex)  should be used if your focus is 
+ *     - <code>Coloring</code> should be used if your focus is 
  *       <b>branch-and-cut-and-price</b> (column generation) and you want to use <b>C</b>.
  *     - <code>TSP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C++</b>.
  *     - <code>LOP</code> should be used if your focus is <b>branch-and-cut</b> and you want to use <b>C</b>.
