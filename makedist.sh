@@ -43,7 +43,7 @@ $NAME/examples/Queens/* \
 $NAME/examples/Quenns/src/depend.* \
 $NAME/examples/Queens/src/*.c $NAME/examples/Queens/src/*.cpp \
 $NAME/examples/Queens/src/*.h $NAME/examples/Queens/src/*.hpp \
-$NAME/examples/SamplePricer_C/Makefile $NAME/examples/SamplePricer_C/INSTALL \
+$NAME/examples/SamplePricer/Makefile $NAME/examples/SamplePricer_C/INSTALL \
 $NAME/examples/SamplePricer/doc/* \
 $NAME/examples/SamplePricer/src/depend.* \
 $NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/examples/SamplePricer/src/*.h \
