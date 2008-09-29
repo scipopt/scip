@@ -41,7 +41,7 @@
  * @author   Michael Winkler
  * @author   Kati Wolter
  *
- * <b>Waht is SCIP?</b>
+ * <b>What is SCIP?</b>
  *
  * SCIP is a framework to solve constraint integer programs (CIPs). In particular,
  *
