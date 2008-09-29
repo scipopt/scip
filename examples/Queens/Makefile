@@ -3,9 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2006 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2006 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -14,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.2 2008/09/23 16:11:22 bzfberth Exp $
+# $Id: Makefile,v 1.3 2008/09/29 18:08:57 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for the SCIP tutorial example by Cornelius Schwarz
@@ -55,6 +53,10 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 # Rules
 #-----------------------------------------------------------------------------
 
+ifeq ($(VERBOSE),false)
+.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK)
+endif
+
 .PHONY: all
 all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
@@ -74,7 +76,7 @@ doc:
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
-		@ln -s $(MAIN) $@
+		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
@@ -96,30 +98,18 @@ depend:		$(SCIPDIR)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-ifeq ($(VERBOSE), true)
-		$(CXX) $(MAINOBJFILES) \
-		-L$(SCIPDIR)/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
-else
-		@$(CXX) $(MAINOBJFILES) \
-		-L$(SCIPDIR)/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
-endif
+		$(LINKCXX) $(MAINOBJFILES) \
+		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKERLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKERLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKERLIBSUFFIX) \
+                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-ifeq ($(VERBOSE), true)
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
-else
-		@$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
-endif
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
-ifeq ($(VERBOSE), true)
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
-else
-		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
-endif
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o) $@
 
-# --- EOF ---------------------------------------------------------------------
+#---- EOF --------------------------------------------------------------------

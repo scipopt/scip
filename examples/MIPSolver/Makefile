@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.24 2008/04/17 19:07:58 bzfpfets Exp $
+# $Id: Makefile,v 1.25 2008/09/29 18:08:57 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ example project using SCIP as a callable library
@@ -75,7 +75,7 @@ doc:
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
-		ln -s $(MAIN) $@
+		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
 $(OBJDIR):	
 		@-mkdir -p $(OBJDIR)
@@ -90,23 +90,25 @@ clean:
 .PHONY: depend
 depend:		$(SCIPDIR)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).cpp|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.cpp|g'\'' \
 		>$(MAINDEP)'
 
 -include	$(MAINDEP)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(CXX) $(MAINOBJFILES) \
-		-L$(SCIPDIR)/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
+		$(LINKCXX) $(MAINOBJFILES) \
+		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKERLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKERLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKERLIBSUFFIX) \
+                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o) $@
 
-# --- EOF ---------------------------------------------------------------------
+#---- EOF --------------------------------------------------------------------
