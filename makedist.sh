@@ -42,10 +42,12 @@ $NAME/examples/Queens/* \
 $NAME/examples/Quenns/src/depend.* \
 $NAME/examples/Queens/src/*.c $NAME/examples/Queens/src/*.cpp \
 $NAME/examples/Queens/src/*.h $NAME/examples/Queens/src/*.hpp \
-$NAME/examples/SamplePricer/* $NAME/examples/SamplePricer/doc/* \
+$NAME/examples/SamplePricer_C/Makefile $NAME/examples/SamplePricer_C/INSTALL \
+$NAME/examples/SamplePricer/doc/* \
 $NAME/examples/SamplePricer/src/depend.* \
 $NAME/examples/SamplePricer/src/*.c $NAME/examples/SamplePricer/src/*.cpp $NAME/examples/SamplePricer/src/*.h \
-$NAME/examples/SamplePricer_C/* $NAME/examples/SamplePricer_C/doc/* \
+$NAME/examples/SamplePricer_C/Makefile $NAME/examples/SamplePricer_C/INSTALL \
+$NAME/examples/SamplePricer_C/doc/* \
 $NAME/examples/SamplePricer_C/src/depend.* \
 $NAME/examples/SamplePricer_C/src/*.c $NAME/examples/SamplePricer_C/src/*.h \
 $NAME/examples/TSP/* $NAME/examples/TSP/doc/* \
