@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.272 2008/09/29 22:08:15 bzfheinz Exp $
+# $Id: Makefile,v 1.273 2008/09/30 17:12:30 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -105,7 +105,7 @@ GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+			-Wmissing-declarations -Wmissing-prototypes # -Wdeclaration-after-statement
 
 GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
