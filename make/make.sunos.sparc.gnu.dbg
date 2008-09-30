@@ -1,5 +1,5 @@
-#--- $Id: make.sunos.sparc.gnu.dbg,v 1.4 2008/09/30 17:21:30 bzfberth Exp $
-FLAGS		+=
+#--- $Id: make.sunos.sparc.gnu.dbg,v 1.5 2008/09/30 17:31:16 bzfheinz Exp $
+FLAGS		+=      -DNO_STRERROR_R
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN) -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) # -fno-exceptions (CLP uses exceptions)
