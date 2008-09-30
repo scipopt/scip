@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.24 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.25 2008/09/30 17:16:01 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -33,9 +33,6 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_countsols.h"
 #include "scip/dialog_default.h"
-#include "scip/pub_cons.h"
-#include "scip/pub_disp.h"
-#include "scip/pub_misc.h"
 
 #ifdef WITH_GMP
 #include <gmp.h>
@@ -323,8 +320,7 @@ SCIP_RETCODE checkParameters(
    }
    
    if( !valid && SCIPgetVerbLevel(scip) != SCIP_VERBLEVEL_FULL )
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, 
-         "The current parameter setting might cause a wrong counting process.");
+      SCIPwarningMessage("The current parameter setting might cause a wrong counting process. Please use <emphasis/counter.set> settings.");
    
    return SCIP_OKAY;
 }
@@ -1499,18 +1495,8 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 {  /*lint --e{715}*/
    SCIP_RETCODE retcode;
-   SCIP_HEUR** heuristics;
-   int* heuristicfreqs;    
-   int nheuristics;        
-   SCIP_Bool heuristicsoff;
    SCIP_Bool active;
-
-   int maxrestarts;        
-   int maxroundsdualfix;
    
-   int h;
-   char parametername[SCIP_MAXSTRLEN];
-
    SCIP_Bool valid;
    SCIP_Longint nsols;
    int displayprimalbound;
@@ -1536,32 +1522,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       }
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
-      /* turn off dual methods */
-      if( SCIPfindPresol(scip, "dualfix") != NULL )
-      {
-         SCIP_CALL( SCIPgetIntParam(scip, "presolving/dualfix/maxrounds", &maxroundsdualfix) );
-         
-         if( maxroundsdualfix != 0 )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
-               "set parameter <presolving/dualfix/maxrounds> to 0\n");
-            SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualfix/maxrounds", 0) );
-         }
-      }
-
       /* presolve problem */
       SCIP_CALL( SCIPpresolve(scip) );
-      
-      /* reset parametername setting for dual methods */
-      if( SCIPfindPresol(scip, "dualfix") != NULL )
-      {
-         if( maxroundsdualfix != 0 )
-         {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
-               "reset parameter <presolving/dualfix/maxrounds> to %d\n", maxroundsdualfix);
-            SCIP_CALL( SCIPsetIntParam(scip,  "presolving/dualfix/maxrounds", maxroundsdualfix) );
-         }
-      }
    case SCIP_STAGE_PRESOLVED:
       /* reset activity status of constraint handler cons_countsols */
       if( !active )
@@ -1576,42 +1538,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
          break;
       }
       
-      /* set parameter setting for a correct count and store the old setting */
-      nheuristics = SCIPgetNHeurs(scip);
-         
-      SCIP_CALL( SCIPallocMemoryArray(scip, &heuristicfreqs, nheuristics) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heuristics, SCIPgetHeurs(scip), nheuristics) );
-      heuristicsoff = TRUE;
-
-      for( h = 0; h < nheuristics; ++h )
-      {
-         (void) SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
-         heuristicfreqs[h] = SCIPheurGetFreq(heuristics[h]);
-         
-         if( heuristicfreqs[h] != -1 )
-         {
-            heuristicsoff = FALSE;
-            SCIP_CALL( SCIPsetIntParam(scip, parametername, -1) );
-         }
-         assert( SCIPheurGetFreq(heuristics[h]) == -1 );
-      }
-      
-      if( !heuristicsoff )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
-            "set all heuristic calling frequencies to -1\n");
-      }
-
-      /* turn off restarts */
-      SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &maxrestarts) );
-
-      if( maxrestarts != 0 )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
-            "set parameter <presolving/maxrestarts> to 0\n");
-         SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
-      }
-
       /* turn off primal bound and gap column */
       SCIP_CALL( SCIPgetIntParam(scip, "display/primalbound/active", &displayprimalbound) );
       if( displayprimalbound != 0 )
@@ -1664,27 +1590,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
-      if( !heuristicsoff )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
-            "reset heuristic frequencies\n");
-
-         /* reset parameters setting for heuristics */
-         for( h = 0; h < nheuristics; ++h )
-         {
-            (void) SCIPsnprintf(parametername, SCIP_MAXSTRLEN, "heuristics/%s/freq", SCIPheurGetName(heuristics[h]));
-            SCIP_CALL( SCIPsetIntParam(scip, parametername, heuristicfreqs[h]) );
-         }
-      }
-      
-      /* reset parametername setting for restarts */
-      if( maxrestarts != 0 )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, 
-            "reset parameter <presolving/maxrestarts> to %d\n", maxrestarts);
-         SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", maxrestarts) );
-      }
-      
       /* reset display columns */
       if( displayprimalbound != 0 )
          SCIP_CALL( SCIPsetIntParam(scip, "display/primalbound/active", displayprimalbound) );
@@ -1697,10 +1602,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       if( displayfeasST != 2 )
          SCIP_CALL( SCIPsetIntParam(scip, "display/feasST/active", displayfeasST) );
 
-      /* free array */
-      SCIPfreeMemoryArrayNull(scip, &heuristicfreqs);
-      SCIPfreeMemoryArrayNull(scip, &heuristics);
-      
       /* evaluate retcode */
       SCIP_CALL( retcode );
       break;
