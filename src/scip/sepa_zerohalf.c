@@ -13,9 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* prints a lot of debug informations, e.g. mod2 matrix, subscip */
-//#define ZEROHALF__DEBUG /**< sepa_zerohalf debug mode */
-
 /* prints short statistics (callback, preprocessing, adding cuts) */
 //#define ZEROHALF__PRINT_STATISTICS /**< print statistics */
 
@@ -161,7 +158,9 @@
  * -------------------------------------------------------------------------------------------------------------------- */
 
 
-enum preprocessingmethods {                    /**< preprocessing methods, usable within the ppmethods parameter */
+/** preprocessing methods, usable within the ppmethods parameter */
+enum preprocessingmethods 
+{
    MODGAUSSIANELIMINATION =                'G',
    DELETEZEROROWS =                        'Z',
    DELETEZEROCOLS =                        'z',
@@ -173,13 +172,15 @@ enum preprocessingmethods {                    /**< preprocessing methods, usabl
    DELETESMALLFRACSOLCOLS =                'd',
    DELETEROWSWRTMINSLACK =                 'M',
    PPCOLUMNS =                             'C',
-   PPROWS =                                'R',
+   PPROWS =                                'R'
 };
 typedef enum preprocessingmethods PREPROCESSINGMETHODS;  
-static const char preprocessingmethodsdescription[SCIP_MAXSTRLEN] =  /**< description of the ppmethods parameter */
+
+/** description of the ppmethods parameter */
+static const char preprocessingmethodsdescription[SCIP_MAXSTRLEN] =  
    "preprocessing methods and ordering:\n\
-   #                      'd' columns with small LP solution,\n\
-   #                      'G' modified Gaussian elimination,\n\
+   #                      'd' columns with small LP solution,\n \
+   #                      'G' modified Gaussian elimination,\n  \
    #                      'i' identical columns,\n\
    #                      'I' identical rows,\n\
    #                      'L' large slack rows,\n\
@@ -190,11 +191,13 @@ static const char preprocessingmethodsdescription[SCIP_MAXSTRLEN] =  /**< descri
    #                      'Z' zero rows,\n\
    #                      'C' fast {'z','s'},\n\
    #                      'R' fast {'Z','L','I'}\n\
-   #                      \n\
-   #                      '-' no preprocessing\n\
+   #                      \n                      \
+   #                      '-' no preprocessing\n  \
    #                     ";
 
-enum sepamethods {                             /**< separation methods, usable within the sepamethods parameter  */
+/** separation methods, usable within the sepamethods parameter  */
+enum sepamethods 
+{
    STOPIFCUTWASFOUND =                     '!',
    SOLVEAUXSCIP =                          's',
    SOLVEAUXSCIPEXACT =                     'S',
@@ -204,7 +207,9 @@ enum sepamethods {                             /**< separation methods, usable w
    MAX2ODDENTRIESPERROW =                  '2'
 };
 typedef enum sepamethods SEPAMETHODS;
-static const char sepamethodsdescription[SCIP_MAXSTRLEN] =         /**< description of the sepamethods parameter */
+
+/** description of the sepamethods parameter */
+static const char sepamethodsdescription[SCIP_MAXSTRLEN] =        
    "separating methods and ordering:\n\
    #                      '!' stop further processing if a cut was found,\n\
    #                      '2' exact polynomial time algorithm (only if matrix has max 2 odd entries per row),\n\
@@ -217,7 +222,9 @@ static const char sepamethodsdescription[SCIP_MAXSTRLEN] =         /**< descript
    #                      '-' no processing\n\
    #                     ";
 
-enum cutseparatedby {                                                 /**< statistics: "origin" of separated cut */
+/** statistics: "origin" of separated cut */
+enum cutseparatedby 
+{                                                
    AUXIP, DECOMPOSITION, PPZEROONEROW, HEURISTICSENUM, HEURISTICSGAUSS, AUXGRAPH
 };
 typedef enum cutseparatedby CUTSEPARATEDBY;
@@ -248,85 +255,6 @@ typedef enum cutseparatedby CUTSEPARATEDBY;
       }                                                         \
    } /**< moves array at source with size num to ptr */                                                                 
 #endif
-#define DECL_BUBBLESORT(name, paramtype, paramname, comparator)         \
-   static                                                               \
-   void name (                                                          \
-      int*           indarray,                                          \
-      int            indarraysize,                                      \
-      paramtype      paramname                                          \
-      )                                                                 \
-   {                                                                    \
-      SCIP_Bool issorted;                                               \
-      int i;                                                            \
-      int temp;                                                         \
-      assert(indarray != NULL);                                         \
-      assert(indarraysize >= 0);                                        \
-                                                                        \
-      if( indarraysize <=1 )                                            \
-         return;                                                        \
-                                                                        \
-      do                                                                \
-      {                                                                 \
-         issorted = TRUE;                                               \
-         for( i = 0 ; i < indarraysize - 1 ; ++i )                      \
-            if( paramname[indarray[i]] comparator paramname[indarray[i+1]] ) \
-            {                                                           \
-               temp = indarray[i];                                      \
-               indarray[i] =  indarray[i+1];                            \
-               indarray[i+1] = temp;                                    \
-               issorted = FALSE;                                        \
-            }                                                           \
-      } while (!issorted);                                              \
-   } /**< bubblesort template used to sort index arrays w.r.t. to a value array */
-
-#define DECL_QUICKSORT(name, valtype, paramtype, paramname, pivotstatement, check1statement, check2statement) \
-   static                                                               \
-   void name (                                                          \
-      int*           indarray,                                          \
-      int            indarraysize,                                      \
-      paramtype      paramname                                          \
-      )                                                                 \
-   {                                                                    \
-      register valtype pivot;                                           \
-      int left;                                                         \
-      int right;                                                        \
-      int temp;                                                         \
-      assert(indarray != NULL);                                         \
-      assert(indarraysize >= 0);                                        \
-                                                                        \
-      if( indarraysize <=1 )                                            \
-         return;                                                        \
-                                                                        \
-      pivot = pivotstatement;                                           \
-      left = 0;                                                         \
-      right = indarraysize;                                             \
-                                                                        \
-      while(TRUE)                                                       \
-      {                                                                 \
-         for( left = 1; left < indarraysize; ++left )                   \
-            if( check1statement pivot )                                 \
-               break;                                                   \
-         while( check2statement pivot )                                 \
-         { /* nothing */ }                                              \
-                                                                        \
-         if( left >= right )                                            \
-            break;                                                      \
-                                                                        \
-         temp = indarray[left];                                         \
-         indarray[left] = indarray[right];                              \
-         indarray[right] = temp;                                        \
-      }                                                                 \
-      temp = indarray[left - 1];                                        \
-      indarray[left - 1] = indarray[0];                                 \
-      indarray[0] = temp;                                               \
-                                                                        \
-      name (                                                            \
-         indarray, left - 1, paramname);                                \
-      name (                                                            \
-         indarray + left, indarraysize - left,                          \
-         paramname);                                                    \
-   } /**< quicksort template used to sort index arrays w.r.t. to a value array */
-
 
 #ifdef  ZEROHALF__PRINT_STATISTICS
 
@@ -758,7 +686,7 @@ SCIP_RETCODE ZerohalfSubLPDataCreate(
 
 /** frees sub LP data structures */
 static
-SCIP_RETCODE ZerohalfSubLPDataFree(
+void ZerohalfSubLPDataFree(
    SCIP*                 scip,               /**< SCIP data structure */
    ZEROHALF_SUBLPDATA**  subproblem          /**< pointer to pointer of data structure */
    )
@@ -787,8 +715,6 @@ SCIP_RETCODE ZerohalfSubLPDataFree(
 
    SCIPfreeMemory(scip, subproblem);
    (*subproblem) = NULL;
-  
-   return SCIP_OKAY;
 }
 
 
@@ -1069,7 +995,7 @@ SCIP_RETCODE ZerohalfCutDataCreate(
    (*cutdata)->norm = 0.0;
    (*cutdata)->efficacy = 0.0;
    (*cutdata)->violation = 0.0;
-   (*cutdata)->nnonz = 0.0;
+   (*cutdata)->nnonz = 0;
      
    (*cutdata)->nrrowsincut = nrrowsincut;
    (*cutdata)->nrowsincut = nrowsincut;
@@ -1221,29 +1147,10 @@ SCIP_RETCODE ZerohalfAuxGraphFree(
 
 
 /* --------------------------------------------------------------------------------------------------------------------
- * sorting methods
- * -------------------------------------------------------------------------------------------------------------------- */
-
-
-/* note: DECL_QUICKSORT(name, valtype, paramtype, paramname, pivotstatement, check1statement, check2statement) */
-DECL_QUICKSORT(sortIndicesByValsNondecreasing, SCIP_Real, SCIP_Real*, valsarray, 
-   valsarray[indarray[0]], valsarray[indarray[left]] >=, valsarray[indarray[--right]] >);
-
-DECL_QUICKSORT(sortIndicesByValsNonincreasing, SCIP_Real, SCIP_Real*, valsarray, 
-   valsarray[indarray[0]], valsarray[indarray[left]] <=, valsarray[indarray[--right]] <);
-
-/* note: DECL_BUBBLESORT(name, paramtype, paramname, comparator) */
-
-DECL_BUBBLESORT(bsortIndicesByValsNondecreasing, SCIP_Real*, valsarray, >);  
-
-//DECL_BUBBLESORT(bsortIndicesByValsNonincreasing, SCIP_Real*, valsarray, <);  
-
-
-/* --------------------------------------------------------------------------------------------------------------------
  * local methods: debug
  * -------------------------------------------------------------------------------------------------------------------- */
 
-#ifdef ZEROHALF__DEBUG
+#ifdef SCIP_DEBUG
 /** returns a string containing the name of the symbolic constant (given as int value) */
 static
 char* getconstantname(
@@ -1387,7 +1294,7 @@ SCIP_RETCODE printPreprocessingStatistics(
 #endif
 
 
-#ifdef ZEROHALF__DEBUG
+#ifdef SCIP_DEBUG
 /** prints the considered subproblem */
 static
 void debugPrintSubLpData(
@@ -1420,7 +1327,7 @@ void debugPrintSubLpData(
 #endif
 
 
-#ifdef ZEROHALF__DEBUG
+#ifdef SCIP_DEBUG
 /** prints mod 2 data structures */
 static
 void debugPrintMod2Data(
@@ -1512,7 +1419,7 @@ void debugPrintMod2Data(
 #endif
 
 
-#ifdef ZEROHALF__DEBUG
+#ifdef SCIP_DEBUG
 /** prints LP data */
 static
 SCIP_RETCODE debugPrintLPRowsAndCols(
@@ -1876,7 +1783,7 @@ SCIP_RETCODE getRelevantRows(
       if( sepadata->scalefraccoeffs )
       {
          SCIP_CALL( SCIPcalcRowIntegralScalar(scip, row, -SCIPepsilon(scip), SCIPepsilon(scip), 
-               MAXDNOM, MAXSCALE, USECONTVARS, &intscalar, &success) );
+               (SCIP_Longint) MAXDNOM, MAXSCALE, USECONTVARS, &intscalar, &success) );
          if( !success )
          {
             lpdata->subproblemsindexofrow[r] = IRRELEVANT;
@@ -2284,8 +2191,7 @@ SCIP_RETCODE storeMod2Data(
          {
             int rcolsindex = lpdata->rcolsindexofcol[c];
         
-            fliplhsrhs = XOR(fliplhsrhs, (rcolsindex == LP_SOL_EQUALS_ODD_LB
-                  || rcolsindex == LP_SOL_EQUALS_ODD_UB));
+            fliplhsrhs = XOR(fliplhsrhs, (rcolsindex == LP_SOL_EQUALS_ODD_LB || rcolsindex == LP_SOL_EQUALS_ODD_UB) );
             if( rcolsindex >= 0 ) /* relevant column? */
             {
                if( tempcurrentrow == NULL )
@@ -2582,9 +2488,7 @@ SCIP_RETCODE addZerohalfCutToLP(
 
    *result = SCIP_SEPARATED;
           
-#ifdef ZEROHALF__DEBUG
    SCIPdebug(SCIPprintRow(scip, cutdata->cut, NULL));            
-#endif          
 
    return SCIP_OKAY;
 }
@@ -2694,14 +2598,11 @@ SCIP_RETCODE getZerohalfWeightvectorFromSelectedRowsBitarray(
       assert(0 <= lppos && lppos <= lpdata->nrows);         
       if( BITARRAYBITISSET(rrowsincut, i) )
       {
-         assert(lpdata->rrowsindexofleftrow[lppos] == i
-            || lpdata->rrowsindexofrightrow[lppos] == i);
-
-#ifdef ZEROHALF__DEBUG
-         printf("  %1s0.5   (int scaling: %16.4f)  row[%d] %s\n",
+         assert(lpdata->rrowsindexofleftrow[lppos] == i || lpdata->rrowsindexofrightrow[lppos] == i);
+         
+         SCIPdebugMessage("  %1s0.5   (int scaling: %16.4f)  row[%d] %s\n",
             lpdata->rrowsindexofleftrow[lppos] == i ? "-" : "+",
             lpdata->intscalars[lppos], lppos, SCIProwGetName(lpdata->rows[lppos]));          
-#endif
       
          if( lpdata->rrowsindexofleftrow[lppos] == i )
             (*weights)[lppos] = lpdata->intscalars[lppos] * (-0.5);
@@ -2760,9 +2661,9 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    if( cutdata->success )
    {
       cutdata->isfeasviolated = SCIPisFeasGT(scip, cutdata->activity, cutdata->rhs);
-      /*  SCIPdebugMessage("Cut is %sfeasviolated: (act: %e, rhs: %e, viol: %e)\n", cutdata->isfeasviolated ? "" : "not ",  
-       *  cutdata->activity, cutdata->rhs, cutdata->violation);      
-       */
+      SCIPdebugMessage("Cut is %sfeasviolated: (act: %e, rhs: %e, viol: %e)\n", 
+         cutdata->isfeasviolated ? "" : "not ", cutdata->activity, cutdata->rhs, cutdata->violation);      
+      
 
       if( cutdata->isfeasviolated )    
       { 
@@ -3286,11 +3187,15 @@ SCIP_RETCODE preprocessModGaussElim(
 
    /*   sort column indices sets w.r.t. to their primsol values NON-INCREASINGLY */
    if( mod2data->ncolsind > 1 )
-      sortIndicesByValsNonincreasing(mod2data->colsind, mod2data->ncolsind, mod2data->fracsol);
+   {
+      SCIPsortRealInt(mod2data->fracsol, mod2data->colsind, mod2data->ncolsind);
+   }
   
    /*   sort row indices sets w.r.t. to their slack values NON-DECREASINGLY */
    if( mod2data->nrowsind > 1 )
-      sortIndicesByValsNondecreasing(mod2data->rowsind, mod2data->nrowsind, mod2data->slacks);
+   {
+      SCIPsortRealInt(mod2data->slacks, mod2data->rowsind, mod2data->nrowsind);
+   }
 
   
    identsubmatrixsize = 0;
@@ -3695,9 +3600,8 @@ SCIP_RETCODE decomposeProblem (
 
       totalnrrows += subproblem->nrrows;
       totalnrcols += subproblem->nrcols;
-#ifdef ZEROHALF__DEBUG
-      printf("subproblem %d: %d rrows, %d rcols\n", k, subproblem->nrrows, subproblem->nrcols);
-#endif    
+
+      SCIPdebugMessage("subproblem %d: %d rrows, %d rcols\n", k, subproblem->nrrows, subproblem->nrcols);
    }
    if( lpdata->nsubproblems == 0 )
    {
@@ -3777,7 +3681,9 @@ SCIP_RETCODE preprocessColumnsWithSmallFracsol(
   
    /* sort column indices sets w.r.t. to their primsol values NON-INCREASINGLY */
    if( mod2data->ncolsind > 1 )
-      sortIndicesByValsNonincreasing(mod2data->colsind, mod2data->ncolsind, mod2data->fracsol);
+   {
+      SCIPsortDownRealInt(mod2data->fracsol, mod2data->colsind, mod2data->ncolsind);
+   }
 
    for( c = mod2data->ncolsind - 1 ; c >= 0 ; --c)
    {
@@ -3864,10 +3770,11 @@ SCIP_RETCODE preprocessConsiderMinSlack(
   
    /* sort each partition by nondecreasing slacks */
    assert(noddrhsrows >= 0);
-   sortIndicesByValsNondecreasing(mod2data->rowsind, noddrhsrows, mod2data->slacks );  
+   SCIPsortRealInt( mod2data->slacks, mod2data->rowsind, noddrhsrows);  
    if( noddrhsrows < mod2data->nrowsind)
-      sortIndicesByValsNondecreasing(mod2data->rowsind + noddrhsrows,
-         mod2data->nrowsind - noddrhsrows, mod2data->slacks);
+   {
+      SCIPsortRealInt(mod2data->slacks, mod2data->rowsind + noddrhsrows, mod2data->nrowsind - noddrhsrows );
+   }
   
    minslackoddrhsrows = mod2data->slacks[mod2data->rowsind[0]];
    nlslrowsremoved = 0;
@@ -3921,11 +3828,12 @@ SCIP_RETCODE preprocessConsiderMinSlack(
          {
             /*   sort column indices sets w.r.t. to their primsol values NON-INCREASINGLY */
             if( mod2data->ncolsind > 1 )
-               sortIndicesByValsNonincreasing(mod2data->colsind, mod2data->ncolsind, mod2data->fracsol);
+            {
+               SCIPsortDownRealInt( mod2data->fracsol, mod2data->colsind, mod2data->ncolsind);
+            }
         
             j = 0;
-            while (j < mod2data->ncolsind
-               && SCIPisGT(scip, mod2data->fracsol[mod2data->colsind[j]] + minslackoddrhsrows, sepadata->maxslack))
+            while (j < mod2data->ncolsind && SCIPisGT(scip, mod2data->fracsol[mod2data->colsind[j]] + minslackoddrhsrows, sepadata->maxslack))
             {
                c = mod2data->colsind[j];
                minslackrowwithnonz = 1.0;
@@ -4441,7 +4349,7 @@ SCIP_RETCODE createSubscip(
       SCIP_CALL(SCIPsetBoolParam(auxipdata->subscip, "misc/catchctrlc", FALSE));
 
       /* disable output to console */
-#ifdef ZEROHALF__DEBUG
+#ifdef SCIP_DEBUG
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/verblevel", 4));
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/freq", 1));
       SCIP_CALL(SCIPsetIntParam(auxipdata->subscip, "display/nsols/active", 2));
@@ -4515,7 +4423,7 @@ SCIP_RETCODE createSubscip(
    /* create variables and set objective */ 
    /* q */
    SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->q), "q", 0.0, SCIPinfinity(auxipdata->subscip),
-      0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+         0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->q) );
    SCIP_CALL( SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__AVOID_BRANCHING) );
    /* r */
@@ -4523,7 +4431,7 @@ SCIP_RETCODE createSubscip(
    {
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "r_colsind%d(rcols%d)", j, mod2data->colsind[j]);
       SCIP_CALL( SCIPcreateVar(auxipdata->subscip, &(auxipdata->r[j]), varname, 0.0, SCIPinfinity(auxipdata->subscip),
-         0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+            0.0, SCIP_VARTYPE_INTEGER, TRUE, FALSE, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(auxipdata->subscip, auxipdata->r[j]) );
       SCIP_CALL( SCIPchgVarBranchPriority(auxipdata->subscip, auxipdata->q, BRANCHPRIORITY__AVOID_BRANCHING) );
    }
@@ -4641,11 +4549,8 @@ SCIP_RETCODE createSubscip(
    SCIPfreeBufferArray(scip, &consvars);
    SCIPfreeBufferArray(scip, &consvals);
 
-#ifdef ZEROHALF__DEBUG
-   printf("\n");
-   SCIPprintOrigProblem(auxipdata->subscip, NULL, NULL, TRUE);
-#endif          
-  
+   SCIPdebug( SCIPprintOrigProblem(auxipdata->subscip, NULL, NULL, TRUE) );
+   
    return SCIP_OKAY;   
 }
 
@@ -4681,9 +4586,10 @@ SCIP_RETCODE solveSubscip(
 
    /* solve AuxIP */
    SCIP_CALL(SCIPsolve(auxipdata->subscip));
-#ifdef ZEROHALF__DEBUG
-   SCIPprintStatistics(auxipdata->subscip, NULL);
-#endif
+
+   /* print statistic */
+   SCIPdebug( SCIPprintStatistics(auxipdata->subscip, NULL) );
+
    subscipsolvingtime = SCIPgetSolvingTime(auxipdata->subscip);
    maxslack = sepadata->maxslack;
 
@@ -4960,7 +4866,7 @@ SCIP_RETCODE separateBySolvingAuxIP(
       assert(nrowsincut > 0);
 
 
-#ifdef ZEROHALF__DEBUG
+#ifdef SCIP_DEBUG
       debugPrintLPRowsAndCols(scip, lpdata);
       printf("\n");
       debugPrintSubLpData(scip, lpdata, mod2data->relatedsubproblem);
@@ -5145,10 +5051,12 @@ SCIP_RETCODE separateByEnumerationHeuristics(
 
    /* sort each partition by nondecreasing slacks */
    assert(noddrhsrows >= 0);
-   sortIndicesByValsNondecreasing(mod2data->rowsind, noddrhsrows, mod2data->slacks);  
+   SCIPsortRealInt(mod2data->slacks, mod2data->rowsind, noddrhsrows);  
+   
    if( noddrhsrows < mod2data->nrowsind )
-      sortIndicesByValsNondecreasing(mod2data->rowsind + noddrhsrows,
-         mod2data->nrowsind - noddrhsrows, mod2data->slacks);
+   {
+      SCIPsortRealInt(mod2data->slacks, mod2data->rowsind + noddrhsrows, mod2data->nrowsind - noddrhsrows);
+   }
 
    minslackoddrhsrows = mod2data->slacks[mod2data->rowsind[0]];
    minslackevenrhsrows = noddrhsrows < mod2data->nrowsind ?
@@ -5278,7 +5186,7 @@ SCIP_RETCODE separateByEnumerationHeuristics(
 
 
 
-#ifdef ZEROHALF__DEBUG
+#ifdef SCIP_DEBUG
 /** prints a node of the auxiliary graph */
 static
 void debugPrintAuxGraphNode(
@@ -5809,8 +5717,7 @@ SCIP_RETCODE separateByGaussHeuristics(
          break;
     
       /* sort row indices sets w.r.t. to their slack values NON-DECREASINGLY */
-      bsortIndicesByValsNondecreasing(mod2data->rowsind + identsubmatrixsize, 
-         mod2data->nrowsind - identsubmatrixsize, mod2data->slacks);
+      SCIPsortRealInt(mod2data->slacks, mod2data->rowsind + identsubmatrixsize,  mod2data->nrowsind - identsubmatrixsize);
     
       /* break if no unprocessed row with slack <= maxslack is left */
       if( SCIPisGT(scip, mod2data->slacks[mod2data->rowsind[identsubmatrixsize]], sepadata->maxslack) )
@@ -5836,7 +5743,7 @@ SCIP_RETCODE separateByGaussHeuristics(
             /* add pivot row to r-th row */
             mod2data->slacks[mod2data->rowsind[r]] += mod2data->slacks[mod2data->rowsind[pivotrow]];
 
-#ifndef ZEROHALF__DEBUG
+#ifndef SCIP_DEBUG
             /* avoid expensive operations on rows with slack > maxslack */
             if( SCIPisLE(scip, mod2data->slacks[mod2data->rowsind[r]], sepadata->maxslack) )
 #endif
@@ -6056,12 +5963,11 @@ SCIP_RETCODE process(
       }
 
       /* statistics */
+#ifdef ZEROHALF__PRINT_STATISTICS
       ZEROHALFstopTimer(sepadata->sepatimers[i]);
       ZEROHALFstopTimer(sepatimer);
-#ifdef ZEROHALF__PRINT_STATISTICS
       sepadata->nsepacutsalgo[i] += *nsepacuts - nsepacutsbefore;
       sepadata->nzerohalfcutsalgo[i] += *nzerohalfcuts - nzerohalfcutsbefore;
-#endif
       ZEROHALFstatisticsMessage("%15s | %8d | %8d | %8d | %8d | %8.4f | %8d | %8d | %8d | %8d | %8.4f\n",
          sepaname, mod2data->nrowsind, mod2data->ncolsind,
          *nsepacuts - nsepacutsbefore, *nzerohalfcuts - nzerohalfcutsbefore,
@@ -6069,6 +5975,7 @@ SCIP_RETCODE process(
          sepadata->nsepacutsalgo[i], sepadata->nzerohalfcutsalgo[i],
          *nsepacuts, *nzerohalfcuts, ZEROHALFevalTimer(sepadata->sepatimers[i]));
       ZEROHALFresetTimer(sepatimer); 
+#endif
    }
 
    /* statistics */
@@ -6406,7 +6313,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       subproblempriorities[i] = ((SCIP_Real) lpdata->subproblems[i]->nrrows)
          + nrcolsfactor * ((SCIP_Real) lpdata->subproblems[i]->nrcols);
    }
-   sortIndicesByValsNondecreasing(sortedsubproblems, lpdata->nsubproblems, subproblempriorities);
+   SCIPsortRealInt(subproblempriorities, sortedsubproblems, lpdata->nsubproblems);
 
    /* allocate temporary memory for storing separated zerohalf cuts */
    SCIP_CALL(SCIPallocMemoryArray(scip, &zerohalfcuts, maxcuts));
@@ -6429,7 +6336,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
        * then a violated zerohalf cut can be generated by multipliying this row with 0.5 and rounding down. */
       if( lpdata->subproblems[subproblemindex]->nrrows == 1 && lpdata->subproblems[subproblemindex]->nrcols == 0 )
       {        
-#ifdef ZEROHALF__DEBUG
+#ifdef SCIP_DEBUG
          debugPrintLPRowsAndCols(scip, lpdata);
          printf("\n");
          debugPrintSubLpData(scip, lpdata, lpdata->subproblems[subproblemindex]);
@@ -6531,7 +6438,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          zerohalfcutpriorities[i] = SCIPfloor(scip, violationbucketsize * (zerohalfcuts[i])->violation)
             + (1.0 - (SCIP_Real) (zerohalfcuts[i])->nnonz / (SCIP_Real) lpdata->ncols);
       }
-      sortIndicesByValsNonincreasing(sortedzerohalfcuts, nzerohalfcuts, zerohalfcutpriorities);
+      SCIPsortDownRealInt(zerohalfcutpriorities, sortedzerohalfcuts, nzerohalfcuts);
     
       /* check orthogonality */
       for( si = 0 ; si < nzerohalfcuts ; ++si)
@@ -6583,11 +6490,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    if( varsolvals != NULL )
       SCIPfreeMemoryArray(scip, &varsolvals);
    for( i = 0 ; i < nzerohalfcuts ; ++i)
-      SCIP_CALL(ZerohalfCutDataFree(scip, &(zerohalfcuts[i])));  
+   {
+      SCIP_CALL( ZerohalfCutDataFree(scip, &(zerohalfcuts[i])) );  
+   }
    SCIPfreeMemoryArray(scip, &zerohalfcuts);
    SCIPfreeBufferArray(scip, &subproblempriorities);
    SCIPfreeBufferArray(scip, &sortedsubproblems);
-   SCIP_CALL(ZerohalfLPDataFree(scip, &lpdata));
+   SCIP_CALL( ZerohalfLPDataFree(scip, &lpdata) );
   
   
    return SCIP_OKAY;
