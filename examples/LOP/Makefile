@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.10 2008/09/30 09:53:14 bzfpfets Exp $
+# $Id: Makefile,v 1.11 2008/09/30 14:26:12 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a linear ordering solver
@@ -109,11 +109,7 @@ $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 genRandomLOPInstance: $(BINDIR)/genRandomLOPInstance
 $(BINDIR)/genRandomLOPInstance: $(BINDIR) $(OBJDIR) $(OBJDIR)/genRandomLOPInstance.o
 		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o $(OFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
