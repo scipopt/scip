@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.66 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.67 2008/09/30 12:25:13 bzfraack Exp $"
 
 //#define SCIP_DEBUG
 
@@ -419,7 +419,7 @@ SCIP_RETCODE mcfnetworkFill(
       }
    }
 
-   /**@todo model type and flow type may be different for each component */
+   /** @todo model type and flow type may be different for each component */
    /* record model and flow type */
    mcfnetwork->modeltype = modeltype;
    mcfnetwork->flowtype = flowtype;
@@ -955,7 +955,7 @@ SCIP_RETCODE extractFlowRows(
          /* update maximum dual solution value for additional score tie breaking */
          maxdualflow = MAX(maxdualflow, absdualsol);
 
-         /**@todo go through list of several model types, depending on the current model type throw away invalid constraints
+         /** @todo go through list of several model types, depending on the current model type throw away invalid constraints
           *       instead of assigning a low score
           */
       }
@@ -2189,7 +2189,7 @@ SCIP_RETCODE extractCapacities(
    for( r = 0; r < nrows; r++ )
       rowarcid[r] = -1;
 
-   /**@todo use capacity candidates in their score order
+   /** @todo use capacity candidates in their score order
     *       instead of looping through the used flow columns and their column vectors
     */ /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
    /* for each column, search for a capacity constraint */
@@ -3192,7 +3192,7 @@ SCIP_RETCODE cleanupNetwork(
    BMSclearMemoryArray(nnodespercom, ncommodities);
    BMSclearMemoryArray(narcspercom, ncommodities);
 
-   /**@todo remove nodes without any incoming and outgoing arcs */
+   /** @todo remove nodes without any incoming and outgoing arcs */
 
    /* count the number of nodes in each commodity */
    for( i = 0; i < nflowcands; i++ )
@@ -3942,7 +3942,7 @@ SCIP_RETCODE mcfnetworkExtract(
          /* 8.a if there are still undecided commodity signs, fix them to +1 */
          fixCommoditySigns(scip, &mcfdata);
 
-         /**@todo Now we need to assign arcids to flow variables that have not yet been assigned to an arc because
+         /** @todo Now we need to assign arcids to flow variables that have not yet been assigned to an arc because
           *       there was no valid capacity constraint.
           *       Go through the list of nodes and generate uncapacitated arcs in the network for the flow variables
           *       that do not yet have an arc assigned, such that the commodities still match.
@@ -3983,7 +3983,7 @@ SCIP_RETCODE mcfnetworkExtract(
          SCIP_CALL( setUncapacitatedArcs(scip, &mcfdata) );
 #endif
 
-         /**@todo auto-detect type of flow variables */
+         /** @todo auto-detect type of flow variables */
          if( mcfdata.flowtype == SCIP_MCFFLOWTYPE_AUTO )
             mcfdata.flowtype = SCIP_MCFFLOWTYPE_CONTINUOUS;
       }
@@ -5247,7 +5247,7 @@ SCIP_RETCODE generateClusterCuts(
 
 #else
       /* try out deltas to generate c-MIR cuts: use larger deltas first */
-      /**@todo use only the best delta instead of generating all cuts */
+      /** @todo use only the best delta instead of generating all cuts */
 #ifdef SEPARATEFLOWCUTS
       bestdelta = deltas[ndeltas-1];  /* if nothing else is found, use maxdelta */
       bestrelviolation = SCIP_REAL_MIN;
@@ -5730,6 +5730,7 @@ SCIP_RETCODE SCIPincludeSepaMcf(
          sepaExeclpMcf, sepaExecsolMcf,
          sepadata) );
 
+   /** @todo introduce paramters such as maxrounds (see other separators) */
    /* add mcf separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/mcf/nclusters",
