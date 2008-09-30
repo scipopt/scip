@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.9 2008/09/29 20:33:54 bzfviger Exp $
+# $Id: Makefile,v 1.10 2008/09/30 09:53:14 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a linear ordering solver
@@ -106,8 +106,14 @@ $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) $(LINKCXX_o)$@
 
-genRandomLOPInstance: $(BINDIR)
-		$(CC) $(CC_o)$(BINDIR)/genRandomLOPInstance $(FLAGS) $(SRCDIR)/genRandomLOPInstance.c
+genRandomLOPInstance: $(BINDIR)/genRandomLOPInstance
+$(BINDIR)/genRandomLOPInstance: $(BINDIR) $(OBJDIR) $(OBJDIR)/genRandomLOPInstance.o
+		@echo "-> linking $@"
+		$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o \
+		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
+                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
