@@ -21,9 +21,12 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include <scip/pub_misc.h>
+
 int main(int argc, char** argv)
 {
    int n, d, i, j;
+   unsigned int seed;
    FILE *file;
 
    if ( argc != 4 )
@@ -34,6 +37,7 @@ int main(int argc, char** argv)
 
    n = atoi(argv[2]);
    d = atoi(argv[3]);
+   seed = 0;
    assert( n > 0 );
    assert( d > 0 );
 
@@ -51,11 +55,13 @@ int main(int argc, char** argv)
    for (i = 0; i < n; ++i)
    {
       for (j = 0; j < n; ++j)
-	 fprintf(file, "%d ", (int) (((double)d) * drand48()));
+	 fprintf(file, "%d ", SCIPgetRandomInt(0, d, &seed));
       fprintf(file, "\n");
    }
 
    printf("Wrote random LOP instance to %s\n", argv[1]);
    printf("Size: %d\n", n);
    printf("Entries: {0, ..., %d}\n", d);
+
+   return 0;
 }
