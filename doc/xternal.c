@@ -67,6 +67,7 @@
  * - \ref MAKE    "Makefiles"
  * - \ref DEBUG   "Debugging"
  * - \ref TEST    "How to run automated tests with SCIP"
+ * - \ref COUNTER "How to use SCIP to count feasible solution"
  *
  * <b>Programming with SCIP</b>
  *
@@ -3755,6 +3756,29 @@
  * - Added user pointer to callback methods of hash table, see pub_misc.h.
  *
  * - New parameters "extension" in SCIPreadProb() defining a desired file format or NULL if file extension should be use.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page COUNTER How to use SCIP to count feasible solution
+ *
+ * SCIP is capable of computing the number of feasible solution of a given constraint integer program 
+ * with the restriction that there are no continuous variables. Therefore, 
+ * you just have to load the problem in the interactive shell by using the <code>read</code> command, for example,
+ *
+ * - <code>SCIP&gt; read &lt;file name&gt;</code>
+ *
+ * Afterwards you can count the number of feasible solution with the command <code>count</code>. 
+ *
+ * - <code>SCIP&gt; count</code>
+ *
+ * <b>Note:</b> If you are using the default SCIP settings it is most likely that SCIP will not compute 
+ * the right number of feasible solutions since <tt>dual</tt> reduction are turned on, for example, 
+ * presol_dualfix.c. We recommend to load the setting file "counter.set" which is locate in the 
+ * <code>settings/emphasis/</code> directory.
+ *
+ * The SCIP library provides a interface method SCIPcount() which allows to count the number of feasible solution with in
+ * your project. The complete list of all methods which can be used for counting can be found in cons_countsols.h.
+ *
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
