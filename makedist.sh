@@ -40,7 +40,7 @@ $NAME/examples/MIPSolver/doc/* \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.c $NAME/examples/MIPSolver/src/*.cpp $NAME/examples/MIPSolver/src/*.h \
 $NAME/examples/Queens/* \
-$NAME/examples/Quenns/src/depend.* \
+$NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.c $NAME/examples/Queens/src/*.cpp \
 $NAME/examples/Queens/src/*.h $NAME/examples/Queens/src/*.hpp \
 $NAME/examples/SamplePricer/Makefile $NAME/examples/SamplePricer_C/INSTALL \
