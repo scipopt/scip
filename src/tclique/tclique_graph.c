@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.8 2008/08/15 17:00:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.9 2008/09/30 12:54:35 bzfheinz Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -628,7 +628,7 @@ TCLIQUE_Bool tcliqueSaveFile(
    /* create file */
    if( (file = fopen(filename, "w")) == NULL )
    {
-     infoMessage("\nCan't create file: %s", filename);
+      infoMessage("\nCan't create file: %s", filename);
       return FALSE;
    }
  
