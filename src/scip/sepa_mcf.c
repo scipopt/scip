@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.67 2008/09/30 12:25:13 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.68 2008/09/30 13:33:52 bzfheinz Exp $"
 
 //#define SCIP_DEBUG
 
@@ -3817,8 +3817,8 @@ SCIP_RETCODE mcfnetworkExtract(
 {
    MCFDATA mcfdata;
 
-   SCIP_MCFMODELTYPE modeltype = sepadata->modeltype;
-   SCIP_MCFFLOWTYPE  flowtype  = sepadata->flowtype;
+   SCIP_MCFMODELTYPE modeltype = (SCIP_MCFMODELTYPE) sepadata->modeltype;
+   SCIP_MCFFLOWTYPE  flowtype  = (SCIP_MCFFLOWTYPE) sepadata->flowtype;
 
    int* nodevisited;
    int* compnodeid;
