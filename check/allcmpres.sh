@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.15 2008/04/17 19:30:44 bzfpfets Exp $
+# $Id: allcmpres.sh,v 1.16 2008/09/30 16:11:05 bzfheinz Exp $
 
 AWKARGS=""
 FILES=""
@@ -37,6 +37,6 @@ for i in $TESTSETS
 do
     echo
     echo ====vvvv==== $i ====vvvv====
-    cmpres.awk $AWKARGS texcmpfilename="cmpres.$i.tex" `ls -1 --color=none $FILES | grep "$i\..*\.res"`
+    awk -f cmpres.awk $AWKARGS texcmpfilename="cmpres.$i.tex" `ls -1 --color=none $FILES | grep "$i\..*\.res"`
     echo ====^^^^==== $i ====^^^^====
 done
