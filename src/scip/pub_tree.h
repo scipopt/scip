@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.22 2008/04/17 17:49:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.23 2008/09/30 13:17:23 bzfviger Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -105,7 +105,7 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
  * speed up the algorithms.
  */
 
-#define SCIPnodeGetType(node)           ((node)->nodetype)
+#define SCIPnodeGetType(node)           ((SCIP_NODETYPE)(node)->nodetype)
 #define SCIPnodeGetNumber(node)         ((node)->number)
 #define SCIPnodeGetDepth(node)          ((node)->depth)
 #define SCIPnodeGetLowerbound(node)     ((node)->lowerbound)
