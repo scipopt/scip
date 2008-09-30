@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.291 2008/09/29 22:26:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.292 2008/09/30 14:45:21 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10449,7 +10449,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                lp->cutoffbound = SCIPlpiInfinity(lpi);
                iters = 1;
 
-               while ( objval < tmpcutoff - lp->looseobjval )
+               while( !(*lperror) && objval < tmpcutoff - lp->looseobjval )
                {
                   /* set an iteration limit of 1 which will be multiplied by 2 each time, the new objvalue doesn't exceed the objective limit */
                   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, iters) );
@@ -10458,9 +10458,13 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   SCIP_CALL( lpSolveStable(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
                   SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
                   iters = iters * 2;
+                  if( iters > INT_MAX / 4 )
+                  {
+                     *lperror = TRUE;
+                     break;
+                  }
                }
-
-               assert( objval >= tmpcutoff - lp->looseobjval );
+               assert( *lperror || objval >= tmpcutoff - lp->looseobjval );
 
                /* reinstall old cutoff bound and iteration limits in LP solver */
                lp->cutoffbound = tmpcutoff;
