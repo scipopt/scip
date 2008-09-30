@@ -1,8 +1,8 @@
-#--- $Id: make.sunos.sparc.gnu.opt,v 1.3 2008/09/29 09:12:39 bzfberth Exp $
+#--- $Id: make.sunos.sparc.gnu.opt,v 1.4 2008/09/30 17:21:30 bzfberth Exp $
 FLAGS		+=	-DNDEBUG # -DROUNDING_FE
 OFLAGS		+=	-O3 -mcpu=ultrasparc -mtune=ultrasparc -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
-CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+CFLAGS		+=	$(GCCWARN) -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
 LDFLAGS		+=      -Bstatic
 ZLIB_FLAGS	=
