@@ -14,7 +14,8 @@ General
 - There is a new file make/make.projects supporting the compilation of
   projects using SCIP.
 
-- SCIP can now count integer solutions.
+- SCIP can now count integer feasible solutions for IPs/CIPs (without
+  continuous variables).
 
 - The feasibility test for solutions at the end of the execution now
   outputs more useful information. This made some changes in the
@@ -25,6 +26,10 @@ General
 
 - Pseudo-Boolean problems can be read and handled by SCIP.
 
+- New heuristic DINS.
+
+- New cutting plane separator MCF (beta version).
+
 
 Performance Improvements and Bug Fixes
 ======================================
@@ -32,14 +37,14 @@ Performance Improvements and Bug Fixes
 - Improved sorting functions. They now use quick-sort/shell-sort
   depending on the size.
 
-- The preprocessing has been overworked. It now applies bound
+- The preprocessing has been revised. It now applies bound
   computations in a numerically more stable way. The pairwise
   comparison of linear, logicor, and setppc constraints has been
   improved.
 
-- The timing calls have been overworked.
+- The timing calls have been reworked.
 
-- The LP-interfaces to Clp and SoPlex have been overworked and adapted
+- The LP-interfaces to Clp and SoPlex have been revised and adapted
   to the changes in these solvers.
 
 - Many internal performance improvements.
