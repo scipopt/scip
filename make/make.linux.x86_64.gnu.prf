@@ -1,6 +1,6 @@
-#--- $Id: make.linux.x86_64.gnu.prf,v 1.4 2008/09/05 20:09:55 bzfpfets Exp $
+#--- $Id: make.linux.x86_64.gnu.prf,v 1.5 2008/09/30 13:07:04 bzfheinz Exp $
 FLAGS		+=	-DNDEBUG # -DROUNDING_FE
-OFLAGS		+=	-O2 -m64 -march=nocona -g -pg -fno-inline -funit-at-a-time
+OFLAGS		+=	-O2 -m64 -march=nocona -g -pg -fno-inline 
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
