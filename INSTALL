@@ -300,3 +300,33 @@ make[1]: Leaving directory `/sw/scip'
    "http://scip.zib.de/download/files/scip-miplib3.zip" and extract the archive into the SCIP base directory.
    The instances will be unziped into the subdirectory "check/IP/miplib3/". Afterwards, enter
    "make [options] test" with the same options with which you compiled SCIP in step 1.
+
+
+
+Remarks on Installing under Windows using MinGW
+-----------------------------------------------
+
+To build your own windows binaries under windows we recommend using the MinGW-Compiler with MSYS from mingw.org .
+
+First install MSYS, then MinGW to the mingw folder inside the msys folder.
+Now you need to install the following packages to the mingw folder:
+- zlib (or use ZLIB=false)
+- pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
+
+(After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.)
+
+You can download these additional packages from
+http://gnuwin32.sourceforge.net/packages.html
+or compile the source on your own from their homepages.
+
+Second you need to copy the file sh.exe to bash.exe otherwise various scripts (including makefiles) will not work.
+Normally the unistd.h covers also the getopt-options, but for mingw you need to add the entry
+#include <getopt.h>
+into the /mingw/include/unistd.h after the other include-entries (if not present).
+
+At last there is one package you need to compile if you want to use ZIMPL and ZIMPL-support in SCIP (otherwise use ZIMPL=false as parameter with the make-call):
+the gmplib from gmplib.org
+The command "./configure --prefix=/mingw ; make ; make install" should succeed without problems and installs the gmplib to the mingw folder.
+
+Now "make READLINE=false" should be compiling without errors.
+Please note that we do NOT support creating the doxygen documentation and readline-usage under windows.
