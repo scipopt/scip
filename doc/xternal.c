@@ -3722,22 +3722,39 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CHG2 Interface changes between SCIP 1.0 and SCIP 1.1
  *
- * - <code>SCIPcreateChild()</code> has a new last parameter giving an estimate for value of best feasible solution in
- *   the subtree to be created. One possibility is to use <code>SCIPgetLocalOrigEstimate(scip)</code> for this value.
+ * - SCIPcreateChild() has a new last parameter giving an estimate for value of best feasible solution in the subtree to
+ *   be created. One possibility is to use SCIPgetLocalOrigEstimate() for this value.
  * 
  * - The callback \ref CONSCHECK in the constraint handlers now has a new parameter <code>printreason</code> that tells
  *   a constraint handler to output the reason for a possible infeasibility of the solution to be checked using
- *   <code>SCIPinfoMessage()</code>. Have a look at one of the constraint handlers implemented in SCIP to see how it
- *   works. This methodology makes it possible to output the reason of a violation in human readable form, for instance,
- *   for the check at the end of a SCIP run, where the obtained best solution is checked against the original formulation.\n
- *   This change often has little effect on C-implementations, since this parameter can be safely ignored with respect to
- *   the correctness of the code. The corresponding C++ method <code>scip::ObjConshdlr::scip_check()</code>, however, has
- *   to be extended and will not compile otherwise.
+ *   SCIPinfoMessage(). Have a look at one of the constraint handlers implemented in SCIP to see how it works. This
+ *   methodology makes it possible to output the reason of a violation in human readable form, for instance, for the check
+ *   at the end of a SCIP run, where the obtained best solution is checked against the original formulation.\n This change
+ *   often has little effect on C-implementations, since this parameter can be safely ignored with respect to the
+ *   correctness of the code. The corresponding C++ method scip::ObjConshdlr::scip_check(), however, has to be extended
+ *   and will not compile otherwise.
  *
- * - <code>SCIPcheckSolOrig()</code> is restructured. The last two parameters have changed. They are now bools indicating
+ * - SCIPcheckSolOrig() is restructured. The last two parameters have changed. They are now bools indicating
  *   whether the reason for the violation should be printed to the standard output and whether all violations should be
  *   printed. This reflects the changes in the constraint handlers above, which allow the automation of the feasibility
  *   test. The pointers to store the constraint handler or constraint are not needed anymore.
+ *
+ * - New parameters "extension" and "genericnames" in SCIPprintTransProblem() and SCIPprintOrigProblem() defining the
+ *   requested format or NULL for default CIP format and using generic names for the variables and constraints. Examples are
+ *   - <code>SCIPprintTransProblem(scip, NULL, NULL, TRUE)</code> displays the transformed problem in CIP format with
+ *     generic variables and constraint names
+ *   - <code>SCIPprintOrigProblem(scip, NULL, "lp", FALSE)</code> displays the original problem in LP format with
+ *     original variables and constraint names.
+ *
+ * - New callback method SCIP_DECL_READERWRITE(x) in type_reader.h; this method is called to write a problem to file
+ *   stream in the format the reader stands for; useful for writing the transformed problem in LP or MPS format. Hence,
+ *   also SCIPincludeReader() has changed.
+ *
+ * - New parameter "conshdlrname" in SCIPincludeLinconsUpgrade().
+ *
+ * - Added user pointer to callback methods of hash table, see pub_misc.h.
+ *
+ * - New parameters "extension" in SCIPreadProb() defining a desired file format or NULL if file extension should be use.
  */
 
 /**@page FAQ Frequently Asked Questions (FAQ)
