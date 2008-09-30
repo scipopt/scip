@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.24 2008/09/22 19:16:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.25 2008/09/30 15:04:25 bzfheinz Exp $"
 
 /**@file   prop_pseudoobj.c
  * @ingroup PROPAGATORS
@@ -311,9 +311,9 @@ SCIP_Real getMaxObjPseudoactivityResidualValue(
    assert(propdata != NULL);
 
    /* if necessary, calculate the maximum pseudo objective activity */
-   if( propdata->maxpseudoobjact == SCIP_INVALID )
+   if( propdata->maxpseudoobjact == SCIP_INVALID ) /*lint !e777*/
       calcMaxObjPseudoactivity(scip, propdata);
-   assert(propdata->maxpseudoobjact != SCIP_INVALID);
+   assert(propdata->maxpseudoobjact != SCIP_INVALID); /*lint !e777*/
 
    if( SCIPisInfinity(scip, contrib) )
    {
