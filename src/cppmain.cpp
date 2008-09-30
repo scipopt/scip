@@ -6,13 +6,13 @@
 /*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.15 2008/04/17 18:00:19 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.16 2008/09/30 10:49:56 bzfheinz Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ compilation
