@@ -255,7 +255,7 @@ heuristics/feaspump/cyclelength = 3
 heuristics/feaspump/perturbfreq = 100
 
 # should the feasibility pump be called at root node before cut separation?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/feaspump/beforecuts = FALSE
 
 # priority of heuristic <fixandinfer>
