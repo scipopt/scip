@@ -1,9 +1,9 @@
-#--- $Id: make.linux.x86.gnu.prf,v 1.15 2008/09/30 17:21:30 bzfberth Exp $
+#--- $Id: make.linux.x86.gnu.prf,v 1.16 2008/09/30 18:00:03 bzfberth Exp $
 #analysis of performance file: gprof bin/scip.linux.x86.gnu.prf.static.cpx gmon.out
 FLAGS		+=	-DNDEBUG # -DROUNDING_FE
 OFLAGS		+=	-O2 -march=pentiumpro -g -pg -fno-inline
-CFLAGS		+=	$(GCCWARN) -Wno-missing-declarations -Wno-missing-prototypes
-CXXFLAGS	+=	$(GXXWARN) # -fno-exceptions (CLP uses exceptions)
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
 ARFLAGS		=	crs
 LDFLAGS		+=	-pg -Wl,-rpath,$(CURDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
