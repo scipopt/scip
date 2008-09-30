@@ -21,7 +21,55 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <scip/pub_misc.h>
+
+/* the following is copied from <scip/misc.c> */
+
+/* define own random numbers or take library version depending on the following define */
+#ifdef NO_RAND_R
+
+#define SCIP_RAND_MAX 32767
+
+/** returns a random number between 0 and SCIP_RAND_MAX */
+static
+int getRand(
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   SCIP_Longint nextseed;
+
+   assert(seedp != NULL);
+
+   nextseed = (*seedp) * 1103515245 + 12345;
+   *seedp = (unsigned int)nextseed;
+
+   return (int)((unsigned int)(nextseed/(2*(SCIP_RAND_MAX+1))) % (SCIP_RAND_MAX+1));
+}
+
+#else
+
+#define SCIP_RAND_MAX RAND_MAX
+
+/** returns a random number between 0 and SCIP_RAND_MAX */
+static
+int getRand(
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return rand_r(seedp);
+}
+
+#endif
+
+/** returns a random integer between minrandval and maxrandval */
+static
+int getRandomInt(
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return minrandval + (int) ((maxrandval - minrandval + 1)*(double)getRand(seedp)/(SCIP_RAND_MAX+1.0));
+}
 
 int main(int argc, char** argv)
 {
@@ -55,7 +103,7 @@ int main(int argc, char** argv)
    for (i = 0; i < n; ++i)
    {
       for (j = 0; j < n; ++j)
-	 fprintf(file, "%d ", SCIPgetRandomInt(0, d, &seed));
+	 fprintf(file, "%d ", getRandomInt(0, d, &seed));
       fprintf(file, "\n");
    }
 
