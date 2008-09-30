@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.49 2008/09/22 19:25:08 bzfwanie Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.50 2008/09/30 09:03:16 bzfheinz Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -314,9 +314,9 @@ void setFastmipClpParameters(
     *
     *  ! internally Cbc 2.20.00 set this parameter to 50
     *
-    * for Clp 1.8 stable: 50 does not seem to work well
+    * for Clp 1.8 stable: 50 seems to be 10% faster than 100 
     */
-   lpi->clp->setPerturbation(100);
+   lpi->clp->setPerturbation(50);
 
    /** For advanced options
     *       1 - Don't keep changing infeasibility weight
