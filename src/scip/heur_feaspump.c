@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.56 2008/09/26 18:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.57 2008/09/30 08:59:11 bzfheinz Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -48,7 +48,7 @@
 #define DEFAULT_PERTURBFREQ       100   /**< number of iterations until a random perturbation is forced */
 #define DEFAULT_OBJFACTOR         1.0   /**< factor by which the regard of the objective is decreased in each round, 
                                          *   1.0 for dynamic, depending on solutions already found */
-#define DEFAULT_BEFORECUTS      FALSE   /**< should the feasibility pump be called at root node before cut separation? */
+#define DEFAULT_BEFORECUTS       TRUE   /**< should the feasibility pump be called at root node before cut separation? */
 
 #define MINLPITER                5000   /**< minimal number of LP iterations allowed in each LP solving call */
 
