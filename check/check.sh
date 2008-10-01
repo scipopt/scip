@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.54 2008/09/28 20:59:37 bzfheinz Exp $
+# $Id: check.sh,v 1.55 2008/10/01 21:12:52 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -111,8 +111,8 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-# we add 60 seconds to the hard time limit
-HARDTIMELIMIT=`expr $TIMELIMIT + 60`
+# we add 10% to the hard time limit and additional 10 seconds in case of small time limits
+HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
 
 # we add 100kb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` \* 1024`

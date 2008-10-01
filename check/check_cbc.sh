@@ -76,14 +76,14 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-# we add 60 seconds to the hard time limit
-HARDTIMELIMIT=`expr $TIMELIMIT + 60`
+# we add 10% to the hard time limit and additional 10 seconds in case of small time limits
+HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
 
 # we add 100kb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` \* 1024`
 
-echo hard time limit: $HARDTIMELIMIT >>$OUTFILE
-echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
+echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
+echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
 for i in `cat $TSTNAME.test`
 do

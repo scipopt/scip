@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.16 2008/09/28 20:59:37 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.17 2008/10/01 21:12:52 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -49,11 +49,11 @@ fi
 
 SETTINGS=$SETDIR/$SETNAME.set
 
-# the jobs should have a hard running time of more than 5 minutes; if not so, these
-# jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
-# available 
-# we add 60 seconds to the hard time limit
-HARDTIMELIMIT=`expr $TIMELIMIT + 600`
+# we add 10% to the hard time limit and additional 600 seconds in case of small time limits
+# NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
+#       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
+#       available 
+HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + \`expr $TIMELIMIT / 10\``
 
 # we add 100kb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` \* 1024000`
