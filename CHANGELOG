@@ -1,3 +1,9 @@
+current version
+===============
+
+features:
+- adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
+
 SCIP version 1.1.0
 ===============
 

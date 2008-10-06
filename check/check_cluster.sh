@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.17 2008/10/01 21:12:52 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.18 2008/10/06 17:07:14 bzfwinkm Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -55,8 +55,9 @@ SETTINGS=$SETDIR/$SETNAME.set
 #       available 
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + \`expr $TIMELIMIT / 10\``
 
-# we add 100kb to the hard memory limit
-HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` \* 1024000`
+# we add 10% to the hard memory limit and additional 100mb to the hard memory limit
+HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
+HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
 
 USRPATH=`pwd`
 
