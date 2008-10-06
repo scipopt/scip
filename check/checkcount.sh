@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: checkcount.sh,v 1.4 2008/10/01 21:12:52 bzfheinz Exp $
+# $Id: checkcount.sh,v 1.5 2008/10/06 10:27:52 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -151,13 +151,21 @@ do
 	    echo set display verblevel 4           >> $TMPFILE
 	    echo set display freq $DISPFREQ        >> $TMPFILE
 	    echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+	    if test "$LPS" == "none"      
+	    then
+		echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
+
+	    fi
 	    echo set save $SETFILE                 >> $TMPFILE
 	    echo read $i                           >> $TMPFILE
 	    echo count                             >> $TMPFILE
 	    echo display statistics                >> $TMPFILE
 	    echo quit                              >> $TMPFILE
 
-#	    waitcplex.sh # ??????????????????
+#	    if test "$LPS" == "cpx"      
+#	    then
+#		waitcplex.sh # ??????????????????
+#	    fi
 
 	    echo -----------------------------
 	    date
