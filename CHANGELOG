@@ -3,12 +3,13 @@ current version
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
+- new interface to QSopt due to Daniel Espinoza
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform the final pivot 
   step in order to exceed the objlimit, do one additional simplex step with pricing strategy steepest edge, if this doesn't suffice,
   turn off fastmip temporarily and solve again. Also consider solstat of the new solution.
-
+- corrected two asserts in sepa_redcost.c (reduced costs can be negative for fixed variables - qsopt uses this)
 
 SCIP version 1.1.0
 ===============
