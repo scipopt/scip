@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.50 2008/09/30 09:03:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.51 2008/10/09 20:51:29 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -1998,7 +1998,7 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   return (! lpi->clp->dualFeasible() );
+   return ( lpi->clp->dualFeasible() );
 }
 
 
@@ -2012,7 +2012,8 @@ SCIP_Bool SCIPlpiIsOptimal(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   return( lpi->clp->isProvenOptimal() && lpi->clp->secondaryStatus() == 0 );
+   /* secondaryStatus == 6 means that the problem is empty */
+   return( lpi->clp->isProvenOptimal() && (lpi->clp->secondaryStatus() == 0 || lpi->clp->secondaryStatus() == 6));
 }
 
 
@@ -2055,7 +2056,8 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   return( lpi->clp->isPrimalObjectiveLimitReached() || lpi->clp->isDualObjectiveLimitReached() );
+   /* status == 2 means "dual infeasible" - in this case Clp currently always returns an objective limit exceedence! */
+   return( (lpi->clp->isPrimalObjectiveLimitReached() || lpi->clp->isDualObjectiveLimitReached()) && (lpi->clp->status() != 2) );
 }
 
 
