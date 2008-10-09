@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.292 2008/09/30 14:45:21 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.293 2008/10/09 14:20:20 bzfgamra Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10420,10 +10420,11 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          /* make sure, a dual feasible solution exists, that exceeds the objective limit if pricing is performed;
           * With FASTMIP setting, CPLEX does not apply the final pivot to reach the dual solution exceeding the objective
           * limit. Therefore, we have to either turn off FASTMIP and resolve the problem or continue solving it without
-          * objective limit for at least one iteration. It seems that the strategy to continue with FASTMIP for one
-          * additional simplex iteration yields better results.
+          * objective limit for at least one iteration. We first try to continue with FASTMIP for one additional simplex 
+          * iteration using the steepest edge pricing rule. If this does not fix the problem, we temporarily disable 
+          * FASTMIP and solve again.
           */
-         if ( set->npricers > 0 && set->lp_fastmip && lp->lpihasfastmip )
+         if( set->nactivepricers > 0 && set->lp_fastmip && lp->lpihasfastmip )
          {
             SCIP_LPI* lpi;
             SCIP_Real objval;
@@ -10438,59 +10439,116 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
 
             /* do one additional simplex step if the computed dual solution doesn't exceed the objective limit */
-            if ( objval < lp->lpiuobjlim )
+            if( objval < lp->lpiuobjlim )
             {
                SCIP_Real tmpcutoff;
-               SCIP_Bool resolve;
-               int iters;
+               SCIP_LPSOLSTAT solstat;
+               char tmppricingchar;
 
-               /* temporarily disable cutoffbound, which also disables the objective limit */
+               SCIPdebugMessage("objval = %f < %f = lp->lpiuobjlim, but status objlimit ", objval, lp->lpiuobjlim);
+
+               /* temporarily disable cutoffbound, which also disables the objective limit */ 
                tmpcutoff = lp->cutoffbound;
                lp->cutoffbound = SCIPlpiInfinity(lpi);
-               iters = 1;
 
-               while( !(*lperror) && objval < tmpcutoff - lp->looseobjval )
-               {
-                  /* set an iteration limit of 1 which will be multiplied by 2 each time, the new objvalue doesn't exceed the objective limit */
-                  SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, iters) );
-                  /* resolve LP */            
-                  resolve = FALSE;
-                  SCIP_CALL( lpSolveStable(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
-                  SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
-                  iters = iters * 2;
-                  if( iters > INT_MAX / 4 )
-                  {
-                     *lperror = TRUE;
-                     break;
-                  }
-               }
-               assert( *lperror || objval >= tmpcutoff - lp->looseobjval );
+               /* set lp pricing strategie to steepest edge */
+               SCIP_CALL( SCIPsetGetCharParam(set, "lp/pricing", &tmppricingchar) );
+               SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", 's') );
 
-               /* reinstall old cutoff bound and iteration limits in LP solver */
+               /* resolve LP with an iteration limit of 1 */
+               SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, 1) );
+               SCIP_CALL( lpSolve(lp, set, stat,  SCIP_LPALGO_DUALSIMPLEX, FALSE, FALSE, FALSE, 
+                     fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+
+               /* reinstall old cutoff bound, iteration limit and lp pricing strategie */
                lp->cutoffbound = tmpcutoff;
                SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_LPITLIM, lp->lpiitlim) );
+               SCIP_CALL( SCIPsetSetCharParam(set, "lp/pricing", tmppricingchar) );
 
-               /* check for error */
-               if( *lperror )
+               /* get objective value */
+               SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+               
+               /* get solution status for the lp */
+               solstat = SCIPlpGetSolstat(lp);
+               assert( solstat != SCIP_LPSOLSTAT_OBJLIMIT );
+
+               if( !(*lperror) && solstat != SCIP_LPSOLSTAT_ERROR && solstat != SCIP_LPSOLSTAT_NOTSOLVED )
                {
-                  SCIPdebugMessage("unresolved error while doing an extra simplex step to exceed the objlimit\n");
+                  SCIPdebugMessage(" ---> new objval = %f (solstat: %d, 1 add. step)\n", objval, solstat);
+               }
+
+               /* the solution is still not exceeding the objective limit and the solving process
+                  was stopped due to time or iteration limit, solve again with fastmip turned off */
+               if( solstat == SCIP_LPSOLSTAT_ITERLIMIT  && objval < lp->cutoffbound - lp->looseobjval )
+               {
+                  assert(!(*lperror));
+
+                  SCIP_CALL( lpSolve(lp, set, stat, SCIP_LPALGO_DUALSIMPLEX, FALSE, FALSE, FALSE, 
+                        FALSE, tightfeastol, fromscratch, keepsol, lperror) );
+
+                  /* get objective value */
+                  SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+                  
+                  /* get solution status for the lp */
+                  solstat = SCIPlpGetSolstat(lp);
+                  
+                  SCIPdebugMessage(" ---> new objval = %f (solstat: %d, with fastmip)\n", objval, solstat);
+               }
+
+               /* check for lp errors */
+               if( *lperror || solstat == SCIP_LPSOLSTAT_ERROR || solstat == SCIP_LPSOLSTAT_NOTSOLVED )
+               {
+                  SCIPdebugMessage("unresolved error while resolving LP in order to exceed the objlimit\n");
                   lp->solved = FALSE;
                   lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
-                  return SCIP_OKAY;
+
+                  if( *lperror )
+                     return SCIP_OKAY;
+                  else
+                     return SCIP_LPERROR;                     
                }
                
                lp->solved = TRUE;
-               lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
-               lp->lpobjval = SCIPsetInfinity(set);
 
-               /* get new solution and objective value */
-               SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
-
-               SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (infeasible:%d, optimal:%d) objval: %f, objlimit: %f\n",
-                  iters/2, SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsOptimal(lpi), 
-                  objval, lp->cutoffbound - lp->looseobjval);
+               /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
+               if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT 
+                  || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT) 
+                     && objval >= lp->cutoffbound - lp->looseobjval ) )
+               {
+                  /* get new solution and objective value */
+                  SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
+                  /* if objective value is larger than the cutoff bound, set solution status to objective 
+                     limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
+                     this was already done in the lpSolve() method */               
+                  if( objval >= lp->cutoffbound - lp->looseobjval )
+                  {
+                     lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
+                     lp->lpobjval = SCIPsetInfinity(set);
+                  }
+                  else if( solstat == SCIP_LPSOLSTAT_OBJLIMIT )
+                  {
+                     SCIPdebugMessage("unresolved error while resolving LP in order to exceed the objlimit\n");
+                     lp->solved = FALSE;
+                     lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+                     return SCIP_LPERROR;                     
+                  }
+               }
+               /* infeasible solution */
+               else if( solstat == SCIP_LPSOLSTAT_INFEASIBLE )
+               {
+                  SCIP_CALL( SCIPlpGetDualfarkas(lp, set, stat) );
+                  SCIPdebugMessage(" -> LP infeasible\n");
+               }
+               /* unbounded solution */
+               else if( solstat == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+               {
+                  SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat) );
+                  SCIPdebugMessage(" -> LP has unbounded primal ray\n");                  
+               }
+                            
+               assert(objval >= lp->cutoffbound - lp->looseobjval || solstat != SCIP_LPSOLSTAT_OBJLIMIT);
             }
-            else if( !SCIPprobAllColsInLP(prob, set, lp) || set->misc_exactsolve )
+            else
             {
                SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
             }
