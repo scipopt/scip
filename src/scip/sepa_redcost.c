@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.8 2008/09/22 19:16:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.9 2008/10/09 19:32:48 bzfpfets Exp $"
 
 /**@file   sepa_redcost.c
  * @ingroup SEPARATORS
@@ -145,7 +145,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
       {
       case SCIP_BASESTAT_LOWER:
          redcost = SCIPgetColRedcost(scip, cols[c]);
-         assert(!SCIPisFeasNegative(scip, redcost));
+         assert( !SCIPisFeasNegative(scip, redcost) || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
          if( SCIPisFeasPositive(scip, redcost) )
          {
             SCIP_Real oldlb;
@@ -193,7 +193,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
 
       case SCIP_BASESTAT_UPPER:
          redcost = SCIPgetColRedcost(scip, cols[c]);
-         assert(!SCIPisFeasPositive(scip, redcost));
+         assert( !SCIPisFeasPositive(scip, redcost) || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
          if( SCIPisFeasNegative(scip, redcost) )
          {
             SCIP_Real oldlb;
