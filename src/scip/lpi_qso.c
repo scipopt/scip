@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_qso.c,v 1.1 2008/10/09 19:41:39 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_qso.c,v 1.2 2008/10/10 19:14:27 bzfpfets Exp $"
 
 /**@file   lpi_qso.c
  * @brief  LP interface for QSopt version >= 070303
@@ -70,10 +70,10 @@ static char __qsstr[1024];
 /** This macro is to print error messages and jump to the given point in the code, it also print the
  * file and line where this happend */
 #define QS_TESTG(A,B,...) do{{\
-	if (A){\
-		fprintf(stderr,__VA_ARGS__);\
-		__QS_PRINTLOC__;\
-		goto B;}}}while(0)
+	 if (A){				\
+	    fprintf(stderr,__VA_ARGS__);	\
+	    __QS_PRINTLOC__;			\
+	    goto B;}}}while(0)
 
 /** This macro is to print error messages and to exit with SCIP_LPERROR */
 #define QS_ERROR(A,...) do{{\
@@ -85,7 +85,7 @@ static char __qsstr[1024];
 /** return value macro, if the value is non-zero, write to standard error the returning code and
  * where this happened, and return SCIP_ERROR, otherwise return normal SCIP_OKAY termination code. */
 #define QS_RETURN(A) do{\
-      const int __RVAL__ = (A);			\
+      const int __RVAL__ = (A);						\
       if (__RVAL__){							\
 	 fprintf(stderr,"LP Error: QSopt returned %d",__RVAL__);	\
 	 __QS_PRINTLOC__;						\
@@ -95,12 +95,12 @@ static char __qsstr[1024];
 /** return value macro, if the value is non-zero, write to standard error the returning code and
  * where this happened, and return SCIP_ERROR, otherwise do nothing. */
 #define QS_CONDRET(A) do{\
-      const int __RVAL__ = (A);			\
+      const int __RVAL__ = (A);						\
       if (__RVAL__){							\
 	 fprintf(stderr,"LP Error: QSopt returned %d",__RVAL__);	\
 	 __QS_PRINTLOC__;						\
 	 return SCIP_LPERROR;}						\
-      }while(0)
+   }while(0)
 
 
 
@@ -124,7 +124,7 @@ int colpacketNum(
    int                   ncols               /**< number of columns to store */
    )
 {
-   return (ncols+(int)COLS_PER_PACKET-1)/(int)COLS_PER_PACKET;
+   return (ncols + (int)COLS_PER_PACKET-1)/(int)COLS_PER_PACKET;
 }
 
 /** returns the number of packets needed to store row packet information */
@@ -133,7 +133,7 @@ int rowpacketNum(
    int                   nrows               /**< number of rows to store */
    )
 {
-   return (nrows+(int)ROWS_PER_PACKET-1)/(int)ROWS_PER_PACKET;
+   return (nrows + (int)ROWS_PER_PACKET-1)/(int)ROWS_PER_PACKET;
 }
 
 /** store row and column basis status in a packed LPi state object */
@@ -229,8 +229,7 @@ SCIP_RETCODE ensureTabMem(
 
 /** ensure size of column-related arrays */
 static inline
-SCIP_RETCODE
-ensureColMem(
+SCIP_RETCODE ensureColMem(
    SCIP_LPI* const lpi,
    int const ncols
    )
@@ -246,8 +245,7 @@ ensureColMem(
 
 /** ensure size of row-related arrays */
 static inline
-SCIP_RETCODE
-ensureRowMem(
+SCIP_RETCODE ensureRowMem(
    SCIP_LPI* const lpi,
    int const nrows
    )
@@ -301,7 +299,7 @@ SCIP_RETCODE convertSides(
 	 break;
       default:
 	 SCIPerrorMessage("Error, constraint %d has no bounds!",i);
-	 return SCIP_LPERROR;
+	 SCIP_ABORT();
       }
    }
    return SCIP_OKAY;
@@ -1158,8 +1156,8 @@ SCIP_RETCODE SCIPlpiGetCols(
       lpi->iccnt[i] = i+firstcol;
 
    /* get data from qsopt */
-   rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, nnonz ? (&lcnt) : NULL, nnonz ? (&lbeg) : NULL, nnonz ? (&lind) : NULL,
-      nnonz ? (&lval) : NULL, NULL, lb ? (&llb) : NULL, lb ? (&lub) : NULL, NULL);  /*lint !e826*/
+   rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, nnonz ? (&lcnt) : 0, nnonz ? (&lbeg) : 0, nnonz ? (&lind) : 0,
+      nnonz ? (&lval) : 0, 0, lb ? (&llb) : 0, lb ? (&lub) : 0, 0);
 
    QS_TESTG(rval, CLEANUP, " ");
 
@@ -1243,8 +1241,8 @@ SCIP_RETCODE SCIPlpiGetRows(
       lpi->ircnt[i] = i+firstrow;
 
    /* get data from qsopt */
-   rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, nnonz ? (&lcnt) : NULL, nnonz ? (&lbeg) : NULL, nnonz ? (&lind) : NULL,
-      nnonz ? (&lval) : NULL, rhs ? (&lrhs) : NULL, rhs ? (&lsense) : NULL, rhs ? (&lrng) : NULL, NULL);  /*lint !e826*/
+   rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, nnonz ? (&lcnt) : 0, nnonz ? (&lbeg) : 0, nnonz ? (&lind) : 0,
+      nnonz ? (&lval) : 0, rhs ? (&lrhs) : 0, rhs ? (&lsense) : 0, rhs ? (&lrng) : 0, 0);
    QS_TESTG(rval, CLEANUP, " ");
 
    /* store in the user-provided data */
@@ -1291,8 +1289,7 @@ SCIP_RETCODE SCIPlpiGetRows(
 	    break;
 	 default:
 	    SCIPerrorMessage("Unknown sense %c from QSopt", lsense[i]);
-	    rval = 1;
-	    break;
+	    SCIPABORT();
 	 }
       }
    }
@@ -1401,7 +1398,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    /* store in the user-provided data */
    for (i = len ; i-- ; )
    {
-      switch(lsense[i])
+      switch (lsense[i])
       {
       case 'R':
 	 lhss[i] = lrhs[i];
@@ -1420,8 +1417,7 @@ SCIP_RETCODE SCIPlpiGetSides(
 	 break;
       default:
 	 SCIPerrorMessage("Unknown sense %c from QSopt", lsense[i]);
-	 rval = 1;
-	 break;
+	 SCIPABORT();
       }
    }
 
@@ -1471,8 +1467,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("calling QSopt primal simplex: %d cols, %d rows, %d nz\n",
-      QSget_colcount(lpi->prob), QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
+   SCIPdebugMessage("calling QSopt primal simplex: %d cols, %d rows, %d nz\n", QSget_colcount(lpi->prob), 
+      QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
    rval = QSopt_primal(lpi->prob, &(lpi->solstat));
 
@@ -1489,9 +1485,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("calling QSopt dual simplex: %d cols, %d rows, %d nz\n",
-      QSget_colcount(lpi->prob), QSget_rowcount(lpi->prob),
-      QSget_nzcount(lpi->prob));
+   SCIPdebugMessage("calling QSopt dual simplex: %d cols, %d rows, %d nz\n", QSget_colcount(lpi->prob), 
+      QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
    rval = QSopt_dual(lpi->prob, &(lpi->solstat));
 
@@ -1953,7 +1948,6 @@ SCIP_RETCODE SCIPlpiGetSol(
 	 default:
 	    SCIPerrorMessage("unknown stat col[%d] = %c, rd[%d] = %lg\n", i, icstat[i], i, redcost[i]*sense);
 	    SCIPABORT();
-	    break;
 	 }
       }
    }
@@ -2296,7 +2290,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int                   c,                  /**< column number */
    SCIP_Real*            coef                /**< vector to return coefficients */
    )
-{																/*lint --e{715} */
+{  /*lint --e{715} */
    assert(lpi!=NULL);
    assert(lpi->prob!=NULL);
 
