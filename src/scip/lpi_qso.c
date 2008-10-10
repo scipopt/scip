@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_qso.c,v 1.2 2008/10/10 19:14:27 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_qso.c,v 1.3 2008/10/10 20:57:04 bzfpfets Exp $"
 
 /**@file   lpi_qso.c
  * @brief  LP interface for QSopt version >= 070303
@@ -299,7 +299,7 @@ SCIP_RETCODE convertSides(
 	 break;
       default:
 	 SCIPerrorMessage("Error, constraint %d has no bounds!",i);
-	 SCIP_ABORT();
+	 SCIPABORT();
       }
    }
    return SCIP_OKAY;
