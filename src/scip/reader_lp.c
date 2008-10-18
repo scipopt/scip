@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.69 2008/09/29 23:12:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.70 2008/10/18 15:20:34 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -1227,10 +1227,13 @@ SCIP_RETCODE readBounds(
          }
       }
 
-      /* change the bounds of the variable */
-      SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
-      SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
-      SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", lpinput->linenumber, SCIPvarGetName(var), lb, ub);
+      /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
+      if ( lb != 0.0 )
+	 SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+      if ( ub != SCIPinfinity(scip) )
+	 SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
+      SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", lpinput->linenumber, SCIPvarGetName(var),
+	 SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    return SCIP_OKAY;
