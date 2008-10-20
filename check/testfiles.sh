@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: testfiles.sh,v 1.1 2008/10/20 14:06:41 bzfpfets Exp $
+# $Id: testfiles.sh,v 1.2 2008/10/20 14:30:45 bzfberth Exp $
 
 # Test the file names contained in all "*.test" files in the current directory.
 # Output names of files that do not exist.
@@ -21,7 +21,7 @@
 for j in *.test; do
   for i in `cat $j`; do
     if test ! -f $i; then
-	echo "Could not find: " $i
+	echo "In "$j": could not find: " $i 
     fi
   done
 done
