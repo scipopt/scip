@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.201 2008/09/22 19:25:11 bzfwanie Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.202 2008/10/21 14:21:10 bzfwinkm Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -2073,6 +2073,7 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
    )
 {
    int i;
+   int nodeselstdprio;
 
    assert(set != NULL);
    assert(nodesel != NULL);
@@ -2085,7 +2086,9 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
    }
    assert(set->nnodesels < set->nodeselssize);
 
-   for( i = set->nnodesels; i > 0 && SCIPnodeselGetStdPriority(nodesel) > SCIPnodeselGetStdPriority(set->nodesels[i-1]);
+   nodeselstdprio = SCIPnodeselGetStdPriority(nodesel);
+
+   for( i = set->nnodesels; i > 0 && nodeselstdprio > SCIPnodeselGetStdPriority(set->nodesels[i-1]);
         --i )
    {
       set->nodesels[i] = set->nodesels[i-1];
@@ -2219,7 +2222,8 @@ SCIP_RETCODE SCIPsetIncludeDisp(
    )
 {
    int i;
-
+   int disppos;
+   
    assert(set != NULL);
    assert(disp != NULL);
    assert(!SCIPdispIsInitialized(disp));
@@ -2231,7 +2235,9 @@ SCIP_RETCODE SCIPsetIncludeDisp(
    }
    assert(set->ndisps < set->dispssize);
 
-   for( i = set->ndisps; i > 0 && SCIPdispGetPosition(disp) < SCIPdispGetPosition(set->disps[i-1]); --i )
+   disppos = SCIPdispGetPosition(disp);
+   
+   for( i = set->ndisps; i > 0 && disppos < SCIPdispGetPosition(set->disps[i-1]); --i )
    {
       set->disps[i] = set->disps[i-1];
    }

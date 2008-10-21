@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.125 2008/09/29 23:13:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.126 2008/10/21 14:21:09 bzfwinkm Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -1427,7 +1427,7 @@ SCIP_RETCODE removeRedundantConstraints(
 
       if( consdelisredundant )
       {
-         /* delete cons1 */
+         /* delete consdel */
          SCIPdebugMessage("logicor constraint <%s> is contained in <%s>\n", SCIPconsGetName(consdel), SCIPconsGetName(consstay));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, consstay, NULL) ) );
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, consdel, NULL) ) );

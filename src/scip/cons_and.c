@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.98 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.99 2008/10/21 14:21:09 bzfwinkm Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -430,7 +430,11 @@ SCIP_RETCODE consdataFreeRows(
 
    if( consdata->rows != NULL )
    {
-      for( r = 0; r < consdataGetNRows(consdata); ++r )
+      int nrows;
+
+      nrows = consdataGetNRows(consdata);
+
+      for( r = 0; r < nrows; ++r )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
@@ -802,7 +806,7 @@ SCIP_RETCODE applyFixings(
 #ifndef NDEBUG
             {
                int i;
-               for( i = consdata->nvars-1; i > v && var != SCIPvarGetNegatedVar(consdata->vars[i]); --i )
+               for( i = consdata->nvars - 1; i > v && var != SCIPvarGetNegatedVar(consdata->vars[i]); --i )
                {}
                assert(i > v);
             }
@@ -881,6 +885,7 @@ SCIP_RETCODE addRelaxation(
 {
    SCIP_CONSDATA* consdata;
    int r;
+   int nrows; 
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -890,7 +895,9 @@ SCIP_RETCODE addRelaxation(
       SCIP_CALL( createRelaxation(scip, cons) );
    }
 
-   for( r = 0; r < consdataGetNRows(consdata); ++r )
+   nrows = consdataGetNRows(consdata);
+
+   for( r = 0; r < nrows; ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
@@ -928,8 +935,12 @@ SCIP_RETCODE checkCons(
    mustcheck = mustcheck || (consdata->rows == NULL);
    if( !mustcheck )
    {
+      int nrows;
+
       assert(consdata->rows != NULL);
-      for( r = 0; r < consdataGetNRows(consdata); ++r )
+
+      nrows = consdataGetNRows(consdata);
+      for( r = 0; r < nrows; ++r )
       {
          mustcheck = !SCIProwIsInLP(consdata->rows[r]);
          if( mustcheck )
@@ -998,6 +1009,7 @@ SCIP_RETCODE separateCons(
    SCIP_CONSDATA* consdata;
    SCIP_Real feasibility;
    int r;
+   int nrows;
 
    assert(separated != NULL);
 
@@ -1013,8 +1025,10 @@ SCIP_RETCODE separateCons(
    }
    assert(consdata->rows != NULL);
 
+   nrows = consdataGetNRows(consdata);
+
    /* test all rows for feasibility and add infeasible rows */
-   for( r = 0; r < consdataGetNRows(consdata); ++r )
+   for( r = 0; r < nrows; ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
@@ -1467,140 +1481,143 @@ SCIP_RETCODE preprocessConstraintPairs(
 
    /* check constraint against all prior constraints */
    cons0changed = consdata0->changed;
-   for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && SCIPconsIsActive(cons0) 
-      && !SCIPisStopped(scip); ++c )
+   
+   if( SCIPconsIsActive(cons0) )
    {
-      SCIP_CONS* cons1;
-      SCIP_CONSDATA* consdata1;
-      SCIP_Bool cons0superset;
-      SCIP_Bool cons1superset;
-      int v0;
-      int v1;
+      for( c = (cons0changed ? 0 : firstchange); c < chkind && !(*cutoff) && !SCIPisStopped(scip); ++c )
+      {
+         SCIP_CONS* cons1;
+         SCIP_CONSDATA* consdata1;
+         SCIP_Bool cons0superset;
+         SCIP_Bool cons1superset;
+         int v0;
+         int v1;
 
-      cons1 = conss[c];
+         cons1 = conss[c];
 
-      /* ignore inactive and modifiable constraints */
-      if( !SCIPconsIsActive(cons1) || SCIPconsIsModifiable(cons1) )
-         continue;
+         /* ignore inactive and modifiable constraints */
+         if( !SCIPconsIsActive(cons1) || SCIPconsIsModifiable(cons1) )
+            continue;
 
-      consdata1 = SCIPconsGetData(cons1);
-      assert(consdata1 != NULL);
+         consdata1 = SCIPconsGetData(cons1);
+         assert(consdata1 != NULL);
 
 #if 0
-      SCIPdebugMessage("preprocess and constraint pair <%s>[chg:%d] and <%s>[chg:%d]\n",
-         SCIPconsGetName(cons0), cons0changed, SCIPconsGetName(cons1), consdata1->changed);
+         SCIPdebugMessage("preprocess and constraint pair <%s>[chg:%d] and <%s>[chg:%d]\n",
+            SCIPconsGetName(cons0), cons0changed, SCIPconsGetName(cons1), consdata1->changed);
 #endif
 
-      /* if both constraints were not changed since last round, we can ignore the pair */
-      if( !cons0changed && !consdata1->changed )
-         continue;
+         /* if both constraints were not changed since last round, we can ignore the pair */
+         if( !cons0changed && !consdata1->changed )
+            continue;
 
-      assert(consdata1->nvars >= 1);
+         assert(consdata1->nvars >= 1);
 
-      /* sort the constraint */
-      SCIP_CALL( consdataSort(scip, consdata1) );
+         /* sort the constraint */
+         SCIP_CALL( consdataSort(scip, consdata1) );
 
-      /* check consdata0 against consdata1:
-       * - if they consist of the same operands, the resultants can be aggregated
-       * - if one operand list is a subset of the other, add implication r0 = 1 -> r1 = 1, or r1 = 1 -> r0 = 1
-       */
-      v0 = 0;
-      v1 = 0;
-      cons0superset = TRUE;
-      cons1superset = TRUE;
-      while( (v0 < consdata0->nvars || v1 < consdata1->nvars) && (cons0superset || cons1superset) )
-      {
-         int varcmp;
-
-         /* test, if variable appears in only one or in both constraints */
-         if( v0 < consdata0->nvars && v1 < consdata1->nvars )
-            varcmp = SCIPvarCompare(consdata0->vars[v0], consdata1->vars[v1]);
-         else if( v0 < consdata0->nvars )
-            varcmp = -1;
-         else
-            varcmp = +1;
-
-         switch( varcmp )
+         /* check consdata0 against consdata1:
+          * - if they consist of the same operands, the resultants can be aggregated
+          * - if one operand list is a subset of the other, add implication r0 = 1 -> r1 = 1, or r1 = 1 -> r0 = 1
+          */
+         v0 = 0;
+         v1 = 0;
+         cons0superset = TRUE;
+         cons1superset = TRUE;
+         while( (v0 < consdata0->nvars || v1 < consdata1->nvars) && (cons0superset || cons1superset) )
          {
-         case -1:
-            /* variable doesn't appear in consdata1 */
-            cons1superset = FALSE;
-            v0++;
-            break;
+            int varcmp;
 
-         case +1:
-            /* variable doesn't appear in consdata0 */
-            cons0superset = FALSE;
-            v1++;
-            break;
+            /* test, if variable appears in only one or in both constraints */
+            if( v0 < consdata0->nvars && v1 < consdata1->nvars )
+               varcmp = SCIPvarCompare(consdata0->vars[v0], consdata1->vars[v1]);
+            else if( v0 < consdata0->nvars )
+               varcmp = -1;
+            else
+               varcmp = +1;
 
-         case 0:
-            /* variable appears in both constraints */
-            v0++;
-            v1++;
-            break;
+            switch( varcmp )
+            {
+            case -1:
+               /* variable doesn't appear in consdata1 */
+               cons1superset = FALSE;
+               v0++;
+               break;
 
-         default:
-            SCIPerrorMessage("invalid comparison result\n");
-            SCIPABORT();
+            case +1:
+               /* variable doesn't appear in consdata0 */
+               cons0superset = FALSE;
+               v1++;
+               break;
+
+            case 0:
+               /* variable appears in both constraints */
+               v0++;
+               v1++;
+               break;
+
+            default:
+               SCIPerrorMessage("invalid comparison result\n");
+               SCIPABORT();
+            }
          }
-      }
 
-      /* check for equivalence and domination */
-      if( cons0superset && cons1superset )
-      {
-         SCIP_Bool infeasible;
-         SCIP_Bool redundant;
-         SCIP_Bool aggregated;
+         /* check for equivalence and domination */
+         if( cons0superset && cons1superset )
+         {
+            SCIP_Bool infeasible;
+            SCIP_Bool redundant;
+            SCIP_Bool aggregated;
 
-         /* constraints are equivalent */
-         SCIPdebugMessage("equivalent and constraints <%s> and <%s>: aggregate resultants <%s> == <%s>\n",
-            SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPvarGetName(consdata0->resvar),
-            SCIPvarGetName(consdata1->resvar));
+            /* constraints are equivalent */
+            SCIPdebugMessage("equivalent and constraints <%s> and <%s>: aggregate resultants <%s> == <%s>\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPvarGetName(consdata0->resvar),
+               SCIPvarGetName(consdata1->resvar));
          
-         /* aggregate resultants */
-         SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
-               &infeasible, &redundant, &aggregated) );
-         assert(redundant);
-         if( aggregated )
-            (*naggrvars)++;
-         *cutoff = *cutoff || infeasible;
+            /* aggregate resultants */
+            SCIP_CALL( SCIPaggregateVars(scip, consdata0->resvar, consdata1->resvar, 1.0, -1.0, 0.0,
+                  &infeasible, &redundant, &aggregated) );
+            assert(redundant);
+            if( aggregated )
+               (*naggrvars)++;
+            *cutoff = *cutoff || infeasible;
 
-         /* delete cons1 */
-         SCIP_CALL( SCIPdelCons(scip, cons1) );
-         (*ndelconss)++;
-      }
-      else if( cons0superset )
-      {
-         SCIP_Bool infeasible;
-         int nboundchgs;
+            /* delete cons1 */
+            SCIP_CALL( SCIPdelCons(scip, cons1) );
+            (*ndelconss)++;
+         }
+         else if( cons0superset )
+         {
+            SCIP_Bool infeasible;
+            int nboundchgs;
 
-         /* the conjunction of cons0 is a superset of the conjunction of cons1 */
-         SCIPdebugMessage("and constraint <%s> is superset of <%s>: add implication <%s> = 1 -> <%s> = 1\n",
-            SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPvarGetName(consdata0->resvar),
-            SCIPvarGetName(consdata1->resvar));
+            /* the conjunction of cons0 is a superset of the conjunction of cons1 */
+            SCIPdebugMessage("and constraint <%s> is superset of <%s>: add implication <%s> = 1 -> <%s> = 1\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1), SCIPvarGetName(consdata0->resvar),
+               SCIPvarGetName(consdata1->resvar));
 
-         /* add implication */
-         SCIP_CALL( SCIPaddVarImplication(scip, consdata0->resvar, TRUE, consdata1->resvar, SCIP_BOUNDTYPE_LOWER, 1.0,
-               &infeasible, &nboundchgs) );
-         *cutoff = *cutoff || infeasible;
-         (*nbdchgs) += nboundchgs;
-      }
-      else if( cons1superset )
-      {
-         SCIP_Bool infeasible;
-         int nboundchgs;
+            /* add implication */
+            SCIP_CALL( SCIPaddVarImplication(scip, consdata0->resvar, TRUE, consdata1->resvar, SCIP_BOUNDTYPE_LOWER, 1.0,
+                  &infeasible, &nboundchgs) );
+            *cutoff = *cutoff || infeasible;
+            (*nbdchgs) += nboundchgs;
+         }
+         else if( cons1superset )
+         {
+            SCIP_Bool infeasible;
+            int nboundchgs;
 
-         /* the conjunction of cons1 is a superset of the conjunction of cons0 */
-         SCIPdebugMessage("and constraint <%s> is superset of <%s>: add implication <%s> = 1 -> <%s> = 1\n",
-            SCIPconsGetName(cons1), SCIPconsGetName(cons0), SCIPvarGetName(consdata1->resvar),
-            SCIPvarGetName(consdata0->resvar));
+            /* the conjunction of cons1 is a superset of the conjunction of cons0 */
+            SCIPdebugMessage("and constraint <%s> is superset of <%s>: add implication <%s> = 1 -> <%s> = 1\n",
+               SCIPconsGetName(cons1), SCIPconsGetName(cons0), SCIPvarGetName(consdata1->resvar),
+               SCIPvarGetName(consdata0->resvar));
 
-         /* add implication */
-         SCIP_CALL( SCIPaddVarImplication(scip, consdata1->resvar, TRUE, consdata0->resvar, SCIP_BOUNDTYPE_LOWER, 1.0,
-               &infeasible, &nboundchgs) );
-         *cutoff = *cutoff || infeasible;
-         (*nbdchgs) += nboundchgs;
+            /* add implication */
+            SCIP_CALL( SCIPaddVarImplication(scip, consdata1->resvar, TRUE, consdata0->resvar, SCIP_BOUNDTYPE_LOWER, 1.0,
+                  &infeasible, &nboundchgs) );
+            *cutoff = *cutoff || infeasible;
+            (*nbdchgs) += nboundchgs;
+         }
       }
    }
    consdata0->changed = FALSE;

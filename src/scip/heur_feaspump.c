@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.57 2008/09/30 08:59:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.58 2008/10/21 14:21:10 bzfwinkm Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -525,6 +525,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       /* change objective function to Manhattan-distance of the integer variables to the LP and get the rounded solution */
       for( i = 0; i < nvars; i++ )
       {
+         int minimum;
+
          var = vars[i];
          solval = SCIPvarGetLPSol(var);
          orgobjcoeff = SCIPvarGetObj(var);
@@ -575,8 +577,9 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* change one coefficient of the objective */
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
          
+         minimum = MIN(heurdata->cyclelength, nloops-1);
          /* check, whether there is still the possibility of j-cycles */
-         for( j = 0; j < MIN(heurdata->cyclelength, nloops-1); j++ ) 
+         for( j = 0; j < minimum; j++ ) 
          {
             /* cycles exist, iff all solution values are equal */
             if( cycles[j] )
@@ -600,7 +603,11 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
       else 
       {
-         for( j = 0; j < MIN(heurdata->cyclelength, nloops-1); j++ ) 
+         int minimum;
+         
+         minimum = MIN(heurdata->cyclelength, nloops-1);
+         
+         for( j = 0; j < minimum; j++ ) 
          {
             /* if we got the same rounded solution as in some step before, we have to flip some variables */
             if( cycles[j] )

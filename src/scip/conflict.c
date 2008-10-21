@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.141 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.142 2008/10/21 14:21:09 bzfwinkm Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2121,6 +2121,8 @@ SCIP_RETCODE conflictResolveBound(
 #ifdef SCIP_DEBUG
    {
       int i;
+      int nforcedbdchgqueue;
+      int nbdchgqueue;
 
       SCIPdebugMessage("processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s [%s], vartype: %d): [<%s> %s %g]\n",
          SCIPbdchginfoGetDepth(bdchginfo), validdepth,
@@ -2142,7 +2144,8 @@ SCIP_RETCODE conflictResolveBound(
             SCIPbdchginfoGetNewbound(conflict->conflictset->bdchginfos[i]));
       SCIPdebugPrintf("\n");
       SCIPdebugMessage(" - forced candidates  :");
-      for( i = 0; i < SCIPpqueueNElems(conflict->forcedbdchgqueue); ++i )
+      nforcedbdchgqueue = SCIPpqueueNElems(conflict->forcedbdchgqueue)
+      for( i = 0; i < nforcedbdchgqueue; ++i )
       {
          SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->forcedbdchgqueue)[i]);
          SCIPdebugPrintf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
@@ -2151,7 +2154,8 @@ SCIP_RETCODE conflictResolveBound(
       }
       SCIPdebugPrintf("\n");
       SCIPdebugMessage(" - optional candidates:");
-      for( i = 0; i < SCIPpqueueNElems(conflict->bdchgqueue); ++i )
+      nbdchgqueue = SCIPpqueueNElems(conflict->bdchgqueue);
+      for( i = 0; i < nbdchgqueue; ++i )
       {
          SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->bdchgqueue)[i]);
          SCIPdebugPrintf(" [%d:<%s> %s %g]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),

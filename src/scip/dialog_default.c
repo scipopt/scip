@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.95 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.96 2008/10/21 14:21:09 bzfwinkm Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -2489,6 +2489,27 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    int nparams;
    int i;
 
+   SCIP_BRANCHRULE** branchrules; 
+   SCIP_CONFLICTHDLR** conflicthdlrs;
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_DISP** disps;
+   SCIP_HEUR** heurs;
+   SCIP_NODESEL** nodesels;
+   SCIP_PRESOL** presols;
+   SCIP_PRICER** pricers;
+   SCIP_READER** readers;
+   SCIP_SEPA** sepas;
+   int nbranchrules;
+   int nconflicthdlrs;
+   int nconshdlrs;
+   int ndisps;
+   int nheurs;
+   int nnodesels;
+   int npresols;
+   int npricers;
+   int nreaders;
+   int nsepas;
+   
    /* get root dialog */
    root = SCIPgetRootDialog(scip);
    if( root == NULL )
@@ -2561,14 +2582,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNBranchrules(scip); ++i )
-   {
-      SCIP_BRANCHRULE* branchrule = SCIPgetBranchrules(scip)[i];
+   nbranchrules = SCIPgetNBranchrules(scip);
+   branchrules = SCIPgetBranchrules(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPbranchruleGetName(branchrule)) )
+   for( i = 0; i < nbranchrules; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPbranchruleGetName(branchrules[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPbranchruleGetName(branchrule), SCIPbranchruleGetDesc(branchrule), TRUE, NULL) );
+               SCIPbranchruleGetName(branchrules[i]), SCIPbranchruleGetDesc(branchrules[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2606,15 +2628,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIPerrorMessage("conflict sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
+   
+   nconflicthdlrs = SCIPgetNConflicthdlrs(scip);
+   conflicthdlrs = SCIPgetConflicthdlrs(scip);
 
-   for( i = 0; i < SCIPgetNConflicthdlrs(scip); ++i )
+   for( i = 0; i < nconflicthdlrs; ++i )
    {
-      SCIP_CONFLICTHDLR* conflicthdlr = SCIPgetConflicthdlrs(scip)[i];
-
-      if( !SCIPdialogHasEntry(submenu, SCIPconflicthdlrGetName(conflicthdlr)) )
+      if( !SCIPdialogHasEntry(submenu, SCIPconflicthdlrGetName(conflicthdlrs[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPconflicthdlrGetName(conflicthdlr), SCIPconflicthdlrGetDesc(conflicthdlr), TRUE, NULL) );
+               SCIPconflicthdlrGetName(conflicthdlrs[i]), SCIPconflicthdlrGetDesc(conflicthdlrs[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2634,14 +2657,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
-   {
-      SCIP_CONSHDLR* conshdlr = SCIPgetConshdlrs(scip)[i];
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   conshdlrs = SCIPgetConshdlrs(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPconshdlrGetName(conshdlr)) )
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPconshdlrGetName(conshdlrs[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPconshdlrGetName(conshdlr), SCIPconshdlrGetDesc(conshdlr), TRUE, NULL) );
+               SCIPconshdlrGetName(conshdlrs[i]), SCIPconshdlrGetDesc(conshdlrs[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2661,14 +2685,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNDisps(scip); ++i )
-   {
-      SCIP_DISP* disp = SCIPgetDisps(scip)[i];
+   ndisps = SCIPgetNDisps(scip);
+   disps = SCIPgetDisps(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPdispGetName(disp)) )
+   for( i = 0; i < ndisps; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPdispGetName(disps[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPdispGetName(disp), SCIPdispGetDesc(disp), TRUE, NULL) );
+               SCIPdispGetName(disps[i]), SCIPdispGetDesc(disps[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2687,15 +2712,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIPerrorMessage("heuristics sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   for( i = 0; i < SCIPgetNHeurs(scip); ++i )
+   
+   nheurs = SCIPgetNHeurs(scip);
+   heurs = SCIPgetHeurs(scip);
+   
+   for( i = 0; i < nheurs; ++i )
    {
-      SCIP_HEUR* heur = SCIPgetHeurs(scip)[i];
-
-      if( !SCIPdialogHasEntry(submenu, SCIPheurGetName(heur)) )
+      if( !SCIPdialogHasEntry(submenu, SCIPheurGetName(heurs[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPheurGetName(heur), SCIPheurGetDesc(heur), TRUE, NULL) );
+               SCIPheurGetName(heurs[i]), SCIPheurGetDesc(heurs[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2757,14 +2783,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNNodesels(scip); ++i )
-   {
-      SCIP_NODESEL* nodesel = SCIPgetNodesels(scip)[i];
+   nnodesels = SCIPgetNNodesels(scip);
+   nodesels = SCIPgetNodesels(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPnodeselGetName(nodesel)) )
+   for( i = 0; i < nnodesels; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPnodeselGetName(nodesels[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPnodeselGetName(nodesel), SCIPnodeselGetDesc(nodesel), TRUE, NULL) );
+               SCIPnodeselGetName(nodesels[i]), SCIPnodeselGetDesc(nodesels[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2793,14 +2820,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNPresols(scip); ++i )
-   {
-      SCIP_PRESOL* presol = SCIPgetPresols(scip)[i];
+   npresols = SCIPgetNPresols(scip);
+   presols = SCIPgetPresols(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPpresolGetName(presol)) )
+   for( i = 0; i < npresols; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPpresolGetName(presols[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPpresolGetName(presol), SCIPpresolGetDesc(presol), TRUE, NULL) );
+               SCIPpresolGetName(presols[i]), SCIPpresolGetDesc(presols[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2820,14 +2848,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNPricers(scip); ++i )
-   {
-      SCIP_PRICER* pricer = SCIPgetPricers(scip)[i];
+   npricers = SCIPgetNPricers(scip);
+   pricers = SCIPgetPricers(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPpricerGetName(pricer)) )
+   for( i = 0; i < npricers; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPpricerGetName(pricers[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPpricerGetName(pricer), SCIPpricerGetDesc(pricer), TRUE, NULL) );
+               SCIPpricerGetName(pricers[i]), SCIPpricerGetDesc(pricers[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2856,14 +2885,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNReaders(scip); ++i )
-   {
-      SCIP_READER* reader = SCIPgetReaders(scip)[i];
+   nreaders = SCIPgetNReaders(scip);
+   readers = SCIPgetReaders(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPreaderGetName(reader)) )
+   for( i = 0; i < nreaders; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPreaderGetName(readers[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPreaderGetName(reader), SCIPreaderGetDesc(reader), TRUE, NULL) );
+               SCIPreaderGetName(readers[i]), SCIPreaderGetDesc(readers[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2883,14 +2913,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNSepas(scip); ++i )
+   nsepas = SCIPgetNSepas(scip);
+   sepas = SCIPgetSepas(scip);
+   
+   for( i = 0; i < nsepas; ++i )
    {
-      SCIP_SEPA* sepa = SCIPgetSepas(scip)[i];
-
-      if( !SCIPdialogHasEntry(submenu, SCIPsepaGetName(sepa)) )
+      if( !SCIPdialogHasEntry(submenu, SCIPsepaGetName(sepas[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPsepaGetName(sepa), SCIPsepaGetDesc(sepa), TRUE, NULL) );
+               SCIPsepaGetName(sepas[i]), SCIPsepaGetDesc(sepas[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }

@@ -5,6 +5,9 @@ features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
 - new interface to QSopt due to Daniel Espinoza
 
+performance improvements:
+- replaced some function calls in loop conditions
+
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform the final pivot 
   step in order to exceed the objlimit, do one additional simplex step with pricing strategy steepest edge, if this doesn't suffice,

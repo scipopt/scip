@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.74 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.75 2008/10/21 14:21:09 bzfwinkm Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -421,7 +421,11 @@ SCIP_RETCODE consdataFreeRows(
 
    if( consdata->rows != NULL )
    {
-      for( r = 0; r < consdataGetNRows(consdata); ++r )
+      int nrows;
+      
+      nrows = consdataGetNRows(consdata);
+
+      for( r = 0; r < nrows; ++r )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
@@ -710,6 +714,7 @@ SCIP_RETCODE addRelaxation(
 {
    SCIP_CONSDATA* consdata;
    int r;
+   int nrows;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -720,7 +725,9 @@ SCIP_RETCODE addRelaxation(
    }
    assert( consdata->rows != NULL );
 
-   for( r = 0; r < consdataGetNRows(consdata); ++r )
+   nrows = consdataGetNRows(consdata);
+
+   for( r = 0; r < nrows; ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
@@ -758,8 +765,13 @@ SCIP_RETCODE checkCons(
    mustcheck = mustcheck || (consdata->rows == NULL);
    if( !mustcheck )
    {
+      int nrows;
+
       assert(consdata->rows != NULL);
-      for( r = 0; r < consdataGetNRows(consdata); ++r )
+
+      nrows = consdataGetNRows(consdata);
+
+      for( r = 0; r < nrows; ++r )
       {
          mustcheck = !SCIProwIsInLP(consdata->rows[r]);
          if( mustcheck )
@@ -827,6 +839,7 @@ SCIP_RETCODE separateCons(
    SCIP_CONSDATA* consdata;
    SCIP_Real feasibility;
    int r;
+   int nrows;
 
    assert(separated != NULL);
 
@@ -842,8 +855,10 @@ SCIP_RETCODE separateCons(
    }
    assert(consdata->rows != NULL);
 
+   nrows = consdataGetNRows(consdata);
+
    /* test all rows for feasibility and add infeasible rows */
-   for( r = 0; r < consdataGetNRows(consdata); ++r )
+   for( r = 0; r < nrows; ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
