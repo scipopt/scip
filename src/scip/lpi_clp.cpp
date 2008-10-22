@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.51 2008/10/09 20:51:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.52 2008/10/22 17:05:20 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -42,10 +42,8 @@
  *    Concluding: the implementation of Clp/CoinPackeMatrix could be improved. The functions
  *    affected by this are SCIPlpiLoadColLP(), SCIPlpiAddCols(), SCIPlpiAddRows()
  *
- * - Clp seems to use/have used an "auxiliary model" that allows to save time when the model is
- *   scaled. One then needs to specify what parts of the model have been changed between two solving
- *   calls. It seems that this feature is currently (Clp - Version 1.8) not used anymore. Rudimentary
- *   support is still included in this file.
+ * - In former versions Clp used an "auxiliary model" that allows to save time when the model is
+ *   scaled. This is discarded from version higher than 1.8.2.
  *
  * - Clp allows the setting of several special flags. These are now set when the FASTMIP option in
  *   SCIP is true. We tried to use the best settings, while still working correctly, see
@@ -1584,20 +1582,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
    if ( lpi->validFactorization )
       startFinishOptions = 1 | 2;
 
-   /* Usage of auxiliary model:
-    *  1 - rhs is constant
-    *  2 - bounds are constant
-    *  4 - objective is constant
-    *  8 - solution in by basis and no djs etc in
-    * 16 - no duals out (but reduced costs)
-    * 32 - no output if infeasible
-    *
-    * @todo The auxiliary model does not seem to appear, but one should change the settings for it
-    * in the modification problems and not here.
-    */
-   if ( lpi->fastmip && lpi->clp->usingAuxiliaryModel() )
-      lpi->clp->auxiliaryModel(63-2);
-
    /** Dual algorithm */
    int status = lpi->clp->dual(0, startFinishOptions);
 
@@ -2012,6 +1996,9 @@ SCIP_Bool SCIPlpiIsOptimal(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+   if ( SCIPlpiIsObjlimExc(lpi) )
+      return FALSE;
+
    /* secondaryStatus == 6 means that the problem is empty */
    return( lpi->clp->isProvenOptimal() && (lpi->clp->secondaryStatus() == 0 || lpi->clp->secondaryStatus() == 6));
 }
@@ -2056,8 +2043,17 @@ SCIP_Bool SCIPlpiIsObjlimExc(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-   /* status == 2 means "dual infeasible" - in this case Clp currently always returns an objective limit exceedence! */
-   return( (lpi->clp->isPrimalObjectiveLimitReached() || lpi->clp->isDualObjectiveLimitReached()) && (lpi->clp->status() != 2) );
+   /* status == 2 means "dual infeasible" - in this case Clp currently always returns an objective limit exceedence! 
+    * The following is a workaround. In future version one can use ClpSimplex::isObjectiveLimitTestValid().
+    */
+
+   /* if 'primal infeasible' and algorithm was dual or 'dual infeasible' and algorithm was primal */
+   if ( lpi->clp->status() == 0 || (lpi->clp->status() == 1 && lpi->clp->algorithm() < 0) || (lpi->clp->status() == 2 && lpi->clp->algorithm() > 0) )
+   {
+      return( lpi->clp->isPrimalObjectiveLimitReached() || lpi->clp->isDualObjectiveLimitReached() );
+   }
+
+   return FALSE;
 }
 
 
@@ -2487,15 +2483,6 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert( 0 <= r && r <= lpi->clp->numberRows() );
 
    ClpSimplex* clp = lpi->clp;
-   if ( clp->usingAuxiliaryModel() )
-   {
-      SCIPdebugMessage("Resolving model to obtain row of basis inverse ...\n");
-
-      clp->deleteAuxiliaryModel();
-      int status = clp->dual(0,3);
-      if ( status != 0 )
-         return SCIP_LPERROR;
-   }
    clp->getBInvRow(r, coef);
 
    return SCIP_OKAY;
@@ -2521,15 +2508,6 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert( 0 <= c && c <= lpi->clp->numberRows() ); /* basis matrix is nrows * nrows */
 
    ClpSimplex* clp = lpi->clp;
-   if ( clp->usingAuxiliaryModel() )
-   {
-      SCIPdebugMessage("Resolving model to obtain column of basis inverse ...\n");
-
-      clp->deleteAuxiliaryModel();
-      int status = clp->dual(0,3);
-      if( status != 0 )
-         return SCIP_LPERROR;
-   }
    clp->getBInvCol(c, coef);
 
    return SCIP_OKAY;
@@ -2552,15 +2530,6 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert( 0 <= r && r <= lpi->clp->numberRows() );
 
    ClpSimplex* clp = lpi->clp;
-   if ( clp->usingAuxiliaryModel() )
-   {
-      SCIPdebugMessage("Resolving model to obtain row of basis inverse times matrix ...\n");
-
-      clp->deleteAuxiliaryModel();
-      int status = clp->dual(0,3);
-      if ( status != 0 )
-         return SCIP_LPERROR;
-   }
    clp->getBInvARow(r, coef, 0);
   
    return SCIP_OKAY;
@@ -2582,15 +2551,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert( 0 <= c && c <= lpi->clp->numberColumns() );
 
    ClpSimplex* clp = lpi->clp;
-   if ( clp->usingAuxiliaryModel() )
-   {
-      SCIPdebugMessage("Resolving model to obtain column of basis inverse times matrix ...\n");
-
-      clp->deleteAuxiliaryModel();
-      int status = clp->dual(0,3);
-      if ( status != 0 )
-         return SCIP_LPERROR;
-   }
    clp->getBInvACol(c, coef);
   
    return SCIP_OKAY;
@@ -2935,15 +2895,15 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       return SCIP_PARAMETERUNKNOWN; // ?????????????????
    case SCIP_LPPAR_LOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 *dval = lpi->clp->dualObjectiveLimit();
-      else
 	 *dval = lpi->clp->primalObjectiveLimit();
+      else
+	 *dval = lpi->clp->dualObjectiveLimit();
       break;
    case SCIP_LPPAR_UOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 *dval = lpi->clp->primalObjectiveLimit();
-      else
 	 *dval = lpi->clp->dualObjectiveLimit();
+      else
+	 *dval = lpi->clp->primalObjectiveLimit();
       break;
    case SCIP_LPPAR_LPTILIM:
       *dval = lpi->clp->maximumSeconds();
@@ -2980,15 +2940,15 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       return SCIP_PARAMETERUNKNOWN; // ?????????????????
    case SCIP_LPPAR_LOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 lpi->clp->setDualObjectiveLimit(dval);
-      else
 	 lpi->clp->setPrimalObjectiveLimit(dval);
+      else
+	 lpi->clp->setDualObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_UOBJLIM:
       if ( lpi->clp->optimizationDirection() > 0 )   // if minimization
-	 lpi->clp->setPrimalObjectiveLimit(dval);
-      else
 	 lpi->clp->setDualObjectiveLimit(dval);
+      else
+	 lpi->clp->setPrimalObjectiveLimit(dval);
       break;
    case SCIP_LPPAR_LPTILIM:
       lpi->clp->setMaximumSeconds(dval);
