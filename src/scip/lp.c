@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.293 2008/10/09 14:20:20 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.294 2008/10/23 13:44:25 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7586,7 +7586,7 @@ SCIP_RETCODE transformMIRRow(
 
    return SCIP_OKAY;
 }
-
+ 
 /** Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
  *    a~*x' <= down(b)
  *  integers :  a~_j = down(a'_j)                      , if f_j <= f_0
@@ -7597,8 +7597,12 @@ SCIP_RETCODE transformMIRRow(
  *  Transform inequality back to a°*x <= rhs:
  *
  *  (lb or ub):
- *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
- *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+ * \f[
+ * \begin{array}{lllll}
+ *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
+ *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
+ * \end{array}
+ * \f]
  *  and move the constant terms
  *    -a~_j * lb_j == -a°_j * lb_j, or
  *     a~_j * ub_j == -a°_j * ub_j
