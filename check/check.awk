@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.74 2008/09/30 16:24:12 bzfheinz Exp $
+# $Id: check.awk,v 1.75 2008/10/23 15:43:38 bzfberth Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -140,7 +140,7 @@ BEGIN {
    origvars = 0;
    origcons = 0;
    timeout = 0;
-   feasible = 1;
+   feasible = 0;
    pb = +1e20;
    db = -1e20;
    simpiters = 0;

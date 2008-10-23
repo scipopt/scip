@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.294 2008/10/23 13:44:25 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.295 2008/10/23 15:43:38 bzfberth Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7586,7 +7586,7 @@ SCIP_RETCODE transformMIRRow(
 
    return SCIP_OKAY;
 }
- 
+
 /** Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
  *    a~*x' <= down(b)
  *  integers :  a~_j = down(a'_j)                      , if f_j <= f_0
@@ -7597,12 +7597,8 @@ SCIP_RETCODE transformMIRRow(
  *  Transform inequality back to a°*x <= rhs:
  *
  *  (lb or ub):
- * \f[
- * \begin{array}{lllll}
- *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
- *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
- * \end{array}
- * \f]
+ *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
+ *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
  *  and move the constant terms
  *    -a~_j * lb_j == -a°_j * lb_j, or
  *     a~_j * ub_j == -a°_j * ub_j
@@ -9645,28 +9641,30 @@ SCIP_RETCODE lpAlgorithm(
    SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
    SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            timelimit,          /**< pointer to store whether the time limit was hit */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
-   SCIP_Real timelimit;
+   SCIP_Real lptimelimit;
    SCIP_Bool success;
 
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lperror != NULL);
 
-   timelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
-   timelimit = MAX( timelimit, 0.0 );
-
-   SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, timelimit, &success) );
-   if( !success )
+   lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+   if( lptimelimit > 0.0 )
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
+   
+   if( lptimelimit <= 0.0 || !success )
    {
-      *lperror =  FALSE;
-      SCIPdebugMessage("time limit of %f seconds could not be set\n", timelimit);
+      printf("time limit of %f seconds could not be set\n", lptimelimit);
+      *lperror = FALSE;
+      *timelimit = TRUE;
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("calling LP algorithm <%s>\n with a time limit of %f seconds\n", lpalgoName(lpalgo), timelimit);
+   SCIPdebugMessage("calling LP algorithm <%s>\n with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
@@ -9716,13 +9714,14 @@ SCIP_RETCODE lpSolveStable(
    SCIP_Bool             tightfeastol,       /**< should a tighter feasibility tolerance be used? */
    SCIP_Bool             fromscratch,        /**< should the LP be solved from scratch without using current basis? */
    SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            timelimit,          /**< pointer to store whether the time limit was hit */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
    )
 {
    SCIP_Bool success;
    SCIP_Bool success2;
    SCIP_Bool simplex;
-
+   
    assert(lp != NULL);
    assert(lp->flushed);
    assert(lp->looseobjvalinf == 0);
@@ -9748,11 +9747,11 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetPresolving(lp, set->lp_presolving, &success) );
    SCIP_CALL( lpSetPricingChar(lp, set->lp_pricing) );
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
-   SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+   SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
    /* check for stability */
-   if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+   if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
       return SCIP_OKAY;
    else if( !set->lp_checkstability )
    {
@@ -9775,10 +9774,10 @@ SCIP_RETCODE lpSolveStable(
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again without FASTMIP with %s\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
          /* check for stability */
-         if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -9801,10 +9800,10 @@ SCIP_RETCODE lpSolveStable(
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again with %s %s scaling\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
-      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    
       /* check for stability */
-      if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+      if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
          return SCIP_OKAY;
       else if( !set->lp_checkstability )
       {
@@ -9830,10 +9829,10 @@ SCIP_RETCODE lpSolveStable(
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again with %s %s presolving\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
-      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    
       /* check for stability */
-      if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+      if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
          return SCIP_OKAY;
       else if( !set->lp_checkstability )
       {
@@ -9863,10 +9862,10 @@ SCIP_RETCODE lpSolveStable(
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again with %s with tighter feasibility tolerance\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
       
          /* check for stability */
-         if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -9896,10 +9895,10 @@ SCIP_RETCODE lpSolveStable(
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again from scratch with %s\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo));
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
          /* check for stability */
-         if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -9922,10 +9921,10 @@ SCIP_RETCODE lpSolveStable(
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again from scratch with %s\n", 
          stat->nnodes, stat->nlps, lpalgoName(lpalgo));
-      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+      SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
       /* check for stability */
-      if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+      if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
          return SCIP_OKAY;
       else if( !set->lp_checkstability )
       {
@@ -9946,10 +9945,10 @@ SCIP_RETCODE lpSolveStable(
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again from scratch with %s %s scaling\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
          /* check for stability */
-         if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -9975,10 +9974,10 @@ SCIP_RETCODE lpSolveStable(
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again from scratch with %s %s presolving\n", 
             stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
-         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+         SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
          /* check for stability */
-         if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -10008,10 +10007,10 @@ SCIP_RETCODE lpSolveStable(
             SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
                "(node %"SCIP_LONGINT_FORMAT") numerical troubles in LP %d -- solve again from scratch with %s with tighter feasibility tolerance\n", 
                stat->nnodes, stat->nlps, lpalgoName(lpalgo));
-            SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, lperror) );
+            SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
             /* check for stability */
-            if( !(*lperror) && SCIPlpiIsStable(lp->lpi) )
+            if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
                return SCIP_OKAY;
             else if( !set->lp_checkstability )
             {
@@ -10033,13 +10032,14 @@ SCIP_RETCODE lpSolveStable(
       }
    }
 
-   /* nothing worked -- store the instable LP to a file and exit with an LPERROR */
+   /* nothing worked -- exit with an LPERROR */
    SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %d\n", 
       stat->nnodes, stat->nlps);
    *lperror = TRUE;
 
    return SCIP_OKAY;
 }
+
 
 /** solves the LP with the given algorithm and evaluates return status */
 static
@@ -10060,31 +10060,43 @@ SCIP_RETCODE lpSolve(
 {
    SCIP_Bool solvedprimal;
    SCIP_Bool solveddual;
+   SCIP_Bool timelimit;
 
    assert(lp != NULL);
    assert(lp->flushed);
    assert(set != NULL);
    assert(stat != NULL);
    assert(lperror != NULL);
-
+   
    checkLinks(lp);
-
+   
    solvedprimal = FALSE;
    solveddual = FALSE;
-
+   timelimit = FALSE;
+   
  SOLVEAGAIN:
    /* call simplex */
-   SCIP_CALL( lpSolveStable(lp, set, stat, lpalgo, resolve, fastmip, tightfeastol, fromscratch, keepsol, lperror) );
+   SCIP_CALL( lpSolveStable(lp, set, stat, lpalgo, resolve, fastmip, tightfeastol, fromscratch, keepsol, &timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
    solvedprimal = solvedprimal || (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX);
    solveddual = solveddual || (lpalgo == SCIP_LPALGO_DUALSIMPLEX);
-      
+   
    /* check, if an error occured */
    if( *lperror )
    {
       SCIPdebugMessage("unresolved error while solving LP with %s\n", lpalgoName(lp->lastlpalgo));
       lp->solved = FALSE;
       lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
+      return SCIP_OKAY;
+   }
+
+   /* check, if a time limit was exceeded */
+   if( timelimit )
+   {
+      SCIPdebugMessage("time limit exceeded before solving LP\n");
+      lp->solved = TRUE;
+      lp->lpsolstat = SCIP_LPSOLSTAT_TIMELIMIT;
+      lp->lpobjval = -SCIPsetInfinity(set);
       return SCIP_OKAY;
    }
 
@@ -10298,7 +10310,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
    /* flush changes to the LP solver */
    SCIP_CALL( SCIPlpFlush(lp, blkmem, set) );
-
+   
    /* set iteration limit for this solve */
    SCIP_CALL( lpSetIterationLimit(lp, itlim) );
 

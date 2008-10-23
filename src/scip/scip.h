@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.331 2008/09/24 20:52:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.332 2008/10/23 15:43:38 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1323,7 +1323,7 @@ SCIP_RETCODE SCIPwriteOrigProblem(
    const char*           filename,           /**< output file (or NULL for standard output) */
    const char*           extension,          /**< extension of the desired file reader, 
                                               *   or NULL if file extension should be used */
-   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
+   SCIP_Bool             genericnames        /**< use generic variable and constraint names? */
    );
 
 /** writes transformed problem to file  */
@@ -4717,7 +4717,7 @@ SCIP_RETCODE SCIPcheckSolOrig(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
    SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
-   SCIP_Bool             completely          /**< should all violation be checked? */
+   SCIP_Bool             completely          /**< should all violations be checked? */
    );
 
 /**@} */

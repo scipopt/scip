@@ -9,13 +9,14 @@ performance improvements:
 - replaced some function calls in loop conditions
 
 fixed bugs:
-- fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform the final pivot 
-  step in order to exceed the objlimit, do one additional simplex step with pricing strategy steepest edge, if this doesn't suffice,
-  turn off fastmip temporarily and solve again. Also consider solstat of the new solution.
+- fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 
+  the final pivot step in order to exceed the objlimit, do one additional simplex step with pricing strategy steepest 
+  edge, if this doesn't suffice, turn off fastmip temporarily and solve again. Also consider solstat of the new solution.
 - corrected two asserts in sepa_redcost.c (reduced costs can be negative for fixed variables - qsopt uses this)
 - corrected several bugs in the Clp-interface concerning return values
 - corrected bug in reader_lp.c: earlier read bounds were thrown away (implementation was not conforming to standard)
-
+- fixed potential interface bug: time limits of 0.0 are not anymore passed to the LP solver, which may have caused errors
+- fixed wrong result in check.awk, if infeasible problems are stopped in presolving
 
 SCIP version 1.1.0
 ===============
