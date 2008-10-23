@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.296 2008/10/23 16:23:57 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.297 2008/10/23 20:42:10 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9725,6 +9725,7 @@ SCIP_RETCODE lpAlgorithm(
    assert(lperror != NULL);
 
    lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
+   success = FALSE;
    if( lptimelimit > 0.0 )
       SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
    
