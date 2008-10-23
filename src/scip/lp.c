@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.295 2008/10/23 15:43:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.296 2008/10/23 16:23:57 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7128,20 +7128,32 @@ void findBestUb(
    }
 }
 
-/** Transform equation  a*x == b, lb <= x <= ub  into standard form
- *    a'*x' == b, 0 <= x' <= ub'.
+/** Transform equation \f$ a*x == b, lb <= x <= ub \f$ into standard form
+ *    \f$ a^\prime*x^\prime == b, 0 <= x^\prime <= ub' \f$.
  *  
  *  Transform variables (lb or ub):
- *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
- *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
- *  and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
+ * \f[
+ * \begin{array}{llll}
+ *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \mbox{if lb is used in transformation}\\
+ *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \mbox{if ub is used in transformation}
+ * \end{array}
+ * \f]
+ *  and move the constant terms \f$ a_j * lb_j \f$ or \f$ a_j * ub_j \f$ to the rhs.
  *
  *  Transform variables (vlb or vub):
- *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
- *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
- *  move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
- *    a_{zl_j} := a_{zl_j} + a_j * bl_j, or
- *    a_{zu_j} := a_{zu_j} + a_j * bu_j
+ * \f[
+ * \begin{array}{llll}
+ *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),&   x_j == x^\prime_j + (bl_j * zl_j + dl_j),&   a^\prime_j ==  a_j,&   \mbox{if vlb is used in transf.} \\
+ *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,&   x_j == (bu_j * zu_j + du_j) - x^\prime_j,&   a^\prime_j == -a_j,&   \mbox{if vub is used in transf.}
+ * \end{array}
+ * \f]
+ *  move the constant terms \f$ a_j * dl_j \f$ or \f$ a_j * du_j \f$ to the rhs, and update the coefficient of the VLB variable:
+ * \f[
+ * \begin{array}{ll}
+ *    a_{zl_j} := a_{zl_j} + a_j * bl_j,& \mbox{or} \\
+ *    a_{zu_j} := a_{zu_j} + a_j * bu_j &
+ * \end{array}
+ * \f]
  */
 static
 SCIP_RETCODE transformMIRRow(
@@ -7587,32 +7599,55 @@ SCIP_RETCODE transformMIRRow(
    return SCIP_OKAY;
 }
 
-/** Calculate fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) , and derive MIR cut
- *    a~*x' <= down(b)
- *  integers :  a~_j = down(a'_j)                      , if f_j <= f_0
- *              a~_j = down(a'_j) + (f_j - f0)/(1 - f0), if f_j >  f_0
- *  continuous: a~_j = 0                               , if a'_j >= 0
- *              a~_j = a'_j/(1 - f0)                   , if a'_j <  0
+/** Calculate fractionalities \f$ f_0 := b - down(b), f_j := a^\prime_j - down(a^\prime_j) \f$, and derive MIR cut \f$ \tilde{a}*x' <= down(b) \f$
+ * \f[
+ * \begin{array}{rll}
+ *  integers :&  \tilde{a}_j = down(a^\prime_j)                      &, if \qquad f_j <= f_0 \\
+ *            &  \tilde{a}_j = down(a^\prime_j) + (f_j - f0)/(1 - f0)&, if \qquad f_j >  f_0 \\
+ *  continuous:& \tilde{a}_j = 0                                     &, if \qquad a^\prime_j >= 0 \\
+ *             & \tilde{a}_j = a^\prime_j/(1 - f0)                   &, if \qquad a^\prime_j <  0
+ * \end{array}
+ * \f]
  *
- *  Transform inequality back to a°*x <= rhs:
+ *  Transform inequality back to \f$ \hat{a}*x <= rhs \f$:
  *
  *  (lb or ub):
- *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
- *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+ * \f[
+ * \begin{array}{llll}
+ *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
+ *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
+ * \end{array}
+ * \f]
  *  and move the constant terms
- *    -a~_j * lb_j == -a°_j * lb_j, or
- *     a~_j * ub_j == -a°_j * ub_j
+ * \f[
+ * \begin{array}{cl}
+ *    -\tilde{a}_j * lb_j == -\hat{a}_j * lb_j,& \mbox{or} \\
+ *     \tilde{a}_j * ub_j == -\hat{a}_j * ub_j &
+ * \end{array}
+ * \f]
  *  to the rhs.
  *
  *  (vlb or vub):
- *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
- *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+ * \f[
+ * \begin{array}{lllll}
+ *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),&   x_j == x^\prime_j + (bl_j * zl_j + dl_j),&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{(vlb)} \\
+ *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,&   x_j == (bu_j * zu_j + du_j) - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{(vub)}
+ * \end{array}
+ * \f]
  *  move the constant terms
- *    -a~_j * dl_j == -a°_j * dl_j, or
- *     a~_j * du_j == -a°_j * du_j
+ * \f[
+ * \begin{array}{cl}
+ *    -\tilde{a}_j * dl_j == -\hat{a}_j * dl_j,& \mbox{or} \\
+ *     \tilde{a}_j * du_j == -\hat{a}_j * du_j &
+ * \end{array}
+ * \f]
  *  to the rhs, and update the VB variable coefficients:
- *    a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
- *    a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
+ * \f[
+ * \begin{array}{ll}
+ *    \hat{a}_{zl_j} := \hat{a}_{zl_j} - \tilde{a}_j * bl_j == \hat{a}_{zl_j} - \hat{a}_j * bl_j,& \mbox{or} \\
+ *    \hat{a}_{zu_j} := \hat{a}_{zu_j} + \tilde{a}_j * bu_j == \hat{a}_{zu_j} - \hat{a}_j * bu_j &
+ * \end{array}
+ * \f]
  */
 static
 void roundMIRRow(
@@ -7675,9 +7710,9 @@ void roundMIRRow(
          fj = aj - downaj;
          
          if( SCIPsetIsSumLE(set, fj, f0) )
-            cutaj = varsign[v] * downaj; /* a°_j */
+            cutaj = varsign[v] * downaj; /* a^_j */
          else
-            cutaj = varsign[v] * (downaj + (fj - f0) * onedivoneminusf0); /* a°_j */
+            cutaj = varsign[v] * (downaj + (fj - f0) * onedivoneminusf0); /* a^_j */
       }
       else
       {
@@ -7687,7 +7722,7 @@ void roundMIRRow(
          if( aj >= 0.0 )
             cutaj = 0.0;
          else
-            cutaj = varsign[v] * aj * onedivoneminusf0; /* a°_j */
+            cutaj = varsign[v] * aj * onedivoneminusf0; /* a^_j */
       }
 
       /* remove zero cut coefficients from sparsity pattern */
@@ -7707,7 +7742,7 @@ void roundMIRRow(
       {
          /* standard bound */
 
-         /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
+         /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
          if( varsign[v] == +1 )
          {
             /* lower bound was used */
@@ -7787,16 +7822,19 @@ void roundMIRRow(
 /** substitute aggregated slack variables:
  *
  *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
- *  variable only appears in its own row:
- *     a'_r = scale * weight[r] * slacksign[r].
+ *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r]. \f$
  *
  *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
- *    integers :  a°_r = a~_r = down(a'_r)                      , if f_r <= f0
- *                a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
- *    continuous: a°_r = a~_r = 0                               , if a'_r >= 0
- *                a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+ * \f[
+ * \begin{array}{rll}
+ *    integers : & \hat{a}_r = \tilde{a}_r = down(a^\prime_r)                      &, if \qquad f_r <= f0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + (f_r - f0)/(1 - f0)&, if \qquad f_r >  f0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0                                     &, if \qquad a^\prime_r >= 0 \\
+ *               & \hat{a}_r = \tilde{a}_r = a^\prime_r/(1 - f0)                   &, if \qquad a^\prime_r <  0
+ * \end{array}
+ * \f]
  *
- *  Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+ *  Substitute \f$ \hat{a}_r * s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
  */
 static
 void substituteMIRRow(
@@ -7858,14 +7896,14 @@ void substituteMIRRow(
       /* get the slack's coefficient a'_r in the aggregated row */
       ar = slacksign[r] * scale * weights[r];
 
-      /* calculate slack variable's coefficient a°_r in the cut */
+      /* calculate slack variable's coefficient a^_r in the cut */
       if( row->integral
          && ((slacksign[r] == +1 && SCIPsetIsFeasIntegral(set, row->rhs - row->constant))
             || (slacksign[r] == -1 && SCIPsetIsFeasIntegral(set, row->lhs - row->constant))) )
       {
          /* slack variable is always integral:
-          *    a°_r = a~_r = down(a'_r)                      , if f_r <= f0
-          *    a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+          *    a^_r = a~_r = down(a'_r)                      , if f_r <= f0
+          *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
          downar = SCIPsetFloor(set, ar);
          fr = ar - downar;
@@ -7877,8 +7915,8 @@ void substituteMIRRow(
       else
       {
          /* slack variable is continuous:
-          *    a°_r = a~_r = 0                               , if a'_r >= 0
-          *    a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+          *    a^_r = a~_r = 0                               , if a'_r >= 0
+          *    a^_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
           */
          if( ar >= 0.0 )
             continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
@@ -7892,11 +7930,11 @@ void substituteMIRRow(
 
       /* depending on the slack's sign, we have
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
-       * substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+       * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
        */
       mul = -slacksign[r] * cutar;
 
-      /* add the slack's definition multiplied with a°_j to the cut */
+      /* add the slack's definition multiplied with a^_j to the cut */
       for( j = 0; j < row->len; ++j )
       {
          assert(row->cols[j] != NULL);
@@ -7921,7 +7959,7 @@ void substituteMIRRow(
       {
  	 SCIP_Real rhs;
 
-         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a°_r * (rhs - c) to the right hand side */
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPsetIsInfinity(set, row->rhs));
 	 rhs = row->rhs - row->constant;
 	 if( row->integral )
@@ -7935,7 +7973,7 @@ void substituteMIRRow(
       {
  	 SCIP_Real lhs;
 
-         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a°_r * (c - lhs) to the right hand side */
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPsetIsInfinity(set, -row->lhs));
 	 lhs = row->lhs - row->constant;
          if( row->integral )
@@ -8131,25 +8169,25 @@ SCIP_RETCODE SCIPlpCalcMIR(
     * continuous: a~_j = 0                               , if a'_j >= 0
     *             a~_j = a'_j/(1 - f0)                   , if a'_j <  0
     *
-    * Transform inequality back to a°*x <= rhs:
+    * Transform inequality back to a^*x <= rhs:
     *
     * (lb or ub):
-    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
-    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a^_j :=  a~_j,   if lb was used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a^_j := -a~_j,   if ub was used in transformation
     * and move the constant terms
-    *   -a~_j * lb_j == -a°_j * lb_j, or
-    *    a~_j * ub_j == -a°_j * ub_j
+    *   -a~_j * lb_j == -a^_j * lb_j, or
+    *    a~_j * ub_j == -a^_j * ub_j
     * to the rhs.
     *
     * (vlb or vub):
-    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
-    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a^_j :=  a~_j,   (vlb)
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a^_j := -a~_j,   (vub)
     * move the constant terms
-    *   -a~_j * dl_j == -a°_j * dl_j, or
-    *    a~_j * du_j == -a°_j * du_j
+    *   -a~_j * dl_j == -a^_j * dl_j, or
+    *    a~_j * du_j == -a^_j * du_j
     * to the rhs, and update the VB variable coefficients:
-    *   a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
-    *   a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
+    *   a^_{zl_j} := a^_{zl_j} - a~_j * bl_j == a^_{zl_j} - a^_j * bl_j, or
+    *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
     */
    downrhs = SCIPsetSumFloor(set, rhs);
    f0 = rhs - downrhs;
@@ -8173,12 +8211,12 @@ SCIP_RETCODE SCIPlpCalcMIR(
     *    a'_r = scale * weight[r] * slacksign[r].
     *
     * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
-    *   integers :  a°_r = a~_r = down(a'_r)                      , if f_r <= f0
-    *               a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
-    *   continuous: a°_r = a~_r = 0                               , if a'_r >= 0
-    *               a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+    *   integers :  a^_r = a~_r = down(a'_r)                      , if f_r <= f0
+    *               a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+    *   continuous: a^_r = a~_r = 0                               , if a'_r >= 0
+    *               a^_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
     *
-    * Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+    * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
     */
    substituteMIRRow(set, stat, lp, weights, scale, mircoef, mirrhs, slacksign,
                     varused, varinds, &nvarinds, rowinds, nrowinds, f0);
@@ -8365,20 +8403,31 @@ void sumStrongCGRow(
       *rowtoolong = TRUE;
 }
 
-/** Transform equation  a*x == b, lb <= x <= ub  into standard form
- *    a'*x' == b, 0 <= x' <= ub'.
+/** Transform equation  \f$ a*x == b \f$, \f$ lb <= x <= ub \f$ into standard form \f$ a^\prime*x^\prime == b\f$, \f$ 0 <= x^\prime <= ub^\prime \f$.
  *  
  *  Transform variables (lb or ub):
- *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
- *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
- *  and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
+ * \f[
+ * \begin{array}{llll}
+ *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \mbox{if lb is used in transformation} \\
+ *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \mbox{if ub is used in transformation}
+ * \end{array}
+ * \f]
+ *  and move the constant terms \f$ a_j * lb_j \f$ or \f$ a_j * ub_j \f$ to the rhs.
  *
  *  Transform variables (vlb or vub):
- *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
- *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
- *  move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
- *    a_{zl_j} := a_{zl_j} + a_j * bl_j, or
- *    a_{zu_j} := a_{zu_j} + a_j * bu_j
+ * \f[
+ * \begin{array}{llll}
+ *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),&   x_j == x^\prime_j + (bl_j * zl_j + dl_j),&   a^\prime_j ==  a_j,&   \mbox{if vlb is used in transf.} \\
+ *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,&   x_j == (bu_j * zu_j + du_j) - x^\prime_j,&   a^\prime_j == -a_j,&   \mbox{if vub is used in transf.}
+ * \end{array}
+ * \f]
+ *  move the constant terms \f$ a_j * dl_j \f$ or \f$ a_j * du_j \f$ to the rhs, and update the coefficient of the VLB variable:
+ * \f[
+ * \begin{array}{ll}
+ *    a_{zl_j} := a_{zl_j} + a_j * bl_j,& \mbox{or} \\
+ *    a_{zu_j} := a_{zu_j} + a_j * bu_j&
+ * \end{array}
+ * \f]
  */
 static
 void transformStrongCGRow(
@@ -8649,38 +8698,58 @@ void transformStrongCGRow(
    }
 }
 
-/** Calculate 
- *   fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j) and 
- *   integer k >= 1 with 1/(k + 1) <= f_0 < 1/k and 
- *   (=> k = up(1/f_0) + 1)
- *   integer 1 <= p_j <= k with f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k) 
- *   (=> p_j = up( k*(f_j - f_0)/(1 - f_0) ))
- * and derive strong CG cut 
- *   a~*x' <= down(b)
- * integers :  a~_j = down(a'_j)                , if f_j <= f_0
- *             a~_j = down(a'_j) + p_j/(k + 1)  , if f_j >  f_0  
- * continuous: a~_j = 0                         , if a'_j >= 0
- *             no strong CG cut found          , if a'_j <  0
+/** Calculate fractionalities \f$ f_0 := b - down(b) \f$, \f$ f_j := a^\prime_j - down(a^\prime_j) \f$ and 
+ *   integer \f$ k >= 1 \f$ with \f$ 1/(k + 1) <= f_0 < 1/k \f$ and \f$ (=> k = up(1/f_0) + 1) \f$
+ *   integer \f$ 1 <= p_j <= k \f$ with \f$ f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k)\f$ \f$ (=> p_j = up( k*(f_j - f_0)/(1 - f_0) )) \f$
+ * and derive strong CG cut \f$ \tilde{a}*x^\prime <= down(b) \f$
+ * \f[
+ * \begin{array}{rll}
+ * integers : &  \tilde{a}_j = down(a^\prime_j)                &, if \qquad f_j <= f_0 \\
+ *            &  \tilde{a}_j = down(a^\prime_j) + p_j/(k + 1)  &, if \qquad f_j >  f_0 \\
+ * continuous:&  \tilde{a}_j = 0                               &, if \qquad a^\prime_j >= 0 \\
+ *            &  \mbox{no strong CG cut found}                 &, if \qquad a^\prime_j <  0
+ * \end{array}
+ * \f]
  *
- * Transform inequality back to a°*x <= rhs:
+ * Transform inequality back to \f$ \hat{a}*x <= rhs \f$:
  *
  *  (lb or ub):
- *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
- *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+ * \f[
+ * \begin{array}{lllll}
+ *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
+ *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
+ * \end{array}
+ * \f]
  *  and move the constant terms
- *    -a~_j * lb_j == -a°_j * lb_j, or
- *     a~_j * ub_j == -a°_j * ub_j
+ * \f[
+ * \begin{array}{rl}
+ *    -\tilde{a}_j * lb_j == -\hat{a}_j * lb_j, & \mbox{or} \\
+ *     \tilde{a}_j * ub_j == -\hat{a}_j * ub_j &
+ * \end{array}
+ * \f]
  *  to the rhs.
  *
  *  (vlb or vub):
- *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
- *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+ * \f[
+ * \begin{array}{lllll}
+ *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),$   x_j == x^\prime_j + (bl_j * zl_j + dl_j),$   a^\prime_j ==  a_j,$   \hat{a}_j :=  \tilde{a}_j,$   \mbox{(vlb)} \\
+ *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,$   x_j == (bu_j * zu_j + du_j) - x^\prime_j,$   a^\prime_j == -a_j,$   \hat{a}_j := -\tilde{a}_j,$   \mbox{(vub)}
+ * \end{array}
+ * \f]
  *  move the constant terms
- *    -a~_j * dl_j == -a°_j * dl_j, or
- *     a~_j * du_j == -a°_j * du_j
+ * \f[
+ * \begin{array}{rl}
+ *    -\tilde{a}_j * dl_j == -\hat{a}_j * dl_j,& \mbox{or} \\
+ *     \tilde{a}_j * du_j == -\hat{a}_j * du_j &
+ * \end{array}
+ * \f]
  *  to the rhs, and update the VB variable coefficients:
- *    a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
- *    a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
+ * \f[
+ * \begin{array}{ll}
+ *    \hat{a}_{zl_j} := \hat{a}_{zl_j} - \tilde{a}_j * bl_j == \hat{a}_{zl_j} - \hat{a}_j * bl_j,& \mbox{or} \\
+ *    \hat{a}_{zu_j} := \hat{a}_{zu_j} + \tilde{a}_j * bu_j == \hat{a}_{zu_j} - \hat{a}_j * bu_j &
+ * \end{array}
+ * \f]
  */
 static
 void roundStrongCGRow(
@@ -8753,7 +8822,7 @@ void roundStrongCGRow(
       fj = aj - downaj;
 
       if( SCIPsetIsSumLE(set, fj, f0) )
-         cutaj = varsign[v] * downaj; /* a°_j */
+         cutaj = varsign[v] * downaj; /* a^_j */
       else
       {
          SCIP_Real pj;
@@ -8761,7 +8830,7 @@ void roundStrongCGRow(
          pj = SCIPsetCeil(set, k * (fj - f0) * onedivoneminusf0);
          assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj almost equal to f0 */ 
          assert(pj <= k);
-         cutaj = varsign[v] * (downaj + pj / (k + 1)); /* a°_j */
+         cutaj = varsign[v] * (downaj + pj / (k + 1)); /* a^_j */
       }
 
 
@@ -8777,7 +8846,7 @@ void roundStrongCGRow(
 
       strongcgcoef[v] = cutaj;
 
-      /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
+      /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
       if( varsign[v] == +1 )
       {
          /* lower bound was used */
@@ -8847,16 +8916,19 @@ void roundStrongCGRow(
 /** substitute aggregated slack variables:
  *
  *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
- *  variable only appears in its own row:
- *     a'_r = scale * weight[r] * slacksign[r].
+ *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r] \f$.
  *
  *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
- *    integers:   a°_r = a~_r = down(a'_r)                  , if f_r <= f0
- *                a°_r = a~_r = down(a'_r) + p_r/(k + 1)    , if f_r >  f0
- *    continuous: a°_r = a~_r = 0                           , if a'_r >= 0
- *                no strong CG cut found                    , if a'_r <  0
+ * \f[
+ * \begin{array}{rll}
+ *    integers:  & \hat{a}_r = \tilde{a}_r = down(a^\prime_r)                  &, if \qquad f_r <= f0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + p_r/(k + 1)    &, if \qquad f_r >  f0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0                                 &, if \qquad a^\prime_r >= 0 \\
+ *               & \mbox{no strong CG cut found}                               &, if \qquad a^\prime_r <  0
+ * \end{array}
+ * \f]
  *
- *  Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+ *  Substitute \f$ \hat{a}_r * s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
  */
 static
 void substituteStrongCGRow(
@@ -8921,7 +8993,7 @@ void substituteStrongCGRow(
       /* get the slack's coefficient a'_r in the aggregated row */
       ar = slacksign[r] * scale * weights[r];
 
-      /* calculate slack variable's coefficient a°_r in the cut */
+      /* calculate slack variable's coefficient a^_r in the cut */
       if( row->integral )
       {
          /* slack variable is always integral: */
@@ -8951,11 +9023,11 @@ void substituteStrongCGRow(
 
       /* depending on the slack's sign, we have
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
-       * substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+       * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
        */
       mul = -slacksign[r] * cutar;
 
-      /* add the slack's definition multiplied with a°_j to the cut */
+      /* add the slack's definition multiplied with a^_j to the cut */
       for( j = 0; j < row->len; ++j )
       {
          assert(row->cols[j] != NULL);
@@ -8980,7 +9052,7 @@ void substituteStrongCGRow(
       {
  	 SCIP_Real rhs;
 
-         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a°_r * (rhs - c) to the right hand side */
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPsetIsInfinity(set, row->rhs));
 	 rhs = row->rhs - row->constant;
 	 if( row->integral )
@@ -8994,7 +9066,7 @@ void substituteStrongCGRow(
       {
  	 SCIP_Real lhs;
 
-         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a°_r * (c - lhs) to the right hand side */
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPsetIsInfinity(set, -row->lhs));
 	 lhs = row->lhs - row->constant;
          if( row->integral )
@@ -9131,25 +9203,25 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     * continuous: a~_j = 0                         , if a'_j >= 0
     *             no strong CG cut found          , if a'_j <  0 
     *
-    * Transform inequality back to a°*x <= rhs:
+    * Transform inequality back to a^*x <= rhs:
     *
     * (lb or ub):
-    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
-    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a^_j :=  a~_j,   if lb was used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a^_j := -a~_j,   if ub was used in transformation
     * and move the constant terms
-    *   -a~_j * lb_j == -a°_j * lb_j, or
-    *    a~_j * ub_j == -a°_j * ub_j
+    *   -a~_j * lb_j == -a^_j * lb_j, or
+    *    a~_j * ub_j == -a^_j * ub_j
     * to the rhs.
     *
     * (vlb or vub):
-    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
-    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a^_j :=  a~_j,   (vlb)
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a^_j := -a~_j,   (vub)
     * move the constant terms
-    *   -a~_j * dl_j == -a°_j * dl_j, or
-    *    a~_j * du_j == -a°_j * du_j
+    *   -a~_j * dl_j == -a^_j * dl_j, or
+    *    a~_j * du_j == -a^_j * du_j
     * to the rhs, and update the VB variable coefficients:
-    *   a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
-    *   a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
+    *   a^_{zl_j} := a^_{zl_j} - a~_j * bl_j == a^_{zl_j} - a^_j * bl_j, or
+    *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
     */
    downrhs = SCIPsetSumFloor(set, rhs);
    f0 = rhs - downrhs;
@@ -9168,12 +9240,12 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     *    a'_r = scale * weight[r] * slacksign[r].
     *
     * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
-    *   integers :  a°_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
-    *               a°_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
-    *   continuous: a°_r = a~_r = 0                           , if a'_r >= 0
-    *               a°_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
+    *   integers :  a^_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
+    *               a^_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
+    *   continuous: a^_r = a~_r = 0                           , if a'_r >= 0
+    *               a^_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
     *
-    * Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+    * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
     */
    substituteStrongCGRow(set, stat, lp, weights, scale, strongcgcoef, strongcgrhs, slacksign,
                          varused, varinds, &nvarinds, rowinds, nrowinds, f0, k);
