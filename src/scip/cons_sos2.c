@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.23 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.24 2008/10/24 10:01:43 bzfviger Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS 
@@ -1680,7 +1680,6 @@ SCIP_DECL_CONSPRINT(consPrintSOS2)
       else
          SCIPinfoMessage(scip, file, "%s (%3.2f)", SCIPvarGetName(consdata->Vars[j]), consdata->weights[j]);
    }
-   SCIPinfoMessage(scip, file, ")\n");
 
    return SCIP_OKAY;
 }
