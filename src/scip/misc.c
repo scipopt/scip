@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.88 2008/09/29 22:26:54 bzfheinz Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.89 2008/10/26 22:45:56 bzfheinz Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2502,6 +2502,7 @@ void SCIPsort(
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c"
 
+
 /* SCIPsortPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrIntInt
 #define SORTTPL_KEYTYPE     void*
@@ -2574,6 +2575,7 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  int
 #include "scip/sorttpl.c"
 
+
 /* SCIPsortRealRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealRealRealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -2597,16 +2599,26 @@ void SCIPsort(
 #define SORTTPL_KEYTYPE     int
 #include "scip/sorttpl.c"
 
+
 /* SCIPsortIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntInt
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
 #include "scip/sorttpl.c"
 
+
 /* SCIPsortIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntPtr
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  void*
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
 #include "scip/sorttpl.c"
 
 
@@ -2816,6 +2828,15 @@ void SCIPsortDown(
 #define SORTTPL_NAMEEXT     DownIntPtr
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntIntPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c"
 
