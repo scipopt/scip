@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.48 2008/10/26 22:45:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.49 2008/10/27 13:10:57 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -874,6 +874,7 @@ void SCIPsortedvecInsertIntIntPtr(
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
@@ -1132,6 +1133,7 @@ void SCIPsortedvecInsertDownIntIntPtr(
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
    int                   keyval,             /**< key value of new element */
    int                   field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
