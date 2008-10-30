@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.22 2008/10/24 10:01:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.23 2008/10/30 11:56:36 bzfviger Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -1436,6 +1436,7 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
                         cnt++;
                      }
                   }
+                  SCIPinfoMessage(scip, NULL, "\n");
                }
                return SCIP_OKAY;
             }
