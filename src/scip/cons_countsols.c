@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.25 2008/09/30 17:16:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.26 2008/10/31 21:46:57 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -245,7 +245,6 @@ SCIP_RETCODE conshdlrdataCreate(
    SCIP_CONSHDLRDATA**        conshdlrdata     /**< pointer to store constraint handler data */
    )
 {
-
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
    
    (*conshdlrdata)->feasST = 0;
@@ -990,7 +989,7 @@ SCIP_Bool checkVarbound(
 }
 
 
-/** check if the current node initializes a non trivial feasible subtree */
+/** check if the current node initializes a non trivial unrestricted subtree */
 static 
 SCIP_RETCODE checkFeasSubtree(
    SCIP* scip,                         /**< SCIP main data structure */
@@ -1111,7 +1110,7 @@ SCIP_RETCODE checkSolution(
        case the solution comes from a heuristic we should try to sequentially fix the
        variables in the branch and bound tree and check after every fixing if all
        constraints are disabled; at the point where all constraints are disabled the
-       unfixed variables are stars; */
+       unfixed variables are "stars" (arbitrary); */
    assert( SCIPgetNOrigVars(scip) != 0);
    assert( SCIPsolGetHeur(sol) == NULL);
 
@@ -1206,7 +1205,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
    assert(conshdlrdata != NULL );
 
    /* reset counting variables */
-   conshdlrdata->feasST = 0;             /** number of non trivial feasible subtrees */
+   conshdlrdata->feasST = 0;             /** number of non trivial unrestricted subtrees */
    conshdlrdata->nDiscardSols = 0;       /** number of discard solutions */
    conshdlrdata->nNonSparseSols = 0;     /** number of non sparse solutions */
    setInt(&conshdlrdata->nsols, 0);      /** number of solutions */
@@ -1464,7 +1463,8 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
       
       for( v = 0; v < conshdlrdata->nvars; ++v )
       {
-         SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->vars[v], +1, +1) );
+         SCIP_CALL( SCIPaddVarLocks(scip, conshdlrdata->vars[v], 
+               nlockspos + nlocksneg, nlockspos + nlocksneg) );
       }
    }
    
