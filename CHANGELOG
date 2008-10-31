@@ -17,6 +17,7 @@ fixed bugs:
 - corrected bug in reader_lp.c: earlier read bounds were thrown away (implementation was not conforming to standard)
 - fixed potential interface bug: time limits of 0.0 are not anymore passed to the LP solver, which may have caused errors
 - fixed wrong result in check.awk, if infeasible problems are stopped in presolving
+- fixed wrong use of pointer in lp.c
 
 SCIP version 1.1.0
 ===============

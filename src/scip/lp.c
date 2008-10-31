@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.297 2008/10/23 20:42:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.298 2008/10/31 14:32:47 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9801,6 +9801,7 @@ SCIP_RETCODE lpSolveStable(
    assert(set != NULL);
    assert(stat != NULL);
    assert(lperror != NULL);
+   assert(timelimit != NULL);
 
    *lperror = FALSE;
 
@@ -9824,7 +9825,7 @@ SCIP_RETCODE lpSolveStable(
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
    /* check for stability */
-   if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+   if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
       return SCIP_OKAY;
    else if( !set->lp_checkstability )
    {
@@ -9850,7 +9851,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
          /* check for stability */
-         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+         if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -9876,7 +9877,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    
       /* check for stability */
-      if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+      if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
          return SCIP_OKAY;
       else if( !set->lp_checkstability )
       {
@@ -9905,7 +9906,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    
       /* check for stability */
-      if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+      if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
          return SCIP_OKAY;
       else if( !set->lp_checkstability )
       {
@@ -9938,7 +9939,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
       
          /* check for stability */
-         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+         if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -9971,7 +9972,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
          /* check for stability */
-         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+         if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -9997,7 +9998,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
       /* check for stability */
-      if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+      if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
          return SCIP_OKAY;
       else if( !set->lp_checkstability )
       {
@@ -10021,7 +10022,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
          /* check for stability */
-         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+         if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -10050,7 +10051,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
          /* check for stability */
-         if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+         if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
             return SCIP_OKAY;
          else if( !set->lp_checkstability )
          {
@@ -10083,7 +10084,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
          
             /* check for stability */
-            if( timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
+            if( *timelimit || (!(*lperror) && SCIPlpiIsStable(lp->lpi)) )
                return SCIP_OKAY;
             else if( !set->lp_checkstability )
             {
@@ -10239,8 +10240,8 @@ SCIP_RETCODE lpSolve(
       assert(lpalgo != SCIP_LPALGO_DUALSIMPLEX);
       lpalgo = SCIP_LPALGO_DUALSIMPLEX;
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %"SCIP_LONGINT_FORMAT") solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
-         stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         "(node %"SCIP_LONGINT_FORMAT") solution status of LP %d could not be proven (internal status:%d) -- solve again with %s\n", 
+         stat->nnodes, stat->nlps, SCIPlpiGetInternalStatus(lp->lpi), lpalgoName(lpalgo));
       goto SOLVEAGAIN;
    }
    else if( !solvedprimal )
@@ -10248,8 +10249,8 @@ SCIP_RETCODE lpSolve(
       assert(lpalgo != SCIP_LPALGO_PRIMALSIMPLEX);
       lpalgo = SCIP_LPALGO_PRIMALSIMPLEX;
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %"SCIP_LONGINT_FORMAT") solution status of LP %d couldn't be proved (internal status:%d) -- solve again with %s\n", 
-         stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         "(node %"SCIP_LONGINT_FORMAT") solution status of LP %d could not be proven (internal status:%d) -- solve again with %s\n", 
+         stat->nnodes, stat->nlps, SCIPlpiGetInternalStatus(lp->lpi), lpalgoName(lpalgo));
       goto SOLVEAGAIN;
    }
    else
