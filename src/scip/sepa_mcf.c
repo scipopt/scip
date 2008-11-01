@@ -12,15 +12,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.69 2008/09/30 14:55:13 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.70 2008/11/01 11:26:07 bzfviger Exp $"
 
-//#define SCIP_DEBUG
+/*#define SCIP_DEBUG*/
 
 /*//#define USECMIRDELTAS *//*????????????????????*/
 #define SEPARATEKNAPSACKCOVERS /*?????????????????*/
 #define SEPARATEFLOWCUTS /*?????????????????????*/ /* only without USECMIRDELTAS */
 #define SEPARATESINGLENODECUTS /*??????????????????*/
-// #define UNCAPACITATEDARCS
+/*// #define UNCAPACITATEDARCS */
 /*//#define STRICTCOLSPERCOMMODITYLIMIT *//*???????????????????*/
 /*//#define FORCECUTS *//*??????????????????????*/
 
@@ -364,7 +364,7 @@ SCIP_RETCODE mcfnetworkFill(
 
    assert(mcfnetwork != NULL);
    assert(modeltype != SCIP_MCFMODELTYPE_AUTO);
-   assert(flowtype == SCIP_MCFFLOWTYPE_AUTO); // flowtype not used in the moment
+   assert(flowtype == SCIP_MCFFLOWTYPE_AUTO); /* flowtype not used in the moment */
    assert(2 <= ncompnodes && ncompnodes <= mcfdata->nnodes);
    assert(1 <= ncomparcs && ncomparcs <= mcfdata->narcs);
    assert(ncommodities > 0);
@@ -4832,7 +4832,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
-//   SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
+/*//   SCIP_Real*            varsolvals, */        /**< LP solution value of all variables in LP */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
    NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
    int*                  ncuts               /**< pointer to count the number of added cuts */
@@ -5553,7 +5553,7 @@ SCIP_RETCODE separateCuts(
 #ifdef SEPARATESINGLENODECUTS
          SCIPdebugMessage("************** [%6.2f] MCF create single-node cuts\n", SCIPgetSolvingTime(scip));
          /* enumerate single node cuts */
-//          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, varsolvals, mcfnetwork, NULL, &ncuts) );
+/*//          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, varsolvals, mcfnetwork, NULL, &ncuts) ); */
          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, NULL, &ncuts) );
 #endif
 
@@ -5564,7 +5564,7 @@ SCIP_RETCODE separateCuts(
 
          SCIPdebugMessage("************** [%6.2f] MCF generate cluster cuts\n", SCIPgetSolvingTime(scip));
          /* enumerate cuts between subsets of the clusters */
-//          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, varsolvals, mcfnetwork, nodepartition, &ncuts) );
+/*//          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, varsolvals, mcfnetwork, nodepartition, &ncuts) ); */
          SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, nodepartition, &ncuts) );
 
          /* free node partition */
@@ -5760,10 +5760,10 @@ SCIP_RETCODE SCIPincludeSepaMcf(
          "separating/mcf/modeltype",
          "model type of network (0: auto, 1:directed, 2:undirected)",
          &sepadata->modeltype, TRUE, DEFAULT_MODELTYPE, 0, 2, NULL, NULL) );
-//    SCIP_CALL( SCIPaddIntParam(scip,
+/*//    SCIP_CALL( SCIPaddIntParam(scip,
 //          "separating/mcf/flowtype",
 //          "type of flow variables in the network (0: auto, 1:continuous/integer, 2:binary)",
-//          &sepadata->flowtype, TRUE, DEFAULT_FLOWTYPE, 0, 2, NULL, NULL) );
+//          &sepadata->flowtype, TRUE, DEFAULT_FLOWTYPE, 0, 2, NULL, NULL) ); */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "separating/mcf/trynegscaling",
          "should negative values also be tested in scaling?",

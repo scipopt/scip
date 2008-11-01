@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
-//#define ZEROHALF__PRINT_STATISTICS /**< print statistics */
+/*//#define ZEROHALF__PRINT_STATISTICS */ /**< print statistics */
 
 
 /**
@@ -2444,15 +2444,15 @@ SCIP_RETCODE addZerohalfCutToLP(
 
 
    /* check if zerohalf cut is not violated */ 
-   //   if( !cutdata->isfeasviolated ) ????????????????????????????????
+/*   //   if( !cutdata->isfeasviolated ) ????????????????????????????????
    //   {
    //     if( !SCIPisFeasZero(scip, cutdata->rhs - cutdata->activity)
    //       && SCIPisLE(scip, cutdata->activity, cutdata->rhs) )
    //     {      
    //       SCIPerrorMessage("Zerohalf cut is NOT violated! (act: %e, rhs: %e, viol: %e)\n",
    //         cutdata->activity, cutdata->rhs, cutdata->violation);      
-   //       assert(FALSE); /* zerohalf cut is not violated! */
-   //       return SCIP_ERROR;
+   //       assert(FALSE); */ /* zerohalf cut is not violated! */
+/*   //       return SCIP_ERROR;
    //     }
    //     else
    //     {      
@@ -2460,7 +2460,7 @@ SCIP_RETCODE addZerohalfCutToLP(
    //       return SCIP_OKAY;
    //     }
    //   }
-  
+*/
    /* check if norm was not calculated correctly */
    if( !SCIPisPositive(scip, cutdata->norm) )
    {
@@ -3231,7 +3231,7 @@ SCIP_RETCODE preprocessModGaussElim(
             mod2data->rhs[mod2data->rowsind[r]] =
                XOR(mod2data->rhs[mod2data->rowsind[pivotrow]],mod2data->rhs[mod2data->rowsind[r]]);
             /* all rows have slack zero: */
-            // mod2data->slacks[[mod2data->rowsind[r]] += mod2data->slacks[[mod2data->rowsind[pivotrow]];        
+/*            // mod2data->slacks[[mod2data->rowsind[r]] += mod2data->slacks[[mod2data->rowsind[pivotrow]];        */
          }      
       }
       
@@ -3265,7 +3265,7 @@ SCIP_RETCODE preprocessModGaussElim(
                mod2data->rhs[mod2data->rowsind[r]] =
                   XOR(mod2data->rhs[mod2data->rowsind[pivot]],mod2data->rhs[mod2data->rowsind[r]]);
                /* all identity submatrix rows have slack zero */
-               // mod2data->slacks[[mod2data->rowsind[r]] += mod2data->slacks[[mod2data->rowsind[pivot]];
+               /* // mod2data->slacks[[mod2data->rowsind[r]] += mod2data->slacks[[mod2data->rowsind[pivot]]; */
             }              
       }
 
@@ -6597,7 +6597,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
          &(sepadata->maxncalls), TRUE, DEFAULT_MAXNCALLS, -1, SCIP_LONGINT_MAX, NULL, NULL));
    SCIP_CALL(SCIPaddBoolParam(scip,
          "separating/zerohalf/relaxcontvars", 
-         "should continuous variables be relaxed by adding variable bounds?", // ????????? TODO
+         "should continuous variables be relaxed by adding variable bounds?", /* // ????????? TODO */
          &(sepadata->relaxcontvars), TRUE, DEFAULT_RELAXCONTVARS, NULL, NULL));
    SCIP_CALL(SCIPaddBoolParam(scip,
          "separating/zerohalf/scalefraccoeffs",
