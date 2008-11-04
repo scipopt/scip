@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.71 2008/11/04 16:16:37 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.72 2008/11/04 16:50:02 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/ /*????????????????????*/
 
@@ -90,6 +90,7 @@
 #ifdef UNCAPACITATEDARCS
 #define UNCAPACITATEDARCSTRESHOLD   0.8 /**< treshold for the percentage of commodities an uncapacitated arc should appear in */
 #endif
+#define HASHSIZE_NODEPAIRS        131101 /**< minimal size of hash table for nodepairs */
 
 /*#define OUTPUTGRAPH*/                     /* should a .gml graph of the network be generated for debugging purposes? */
 
@@ -201,21 +202,22 @@ struct mcfdata
 };
 typedef struct mcfdata MCFDATA;              /**< internal MCF extraction data to pass to subroutines */
 
-/** data structure to put on the arc heap */
-struct arcentry
+/** data structure to put a nodepair on the heap -- it holds node1 <= node2 */
+struct nodepairentry
 {
-   int                   arcid;              /**< index of the arc */
-   SCIP_Real             weight;             /**< weight of the arc in the separation problem */
+   int                   node1;              /**< index of the first node */
+   int                   node2;              /**< index of the second node */
+   SCIP_Real             weight;              /**< weight of the arc in the separation problem */
 };
-typedef struct arcentry ARCENTRY;
+typedef struct nodepairentry NODEPAIRENTRY;
 
-/** arc priority queue */
-struct arcqueue
+/** nodepair priority queue */
+struct nodepairqueue
 {
    SCIP_PQUEUE*          pqueue;             /**< priority queue of elements */
-   ARCENTRY*             arcentries;         /**< elements on the heap */
+   NODEPAIRENTRY*        nodepairentries;    /**< elements on the heap */
 };
-typedef struct arcqueue ARCQUEUE;
+typedef struct nodepairqueue NODEPAIRQUEUE;
 
 /** partitioning of the nodes into clusters */
 struct nodepartition
@@ -3046,7 +3048,7 @@ SCIP_RETCODE findUncapacitatedArcs(
             int c;
             int s;
             int t;
-            
+
             col = rowcols[i];
             c = SCIPcolGetLPPos(col);
             assert(0 <= c && c < SCIPgetNLPCols(scip));
@@ -3068,10 +3070,10 @@ SCIP_RETCODE findUncapacitatedArcs(
 
                /* identify the (at most) two nodes which contain this flow variable */
                getIncidentNodes(scip, mcfdata, col, &s, &t);
-               
+
                SCIPdebugMessage("   col <%s> [%g,%g] (s,t):(%i,%i)\n", SCIPvarGetName(SCIPcolGetVar(col)),
                                 SCIPvarGetLbGlobal(SCIPcolGetVar(col)), SCIPvarGetUbGlobal(SCIPcolGetVar(col)), s, t);
-               
+
                assert(-1 <= s && s < nnodes);
                assert(-1 <= t && t < nnodes);
                assert(s == v || t == v);
@@ -4170,16 +4172,110 @@ SCIP_RETCODE mcfnetworkExtract(
 static
 SCIP_DECL_SORTPTRCOMP(compArcs)
 {
-   ARCENTRY* arc1 = (ARCENTRY*)elem1;
-   ARCENTRY* arc2 = (ARCENTRY*)elem2;
+   NODEPAIRENTRY* nodepair1 = (NODEPAIRENTRY*)elem1;
+   NODEPAIRENTRY* nodepair2 = (NODEPAIRENTRY*)elem2;
 
-   if( arc1->weight > arc2->weight )
+   if( nodepair1->weight > nodepair2->weight )
       return -1;
-   else if( arc1->weight < arc2->weight )
+   else if( nodepair1->weight < nodepair2->weight )
       return +1;
    else
       return 0;
 }
+
+/** NodePair HashTable
+ * gets the key of the given element */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyNodePairs)
+{  /*lint --e{715}*/
+   /* the key is the element itself */
+   return elem;
+}
+
+/** NodePair HashTable
+ * returns TRUE iff both keys are equal;
+ * two nodepairs are equal if both nodes equal
+ */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqNodePairs)
+{
+#ifndef NDEBUG
+   SCIP_MCFNETWORK*  mcfnetwork;
+#endif
+   NODEPAIRENTRY*    nodepair1;
+   NODEPAIRENTRY*    nodepair2;
+   int source1;
+   int source2;
+   int target1;
+   int target2;
+
+#ifndef NDEBUG
+   mcfnetwork = (SCIP_MCFNETWORK*)userptr;
+#endif
+   assert(mcfnetwork != NULL);
+
+   nodepair1 = (NODEPAIRENTRY*)key1;
+   nodepair2 = (NODEPAIRENTRY*)key2;
+
+   assert( nodepair1 != NULL);
+   assert( nodepair2 != NULL);
+
+   source1 = nodepair1 -> node1;
+   source2 = nodepair2 -> node1;
+   target1 = nodepair1 -> node2;
+   target2 = nodepair2 -> node2;
+
+   assert(source1 >=0 && source1 < mcfnetwork->nnodes);
+   assert(source2 >=0 && source2 < mcfnetwork->nnodes);
+   assert(target1 >=0 && target1 < mcfnetwork->nnodes);
+   assert(target2 >=0 && target2 < mcfnetwork->nnodes);
+   assert(source1 <= target1);
+   assert(source2 <= target2);
+
+   if( source1 != source2 )
+      return FALSE;
+
+   if( target1 != target2 )
+      return FALSE;
+
+   return TRUE;
+}
+
+/** NodePair HashTable
+ * returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValNodePairs)
+{
+
+#ifndef NDEBUG
+   SCIP_MCFNETWORK*  mcfnetwork;
+#endif
+   NODEPAIRENTRY*    nodepair;
+   int source;
+   int target;
+   unsigned int hashval;
+
+#ifndef NDEBUG
+   mcfnetwork = (SCIP_MCFNETWORK*)userptr;
+#endif
+   assert(mcfnetwork != NULL);
+
+   nodepair = (NODEPAIRENTRY*)key;
+   assert( nodepair != NULL);
+
+   source = nodepair -> node1;
+   target = nodepair -> node2;
+
+   assert(source >=0 && source < mcfnetwork->nnodes);
+   assert(target >=0 && target < mcfnetwork->nnodes);
+   assert(source <= target);
+
+   hashval = (source << 16) + target; /*lint !e701*/
+
+   return hashval;
+}
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 
 /** creates a priority queue and fills it with the given arc entries
@@ -4188,104 +4284,162 @@ SCIP_DECL_SORTPTRCOMP(compArcs)
  *      the weight is the minimal slack of fwd and bwd arcs --> this is important in the directed case
  */
 static
-SCIP_RETCODE arcqueueCreate(
+SCIP_RETCODE nodepairqueueCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
-   ARCQUEUE**            arcqueue            /**< pointer to arc priority queue */
+   NODEPAIRQUEUE**       nodepairqueue       /**< pointer to arc priority queue */
    )
 {
+
+//    printf("ITERATE ARCS:\n");
+   SCIP_HASHTABLE* hashtable;
+   int hashtablesize;
    int a;
+   int nnodepairs;
+   int n;
 
    assert(mcfnetwork != NULL);
-   assert(arcqueue != NULL);
+   assert(nodepairqueue != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, arcqueue) );
+   SCIP_CALL( SCIPallocMemory(scip, nodepairqueue) );
 
-   /* calculate weights for arcs */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*arcqueue)->arcentries, mcfnetwork->narcs) );
+   /* create a hash table for all used node pairs */
+   hashtablesize = SCIPcalcHashtableSize(10*mcfnetwork->narcs);
+   hashtablesize = MAX(hashtablesize, HASHSIZE_NODEPAIRS);
+   SCIP_CALL( SCIPhashtableCreate(&hashtable, SCIPblkmem(scip), hashtablesize,
+         hashGetKeyNodePairs, hashKeyEqNodePairs, hashKeyValNodePairs, (void*) mcfnetwork) );
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(*nodepairqueue)->nodepairentries, mcfnetwork->narcs) );
+
+   nnodepairs = 0;
+   /* initialise hash table of all used node pairs */
    for( a = 0; a < mcfnetwork->narcs; a++ )
    {
-      SCIP_Real maxval;
-      SCIP_Real slack;
-      SCIP_Real dualsol;
-      SCIP_Real scale;
+//       printf("ARC %i = (%i %i)\n", a, mcfnetwork -> arcsources[a], mcfnetwork -> arctargets[a]);
+      NODEPAIRENTRY  nodepairentry;
+      NODEPAIRENTRY* nodepairentryptr;
 
-
-      if( mcfnetwork->arccapacityrows[a] == NULL )
+      if( mcfnetwork->arccapacityrows[a] != NULL )
       {
-         (*arcqueue)->arcentries[a].arcid  = a;
-         (*arcqueue)->arcentries[a].weight = SCIPinfinity(scip);
-         continue;
+         SCIP_Real maxval;
+         SCIP_Real slack;
+         SCIP_Real dualsol;
+         SCIP_Real scale;
+
+         slack = SCIPgetRowFeasibility(scip, mcfnetwork->arccapacityrows[a]);
+         slack = MAX(slack, 0.0); /* can only be negative due to numerics */
+         dualsol = SCIProwGetDualsol(mcfnetwork->arccapacityrows[a]);
+         maxval = SCIPgetRowMaxCoef(scip, mcfnetwork->arccapacityrows[a]);
+         assert(maxval > 0.0);
+         scale = ABS(mcfnetwork->arccapacityscales[a])/maxval; /* divide by maxval to normalize rows */
+
+         nodepairentry.weight = scale * slack - ABS(dualsol)/scale;
+      }
+      // uncapacitated arc has infinite slack
+      else
+         nodepairentry.weight = SCIPinfinity(scip);
+
+      if( mcfnetwork -> arcsources[a] <= mcfnetwork -> arctargets[a] )
+      {
+         nodepairentry.node1 = mcfnetwork -> arcsources[a];
+         nodepairentry.node2 = mcfnetwork -> arctargets[a];
+      }
+      else
+      {
+         nodepairentry.node2 = mcfnetwork -> arcsources[a];
+         nodepairentry.node1 = mcfnetwork -> arctargets[a];
+      }
+      assert( nodepairentry.node1 >= 0 && nodepairentry.node1 < mcfnetwork->nnodes );
+      assert( nodepairentry.node2 >= 0 && nodepairentry.node2 < mcfnetwork->nnodes );
+
+
+      /* get nodepair from current hash table (if existent) */
+      nodepairentryptr = (NODEPAIRENTRY*)(SCIPhashtableRetrieve(hashtable, (void*) (&nodepairentry) ));
+
+      if( nodepairentryptr != NULL )
+      {
+         // adpat weight
+         nodepairentryptr -> weight = MIN(nodepairentry.weight, nodepairentryptr -> weight);
+      }
+      else
+      {
+         /* no such constraint in current hash table: insert into array and hashtable */
+         NODEPAIRENTRY* nodepairentries = (*nodepairqueue)->nodepairentries;
+         nodepairentries[nnodepairs] = nodepairentry;
+         SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) (&nodepairentries[nnodepairs]) ) );
+
+//          printf("new nodepair\n");
+
+         ++nnodepairs;
       }
 
-      slack = SCIPgetRowFeasibility(scip, mcfnetwork->arccapacityrows[a]);
-      slack = MAX(slack, 0.0); /* can only be negative due to numerics */
-      dualsol = SCIProwGetDualsol(mcfnetwork->arccapacityrows[a]);
-      maxval = SCIPgetRowMaxCoef(scip, mcfnetwork->arccapacityrows[a]);
-      assert(maxval > 0.0);
-      scale = ABS(mcfnetwork->arccapacityscales[a])/maxval; /* divide by maxval to normalize rows */
+//       SCIPdebugMessage("arc %2d <%s>: slack=%g, dualsol=%g -> weight=%g\n", a, SCIProwGetName(mcfnetwork->arccapacityrows[a]),
+//                        slack, dualsol, (*nodepairqueue)->arcentries[a].weight);
 
-      /* shrink rows with large slack first, and from the tight rows, shrink the ones with small dual solution value first */
-      (*arcqueue)->arcentries[a].arcid = a;
-      (*arcqueue)->arcentries[a].weight = scale * slack - ABS(dualsol)/scale;
-      SCIPdebugMessage("arc %2d <%s>: slack=%g, dualsol=%g -> weight=%g\n", a, SCIProwGetName(mcfnetwork->arccapacityrows[a]),
-                       slack, dualsol, (*arcqueue)->arcentries[a].weight);
    }
 
+//    printf("CREATE PRIO QUEUE for %i nodepairs\n", nnodepairs);
    /* create priority queue */
-   SCIP_CALL( SCIPpqueueCreate(&(*arcqueue)->pqueue, mcfnetwork->narcs, 2.0, compArcs) );
+   SCIP_CALL( SCIPpqueueCreate(&(*nodepairqueue)->pqueue, nnodepairs, 2.0, compArcs) );
 
-   /* fill priority queue with arc data */
-   for( a = 0; a < mcfnetwork->narcs; a++ )
+   /* fill priority queue with nodepair data */
+   for( n = 0; n < nnodepairs; n++ )
    {
-      SCIP_CALL( SCIPpqueueInsert((*arcqueue)->pqueue, (void*)&(*arcqueue)->arcentries[a]) );
+      SCIP_CALL( SCIPpqueueInsert((*nodepairqueue)->pqueue, (void*)&(*nodepairqueue)->nodepairentries[n]) );
    }
+
+     /* free hash table */
+   SCIPhashtableFree(&hashtable);
 
    return SCIP_OKAY;
 }
 
-/** frees memory of an arc queue */
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
+/** frees memory of a nodepair queue */
 static
-void arcqueueFree(
+void nodepairqueueFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   ARCQUEUE**            arcqueue            /**< pointer to arc priority queue */
+   NODEPAIRQUEUE**       nodepairqueue       /**< pointer to arc priority queue */
    )
 {
-   assert(arcqueue != NULL);
-   assert(*arcqueue != NULL);
+   assert(nodepairqueue != NULL);
+   assert(*nodepairqueue != NULL);
 
-   SCIPpqueueFree(&(*arcqueue)->pqueue);
-   SCIPfreeMemoryArray(scip, &(*arcqueue)->arcentries);
-   SCIPfreeMemory(scip, arcqueue);
+   SCIPpqueueFree(&(*nodepairqueue)->pqueue);
+   SCIPfreeMemoryArray(scip, &(*nodepairqueue)-> nodepairentries);
+   SCIPfreeMemory(scip, nodepairqueue);
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** returns whether there are any arcs left on the queue */
 static
-SCIP_Bool arcqueueIsEmpty(
-   ARCQUEUE*             arcqueue            /**< arc priority queue */
+SCIP_Bool nodepairqueueIsEmpty(
+   NODEPAIRQUEUE*             nodepairqueue            /**< arc priority queue */
    )
 {
-   assert(arcqueue != NULL);
+   assert(nodepairqueue != NULL);
 
-   return (SCIPpqueueFirst(arcqueue->pqueue) == NULL);
+   return (SCIPpqueueFirst(nodepairqueue->pqueue) == NULL);
 }
 
-/** removes the top element from the arc priority queue and returns the arcid */
+/** ---------------------------------------------------------------------------------------------------------------------------- */
+
+/** removes the top element from the nodepair priority queue, returns nodepair entry or NULL */
 static
-int arcqueueRemove(
-   ARCQUEUE*             arcqueue            /**< arc priority queue */
+NODEPAIRENTRY* nodepairqueueRemove(
+   NODEPAIRQUEUE*             nodepairqueue            /**< arc priority queue */
    )
 {
-   ARCENTRY* arcentry;
 
-   assert(arcqueue != NULL);
+   assert(nodepairqueue != NULL);
 
-   arcentry = (ARCENTRY*)SCIPpqueueRemove(arcqueue->pqueue);
-   if( arcentry != NULL )
-      return arcentry->arcid;
-   else
-      return -1;
+   return (NODEPAIRENTRY*)SCIPpqueueRemove(nodepairqueue->pqueue);
 }
+
+/** ---------------------------------------------------------------------------------------------------------------------------- */
 
 /** returns the representative node in the cluster of the given node */
 static
@@ -4340,7 +4494,7 @@ SCIP_RETCODE nodepartitionCreate(
    int                   nclusters           /**< number of clusters to generate */
    )
 {
-   ARCQUEUE* arcqueue;
+   NODEPAIRQUEUE* nodepairqueue;
    int* clustersize;
    int nclustersleft;
    int v;
@@ -4363,47 +4517,47 @@ SCIP_RETCODE nodepartitionCreate(
       (*nodepartition)->representatives[v] = v;
 
    /* create priority queue for arcs */
-   SCIP_CALL( arcqueueCreate(scip, mcfnetwork, &arcqueue) );
+   SCIP_CALL( nodepairqueueCreate(scip, mcfnetwork, &nodepairqueue) );
 
-   /* loop over arcs in order of their weights */
+   /* loop over nodepairs in order of their weights */
    nclustersleft = mcfnetwork->nnodes;
-   while( !arcqueueIsEmpty(arcqueue) && nclustersleft > nclusters )
+   while( !nodepairqueueIsEmpty(nodepairqueue) && nclustersleft > nclusters )
    {
-      int a;
-      int sourcev;
-      int targetv;
-      int sourcerep;
-      int targetrep;
+      NODEPAIRENTRY* nodepairentry;
+      int node1;
+      int node2;
+      SCIP_Real weight;
+      int node1rep;
+      int node2rep;
 
-      /* get the next arc */
-      a = arcqueueRemove(arcqueue);
-      assert(0 <= a && a < mcfnetwork->narcs);
-      assert(arcqueue->arcentries[a].arcid == a);
+      /* get the next nodepair */
+      nodepairentry = nodepairqueueRemove(nodepairqueue);
+      assert(nodepairentry != NULL);
+      node1 = nodepairentry -> node1;
+      node2 = nodepairentry -> node2;
+#ifdef SCIP_DEBUG
+      weight  = nodepairentry->weight;
+#endif
 
-      /* get the source and target node of the arc */
-      sourcev = mcfnetwork->arcsources[a];
-      targetv = mcfnetwork->arctargets[a];
-      assert(sourcev < mcfnetwork->nnodes);
-      assert(targetv < mcfnetwork->nnodes);
-      if( sourcev == -1 || targetv == -1 )
+      assert(node1 < mcfnetwork->nnodes);
+      assert(node2 < mcfnetwork->nnodes);
+      if( node1 == -1 || node2 == -1 )
          continue;
 
       /* identify the representatives of the two nodes */
-      sourcerep = nodepartitionGetRepresentative(*nodepartition, sourcev);
-      targetrep = nodepartitionGetRepresentative(*nodepartition, targetv);
-      assert(0 <= sourcerep && sourcerep < mcfnetwork->nnodes);
-      assert(0 <= targetrep && targetrep < mcfnetwork->nnodes);
+      node1rep = nodepartitionGetRepresentative(*nodepartition, node1);
+      node2rep = nodepartitionGetRepresentative(*nodepartition, node2);
+      assert(0 <= node1rep && node1rep < mcfnetwork->nnodes);
+      assert(0 <= node2rep && node2rep < mcfnetwork->nnodes);
 
       /* there is nothing to do if the two nodes are already in the same cluster */
-      if( sourcerep == targetrep )
+      if( node1rep == node2rep )
          continue;
 
-      /* shrink the arc by joining the two clusters */
-      SCIPdebugMessage("shrinking arc %d <%s> with weight %g (s=%g y=%g): join representatives %d and %d\n",
-                       a, SCIProwGetName(mcfnetwork->arccapacityrows[a]), arcqueue->arcentries[a].weight,
-                       SCIPgetRowFeasibility(scip, mcfnetwork->arccapacityrows[a]),
-                       SCIProwGetDualsol(mcfnetwork->arccapacityrows[a]), sourcerep, targetrep);
-      nodepartitionJoin(*nodepartition, sourcerep, targetrep);
+      /* shrink nodepair by joining the two clusters */
+      SCIPdebugMessage("shrinking nodepair (%d,%d) with weight %g: join representatives %d and %d\n",
+                       node1, node2, weight, node1rep, node2rep);
+      nodepartitionJoin(*nodepartition, node1rep, node2rep);
       nclustersleft--;
    }
 
@@ -4480,7 +4634,7 @@ SCIP_RETCODE nodepartitionCreate(
    SCIPfreeBufferArray(scip, &clustersize);
 
    /* free arc queue */
-   arcqueueFree(scip, &arcqueue);
+   nodepairqueueFree(scip, &nodepairqueue);
 
    return SCIP_OKAY;
 }
