@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.75 2008/11/05 10:52:00 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.76 2008/11/05 11:32:22 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/ /*????????????????????*/
 
@@ -1292,7 +1292,7 @@ SCIP_RETCODE extractCapacityRows(
       else
          modeltype = SCIP_MCFMODELTYPE_UNDIRECTED;
 
-      SCIPdebugMessage("detected model type: %s (%g directed score, %g undirected score)\n",
+      printf/*????????????SCIPdebugMessage*/("detected model type: %s (%g directed score, %g undirected score)\n",
                        modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected", directedcandsscore, undirectedcandsscore);
 
       if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
@@ -2119,7 +2119,7 @@ SCIP_RETCODE extractFlow(
    SCIPfreeBufferArray(scip, &ncomnodes);
    SCIPfreeBufferArray(scip, &comrows);
 
-   SCIPdebugMessage("identified %d commodities (%d empty) with a maximum of %d nodes\n",
+   printf/*???????????????????SCIPdebugMessage*/("identified %d commodities (%d empty) with a maximum of %d nodes\n",
       mcfdata->ncommodities, mcfdata->nemptycommodities, maxnnodes);
 
    return SCIP_OKAY;
@@ -3239,7 +3239,7 @@ SCIP_RETCODE findUncapacitatedArcs(
    SCIPfreeBufferArray(scip, &sortedflowcandnodeid);
    SCIPfreeBufferArray(scip, &sortedflowcands);
 
-   SCIPdebugMessage("network after finding uncapacitated arcs has %d nodes, %d arcs, and %d commodities\n",
+   printf/*???????????????????????SCIPdebugMessage*/("network after finding uncapacitated arcs has %d nodes, %d arcs, and %d commodities\n",
                     mcfdata->nnodes, mcfdata->narcs, mcfdata->ncommodities);
 
    return SCIP_OKAY;
@@ -3283,7 +3283,7 @@ SCIP_RETCODE cleanupNetwork(
    int a;
    int k;
 
-   SCIPdebugMessage("network before cleanup has %d nodes, %d arcs, and %d commodities\n", nnodes, narcs, ncommodities);
+   printf/*?????????????????????SCIPdebugMessage*/("network before cleanup has %d nodes, %d arcs, and %d commodities\n", nnodes, narcs, ncommodities);
 
    /* get LP data */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
@@ -3546,7 +3546,7 @@ SCIP_RETCODE cleanupNetwork(
    SCIPfreeBufferArray(scip, &narcspercom);
    SCIPfreeBufferArray(scip, &nnodespercom);
 
-   SCIPdebugMessage("network after cleanup has %d nodes, %d arcs, and %d commodities\n", nnodes, narcs, ncommodities);
+   printf/*????????????????SCIPdebugMessage*/("network after cleanup has %d nodes, %d arcs, and %d commodities\n", nnodes, narcs, ncommodities);
 
    return SCIP_OKAY;
 }
@@ -3774,7 +3774,7 @@ SCIP_RETCODE identifySourcesTargets(
       mcfdata->ninconsistencies += totalnodecnt - bestsourcecnt - besttargetcnt;
    }
 
-   SCIPdebugMessage("extracted network has %d inconsistencies\n", mcfdata->ninconsistencies);
+   printf/*???????????????????SCIPdebugMessage*/("extracted network has %d inconsistencies\n", mcfdata->ninconsistencies);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &touchednodes);
@@ -4124,7 +4124,7 @@ SCIP_RETCODE mcfnetworkExtract(
       }
       else
       {
-         SCIPdebugMessage(" -> discarded component with %d nodes and %d arcs\n", ncompnodes, ncomparcs);
+         printf/*????????????????????SCIPdebugMessage*/(" -> discarded component with %d nodes and %d arcs\n", ncompnodes, ncomparcs);
       }
    }
 
@@ -5710,18 +5710,18 @@ SCIP_RETCODE separateCuts(
       *result = SCIP_DIDNOTFIND;
       SCIP_CALL( mcfnetworkExtract(scip, sepadata, &sepadata->mcfnetworks, &sepadata->nmcfnetworks) );
 
-#ifdef SCIP_DEBUG
-      SCIPdebugMessage("extracted %d networks\n", sepadata->nmcfnetworks);
+      printf/*??????????????SCIPdebugMessage*/("extracted %d networks\n", sepadata->nmcfnetworks);
+// #ifdef SCIP_DEBUG
       for( i = 0; i < sepadata->nmcfnetworks; i++ )
       {
-         SCIPdebugMessage(" -> extracted network %d has %d nodes, %d (%d) arcs (uncapacitated), and %d commodities (modeltype: %s, flowtype: %s)\n",
+         printf/*????????????????SCIPdebugMessage*/(" -> extracted network %d has %d nodes, %d (%d) arcs (uncapacitated), and %d commodities (modeltype: %s, flowtype: %s)\n",
                           i, sepadata->mcfnetworks[i]->nnodes, sepadata->mcfnetworks[i]->narcs, sepadata->mcfnetworks[i]->nuncapacitatedarcs,
                           sepadata->mcfnetworks[i]->ncommodities,
                           sepadata->mcfnetworks[i]->modeltype == SCIP_MCFMODELTYPE_DIRECTED ? "directed" : "undirected",
                           sepadata->mcfnetworks[i]->flowtype == SCIP_MCFFLOWTYPE_CONTINUOUS ? "continuous" : "binary");
          SCIPdebug( mcfnetworkPrint(sepadata->mcfnetworks[i]) );
       }
-#endif
+// #endif
    }
    assert(sepadata->nmcfnetworks >= 0);
    assert(sepadata->mcfnetworks != NULL || sepadata->nmcfnetworks == 0);
@@ -5774,7 +5774,7 @@ SCIP_RETCODE separateCuts(
          /* free node partition */
          nodepartitionFree(scip, &nodepartition);
 
-         SCIPdebugMessage("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
+         printf/*?????????????????SCIPdebugMessage*/("MCF network has %d nodes, %d arcs, %d commodities. Found %d MCF network cuts.\n",
                                                  mcfnetwork->nnodes, mcfnetwork->narcs, mcfnetwork->ncommodities, ncuts);
 
          /* adjust result code */
