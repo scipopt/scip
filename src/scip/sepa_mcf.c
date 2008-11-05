@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.73 2008/11/05 10:26:12 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.74 2008/11/05 10:34:14 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/ /*????????????????????*/
 
@@ -4373,7 +4373,8 @@ SCIP_RETCODE nodepairqueueCreate(
       if( nodepairentryptr != NULL )
       {
          // adpat weight
-         SCIPdebugMessage("nodepair known -- old weight:%g -- new weight:%g\n", nodepairentryptr -> weight, MIN(nodepairentry.weight, nodepairentryptr -> weight));
+         SCIPdebugMessage("nodepair known -- old weight:%g -- new weight:%g\n", nodepairentryptr -> weight,
+                          MIN(nodepairentry.weight, nodepairentryptr -> weight));
          nodepairentryptr -> weight = MIN(nodepairentry.weight, nodepairentryptr -> weight);
 
       }
@@ -4391,10 +4392,10 @@ SCIP_RETCODE nodepairqueueCreate(
 
    }
 
-   /* initialise priority queue*/
+   /* initialise priority queue */
    SCIP_CALL( SCIPpqueueCreate(&(*nodepairqueue)->pqueue, nnodepairs, 2.0, compArcs) );
 
-   /* fill priority queue using array nodepairentries*/
+   /* fill priority queue using array nodepairentries */
    for( n = 0; n < nnodepairs; n++ )
    {
       SCIP_CALL( SCIPpqueueInsert((*nodepairqueue)->pqueue, (void*)&(*nodepairqueue)->nodepairentries[n]) );
