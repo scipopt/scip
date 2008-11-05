@@ -1,5 +1,5 @@
 #!/bin/bash
-OUTFILE=$BASENAME.out
+OUTFILE="/scratch/scip_output.out"
 ERRFILE=$BASENAME.err
 TMPFILE=$BASENAME.tmp
 
@@ -24,3 +24,5 @@ rm -f $TMPFILE
 chmod g+r $OUTFILE
 chmod g+r $ERRFILE
 chmod g+r $BASENAME.set
+
+mv $OUTFILE $BASENAME.out
