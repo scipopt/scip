@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_qso.c,v 1.3 2008/10/10 20:57:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_qso.c,v 1.4 2008/11/06 19:14:08 bzfpfets Exp $"
 
 /**@file   lpi_qso.c
  * @brief  LP interface for QSopt version >= 070303
@@ -282,10 +282,20 @@ SCIP_RETCODE convertSides(
       switch(state)
       {
       case 0:
-	 lpi->isen[i] = 'R';
-	 lpi->irhs[i] = lhs[i];
-	 lpi->irng[i] = rhs[i] - lhs[i];
-	 assert(lpi->irng[i] >= 0.0);
+	 /* check for equations */
+	 if ( lhs[i] == rhs[i] )
+	 {
+	    lpi->isen[i] = 'E';
+	    lpi->irhs[i] = lhs[i];
+	    lpi->irng[i] = 0.0;
+	 }
+	 else
+	 {
+	    lpi->isen[i] = 'R';
+	    lpi->irhs[i] = lhs[i];
+	    lpi->irng[i] = rhs[i] - lhs[i];
+	    assert(lpi->irng[i] >= 0.0);
+	 }
 	 break;
       case 1:
 	 lpi->isen[i] = 'L';
@@ -365,13 +375,13 @@ SCIP_RETCODE SCIPlpiCreate(
    memset(*lpi, 0, sizeof(struct SCIP_LPi));
 
    (*lpi)->prob = QScreate_prob(name, (int) objsen);
-   (*lpi)->rowspace = 1024;
    if ( (*lpi)->prob == NULL )
    {
       SCIPerrorMessage("No memory\n");
       return SCIP_LPERROR;
    }
 
+   (*lpi)->rowspace = 1024;
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->isen),1024) );
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->irhs),1024) );
    SCIP_ALLOC( BMSallocMemoryArray(&((*lpi)->irng),1024) );
@@ -455,6 +465,9 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    lpi->solstat = 0;
    SCIPdebugMessage("loading LP in column format into QSopt: %d cols, %d rows\n", ncols, nrows);
 
+   /* delete old LP */
+   SCIP_CALL( SCIPlpiClear(lpi) );
+
    /* set sense */
    if (objsen == SCIP_OBJSEN_MAXIMIZE)
    {
@@ -481,12 +494,16 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    SCIP_CALL( ensureColMem(lpi, ncols) );
 
    /* compute column lengths */
-   for ( i = ncols ; --i ; )
+   for (i = 0; i < ncols-1; ++i)
    {
-      lpi->iccnt[i-1] = beg[i] - beg[i-1];
-      assert(lpi->iccnt[i-1] >= 0);
+      lpi->iccnt[i] = beg[i+1] - beg[i];
+      assert( lpi->iccnt[i] >= 0 );
    }
-   lpi->iccnt[ncols-1] = nnonz - (ncols>1 ? beg[ncols-2] : 0);
+   if ( ncols > 0 )
+   {
+      lpi->iccnt[ncols-1] = nnonz - beg[ncols-1];
+      assert( lpi->iccnt[ncols-1] >= 0 );
+   }
 
    /* and add the columns */
    rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, beg, ind, val, obj, lb, ub, (const char**)colnames);
@@ -523,12 +540,16 @@ SCIP_RETCODE SCIPlpiAddCols(
    SCIP_CALL(ensureColMem(lpi, ncols));
 
    /* compute column lengths */
-   for ( i = ncols ; --i ; )
+   for (i = 0; i < ncols - 1; ++i)
    {
-      lpi->iccnt[i-1] = beg[i] - beg[i-1];
-      assert(lpi->iccnt[i-1] >= 0);
+      lpi->iccnt[i] = beg[i+1] - beg[i];
+      assert( lpi->iccnt[i] >= 0 );
    }
-   lpi->iccnt[ncols-1] = nnonz - beg[ncols-1];
+   if ( ncols > 0 )
+   {
+      lpi->iccnt[ncols-1] = nnonz - beg[ncols-1];
+      assert( lpi->iccnt[ncols-1] >= 0 );
+   }
 
    /* and add the columns */
    rval = QSadd_cols(lpi->prob, ncols, lpi->iccnt, beg, ind, val, obj, lb, ub, (const char**)colnames);
@@ -586,7 +607,7 @@ SCIP_RETCODE SCIPlpiDelColset(
    rval = QSdelete_setcols(lpi->prob,dstat);
    QS_CONDRET(rval);
 
-   for (i=0, ccnt=0; i<ncols;i++)
+   for (i=0, ccnt=0; i < ncols; i++)
    {
       if (dstat[i])
 	 dstat[i] = -1;
@@ -627,8 +648,15 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    /* compute row count */
    for (i = 0 ; i < nrows -1 ; i++)
+   {
       lpi->ircnt[i] = beg[i+1] - beg[i];
-   lpi->ircnt[nrows-1] = nnonz - beg[nrows-1];
+      assert( lpi->ircnt[i] >= 0 );
+   }
+   if ( nrows > 0 )
+   {
+      lpi->ircnt[nrows-1] = nnonz - beg[nrows-1];
+      assert( lpi->ircnt[nrows-1] >= 0 );
+   }
 
    /* now we add the rows */
    rval = QSadd_ranged_rows(lpi->prob, nrows, lpi->ircnt, beg, ind, val, lpi->irhs, lpi->isen, lpi->irng, (const char**)rownames);
@@ -656,8 +684,8 @@ SCIP_RETCODE SCIPlpiDelRows(
 
    SCIPdebugMessage("deleting %d rows from QSopt\n", len);
 
-   SCIP_CALL(ensureRowMem(lpi, len));
-   for (i = firstrow ; i <= lastrow ; i++)
+   SCIP_CALL( ensureRowMem(lpi, len) );
+   for (i = firstrow; i <= lastrow; i++)
       lpi->ircnt[i-firstrow] = i;
    rval = QSdelete_rows(lpi->prob, len, lpi->ircnt);
 
@@ -682,15 +710,18 @@ SCIP_RETCODE SCIPlpiDelRowset(
    nrows = QSget_rowcount(lpi->prob);
    lpi->solstat = 0;
 
-   for ( i = nrows ; i-- ; ) if (dstat[i] == 1)
-      ndel++;
+   for (i = 0; i < nrows; ++i)
+   {
+      if (dstat[i] == 1)
+	 ndel++;
+   }
 
    SCIPdebugMessage("deleting a row set from QSopt (%d)\n",ndel);
 
    rval = QSdelete_setrows(lpi->prob,dstat);
    QS_CONDRET(rval);
 
-   for (i=0, ccnt=0; i<nrows;i++)
+   for (i=0, ccnt=0; i < nrows; i++)
    {
       if (dstat[i])
 	 dstat[i] = -1;
@@ -714,12 +745,12 @@ SCIP_RETCODE SCIPlpiClear(
    SCIPdebugMessage("clearing QSopt LP\n");
    lpi->solstat = 0;
 
-   ncols = QSget_colcount (lpi->prob);
-   nrows = QSget_rowcount (lpi->prob);
+   ncols = QSget_colcount(lpi->prob);
+   nrows = QSget_rowcount(lpi->prob);
    if (ncols >= 1)
    {
-      SCIP_CALL(ensureColMem(lpi,ncols));
-      for (i = ncols ; i-- ;)
+      SCIP_CALL( ensureColMem(lpi,ncols) );
+      for (i = 0; i < ncols; ++i)
 	 lpi->iccnt[i] = i;
       rval = QSdelete_cols(lpi->prob, ncols, lpi->iccnt);
       QS_CONDRET(rval);
@@ -727,8 +758,9 @@ SCIP_RETCODE SCIPlpiClear(
 
    if (nrows >= 1)
    {
-      SCIP_CALL(ensureRowMem(lpi,nrows));
-      for (i = nrows ; i-- ;) lpi->ircnt[i] = i;
+      SCIP_CALL( ensureRowMem(lpi, nrows) );
+      for (i = 0; i < nrows; ++i)
+	 lpi->ircnt[i] = i;
       rval = QSdelete_rows(lpi->prob, nrows, lpi->ircnt);
       QS_CONDRET(rval);
    }
@@ -763,13 +795,13 @@ SCIP_RETCODE SCIPlpiChgBounds(
 #endif
 
    SCIP_CALL(ensureColMem(lpi, ncols));
-   for (i = ncols ; i--; )
+   for (i = 0; i < ncols; ++i)
       lpi->iccha[i] = 'L';
 
    rval = QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, lb);
    QS_CONDRET(rval);
 
-   for (i = ncols ; i--; )
+   for (i = 0; i < ncols; ++i)
       lpi->iccha[i] = 'U';
 
    rval = QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, ub);
@@ -795,13 +827,13 @@ SCIP_RETCODE SCIPlpiChgSides(
    lpi->solstat = 0;
    SCIPdebugMessage("changing %d sides in QSopt\n", nrows);
 
-   SCIP_CALL(ensureRowMem(lpi, nrows));
+   SCIP_CALL( ensureRowMem(lpi, nrows) );
 
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs) );
 
    /* now we change all rows */
-   for (i = nrows ; i-- ; )
+   for (i = 0; i < nrows; ++i)
    {
       rval = QSchange_sense(lpi->prob, ind[i], lpi->isen[i]);
       QS_CONDRET(rval);
@@ -886,7 +918,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    lpi->solstat = 0;
    SCIPdebugMessage("changing %d objective values in QSopt\n", ncols);
 
-   for (i = ncols ; i-- ; )
+   for (i = 0; i < ncols; ++i)
    {
       rval = QSchange_objcoef(lpi->prob, ind[i], obj[i]);
       QS_CONDRET(rval);
@@ -920,7 +952,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    QS_TESTG(rval, CLEANUP, " ");
 
    /* change all coefficients in the constraint */
-   for (i = rowcnt[0] ; i-- ;)
+   for (i = 0; i < rowcnt[0]; ++i)
    {
       rval = QSchange_coef(lpi->prob, row, rowind[i], rowval[i] * scaleval);
       QS_TESTG(rval, CLEANUP, " ");
@@ -959,8 +991,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
 	 QS_TESTG(rval, CLEANUP, " ");
 	 break;
       case 'R':
-	 rhs[0] = (rhs[0]+range[0])*scaleval;
-	 range[0] = fabs(scaleval)*range[0];
+	 rhs[0] = (rhs[0] + range[0]) * scaleval;
+	 range[0] = fabs(scaleval) * range[0];
 	 rval = QSchange_rhscoef(lpi->prob, row, rhs[0]);
 	 QS_TESTG(rval, CLEANUP, " ");
 	 rval = QSchange_range(lpi->prob, row, range[0]);
@@ -1012,7 +1044,7 @@ SCIP_RETCODE SCIPlpiScaleCol(
    QS_TESTG(rval,CLEANUP," ");
 
    /* scale column coefficients */
-   for (i = colcnt[0] ; i-- ; )
+   for (i = 0; i < colcnt[0]; ++i)
    {
       rval = QSchange_coef(lpi->prob, colind[i], col, colval[i]*scaleval);
       QS_TESTG(rval,CLEANUP," ");
@@ -1152,8 +1184,8 @@ SCIP_RETCODE SCIPlpiGetCols(
    /* build col-list */
    len = lastcol - firstcol + 1;
    SCIP_CALL( ensureColMem(lpi,len) );
-   for (i = len ; i-- ; )
-      lpi->iccnt[i] = i+firstcol;
+   for (i = 0; i < len; ++i)
+      lpi->iccnt[i] = i + firstcol;
 
    /* get data from qsopt */
    rval = QSget_columns_list(lpi->prob, len, lpi->iccnt, nnonz ? (&lcnt) : 0, nnonz ? (&lbeg) : 0, nnonz ? (&lind) : 0,
@@ -1172,7 +1204,7 @@ SCIP_RETCODE SCIPlpiGetCols(
       *nnonz = lbeg[len-1] + lcnt[len-1];
       for (i = 0 ; i < len ; i++)
 	 beg[i] = lbeg[i];  /*lint !e613*/
-      for (i = *nnonz ; i-- ; )
+      for (i = 0; i < *nnonz; ++i)
       {
 	 ind[i] = lind[i];  /*lint !e613*/
 	 val[i] = lval[i];  /*lint !e613*/
@@ -1183,7 +1215,7 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert( llb != NULL );
       assert( lub != NULL );
 
-      for (i = len ; i-- ; )
+      for (i = 0; i < len; ++i)
       {
 	 lb[i] = llb[i];
 	 ub[i] = lub[i];   /*lint !e613*/
@@ -1236,9 +1268,9 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIPdebugMessage("getting rows %d to %d\n", firstrow, lastrow);
 
    /* build row-list */
-   SCIP_CALL(ensureRowMem(lpi,len));
-   for ( i = len ; i-- ; )
-      lpi->ircnt[i] = i+firstrow;
+   SCIP_CALL( ensureRowMem(lpi, len) );
+   for (i = 0; i < len; ++i)
+      lpi->ircnt[i] = i + firstrow;
 
    /* get data from qsopt */
    rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, nnonz ? (&lcnt) : 0, nnonz ? (&lbeg) : 0, nnonz ? (&lind) : 0,
@@ -1254,9 +1286,9 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert( lval != NULL );
 
       *nnonz = lbeg[len-1] + lcnt[len-1];
-      for (i = 0 ; i < len ; i++)
+      for (i = 0 ; i < len; i++)
 	 beg[i] = lbeg[i];  /*lint !e613*/
-      for (i = *nnonz ; i-- ; )
+      for (i = 0; i < *nnonz; ++i)
       {
 	 ind[i] = lind[i];  /*lint !e613*/
 	 val[i] = lval[i];  /*lint !e613*/
@@ -1268,7 +1300,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       assert( lrng != NULL );
       assert( lsense != NULL );
 
-      for (i = len ; i-- ; )
+      for (i = 0; i < len; ++i)
       {
 	 switch (lsense[i])
 	 {
@@ -1325,8 +1357,8 @@ SCIP_RETCODE SCIPlpiGetObj(
 
    /* build col-list */
    SCIP_CALL(ensureColMem(lpi,len));
-   for (i = len ; i-- ; )
-      lpi->iccnt[i] = i+firstcol;
+   for (i = 0; i < len; ++i)
+      lpi->iccnt[i] = i + firstcol;
 
    /* get data from qsopt */
    rval = QSget_obj_list(lpi->prob, len, lpi->iccnt, vals);
@@ -1355,8 +1387,8 @@ SCIP_RETCODE SCIPlpiGetBounds(
 
    /* build col-list */
    SCIP_CALL(ensureColMem(lpi,len));
-   for ( i = len ; i-- ; )
-      lpi->iccnt[i] = i+firstcol;
+   for (i = 0; i < len; ++i)
+      lpi->iccnt[i] = i + firstcol;
 
    /* get data from qsopt */
    rval = QSget_bounds_list(lpi->prob, len, lpi->iccnt, lbs, ubs);
@@ -1387,16 +1419,16 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIPdebugMessage("getting row sides %d to %d\n", firstrow, lastrow);
 
    /* build row-list */
-   SCIP_CALL(ensureRowMem(lpi,len));
-   for (i = len ; i-- ; )
-      lpi->ircnt[i] = i+firstrow;
+   SCIP_CALL( ensureRowMem(lpi, len) );
+   for (i = 0; i < len; ++i)
+      lpi->ircnt[i] = i + firstrow;
 
    /* get data from qsopt */
    rval = QSget_ranged_rows_list(lpi->prob, len, lpi->ircnt, 0, 0, 0, 0, &lrhs,	&lsense, &lrng, 0);
    QS_TESTG(rval, CLEANUP, " ");
 
    /* store in the user-provided data */
-   for (i = len ; i-- ; )
+   for (i = 0; i < len; ++i)
    {
       switch (lsense[i])
       {
@@ -1467,7 +1499,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("calling QSopt primal simplex: %d cols, %d rows, %d nz\n", QSget_colcount(lpi->prob), 
+   SCIPdebugMessage("calling QSopt primal simplex: %d cols, %d rows, %d nz\n", QSget_colcount(lpi->prob),
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
    rval = QSopt_primal(lpi->prob, &(lpi->solstat));
@@ -1485,7 +1517,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
-   SCIPdebugMessage("calling QSopt dual simplex: %d cols, %d rows, %d nz\n", QSget_colcount(lpi->prob), 
+   SCIPdebugMessage("calling QSopt dual simplex: %d cols, %d rows, %d nz\n", QSget_colcount(lpi->prob),
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
    rval = QSopt_dual(lpi->prob, &(lpi->solstat));
@@ -1618,8 +1650,6 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("checking for primal ray\n");
-
-   /* (void) QSget_status(lpi->prob, &(lpi->solstat)); */
 
    /* the current version of QSopt can not give a primal certificate of unboundness */
    return FALSE;
@@ -1898,7 +1928,7 @@ SCIP_RETCODE SCIPlpiGetSol(
    SCIPdebugMessage("getting solution\n");
 
    nrows = QSget_rowcount(lpi->prob);
-   SCIP_CALL(ensureRowMem(lpi,nrows));
+   SCIP_CALL( ensureRowMem(lpi, nrows) );
 
    rval = QSget_solution(lpi->prob, objval, primsol, dualsol, lpi->irng, redcost);
    QS_CONDRET(rval);
@@ -1964,21 +1994,24 @@ SCIP_RETCODE SCIPlpiGetSol(
    QS_CONDRET(rval);
 
    /* build back the activity */
-   for (i = nrows ; i-- ; )
+   if ( activity )
    {
-      switch (lpi->isen[i])
+      for (i = 0; i < nrows; ++i)
       {
-      case 'R':
-      case 'E':
-      case 'G':
-	 activity[i] = lpi->irhs[i] + lpi->irng[i];
-	 break;
-      case 'L':
-	 activity[i] = lpi->irhs[i] - lpi->irng[i];
-	 break;
-      default:
-	 SCIPerrorMessage("unknown sense %c\n", lpi->isen[i]);
-	 SCIPABORT();
+	 switch (lpi->isen[i])
+	 {
+	 case 'R':
+	 case 'E':
+	 case 'G':
+	    activity[i] = lpi->irhs[i] + lpi->irng[i];
+	    break;
+	 case 'L':
+	    activity[i] = lpi->irhs[i] - lpi->irng[i];
+	    break;
+	 default:
+	    SCIPerrorMessage("unknown sense %c\n", lpi->isen[i]);
+	    SCIPABORT();
+	 }
       }
    }
 
@@ -2076,7 +2109,7 @@ SCIP_RETCODE SCIPlpiGetBase(
    QS_CONDRET(rval);
 
    /* now we must transform QSopt codes into SCIP codes */
-   for (i = nrows ; i-- ; )
+   for (i = 0; i < nrows; ++i)
    {
       switch (irstat[i])
       {
@@ -2094,7 +2127,7 @@ SCIP_RETCODE SCIPlpiGetBase(
 	 SCIPABORT();
       }
    }
-   for ( i = ncols ; i-- ; )
+   for (i = 0; i < ncols; ++i)
    {
       switch(icstat[i])
       {
@@ -2143,7 +2176,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    irstat = lpi->ibas + ncols;
 
    /* now we must transform QSopt codes into SCIP codes */
-   for (i = nrows ; i-- ; )
+   for (i = 0; i < nrows; ++i)
    {
       switch(rstat[i])
       {
@@ -2161,7 +2194,7 @@ SCIP_RETCODE SCIPlpiSetBase(
 	 SCIPABORT();
       }
    }
-   for ( i = ncols ; i-- ; )
+   for (i = 0; i < ncols; ++i)
    {
       switch(cstat[i])
       {
@@ -2208,10 +2241,10 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    QS_CONDRET(rval);
 
    /* transform QSopt basis header into SCIP format */
-   for ( i = nrows ; i-- ; )
+   for (i = 0; i < nrows; ++i)
    {
       if (bind[i] >= ncols)
-	 bind[i] = -(bind[i]-ncols-1);
+	 bind[i] = -(bind[i] - ncols - 1);
    }
 
    return SCIP_OKAY;
@@ -2334,9 +2367,9 @@ SCIP_RETCODE SCIPlpiGetState(
    SCIPdebugMessage("storing QSopt LPI state in %p (%d cols, %d rows)\n", *lpistate, ncols, nrows);
 
    /* get unpacked basis information from QSopt */
-   SCIP_CALL(ensureColMem(lpi,ncols));
-   SCIP_CALL(ensureRowMem(lpi,nrows));
-   SCIP_CALL(SCIPlpiGetBase(lpi, lpi->iccnt, lpi->ircnt));
+   SCIP_CALL( ensureColMem(lpi, ncols) );
+   SCIP_CALL( ensureRowMem(lpi, nrows) );
+   SCIP_CALL( SCIPlpiGetBase(lpi, lpi->iccnt, lpi->ircnt) );
 
    /* pack LPi state data */
    (*lpistate)->ncols = ncols;
@@ -2384,7 +2417,7 @@ SCIP_RETCODE SCIPlpiSetState(
    /* allocate enough memory for storing uncompressed basis information */
    SCIP_CALL( ensureColMem(lpi, ncols) );
    SCIP_CALL( ensureRowMem(lpi, nrows) );
-   SCIP_CALL( ensureTabMem(lpi, nrows+ncols) );
+   SCIP_CALL( ensureTabMem(lpi, nrows + ncols) );
 
    icstat = lpi->ibas;
    irstat = lpi->ibas + ncols;
@@ -2399,7 +2432,7 @@ SCIP_RETCODE SCIPlpiSetState(
       lpi->ircnt[i] = SCIP_BASESTAT_BASIC; /*lint !e641*/
 
    /* convert the loaded basis into QSopt format */
-   for ( i = nrows ; i-- ; )
+   for (i = 0; i < nrows; ++i)
    {
       switch(lpi->ircnt[i])
       {
@@ -2418,7 +2451,7 @@ SCIP_RETCODE SCIPlpiSetState(
 	 break;
       }
    }
-   for ( i = ncols ; i-- ; )
+   for (i = 0; i < ncols; ++i)
    {
       switch(lpi->iccnt[i])
       {
@@ -2485,7 +2518,11 @@ SCIP_RETCODE SCIPlpiReadState(
    SCIPdebugMessage("reading QSopt LP state from file <%s>\n", fname);
 
    rval = QSread_and_load_basis(lpi->prob, fname);
-   QS_ERROR(rval, "Could not load basis from file.");
+   if ( rval )
+   {
+      SCIPerrorMessage("Error while loading basis from file <%s>.\n", fname);
+      return SCIP_READERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -2505,13 +2542,18 @@ SCIP_RETCODE SCIPlpiWriteState(
    SCIPdebugMessage("writing QSopt LP state to file <%s>\n", fname);
 
    bas = QSget_basis(lpi->prob);
-   QS_TESTG((rval = !bas), CLEANUP, "Could not get basis from problem.");   /*lint !e820*/
-   rval = QSwrite_basis(lpi->prob, bas, fname);
-   QS_TESTG(rval, CLEANUP, "Could not write basis to file.");
+   QS_ERROR(bas == 0, "Could not get basis from problem.");   /*lint !e820*/
+   assert( bas );
 
- CLEANUP:
-   if (bas) QSfree(bas);
-   QS_RETURN(rval);
+   rval = QSwrite_basis(lpi->prob, bas, fname);
+   QSfree(bas);
+   if ( rval )
+   {
+      SCIPerrorMessage("Could not write basis to file <%s>.\n", fname);
+      return SCIP_WRITEERROR;
+   }
+
+   return SCIP_OKAY;
 }
 
 /**@} */
@@ -2747,8 +2789,6 @@ SCIP_RETCODE SCIPlpiReadLP(
    const char*           fname               /**< file name */
    )
 {
-   int rval = 0;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
@@ -2760,9 +2800,11 @@ SCIP_RETCODE SCIPlpiReadLP(
    lpi->solstat = 0;
    lpi->previt = 0;
 
-   rval =((lpi->prob = QSread_prob(fname, "LP"))!=0);
+   lpi->prob = QSread_prob(fname, "LP");
+   if ( lpi->prob == 0 )
+      return SCIP_READERROR;
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /** writes LP to a file */
@@ -2771,16 +2813,15 @@ SCIP_RETCODE SCIPlpiWriteLP(
    const char*           fname               /**< file name */
    )
 {
-   int rval = 0;
-
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("writing LP to file <%s>\n", fname);
 
-   rval = QSwrite_prob (lpi->prob, fname, "LP");
+   if ( QSwrite_prob (lpi->prob, fname, "LP") )
+      return SCIP_WRITEERROR;
 
-   QS_RETURN(rval);
+   return SCIP_OKAY;
 }
 
 /**@} */
