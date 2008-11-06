@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.88 2008/09/29 19:33:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.89 2008/11/06 16:41:10 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -3257,7 +3257,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
    {
       std::string s = x.what();      
       SCIPwarningMessage("SoPlex threw an exception: %s\n", s.c_str());
-      return SCIP_READERROR;
+      return SCIP_WRITEERROR;
    }
 
    return SCIP_OKAY;
