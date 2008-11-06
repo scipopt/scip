@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.103 2008/09/29 23:12:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.104 2008/11/06 08:32:55 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -62,7 +62,7 @@
 #define MPS_MAX_VALUELEN   26
 #define MPS_MAX_FIELDLEN   20
 
-#define PATCH_CHAR    '_'
+[5~#define PATCH_CHAR    '_'
 #define BLANK         ' '
 
 enum MpsSection
@@ -891,8 +891,8 @@ SCIP_RETCODE readCols(
 
          if( mpsinputIsInteger(mpsi) )
          {
-            /* for integer variables, default bounds are 0 <= x <= 1, and default cost is 0 */
-            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
+            /* for integer variables, default bounds are 0 <= x < infinity, and default cost is 0 */
+            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER, !dynamiccols, dynamiccols,
                   NULL, NULL, NULL, NULL) );
          }
          else
@@ -2322,6 +2322,15 @@ void printRangeSection(
       SCIPinfoMessage(scip, file, "\n");
 }
 
+/** print bound section name */
+void printBoundSectionName(
+   SCIP*              scip,               /**< SCIP data structure */
+   FILE*              file                /**<  output file, or NULL if standard output should be used */
+   )   
+{
+   SCIPinfoMessage(scip, file, "BOUNDS\n");
+   SCIPdebugMessage("start printing BOUNDS section\n");
+}
 
 /** output bound section */
 static
@@ -2341,14 +2350,14 @@ void printBoundSection(
    SCIP_VAR* var;
    SCIP_Real lb;
    SCIP_Real ub;
+   SCIP_Bool sectionName;
    const char* varname;
    char valuestr[MPS_MAX_VALUELEN] = { '\0' };
 
    assert( scip != NULL );
    assert( vars != NULL );
    
-   SCIPinfoMessage(scip, file, "BOUNDS\n");
-   SCIPdebugMessage("start printing BOUNDS section\n");
+   sectionName = FALSE;
 
    /* output the active variables */
    for (v = 0; v < nvars; ++v)
@@ -2376,6 +2385,12 @@ void printBoundSection(
       /* take care of binary variables */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
       {
+         if( !sectionName )
+         {
+            printBoundSectionName(scip, file);
+            sectionName = TRUE;
+         }
+
          printStart(scip, file, "BV", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, "", maxnamelen);
          SCIPinfoMessage(scip, file, "\n");
@@ -2385,6 +2400,12 @@ void printBoundSection(
       /* take care of free variables */
       if ( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
       {
+         if( !sectionName )
+         {
+            printBoundSectionName(scip, file);
+            sectionName = TRUE;
+         }
+
          /* variable is free */
          printStart(scip, file, "FR", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, "", maxnamelen);
@@ -2395,6 +2416,12 @@ void printBoundSection(
       /* take care of fixed variables */
       if ( SCIPisEQ(scip, lb, ub) )
       {
+         if( !sectionName )
+         {
+            printBoundSectionName(scip, file);
+            sectionName = TRUE;
+         }
+
          /* variable is fixed */
          (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
          printStart(scip, file, "FX", "Bound", (int) maxnamelen);
@@ -2406,6 +2433,13 @@ void printBoundSection(
       /* print lower bound */
       if ( SCIPisInfinity(scip, -lb) )
       {
+         if( !sectionName )
+         {
+            printBoundSectionName(scip, file);
+            sectionName = TRUE;
+         }
+
+         /* the free variables are processed above */
          assert( !SCIPisInfinity(scip, ub) );
          printStart(scip, file, "MI", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, "", maxnamelen);
@@ -2422,6 +2456,12 @@ void printBoundSection(
          }
          else
          {
+            if( !sectionName )
+            {
+               printBoundSectionName(scip, file);
+               sectionName = TRUE;
+            }
+
             (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", lb);
             printStart(scip, file, "LO", "Bound", (int) maxnamelen);
             printRecord(scip, file, varname, valuestr, maxnamelen);
@@ -2432,6 +2472,12 @@ void printBoundSection(
       /* print upper bound as far this one is not infinity */
       if( !SCIPisInfinity(scip, ub) )
       {
+         if( !sectionName )
+         {
+            printBoundSectionName(scip, file);
+            sectionName = TRUE;
+         }
+
          (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", ub);
          printStart(scip, file, "UP", "Bound", (int) maxnamelen);
          printRecord(scip, file, varname, valuestr, maxnamelen);
@@ -2442,6 +2488,12 @@ void printBoundSection(
    /* output aggregated variables as 'free' */
    for (v = 0; v < naggvars; ++v)
    {
+      if( !sectionName )
+      {
+         printBoundSectionName(scip, file);
+         sectionName = TRUE;
+      }
+
       var = aggvars[v];
       assert( var != NULL );
 

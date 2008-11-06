@@ -18,6 +18,7 @@ fixed bugs:
 - fixed potential interface bug: time limits of 0.0 are not anymore passed to the LP solver, which may have caused errors
 - fixed wrong result in check.awk, if infeasible problems are stopped in presolving
 - fixed wrong use of pointer in lp.c
+- fixed reading bug of MPS format; by default all variable have a lower bound of zero and an upper bound of infinity
 
 SCIP version 1.1.0
 ===============
