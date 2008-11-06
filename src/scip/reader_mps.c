@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.104 2008/11/06 08:32:55 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.105 2008/11/06 19:22:30 bzfpfets Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -62,7 +62,7 @@
 #define MPS_MAX_VALUELEN   26
 #define MPS_MAX_FIELDLEN   20
 
-[5~#define PATCH_CHAR    '_'
+#define PATCH_CHAR    '_'
 #define BLANK         ' '
 
 enum MpsSection
@@ -2323,6 +2323,7 @@ void printRangeSection(
 }
 
 /** print bound section name */
+static
 void printBoundSectionName(
    SCIP*              scip,               /**< SCIP data structure */
    FILE*              file                /**<  output file, or NULL if standard output should be used */
