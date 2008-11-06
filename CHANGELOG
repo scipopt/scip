@@ -19,6 +19,7 @@ fixed bugs:
 - fixed wrong result in check.awk, if infeasible problems are stopped in presolving
 - fixed wrong use of pointer in lp.c
 - fixed reading bug of MPS format; by default all variable have a lower bound of zero and an upper bound of infinity
+- fixed memory error in cons_countsols.c 
 
 SCIP version 1.1.0
 ===============

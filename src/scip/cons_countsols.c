@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.26 2008/10/31 21:46:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.27 2008/11/06 08:55:42 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1219,7 +1219,6 @@ SCIP_DECL_CONSINIT(consInitCountsols)
       int v;
       conshdlrdata->nvars = SCIPgetNVars(scip);
       
-      SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->vars, conshdlrdata->nvars) );
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &conshdlrdata->vars, SCIPgetVars(scip), conshdlrdata->nvars) );
 
       /* capture all variables */
