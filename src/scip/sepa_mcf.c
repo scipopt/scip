@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.76 2008/11/05 11:32:22 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.77 2008/11/07 09:11:16 bzfraack Exp $"
 
 /*#define SCIP_DEBUG*/ /*????????????????????*/
 
@@ -4316,6 +4316,23 @@ SCIP_RETCODE nodepairqueueCreate(
 
       SCIPdebugMessage("arc %i = (%i %i)\n", a, mcfnetwork->arcsources[a], mcfnetwork->arctargets[a]);
 
+      /* construct fresh nodepairentry: smaller node gets node1 in nodeentry */
+      if( mcfnetwork->arcsources[a] <= mcfnetwork->arctargets[a] )
+      {
+         nodepairentry.node1 = mcfnetwork->arcsources[a];
+         nodepairentry.node2 = mcfnetwork->arctargets[a];
+      }
+      else
+      {
+         nodepairentry.node2 = mcfnetwork->arcsources[a];
+         nodepairentry.node1 = mcfnetwork->arctargets[a];
+      }
+
+      assert(nodepairentry.node1 < mcfnetwork->nnodes);
+      assert(nodepairentry.node2 < mcfnetwork->nnodes);
+      if( nodepairentry.node1 == -1 || nodepairentry.node2 == -1 )
+         continue;
+
       /* construct arc weight of a */
       if( mcfnetwork->arccapacityrows[a] != NULL )
       {
@@ -4342,21 +4359,6 @@ SCIP_RETCODE nodepairqueueCreate(
          SCIPdebugMessage("uncap arc ... slack infinite\n");
          nodepairentry.weight = SCIPinfinity(scip);
       }
-
-      /* construct fresh nodepairentry: smaller node gets node1 in nodeentry */
-      if( mcfnetwork->arcsources[a] <= mcfnetwork->arctargets[a] )
-      {
-         nodepairentry.node1 = mcfnetwork->arcsources[a];
-         nodepairentry.node2 = mcfnetwork->arctargets[a];
-      }
-      else
-      {
-         nodepairentry.node2 = mcfnetwork->arcsources[a];
-         nodepairentry.node1 = mcfnetwork->arctargets[a];
-      }
-      assert(nodepairentry.node1 >= 0 && nodepairentry.node1 < mcfnetwork->nnodes);
-      assert(nodepairentry.node2 >= 0 && nodepairentry.node2 < mcfnetwork->nnodes);
-
 
       /* check if nodepairentry already exists in hash-table */
       nodepairentryptr = (NODEPAIRENTRY*)(SCIPhashtableRetrieve(hashtable, (void*) (&nodepairentry) ));
@@ -4539,10 +4541,8 @@ SCIP_RETCODE nodepartitionCreate(
       weight  = nodepairentry->weight;
 #endif
 
-      assert(node1 < mcfnetwork->nnodes);
-      assert(node2 < mcfnetwork->nnodes);
-      if( node1 == -1 || node2 == -1 )
-         continue;
+      assert(node1 >= 0 && node1 < mcfnetwork->nnodes);
+      assert(node2 >= 0 && node2 < mcfnetwork->nnodes);
 
       /* identify the representatives of the two nodes */
       node1rep = nodepartitionGetRepresentative(*nodepartition, node1);
