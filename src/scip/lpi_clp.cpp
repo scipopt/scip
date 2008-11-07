@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.52 2008/10/22 17:05:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.53 2008/11/07 09:58:02 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -2687,7 +2687,7 @@ SCIP_RETCODE SCIPlpiReadState(
     *  returns -1 on file error, 0 if no values, 1 if values
     */
    if ( lpi->clp->readBasis(fname) < 0 )
-      return SCIP_LPERROR;
+      return SCIP_READERROR;
 
    return SCIP_OKAY;
 }
@@ -2710,7 +2710,7 @@ SCIP_RETCODE SCIPlpiWriteState(
     *  - int formatType  (0 - normal, 1 - extra accuracy, 2 - IEEE hex)
     */
    if ( lpi->clp->writeBasis(fname, false, 0) )
-      return SCIP_LPERROR;
+      return SCIP_WRITEERROR;
 
    return SCIP_OKAY;
 }
@@ -2847,7 +2847,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
        *  above that 8,16,32 etc just for selective SCIPdebug
        */
       if ( ival )
-         lpi->clp->setLogLevel(2);
+	 lpi->clp->setLogLevel(2);
+         // lpi->clp->setLogLevel(63);
       else 
          lpi->clp->setLogLevel(0);
       break;
@@ -3070,7 +3071,7 @@ SCIP_RETCODE SCIPlpiWriteLP(
     *  double objSense
     */
    if ( lpi->clp->writeMps(fname, 0, 2, lpi->clp->optimizationDirection()) )
-      return SCIP_ERROR;
+      return SCIP_WRITEERROR;
 
    return SCIP_OKAY;
 }
