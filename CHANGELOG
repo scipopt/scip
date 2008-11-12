@@ -20,6 +20,8 @@ fixed bugs:
 - fixed wrong use of pointer in lp.c
 - fixed reading bug of MPS format; by default all variable have a lower bound of zero and an upper bound of infinity
 - fixed memory error in cons_countsols.c 
+- fixed bug in SCIPsolveNode() concerning the case that the time limit was hit while solving the LP relaxation 
+  of a subproblem which is already an LP (branching on pseudo solution is not possible)
 
 SCIP version 1.1.0
 ===============
