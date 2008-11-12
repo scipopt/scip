@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.264 2008/09/22 21:19:53 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.265 2008/11/12 13:26:03 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2691,10 +2691,26 @@ SCIP_RETCODE solveNode(
             {
                assert(!SCIPtreeHasFocusNodeLP(tree)); /* feasible LP solutions with all integers fixed must be feasible */
 
-               /* solve the LP in the next loop */
-               SCIPtreeSetFocusNodeLP(tree, TRUE);
-               solvelpagain = TRUE;
-               forcedlpsolve = TRUE; /* this LP must be solved without error - otherwise we have to abort */
+               if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT )
+               {
+                  SCIP_NODE* node;
+
+                  /* as we hit the time or iteration limit, we do not want to solve the LP again.
+                   * in order to terminate correctly, we create a "branching" with only one child node 
+                   * that is a copy of the focusnode 
+                   */
+                  SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, 1.0, focusnode->estimate) );
+                  assert(tree->nchildren >= 1);
+                  assert(SCIPsepastoreGetNCuts(sepastore) == 0);
+                  branched = TRUE;
+               }
+               else
+               {
+                  /* solve the LP in the next loop */
+                  SCIPtreeSetFocusNodeLP(tree, TRUE);
+                  solvelpagain = TRUE;
+                  forcedlpsolve = TRUE; /* this LP must be solved without error - otherwise we have to abort */
+               }            
             }
             break;
          default:
