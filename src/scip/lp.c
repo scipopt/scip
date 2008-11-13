@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.298 2008/10/31 14:32:47 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.299 2008/11/13 16:16:17 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -11930,6 +11930,9 @@ SCIP_RETCODE lpDelRowset(
       {
          assert(row != NULL);
 
+         if( row->removable )
+            lp->nremovablerows--;
+
          /* mark row to be deleted from the LPI and update row arrays of all linked columns */
          markRowDeleted(row);
          rowUpdateDelLP(row);
@@ -11941,8 +11944,6 @@ SCIP_RETCODE lpDelRowset(
          assert(lp->lpirows[r] == NULL);
          assert(lp->rows[r] == NULL);
          lp->nrows--;
-         if( row->removable )
-            lp->nremovablerows--;
          lp->nlpirows--;
       }
       else if( rowdstat[r] < r )
