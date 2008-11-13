@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_qso.c,v 1.4 2008/11/06 19:14:08 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_qso.c,v 1.5 2008/11/13 18:34:40 bzfpfets Exp $"
 
 /**@file   lpi_qso.c
  * @brief  LP interface for QSopt version >= 070303
@@ -1613,11 +1613,11 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 
    (void) QSget_status(lpi->prob, &(lpi->solstat));
 
-   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED)
-      *primalfeasible=1;
+   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_UNBOUNDED )
+      *primalfeasible = 1;
 
-   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT)
-      *dualfeasible=1;
+   if ( lpi->solstat == QS_LP_OPTIMAL || lpi->solstat == QS_LP_INFEASIBLE || lpi->solstat == QS_LP_OBJ_LIMIT )
+      *dualfeasible = 1;
 
    return SCIP_OKAY;
 }
@@ -1697,7 +1697,7 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
 
    (void) QSget_status(lpi->prob, &(lpi->solstat));
 
-   return (lpi->solstat == QS_LP_OPTIMAL);
+   return (lpi->solstat == QS_LP_OPTIMAL || lpi->QS_LP_UNBOUNDED);
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
