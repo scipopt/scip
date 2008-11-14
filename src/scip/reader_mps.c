@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.105 2008/11/06 19:22:30 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.106 2008/11/14 15:00:10 bzfwinkm Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -891,8 +891,8 @@ SCIP_RETCODE readCols(
 
          if( mpsinputIsInteger(mpsi) )
          {
-            /* for integer variables, default bounds are 0 <= x < infinity, and default cost is 0 */
-            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_INTEGER, !dynamiccols, dynamiccols,
+            /* for integer variables, default bounds are 0 <= x < 1(not +infinity, like it is for continuous variables), and default cost is 0 */
+            SCIP_CALL( SCIPcreateVar(scip, &var, colname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY, !dynamiccols, dynamiccols,
                   NULL, NULL, NULL, NULL) );
          }
          else
@@ -2344,7 +2344,7 @@ void printBoundSection(
    int                naggvars,           /**< number of aggregated variables */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    const char**       varnames,           /**< array with variable names */
-   unsigned int       maxnamelen          /**< maximum name lenght */
+   unsigned int       maxnamelen          /**< maximum name length */
    )
 {
    int v;
@@ -2450,9 +2450,6 @@ void printBoundSection(
       {
          if ( SCIPisZero(scip, lb) )
          {
-            /* variables are nonnegative by default - so we skip these variables */
-            if ( SCIPisInfinity(scip, ub) )
-               continue;
             lb = 0.0;
          }
          else
@@ -2470,8 +2467,22 @@ void printBoundSection(
          }
       }
 
-      /* print upper bound as far this one is not infinity */
-      if( !SCIPisInfinity(scip, ub) )
+      /* print upper bound, infinity has to be printed for integer! variables, because during reading an mps file no upper bound of an integer variable means that the upper bound will be set to 1 instead of +infinity (like it is for continuous variables)*/
+      if( SCIPisInfinity(scip, ub) )
+      {
+         if( !sectionName )
+         {
+            printBoundSectionName(scip, file);
+            sectionName = TRUE;
+         }
+
+         /* the free variables are processed above */
+         assert( !SCIPisInfinity(scip, -lb) );
+         printStart(scip, file, "PL", "Bound", (int) maxnamelen);
+         printRecord(scip, file, varname, "", maxnamelen);
+         SCIPinfoMessage(scip, file, "\n");
+      }
+      else
       {
          if( !sectionName )
          {
