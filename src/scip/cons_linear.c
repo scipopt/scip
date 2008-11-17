@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.313 2008/09/29 23:13:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.314 2008/11/17 09:55:27 bzfwolte Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -2505,6 +2505,13 @@ SCIP_RETCODE chgLhs(
    if( SCIPisEQ(scip, consdata->lhs, lhs) )
       return SCIP_OKAY;
 
+   /* ensure that rhs >= lhs is satisfied without numerical tolerance */   
+   if( SCIPisEQ(scip, lhs, consdata->rhs) )
+   {
+      consdata->rhs = lhs;
+      assert(consdata->row == NULL);
+   }
+
    /* if necessary, update the rounding locks of variables */
    if( SCIPconsIsLocked(cons) )
    {
@@ -2599,6 +2606,13 @@ SCIP_RETCODE chgRhs(
    /* check whether the side is not changed */
    if( SCIPisEQ(scip, consdata->rhs, rhs) )
       return SCIP_OKAY;
+
+   /* ensure that rhs >= lhs is satisfied without numerical tolerance */   
+   if( SCIPisEQ(scip, rhs, consdata->lhs) )
+   {
+      consdata->lhs = rhs;
+      assert(consdata->row == NULL);
+   }
 
    /* if necessary, update the rounding locks of variables */
    if( SCIPconsIsLocked(cons) )
