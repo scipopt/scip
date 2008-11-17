@@ -1205,7 +1205,8 @@ char* getconstantname(
    case COLUMN_IN_SUBPROB_WITHOUT_ODD_RHS:
       (void) SCIPsnprintf(buffer, SCIP_MAXSTRLEN, "NOODDRHSCOL"); break;
    default: 
-      SCIP_ABORT();
+      SCIPerrorMessage("parameter <%s> unknown\n", value);
+      SCIPABORT(); 
    }
 
    return buffer;
@@ -1467,6 +1468,42 @@ SCIP_RETCODE debugPrintLPRowsAndCols(
 }
 #endif
 
+
+
+
+/* --------------------------------------------------------------------------------------------------------------------
+ * local methods: SCIPsortInd comparators
+ * -------------------------------------------------------------------------------------------------------------------- */
+
+
+/** comparator function for sorting an index array non-decreasingly according to a real array */
+static
+SCIP_DECL_SORTINDCOMP(compRealNonDecreasing)
+{
+   SCIP_Real* scores = (SCIP_Real*) dataptr;
+
+   if( scores[ind1] < scores[ind2] )
+      return -1;
+   else if( scores[ind1] > scores[ind2] )
+      return +1;
+   else
+      return 0;
+}
+
+
+/** comparator function for sorting an index array non-increasingly according to a real array */
+static
+SCIP_DECL_SORTINDCOMP(compRealNonIncreasing)
+{
+   SCIP_Real* scores = (SCIP_Real*) dataptr;
+
+   if( scores[ind1] < scores[ind2] )
+      return +1;
+   else if( scores[ind1] > scores[ind2] )
+      return -1;
+   else
+      return 0;
+}
 
 
 /* --------------------------------------------------------------------------------------------------------------------
@@ -3188,13 +3225,13 @@ SCIP_RETCODE preprocessModGaussElim(
    /*   sort column indices sets w.r.t. to their primsol values NON-INCREASINGLY */
    if( mod2data->ncolsind > 1 )
    {
-      SCIPsortRealInt(mod2data->fracsol, mod2data->colsind, mod2data->ncolsind);
+      SCIPsortInd( mod2data->colsind , compRealNonIncreasing , (void*) mod2data->fracsol , mod2data->ncolsind );
    }
   
    /*   sort row indices sets w.r.t. to their slack values NON-DECREASINGLY */
    if( mod2data->nrowsind > 1 )
    {
-      SCIPsortRealInt(mod2data->slacks, mod2data->rowsind, mod2data->nrowsind);
+      SCIPsortInd( mod2data->rowsind , compRealNonDecreasing , (void*) mod2data->slacks , mod2data->nrowsind );
    }
 
   
@@ -3682,7 +3719,7 @@ SCIP_RETCODE preprocessColumnsWithSmallFracsol(
    /* sort column indices sets w.r.t. to their primsol values NON-INCREASINGLY */
    if( mod2data->ncolsind > 1 )
    {
-      SCIPsortDownRealInt(mod2data->fracsol, mod2data->colsind, mod2data->ncolsind);
+      SCIPsortInd( mod2data->colsind , compRealNonIncreasing , (void*) mod2data->fracsol , mod2data->ncolsind );
    }
 
    for( c = mod2data->ncolsind - 1 ; c >= 0 ; --c)
@@ -3761,8 +3798,9 @@ SCIP_RETCODE preprocessConsiderMinSlack(
       }
       else      
          ++first;                                                                                                             
-   }
+   } 
    noddrhsrows = first + (mod2data->rhs[mod2data->rowsind[first]] ? 1  : 0);
+
 
    /* check if odd rows exists */
    if( noddrhsrows == 0 )
@@ -3770,10 +3808,11 @@ SCIP_RETCODE preprocessConsiderMinSlack(
   
    /* sort each partition by nondecreasing slacks */
    assert(noddrhsrows >= 0);
-   SCIPsortRealInt( mod2data->slacks, mod2data->rowsind, noddrhsrows);  
-   if( noddrhsrows < mod2data->nrowsind)
+   SCIPsortInd( mod2data->rowsind , compRealNonDecreasing , (void*) mod2data->slacks , noddrhsrows );
+   if( noddrhsrows < mod2data->nrowsind )
    {
-      SCIPsortRealInt(mod2data->slacks, mod2data->rowsind + noddrhsrows, mod2data->nrowsind - noddrhsrows );
+      SCIPsortInd( mod2data->rowsind + noddrhsrows , compRealNonDecreasing , (void*) mod2data->slacks , 
+         mod2data->nrowsind - noddrhsrows );  
    }
   
    minslackoddrhsrows = mod2data->slacks[mod2data->rowsind[0]];
@@ -3829,7 +3868,7 @@ SCIP_RETCODE preprocessConsiderMinSlack(
             /*   sort column indices sets w.r.t. to their primsol values NON-INCREASINGLY */
             if( mod2data->ncolsind > 1 )
             {
-               SCIPsortDownRealInt( mod2data->fracsol, mod2data->colsind, mod2data->ncolsind);
+               SCIPsortInd( mod2data->colsind , compRealNonIncreasing , (void*) mod2data->fracsol , mod2data->ncolsind );
             }
         
             j = 0;
@@ -5051,11 +5090,11 @@ SCIP_RETCODE separateByEnumerationHeuristics(
 
    /* sort each partition by nondecreasing slacks */
    assert(noddrhsrows >= 0);
-   SCIPsortRealInt(mod2data->slacks, mod2data->rowsind, noddrhsrows);  
+   SCIPsortInd( mod2data->rowsind , compRealNonDecreasing , (void*) mod2data->slacks , noddrhsrows );
    
    if( noddrhsrows < mod2data->nrowsind )
    {
-      SCIPsortRealInt(mod2data->slacks, mod2data->rowsind + noddrhsrows, mod2data->nrowsind - noddrhsrows);
+      SCIPsortInd( mod2data->rowsind + noddrhsrows , compRealNonDecreasing , (void*) mod2data->slacks , mod2data->nrowsind - noddrhsrows );
    }
 
    minslackoddrhsrows = mod2data->slacks[mod2data->rowsind[0]];
@@ -5717,7 +5756,9 @@ SCIP_RETCODE separateByGaussHeuristics(
          break;
     
       /* sort row indices sets w.r.t. to their slack values NON-DECREASINGLY */
-      SCIPsortRealInt(mod2data->slacks, mod2data->rowsind + identsubmatrixsize,  mod2data->nrowsind - identsubmatrixsize);
+      SCIPsortInd( mod2data->rowsind + identsubmatrixsize , compRealNonDecreasing , 
+         (void*) mod2data->slacks , mod2data->nrowsind - identsubmatrixsize );
+
     
       /* break if no unprocessed row with slack <= maxslack is left */
       if( SCIPisGT(scip, mod2data->slacks[mod2data->rowsind[identsubmatrixsize]], sepadata->maxslack) )

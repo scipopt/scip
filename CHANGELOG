@@ -24,6 +24,7 @@ fixed bugs:
 - fixed wrong fixing of reading bug which was in real a writing bug in MPS format; integer variables in mps format without bounds are binary variables, if the bound of an integer variable is infinity you have to write this bound
 - fixed bug in chgRhs() and chgLhs() of cons_linear.c: after changing lhs or rhs of a constraints
   lhs <= rhs has to be satisfied without numerical tolerances
+- fixed bug in sepa_zerohalf.c; replacement of own sorting functions by template functions was incorrect
 
 SCIP version 1.1.0
 ===============
