@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.49 2008/10/27 13:10:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.50 2008/11/18 04:44:49 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -270,6 +270,15 @@ void SCIPsortPtr(
    int                   len                 /**< length of array */
    );
 
+/** sort of two joint arrays of pointers/pointers, sorted by first array in non-decreasing order */
+extern
+void SCIPsortPtrPtr(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of two joint arrays of pointers/Reals, sorted by first array in non-decreasing order */
 extern
 void SCIPsortPtrReal(
@@ -480,6 +489,15 @@ void SCIPsortDownPtr(
    int                   len                 /**< length of array */
    );
 
+/** sort of two joint arrays of pointers/pointers, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownPtrPtr(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   len                 /**< length of arrays */
+   );
+
 /** sort of two joint arrays of pointers/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortDownPtrReal(
@@ -685,6 +703,17 @@ void SCIPsortedvecInsertPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    void*                 keyval,             /**< key value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
+/** insert a new element into two joint arrays of pointers/pointers sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertPtrPtr(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
@@ -947,6 +976,17 @@ void SCIPsortedvecInsertDownPtr(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into two joint arrays of pointers/pointers, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecInsertDownPtrPtr(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   void*                 keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 /** insert a new element into two joint arrays of pointers/Reals, sorted by first array in non-increasing order */
 extern
 void SCIPsortedvecInsertDownPtrReal(
@@ -1206,6 +1246,16 @@ void SCIPsortedvecDelPosPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from two joint arrays of pointers/pointers, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosPtrPtr(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 /** delete the element at the given position from two joint arrays of pointers/Reals, sorted by first array in non-decreasing order */
 extern
 void SCIPsortedvecDelPosPtrReal(
@@ -1425,6 +1475,16 @@ void SCIPsortedvecDelPosDownInd(
 extern
 void SCIPsortedvecDelPosDownPtr(
    void**                ptrarray,           /**< pointer array to be sorted */
+   SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from two joint arrays of pointers/pointers, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecDelPosDownPtrPtr(
+   void**                ptrarray1,          /**< first pointer array to be sorted */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
    SCIP_DECL_SORTPTRCOMP((*ptrcomp)),        /**< data element comparator */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
