@@ -9,6 +9,7 @@ interface:
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
 - new interface to QSopt due to Daniel Espinoza
+- new reader for reading and writing FlatZinc models
 
 performance improvements:
 - replaced some function calls in loop conditions
@@ -34,6 +35,10 @@ fixed bugs:
 - fixed bug in sepa_zerohalf.c; replacement of own sorting functions by template functions was incorrect
 - fixed bug in sepa_cmir.c concerning uninitialized mksetcoefs (if MIR-cut generation is aborted because the aggregated 
   constraint is empty or contains too many nonzero elements mksetcoefs is invalid) 
+
+plugins:
+- added interface to QSopt due to Daniel Espinoza
+- added reader for FlatZinc models (reader_fzn.{c,h})
 
 SCIP version 1.1.0
 ===============
