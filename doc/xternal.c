@@ -967,9 +967,9 @@
  * Additional documentation for the callback methods of a pricer can be found in the file
  * type_pricer.h.
  *
- * Notice that if your pricer cannot cope with other variable bounds
- * than 0 and infinity, you may have to disable domain propagation by
- * setting propagating/maxrounds and propagating/maxroundsroot to 0.
+ * Notice that if your pricer cannot cope with other variable bounds than 0 and infinity, you have to mark 
+ * all constraints containing priced variables as modifiable, and you may have to disable reduced cost
+ * strengthening by setting propagating/rootredcost/freq to -1.
  *
  * Here is what you have to do to implement a pricer:
  * -# Copy the template files src/scip/pricer_xxx.c and src/scip/pricer_xxx.h into files "pricer_mypricer.c"

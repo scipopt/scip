@@ -649,10 +649,12 @@
     </p>
     <p class="a">
       First check whether your pricing is correct. Are there upper bounds on variables that you have forgotten to take
-      into account?
+      into account? If your pricer cannot cope with other variable bounds than 0 and infinity, you have to mark 
+      all constraints containing priced variables as modifiable, and you may have to disable reduced cost
+      strengthening by setting propagating/rootredcost/freq to -1.
     </p>
     <p class="a">  
-      If your pricer works correct and makes sure that the same column is added at most once in one pricing round, this
+      If your pricer works correctly and makes sure that the same column is added at most once in one pricing round, this
       behavior is probably caused by the PRICER_DELAY property of your pricer.
     </p>
     <p class="a">
