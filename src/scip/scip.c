@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.483 2008/12/09 09:03:31 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.484 2008/12/09 14:57:46 bzforlow Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8871,7 +8871,7 @@ SCIP_RETCODE SCIPsetConsInitial(
 {
    SCIP_CALL( checkStage(scip, "SCIPsetConsInitial", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPconsSetInitial(cons, initial);
+   SCIP_CALL( SCIPconsSetInitial(cons, scip->set, initial) );
 
    return SCIP_OKAY;
 }

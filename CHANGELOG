@@ -5,6 +5,7 @@ interface:
 - new parameter "mksetcoefsvalid" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR(), and sepa_cmir.c: tryDelta() to store
   whether "mksetcoefs" computed in SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows 
   is empty or contains too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
+- new parameter "set" in SCIPconsSetInitial().
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -35,6 +36,8 @@ fixed bugs:
 - fixed bug in sepa_zerohalf.c; replacement of own sorting functions by template functions was incorrect
 - fixed bug in sepa_cmir.c concerning uninitialized mksetcoefs (if MIR-cut generation is aborted because the aggregated 
   constraint is empty or contains too many nonzero elements mksetcoefs is invalid) 
+- fixed bug in SCIPconsSetInitial() that occurred in pairwise presolving: add or delete constraint in initconss when changing
+  the initial flag
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

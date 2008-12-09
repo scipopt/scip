@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.177 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.178 2008/12/09 14:57:46 bzforlow Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4656,14 +4656,28 @@ SCIP_RETCODE SCIPconsTransform(
 }
 
 /** sets the initial flag of the given constraint */
-void SCIPconsSetInitial(
+SCIP_RETCODE SCIPconsSetInitial(
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             initial             /**< new value */
    )
 {
    assert(cons != NULL);
 
-   cons->initial = initial;
+   if( cons->initial != initial )
+   {
+      cons->initial = initial;
+      if( cons->initial )
+      {
+         SCIP_CALL( conshdlrAddInitcons(SCIPconsGetHdlr(cons), set, cons) );
+      }
+      else
+      {
+         conshdlrDelInitcons(SCIPconsGetHdlr(cons), cons);
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** sets the separate flag of the given constraint */
