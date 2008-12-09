@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.1 2008/12/09 14:53:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.2 2008/12/09 18:25:09 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1198,7 +1198,7 @@ static
 void parseArrayType(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
-   SCIP_Bool*            varArray,           /**< pointer to store if it is a variable or constant array */
+   SCIP_Bool*            isvararray,           /**< pointer to store if it is a variable or constant array */
    FZNNUMBERTYPE*        type,               /**< pointer to store number type */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub                  /**< pointer to store the lower bound */
@@ -1218,12 +1218,12 @@ void parseArrayType(
    
    /* check if it is a variable or constant array */
    if( equalTokens(fzninput->token, "var") )
-      *varArray = TRUE;
+      *isvararray = TRUE;
    else
    {
       /* push token back since it belongs to the type declaration */
       pushToken(fzninput);
-      *varArray = FALSE;
+      *isvararray = FALSE;
    }
 
    /* pares array type and range */
@@ -1477,11 +1477,13 @@ SCIP_RETCODE parseArray(
    int nelements;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Bool varArray;
+   SCIP_Bool isvararray;
    char name[FZN_BUFFERLEN];
 
    assert(scip != NULL);
    assert(fzninput != NULL);
+
+   isvararray = FALSE;
 
    SCIPdebugMessage("parse array expression\n");
    
@@ -1492,7 +1494,7 @@ SCIP_RETCODE parseArray(
       return SCIP_OKAY;
 
    /* parse array type ( (i) variable or constant; (ii) integer, float, bool, or set) */
-   parseArrayType(scip, fzninput, &varArray, &type, &lb, &ub);
+   parseArrayType(scip, fzninput, &isvararray, &type, &lb, &ub);
 
    if( hasError(fzninput) )
       return SCIP_OKAY;
@@ -1504,10 +1506,10 @@ SCIP_RETCODE parseArray(
       return SCIP_OKAY;
    
    SCIPdebugMessage("found <%s> array named <%s> of type <%s> and size <%d> with bounds [%g,%g]\n",
-      varArray ? "variable" : "constant", name,
+      isvararray ? "variable" : "constant", name,
       type == FZN_BOOL ? "bool" : type == FZN_INT ? "integer" : "float", nelements, lb, ub);
    
-   if( varArray )
+   if( isvararray )
       SCIP_CALL( parseVariableArray(scip, fzninput, name, nelements, type, lb, ub) );
    else
       SCIP_CALL( parseConstantArray(scip, fzninput, name, nelements, type, lb, ub) );

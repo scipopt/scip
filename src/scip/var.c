@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.238 2008/09/29 21:33:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.239 2008/12/09 18:25:09 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -6459,6 +6459,9 @@ SCIP_RETCODE SCIPvarAddVlb(
          assert(SCIPvarGetStatus(vlbvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vlbvar) == SCIP_VARSTATUS_COLUMN);
          assert(vlbcoef != 0.0);
 
+	 minvlb = -SCIPsetInfinity(set);
+	 maxvlb = -SCIPsetInfinity(set);
+
          xlb = SCIPvarGetLbGlobal(var);
          xub = SCIPvarGetUbGlobal(var);
          zlb = SCIPvarGetLbGlobal(vlbvar);
@@ -6468,46 +6471,69 @@ SCIP_RETCODE SCIPvarAddVlb(
          if( vlbcoef >= 0.0 )
          {
             SCIP_Real newzub;
-
-            /* x >= b*z + d  ->  z <= (x-d)/b */
-            newzub = (xub - vlbconstant)/vlbcoef;
-            if( SCIPsetIsFeasLT(set, newzub, zlb) )
-            {
-               *infeasible = TRUE;
-               return SCIP_OKAY;
-            }
-            if( SCIPsetIsFeasLT(set, newzub, zub) )
-            {
-               SCIP_CALL( SCIPvarChgUbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
-               zub = SCIPvarGetUbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
-               if( nbdchgs != NULL )
-                  (*nbdchgs)++;
-            }
-            minvlb = vlbcoef * zlb + vlbconstant;
-            maxvlb = vlbcoef * zub + vlbconstant;
-         }
+	    
+	    if( !SCIPsetIsInfinity(set, xub) )
+	      {
+		/* x >= b*z + d  ->  z <= (x-d)/b */
+		newzub = (xub - vlbconstant)/vlbcoef;
+		if( SCIPsetIsFeasLT(set, newzub, zlb) )
+		  {
+		    *infeasible = TRUE;
+		    return SCIP_OKAY;
+		  }
+		if( SCIPsetIsFeasLT(set, newzub, zub) )
+		  {
+		    SCIP_CALL( SCIPvarChgUbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
+		    zub = SCIPvarGetUbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
+		    if( nbdchgs != NULL )
+		      (*nbdchgs)++;
+		  }
+		maxvlb = vlbcoef * zub + vlbconstant;
+		if( !SCIPsetIsInfinity(set, -zlb) )
+		  minvlb = vlbcoef * zlb + vlbconstant;
+	      }
+	    else
+	      {
+		if( !SCIPsetIsInfinity(set, zub) )
+		  maxvlb = vlbcoef * zub + vlbconstant;
+		if( !SCIPsetIsInfinity(set, -zlb) )
+		  minvlb = vlbcoef * zlb + vlbconstant;
+	      }
+	 }
          else
          {
             SCIP_Real newzlb;
 
-            /* x >= b*z + d  ->  z >= (x-d)/b */
-            newzlb = (xub - vlbconstant)/vlbcoef;
-            if( SCIPsetIsFeasGT(set, newzlb, zub) )
-            {
-               *infeasible = TRUE;
-               return SCIP_OKAY;
-            }
-            if( SCIPsetIsFeasGT(set, newzlb, zlb) )
-            {
-               SCIP_CALL( SCIPvarChgLbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
-               zlb = SCIPvarGetLbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
-               if( nbdchgs != NULL )
-                  (*nbdchgs)++;
-            }
-            minvlb = vlbcoef * zub + vlbconstant;
-            maxvlb = vlbcoef * zlb + vlbconstant;
+	    if( !SCIPsetIsInfinity(set, xub) )
+	      {
+		/* x >= b*z + d  ->  z >= (x-d)/b */
+		newzlb = (xub - vlbconstant)/vlbcoef;
+		if( SCIPsetIsFeasGT(set, newzlb, zub) )
+		  {
+		    *infeasible = TRUE;
+		    return SCIP_OKAY;
+		  }
+		if( SCIPsetIsFeasGT(set, newzlb, zlb) )
+		  {
+		    SCIP_CALL( SCIPvarChgLbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
+		    zlb = SCIPvarGetLbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
+		    if( nbdchgs != NULL )
+		      (*nbdchgs)++;
+		  }
+		maxvlb = vlbcoef * zlb + vlbconstant;
+		if( !SCIPsetIsInfinity(set, zub) )
+		  minvlb = vlbcoef * zub + vlbconstant;
+	      }
+	    else
+	      {
+		if( !SCIPsetIsInfinity(set, -zlb) )
+		  maxvlb = vlbcoef * zlb + vlbconstant;
+		if( !SCIPsetIsInfinity(set, zub) )
+		  minvlb = vlbcoef * zub + vlbconstant;
+	      }
          }
-         assert(minvlb <= maxvlb);
+	 if( maxvlb < minvlb )
+	   maxvlb = minvlb;
 
          /* adjust bounds due to integrality of variable */
          minvlb = adjustedLb(set, SCIPvarGetType(var), minvlb);
@@ -6534,6 +6560,9 @@ SCIP_RETCODE SCIPvarAddVlb(
             /* b > 0: x >= (maxvlb - minvlb) * z + minvlb
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
              */
+	   
+	    assert(!SCIPsetIsInfinity(set, -maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
+
             if( vlbcoef >= 0.0 )
             {
                vlbcoef = maxvlb - minvlb;
@@ -6701,6 +6730,9 @@ SCIP_RETCODE SCIPvarAddVub(
          assert(SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_COLUMN);
          assert(vubcoef != 0.0);
 
+	 minvub = SCIPsetInfinity(set);
+	 maxvub = SCIPsetInfinity(set);
+
          xlb = SCIPvarGetLbGlobal(var);
          xub = SCIPvarGetUbGlobal(var);
          zlb = SCIPvarGetLbGlobal(vubvar);
@@ -6711,41 +6743,65 @@ SCIP_RETCODE SCIPvarAddVub(
          {
             SCIP_Real newzlb;
 
-            /* x <= b*z + d  ->  z >= (x-d)/b */
-            newzlb = (xlb - vubconstant)/vubcoef;
-            if( SCIPsetIsFeasGT(set, newzlb, zub) )
-            {
-               *infeasible = TRUE;
-               return SCIP_OKAY;
-            }
-            if( SCIPsetIsFeasGT(set, newzlb, zlb) )
-            {
-               SCIP_CALL( SCIPvarChgLbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
-               zlb = SCIPvarGetLbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
-            }
-            minvub = vubcoef * zlb + vubconstant;
-            maxvub = vubcoef * zub + vubconstant;
+	    if( !SCIPsetIsInfinity(set, -xlb) )
+	      {
+		/* x <= b*z + d  ->  z >= (x-d)/b */
+		newzlb = (xlb - vubconstant)/vubcoef;
+		if( SCIPsetIsFeasGT(set, newzlb, zub) )
+		  {
+		    *infeasible = TRUE;
+		    return SCIP_OKAY;
+		  }
+		if( SCIPsetIsFeasGT(set, newzlb, zlb) )
+		  {
+		    SCIP_CALL( SCIPvarChgLbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
+		    zlb = SCIPvarGetLbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
+		  }
+		minvub = vubcoef * zlb + vubconstant;
+		if( !SCIPsetIsInfinity(set, zub) )
+		  maxvub = vubcoef * zub + vubconstant;
+	      }
+	    else
+	      {
+		if( !SCIPsetIsInfinity(set, zub) )
+		  maxvub = vubcoef * zub + vubconstant;
+		if( !SCIPsetIsInfinity(set, -zlb) )
+		  minvub = vubcoef * zlb + vubconstant;
+	      }
          }
          else
          {
             SCIP_Real newzub;
 
-            /* x <= b*z + d  ->  z <= (x-d)/b */
-            newzub = (xlb - vubconstant)/vubcoef;
-            if( SCIPsetIsFeasLT(set, newzub, zlb) )
-            {
-               *infeasible = TRUE;
-               return SCIP_OKAY;
-            }
-            if( SCIPsetIsFeasLT(set, newzub, zub) )
-            {
-               SCIP_CALL( SCIPvarChgUbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
-               zub = SCIPvarGetUbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
-            }
-            minvub = vubcoef * zub + vubconstant;
-            maxvub = vubcoef * zlb + vubconstant;
+	    if( !SCIPsetIsInfinity(set, -xlb) )
+	      {
+		/* x <= b*z + d  ->  z <= (x-d)/b */
+		newzub = (xlb - vubconstant)/vubcoef;
+		if( SCIPsetIsFeasLT(set, newzub, zlb) )
+		  {
+		    *infeasible = TRUE;
+		    return SCIP_OKAY;
+		  }
+		if( SCIPsetIsFeasLT(set, newzub, zub) )
+		  {
+		    SCIP_CALL( SCIPvarChgUbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
+		    zub = SCIPvarGetUbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
+		  }
+		minvub = vubcoef * zub + vubconstant;
+		if( !SCIPsetIsInfinity(set, -zlb) )
+		  maxvub = vubcoef * zlb + vubconstant;
+	      }
+	    else
+	      {
+		if( !SCIPsetIsInfinity(set, zub) )
+		  minvub = vubcoef * zub + vubconstant;
+		if( !SCIPsetIsInfinity(set, -zlb) )
+		  maxvub = vubcoef * zlb + vubconstant;
+	      }
+
          }
-         assert(minvub <= maxvub);
+	 if( minvub > maxvub )
+	   minvub = maxvub;
 
          /* adjust bounds due to integrality of vub variable */
          minvub = adjustedUb(set, SCIPvarGetType(var), minvub);
@@ -6770,6 +6826,9 @@ SCIP_RETCODE SCIPvarAddVub(
             /* b > 0: x <= (maxvub - minvub) * z + minvub
              * b < 0: x <= (minvub - maxvub) * z + maxvub
              */
+	    
+	    assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, minvub));
+
             if( vubcoef >= 0.0 )
             {
                vubcoef = maxvub - minvub;

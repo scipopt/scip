@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.78 2008/09/26 20:56:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.79 2008/12/09 18:25:09 bzfwinkm Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -382,9 +382,20 @@ SCIP_RETCODE propagateCons(
          if( SCIPvarGetStatus(consdata->var) != SCIP_VARSTATUS_MULTAGGR ) /* cannot change bounds of multaggr vars */
          {
             if( consdata->vbdcoef > 0.0 )
-               newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * yub);
+            {
+               if( !SCIPisInfinity(scip, yub) )
+                  newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * yub);
+               else
+                  newlb = -SCIPinfinity(scip);
+            }
             else
-               newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * ylb);
+            {
+               if( !SCIPisInfinity(scip, -ylb) )
+                  newlb = SCIPadjustedVarLb(scip, consdata->var, consdata->lhs - consdata->vbdcoef * ylb);
+               else
+                  newlb = -SCIPinfinity(scip);
+            }
+            
             if( SCIPisLbBetter(scip, newlb, xlb, xub) || ylb > yub - 0.5 )
             {
                SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -403,7 +414,7 @@ SCIP_RETCODE propagateCons(
          /* propagate bounds on y:
           *  (2) left hand side and upper bound on x -> bound on y
           */
-         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR ) /* cannot change bounds of multaggr vars */
+         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, xub) ) /* cannot change bounds of multaggr vars */
          {
             if( consdata->vbdcoef > 0.0 )
             {
@@ -453,9 +464,20 @@ SCIP_RETCODE propagateCons(
          if( SCIPvarGetStatus(consdata->var) != SCIP_VARSTATUS_MULTAGGR ) /* cannot change bounds of multaggr vars */
          {
             if( consdata->vbdcoef > 0.0 )
-               newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * ylb);
+            {
+               if( !SCIPisInfinity(scip, -ylb) )
+                  newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * ylb);
+               else 
+                  newub = SCIPinfinity(scip);
+            }
             else
-               newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * yub);
+            {
+               if( !SCIPisInfinity(scip, yub) )
+                  newub = SCIPadjustedVarUb(scip, consdata->var, consdata->rhs - consdata->vbdcoef * yub);
+               else 
+                  newub = SCIPinfinity(scip);
+            }
+            
             if( SCIPisUbBetter(scip, newub, xlb, xub) || ylb > yub - 0.5 )
             {
                SCIPdebugMessage(" -> tighten <%s>[%.15g,%.15g] -> [%.15g,%.15g]\n",
@@ -474,7 +496,7 @@ SCIP_RETCODE propagateCons(
          /* propagate bounds on y:
           *  (4) right hand side and lower bound on x -> bound on y
           */
-         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR ) /* cannot change bounds of multaggr vars */
+         if( SCIPvarGetStatus(consdata->vbdvar) != SCIP_VARSTATUS_MULTAGGR && !SCIPisInfinity(scip, -xlb) ) /* cannot change bounds of multaggr vars */
          {
             if( consdata->vbdcoef > 0.0 )
             {

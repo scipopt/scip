@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.25 2008/09/30 15:04:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.26 2008/12/09 18:25:09 bzfwinkm Exp $"
 
 /**@file   prop_pseudoobj.c
  * @ingroup PROPAGATORS
@@ -349,6 +349,7 @@ SCIP_Real getMaxObjPseudoactivityResidual(
 
    assert(propdata != NULL);
 
+   contrib = 0.0;
    obj = SCIPvarGetObj(var);
    if( SCIPisPositive(scip, obj) )
    {
@@ -359,14 +360,12 @@ SCIP_Real getMaxObjPseudoactivityResidual(
    else if( SCIPisNegative(scip, obj) )
    {
       contrib = SCIPvarGetLbGlobal(var);
-      if( !SCIPisInfinity(scip, contrib) )
+      if( !SCIPisInfinity(scip, -contrib) )
          contrib *= obj;
       else
          contrib *= -1.0;
    }
-   else
-      contrib = 0.0;
-
+   
    return getMaxObjPseudoactivityResidualValue(scip, propdata, contrib);
 }
 
@@ -407,6 +406,9 @@ SCIP_RETCODE propagateLowerbound(
     */
    lowerbound = SCIPgetLowerbound(scip);
 
+   if( SCIPisInfinity(scip, -lowerbound) )
+      return SCIP_OKAY;
+
    /* propagate c*x >= lowerbound */
    for( k = 0; k < nobjvars; k++ )
    {
@@ -422,6 +424,9 @@ SCIP_RETCODE propagateLowerbound(
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
       residual = getMaxObjPseudoactivityResidual(scip, propdata, var);
+      if( SCIPisInfinity(scip, residual) )
+         continue;
+
       if( obj > 0.0 )
       {
          SCIP_Real newlb;
@@ -429,6 +434,7 @@ SCIP_RETCODE propagateLowerbound(
          SCIP_Bool tightened;
 
          newlb = (lowerbound - residual)/obj;
+
          if( SCIPisLbBetter(scip, newlb, lb, ub) )
          {
             SCIPdebugMessage(" -> new global lower bound of variable <%s>[%.10f,%.10f]: %.10f (obj=%g, residual=%g)\n",
