@@ -1,12 +1,18 @@
 current version
 ===============
 
+interface:
+- new parameter "mksetcoefsvalid" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR(), and sepa_cmir.c: tryDelta() to store
+  whether "mksetcoefs" computed in SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows 
+  is empty or contains too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
+
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
 - new interface to QSopt due to Daniel Espinoza
 
 performance improvements:
 - replaced some function calls in loop conditions
+- in sepa_cmir.c, if mksetcoefs is invalid for delta=1 no other values of delta are tested anymore
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 
@@ -21,10 +27,13 @@ fixed bugs:
 - fixed memory error in cons_countsols.c 
 - fixed bug in SCIPsolveNode() concerning the case that the time limit was hit while solving the LP relaxation 
   of a subproblem which is already an LP (branching on pseudo solution is not possible)
-- fixed wrong fixing of reading bug which was in real a writing bug in MPS format; integer variables in mps format without bounds are binary variables, if the bound of an integer variable is infinity you have to write this bound
+- fixed wrong fixing of reading bug which was in real a writing bug in MPS format; integer variables in mps format 
+  without bounds are binary variables, if the bound of an integer variable is infinity you have to write this bound
 - fixed bug in chgRhs() and chgLhs() of cons_linear.c: after changing lhs or rhs of a constraints
   lhs <= rhs has to be satisfied without numerical tolerances
 - fixed bug in sepa_zerohalf.c; replacement of own sorting functions by template functions was incorrect
+- fixed bug in sepa_cmir.c concerning uninitialized mksetcoefs (if MIR-cut generation is aborted because the aggregated 
+  constraint is empty or contains too many nonzero elements mksetcoefs is invalid) 
 
 SCIP version 1.1.0
 ===============

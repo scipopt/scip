@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.131 2008/09/01 21:06:51 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.132 2008/12/09 09:03:31 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -773,6 +773,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
+   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */

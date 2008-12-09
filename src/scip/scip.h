@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.332 2008/10/23 15:43:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.333 2008/12/09 09:03:31 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3437,6 +3437,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
+   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */

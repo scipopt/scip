@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.299 2008/11/13 16:16:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.300 2008/12/09 09:03:30 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -8068,6 +8068,7 @@ SCIP_RETCODE SCIPlpCalcMIR(
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
+   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
@@ -8108,7 +8109,9 @@ SCIP_RETCODE SCIPlpCalcMIR(
    /**@todo test, if a column based summation is faster */
 
    *success = FALSE;
-
+   if( mksetcoefsvalid != NULL )
+      *mksetcoefsvalid = FALSE;
+   
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &slacksign, lp->nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varsign, prob->nvars) );
@@ -8157,6 +8160,8 @@ SCIP_RETCODE SCIPlpCalcMIR(
    /* store the coefficients of the variables in the constructed mixed knapsack set */
    if( mksetcoefs != NULL )
       BMScopyMemoryArray(mksetcoefs, mircoef, prob->nvars);
+   if( mksetcoefsvalid != NULL )
+      *mksetcoefsvalid = TRUE;
 
    if( freevariable )
       goto TERMINATE;

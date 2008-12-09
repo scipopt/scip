@@ -2688,7 +2688,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
    /* calculate MIR */
    SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
          BOUNDSFORTRANS, BOUNDTYPESFORTRANS, MAXAGGRLEN(lpdata->nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-         weights, SCALE, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
+         weights, SCALE, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
          &(cutdata->success), &(cutdata->islocal)) );
    assert(ALLOWLOCAL || !cutdata->islocal);
   

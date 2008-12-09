@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.482 2008/09/29 22:22:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.483 2008/12/09 09:03:31 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9701,6 +9701,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
+   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
@@ -9711,8 +9712,9 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_CALL( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob,
-         boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxmksetcoefs, maxweightrange,
-         minfrac, maxfrac, weights, scale, mksetcoefs, mircoef, mirrhs, cutactivity, success, cutislocal) );
+         boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxmksetcoefs, 
+         maxweightrange, minfrac, maxfrac, weights, scale, mksetcoefs, mksetcoefsvalid, mircoef, mirrhs, cutactivity, 
+         success, cutislocal) );
 
    return SCIP_OKAY;
 }

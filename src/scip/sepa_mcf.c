@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.79 2008/12/05 17:31:06 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.80 2008/12/09 09:03:32 bzfwolte Exp $"
 
 /*#define SCIP_DEBUG*/ /*????????????????????*/
 
@@ -5675,7 +5675,7 @@ SCIP_RETCODE generateClusterCuts(
          SCIPdebugMessage("applying MIR with delta = %g\n", deltas[d]);
          SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
 	       (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/deltas[d],
-	       NULL, cutcoefs, &cutrhs, &cutact,
+	       NULL, NULL, cutcoefs, &cutrhs, &cutact,
 	       &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
          time4 += SCIPgetSolvingTime(scip)-temptime;
@@ -5849,8 +5849,8 @@ SCIP_RETCODE generateClusterCuts(
 
             SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
             SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
-		  (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, cutcoefs, &cutrhs, &cutact,
-		  &success, &cutislocal) );
+		  (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, 
+                  NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
             assert(ALLOWLOCAL || !cutislocal);
 
             if( success && SCIPisFeasGT(scip, cutact, cutrhs) )

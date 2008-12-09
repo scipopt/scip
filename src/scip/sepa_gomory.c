@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.77 2008/09/29 23:12:13 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.78 2008/12/09 09:03:32 bzfwolte Exp $"
 
 /**@file   sepa_gomory.c
  * @ingroup SEPARATORS
@@ -420,7 +420,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
                (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
-               binvrow, 1.0, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+               binvrow, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
