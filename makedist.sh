@@ -58,29 +58,29 @@ $NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.c $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
-$NAME/check/IP/miplib/bell3a.mps \
-$NAME/check/IP/miplib/bell5.mps \
-$NAME/check/IP/miplib/blend2.mps \
-$NAME/check/IP/miplib/dcmulti.mps \
-$NAME/check/IP/miplib/egout.mps \
-$NAME/check/IP/miplib/enigma.mps \
-$NAME/check/IP/miplib/flugpl.mps \
-$NAME/check/IP/miplib/gt2.mps \
-$NAME/check/IP/miplib/lseu.mps \
-$NAME/check/IP/miplib/misc03.mps \
-$NAME/check/IP/miplib/mod008.mps \
-$NAME/check/IP/miplib/modglob.mps \
-$NAME/check/IP/miplib/p0033.mps \
-$NAME/check/IP/miplib/p0201.mps \
-$NAME/check/IP/miplib/p0282.mps \
-$NAME/check/IP/miplib/p0548.mps \
-$NAME/check/IP/miplib/pp08a.mps \
-$NAME/check/IP/miplib/pp08aCUTS.mps \
-$NAME/check/IP/miplib/rgn.mps \
-$NAME/check/IP/miplib/stein27.mps \
-$NAME/check/IP/miplib/stein45.mps \
-$NAME/check/IP/miplib/vpm1.mps \
-$NAME/check/IP/miplib/vpm2.mps
+$NAME/check/IP/miplib/bell3a.mps.gz \
+$NAME/check/IP/miplib/bell5.mps.gz \
+$NAME/check/IP/miplib/blend2.mps.gz \
+$NAME/check/IP/miplib/dcmulti.mps.gz \
+$NAME/check/IP/miplib/egout.mps.gz \
+$NAME/check/IP/miplib/enigma.mps.gz \
+$NAME/check/IP/miplib/flugpl.mps.gz \
+$NAME/check/IP/miplib/gt2.mps.gz \
+$NAME/check/IP/miplib/lseu.mps.gz \
+$NAME/check/IP/miplib/misc03.mps.gz \
+$NAME/check/IP/miplib/mod008.mps.gz \
+$NAME/check/IP/miplib/modglob.mps.gz \
+$NAME/check/IP/miplib/p0033.mps.gz \
+$NAME/check/IP/miplib/p0201.mps.gz \
+$NAME/check/IP/miplib/p0282.mps.gz \
+$NAME/check/IP/miplib/p0548.mps.gz \
+$NAME/check/IP/miplib/pp08a.mps.gz \
+$NAME/check/IP/miplib/pp08aCUTS.mps.gz \
+$NAME/check/IP/miplib/rgn.mps.gz \
+$NAME/check/IP/miplib/stein27.mps.gz \
+$NAME/check/IP/miplib/stein45.mps.gz \
+$NAME/check/IP/miplib/vpm1.mps.gz \
+$NAME/check/IP/miplib/vpm2.mps.gz
 rm -f $NAME
 echo ""
 echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile and makedist.sh ($VERSION):"
