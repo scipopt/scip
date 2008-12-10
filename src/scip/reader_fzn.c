@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.2 2008/12/09 18:25:09 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.3 2008/12/10 18:35:16 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -102,6 +102,7 @@ struct FznInput
    SCIP_Bool            endline;
    SCIP_Bool            eof;
    SCIP_Bool            haserror;
+   SCIP_Bool            valid;
 };
 typedef struct FznInput FZNINPUT;
 
@@ -186,7 +187,7 @@ SCIP_Bool hasError(
 {
    assert(fzninput != NULL);
 
-   return fzninput->haserror;
+   return (fzninput->haserror || !fzninput->valid);
 }
 
 /** frees a given buffer char* array */
@@ -381,7 +382,7 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", FZN_BUFFERLEN - 2);
+         SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!\n", FZN_BUFFERLEN - 2);
          fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
          SCIPdebugMessage("the buffer might be currented\n");
       }
@@ -413,7 +414,7 @@ SCIP_Bool getNextLine(
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
       }
    }
-
+   
    return TRUE;
 }
 
@@ -1049,7 +1050,8 @@ void parseType(
       *type = FZN_INT;
    else if( equalTokens(fzninput->token, "set") )
    {
-      syntaxError(scip, fzninput, "sets are not supported yet");
+      SCIPwarningMessage("sets are not supported yet\n");
+      fzninput->valid = FALSE;
       return;
    }
    else
@@ -1760,12 +1762,13 @@ SCIP_RETCODE createSetOpCons(
    if( !equalTokens(ftokens[0], "set") )
       return SCIP_OKAY;
    
-   syntaxError(scip, fzninput, "set operation are not supported yet");
+   fzninput->valid = FALSE;
+   SCIPwarningMessage("set operation are not supported yet\n");
    
    return SCIP_OKAY;
 }
 
-/** creates a linear constraint for an array operation */
+/** creates linear constraint for an array operation */
 static
 SCIP_RETCODE createArrayOpCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1783,7 +1786,35 @@ SCIP_RETCODE createArrayOpCons(
    if( !equalTokens(ftokens[0], "array") )
       return SCIP_OKAY;
    
-   syntaxError(scip, fzninput, "array operation are not supported yet");
+   fzninput->valid = FALSE;
+   SCIPwarningMessage("array operation are not supported yet\n");
+   
+   return SCIP_OKAY;
+}
+
+/** creates a linear constraint for a logical operation */
+static
+SCIP_RETCODE createLogicalOpCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           fname,              /**, functions identifier name */
+   char**                ftokens,            /**< function identifier tokens */
+   int                   nftokens,           /**< number of function identifier tokes */
+   SCIP_Bool*            created             /**< pointer to store whether a constraint was created or not */
+   )
+{
+   assert(scip != NULL);
+   assert(fzninput != NULL);
+
+   /* check if the function identifier name is array operation */
+   if(nftokens < 2)
+      return SCIP_OKAY;
+   
+   if( !equalTokens(ftokens[0], "bool") && !equalTokens(ftokens[1], "bool") )
+      return SCIP_OKAY;
+   
+   fzninput->valid = FALSE;
+   SCIPwarningMessage("logical operation are not supported yet\n");
    
    return SCIP_OKAY;
 }
@@ -1809,7 +1840,8 @@ SCIP_RETCODE createComparisonOpCons(
    /* check if the function name ends of "reif" (reified constraint) which SCIP does not support yet */
    if( equalTokens(ftokens[nftokens - 1], "reif") )
    {
-      syntaxError(scip, fzninput, "reified constraints are not supported");
+      SCIPwarningMessage("reified constraints are not supported\n");
+      fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
    
@@ -1821,26 +1853,30 @@ SCIP_RETCODE createComparisonOpCons(
     * 'le' -- less or equal than 
     * 'ge' -- greater or equal than 
     */
-   assert(strlen(ftokens[nftokens - 1]) == 2);
+   if( strlen(ftokens[nftokens - 1]) != 2)
+      return SCIP_OKAY;
 
    /* check if any sets are involved inn the constraint */
    if( equalTokens(ftokens[0], "set") )
    {
-      syntaxError(scip, fzninput, "constraints using sets are not supported");
+      SCIPwarningMessage("constraints using sets are not supported\n");
+      fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
    
    /* check if the constraint is a 'not equal' one */
    if( equalTokens(ftokens[nftokens - 1], "ne") )
    {
-      syntaxError(scip, fzninput, "constraints with 'not equal' relation are not supported");
+      SCIPwarningMessage("constraints with 'not equal' relation are not supported\n");
+      fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
 
    /* check if the constraint contains float variable or coefficients and '<' or '>' */
    if( equalTokens(ftokens[0], "float") && (equalTokens(ftokens[nftokens - 1], "lt") || equalTokens(ftokens[nftokens - 1], "ht") ) )
    {
-      syntaxError(scip, fzninput, "constraints with '<' or '>' relation and continuous variables are not supported");
+      SCIPwarningMessage("constraints with '<' or '>' relation and continuous variables are not supported\n");
+      fzninput->valid = FALSE;
       return SCIP_OKAY;
    }
    
@@ -1990,6 +2026,11 @@ SCIP_RETCODE parseConstraint(
    if( hasError(fzninput) || created ) 
       goto TERMINATE;
    
+   SCIP_CALL( createLogicalOpCons(scip, fzninput, name, tokens, ntokens, &created) );
+
+   if( hasError(fzninput) || created )
+      goto TERMINATE;
+
    SCIP_CALL( createArrayOpCons(scip, fzninput, name, tokens, ntokens, &created) );
 
    if( hasError(fzninput) || created )
@@ -1999,8 +2040,13 @@ SCIP_RETCODE parseConstraint(
    
    if( hasError(fzninput) || created )
       goto TERMINATE;
-
-
+   
+   if( !created )
+   {
+      fzninput->valid = FALSE;
+      SCIPwarningMessage("constraint <%s> is not supported yet\n", fzninput->tokenbuf);
+   }
+   
  TERMINATE:
    for( i = 0; i < ntokens; ++i )
       SCIPfreeBufferArray(scip, &tokens[i]);
@@ -2233,6 +2279,8 @@ SCIP_RETCODE readFZNFile(
          {
             /* deal with sets */
             SCIPwarningMessage("sets are not supported yet\n");
+            fzninput->valid = FALSE;
+            break;
          }
          else if( equalTokens(fzninput->token, "solve") )
          {
@@ -2273,21 +2321,46 @@ SCIP_RETCODE readFZNFile(
                return SCIP_OKAY;
             }
          }        
+         
+         if( hasError(fzninput) )
+            break;
 
          /* each statement should be closed with a semicolon */
-         if( !getNextToken(fzninput) || !isEndStatment(fzninput) )
-         {
+         if( !getNextToken(fzninput) )
             syntaxError(scip, fzninput, "expected semicolon");
+
+         /* check for annotations */
+         if( equalTokens(fzninput->token, "::") )
+         {
+            /* skip the annotation */
+            do
+            {
+               if( !getNextToken(fzninput) )
+                  syntaxError(scip, fzninput, "expected more tokens");
+            }
+            while( !isEndStatment(fzninput) );
          }
+            
+         if( !isEndStatment(fzninput) ) 
+            syntaxError(scip, fzninput, "expected semicolon");
       }
    }
    
    /* close file */
    SCIPfclose(fzninput->file);
-
+   
    if( hasError(fzninput) )
+   {
       SCIP_CALL( SCIPfreeProb(scip) );
 
+      /* create empty problem */
+      SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPsetObjsense(scip, fzninput->objsense) );
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -3120,6 +3193,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.endline = FALSE;
    fzninput.eof = FALSE;
    fzninput.haserror = FALSE;
+   fzninput.valid = TRUE;
    
    SCIP_CALL( SCIPhashtableCreate(&fzninput.varHashtable, SCIPblkmem(scip), SCIP_HASHSIZE_NAMES,
          hashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
@@ -3155,13 +3229,9 @@ SCIP_DECL_READERREAD(readerReadFzn)
    /* evaluate the result */
    if( fzninput.haserror )
       return SCIP_PARSEERROR;
-   else
-   {
-      /* set objective sense */
-      SCIP_CALL( SCIPsetObjsense(scip, fzninput.objsense) );
-      *result = SCIP_SUCCESS;
-   }
-   
+
+   *result = SCIP_SUCCESS;
+
    return SCIP_OKAY;
 }
 
