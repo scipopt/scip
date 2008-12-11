@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.314 2008/11/17 09:55:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.315 2008/12/11 14:59:16 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5992,10 +5992,10 @@ SCIP_RETCODE aggregateVariables(
  *  in case there is only one binary variable with an odd coefficient, all other
  *  variables are not continuous and have an even coefficient, and only one of the left and right 
  *  hand-sides is odd, then:
- *  1. the left hand-side is odd and the right hand-side is even or infinity then:
+ *  1. the right hand-side is odd and the left hand-side is even or minus infinity then:
  *    - if the odd coefficient is equal to 1, delete the variable and decrease rhs by 1
  *    - otherwise, decrease coefficient and rhs by 1
- *  2. the right hand-side is odd and the left hand-side is even or minus infinity then:
+ *  2. the left hand-side is odd and the right hand-side is even or infinity then:
  *    - if the odd coefficient equal to -1, delete the variable and increase lhs by 1
  *    - otherwise, increase coefficient and lhs by 1
  *  Afterwards we us the normalize method to further simplify the inequality 
@@ -6021,7 +6021,7 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_Real val;
    
    SCIP_VAR* oddbinvar;
-   int noddvars = 0;
+   int noddvals = 0;
    int pos = 0;
    assert( scip != NULL );
    assert( cons != NULL );
@@ -6034,14 +6034,8 @@ SCIP_RETCODE simplifyInequalities(
    /* try to delete variables and simplify constraint */
    do
    {
-      success = FALSE;
-      noddvars = 0;
-
       lhs = consdata->lhs;
       rhs = consdata->rhs;
-      vars = consdata->vars;
-      vals = consdata->vals;
-      nvars = consdata->nvars;
 
       assert( !SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs) );
       
@@ -6063,7 +6057,11 @@ SCIP_RETCODE simplifyInequalities(
 
       oddbinvar = NULL;
       oddbinval = 0;
-      noddvars = 0;
+      success = FALSE;
+      noddvals = 0;
+      vars = consdata->vars;
+      vals = consdata->vals;
+      nvars = consdata->nvars;
       
       /* search for binary variables with an odd coefficient */
       for( v = 0; v < nvars; ++v )
@@ -6076,23 +6074,24 @@ SCIP_RETCODE simplifyInequalities(
          val = vals[v] / 2.0;
          if( !SCIPisIntegral(scip, val) )
          {
-            /* the odd values have belong to binary variables */
+            /* the odd values have to belong to binary variables */
             if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
                return SCIP_OKAY;
             
             oddbinvar = vars[v];
             oddbinval = vals[v];
             pos = v;
-            noddvars++;
-            if (noddvars >= 2)
+            noddvals++;
+            if (noddvals >= 2)
                return SCIP_OKAY;
          }
       }
       
       /* now we found exactly one binary variables with an odd coefficient and all other variables have even
        * coefficients and are not of continuous type; furthermore, only one side is odd */
-      if( noddvars == 1 )
+      if( noddvals)
       {
+         assert(noddvals == 1);
          assert( oddbinvar != NULL );
          lhsodd = FALSE;
          
@@ -6106,14 +6105,14 @@ SCIP_RETCODE simplifyInequalities(
          {
             oddbinval++;
             SCIP_CALL( chgLhs(scip, cons, lhs + 1) );
-            SCIPdebugMessage("linear constraint <%s>: decreasing coefficient for variable <%s> to <%g> and lhs to <%g>\n",
+            SCIPdebugMessage("linear constraint <%s>: increasing coefficient for variable <%s> to <%g> and lhs to <%g>\n",
                SCIPconsGetName(cons), SCIPvarGetName(oddbinvar), oddbinval, lhs + 1);
          }
          else
          {
             oddbinval--;
             SCIP_CALL( chgRhs(scip, cons, rhs - 1) );
-            SCIPdebugMessage("linear constraint <%s>: reducing coefficient for variable <%s> to <%g> and rhs to <%g>\n", 
+            SCIPdebugMessage("linear constraint <%s>: decreasing coefficient for variable <%s> to <%g> and rhs to <%g>\n", 
                SCIPconsGetName(cons), SCIPvarGetName(oddbinvar), oddbinval , rhs - 1);
          }
          

@@ -11,6 +11,7 @@ features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
 - new interface to QSopt due to Daniel Espinoza
 - new reader for reading and writing FlatZinc models
+- new presolving step in cons_knapsack.c, same like "simplifyinequalities" in cons_linear.c
 
 performance improvements:
 - replaced some function calls in loop conditions

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.167 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.168 2008/12/11 14:59:16 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -70,6 +70,7 @@
 #define DEFAULT_MAXCARDBOUNDDIST    0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
                                          *   to best node's dual bound for separating knapsack cardinality cuts */
 #define DEFAULT_DISAGGREGATION     TRUE /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
+#define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify knapsacks */
 
 
 
@@ -91,6 +92,7 @@ struct SCIP_ConshdlrData
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
    int                   maxnumcardlift;     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
    SCIP_Bool             disaggregation;     /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
+   SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
 };
 
 
@@ -130,6 +132,7 @@ struct SCIP_EventData
 /*
  * Local methods
  */
+
 
 /** creates event data */
 static
@@ -2729,6 +2732,141 @@ SCIP_RETCODE mergeMultiples(
    return SCIP_OKAY;
 }
 
+/*  tries to simplify coefficients and delete variables in knapsack a^Tx <= rhs
+ *  in case there is only one binary variable with an odd weight and the capacity
+ *  is odd too, then:
+ *    - if the odd coefficient is equal to 1, delete the variable and decrease rhs by 1
+ *    - otherwise, decrease coefficient and rhs by 1
+ *  Afterwards we use the normalize method to further simplify the inequality. 
+ */
+static
+SCIP_RETCODE simplifyInequalities(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
+   int*                  nchgsides           /**< pointer to store the amount of changed sides */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool success;
+   int v;
+   int nvars;
+   SCIP_VAR** vars;
+   SCIP_Longint* weights;
+   SCIP_Longint oddbinval;
+   SCIP_Longint capacity;
+   SCIP_Longint gcd;
+   
+   SCIP_VAR* oddbinvar;
+   int noddvals = 0;
+   int pos = 0;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( nchgcoefs != NULL );
+   assert( nchgsides != NULL );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+   assert( !SCIPisInfinity(scip, consdata->capacity) );
+
+   if( !consdata->merged )
+      return SCIP_OKAY;
+
+   /* check if capacity is odd */
+   if( !(consdata->capacity % 2) )
+      return SCIP_OKAY;
+
+
+   /* try to delete variables and simplify constraint */
+   do
+   {
+      success = FALSE;
+      noddvals = 0;
+
+      capacity = consdata->capacity;
+      vars = consdata->vars;
+      weights = consdata->weights;
+      nvars = consdata->nvars;
+      
+      assert(nvars > 1);
+
+      oddbinvar = NULL;
+      oddbinval = 0;
+      
+      /* search for binary variables with an odd coefficient */
+      for( v = 0; v < nvars; ++v )
+      {
+         /* check if the coefficient is odd */
+         if( !SCIPisIntegral(scip, weights[v] % 2) )
+         {
+            oddbinvar = vars[v];
+            oddbinval = weights[v];
+            pos = v;
+            noddvals++;
+            if (noddvals >= 2)
+               return SCIP_OKAY;
+         }
+      }
+      
+      /* now we found exactly one binary variables with an odd coefficient and all other variables have even
+       * coefficients and are not of continuous type; furthermore, only one side is odd */
+      if( noddvals )
+      {
+         assert(noddvals == 1);
+         assert(oddbinvar != NULL);
+         
+         oddbinval--;
+         SCIPdebugMessage("linear constraint <%s>: decreasing coefficient for variable <%s> to <%lld> and rhs to <%lld>\n", 
+            SCIPconsGetName(cons), SCIPvarGetName(oddbinvar), oddbinval , capacity - 1);
+
+         --(consdata->capacity);
+         
+         if( SCIPisZero(scip, oddbinval) )
+         {
+            SCIP_CALL( delCoefPos( scip, cons, pos ) );
+         }
+         else
+         {
+            consdataChgWeight(consdata, pos, oddbinval);
+         }
+
+         (*nchgcoefs)++;
+         (*nchgsides)++;
+
+         capacity = consdata->capacity;
+         vars = consdata->vars;
+         weights = consdata->weights;
+         nvars = consdata->nvars;
+
+         /*
+          * division by greatest common divisor
+          */
+         gcd = weights[nvars - 1];
+         for( v = nvars - 2; v >= 0 && gcd > 1; --v )
+         {
+            gcd = SCIPcalcGreComDiv(gcd, ABS(weights[v]));
+         }
+         
+         assert(gcd >= 2);
+         
+         for( v = nvars - 1; v >= 0 && gcd > 1; --v )
+         {
+            consdataChgWeight(consdata, v, weights[v]/gcd);
+         }
+         (*nchgcoefs) += nvars;
+         
+         consdata->capacity /= gcd;
+         (*nchgsides)++;
+         
+         success = TRUE;
+      }
+   }
+   while( success );
+   
+   return SCIP_OKAY;
+}
+
 /** deletes all fixed variables from knapsack constraint, and replaces variables with binary representatives */
 static
 SCIP_RETCODE applyFixings(
@@ -4011,6 +4149,7 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
 static
 SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
    SCIP_Bool redundant;
@@ -4029,6 +4168,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
    for( i = 0; i < nconss && !SCIPisStopped(scip); i++ )
    {
       SCIP_CONS* cons;
@@ -4097,6 +4239,12 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
          /* tighten capacity and weights */
          SCIP_CALL( tightenWeights(scip, cons, nchgcoefs, nchgsides) );
+
+         /* try to simplify inequalities */
+         if( conshdlrdata->simplifyinequalities )
+         {
+            SCIP_CALL( simplifyInequalities(scip, cons, nchgcoefs, nchgsides) );
+         }
       }
    } 
 
@@ -4480,6 +4628,10 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          "constraints/knapsack/disaggregation",
          "should disaggregation of knapsack constraints be allowed in preprocessing?",
          &conshdlrdata->disaggregation, TRUE, DEFAULT_DISAGGREGATION, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/knapsack/simplifyinequalities",
+         "should presolving try to simplify knapsacks",
+         &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
 
    return SCIP_OKAY;
 }
