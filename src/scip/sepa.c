@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.66 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.67 2008/12/12 10:02:54 bzfraack Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -292,7 +292,7 @@ SCIP_RETCODE SCIPsepaExecLP(
       && SCIPsetIsLE(set, bounddist, sepa->maxbounddist)
       && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->lpwasdelayed) )
    {
-      if( !sepa->delay || execdelayed )
+      if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
       {
 	 SCIP_Longint oldndomchgs;
 	 SCIP_Longint oldnprobdomchgs;
@@ -394,7 +394,7 @@ SCIP_RETCODE SCIPsepaExecSol(
    if( sepa->sepaexecsol != NULL
       && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->solwasdelayed) )
    {
-      if( !sepa->delay || execdelayed )
+      if( (!sepa->delay && !sepa->solwasdelayed) || execdelayed )
       {
 	 SCIP_Longint oldndomchgs;
 	 SCIP_Longint oldnprobdomchgs;
