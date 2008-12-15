@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.3 2008/12/10 18:35:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.4 2008/12/15 11:15:28 bzfheinz Exp $"
+
+#define SCIP_DEBUG
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -861,27 +863,39 @@ SCIP_RETCODE parseList(
 {
    char assignment[FZN_BUFFERLEN];
 
-   /* loop through the array */
-   do
+   /* check if the list is not empty */
+   if( getNextToken(fzninput) && !isChar(fzninput->token, ']') )
    {
-      if(selements == *nelements)
+      /* push back token */
+      pushToken(fzninput);
+
+      /* loop through the array */
+      do
       {
-         selements *= 2;
-         SCIP_CALL( SCIPreallocBufferArray(scip, elements, selements) );
+         if(selements == *nelements)
+         {
+            selements *= 2;
+            SCIP_CALL( SCIPreallocBufferArray(scip, elements, selements) );
+         }
+         
+         /* parse and flatten assignment */
+         flattenAssignment(scip, fzninput, assignment);
+         
+         if( hasError(fzninput) )
+            break;
+         
+         /* strore assignment */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &(*elements)[(*nelements)], assignment, strlen(assignment) + 1) );
+         
+         (*nelements)++;
       }
-
-      /* parse and flatten assignment */
-      flattenAssignment(scip, fzninput, assignment);
-      
-      if( hasError(fzninput) )
-         break;
-      
-      /* strore assignment */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &(*elements)[(*nelements)], assignment, strlen(assignment) + 1) );
-
-      (*nelements)++;
+      while( getNextToken(fzninput) && isChar(fzninput->token, ',') );
    }
-   while( getNextToken(fzninput) && isChar(fzninput->token, ',') );
+   else
+   {
+      SCIPdebugMessage("list is empty\n");
+   }
+
    
    /* push back ']' which closes the list */
    pushToken(fzninput);
@@ -1079,7 +1093,6 @@ SCIP_RETCODE applyVariableAssignment(
 {
    FZNCONSTANT* constant;
    SCIP_VAR* linkVar;
-   char name[FZN_BUFFERLEN];
    SCIP_Bool boolvalue;
    SCIP_Real realvalue;
    SCIP_Real fixvalue;
@@ -1092,18 +1105,12 @@ SCIP_RETCODE applyVariableAssignment(
 
    if( linkVar == NULL )
    {
-      if( isBoolExp(name, &boolvalue) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-      {
+      if( isBoolExp(assignment, &boolvalue) && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          fixvalue = (SCIP_Real) boolvalue;
-      }
-      else if( isValue(name, &realvalue) && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
-      {
+      else if( isValue(assignment, &realvalue) && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
          fixvalue = realvalue;
-      }
       else if( constant != NULL )
-      {
          fixvalue = constant->value;
-      }
       else
       {
          syntaxError(scip, fzninput, "assignment is not recognizable");
@@ -2149,7 +2156,13 @@ SCIP_RETCODE parseSolveItem(
          SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
          SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
          
-         SCIPdebugMessage("found linear objective <%s>\n", fzninput->token);
+         SCIPdebugMessage("found linear objective\n");
+         
+         if( !getNextToken(fzninput) || !isChar(fzninput->token, '(') )
+         {
+            syntaxError(scip, fzninput, "expected token <(>");
+            goto TERMINATE;
+         }
          
          /* pares coefficients array for integer variables */
          SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );  
@@ -2194,11 +2207,11 @@ SCIP_RETCODE parseSolveItem(
          /* pares continuous variable array */
          SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, nvars * 2) );  
 
-         /* check error and for the komma between the variable array and side value */
-         if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
+         /* check error and for the ')' */
+         if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ')') )
          {
             if( !hasError(fzninput) )            
-               syntaxError(scip, fzninput, "expected token <,>");
+               syntaxError(scip, fzninput, "expected token <)>");
             
             goto TERMINATE;
          }
