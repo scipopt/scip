@@ -12,9 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.4 2008/12/15 11:15:28 bzfheinz Exp $"
-
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.5 2008/12/17 10:48:48 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -41,8 +39,10 @@
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/cons_or.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_xor.h"
 #include "scip/pub_misc.h"
 #include "scip/reader_fzn.h"
 
@@ -63,7 +63,7 @@ typedef enum reading_states STATE;
 
 /** number types */
 enum FznNumberType {
-   FZN_BOOL, FZN_INT, FZN_FLOAT
+   FZN_BOOL, FZN_INT, FZN_FLOAT, FZN_SET
 };
 typedef enum FznNumberType FZNNUMBERTYPE;
 
@@ -1062,7 +1062,7 @@ void parseType(
       *type = FZN_FLOAT;
    else if( equalTokens(fzninput->token, "int") )
       *type = FZN_INT;
-   else if( equalTokens(fzninput->token, "set") )
+   else if( equalTokens(fzninput->token, "set") || isChar(fzninput->token, '{') )
    {
       SCIPwarningMessage("sets are not supported yet\n");
       fzninput->valid = FALSE;
@@ -1088,7 +1088,7 @@ SCIP_RETCODE applyVariableAssignment(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
    SCIP_VAR*             var,                /**< variable to assign something */
-   const char*           assignment
+   const char*           assignment          /**< assignment */
    )
 {
    FZNCONSTANT* constant;
@@ -1314,14 +1314,14 @@ static
 SCIP_RETCODE createVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
-   SCIP_VAR**            var,                /**< pointer to hold the created variable */
+   SCIP_VAR**            var,                /**< pointer to hold the created variable, or NULL */
    const char*           name,               /**< name of the varibale */
    SCIP_Real             lb,                 /**< lower bound of the variable */
    SCIP_Real             ub,                 /**< upper bound of the variable */
    FZNNUMBERTYPE         type                /**< number type */
    )
 {
-   SCIP_VAR* tmpVar;
+   SCIP_VAR* varcopy;
    SCIP_VARTYPE vartype;
 
    assert(scip != NULL);
@@ -1345,23 +1345,24 @@ SCIP_RETCODE createVariable(
    }
 
    /* create variable */
-   SCIP_CALL( SCIPcreateVar(scip, var, name, lb, ub, 0.0, vartype, TRUE, TRUE, NULL, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPaddVar(scip, *var) );
+   SCIP_CALL( SCIPcreateVar(scip, &varcopy, name, lb, ub, 0.0, vartype, TRUE, TRUE, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPaddVar(scip, varcopy) );
 
    SCIPdebugMessage("created variable ");
-   SCIPdebug(SCIPprintVar(scip, *var, NULL) );
+   SCIPdebug(SCIPprintVar(scip, varcopy, NULL) );
    
    /* variable name should not exist before */
-   assert(SCIPhashtableRetrieve(fzninput->varHashtable, *var) == NULL);
+   assert(SCIPhashtableRetrieve(fzninput->varHashtable, varcopy) == NULL);
    
    /* insert variable into the hashmap for later use in the constraint section */
-   SCIP_CALL( SCIPhashtableInsert(fzninput->varHashtable, *var) );
+   SCIP_CALL( SCIPhashtableInsert(fzninput->varHashtable, varcopy) );
 
    /* copy variable pointer before releasing the variable to keep the pointer to the variable */
-   tmpVar = *var;
+   if( var != NULL )
+      *var = varcopy;
    
    /* release variable */
-   SCIP_CALL( SCIPreleaseVar(scip, &tmpVar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &varcopy) );
    
    return SCIP_OKAY;
 }
@@ -1817,11 +1818,95 @@ SCIP_RETCODE createLogicalOpCons(
    if(nftokens < 2)
       return SCIP_OKAY;
    
-   if( !equalTokens(ftokens[0], "bool") && !equalTokens(ftokens[1], "bool") )
+   if(equalTokens(ftokens[0], "bool") && nftokens == 2 )
+   {
+      char** elements;
+      int nelements;
+      
+      /* the bool_eq constraint is processed in createComparisonOpCons() */
+      if( equalTokens(ftokens[1], "eq") )
+         return SCIP_OKAY;
+      
+      SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
+      nelements = 0;
+      
+      SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 3) );
+      
+      if( !hasError(fzninput) )
+      {
+         SCIP_CONS* cons;
+         SCIP_VAR** vars;
+         int v;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
+
+         /* collect variable if constraint identifier is a variable */
+         for( v = 0; v < 3; ++v )
+         {
+            vars[v] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[v]);
+            
+            if( vars[v] == NULL )
+            {
+               syntaxError(scip, fzninput, "unknown variable identifier name");
+               goto TERMINATE;
+            }
+         }   
+
+         if( equalTokens(ftokens[1], "or" ) )
+         {
+            SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, vars[2], 2, vars, 
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
+           
+            *created = TRUE;
+         }
+         else if( equalTokens(ftokens[1], "and") )
+         {
+            SCIP_CALL( SCIPcreateConsAnd(scip, &cons, fname, vars[2], 2, vars, 
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
+            
+            *created = TRUE;
+         }
+         else if( equalTokens(ftokens[1], "xor") )
+         {
+            SCIP_VAR* tmpVar;
+
+            /* swap resultant to front */
+            tmpVar = vars[2];
+            vars[2] = vars[0];
+            vars[0] = tmpVar;
+
+            SCIP_CALL( SCIPcreateConsXor(scip, &cons, fname, FALSE, 3, vars, 
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
+            
+            *created = TRUE;
+         }
+         else
+         {
+            fzninput->valid = FALSE;
+            SCIPwarningMessage("logical operation <%s> is not supported yet\n", fzninput->tokenbuf);
+            goto TERMINATE;
+         }
+         
+         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+         
+      TERMINATE:
+         SCIPfreeBufferArray(scip, &vars);
+      }
+
+      /* free elements array */
+      freeStringBufferArray(scip, elements, nelements);
+      
+   }
+   else if(equalTokens(ftokens[1], "bool") )   
+   {
+      fzninput->valid = FALSE;
+      SCIPwarningMessage("logical operation <%s> is not supported yet\n", fzninput->tokenbuf);
+   }   
+   else
       return SCIP_OKAY;
-   
-   fzninput->valid = FALSE;
-   SCIPwarningMessage("logical operation are not supported yet\n");
    
    return SCIP_OKAY;
 }
@@ -1831,7 +1916,7 @@ static
 SCIP_RETCODE createComparisonOpCons(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
-   const char*           fname,              /**, functions identifier name */
+   const char*           fname,              /**< functions identifier name */
    char**                ftokens,            /**< function identifier tokens */
    int                   nftokens,           /**< number of function identifier tokes */
    SCIP_Bool*            created             /**< pointer to store whether a constraint was created or not */
@@ -1968,10 +2053,12 @@ SCIP_RETCODE parseConstraint(
    FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
+   SCIP_VAR* var;
    char* tokens[4];
    char* token;
    char* nexttoken;
    char name[FZN_BUFFERLEN];
+   char fname[FZN_BUFFERLEN];
    SCIP_Bool created;
    int ntokens;
    int i;
@@ -1981,92 +2068,112 @@ SCIP_RETCODE parseConstraint(
 
    SCIPdebugMessage("parse constraint expression\n");
    
+   /* get next token already flatten */ 
+   flattenAssignment(scip, fzninput, name);
+   
+   /* check if constraint identifier is a variable */
+   var = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) name);
+
+   if( var != NULL )
+   {
+      SCIP_Real vals[] = {1.0};
+
+      /* create fixing constraint */
+      SCIP_CALL( createLinearCons(scip, "fixing", 1, &var, vals, 1.0, 1.0) );
+      return SCIP_OKAY;
+   }
+   
    /* parse constraint identifier name */
-   if( !getNextToken(fzninput) || !isIdentifier(fzninput->token) )
+   if( !isIdentifier(name) )
    {
       syntaxError(scip, fzninput, "expected constraint identifier name");
       return SCIP_OKAY;
    }
    
-   /* remember the constraint identifier name */
-   swapTokenBuffer(fzninput);
-   
-   /* copy constraint identifier name */
-   (void) SCIPsnprintf(name, FZN_BUFFERLEN, "%s", fzninput->tokenbuf);
-   
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, '(') )
+   if( !getNextToken(fzninput) )
    {
       syntaxError(scip, fzninput, "expected token <(>");
       return SCIP_OKAY;
    }
    
-   /* truncate the function identifier name in separate tokes */
-   token = SCIPstrtok(name, "_", &nexttoken);
-   ntokens = 0;
-   while( token != NULL )
+   /* copy function name */
+   (void) SCIPsnprintf(fname, FZN_BUFFERLEN, "%s", name);
+
+
+   if( isChar(fzninput->token, '(') )
    {
-      if( ntokens == 4 )
-         break;
+      /* truncate the function identifier name in separate tokes */
+      token = SCIPstrtok(name, "_", &nexttoken);
+      ntokens = 0;
+      while( token != NULL )
+      {
+         if( ntokens == 4 )
+            break;
+         
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &tokens[ntokens], token, strlen(token) + 1) );
+         ntokens++;
+         
+         token = SCIPstrtok(NULL, "_", &nexttoken);
+      }
       
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &tokens[ntokens], token, strlen(token) + 1) );
-      ntokens++;
+      SCIPdebugMessage("%s", tokens[0]);
+      for( i = 1; i < ntokens; ++i )
+      {
+         SCIPdebugPrintf(" %s", tokens[i]);
+      }
+      SCIPdebugPrintf("\n");
       
-      token = SCIPstrtok(NULL, "_", &nexttoken);
+      created = FALSE;
+      
+      SCIP_CALL( createCoercionOpCons(scip, fzninput, fname, &created) );
+      
+      if( hasError(fzninput) || created )
+         goto TERMINATE;
+      
+      SCIP_CALL( createSetOpCons(scip, fzninput,  fname, tokens, ntokens, &created) );
+      
+      if( hasError(fzninput) || created ) 
+         goto TERMINATE;
+      
+      SCIP_CALL( createLogicalOpCons(scip, fzninput, fname, tokens, ntokens, &created) );
+      
+      if( hasError(fzninput) || created )
+         goto TERMINATE;
+      
+      SCIP_CALL( createArrayOpCons(scip, fzninput, fname, tokens, ntokens, &created) );
+      
+      if( hasError(fzninput) || created )
+         goto TERMINATE;
+      
+      SCIP_CALL( createComparisonOpCons(scip, fzninput, fname, tokens, ntokens, &created) );
+      
+      if( hasError(fzninput) || created )
+         goto TERMINATE;
+      
+      if( !created )
+      {
+         fzninput->valid = FALSE;
+         SCIPwarningMessage("constraint <%s> is not supported yet\n", fname);
+      }
+      
+   TERMINATE:
+      for( i = 0; i < ntokens; ++i )
+         SCIPfreeBufferArray(scip, &tokens[i]);
+      
+      if( hasError(fzninput) )
+         return SCIP_OKAY;
+      
+      if( !getNextToken(fzninput) || !isChar(fzninput->token, ')') )
+      {
+         syntaxError(scip, fzninput, "expected token <)>");
+         return SCIP_OKAY;
+      }
    }
-
-   SCIPdebugMessage("%s", tokens[0]);
-   for( i = 1; i < ntokens; ++i )
+   else
    {
-      SCIPdebugPrintf(" %s", tokens[i]);
+      
    }
-   SCIPdebugPrintf("\n");
-
-   created = FALSE;
-   
-   SCIP_CALL( createCoercionOpCons(scip, fzninput, name, &created) );
-   
-   if( hasError(fzninput) || created )
-      goto TERMINATE;
-
-   SCIP_CALL( createSetOpCons(scip, fzninput, name, tokens, ntokens, &created) );
-   
-   if( hasError(fzninput) || created ) 
-      goto TERMINATE;
-   
-   SCIP_CALL( createLogicalOpCons(scip, fzninput, name, tokens, ntokens, &created) );
-
-   if( hasError(fzninput) || created )
-      goto TERMINATE;
-
-   SCIP_CALL( createArrayOpCons(scip, fzninput, name, tokens, ntokens, &created) );
-
-   if( hasError(fzninput) || created )
-      goto TERMINATE;
-
-   SCIP_CALL( createComparisonOpCons(scip, fzninput, name, tokens, ntokens, &created) );
-   
-   if( hasError(fzninput) || created )
-      goto TERMINATE;
-   
-   if( !created )
-   {
-      fzninput->valid = FALSE;
-      SCIPwarningMessage("constraint <%s> is not supported yet\n", fzninput->tokenbuf);
-   }
-   
- TERMINATE:
-   for( i = 0; i < ntokens; ++i )
-      SCIPfreeBufferArray(scip, &tokens[i]);
-   
-   if( hasError(fzninput) )
-      return SCIP_OKAY;
-   
-   if( !getNextToken(fzninput) || !isChar(fzninput->token, ')') )
-   {
-      syntaxError(scip, fzninput, "expected token <)>");
-      return SCIP_OKAY;
-   }
-   
+      
    return SCIP_OKAY;
 }
 
@@ -2257,6 +2364,10 @@ SCIP_RETCODE readFZNFile(
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
    
+   /* create two auxiliary variable for true and false values */
+   SCIP_CALL( createVariable(scip, fzninput, NULL, "true", 1.0, 1.0, FZN_BOOL) );
+   SCIP_CALL( createVariable(scip, fzninput, NULL, "false", 0.0, 0.0, FZN_BOOL) );
+
    /* parse through statements one-by-one */
    while( !SCIPfeof( fzninput->file ) && !hasError(fzninput) )
    {
@@ -3217,7 +3328,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
 
    fzninput.nconstants = 0;
    fzninput.sconstants = 10;
-   
+
    /* read the file */
    SCIP_CALL( readFZNFile(scip, &fzninput, filename) );
    
