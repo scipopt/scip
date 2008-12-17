@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.27 2008/11/06 08:55:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.28 2008/12/17 11:34:09 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -87,7 +87,7 @@ typedef SCIP_Longint         Int;
  *  - scip            : SCIP main data structure
  *  - sol             : solution to cut off 
  *  - conshdlrdata    : constraint handler data 
-*/
+ */
 #define CUTOFF_CONSTRAINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_SOL* sol, SCIP_CONSHDLRDATA* conshdlrdata)
 
 

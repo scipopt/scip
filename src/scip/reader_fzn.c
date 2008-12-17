@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.5 2008/12/17 10:48:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.6 2008/12/17 11:34:09 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -81,6 +81,21 @@ struct FznConstant
    SCIP_Real            value;
 };
 typedef struct FznConstant FZNCONSTANT;
+
+/** tries to creates and adds a constraint sets parameter creates to TRUE if method was successful 
+ * 
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - fzninput,       : FZN reading data
+ *  - fname,          : functions identifier name
+ *  - ftokens,        : function identifier tokens 
+ *  - nftokens,       : number of function identifier tokes
+ *
+ *  output
+ *  - created         : pointer to store whether a constraint was created or not
+ */
+#define CREATE_CONSTRAINT(x) SCIP_RETCODE x (SCIP* scip, FZNINPUT* fzninput, const char* fname, char** ftokens, int nftokens, SCIP_Bool* created)
+
 
 /** FlatZinc reading data */
 struct FznInput
@@ -1731,16 +1746,11 @@ SCIP_RETCODE parseVariableArrayAssignment(
 
 /** creates a linear constraint for an array operation */
 static
-SCIP_RETCODE createCoercionOpCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FZNINPUT*             fzninput,           /**< FZN reading data */
-   const char*           fname,              /**, functions identifier name */
-   SCIP_Bool*            created             /**< pointer to store whether a constraint was created or not */
-   )
-{
+CREATE_CONSTRAINT(createCoercionOpCons)
+{ /*lint --e{715}*/
    assert(scip != NULL);
    assert(fzninput != NULL);
-
+   
    /* check if the function identifier name is array operation */
    if( !equalTokens(fname, "int2float") && !equalTokens(fname, "bool2int") )
       return SCIP_OKAY;
@@ -1748,20 +1758,13 @@ SCIP_RETCODE createCoercionOpCons(
    SCIP_CALL( parseLinking(scip, fzninput, fname, "eq", 0.0) );
    
    *created = TRUE;
-
+   
    return SCIP_OKAY;
 }
 
 /** creates a linear constraint for an array operation */
 static
-SCIP_RETCODE createSetOpCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FZNINPUT*             fzninput,           /**< FZN reading data */
-   const char*           fname,              /**, functions identifier name */
-   char**                ftokens,            /**< function identifier tokens */
-   int                   nftokens,           /**< number of function identifier tokes */
-   SCIP_Bool*            created             /**< pointer to store whether a constraint was created or not */
-   )
+CREATE_CONSTRAINT(createSetOpCons)
 {
    assert(scip != NULL);
    assert(fzninput != NULL);
@@ -1778,14 +1781,7 @@ SCIP_RETCODE createSetOpCons(
 
 /** creates linear constraint for an array operation */
 static
-SCIP_RETCODE createArrayOpCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FZNINPUT*             fzninput,           /**< FZN reading data */
-   const char*           fname,              /**, functions identifier name */
-   char**                ftokens,            /**< function identifier tokens */
-   int                   nftokens,           /**< number of function identifier tokes */
-   SCIP_Bool*            created             /**< pointer to store whether a constraint was created or not */
-   )
+CREATE_CONSTRAINT(createArrayOpCons)
 {
    assert(scip != NULL);
    assert(fzninput != NULL);
@@ -1802,14 +1798,7 @@ SCIP_RETCODE createArrayOpCons(
 
 /** creates a linear constraint for a logical operation */
 static
-SCIP_RETCODE createLogicalOpCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FZNINPUT*             fzninput,           /**< FZN reading data */
-   const char*           fname,              /**, functions identifier name */
-   char**                ftokens,            /**< function identifier tokens */
-   int                   nftokens,           /**< number of function identifier tokes */
-   SCIP_Bool*            created             /**< pointer to store whether a constraint was created or not */
-   )
+CREATE_CONSTRAINT(createLogicalOpCons)
 {
    assert(scip != NULL);
    assert(fzninput != NULL);
@@ -1913,14 +1902,7 @@ SCIP_RETCODE createLogicalOpCons(
 
 /** creates a linear constraint for an comparison operation */
 static
-SCIP_RETCODE createComparisonOpCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FZNINPUT*             fzninput,           /**< FZN reading data */
-   const char*           fname,              /**< functions identifier name */
-   char**                ftokens,            /**< function identifier tokens */
-   int                   nftokens,           /**< number of function identifier tokes */
-   SCIP_Bool*            created             /**< pointer to store whether a constraint was created or not */
-   )
+CREATE_CONSTRAINT(createComparisonOpCons)
 {
    char assignment[FZN_BUFFERLEN];
    SCIP_Real lhs;
@@ -2053,6 +2035,16 @@ SCIP_RETCODE parseConstraint(
    FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
+   /* function pointer array containing all function which can create a constraint */
+   CREATE_CONSTRAINT((*constypes[])) =  {
+      &createCoercionOpCons,
+      &createSetOpCons,
+      &createLogicalOpCons,
+      &createArrayOpCons,
+      &createComparisonOpCons,
+   };
+   int nconstypes = 5;
+
    SCIP_VAR* var;
    char* tokens[4];
    char* token;
@@ -2062,6 +2054,7 @@ SCIP_RETCODE parseConstraint(
    SCIP_Bool created;
    int ntokens;
    int i;
+   int c;
    
    assert(scip != NULL);
    assert(fzninput != NULL);
@@ -2083,97 +2076,67 @@ SCIP_RETCODE parseConstraint(
       return SCIP_OKAY;
    }
    
-   /* parse constraint identifier name */
+   /* check constraint identifier name */
    if( !isIdentifier(name) )
    {
       syntaxError(scip, fzninput, "expected constraint identifier name");
       return SCIP_OKAY;
    }
    
-   if( !getNextToken(fzninput) )
+   /* check if we have a opening parenthesis */
+   if( !getNextToken(fzninput) || !isChar(fzninput->token, '(') )
    {
       syntaxError(scip, fzninput, "expected token <(>");
       return SCIP_OKAY;
    }
-   
+    
    /* copy function name */
    (void) SCIPsnprintf(fname, FZN_BUFFERLEN, "%s", name);
-
-
-   if( isChar(fzninput->token, '(') )
+   
+   /* truncate the function identifier name in separate tokes */
+   token = SCIPstrtok(name, "_", &nexttoken);
+   ntokens = 0;
+   while( token != NULL )
    {
-      /* truncate the function identifier name in separate tokes */
-      token = SCIPstrtok(name, "_", &nexttoken);
-      ntokens = 0;
-      while( token != NULL )
-      {
-         if( ntokens == 4 )
-            break;
-         
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &tokens[ntokens], token, strlen(token) + 1) );
-         ntokens++;
-         
-         token = SCIPstrtok(NULL, "_", &nexttoken);
-      }
+      if( ntokens == 4 )
+         break;
       
-      SCIPdebugMessage("%s", tokens[0]);
-      for( i = 1; i < ntokens; ++i )
-      {
-         SCIPdebugPrintf(" %s", tokens[i]);
-      }
-      SCIPdebugPrintf("\n");
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tokens[ntokens], token, strlen(token) + 1) );
+      ntokens++;
       
-      created = FALSE;
-      
-      SCIP_CALL( createCoercionOpCons(scip, fzninput, fname, &created) );
-      
-      if( hasError(fzninput) || created )
-         goto TERMINATE;
-      
-      SCIP_CALL( createSetOpCons(scip, fzninput,  fname, tokens, ntokens, &created) );
-      
-      if( hasError(fzninput) || created ) 
-         goto TERMINATE;
-      
-      SCIP_CALL( createLogicalOpCons(scip, fzninput, fname, tokens, ntokens, &created) );
-      
-      if( hasError(fzninput) || created )
-         goto TERMINATE;
-      
-      SCIP_CALL( createArrayOpCons(scip, fzninput, fname, tokens, ntokens, &created) );
-      
-      if( hasError(fzninput) || created )
-         goto TERMINATE;
-      
-      SCIP_CALL( createComparisonOpCons(scip, fzninput, fname, tokens, ntokens, &created) );
-      
-      if( hasError(fzninput) || created )
-         goto TERMINATE;
-      
-      if( !created )
-      {
-         fzninput->valid = FALSE;
-         SCIPwarningMessage("constraint <%s> is not supported yet\n", fname);
-      }
-      
-   TERMINATE:
-      for( i = 0; i < ntokens; ++i )
-         SCIPfreeBufferArray(scip, &tokens[i]);
-      
-      if( hasError(fzninput) )
-         return SCIP_OKAY;
-      
-      if( !getNextToken(fzninput) || !isChar(fzninput->token, ')') )
-      {
-         syntaxError(scip, fzninput, "expected token <)>");
-         return SCIP_OKAY;
-      }
+      token = SCIPstrtok(NULL, "_", &nexttoken);
    }
-   else
+   
+   SCIPdebugMessage("%s", tokens[0]);
+   for( i = 1; i < ntokens; ++i )
    {
-      
+      SCIPdebugPrintf(" %s", tokens[i]);
    }
-      
+   SCIPdebugPrintf("\n");
+   
+   created = FALSE;
+   
+   /* loop over all methods which can create a constraint */
+   for( c = 0; c < nconstypes && !created && !hasError(fzninput); ++c )
+   {
+      SCIP_CALL( constypes[c](scip, fzninput, fname, tokens, ntokens, &created) );
+   }
+   
+   /* check if a contraint was created */
+   if( !hasError(fzninput) && !created )
+   {
+      fzninput->valid = FALSE;
+      SCIPwarningMessage("constraint <%s> is not supported yet\n", fname);
+   }
+   
+   /* free memory */
+   for( i = 0; i < ntokens; ++i )
+      SCIPfreeBufferArray(scip, &tokens[i]);
+   
+   /* check for the closing parenthesis */
+   if( !hasError(fzninput) && ( !getNextToken(fzninput) || !isChar(fzninput->token, ')')) )
+      syntaxError(scip, fzninput, "expected token <)>");
+   
    return SCIP_OKAY;
 }
 
