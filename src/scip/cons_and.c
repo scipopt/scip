@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.99 2008/10/21 14:21:09 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.100 2008/12/17 10:48:20 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -1781,13 +1781,13 @@ SCIP_DECL_CONSINITSOL(consInitsolAnd)
    SCIP_Bool initial;
    
    assert( scip != NULL );
-   assert( nconss > 0 || conss == NULL );
+   assert( nconss == 0 || (nconss > 0 && conss != NULL) );
    
    if( conss == NULL )
       return SCIP_OKAY;
-
+   
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   assert( conshdlrdata != NULL );
    assert( conshdlrdata->initiallp == 0 || conshdlrdata->initiallp == 1 || conshdlrdata->initiallp == 2 );
 
    /* the parameter conshdlrdata->initiallp has the values  0: FALSE, 1: auto, 2: TRUE */
