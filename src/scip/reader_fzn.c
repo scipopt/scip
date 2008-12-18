@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.7 2008/12/18 08:23:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.8 2008/12/18 14:59:31 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -22,6 +22,7 @@
  *
  *@todo Test for uniqueness of variable and constraint names (after cutting down).
  *@todo remove pushBufferToken() staff since it is not used in this reader
+ *@todo remove swapTokenBuffer() staff since it is not used in this reader
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -51,19 +52,17 @@
 #define READER_EXTENSION        "fzn"
 
 
+#define FZN_BUFFERLEN         65536     /**< size of the line buffer for reading or writing */
+#define FZN_MAX_PUSHEDTOKENS  1
+#define FZN_INIT_COEFSSIZE    8192
+
 /*
  * Data structures
  */
-#define FZN_BUFFERLEN         65536     /**< size of the line buffer for reading or writing */
-#define FZN_MAX_PUSHEDTOKENS  2
-#define FZN_INIT_COEFSSIZE    8192
-
-enum reading_states { FZN_SYMBOLS, FZN_CONSTRAINTS, FZN_SOLVE, FZN_OUTPUT};
-typedef enum reading_states STATE;
 
 /** number types */
 enum FznNumberType {
-   FZN_BOOL, FZN_INT, FZN_FLOAT, FZN_SET
+   FZN_BOOL, FZN_INT, FZN_FLOAT
 };
 typedef enum FznNumberType FZNNUMBERTYPE;
 
@@ -76,13 +75,13 @@ typedef enum FznExpType FZNEXPTYPE;
 /** FlatZinc constant */
 struct FznConstant
 {
-   const char*          name;
-   FZNNUMBERTYPE        type;
-   SCIP_Real            value;
+   const char*          name;           /**< constant name */
+   FZNNUMBERTYPE        type;           /**< constant type */
+   SCIP_Real            value;          /**< constant value */
 };
 typedef struct FznConstant FZNCONSTANT;
 
-/** tries to creates and adds a constraint sets parameter creates to TRUE if method was successful 
+/** tries to creates and adds a constraint; sets parameter created to TRUE if method was successful 
  * 
  *  input:
  *  - scip            : SCIP main data structure
@@ -106,7 +105,6 @@ struct FznInput
    FZNCONSTANT**        constants;
    char                 linebuf[FZN_BUFFERLEN];
    char*                token;
-   char*                tokenbuf;
    char*                pushedtokens[FZN_MAX_PUSHEDTOKENS];
    int                  npushedtokens;
    int                  linenumber;
@@ -117,7 +115,6 @@ struct FznInput
    SCIP_OBJSENSE        objsense;
    SCIP_Bool            hasdot;
    SCIP_Bool            endline;
-   SCIP_Bool            eof;
    SCIP_Bool            haserror;
    SCIP_Bool            valid;
 };
@@ -399,7 +396,8 @@ SCIP_Bool getNextLine(
 
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!\n", FZN_BUFFERLEN - 2);
+         SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!\n", 
+            FZN_BUFFERLEN - 2);
          fzninput->linebuf[FZN_BUFFERLEN-2] = '\0';
          SCIPdebugMessage("the buffer might be currented\n");
       }
@@ -499,7 +497,7 @@ SCIP_Bool getNextToken(
 
    if( buf[fzninput->bufpos] == '.' && buf[fzninput->bufpos+1] == '.')
    {
-      /* found <..> which only occurs in Ranges and is a keyword */
+      /* found <..> which only occurs in Ranges and is a "keyword" */
       tokenlen = 2;
       fzninput->bufpos += 2;
       fzninput->linepos += 2;
@@ -570,17 +568,6 @@ void pushToken(
 
    swapPointers(&fzninput->pushedtokens[fzninput->npushedtokens], &fzninput->token);
    fzninput->npushedtokens++;
-}
-
-/** swaps the current token with the token buffer */
-static
-void swapTokenBuffer(
-   FZNINPUT*              fzninput             /**< FZN reading data */
-   )
-{
-   assert(fzninput != NULL);
-
-   swapPointers(&fzninput->token, &fzninput->tokenbuf);
 }
 
 /** checks whether the current token is a semicolon which closes a statement */
@@ -900,7 +887,7 @@ SCIP_RETCODE parseList(
             break;
          
          /* strore assignment */
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &(*elements)[(*nelements)], assignment, strlen(assignment) + 1) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &(*elements)[(*nelements)], assignment, (int) strlen(assignment) + 1) );
          
          (*nelements)++;
       }
@@ -1197,7 +1184,7 @@ SCIP_RETCODE applyConstantAssignment(
    SCIP_CALL( SCIPallocBuffer(scip, &constant) );
    
    constant->type = type;
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &constant->name, name, strlen(name) + 1) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &constant->name, name, (int) strlen(name) + 1) );
    constant->value = value;
    
    /* store constant */
@@ -1456,9 +1443,7 @@ SCIP_RETCODE parseConstantArray(
    FZNINPUT*             fzninput,           /**< FZN reading data */
    const char*           name,               /**< array name */
    int                   nconstants,         /**< number of constants */
-   FZNNUMBERTYPE         type,               /**< number type */
-   SCIP_Real             lb,                 /**< lower bound of the variables */
-   SCIP_Real             ub                  /**< lower bound of the variables */
+   FZNNUMBERTYPE         type                /**< number type */
    )
 {
    char** assigns;
@@ -1537,7 +1522,7 @@ SCIP_RETCODE parseArray(
    if( isvararray )
       SCIP_CALL( parseVariableArray(scip, fzninput, name, nelements, type, lb, ub) );
    else
-      SCIP_CALL( parseConstantArray(scip, fzninput, name, nelements, type, lb, ub) );
+      SCIP_CALL( parseConstantArray(scip, fzninput, name, nelements, type) );
    
    return SCIP_OKAY;
 }
@@ -1747,7 +1732,7 @@ SCIP_RETCODE parseVariableArrayAssignment(
 /** creates a linear constraint for an array operation */
 static
 CREATE_CONSTRAINT(createCoercionOpCons)
-{ /*lint --e{715}*/
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(fzninput != NULL);
    
@@ -1765,7 +1750,7 @@ CREATE_CONSTRAINT(createCoercionOpCons)
 /** creates a linear constraint for an array operation */
 static
 CREATE_CONSTRAINT(createSetOpCons)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(fzninput != NULL);
 
@@ -1782,7 +1767,7 @@ CREATE_CONSTRAINT(createSetOpCons)
 /** creates linear constraint for an array operation */
 static
 CREATE_CONSTRAINT(createArrayOpCons)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(fzninput != NULL);
 
@@ -1799,7 +1784,7 @@ CREATE_CONSTRAINT(createArrayOpCons)
 /** creates a linear constraint for a logical operation */
 static
 CREATE_CONSTRAINT(createLogicalOpCons)
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(fzninput != NULL);
 
@@ -1872,7 +1857,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
          else
          {
             fzninput->valid = FALSE;
-            SCIPwarningMessage("logical operation <%s> is not supported yet\n", fzninput->tokenbuf);
+            SCIPwarningMessage("logical operation <%s> is not supported yet\n", fname);
             goto TERMINATE;
          }
          
@@ -1892,7 +1877,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
    else if(equalTokens(ftokens[1], "bool") )   
    {
       fzninput->valid = FALSE;
-      SCIPwarningMessage("logical operation <%s> is not supported yet\n", fzninput->tokenbuf);
+      SCIPwarningMessage("logical operation <%s> is not supported yet\n", fname);
    }   
    else
       return SCIP_OKAY;
@@ -1903,7 +1888,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
 /** creates a linear constraint for an comparison operation */
 static
 CREATE_CONSTRAINT(createComparisonOpCons)
-{
+{  /*lint --e{715}*/
    char assignment[FZN_BUFFERLEN];
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -1947,7 +1932,8 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    }
 
    /* check if the constraint contains float variable and coefficients and '<' or '>' relation */
-   if( equalTokens(ftokens[0], "float") && (equalTokens(ftokens[nftokens - 1], "lt") || equalTokens(ftokens[nftokens - 1], "gt") ) )
+   if( equalTokens(ftokens[0], "float") && 
+      (equalTokens(ftokens[nftokens - 1], "lt") || equalTokens(ftokens[nftokens - 1], "gt") ) )
    {
       SCIPwarningMessage("constraints with '<' or '>' relation and continuous variables are not supported\n");
       fzninput->valid = FALSE;
@@ -1972,7 +1958,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
       
-      SCIPdebugMessage("found linear constraint <%s>\n", fzninput->tokenbuf);
+      SCIPdebugMessage("found linear constraint <%s>\n", fname);
       
       /* pares coefficients array */
       SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );  
@@ -2037,11 +2023,11 @@ SCIP_RETCODE parseConstraint(
 {
    /* function pointer array containing all function which can create a constraint */
    CREATE_CONSTRAINT((*constypes[])) =  {
-      &createCoercionOpCons,
-      &createSetOpCons,
-      &createLogicalOpCons,
-      &createArrayOpCons,
-      &createComparisonOpCons,
+      createCoercionOpCons,
+      createSetOpCons,
+      createLogicalOpCons,
+      createArrayOpCons,
+      createComparisonOpCons,
    };
    int nconstypes = 5;
 
@@ -2101,7 +2087,7 @@ SCIP_RETCODE parseConstraint(
       if( ntokens == 4 )
          break;
       
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &tokens[ntokens], token, strlen(token) + 1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tokens[ntokens], token, (int) strlen(token) + 1) );
       ntokens++;
       
       token = SCIPstrtok(NULL, "_", &nexttoken);
@@ -2167,7 +2153,9 @@ SCIP_RETCODE parseSolveItem(
          if( !getNextToken(fzninput) )
             syntaxError(scip, fzninput, "expected more tokens");
       }
-      while( !equalTokens(fzninput->token, "satisfy") && !equalTokens(fzninput->token, "minimize") && !equalTokens(fzninput->token, "maximize") );
+      while( !equalTokens(fzninput->token, "satisfy") 
+         && !equalTokens(fzninput->token, "minimize") 
+         && !equalTokens(fzninput->token, "maximize") );
    }
    
    if( equalTokens(fzninput->token, "satisfy") )
@@ -3263,8 +3251,8 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.linebuf[0] = '\0';
    SCIP_CALL( SCIPallocBufferArray(scip, &fzninput.token, FZN_BUFFERLEN) );
    fzninput.token[0] = '\0';
-   SCIP_CALL( SCIPallocBufferArray(scip, &fzninput.tokenbuf, FZN_BUFFERLEN) );
-   fzninput.tokenbuf[0] = '\0';
+//    SCIP_CALL( SCIPallocBufferArray(scip, &fzninput.tokenbuf, FZN_BUFFERLEN) );
+//    fzninput.tokenbuf[0] = '\0';
    for( i = 0; i < FZN_MAX_PUSHEDTOKENS; ++i )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &fzninput.pushedtokens[i], FZN_BUFFERLEN) );
@@ -3276,7 +3264,6 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.linepos = 0;
    fzninput.objsense = SCIP_OBJSENSE_MINIMIZE;
    fzninput.endline = FALSE;
-   fzninput.eof = FALSE;
    fzninput.haserror = FALSE;
    fzninput.valid = TRUE;
    
@@ -3295,7 +3282,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
    
    /* free dynamically allocated memory */
    SCIPfreeBufferArrayNull(scip, &fzninput.token);
-   SCIPfreeBufferArrayNull(scip, &fzninput.tokenbuf);
+   //   SCIPfreeBufferArrayNull(scip, &fzninput.tokenbuf);
    for( i = 0; i < FZN_MAX_PUSHEDTOKENS; ++i )
    {
       SCIPfreeBufferArrayNull(scip, &fzninput.pushedtokens[i]);

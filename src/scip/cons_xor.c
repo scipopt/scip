@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.69 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.70 2008/12/18 14:59:30 bzfheinz Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -547,11 +547,12 @@ SCIP_RETCODE consdataSort(
 {
    assert(consdata != NULL);
 
-   if( consdata->nvars == 0 )
+   if( consdata->nvars <= 1 )
       consdata->sorted = TRUE;
    else if( !consdata->sorted )
    {
       SCIP_VAR* varv;
+
       int* perm;
       int v;
       int i;
