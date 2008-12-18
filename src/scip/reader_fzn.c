@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.6 2008/12/17 11:34:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.7 2008/12/18 08:23:43 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1930,7 +1930,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    if( strlen(ftokens[nftokens - 1]) != 2)
       return SCIP_OKAY;
 
-   /* check if any sets are involved inn the constraint */
+   /* check if any sets are involved in the constraint */
    if( equalTokens(ftokens[0], "set") )
    {
       SCIPwarningMessage("constraints using sets are not supported\n");
@@ -1946,8 +1946,8 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       return SCIP_OKAY;
    }
 
-   /* check if the constraint contains float variable or coefficients and '<' or '>' */
-   if( equalTokens(ftokens[0], "float") && (equalTokens(ftokens[nftokens - 1], "lt") || equalTokens(ftokens[nftokens - 1], "ht") ) )
+   /* check if the constraint contains float variable and coefficients and '<' or '>' relation */
+   if( equalTokens(ftokens[0], "float") && (equalTokens(ftokens[nftokens - 1], "lt") || equalTokens(ftokens[nftokens - 1], "gt") ) )
    {
       SCIPwarningMessage("constraints with '<' or '>' relation and continuous variables are not supported\n");
       fzninput->valid = FALSE;
@@ -2165,9 +2165,7 @@ SCIP_RETCODE parseSolveItem(
       do
       {
          if( !getNextToken(fzninput) )
-         {
             syntaxError(scip, fzninput, "expected more tokens");
-         }
       }
       while( !equalTokens(fzninput->token, "satisfy") && !equalTokens(fzninput->token, "minimize") && !equalTokens(fzninput->token, "maximize") );
    }
