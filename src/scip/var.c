@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.239 2008/12/09 18:25:09 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.240 2008/12/19 12:58:58 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2813,12 +2813,13 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    int v;
    int r;
 
+   SCIP_VAR** tmpvars;
    SCIP_VAR** multvars;
+   SCIP_Real* tmpscalars;
    SCIP_Real* multscalars;
-   SCIP_Real multconstant;
-   int multvarssize;
+   int tmpvarssize;
+   int ntmpvars;
    int nmultvars;
-   int multrequiredsize;
 
    assert( set != NULL );
    assert( vars != NULL );
@@ -2831,15 +2832,22 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    nactivevars = 0;
    activeconstant = 0.0;
    activevarssize = (*nvars) * 2;
+   ntmpvars = *nvars;
+   tmpvarssize = *nvars;
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &activescalars, activevarssize) );
+   /* use memory array allocation because it's possible to reallocate for these arrays a too big size later on, which we don't want to 
+    * keep in scip
+    */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&tmpvars, vars, ntmpvars) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&tmpscalars, scalars, ntmpvars) );
 
    /* collect for each variable the representation in active variables */
-   for( v = 0; v < (*nvars); ++v )
+   for( v = 0; v < ntmpvars; ++v )
    {
-      var = vars[v];
-      scalar = scalars[v];
+      var = tmpvars[v];
+      scalar = tmpscalars[v];
 
       assert( var != NULL );
 
@@ -2875,49 +2883,33 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       case SCIP_VARSTATUS_MULTAGGR:
          /* x = a_1*y_1 + ... + a_n*y_n + c */
-         multconstant = SCIPvarGetMultaggrConstant(var);
          nmultvars = SCIPvarGetMultaggrNVars(var);
-
-         SCIP_CALL( SCIPsetDuplicateBufferArray(set, &multvars, SCIPvarGetMultaggrVars(var), nmultvars) );
-         SCIP_CALL( SCIPsetDuplicateBufferArray(set, &multscalars, SCIPvarGetMultaggrScalars(var), nmultvars) );
-         multvarssize = nmultvars;
-
-         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, multvars, multscalars, &nmultvars, multvarssize, 
-               &multconstant, &multrequiredsize, mergemultiples) );
-         if( multrequiredsize > multvarssize )
-         {
-            multvarssize = multrequiredsize;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &multvars, multvarssize) );
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &multscalars, multvarssize) );
-
-            SCIP_CALL( SCIPvarGetActiveRepresentatives(set, multvars, multscalars, &nmultvars, multvarssize, 
-                  &multconstant, &multrequiredsize, mergemultiples) );
-            
-            assert(multrequiredsize <= multvarssize );
-         }
-
-         if( nactivevars + nmultvars > activevarssize )
-         {
-            activevarssize += nactivevars + nmultvars;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
-         }
+         multvars = SCIPvarGetMultaggrVars(var);
+         multscalars = SCIPvarGetMultaggrScalars(var);
 
          /* copy the variables and scalars */
-         for( r = 0; r < nmultvars; ++r, ++nactivevars )
+         for( ; v >= 0 && nmultvars > 0; --v , --nmultvars )
          {
-            assert( SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(multvars[r]) == SCIP_VARSTATUS_COLUMN );
-            assert( nactivevars < activevarssize );
-
-            activevars[nactivevars] = multvars[r];
-            activescalars[nactivevars] = scalar * multscalars[r];
+            tmpvars[v] = multvars[nmultvars - 1];
+            tmpscalars[v] = scalar * multscalars[nmultvars - 1];
+         }
+         if( nmultvars + ntmpvars > tmpvarssize )
+         {
+            tmpvarssize *= 2;
+            SCIP_ALLOC( BMSreallocMemoryArray(&tmpvars, tmpvarssize) );
+            SCIP_ALLOC( BMSreallocMemoryArray(&tmpscalars, tmpvarssize) );
+            assert(ntmpvars <= tmpvarssize);
+         }
+         for( ; nmultvars > 0; --nmultvars )
+         {
+            tmpvars[ntmpvars] = multvars[nmultvars - 1];
+            tmpscalars[ntmpvars] = scalar * multscalars[nmultvars - 1];
+            ++ntmpvars;
+            assert(ntmpvars <= tmpvarssize);
          }
 
-         activeconstant += scalar * multconstant;
+         activeconstant += scalar * SCIPvarGetMultaggrConstant(var);;
 
-         /* free buffers for multiaggregated variables */
-         SCIPsetFreeBufferArray(set, &multvars);
-         SCIPsetFreeBufferArray(set, &multscalars);
          break;
 
       case SCIP_VARSTATUS_FIXED:
@@ -2975,6 +2967,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       }
    }
 
+   BMSfreeMemoryArray(&tmpvars);
+   BMSfreeMemoryArray(&tmpscalars);
    SCIPsetFreeBufferArray(set, &activevars);
    SCIPsetFreeBufferArray(set, &activescalars);
 
@@ -2982,7 +2976,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 }
 
 
-/** flattens aggeregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+/** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
 SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -3522,6 +3516,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    )
 {
+   SCIP_VAR** tmpvars;
+   SCIP_Real* tmpscalars;
    SCIP_EVENT* event;
    SCIP_Real obj;
    SCIP_Real branchfactor;
@@ -3530,6 +3526,11 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    int nlocksdown;
    int nlocksup;
    int v;
+   SCIP_Real tmpconstant;
+   SCIP_Real tmpscalar;
+   int ntmpvars;
+   int tmpvarssize;
+   int tmprequiredsize;
 
    assert(var != NULL);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
@@ -3573,6 +3574,67 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 	 break;
       }
 
+      /* check if there would be created a self-reference */
+      ntmpvars = naggvars;
+      tmpvarssize = naggvars;
+      tmpconstant = constant;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpvars, aggvars, ntmpvars) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &tmpscalars, scalars, ntmpvars) );
+
+      SCIP_CALL( SCIPvarGetActiveRepresentatives(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, &tmpconstant, &tmprequiredsize, FALSE) );
+      if( tmprequiredsize > tmpvarssize )
+      {
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tmpvars, tmpvarssize, tmprequiredsize) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tmpscalars, tmpvarssize, tmprequiredsize) );
+         tmpvarssize = tmprequiredsize;
+         SCIP_CALL( SCIPvarGetActiveRepresentatives(set, tmpvars, tmpscalars, &ntmpvars, tmpvarssize, &tmpconstant, &tmprequiredsize, FALSE) );
+         assert( tmprequiredsize <= tmpvarssize );
+      }
+
+      tmpscalar = 0;
+      for( v = ntmpvars - 1; v >= 0; --v )
+      {
+         if( tmpvars[v]->index == var->index )
+         {
+            tmpscalar += tmpscalars[v];
+            tmpvars[v] = tmpvars[ntmpvars - 1];
+            tmpscalars[v] = tmpscalars[ntmpvars - 1];
+            --ntmpvars;
+         }
+            
+      }
+      
+      /* this means that x = x + a_1*y_1 + ... + a_n*y_n + c */
+      if( tmpscalar == 1 )
+      {
+         if( ntmpvars == 0 )
+         {  
+            if( tmpconstant == 0 ) /* x = x */
+               return SCIP_OKAY;
+            else /* 0 = c and c != 0 */
+            {
+               *infeasible = TRUE;
+               return SCIP_OKAY;
+            }
+         }
+         else /* maybe here you can do more presolving */
+            return SCIP_OKAY;
+      }
+      else if( tmpscalar != 0 )
+      {
+         tmpconstant /= tmpscalar;
+         for( v = ntmpvars - 1; v >= 0; --v )
+            tmpscalars[v] /= tmpscalar;
+
+         /* check, if we are in one of the simple cases */
+         if( ntmpvars == 0 )
+            return SCIPvarFix(var, blkmem, set, stat, prob, primal, tree, lp, branchcand, eventqueue, tmpconstant, 
+               infeasible, aggregated);
+         else if( ntmpvars == 1)
+            return SCIPvarAggregate(var, blkmem, set, stat, prob, primal, tree, lp, cliquetable, branchcand, eventqueue, 
+               tmpvars[0], tmpscalars[0], tmpconstant, infeasible, aggregated);
+      }
+
       /* if the variable to be multiaggregated has implications or variable bounds (i.e. is the implied variable or
        * variable bound variable of another variable), we have to remove it from the other variables implications or
        * variable bounds
@@ -3602,11 +3664,11 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
       /* convert variable into multi-aggregated variable */
       var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, aggvars, naggvars) );
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.scalars, scalars, naggvars) );
-      var->data.multaggr.constant = constant;
-      var->data.multaggr.nvars = naggvars;
-      var->data.multaggr.varssize = naggvars;
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.vars, tmpvars, ntmpvars) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &var->data.multaggr.scalars, tmpscalars, ntmpvars) );
+      var->data.multaggr.constant = tmpconstant;
+      var->data.multaggr.nvars = ntmpvars;
+      var->data.multaggr.varssize = ntmpvars;
 
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
       SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );
@@ -3617,23 +3679,24 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       branchfactor = var->branchfactor;
       branchpriority = var->branchpriority;
       branchdirection = (SCIP_BRANCHDIR)var->branchdirection;
-      for( v = 0; v < naggvars; ++v )
+
+      for( v = 0; v < ntmpvars; ++v )
       {
-         assert(aggvars[v] != NULL);
-         aggvars[v]->removable &= var->removable;
-         branchfactor = MAX(aggvars[v]->branchfactor, branchfactor);
-         branchpriority = MAX(aggvars[v]->branchpriority, branchpriority);
+         assert(tmpvars[v] != NULL);
+         tmpvars[v]->removable &= var->removable;
+         branchfactor = MAX(tmpvars[v]->branchfactor, branchfactor);
+         branchpriority = MAX(tmpvars[v]->branchpriority, branchpriority);
       }
-      for( v = 0; v < naggvars; ++v )
+      for( v = 0; v < ntmpvars; ++v )
       {
-         SCIPvarChgBranchFactor(aggvars[v], set, branchfactor);
-         SCIPvarChgBranchPriority(aggvars[v], branchpriority);
-         if( (SCIP_BRANCHDIR)aggvars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
+         SCIPvarChgBranchFactor(tmpvars[v], set, branchfactor);
+         SCIPvarChgBranchPriority(tmpvars[v], branchpriority);
+         if( (SCIP_BRANCHDIR)tmpvars[v]->branchdirection == SCIP_BRANCHDIR_AUTO )
          {
-            if( scalars[v] >= 0.0 )
-               SCIPvarChgBranchDirection(aggvars[v], branchdirection);
+            if( tmpscalars[v] >= 0.0 )
+               SCIPvarChgBranchDirection(tmpvars[v], branchdirection);
             else
-               SCIPvarChgBranchDirection(aggvars[v], SCIPbranchdirOpposite(branchdirection));
+               SCIPvarChgBranchDirection(tmpvars[v], SCIPbranchdirOpposite(branchdirection));
          }
       }
       SCIPvarChgBranchFactor(var, set, branchfactor);
@@ -3653,8 +3716,9 @@ SCIP_RETCODE SCIPvarMultiaggregate(
        * variables and the problem's objective offset
        */
       SCIP_CALL( SCIPvarAddObj(var, blkmem, set, stat, prob, primal, tree, lp, eventqueue, obj) );
-
-      SCIP_CALL( SCIPvarFlattenAggregationGraph(var, blkmem, set) );
+      
+      BMSfreeBlockMemoryArray(blkmem, &tmpvars, tmpvarssize);
+      BMSfreeBlockMemoryArray(blkmem, &tmpscalars, tmpvarssize);
 
       *aggregated = TRUE;
       break;

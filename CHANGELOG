@@ -39,8 +39,10 @@ fixed bugs:
   constraint is empty or contains too many nonzero elements mksetcoefs is invalid) 
 - fixed bug in SCIPconsSetInitial() that occurred in pairwise presolving: add or delete constraint in initconss when changing
   the initial flag
-- fixed "GGT-Kaibel-Bug" in var.c, prop_pseudoobj.c and cons_varbound.c that occured while computing new values with infinity values
+- fixed "GGT-Kaibel-Bug" in var.c, prop_pseudoobj.c and cons_varbound.c that occured while computing new values using infinity values
 - fixed assert in cons_and.c method SCIP_DECL_CONSINITSOL(consInitsolAnd)
+- fixed bug with exponantial complexity for reallocating memory in SCIPvarGetActiveRepresentatives in var.c
+- fixed possible infinite loop while multiaggregating a variable in var.c
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
