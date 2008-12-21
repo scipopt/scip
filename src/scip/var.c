@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.240 2008/12/19 12:58:58 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.241 2008/12/21 11:51:10 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2883,9 +2883,9 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       case SCIP_VARSTATUS_MULTAGGR:
          /* x = a_1*y_1 + ... + a_n*y_n + c */
-         nmultvars = SCIPvarGetMultaggrNVars(var);
-         multvars = SCIPvarGetMultaggrVars(var);
-         multscalars = SCIPvarGetMultaggrScalars(var);
+	 nmultvars = var->data.multaggr.nvars;
+         multvars = var->data.multaggr.vars;
+         multscalars = var->data.multaggr.scalars;
 
          /* copy the variables and scalars */
          for( ; v >= 0 && nmultvars > 0; --v , --nmultvars )
