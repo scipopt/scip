@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.241 2008/12/21 11:51:10 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.242 2008/12/21 14:00:42 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2895,7 +2895,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          }
          if( nmultvars + ntmpvars > tmpvarssize )
          {
-            tmpvarssize *= 2;
+	    while( nmultvars + ntmpvars > tmpvarssize )
+	      tmpvarssize *= 2;
             SCIP_ALLOC( BMSreallocMemoryArray(&tmpvars, tmpvarssize) );
             SCIP_ALLOC( BMSreallocMemoryArray(&tmpscalars, tmpvarssize) );
             assert(ntmpvars <= tmpvarssize);
@@ -3620,9 +3621,11 @@ SCIP_RETCODE SCIPvarMultiaggregate(
          else /* maybe here you can do more presolving */
             return SCIP_OKAY;
       }
+      /* this means that x = b*x + a_1*y_1 + ... + a_n*y_n + c */
       else if( tmpscalar != 0 )
       {
-         tmpconstant /= tmpscalar;
+	 tmpscalar = 1 - tmpscalar;
+	 tmpconstant /= tmpscalar;
          for( v = ntmpvars - 1; v >= 0; --v )
             tmpscalars[v] /= tmpscalar;
 
