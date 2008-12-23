@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.300 2008/12/09 09:03:30 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.301 2008/12/23 14:46:38 bzfberth Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9736,7 +9736,7 @@ SCIP_RETCODE lpAlgorithm(
    
    if( lptimelimit <= 0.0 || !success )
    {
-      printf("time limit of %f seconds could not be set\n", lptimelimit);
+      SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
       *lperror = FALSE;
       *timelimit = TRUE;
       return SCIP_OKAY;
