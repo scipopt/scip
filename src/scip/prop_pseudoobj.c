@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.26 2008/12/09 18:25:09 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.27 2008/12/23 18:29:36 bzfberth Exp $"
 
 /**@file   prop_pseudoobj.c
  * @ingroup PROPAGATORS
@@ -92,6 +92,8 @@ SCIP_RETCODE resolvePropagation(
     */
    objvars = propdata->objvars;
    nobjvars = propdata->nobjvars;
+   assert(nobjvars == 0 || objvars != NULL);
+
    for( v = 0; v < nobjvars; ++v )
    {
       var = objvars[v];
@@ -161,6 +163,7 @@ SCIP_RETCODE propagateCutoffbound(
 
    objvars = propdata->objvars;
    nobjvars = propdata->nobjvars;
+   assert(nobjvars == 0 || objvars != NULL);
 
    /* nothing to do for empty objective */
    if( nobjvars == 0 )
@@ -394,6 +397,7 @@ SCIP_RETCODE propagateLowerbound(
 
    objvars = propdata->objvars;
    nobjvars = propdata->nobjvars;
+   assert(nobjvars == 0 || objvars != NULL);
 
    /* nothing to do for empty objective */
    if( nobjvars == 0 )
@@ -534,6 +538,7 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
       if( !SCIPisZero(scip, obj) )
          nobjvars++;
    }
+   SCIPdebugMessage("There are %d variables in the objective function.\n",nobjvars);
 
    /* collect the variables with non-zero objective and catch global bound tighten events that decrease the
     * maximal pseudo objective activity
@@ -544,6 +549,7 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
 
       /* allocate memory for non-zero objective variables */
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->objvars, nobjvars) );
+      SCIPdebugMessage("Store objective variables at adress <%p>.\n",propdata->objvars);
 
       k = 0;
       for( v = 0; v < nvars; v++ )
@@ -600,6 +606,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
    eventhdlr = propdata->eventhdlr;
    objvars = propdata->objvars;
    nobjvars = propdata->nobjvars;
+   assert(nobjvars == 0 || objvars != NULL);
 
    /* drop global bound tighten events that decrease the maximal pseudo objective activity and release variables */
    for( k = 0; k < nobjvars; k++ )
@@ -627,6 +634,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolPseudoobj)
       SCIP_CALL( SCIPreleaseVar(scip, &objvars[k]) );
    }
 
+   propdata->nobjvars = 0;
    /* free memory for non-zero objective variables */
    SCIPfreeMemoryArrayNull(scip, &propdata->objvars);
 

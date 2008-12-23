@@ -41,8 +41,9 @@ fixed bugs:
   the initial flag
 - fixed "GGT-Kaibel-Bug" in var.c, prop_pseudoobj.c and cons_varbound.c that occured while computing new values using infinity values
 - fixed assert in cons_and.c method SCIP_DECL_CONSINITSOL(consInitsolAnd)
-- fixed bug with exponantial complexity for reallocating memory in SCIPvarGetActiveRepresentatives in var.c
+- fixed bug with exponential complexity for reallocating memory in SCIPvarGetActiveRepresentatives in var.c
 - fixed possible infinite loop while multiaggregating a variable in var.c
+- fixed bug with array dimension not reset to zero when array is freed in pseudoobj propagator
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
