@@ -1,4 +1,5 @@
-=best= d493                            33095 
+=opt=  d493                            33095 
+=opt=  DSJC250.9.stab                      5
 =opt=  gr666                          286428 
 =opt=  p_hat300-1.clq                      8 
 =inf=  1-Insertions_4.col              1e+20 
@@ -26,7 +27,7 @@
 =best= pg                        -8638.08931 
 =best= d15900                          55413 
 =opt=  e15900                         102421 
-=best= e201600                        180645 
+=opt=  e201600                        180645 
 =opt=  nh97_potential                   1418 
 =opt=  markshare_5_3                       0 
 =opt=  seq10_184_relaxed              134136 
