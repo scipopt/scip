@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.10 2009/01/05 20:24:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.11 2009/01/05 20:26:58 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1714,8 +1714,6 @@ SCIP_RETCODE parseVariableArrayAssignment(
    
    for( v = 0; v < nelements && !hasError(fzninput); ++v )
    {
-      printf("token = %s\n", elements[v]);
-
       (*vars)[(*nvars)] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, elements[v]);
       
       if( (*vars)[(*nvars)] == NULL )
