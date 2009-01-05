@@ -12,9 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.9 2009/01/05 16:27:48 bzfheinz Exp $"
-
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.10 2009/01/05 20:24:40 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -315,6 +313,8 @@ SCIP_Bool isValueChar(
    assert(exptype != NULL);
 
    if( isdigit(c) )
+      return TRUE;
+   else if( firstchar && (c == '+' || c == '-') )
       return TRUE;
    else if( (*exptype == FZN_EXP_NONE) && !(*hasdot) && (c == '.') && (isdigit(nextc)))
    {
