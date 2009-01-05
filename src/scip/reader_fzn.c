@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.8 2008/12/18 14:59:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.9 2009/01/05 16:27:48 bzfheinz Exp $"
+
+#define SCIP_DEBUG
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1712,18 +1714,19 @@ SCIP_RETCODE parseVariableArrayAssignment(
    
    for( v = 0; v < nelements && !hasError(fzninput); ++v )
    {
+      printf("token = %s\n", elements[v]);
+
       (*vars)[(*nvars)] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, elements[v]);
       
       if( (*vars)[(*nvars)] == NULL )
       {
          syntaxError(scip, fzninput, "unknown variable identifier name");
-         goto TERMINATE;
+         break;
       }
 
       (*nvars)++;
    }
 
- TERMINATE:
    freeStringBufferArray(scip, elements, nelements);
    
    return SCIP_OKAY;
@@ -2209,7 +2212,6 @@ SCIP_RETCODE parseSolveItem(
          nvals = 0;
          size = 10;
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
          SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
          
          SCIPdebugMessage("found linear objective\n");
@@ -2231,11 +2233,12 @@ SCIP_RETCODE parseSolveItem(
             
             goto TERMINATE;
          }
-
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvals * 2) );
+         
+         size = MAX(size, nvals) * 2;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vals, size) );
 
          /* pares coefficients array for continuous variables */
-         SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, nvals * 2) );  
+         SCIP_CALL( parseConstantArrayAssignment(scip, fzninput, &vals, &nvals, size) );  
          
          /* check error and for the komma between the coefficient and variable array */
          if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
@@ -2245,9 +2248,11 @@ SCIP_RETCODE parseSolveItem(
             
             goto TERMINATE;
          }
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvals) );
          
          /* pares integer variable array */
-         SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
+         SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, nvals) );  
 
          /* check error and for the komma between the variable array and side value */
          if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ',') )
@@ -2258,10 +2263,10 @@ SCIP_RETCODE parseSolveItem(
             goto TERMINATE;
          }
 
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvars * 2) );
+         assert(nvars <= nvals);
 
          /* pares continuous variable array */
-         SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, nvars * 2) );  
+         SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, nvals) );  
 
          /* check error and for the ')' */
          if( hasError(fzninput) || !getNextToken(fzninput) || !isChar(fzninput->token, ')') )
@@ -2288,6 +2293,7 @@ SCIP_RETCODE parseSolveItem(
          syntaxError(scip, fzninput, "unknown identifier expresion for a objective function");
       }
    }
+   
    return SCIP_OKAY;
 }
 
