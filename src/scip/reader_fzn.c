@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.12 2009/01/06 08:19:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.13 2009/01/06 13:46:40 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1717,17 +1717,34 @@ SCIP_RETCODE parseVariableArrayAssignment(
       
       if( (*vars)[(*nvars)] == NULL )
       {
-         char* tmptoken;
+         /* since the given element does not correspond to an variable name
+          * it might be the case that it is a constant which can be seen as
+          * as a fixed variable */
          
-         tmptoken = fzninput->token;
-         fzninput->token = elements[v];
-         if( !isIdentifier(elements[v]) )
-            syntaxError(scip, fzninput, "expected variable name");
-         else
-            syntaxError(scip, fzninput, "unknown variable identifier name");
-        
-         fzninput->token = tmptoken;
-         break;
+         FZNCONSTANT* constant;
+         SCIP_Real value;
+
+         constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) elements[v]);
+
+         if( constant != NULL )
+         {
+            assert(constant->type = FZN_FLOAT);
+            value = constant->value;
+         } 
+         else if(!isValue(elements[v], &value) )
+         {
+            char* tmptoken;
+         
+            tmptoken = fzninput->token;
+            fzninput->token = elements[v];
+            syntaxError(scip, fzninput, "expected variable name or constant");
+            
+            fzninput->token = tmptoken;
+            break;
+         }
+         
+         /* create a fixed variable */
+         SCIP_CALL( createVariable(scip, fzninput, &(*vars)[*nvars], elements[v], value, value, FZN_FLOAT) );
       }
       
       (*nvars)++;
