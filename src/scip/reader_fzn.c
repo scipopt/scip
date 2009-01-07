@@ -12,8 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.13 2009/01/06 13:46:40 bzfheinz Exp $"
-
+#define SCIP_DEBUG
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
  * @brief  FlatZinc file reader
@@ -2483,9 +2482,9 @@ SCIP_RETCODE getActiveVariables(
    int v;
 
    assert( scip != NULL );
-   assert( vars != NULL );
    assert( scalars != NULL );
    assert( nvars != NULL );
+   assert( vars != NULL || *nvars == 0 );
    assert( constant != NULL );
 
    if( transformed )
@@ -2636,16 +2635,22 @@ SCIP_RETCODE printRow(
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f, ",vals[v]);
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }
+   
+   if( nvars > 0 )
+   { 
+      if( hasfloats )
+      {
+         flattenFloat(scip,vals[nvars-1],buffy);
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",buffy);
+      }
+      else
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f",vals[nvars-1]);
 
-   if( hasfloats )
-   {
-      flattenFloat(scip,vals[nvars-1],buffy);
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s], [",buffy);
-   }
-   else
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f], [",vals[nvars-1]);
-   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
-     
+      SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
+   }   
+
+   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), "], [") );
+   
    for( v = 0; v < nvars-1; ++v )
    {
       var = vars[v];
@@ -2658,13 +2663,19 @@ SCIP_RETCODE printRow(
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }
 
-   if( hasfloats )
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s], ",SCIPvarGetName(vars[nvars-1]), 
+   if( nvars > 0 )
+   { 
+      if( hasfloats )
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]), 
             SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->nvars ? "_float" : "");
-   else
-      (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s], ",SCIPvarGetName(vars[nvars-1]));
-   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
-       
+      else
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));
+
+      SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
+   }
+   
+   SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), "], ") );
+
    /* print right hand side */
    if( SCIPisZero(scip, rhs) )
       rhs = 0.0;
@@ -2704,9 +2715,8 @@ SCIP_RETCODE printLinearCons(
    SCIP_Bool hasfloats;
    
    assert( scip != NULL );
-   assert( vars != NULL );
+   assert( vars != NULL || nvars == 0 );
    assert( fznoutput != NULL );
-   assert( nvars > 0 );
    assert( lhs <= rhs );
 
    if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
@@ -2715,7 +2725,12 @@ SCIP_RETCODE printLinearCons(
    /* duplicate variable and value array */
    nactivevars = nvars;
    hasfloats = FALSE;
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
+   activevars = NULL;
+   
+   if( vars != NULL )
+   {
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
+   }   
    
    if( vals != NULL )
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
@@ -2797,9 +2812,10 @@ SCIP_RETCODE printLinearCons(
    }
    
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &activevars);
+   if( activevars != NULL )
+      SCIPfreeBufferArray(scip, &activevars);
    SCIPfreeBufferArray(scip, &activevals);
-
+   
    return SCIP_OKAY;
 }
 
@@ -3060,7 +3076,7 @@ SCIP_RETCODE writeFzn(
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip,&intobjvars,ndiscretevars) );
-   SCIP_CALL( SCIPallocBufferArray(scip,&floatobjvars,nvars-ndiscretevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip,&floatobjvars,nvars) );
    nintobjvars = 0;
    nfloatobjvars = 0;
 
@@ -3077,8 +3093,9 @@ SCIP_RETCODE writeFzn(
          if( v < ndiscretevars && SCIPisIntegral(scip, objscale*obj) )
          {
             intobjvars[nintobjvars] = v;
+            SCIPdebugMessage("variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",
+               SCIPvarGetName(var),nintobjvars,v,obj,objscale,SCIPvarGetObj(var));
             nintobjvars++;
-            SCIPdebugMessage("variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",SCIPvarGetName(var),nintobjvars-1,v,obj,objscale,SCIPvarGetObj(var));
          }
          else
          {
@@ -3168,6 +3185,7 @@ SCIP_RETCODE writeFzn(
          var = vars[intobjvars[v]];
          obj = objscale*SCIPvarGetObj(var);
          SCIPdebugMessage("variable <%s> at pos <%d,%d> has an integral obj: %f=%f*%f\n",SCIPvarGetName(var),v,intobjvars[v],obj,objscale,SCIPvarGetObj(var));
+
          assert( SCIPisIntegral(scip, obj) );
          flattenFloat(scip, obj, buffy);
          SCIPinfoMessage(scip, file, "%s%s", buffy, v < nintobjvars-1 ? ", " : "" );
@@ -3187,7 +3205,7 @@ SCIP_RETCODE writeFzn(
       if( !SCIPisZero(scip, objoffset) )
       {
          flattenFloat(scip, objoffset, buffy);
-         SCIPinfoMessage(scip, file, "%s%s", nintobjvars == 0 ? "" : ", ", buffy );
+         SCIPinfoMessage(scip, file, "%s%s", nfloatobjvars == 0 ? "" : ", ", buffy );
       }
 
       SCIPinfoMessage(scip, file, "], [");
