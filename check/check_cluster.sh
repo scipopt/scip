@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.18 2008/10/06 17:07:14 bzfwinkm Exp $
+# $Id: check_cluster.sh,v 1.19 2009/01/07 14:39:57 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -27,6 +27,7 @@ CONTINUE=${10}
 LOCK=${11}
 VERSION=${12}
 OPT=${13}
+PPN=1
 
 # get cuurent SCIP path
 SCIPPATH=`pwd`
@@ -59,9 +60,7 @@ HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + \`expr $TIMELIMIT / 10\``
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
 
-USRPATH=`pwd`
-
-EVALFILE=$USRPATH/results/check.$TSTNAME.$BINID.$SETNAME.eval
+EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$SETNAME.eval
 echo > $EVALFILE
 
 for i in `cat $TSTNAME.test` DONE
@@ -78,10 +77,10 @@ do
   DIR=`dirname $i`
   DIR=$(echo $DIR|sed 's/\//_/g')
 
-  BASENAME=$USRPATH/results/check.$TSTNAME.$DIR"_"$SHORTFILENAME.$BINID.$SETNAME
+  FILENAME=check.$TSTNAME.$DIR"_"$SHORTFILENAME.$BINID.$SETNAME
+  BASENAME=$SCIPPATH/results/$FILENAME
 
   TMPFILE=$BASENAME.tmp
-  ERRFILE=$BASENAME.err
   SETFILE=$BASENAME.set
   
   echo $BASENAME >> $EVALFILE
@@ -89,11 +88,11 @@ do
   echo > $TMPFILE
   if test $SETTINGS != "default"
       then
-      echo set load $SETTINGS                >>  $TMPFILE
+      echo set load $SETTINGS            >>  $TMPFILE
   fi
   if test $FEASTOL != "default"
       then
-      echo set numerics feastol $FEASTOL    >> $TMPFILE
+      echo set numerics feastol $FEASTOL >> $TMPFILE
   fi
   echo set limits time $TIMELIMIT        >> $TMPFILE
   echo set limits nodes $NODELIMIT       >> $TMPFILE
@@ -103,15 +102,12 @@ do
   echo set display freq $DISPFREQ        >> $TMPFILE
   echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
   echo set save $SETFILE                 >> $TMPFILE
-  echo read /work/$i                     >> $TMPFILE
+  echo read /workbig/$i                  >> $TMPFILE
   echo optimize                          >> $TMPFILE
   echo display statistics                >> $TMPFILE
 #	    echo display solution                  >> $TMPFILE
   echo checksol                          >> $TMPFILE
   echo quit                              >> $TMPFILE
 
-  echo $i                                > $ERRFILE
-  date                                   >> $ERRFILE
-
-  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -N SCIP$SHORTFILENAME -v SCIPPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$BASENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+  qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SCIPPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
 done
