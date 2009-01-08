@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.5 2008/09/29 23:13:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.6 2009/01/08 12:06:54 bzfberth Exp $"
 
 /**@file   reader_ccg.c
  * @ingroup FILEREADERS 
@@ -423,20 +423,38 @@ SCIP_RETCODE SCIPwriteCcg(
       assert( transformed == SCIPconsIsTransformed(cons) );
 
       if( strcmp(conshdlrname, "linear") == 0 )
-      {
-	 SCIP_CALL( handleLinearCons(scip, file, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
+      {  
+         consvars = SCIPgetVarsLinear(scip, cons);
+         nconsvars = SCIPgetNVarsLinear(scip, cons);
+         assert( consvars != NULL || nconsvars == 0 );
+         
+         if( nconsvars > 0 ) 
+         { 
+            SCIP_CALL( handleLinearCons(scip, file, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
 				     SCIPgetNVarsLinear(scip, cons), nvars, transformed, &G) );
+         }
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
 	 consvars = SCIPgetVarsSetppc(scip, cons);
 	 nconsvars = SCIPgetNVarsSetppc(scip, cons);
+         assert( consvars != NULL || nconsvars == 0 );
 
-	 SCIP_CALL( handleLinearCons(scip, file, consvars, NULL, nconsvars, nvars, transformed, &G) );
+         if( nconsvars > 0 ) 
+         {
+            SCIP_CALL( handleLinearCons(scip, file, consvars, NULL, nconsvars, nvars, transformed, &G) );
+         }
       }
       else if ( strcmp(conshdlrname, "logicor") == 0 )
-      {
-	 SCIP_CALL( handleLinearCons(scip, file, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), nvars, transformed, &G) );
+      {  
+         consvars = SCIPgetVarsLogicor(scip, cons);
+         nconsvars = SCIPgetNVarsLogicor(scip, cons);
+         assert( consvars != NULL || nconsvars == 0 );
+         
+         if( nconsvars > 0 ) 
+         { 
+            SCIP_CALL( handleLinearCons(scip, file, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), nvars, transformed, &G) );
+         }
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
@@ -444,6 +462,7 @@ SCIP_RETCODE SCIPwriteCcg(
 
 	 consvars = SCIPgetVarsKnapsack(scip, cons);
 	 nconsvars = SCIPgetNVarsKnapsack(scip, cons);
+         assert( consvars != NULL || nconsvars == 0 );
 
 	 /* copy Longint array to SCIP_Real array */
 	 w = SCIPgetWeightsKnapsack(scip, cons);
@@ -451,8 +470,10 @@ SCIP_RETCODE SCIPwriteCcg(
 	 for( v = 0; v < nconsvars; ++v )
 	    consvals[v] = w[v];
 
-	 SCIP_CALL( handleLinearCons(scip, file, consvars, consvals, nconsvars, nvars, transformed, &G) );
-
+         if( nconsvars > 0 ) 
+         { 
+            SCIP_CALL( handleLinearCons(scip, file, consvars, consvals, nconsvars, nvars, transformed, &G) );
+         }
 	 SCIPfreeBufferArray(scip, &consvals);
       }
       else if ( strcmp(conshdlrname, "varbound") == 0 )

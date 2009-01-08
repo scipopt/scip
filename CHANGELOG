@@ -44,6 +44,7 @@ fixed bugs:
 - fixed bug with exponential complexity for reallocating memory in SCIPvarGetActiveRepresentatives in var.c
 - fixed possible infinite loop while multiaggregating a variable in var.c
 - fixed bug with array dimension not reset to zero when array is freed in pseudoobj propagator
+- fixed bug with empty constraints in several writing routines 
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

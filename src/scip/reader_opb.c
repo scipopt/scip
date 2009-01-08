@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.23 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.24 2009/01/08 12:06:54 bzfberth Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1397,7 +1397,7 @@ SCIP_RETCODE printLinearCons(
 
 
    assert( scip != NULL );
-   assert( vars != NULL );
+   assert( vars != NULL || nvars == 0 );
    assert( nvars > 0 );
    assert( lhs <= rhs );
 

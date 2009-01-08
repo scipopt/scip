@@ -19,9 +19,10 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- *@todo Test for uniqueness of variable and constraint names (after cutting down).
- *@todo remove pushBufferToken() staff since it is not used in this reader
- *@todo remove swapTokenBuffer() staff since it is not used in this reader
+ * @todo Test for uniqueness of variable and constraint names (after cutting down).
+ * @todo remove pushBufferToken() staff since it is not used in this reader
+ * @todo remove swapTokenBuffer() staff since it is not used in this reader
+ * @todo Support more general constraint types
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -122,17 +123,17 @@ typedef struct FznInput FZNINPUT;
 /** FlatZinc writting data */
 struct FznOutput
 {
-   char*                varbuffer;
-   int                  varbufferlen;
-   int                  varbufferpos;
-   char*                castbuffer;
-   int                  castbufferlen;
-   int                  castbufferpos;
-   char*                consbuffer;
-   int                  consbufferlen;
-   int                  consbufferpos;
-   int                  nvars;
-   SCIP_Bool*           varhasfloat;
+   char*                varbuffer;           /* buffer for auxiliary variables (float representatives of discrete variables) */
+   int                  varbufferlen;        /* current length of the above buffer */
+   int                  varbufferpos;        /* current filling position in the above buffer */
+   char*                castbuffer;          /* buffer for int2float conversion constraints */
+   int                  castbufferlen;       /* current length of the above buffer */          
+   int                  castbufferpos;       /* current filling position in the above buffer */
+   char*                consbuffer;          /* buffer for all problem constraints */
+   int                  consbufferlen;       /* current length of the above buffer */          
+   int                  consbufferpos;       /* current filling position in the above buffer */
+   int                  ndiscretevars;       /* number of discrete variables in the problem */    
+   SCIP_Bool*           varhasfloat;         /* array which indicates, whether a discrete variable already has a float representative */
 };
 typedef struct FznOutput FZNOUTPUT;
 
@@ -2478,7 +2479,7 @@ SCIP_RETCODE getActiveVariables(
    SCIP_Bool             transformed         /**< transformed constraint? */
    )
 {
-   int requiredsize;
+   int requiredsize;                         /* number of active variables */ 
    int v;
 
    assert( scip != NULL );
@@ -2491,6 +2492,7 @@ SCIP_RETCODE getActiveVariables(
    {
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
 
+      /* avoid overflow by reallocation */
       if( requiredsize > *nvars )
       {
          *nvars = requiredsize;
@@ -2507,22 +2509,6 @@ SCIP_RETCODE getActiveVariables(
    
    return SCIP_OKAY;
 }
-#if 0
-
-/** clears the given line buffer */
-static
-void clearBuffer(
-   char*                 linebuffer,         /**< line */
-   int*                  linecnt             /**< number of charaters in line */
-   )
-{
-   assert( linebuffer != NULL );
-   assert( linecnt != NULL );
-
-   (*linecnt) = 0;
-   linebuffer[0] = '\0';
-}
-#endif
 
 /** ends the given line with '\\0' and prints it to the given file stream */
 static
@@ -2566,6 +2552,7 @@ SCIP_RETCODE appendBuffer(
    assert( bufferpos != NULL );
    assert( extension != NULL );
    
+   /* avoid overflow by reallocation */
    newpos = (*bufferpos) + strlen(extension); 
    if( newpos >= (*bufferlen) )
    { 
@@ -2581,6 +2568,7 @@ SCIP_RETCODE appendBuffer(
    return SCIP_OKAY;
 }
 
+/* Writes a real value to a string with full precision, if fractional and adds a ".0" if integral */
 static 
 void flattenFloat(
    SCIP*                 scip,               /**< SCIP data structure */   
@@ -2608,14 +2596,15 @@ SCIP_RETCODE printRow(
    SCIP_Bool             hasfloats           /**< are there continuous varibales or coefficients in the constraint? */
       )
 {
-   SCIP_VAR* var;
+   SCIP_VAR* var;                            /* some variable */
+   int v;                                    /* variable counter */
    char buffer[FZN_BUFFERLEN];
    char buffy[FZN_BUFFERLEN];
-   int v;
 
    assert( scip != NULL );
    assert( strcmp(type, "eq") == 0 || strcmp(type, "le") == 0 || strcmp(type, "ge") == 0 );
   
+   /* Add a constraint of type float_lin or int_lin, depending on whether there are continuous variables or coefficients */
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),"constraint ") );
    if( hasfloats )
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "float_lin_%s([",type);
@@ -2623,7 +2612,7 @@ SCIP_RETCODE printRow(
       (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "int_lin_%s([",type);
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
 
-   /* print coefficients */
+   /* print all coefficients but the last one */
    for( v = 0; v < nvars-1; ++v )
    {
       if( hasfloats )
@@ -2635,7 +2624,8 @@ SCIP_RETCODE printRow(
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%.f, ",vals[v]);
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }
-   
+
+   /* print last coefficient */
    if( nvars > 0 )
    { 
       if( hasfloats )
@@ -2651,23 +2641,25 @@ SCIP_RETCODE printRow(
 
    SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos), "], [") );
    
+   /* print all variables but the last one */
    for( v = 0; v < nvars-1; ++v )
    {
       var = vars[v];
       assert( var != NULL );
    
       if( hasfloats )
-         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s, ", SCIPvarGetName(var), SCIPvarGetProbindex(var) < fznoutput->nvars ? "_float" : "");
+         (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s, ", SCIPvarGetName(var), SCIPvarGetProbindex(var) < fznoutput->ndiscretevars ? "_float" : "");
       else
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s, ", SCIPvarGetName(var) );
       SCIP_CALL( appendBuffer(scip, &(fznoutput->consbuffer), &(fznoutput->consbufferlen), &(fznoutput->consbufferpos),buffer) );
    }
 
+   /* print last variable */
    if( nvars > 0 )
    { 
       if( hasfloats )
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s%s",SCIPvarGetName(vars[nvars-1]), 
-            SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->nvars ? "_float" : "");
+            SCIPvarGetProbindex(vars[nvars-1]) < fznoutput->ndiscretevars ? "_float" : "");
       else
          (void) SCIPsnprintf(buffer, FZN_BUFFERLEN, "%s",SCIPvarGetName(vars[nvars-1]));
 
@@ -2706,11 +2698,13 @@ SCIP_RETCODE printLinearCons(
    SCIP_Bool             mayhavefloats       /**< may there be continuous variables in the constraint? */ 
    )
 {
-   int v;
-   SCIP_VAR** activevars;
-   SCIP_Real* activevals;
-   int nactivevars;
-   SCIP_Real activeconstant = 0.0;
+   SCIP_VAR** activevars;                    /* active problem variables of a constraint */
+   SCIP_Real* activevals;                    /* coefficients in the active representation */
+
+   SCIP_Real activeconstant;                 /* offset (e.g., due to fixings) in the active representation */
+   int nactivevars;                          /* number of active problem variables */
+   int v;                                    /* variable counter */
+
    char buffer[FZN_BUFFERLEN];
    SCIP_Bool hasfloats;
    
@@ -2726,7 +2720,8 @@ SCIP_RETCODE printLinearCons(
    nactivevars = nvars;
    hasfloats = FALSE;
    activevars = NULL;
-   
+   activeconstant = 0.0;
+
    if( vars != NULL )
    {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
@@ -2744,13 +2739,17 @@ SCIP_RETCODE printLinearCons(
    
    /* retransform given variables to active variables */
    SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+
+   /* If there may be continuous variables or coefficients in the constraint, scan for them */
    if( mayhavefloats )
    {
+      /* fractional sides trigger a constraint to be of float type */
       if( !SCIPisInfinity(scip, -lhs) )
          hasfloats = hasfloats || !SCIPisIntegral(scip,lhs-activeconstant);
       if( !SCIPisInfinity(scip, rhs) )
          hasfloats = hasfloats || !SCIPisIntegral(scip,rhs-activeconstant);
 
+      /* any continuous variable or fractional variable coefficient triggers a constraint to be of float type */
       for( v = 0; v < nactivevars && !hasfloats; v++ )
       {
          SCIP_VAR* var;
@@ -2760,6 +2759,7 @@ SCIP_RETCODE printLinearCons(
          hasfloats = hasfloats || !SCIPisIntegral(scip,activevals[v]);
       }
     
+      /* If the constraint has to be written as float type, all discrete variables need to have a float counterpart */
       if( hasfloats )
       {
          for( v = 0; v < nactivevars; v++ )
@@ -2771,7 +2771,8 @@ SCIP_RETCODE printLinearCons(
             idx = SCIPvarGetProbindex(var);
             assert( idx >= 0);
 
-            if( idx < fznoutput->nvars && !fznoutput->varhasfloat[idx] )
+            /* If there was no float representation of the variable before, add an auxiliary variable and a conversion constraint */
+            if( idx < fznoutput->ndiscretevars && !fznoutput->varhasfloat[idx] )
             {
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
             
@@ -2802,7 +2803,6 @@ SCIP_RETCODE printLinearCons(
          /* print inequality ">=" */
          SCIP_CALL( printRow(scip, fznoutput, "ge", activevars, activevals, nactivevars, lhs - activeconstant, hasfloats) );
       }
-
       
       if( !SCIPisInfinity(scip, rhs) )
       {
@@ -2819,7 +2819,7 @@ SCIP_RETCODE printLinearCons(
    return SCIP_OKAY;
 }
 
-/* writes problem to file */
+/* writes problem to a flatzinc conform file, including introduction of several auxiliary variables and constraints */
 static
 SCIP_RETCODE writeFzn(
    SCIP*              scip,               /**< SCIP data structure */
@@ -2841,40 +2841,38 @@ SCIP_RETCODE writeFzn(
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    )
 {
-   int c;
-   int v;
+   FZNOUTPUT fznoutput;                   /* data structure for writing in fzn format */
 
    SCIP_CONSHDLR* conshdlr;
-   const char* conshdlrname;
    SCIP_CONS* cons;
-   
-   SCIP_VAR** consvars;
-   SCIP_Real* consvals;
-   int nconsvars;
-
-   int* boundedvars;
-   SCIP_BOUNDTYPE* boundtypes; 
-   int nboundedvars;
-   int ndiscretevars;
-
+   const char* conshdlrname;
+   SCIP_VAR** consvars;                   /* variables of a specific constraint */
    SCIP_VAR* var;
+   SCIP_BOUNDTYPE* boundtypes;            /* indicates whether to which side the variables are bounded */
+   SCIP_Real* consvals;                   /* coefficients of a specific constraint */
 
-   SCIP_Real lb;
-   SCIP_Real ub;
-   char varname[SCIP_MAXSTRLEN];
-   char buffer[FZN_BUFFERLEN];
+   int* boundedvars;                      /* variables which are bounded to exactly one side */
+   int* floatobjvars;                     /* discrete variables which have a fractional objective coefficient */
+   int* intobjvars;                       /* discrete variables which have an integral objective coefficient */
+
+   SCIP_Real lb;                          /* lower bound of some variable */   
+   SCIP_Real ub;                          /* upper bound of some variable */
+
+   int nboundedvars;                      /* number of variables which are bounded to exactly one side */
+   int nconsvars;                         /* number of variables appering in a specific constraint */
+   int nfloatobjvars;                     /* number of discrete variables which have a fractional objective coefficient */
+   int nintobjvars;                       /* number of discrete variables which have an integral objective coefficient */
+   int c;                                 /* counter for the constraints */
+   int v;                                 /* counter for the variables */
+   const int ndiscretevars = nbinvars+nintvars;  /* number of discrete variables */
+
+   char varname[SCIP_MAXSTRLEN];          /* buffer for storing variable names */
+   char buffer[FZN_BUFFERLEN];            /* buffer for storing auxiliary variables and constraints */
    char buffy[FZN_BUFFERLEN];
         
-   int* intobjvars;
-   int* floatobjvars;
-   int nintobjvars;
-   int nfloatobjvars;
-
-   FZNOUTPUT fznoutput;
-
    assert( scip != NULL );
    
-   /* print statistics as comment to file */
+   /* print problem statistics as comment to file */
    SCIPinfoMessage(scip, file, "%% SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "%% Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "%% Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
@@ -2884,11 +2882,11 @@ SCIP_RETCODE writeFzn(
    SCIP_CALL( SCIPallocBufferArray(scip, &boundedvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nvars) );
    nboundedvars = 0;
-   ndiscretevars = nbinvars+nintvars;
 
    if( nvars > 0 )
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Problem variables %%%%%%%%%%%%\n");   
 
+   /* write all (active) problem variables */
    for( v = 0; v < nvars; v++ )
    {
       var = vars[v];
@@ -2907,6 +2905,9 @@ SCIP_RETCODE writeFzn(
          ub = SCIPvarGetUbOriginal(var);
       }
 
+      /* If a variable is bounded to both sides, the bounds are added to the declaration,
+       * for variables bounded to exactly one side, an auxiliary constraint will be added lateron.
+       */
       if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
       {
          SCIP_Bool fixed;
@@ -2926,6 +2927,7 @@ SCIP_RETCODE writeFzn(
          }
          else
          {
+            /* Real valued bounds have to be made type conform */
 	    if( fixed )
             { 
                flattenFloat(scip,lb,buffy);
@@ -2946,11 +2948,13 @@ SCIP_RETCODE writeFzn(
          assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
          assert( v >= nbinvars );
 
+         /* declare the variable without any bound */
          if( v < nintvars )
 	    SCIPinfoMessage(scip, file, "var int: %s;\n", varname);
          else 
 	    SCIPinfoMessage(scip, file, "var float: %s;\n", varname);
 	   
+         /* if there is a  bound, store the variable and its boundtype for adding a corresponding constraint lateron */
          if( SCIPisInfinity(scip, ub) ) 
          {
             boundedvars[nboundedvars] = v;
@@ -2966,7 +2970,8 @@ SCIP_RETCODE writeFzn(
       }
    }
 
-   fznoutput.nvars = ndiscretevars; 
+   /* set up the datastructures for the auxiliary int2float variables, the casting constraints and the problem constraints */
+   fznoutput.ndiscretevars = ndiscretevars; 
    fznoutput.varbufferpos = 0;
    fznoutput.consbufferpos = 0;
    fznoutput.castbufferpos = 0;
@@ -2985,6 +2990,7 @@ SCIP_RETCODE writeFzn(
    fznoutput.consbuffer[0] = '\0';
    fznoutput.castbuffer[0] = '\0';
 
+   /* output all problem constraints */
    for( c = 0; c < nconss; c++ )
    {
       cons = conss[c];
@@ -3000,6 +3006,9 @@ SCIP_RETCODE writeFzn(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
+      /* By now, only linear, setppc, logicor, knapsack, and varbound constraints can be written.
+       * Since they are all linearizable, a linear representation of them is written. 
+       */
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_CALL( printLinearCons(scip, &fznoutput,
@@ -3011,6 +3020,7 @@ SCIP_RETCODE writeFzn(
          consvars = SCIPgetVarsSetppc(scip, cons);
          nconsvars = SCIPgetNVarsSetppc(scip, cons);
 
+         /* Setppc constraints only differ in their lhs/rhs (+- INF or 1) */
          switch ( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
@@ -3062,6 +3072,7 @@ SCIP_RETCODE writeFzn(
          consvals[0] = 1.0;
          consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
+         /* Varbound constraints always consist of exactly two variables */
          SCIP_CALL( printLinearCons(scip, &fznoutput,
                consvars, consvals, 2,
                SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed, TRUE) );
@@ -3080,7 +3091,7 @@ SCIP_RETCODE writeFzn(
    nintobjvars = 0;
    nfloatobjvars = 0;
 
-   /* scan objective function */
+   /* scan objective function: Which variables have to be put to the float part, which to the int part? */
    for( v = 0; v < nvars; v++ )
    {
       SCIP_Real obj;
@@ -3090,6 +3101,7 @@ SCIP_RETCODE writeFzn(
 
       if( !SCIPisZero(scip,obj) )
       {
+         /* Only discrete variables with integral objective coefficient will be put to the int part of the objective */
          if( v < ndiscretevars && SCIPisIntegral(scip, objscale*obj) )
          {
             intobjvars[nintobjvars] = v;
@@ -3099,6 +3111,7 @@ SCIP_RETCODE writeFzn(
          }
          else
          {
+            /* if not happened yet, introduce an auxiliary variable for discrete variables with fractional coefficients */
             if( v < ndiscretevars && !fznoutput.varhasfloat[v] )
             {
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
@@ -3118,21 +3131,24 @@ SCIP_RETCODE writeFzn(
       }
    }
 
+   /* output all created auxiliary variables (float representives of discrete variables) */
    if( fznoutput.varbufferpos > 0 )
    {
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Auxiliary variables %%%%%%%%%%%%\n");
       writeBuffer(scip, file, fznoutput.varbuffer, fznoutput.varbufferpos );
    }
 
+   /* output all int2float casting/conversion constraints */
    if( fznoutput.castbufferpos > 0 )
    {
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Variable conversions %%%%%%%%%%%%\n");
       writeBuffer(scip, file, fznoutput.castbuffer, fznoutput.castbufferpos );
    }
-
+   
    if( nboundedvars > 0 )
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Variable bounds %%%%%%%%%%%%\n");
-   
+
+   /* output all bounds of variables with exactly one bound*/
    for( v = 0; v < nboundedvars; v++ )
    {
       var = vars[boundedvars[v]];
@@ -3167,6 +3183,7 @@ SCIP_RETCODE writeFzn(
       }
    }
 
+   /* output all problem constraints */
    if( fznoutput.consbufferpos > 0 )
    {
       SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Problem constraints %%%%%%%%%%%%\n");
@@ -3175,10 +3192,12 @@ SCIP_RETCODE writeFzn(
 
    SCIPinfoMessage(scip, file, "\n%%%%%%%%%%%% Objective function %%%%%%%%%%%%\n");
    
+   /* If there is at least one variable in the objective function write down the optimization problem, else declare it to be a satisfiability problem */
    if( nintobjvars > 0 || nfloatobjvars > 0 )
    { 
       SCIPinfoMessage(scip, file, "solve %s int_float_lin([", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize" );
      
+      /* first array: coefficients (in float representation) of discrete variables with integral objective coefficient */
       for( v = 0; v < nintobjvars; v++ )
       {
          SCIP_Real obj;
@@ -3191,6 +3210,7 @@ SCIP_RETCODE writeFzn(
          SCIPinfoMessage(scip, file, "%s%s", buffy, v < nintobjvars-1 ? ", " : "" );
       }
 
+      /* second array: all other objective coefficients */
       SCIPinfoMessage(scip, file, "], [");
       for( v = 0; v < nfloatobjvars; v++ )
       {
@@ -3202,27 +3222,32 @@ SCIP_RETCODE writeFzn(
          SCIPinfoMessage(scip, file, "%s%s", buffy, v < nfloatobjvars-1 ? ", " : "" );
       }
 
+      /* potentially add an objective offset */
       if( !SCIPisZero(scip, objoffset) )
       {
          flattenFloat(scip, objoffset, buffy);
          SCIPinfoMessage(scip, file, "%s%s", nfloatobjvars == 0 ? "" : ", ", buffy );
       }
 
+      /* third array: all discrete variables with integral objective coefficient */
       SCIPinfoMessage(scip, file, "], [");
       for( v = 0; v < nintobjvars; v++ )
          SCIPinfoMessage(scip, file, "%s%s", SCIPvarGetName(vars[intobjvars[v]]), v < nintobjvars-1 ? ", " : "" );
-      
+
+      /* fourth array: all other variables with nonzero objective coefficient */ 
       SCIPinfoMessage(scip, file, "], [");
       for( v = 0; v < nfloatobjvars; v++ )
          SCIPinfoMessage(scip, file, "%s%s%s", SCIPvarGetName(vars[floatobjvars[v]]), floatobjvars[v] < ndiscretevars ? "_float" : "", v < nfloatobjvars-1 ? ", " : "" );
-    
+      
+      /* potentially add a 1.0 for the objective offset */
       if( !SCIPisZero(scip, objoffset) )
          SCIPinfoMessage(scip, file, "%s%.1f", nfloatobjvars == 0 ? "" : ", ", 1.0 );
       SCIPinfoMessage(scip, file, "]);\n");
    }
    else
       SCIPinfoMessage(scip, file, "solve satisfy;\n");
-   
+
+   /* free all memory */   
    SCIPfreeBufferArray(scip, &fznoutput.castbuffer);
    SCIPfreeBufferArray(scip, &fznoutput.consbuffer);
    SCIPfreeBufferArray(scip, &fznoutput.varbuffer);
@@ -3329,6 +3354,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
 
       legal = TRUE;
 
+      /* Scan whether all variable names are flatzinc conform */
       for( i = 0; i < nvars; i++ )
       {
          const char* varname;
@@ -3352,6 +3378,7 @@ SCIP_DECL_READERWRITE(readerWriteFzn)
          }
       }
       
+      /* If there is at least one name, which is not conform, use generic names */
       if( legal )
       {
          SCIP_CALL( writeFzn(scip, file, name, transformed, objsense, objscale, objoffset, vars,
