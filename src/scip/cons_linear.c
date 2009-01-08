@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.315 2008/12/11 14:59:16 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.316 2009/01/08 13:17:36 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5438,7 +5438,7 @@ SCIP_RETCODE dualPresolve(
    else
       maxotherlocks = 1;
 
-   /* if this is constraint has both sides, it also provides a lock for the other side and thus we can allow one more lock */
+   /* if this constraint has both sides, it also provides a lock for the other side and thus we can allow one more lock */
    if( lhsexists && rhsexists )
       maxotherlocks++;
 
