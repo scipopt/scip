@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.142 2008/10/21 14:21:09 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.143 2009/01/19 17:33:32 bzfberth Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -5184,6 +5184,8 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
    assert(stat != NULL);
    assert(prob != NULL);
    assert(lp != NULL);
+   assert(!SCIPsetIsInfinity(set, -SCIPlpGetPseudoObjval(lp, set)));
+   assert(!SCIPsetIsInfinity(set, lp->cutoffbound));
 
    if( success != NULL )
       *success = FALSE;

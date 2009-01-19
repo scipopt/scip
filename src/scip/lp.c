@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.302 2009/01/19 11:09:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.303 2009/01/19 17:33:32 bzfberth Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10919,7 +10919,7 @@ SCIP_Real SCIPlpGetPseudoObjval(
    assert(lp->pseudoobjvalinf >= 0);
    assert(set != NULL);
 
-   if( lp->pseudoobjvalinf > 0 )
+   if( lp->pseudoobjvalinf > 0 ||  set->npricers > 0 )
       return -SCIPsetInfinity(set);
    else
       return lp->pseudoobjval;
@@ -10956,7 +10956,7 @@ SCIP_Real SCIPlpGetModifiedPseudoObjval(
    }
    assert(pseudoobjvalinf >= 0);
 
-   if( pseudoobjvalinf > 0 )
+   if( pseudoobjvalinf > 0 || set->npricers > 0 )
       return -SCIPsetInfinity(set);
    else
       return pseudoobjval;
@@ -11013,7 +11013,7 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
    }
    assert(pseudoobjvalinf >= 0);
 
-   if( pseudoobjvalinf > 0 )
+   if( pseudoobjvalinf > 0 || set->npricers > 0 )
       return -SCIPsetInfinity(set);
    else
       return pseudoobjval;

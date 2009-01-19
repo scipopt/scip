@@ -52,6 +52,7 @@ fixed bugs:
 - fixed possible infinite loop while multiaggregating a variable in var.c
 - fixed bug with array dimension not reset to zero when array is freed in pseudoobj propagator
 - fixed bug with empty constraints in several writing routines 
+- fixed bug with invalid pseudo solution (lower bound was always >= 0) when using pricing.
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
