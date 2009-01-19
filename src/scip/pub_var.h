@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.70 2008/09/01 19:38:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.71 2009/01/19 11:09:22 bzfheinz Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -66,6 +66,18 @@ SCIP_Bool SCIPvarMayRoundDown(
 /** is it possible, to round variable up and stay feasible? */
 extern
 SCIP_Bool SCIPvarMayRoundUp(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks the variable to have a lazy lower bound, this only possible if the variable is not in the LP yet */
+extern
+SCIP_RETCODE SCIPvarMarkLazyLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks the variable to have a lazy upper bound, this only possible if the variable is not in the LP yet */
+extern
+SCIP_RETCODE SCIPvarMarkLazyUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -346,6 +358,16 @@ SCIP_Bool SCIPvarIsActive(
 /** returns whether variable is not allowed to be multi-aggregated */
 extern
 SCIP_Bool SCIPvarDoNotMultaggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether variable has lazy lower bound */
+SCIP_Bool SCIPvarLazyLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether variable has lazy upper bound */
+SCIP_Bool SCIPvarLazyUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -658,6 +680,8 @@ SCIP_Real SCIPvarGetLPSol(
 #define SCIPvarIsDeleted(var)           (var)->deleted
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
 #define SCIPvarDoNotMultaggr(var)       (var)->donotmultaggr
+#define SCIPvarLazyLb(var)              (var)->lazylb
+#define SCIPvarLazyUb(var)              (var)->lazyub
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbindex(var)        (var)->probindex
 #define SCIPvarGetTransVar(var)         (var)->data.original.transvar

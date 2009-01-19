@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.301 2008/12/23 14:46:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.302 2009/01/19 11:09:21 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -167,6 +167,29 @@ SCIP_RETCODE ensureColsSize(
       lp->colssize = newsize;
    }
    assert(num <= lp->colssize);
+
+   return SCIP_OKAY;
+}
+
+/** ensures, that lazy cols array can store at least num entries */
+static
+SCIP_RETCODE ensureLazycolsSize(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(lp->nlazycols <= lp->lazycolssize);
+   
+   if( num > lp->lazycolssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&lp->lazycols, newsize) );
+      lp->lazycolssize = newsize;
+   }
+   assert(num <= lp->lazycolssize);
 
    return SCIP_OKAY;
 }
@@ -2258,6 +2281,8 @@ SCIP_RETCODE SCIPcolCreate(
    (*col)->removable = removable;
    (*col)->sbdownvalid = FALSE;
    (*col)->sbupvalid = FALSE;
+   (*col)->lazylb = SCIPvarLazyLb(var);
+   (*col)->lazyub = SCIPvarLazyUb(var);
 
    return SCIP_OKAY;
 }
@@ -2510,6 +2535,27 @@ SCIP_RETCODE SCIPcolChgObj(
    return SCIP_OKAY;
 }
 
+/** insert column in the chgcols list (if not already there) */
+static
+SCIP_RETCODE insertColChgcols(
+   SCIP_COL*             col,                /**< LP column to change */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   if( !col->objchanged && !col->lbchanged && !col->ubchanged )
+   {
+      SCIP_CALL( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
+      lp->chgcols[lp->nchgcols] = col;
+      lp->nchgcols++;
+   }
+
+   /* mark the current LP unflushed */
+   lp->flushed = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** changes lower bound of column */
 SCIP_RETCODE SCIPcolChgLb(
    SCIP_COL*             col,                /**< LP column to change */
@@ -2529,19 +2575,11 @@ SCIP_RETCODE SCIPcolChgLb(
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->lb, newlb) )
    {
       /* insert column in the chgcols list (if not already there) */
-      if( !col->objchanged && !col->lbchanged && !col->ubchanged )
-      {
-         SCIP_CALL( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
-         lp->chgcols[lp->nchgcols] = col;
-         lp->nchgcols++;
-      }
+      SCIP_CALL( insertColChgcols(col, set, lp) );
       
       /* mark bound change in the column */
       col->lbchanged = TRUE;
       
-      /* mark the current LP unflushed */
-      lp->flushed = FALSE;
-
       assert(lp->nchgcols > 0);
    }  
 
@@ -2569,18 +2607,10 @@ SCIP_RETCODE SCIPcolChgUb(
    if( col->lpipos >= 0 && !SCIPsetIsEQ(set, col->ub, newub) )
    {
       /* insert column in the chgcols list (if not already there) */
-      if( !col->objchanged && !col->lbchanged && !col->ubchanged )
-      {
-         SCIP_CALL( ensureChgcolsSize(lp, set, lp->nchgcols+1) );
-         lp->chgcols[lp->nchgcols] = col;
-         lp->nchgcols++;
-      }
-      
+      SCIP_CALL( insertColChgcols(col, set, lp) );
+
       /* mark bound change in the column */
       col->ubchanged = TRUE;
-      
-      /* mark the current LP unflushed */
-      lp->flushed = FALSE;
 
       assert(lp->nchgcols > 0);
    }  
@@ -4204,10 +4234,10 @@ void SCIProwSort(
    rowSortNonLP(row);
 }
 
-/** sorts row, and merges equal column entries (resulting from lazy sorting and adding) into a single entry;
- *  removes zero entries from row
- *  the row must not be linked to the columns; otherwise, we would need to update the columns as well, which
- *  is too expensive
+/** sorts row, and merges equal column entries (resulting from lazy sorting and adding) into a single entry; removes
+ *  zero entries from row 
+ *  the row must not be linked to the columns; otherwise, we would need to update the columns as
+ *  well, which is too expensive
  */
 static
 void rowMerge(
@@ -5224,11 +5254,11 @@ SCIP_RETCODE lpFlushAddCols(
       col->ubchanged = FALSE;
       col->coefchanged = FALSE;
       obj[pos] = col->obj;
-      if( SCIPsetIsInfinity(set, -col->lb) )
+      if( SCIPsetIsInfinity(set, -col->lb) || col->lazylb )
          lb[pos] = -lpiinf;
       else
          lb[pos] = col->lb;
-      if( SCIPsetIsInfinity(set, col->ub) )
+      if( SCIPsetIsInfinity(set, col->ub) || col->lazyub )
          ub[pos] = lpiinf;
       else
          ub[pos] = col->ub;
@@ -6046,6 +6076,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->chgcols = NULL;
    (*lp)->chgrows = NULL;
    (*lp)->cols = NULL;
+   (*lp)->lazycols = NULL;
    (*lp)->rows = NULL;
    (*lp)->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    (*lp)->lpobjval = 0.0;
@@ -6067,6 +6098,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpifirstchgrow = 0;
    (*lp)->colssize = 0;
    (*lp)->ncols = 0;
+   (*lp)->lazycolssize = 0;
+   (*lp)->nlazycols = 0;
    (*lp)->rowssize = 0;
    (*lp)->nrows = 0;
    (*lp)->chgcolssize = 0;
@@ -6289,6 +6322,13 @@ SCIP_RETCODE SCIPlpAddCol(
    lp->ncols++;
    if( col->removable )
       lp->nremovablecols++;
+
+   if( col->lazylb || col->lazyub )
+   {
+      SCIP_CALL( ensureLazycolsSize(lp, set, lp->nlazycols+1) );
+      lp->lazycols[lp->nlazycols] = col;
+      lp->nlazycols++;
+   }
 
    /* mark the current LP unflushed */
    lp->flushed = FALSE;
@@ -10356,6 +10396,71 @@ SCIP_RETCODE lpFlushAndSolve(
    return SCIP_OKAY;
 }
 
+/** checks if the lazy bound are valid; if not add these bounds to the LP and denote the corresponding column bound as
+ *  not lazy and resolve the LP */
+static
+SCIP_RETCODE checkLazyBounds(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            primalfeasible      /**< pointer to store whether the lazy bound are primal feasible or not */
+   )
+{
+   SCIP_COL* col;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   int c;
+   
+   assert(lp->flushed);
+
+   for( c = 0; c < lp->nlazycols; ++c )
+   {
+      col = lp->lazycols[c];
+      lb = col->lb;
+      ub = col->ub;
+
+      /* check lower bound */
+      if( col->lazylb && SCIPsetIsFeasNegative(set, col->primsol - lb) )
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
+
+         /* mark bound change in the column */
+         col->lbchanged = TRUE;
+
+         /* remove lazy flag */
+         col->lazylb = FALSE;
+
+         (*primalfeasible) = FALSE;
+      }
+         
+      /* check upper bound */
+      if( col->lazyub && SCIPsetIsFeasPositive(set, col->primsol - ub))
+      {
+         /* insert column in the chgcols list (if not already there) */
+         SCIP_CALL( insertColChgcols(col, set, lp) );
+
+         /* mark bound change in the column */
+         col->ubchanged = TRUE;
+
+         /* remove lazy flag */
+         col->lazyub = FALSE;
+
+         (*primalfeasible) = FALSE;
+      }
+
+      /* remove lazy column entry if both columns are in the LP */
+      if( !col->lazylb && !col->lazyub )
+      {
+         lp->nlazycols--;
+         lp->lazycols[c] = lp->lazycols[lp->nlazycols];
+         c--;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** solves the LP with simplex algorithm, and copy the solution into the column's data */
 SCIP_RETCODE SCIPlpSolveAndEval(
    SCIP_LP*              lp,                 /**< LP data */
@@ -10400,6 +10505,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool fastmip;
       SCIP_Bool tightfeastol;
       SCIP_Bool fromscratch;
+      SCIP_Bool lazyboundsvalid;
       int oldnlps;
 
       /* set initial LP solver settings */
@@ -10432,9 +10538,32 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             /* get LP solution believing in the feasibility of the LP solution */
             SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
-            primalfeasible = TRUE;
+
+            /* in case there are lazy bounds, then we have to check the feasibility of the lazy bounds constraint to
+             * determine primal feasibility */
+            primalfeasible = (lp->nlazycols == 0);
             dualfeasible = TRUE;
          }
+         
+         /* check if the lazy bound are the reason for the primal infeasibility; if so add these bounds to the LP and
+          * denote the corresponding column bounds as not lazy and resolve the LP */
+         if( !primalfeasible && lp->nlazycols > 0 )
+         {
+            SCIP_CALL( checkLazyBounds(lp, set, &lazyboundsvalid) );
+            
+            if( !lazyboundsvalid )
+            {
+               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %"SCIP_LONGINT_FORMAT") solution of LP %d not optimal (pfeas=%d, dfeas=%d) since lazy bounds are violated -- solving again with added violated lazy bounds\n",
+                  stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
+               
+               goto SOLVEAGAIN;
+            }
+            
+            if( !set->lp_checkfeas )
+               primalfeasible = TRUE;
+         }
+         
          if( primalfeasible && dualfeasible && aging && !lp->diving && stat->nlps > oldnlps )
          {
             /* update ages and remove obsolete columns and rows from LP */
@@ -10507,6 +10636,23 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          break;
 
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
+         /* check if the lazy bound are valid; if not add these bounds to the LP and denote the corresponding column
+          * bound as not lazy and resolve the LP */
+         if( lp->nlazycols > 0 )
+         {
+            SCIP_CALL( checkLazyBounds(lp, set, &lazyboundsvalid) );
+            
+            if( !lazyboundsvalid )
+            {
+               SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+                  "(node %"SCIP_LONGINT_FORMAT") solution of LP %d may not be unbounded (pfeas=%d, dfeas=%d) since lazy bounds are violated -- solving again with added violated lazy bounds\n",
+                  stat->nnodes, stat->nlps, primalfeasible, dualfeasible);
+               
+               goto SOLVEAGAIN;
+            }
+            
+         }
+         
          SCIP_CALL( SCIPlpGetUnboundedSol(lp, set, stat) );
          SCIPdebugMessage(" -> LP has unbounded primal ray\n");
          break;
@@ -11830,6 +11976,7 @@ SCIP_RETCODE lpDelColset(
 {
    SCIP_COL* col;
    int ncols;
+   int nlazycols;
    int c;
 
    assert(lp != NULL);
@@ -11837,8 +11984,10 @@ SCIP_RETCODE lpDelColset(
    assert(lp->ncols == lp->nlpicols);
    assert(!lp->diving);
    assert(coldstat != NULL);
+   assert(lp->nlazycols <= lp->ncols); 
 
    ncols = lp->ncols;
+   nlazycols = lp->nlazycols;
 
    /* delete columns in LP solver */
    SCIP_CALL( SCIPlpiDelColset(lp->lpi, coldstat) );
@@ -11877,6 +12026,19 @@ SCIP_RETCODE lpDelColset(
          lp->cols[c] = NULL;
          lp->lpicols[c] = NULL;
       }
+   }
+
+   /* remove columns which are deleted from the lazy column array */
+   c = 0;
+   while( c < lp->nlazycols )
+   {
+      if( lp->lazycols[c]->lpipos < 0 )
+      {
+         lp->lazycols[c] = lp->lazycols[lp->nlazycols-1];
+         lp->nlazycols--;
+      }
+      else
+         c++;
    }
 
    /* mark LP to be unsolved */

@@ -6,12 +6,19 @@ interface:
   whether "mksetcoefs" computed in SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows 
   is empty or contains too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
 - new parameter "set" in SCIPconsSetInitial().
+- new method SCIPvarMarkLazyLb() and SCIPvarMarkLazyUb() in pub_var.h and var.c; These methods can be used to set the lower or upper bound 
+  of a variable as lazy; This has the consequences that these bounds are not in LP.
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
 - new interface to QSopt due to Daniel Espinoza
 - new reader for reading and writing FlatZinc models
 - new presolving step in cons_knapsack.c, same like "simplifyinequalities" in cons_linear.c
+- each variable has now two additional Bool parameter which determine whether the lower or upper bound are lazy; lazy means 
+  that there exists a constraint which implies this bound. Variable bounds which are marked as lazy are not in the LP. These 
+  parameters are set to FALSE in default which yields the same behavior as before. With the methods SCIPvarMarkLazyLb() and 
+  SCIPvarMarkLazyUb() these parameters can be set to TRUE. (This of interest if SCIP gets used as a
+  branch-and-price framework).
 
 performance improvements:
 - replaced some function calls in loop conditions

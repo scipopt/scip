@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.242 2008/12/21 14:00:42 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.243 2009/01/19 11:09:22 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1707,6 +1707,8 @@ SCIP_RETCODE varCreate(
    (*var)->removable = removable;
    (*var)->deleted = FALSE;
    (*var)->donotmultaggr = FALSE;
+   (*var)->lazylb = FALSE;
+   (*var)->lazyub = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
@@ -2479,6 +2481,10 @@ SCIP_RETCODE SCIPvarTransform(
 
       /* copy doNotMultiaggr status */
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
+
+      /* copy lazy bound status */
+      (*transvar)->lazylb = origvar->lazylb;
+      (*transvar)->lazyub = origvar->lazyub;
 
       /* transform user data */
       if( origvar->vartrans != NULL )
@@ -3840,6 +3846,10 @@ SCIP_RETCODE SCIPvarNegate(
       /* copy doNotMultiaggr status */
       (*negvar)->donotmultaggr = var->donotmultaggr;
 
+      /* copy lazy bound status (they have to be flipped) */
+      (*negvar)->lazylb = var->lazyub;
+      (*negvar)->lazyub = var->lazylb;
+
       /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
       SCIP_CALL( varAddParent(var, blkmem, set, *negvar) );
       assert((*negvar)->nuses == 1);
@@ -3960,6 +3970,40 @@ void SCIPvarMarkDoNotMultaggr(
    assert(var->probindex != -1);
 
    var->donotmultaggr = TRUE;
+}
+
+/** marks the variable to have a lazy lower bound, this only possible if the variable is not in the LP yet */
+SCIP_RETCODE SCIPvarMarkLazyLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->probindex != -1);
+
+   /* variable should not be in the LP */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIP_INVALIDCALL;
+   
+   var->lazylb = TRUE;
+   
+   return SCIP_OKAY;
+}
+
+/** marks the variable to have a lazy upper bound, this only possible if the variable is not in the LP yet */
+SCIP_RETCODE SCIPvarMarkLazyUb(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(var->probindex != -1);
+
+   /* variable should not be in the LP */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIP_INVALIDCALL;
+   
+   var->lazylb = TRUE;
+   
+   return SCIP_OKAY;
 }
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -10580,6 +10624,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsDeleted
 #undef SCIPvarIsActive
 #undef SCIPvarDoNotMultaggr
+#undef SCIPvarLazyLb
+#undef SCIPvarLazyUb
 #undef SCIPvarGetIndex
 #undef SCIPvarGetProbindex
 #undef SCIPvarGetTransVar
@@ -10893,6 +10939,27 @@ SCIP_Bool SCIPvarDoNotMultaggr(
 
    return var->donotmultaggr;
 }
+
+/** returns whether variable has lazy lower bound */
+SCIP_Bool SCIPvarLazyLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->lazylb;
+}
+
+/** returns whether variable has lazy upper bound */
+SCIP_Bool SCIPvarLazyUb(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   
+   return var->lazyub;
+}
+
 
 /** gets unique index of variable */
 int SCIPvarGetIndex(
