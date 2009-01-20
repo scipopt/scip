@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.243 2009/01/19 11:09:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.244 2009/01/20 10:03:40 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2127,13 +2127,13 @@ void SCIPvarPrint(
    else if( SCIPsetIsInfinity(set, -lb) )
       SCIPmessageFPrintInfo(file, "[-inf,");
    else
-      SCIPmessageFPrintInfo(file, "[%.15g,", lb);
+      SCIPmessageFPrintInfo(file, "[%.15g%s", lb, SCIPvarLazyLb(var) ? "\'," : ",");
    if( SCIPsetIsInfinity(set, ub) )
       SCIPmessageFPrintInfo(file, "+inf]");
    else if( SCIPsetIsInfinity(set, -ub) )
       SCIPmessageFPrintInfo(file, "-inf]");
    else
-      SCIPmessageFPrintInfo(file, "%.15g]", ub);
+      SCIPmessageFPrintInfo(file, "%.15g%s", ub, SCIPvarLazyUb(var) ? "\']" : "]");
 
    /* holes */
    /**@todo print holes */
@@ -4001,7 +4001,7 @@ SCIP_RETCODE SCIPvarMarkLazyUb(
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
       return SCIP_INVALIDCALL;
    
-   var->lazylb = TRUE;
+   var->lazyub = TRUE;
    
    return SCIP_OKAY;
 }
