@@ -13,7 +13,25 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.19 2009/01/07 14:39:57 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.20 2009/01/20 13:31:54 bzfheinz Exp $
+#
+# Call with make testcluster
+# Cluster nodes have 8 cores (queue "ib") and 16 GB RAM
+# If no time is measured, change to PPN=1 (see below) in order to allow parallel runs
+# For more information, see "http://www.zib.de/cluster-user/view/Main/Hardware"
+#
+# To get the result files call  "./evalcheck_cluster.sh results/check.$TSTNAME.$BINNMAE.$SETNAME.eval 
+# in directory check/
+# This leads to result files 
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
+
+# number of needed core at a certain cluster node
+#  - PPN=8 means we need all core at a node, therefore time measuring is possible
+#  - PPN=1 means we need one core at a node, therefore time measuring is not possible
+PPN=8
+
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -27,9 +45,8 @@ CONTINUE=${10}
 LOCK=${11}
 VERSION=${12}
 OPT=${13}
-PPN=1
 
-# get cuurent SCIP path
+# get current SCIP path
 SCIPPATH=`pwd`
 
 SETDIR=../settings
