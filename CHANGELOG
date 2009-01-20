@@ -57,6 +57,8 @@ fixed bugs:
 plugins:
 - added interface to QSopt due to Daniel Espinoza
 - added reader for FlatZinc models (reader_fzn.{c,h})
+- added multi-commodity-flow cut separator
+
 
 SCIP version 1.1.0
 ===============
