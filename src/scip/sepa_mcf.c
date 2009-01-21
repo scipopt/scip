@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.82 2009/01/20 11:44:29 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.83 2009/01/21 13:25:11 bzfpfend Exp $"
 
 /* #define MCF_DEBUG */
 
@@ -1412,9 +1412,16 @@ SCIP_RETCODE createNewArc(
       SCIP_CALL( SCIPreallocMemoryArray(scip, &mcfdata->arctargets, mcfdata->arcarraysize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &mcfdata->nextinarcs, mcfdata->arcarraysize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &mcfdata->nextoutarcs, mcfdata->arcarraysize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &mcfdata->capacityrows, mcfdata->arcarraysize) );
    }
    assert(mcfdata->narcs < mcfdata->arcarraysize);
+
+   /* capacityrows is a special case since it is used earlier */
+   if( mcfdata->capacityrowssize < mcfdata->arcarraysize )
+   {
+      mcfdata->capacityrowssize = mcfdata->arcarraysize;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &mcfdata->capacityrows, mcfdata->capacityrowssize) );
+   }
+   assert(mcfdata->narcs < mcfdata->capacityrowssize);
 
    /* create new arc */
    SCIPdebugMessage("**** creating new arc %d: %d -> %d ****\n", mcfdata->narcs, source, target);
