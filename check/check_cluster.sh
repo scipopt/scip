@@ -13,24 +13,36 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.20 2009/01/20 13:31:54 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.21 2009/01/22 08:20:27 bzfheinz Exp $
 #
-# Call with make testcluster
-# Cluster nodes have 8 cores (queue "ib") and 16 GB RAM
-# If no time is measured, change to PPN=1 (see below) in order to allow parallel runs
-# For more information, see "http://www.zib.de/cluster-user/view/Main/Hardware"
+# Call with "make testcluster"
+
+# The Cluster consist of 80 nodes. These are divided into two sets of 40
+# node. Each set has a different hardware configuration. Both sets can be reached
+# over different queues.
+# - queue "ib":  PowerEdgeTM 1950 Xeon E5420 with 2 CPUS each with 4 Cores  and 16 GB RAM
+#                This gives a total of 40 * 2 * 4 = 320 cores
+# - queue "gbe": PowerEdgeTM 1955 Xeon 5150 with 2 CPUS each with 2 Cores  and 8 GB RAM
+#                This gives a total of 40 * 2 * 2 = 160 cores
 #
-# To get the result files call  "./evalcheck_cluster.sh results/check.$TSTNAME.$BINNMAE.$SETNAME.eval 
-# in directory check/
+# In case of time measuring you should order 1 node and 8 core (ib) or 4
+# cores (gbe) depending on the used queue.  If no time is measured, change
+# to PPN=1 (see below) in order to allow parallel runs on one node.  For
+# more information, see "http://www.zib.de/cluster-user/view/Main/Hardware"
+#
+# To get the result files call "./evalcheck_cluster.sh
+# results/check.$TSTNAME.$BINNMAE.$SETNAME.eval in directory check/
 # This leads to result files 
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
 
 # number of needed core at a certain cluster node
-#  - PPN=8 means we need all core at a node, therefore time measuring is possible
-#  - PPN=1 means we need one core at a node, therefore time measuring is not possible
+#  - PPN=8 means we need 8 core, therefore time measuring is possible if we use 1 node of queue "ib"
+#  - PPN=4 means we need 4 core, therefore time measuring is possible if we use 1 node of queue "gbe"
+#  - PPN=1 means we need one core, therefore time measuring is not possible
 PPN=8
+QUEUE=ib
 
 TSTNAME=$1
 BINNAME=$2
@@ -50,15 +62,6 @@ OPT=${13}
 SCIPPATH=`pwd`
 
 SETDIR=../settings
-
-# choose a queue for the cluster run 
-if test "$OPT" = "opt"
-    then
-#   QUEUE="gbe"
-    QUEUE="ib"
-else
-    QUEUE="ib"
-fi
 
 if test ! -e results
 then
