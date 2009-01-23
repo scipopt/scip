@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.57 2008/10/06 17:07:14 bzfwinkm Exp $
+# $Id: check.sh,v 1.58 2009/01/23 15:26:27 bzfheinz Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -137,13 +137,13 @@ do
 	    echo @01 $i ===========
 	    echo @01 $i ===========                >> $ERRFILE
 	    echo > $TMPFILE
-	    if test $SETTINGS != "default"
+	    if test $SETNAME != "default"
 	    then
-		echo set load $SETTINGS                >>  $TMPFILE
+		echo set load $SETTINGS            >>  $TMPFILE
 	    fi
 	    if test $FEASTOL != "default"
 	    then
-		echo set numerics feastol $FEASTOL    >> $TMPFILE
+		echo set numerics feastol $FEASTOL >> $TMPFILE
 	    fi
 	    echo set limits time $TIMELIMIT        >> $TMPFILE
 	    echo set limits nodes $NODELIMIT       >> $TMPFILE

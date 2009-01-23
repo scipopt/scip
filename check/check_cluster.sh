@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.23 2009/01/23 14:37:33 bzfberth Exp $
+# $Id: check_cluster.sh,v 1.24 2009/01/23 15:26:27 bzfheinz Exp $
 #
 # Call with "make testcluster"
 
@@ -60,15 +60,13 @@ OPT=${13}
 
 # get current SCIP path
 SCIPPATH=`pwd`
-SETDIR=`echo $SCIPPATH | awk 'BEGIN{ FS="/check" } { print $1}' `
-SETDIR=$SETDIR/settings
 
-if test ! -e results
+if test ! -e $SCIPPATH/results
 then
-    mkdir results
+    mkdir $SCIPPATH/results
 fi
 
-SETTINGS=$SETDIR/$SETNAME.set
+SETTINGS=$SCIPPATH/../settings/$SETNAME.set
 
 # we add 10% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
@@ -106,7 +104,7 @@ do
   echo $BASENAME >> $EVALFILE
   
   echo > $TMPFILE
-  if test $SETTINGS != "default"
+  if test $SETNAME != "default"
       then
       echo set load $SETTINGS            >>  $TMPFILE
   fi
