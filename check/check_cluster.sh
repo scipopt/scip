@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.21 2009/01/22 08:20:27 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.22 2009/01/23 14:01:28 bzfberth Exp $
 #
 # Call with "make testcluster"
 
@@ -61,7 +61,7 @@ OPT=${13}
 # get current SCIP path
 SCIPPATH=`pwd`
 
-SETDIR=../settings
+SETDIR=$SCIPPATH/settings
 
 if test ! -e results
 then
