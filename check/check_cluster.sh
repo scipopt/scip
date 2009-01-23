@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.22 2009/01/23 14:01:28 bzfberth Exp $
+# $Id: check_cluster.sh,v 1.23 2009/01/23 14:37:33 bzfberth Exp $
 #
 # Call with "make testcluster"
 
@@ -41,8 +41,8 @@
 #  - PPN=8 means we need 8 core, therefore time measuring is possible if we use 1 node of queue "ib"
 #  - PPN=4 means we need 4 core, therefore time measuring is possible if we use 1 node of queue "gbe"
 #  - PPN=1 means we need one core, therefore time measuring is not possible
-PPN=8
-QUEUE=ib
+PPN=4
+QUEUE=gbe
 
 TSTNAME=$1
 BINNAME=$2
@@ -60,8 +60,8 @@ OPT=${13}
 
 # get current SCIP path
 SCIPPATH=`pwd`
-
-SETDIR=$SCIPPATH/settings
+SETDIR=`echo $SCIPPATH | awk 'BEGIN{ FS="/check" } { print $1}' `
+SETDIR=$SETDIR/settings
 
 if test ! -e results
 then
