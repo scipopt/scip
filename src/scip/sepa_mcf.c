@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.83 2009/01/21 13:25:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.84 2009/01/28 12:00:36 bzfraack Exp $"
 
 /* #define MCF_DEBUG */
 
@@ -865,7 +865,7 @@ SCIP_RETCODE extractFlowRows(
       flowrowscalars[r] = 0.0;
       flowrowscores[r] = 0.0;
 
-      rowlen = SCIProwGetNNonz(row);
+      rowlen = SCIProwGetNLPNonz(row);
       if( rowlen == 0 )
          continue;
 
@@ -1097,7 +1097,7 @@ SCIP_RETCODE extractCapacityRows(
       capacityrowscores[r] = 0.0;
 
       /* ignore empty rows */
-      rowlen = SCIProwGetNNonz(row);
+      rowlen = SCIProwGetNLPNonz(row);
       if( rowlen == 0 )
          continue;
 
@@ -1191,9 +1191,19 @@ SCIP_RETCODE extractCapacityRows(
                nnegcapacitycoefs++;
 
          }
+         else if( SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i]))  >= 1 )
+         {
+            /* */
+            /** @todo a continuous variable having a variable upper bound (VUB: f<=cx +d ) with
+               x beeing integer or binary behaves like a non-continous variable since
+               it will be substitued in the row aggregation of cmir */
+//             printf(" found %d vubs for variable %s\n", SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i])), SCIPvarGetName(SCIPcolGetVar(rowcols[i])) );
+            nbadcoefs++;
+         }
          else
          {
-            /* a continuous variable which is not a flow variable cannot be used for anything: this is bad! */
+            /* a continuous variable which is not a flow variable without VUB cannot be used for anything: we assume this is bad! */
+//             printf(" continous variable %s with %d vubs not flow variable\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i])));
             nbadcoefs++;
          }
       }
@@ -4981,7 +4991,7 @@ SCIP_RETCODE outputGraph(
 
          slack = ABS(mcfnetwork->arccapacityscales[a]) * SCIPgetRowLPFeasibility(scip, row);
          rowcols = SCIProwGetCols(row);
-         rowlen = SCIProwGetNNonz(row);
+         rowlen = SCIProwGetNLPNonz(row);
          for( i = 0; i < rowlen; i++ )
          {
             SCIP_VAR* var;
