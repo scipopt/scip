@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.303 2009/01/19 17:33:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.304 2009/01/28 08:24:06 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6249,6 +6249,7 @@ SCIP_RETCODE SCIPlpFree(
    BMSfreeMemoryArrayNull(&(*lp)->lpicols);
    BMSfreeMemoryArrayNull(&(*lp)->lpirows);
    BMSfreeMemoryArrayNull(&(*lp)->chgcols);
+   BMSfreeMemoryArrayNull(&(*lp)->lazycols);
    BMSfreeMemoryArrayNull(&(*lp)->cols);
    BMSfreeMemoryArrayNull(&(*lp)->rows);
    BMSfreeMemory(lp);
