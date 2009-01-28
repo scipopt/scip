@@ -6,8 +6,10 @@ interface:
   whether "mksetcoefs" computed in SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows 
   is empty or contains too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
 - new parameter "set" in SCIPconsSetInitial().
-- new method SCIPvarMarkLazyLb() and SCIPvarMarkLazyUb() in pub_var.h and var.c; These methods can be used to set the lower or upper bound 
+- new methods SCIPvarMarkLazyLb() and SCIPvarMarkLazyUb() in pub_var.h and var.c; These methods can be used to set the lower or upper bound 
   of a variable as lazy; This has the consequences that these bounds are not in LP.
+- new methods SCIPgetNFixedonesSetppc() and SCIPgetNFixedzerosSetppc() in cons_setppc.{h,c}; these methods returns current (local) 
+  number of variables fixed to one/zero in the given setppc constraint
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh

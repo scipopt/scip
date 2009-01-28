@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.32 2008/04/21 18:51:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.33 2009/01/28 20:35:48 bzfheinz Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -194,5 +194,18 @@ SCIP_ROW* SCIPgetRowSetppc(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** returns current number of variables fixed to one in the constraint  */
+extern
+int SCIPgetNFixedonesSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** returns current number of variables fixed to zero in the constraint  */
+extern
+int SCIPgetNFixedzerosSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
 
 #endif
