@@ -55,6 +55,7 @@ fixed bugs:
 - fixed bug with array dimension not reset to zero when array is freed in pseudoobj propagator
 - fixed bug with empty constraints in several writing routines 
 - fixed bug with invalid pseudo solution (lower bound was always >= 0) when using pricing.
+- fixed bug with incorrect pseudo activities when objective of a variable switches sign in linear constraint handler
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

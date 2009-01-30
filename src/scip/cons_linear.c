@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.316 2009/01/08 13:17:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.317 2009/01/30 16:48:38 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -556,7 +556,7 @@ SCIP_RETCODE consdataCatchEvent(
    consdata->eventdatas[pos]->varpos = pos;
 
    SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[pos],
-         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_GBDCHANGED,
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
          eventhdlr, consdata->eventdatas[pos], &consdata->eventdatas[pos]->filterpos) );
 
    return SCIP_OKAY;
@@ -581,7 +581,7 @@ SCIP_RETCODE consdataDropEvent(
    assert(consdata->eventdatas[pos]->varpos == pos);
 
    SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[pos],
-         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_GBDCHANGED,
+         SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_OBJCHANGED,
          eventhdlr, consdata->eventdatas[pos], consdata->eventdatas[pos]->filterpos) );
 
    SCIPfreeBlockMemory(scip, &consdata->eventdatas[pos]);
@@ -8928,6 +8928,17 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       }
    }
 
+   if( (eventtype & SCIP_EVENTTYPE_OBJCHANGED) != 0 )
+   {
+        SCIP_Real             oldobj;             /**< old objective value before value changed */
+        SCIP_Real             newobj;             /**< new objective value after value changed */
+        
+        oldobj = SCIPeventGetOldobj(event);
+        newobj = SCIPeventGetNewobj(event);
+
+        if( (oldobj >= 0.0 && newobj < 0.0) || (oldobj < 0.0 && newobj >= 0.0) )
+           consdataInvalidateActivities(consdata);
+   }
    return SCIP_OKAY;
 }
 
