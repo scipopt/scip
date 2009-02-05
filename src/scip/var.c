@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.244 2009/01/20 10:03:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.245 2009/02/05 12:08:47 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2817,7 +2817,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_VAR* var;
    SCIP_Real scalar;
    int v;
-   int r;
 
    SCIP_VAR** tmpvars;
    SCIP_VAR** multvars;
@@ -2826,6 +2825,11 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    int tmpvarssize;
    int ntmpvars;
    int nmultvars;
+
+   SCIP_VAR* multvar;
+   SCIP_Real multscalar;
+   SCIP_Real multconstant;
+   int pos;
 
    assert( set != NULL );
    assert( vars != NULL );
@@ -2841,22 +2845,24 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    ntmpvars = *nvars;
    tmpvarssize = *nvars;
 
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &activescalars, activevarssize) );
+
    /* use memory array allocation because it's possible to reallocate for these arrays a too big size later on, which we don't want to 
     * keep in scip
     */
+   SCIP_ALLOC( BMSallocMemoryArray(&activevars, activevarssize) );
+   SCIP_ALLOC( BMSallocMemoryArray(&activescalars, activevarssize) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&tmpvars, vars, ntmpvars) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&tmpscalars, scalars, ntmpvars) );
 
-   /* collect for each variable the representation in active variables */
-   for( v = 0; v < ntmpvars; ++v )
+   /* to avoid unnecessary expanding of variable arrays while disaggregating several variables multiple times combine same variables
+    * first, first get all corresponding variables with status loose, column, multaggr or fixed 
+    */
+   for( v = ntmpvars - 1; v >= 0; --v )
    {
       var = tmpvars[v];
       scalar = tmpscalars[v];
 
       assert( var != NULL );
-
       /* transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
        * scalar and constant;
        * if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
@@ -2864,7 +2870,43 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
        */
       SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &activeconstant) );
       assert( var != NULL );
+      
+      assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
+         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
 
+      tmpvars[v] = var;
+      tmpscalars[v] = scalar;
+   }
+   /* sort all variables to combine equal variables easily */
+   SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
+   for( v = ntmpvars - 1; v > 0; --v )
+   {
+      // combine same variables
+      if( SCIPvarCompare(tmpvars[v], tmpvars[v - 1]) == 0 )
+      {
+         tmpscalars[v - 1] += tmpscalars[v];
+         --ntmpvars;
+         tmpvars[v] = tmpvars[ntmpvars];
+         tmpscalars[v] = tmpscalars[ntmpvars];
+      }
+   }
+   /* sort all variables again to combine equal variables later on */
+   SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
+
+   --ntmpvars;
+   /* collect for each variable the representation in active variables */
+   for( ; ntmpvars >= 0; --ntmpvars )
+   {
+      var = tmpvars[ntmpvars];
+      scalar = tmpscalars[ntmpvars];
+
+      assert( var != NULL );
+
+      if( scalar == 0 )
+         continue;
+      
       assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
@@ -2878,8 +2920,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          if( nactivevars >= activevarssize )
          {
             activevarssize *= 2;
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
-            SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
+            SCIP_ALLOC( BMSreallocMemoryArray(&activevars, activevarssize) );
+            SCIP_ALLOC( BMSreallocMemoryArray(&activescalars, activevarssize) );
             assert(nactivevars < activevarssize);
          }
          activevars[nactivevars] = var;
@@ -2893,29 +2935,45 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          multvars = var->data.multaggr.vars;
          multscalars = var->data.multaggr.scalars;
 
-         /* copy the variables and scalars */
-         for( ; v >= 0 && nmultvars > 0; --v , --nmultvars )
-         {
-            tmpvars[v] = multvars[nmultvars - 1];
-            tmpscalars[v] = scalar * multscalars[nmultvars - 1];
-         }
          if( nmultvars + ntmpvars > tmpvarssize )
          {
 	    while( nmultvars + ntmpvars > tmpvarssize )
 	      tmpvarssize *= 2;
             SCIP_ALLOC( BMSreallocMemoryArray(&tmpvars, tmpvarssize) );
             SCIP_ALLOC( BMSreallocMemoryArray(&tmpscalars, tmpvarssize) );
-            assert(ntmpvars <= tmpvarssize);
+            assert(nmultvars + ntmpvars <= tmpvarssize);
          }
-         for( ; nmultvars > 0; --nmultvars )
-         {
-            tmpvars[ntmpvars] = multvars[nmultvars - 1];
-            tmpscalars[ntmpvars] = scalar * multscalars[nmultvars - 1];
-            ++ntmpvars;
-            assert(ntmpvars <= tmpvarssize);
-         }
+         --nmultvars;
 
-         activeconstant += scalar * SCIPvarGetMultaggrConstant(var);;
+         for( ; nmultvars >= 0; --nmultvars )
+         {
+            multvar = multvars[nmultvars];
+            multscalar = multscalars[nmultvars];
+            multconstant = 0;
+
+            assert( multvar != NULL );
+            SCIP_CALL( SCIPvarGetProbvarSum(&multvar, &multscalar, &multconstant) );
+            assert( multvar != NULL );
+
+            assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
+               || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
+               || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
+               || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
+
+            activeconstant += scalar * multconstant;
+           
+            if( SCIPsortedvecFindPtr((void**)tmpvars, SCIPvarComp, multvar, ntmpvars, &pos) )
+            {
+	       assert(SCIPvarCompare(tmpvars[pos], multvar) == 0);
+	       tmpscalars[pos] += scalar * multscalar;
+            }
+            else
+            {
+	       SCIPsortedvecInsertPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, multvar, scalar * multscalar, &ntmpvars);
+	       assert(ntmpvars <= tmpvarssize);
+            }
+         }
+         activeconstant += scalar * SCIPvarGetMultaggrConstant(var);
 
          break;
 
@@ -2926,7 +2984,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       default:
          /* x = c */
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
-         
       }
    }
 
@@ -2936,27 +2993,18 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       SCIPsortPtrReal((void**)activevars, activescalars, SCIPvarComp, nactivevars);
 
       /* eliminate duplicates and count required size */
-      r = 0;
-      for( v = 1; v < nactivevars; ++v )
+      for( v = nactivevars - 1; v > 0; --v )
       {
-         assert( r <= v );
          /* combine both variable since they are the same */
-         if( SCIPvarCompare(activevars[r], activevars[v]) == 0 )
-            activescalars[r] += activescalars[v];
-         else
+         if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
          {
-            /* variables are sorted, so +1 cannot happen */
-            assert(SCIPvarCompare(activevars[r], activevars[v]) == -1);
-            r++;
-            if( r != v )
-            {
-               /* remove empty slots */
-               activevars[r] = activevars[v];
-               activescalars[r] = activescalars[v];
-            }
+            activescalars[v - 1] += activescalars[v];
+            --nactivevars;
+            activevars[v] = activevars[nactivevars];
+            activescalars[v] = activescalars[nactivevars];
          }
       }
-      *requiredsize = r +  1;
+      *requiredsize = nactivevars;
    }
    else
       *requiredsize = nactivevars;
@@ -2976,8 +3024,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    BMSfreeMemoryArray(&tmpvars);
    BMSfreeMemoryArray(&tmpscalars);
-   SCIPsetFreeBufferArray(set, &activevars);
-   SCIPsetFreeBufferArray(set, &activescalars);
+   BMSfreeMemoryArray(&activevars);
+   BMSfreeMemoryArray(&activescalars);
 
    return SCIP_OKAY;
 }

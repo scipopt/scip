@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.318 2009/02/05 08:34:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.319 2009/02/05 12:08:47 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -6130,7 +6130,12 @@ SCIP_RETCODE simplifyInequalities(
 
          /* normalize constraint */
          SCIP_CALL( normalizeCons(scip, cons) );
-         success = TRUE;
+	 
+	 /* if only one var is left abort loop */
+	 if( consdata->nvars == 1 )
+	    success = FALSE;
+	 else
+	    success = TRUE;
       }
    }
    while( success );

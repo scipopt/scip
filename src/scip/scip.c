@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.485 2009/01/31 22:27:55 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.486 2009/02/05 12:08:47 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4319,12 +4319,48 @@ SCIP_RETCODE exitPresolve(
    SCIP_Bool*            infeasible          /**< pointer to store whether presolving detected infeasibility */
    )
 {
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
+
+   /* flatten all variables */
+   vars = SCIPgetFixedVars(scip);
+   nvars = SCIPgetNFixedVars(scip);
+   assert(vars != NULL);
+   assert(nvars >= 0);
+
+   for( v = nvars - 1; v >= 0; --v )
+   { 
+      SCIP_VAR* var;
+#ifndef NDEBUG      
+      SCIP_VAR** multvars;
+      int i;
+#endif      
+      var = vars[v];
+
+      assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL );
+      //var = SCIPvarGetTransVar(var);
+      assert( var != NULL );
+      
+      if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+      {
+         /** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+         SCIP_CALL( SCIPvarFlattenAggregationGraph(var, scip->mem->solvemem, scip->set) );
+
+#ifndef NDEBUG      
+         multvars = SCIPvarGetMultaggrVars(var);
+         for( i = SCIPvarGetMultaggrNVars(var) - 1; i >= 0; --i)
+            assert(SCIPvarGetStatus(multvars[i]) != SCIP_VARSTATUS_MULTAGGR);
+#endif      
+      }
+   }
 
    *unbounded = FALSE;
    *infeasible = FALSE;
