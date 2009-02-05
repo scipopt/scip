@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.211 2008/09/23 13:40:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.212 2009/02/05 14:11:44 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -5357,6 +5357,146 @@ SCIP_DOMCHG* SCIPnodeGetDomchg(
    assert(node != NULL);
 
    return node->domchg;
+}
+
+
+/** returns the set of variable branchings that were performed in the parent node to create this node */
+void SCIPnodeGetParentBranchings(
+   SCIP_NODE*            node,                /**< node data */
+   SCIP_VAR**            branchvars,          /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            branchbounds,        /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branching in the parent node set */
+   int*                  nbranchvars,         /**< number of variables on which branching has been performed in the parent node 
+                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
+   int                   branchvarssize       /**< available slots in arrays */
+   )
+{
+   SCIP_BOUNDCHG* boundchgs;
+   int nboundchgs;  
+   int i; 
+
+   assert(node != NULL);
+   assert(branchvars != NULL);
+   assert(branchbounds != NULL);
+   assert(boundtypes != NULL);
+   assert(nbranchvars != NULL);
+   assert(branchvarssize >= 0);
+  
+   (*nbranchvars) = 0;
+   if( SCIPnodeGetDepth(node) == 0 )
+      return;
+   nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
+   boundchgs = node->domchg->domchgbound.boundchgs;
+   
+   assert(boundchgs != NULL);
+   assert(nboundchgs >= 0);
+
+   for( i = 0; i < nboundchgs; i++)
+   {
+      if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+         break;
+      (*nbranchvars)++; 
+   }   
+#ifndef NDEBUG
+   for( ; i < nboundchgs; i++)
+      assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING); 
+#endif
+
+   if( branchvarssize >= *nbranchvars )
+   {
+      for( i = 0; i < *nbranchvars; i++)
+      {
+         assert( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING );
+         branchvars[i] = boundchgs[i].var;
+         boundtypes[i] = boundchgs[i].boundtype;
+         branchbounds[i] = boundchgs[i].newbound;       
+      }   
+   }
+}
+
+/** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node */
+void SCIPnodeGetAncestorBranchings(
+   SCIP_NODE*            node,                /**< node data */
+   SCIP_VAR**            branchvars,          /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,        /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,         /**< number of variables on which branchings have been performed in all ancestors 
+                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
+   int                   branchvarssize       /**< available slots in arrays */
+   )
+{
+   assert(node != NULL);
+   assert(branchvars != NULL);
+   assert(branchbounds != NULL);
+   assert(boundtypes != NULL);
+   assert(nbranchvars != NULL);
+   assert(branchvarssize >= 0);
+   
+   (*nbranchvars) = 0;
+   
+   while( SCIPnodeGetDepth(node) != 0 )
+   {
+      int nodenbranchvars;
+      int start;
+      int size;
+
+      start = *nbranchvars < branchvarssize - 1 ? *nbranchvars : branchvarssize - 1;
+      size = *nbranchvars > branchvarssize ? 0 : branchvarssize-(*nbranchvars);
+
+      SCIPnodeGetParentBranchings(node, &branchvars[start], &branchbounds[start], &boundtypes[start], &nodenbranchvars, size);
+      *nbranchvars += nodenbranchvars;
+      
+      node = node->parent;
+   }
+}
+
+/*  returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node 
+ *  sorted by the nodes, starting from the current node going up to the root */
+void SCIPnodeGetAncestorBranchingPath(
+   SCIP_NODE*            node,                /**< node data */
+   SCIP_VAR**            branchvars,          /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,        /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,          /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,         /**< number of variables on which branchings have been performed in all ancestors 
+                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
+   int                   branchvarssize,      /**< available slots in arrays */   
+   int*                  nodeswitches,        /**< marks, where in the arrays the branching decisions of the next node on the path start 
+                                               * branchings performed at the parent of node always start at position 0. For single variable branching,
+                                               * nodeswitches[i] = i holds */
+   int*                  nnodes,              /* number of nodes in the nodeswitch array */
+   int                   nodeswitchsize       /**< available slots in node switch array */                                                                    
+ )
+{
+   assert(node != NULL);
+   assert(branchvars != NULL);
+   assert(branchbounds != NULL);
+   assert(boundtypes != NULL);
+   assert(nbranchvars != NULL);
+   assert(branchvarssize >= 0);
+   
+   (*nbranchvars) = 0;
+   (*nnodes) = 0;
+   
+   /* go up to the root, in the root no domains were changed due to branching */
+   while( SCIPnodeGetDepth(node) != 0 )
+   {
+      int nodenbranchvars;
+      int start;
+      int size;
+
+      /* calculate the start position for the current node ans the maximum remaining slots in the arrays */
+      start = *nbranchvars < branchvarssize - 1 ? *nbranchvars : branchvarssize - 1;
+      size = *nbranchvars > branchvarssize ? 0 : branchvarssize-(*nbranchvars);
+      if( *nnodes < nodeswitchsize )         
+         nodeswitches[*nnodes] = start;
+      
+      /* get branchings for a single node */
+      SCIPnodeGetParentBranchings(node, &branchvars[start], &branchbounds[start], &boundtypes[start], &nodenbranchvars, size);
+      *nbranchvars += nodenbranchvars;
+      (*nnodes)++;
+      
+      node = node->parent;
+   }
 }
 
 /** returns whether node is in the path to the current node */

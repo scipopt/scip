@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.487 2009/02/05 13:38:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.488 2009/02/05 14:11:44 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13006,6 +13006,94 @@ int SCIPgetRepropdepth(
    return scip->tree->repropdepth;
 }
 
+/* prints all branching decisions on variables from the root to the given node */
+SCIP_RETCODE SCIPprintNodeRootPath(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node data */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_VAR**            branchvars;         /**< array of variables on which the branchings has been performed in all ancestors */                        
+   SCIP_Real*            branchbounds;       /**< array of bounds which the branchings in all ancestors set */                                             
+   SCIP_BOUNDTYPE*       boundtypes;         /**< array of boundtypes which the branchings in all ancestors set */                                         
+   int*                  nodeswitches;       /**< marks, where in the arrays the branching decisions of the next node on the path start                    
+                                              * branchings performed at the parent of node always start at position 0. For single variable branching,      
+                                              * nodeswitches[i] = i holds */                                                                               
+   int                   nbranchvars;        /**< number of variables on which branchings have been performed in all ancestors                             
+                                              *   if this is larger than the array size, arrays should be reallocated and method should be called again */ 
+   int                   branchvarssize;     /**< available slots in arrays */                                                                             
+   int                   nnodes;             /* number of nodes in the nodeswitch array */                                                                 
+   int                   nodeswitchsize;     /**< available slots in node switch array */                                                                  
+   
+   branchvarssize = SCIPnodeGetDepth(node);
+   nodeswitchsize = branchvarssize;
+   
+   /* memory allocation */
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchvars, branchvarssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &branchbounds, branchvarssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, branchvarssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodeswitches, nodeswitchsize) );
+
+   SCIPnodeGetAncestorBranchingPath(node, branchvars, branchbounds, boundtypes, &nbranchvars, branchvarssize, nodeswitches, &nnodes, nodeswitchsize );
+   
+   /* if the arrays were to small, we have to reallocate them and recall SCIPnodeGetAncestorBranchingPath */
+   if( nbranchvars > branchvarssize || nnodes > nodeswitchsize )
+   {
+      branchvarssize = nbranchvars;
+      nodeswitchsize = nnodes;
+
+      /* memory reallocation */
+      SCIP_CALL( SCIPreallocBufferArray(scip, &branchvars, branchvarssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &branchbounds, branchvarssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &boundtypes, branchvarssize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &nodeswitches, nodeswitchsize) );
+      
+      SCIPnodeGetAncestorBranchingPath(node, branchvars, branchbounds, boundtypes, &nbranchvars, branchvarssize, nodeswitches, &nnodes, nodeswitchsize);
+      assert(nbranchvars == branchvarssize);
+   }
+   
+   /* we only want to create output, if branchings were performed */
+   if( nbranchvars >= 1 )
+   {
+      int i;
+      int j;
+
+      /* print all nodes, starting from the root, which is last in the arrays */
+      for( j = nnodes-1; j >= 0; --j)
+      {
+         int end;
+         if(j == nnodes-1)
+            end =  nbranchvars;
+         else 
+            end =  nodeswitches[j+1];
+         
+         for( i = nodeswitches[j]; i < end; ++i)
+         {
+            if( i > nodeswitches[j] )
+               SCIPmessageFPrintInfo(file, " AND ");
+            SCIPmessageFPrintInfo(file, "<%s> %s %.1f",SCIPvarGetName(branchvars[i]), boundtypes[i] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", branchbounds[i]);
+         }
+         SCIPmessageFPrintInfo(file, "\n");            
+         if( j > 0 )
+         {
+            if(  nodeswitches[j]-nodeswitches[j-1] != 1 )
+               SCIPmessageFPrintInfo(file, " |\n |\n");
+            else if( boundtypes[i-1] == SCIP_BOUNDTYPE_LOWER )
+               SCIPmessageFPrintInfo(file, "\\ \n \\\n");
+            else
+               SCIPmessageFPrintInfo(file, " /\n/ \n");
+         }
+      }
+   }
+   
+   /* free all local memory */
+   SCIPfreeBufferArray(scip, &nodeswitches);
+   SCIPfreeBufferArray(scip, &boundtypes);
+   SCIPfreeBufferArray(scip, &branchbounds);
+   SCIPfreeBufferArray(scip, &branchvars);
+   
+   return SCIP_OKAY;
+}
 
 
 /*

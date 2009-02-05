@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.333 2008/12/09 09:03:31 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.334 2009/02/05 14:11:44 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4919,6 +4919,15 @@ int SCIPgetCutoffdepth(
 extern
 int SCIPgetRepropdepth(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/* prints all branching decisions on variables from the root to the given node */
+extern
+SCIP_RETCODE SCIPprintNodeRootPath(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node data */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /**@} */

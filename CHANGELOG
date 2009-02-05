@@ -10,6 +10,9 @@ interface:
   of a variable as lazy; This has the consequences that these bounds are not in LP.
 - new methods SCIPgetNFixedonesSetppc() and SCIPgetNFixedzerosSetppc() in cons_setppc.{h,c}; these methods returns current (local) 
   number of variables fixed to one/zero in the given setppc constraint
+- new methods SCIPprintNodeRootPath() in scip.h This method prints all branching decisions on variables from the root to the given node
+- new methods SCIPnodeGetParentBranchings(), SCIPnodeGetAncestorBranchings(), SCIPnodeGetAncestorBranchingPath(); These methods return
+  the set of variable branchings that were performed in the parent node / all ancestor nodes to create a given node
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
