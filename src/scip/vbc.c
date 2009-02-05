@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.c,v 1.30 2008/09/22 19:25:11 bzfwanie Exp $"
+#pragma ident "@(#) $Id: vbc.c,v 1.31 2009/02/05 09:47:35 bzfheinz Exp $"
 
 /**@file   vbc.c
  * @brief  methods for VBC Tool output
@@ -316,7 +316,12 @@ void SCIPvbcMarkedRepropagateNode(
    SCIP_NODE*            node                /**< node, that was marked to be repropagated */
    )
 {
-   vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_MARKREPROP);
+   assert(node != NULL);
+   
+   /* if the node number is zero, then SCIP is currently in probing and wants to mark a probing node; however this node
+    * is not part of the search tree */
+   if( SCIPnodeGetNumber(node) > 0 )
+      vbcSetColor(vbc, stat, node, SCIP_VBCCOLOR_MARKREPROP);
 }
 
 /** changes the color of the node to the color of repropagated nodes */

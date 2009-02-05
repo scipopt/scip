@@ -57,6 +57,7 @@ fixed bugs:
 - fixed bug with invalid pseudo solution (lower bound was always >= 0) when using pricing.
 - fixed bug with incorrect pseudo activities when objective of a variable switches sign in linear constraint handler
 - fixed bug with enforcement of pseudo solutions: if pseudo solution is choosen because LP hit a limit, it has to be enforced in any case
+- fixed bug in vbc tools concerning of marking probing nodes
 	
 plugins:
 - added interface to QSopt due to Daniel Espinoza
