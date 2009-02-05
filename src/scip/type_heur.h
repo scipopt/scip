@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.19 2008/05/05 14:52:33 bzfpfets Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.20 2009/02/05 13:38:42 bzfheinz Exp $"
 
 /**@file   type_heur.h
  * @brief  type definitions for primal heuristics
@@ -37,6 +37,7 @@
 						*   plunge was finished, and only if the LP was solved for this node */
 #define SCIP_HEURTIMING_AFTERPSEUDOPLUNGE 0x40 /**< call heuristic after the processing of the last node in the current
 						*   plunge was finished, and only if the LP was not solved for this node */
+#define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x80 /**< call heuristic during pricing loop */
 
 typedef unsigned int SCIP_HEURTIMING;
 
@@ -45,7 +46,6 @@ typedef unsigned int SCIP_HEURTIMING;
 
 /** call heuristic after the processing of the last node in the current plunge was finished */
 #define SCIP_HEURTIMING_AFTERPLUNGE (SCIP_HEURTIMING_AFTERLPPLUNGE | SCIP_HEURTIMING_AFTERPSEUDOPLUNGE)
-
 
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */

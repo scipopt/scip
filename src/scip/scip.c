@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.486 2009/02/05 12:08:47 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.487 2009/02/05 13:38:41 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11402,7 +11402,7 @@ SCIP_RETCODE solveProbingLP(
          int npricedcolvars;
 
          mustsepa = FALSE;
-         SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree, scip->lp,
+         SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp,
                scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo, maxpricerounds,
                &npricedcolvars, &mustsepa, lperror) );
 

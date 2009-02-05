@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.266 2009/02/05 08:34:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.267 2009/02/05 13:38:41 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -716,6 +716,7 @@ SCIP_RETCODE primalHeuristics(
    assert(lp != NULL);
    assert(heurtiming == SCIP_HEURTIMING_BEFORENODE || heurtiming == SCIP_HEURTIMING_DURINGLPLOOP
       || heurtiming == SCIP_HEURTIMING_AFTERLPLOOP || heurtiming == SCIP_HEURTIMING_AFTERNODE
+      || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP
       || heurtiming == (SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE));
    assert(heurtiming != SCIP_HEURTIMING_AFTERNODE || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
    assert(foundsol != NULL);
@@ -1220,6 +1221,7 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
@@ -1265,6 +1267,7 @@ SCIP_RETCODE SCIPpriceLoop(
    while( !(*lperror) && mustprice && npricerounds < maxpricerounds )
    {
       SCIP_Bool enoughvars;
+      SCIP_Bool foundsol;
       int p;
 
       assert(lp->flushed);
@@ -1278,6 +1281,9 @@ SCIP_RETCODE SCIPpriceLoop(
          *lperror = TRUE;
          break;
       }
+
+      /* call primal heuristics which are callable during pricing */
+      SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGPRICINGLOOP, &foundsol) );
 
       /* price problem variables */
       SCIPdebugMessage("problem variable pricing\n");
@@ -1468,7 +1474,7 @@ SCIP_RETCODE priceAndCutLoop(
 
          oldlowerbound = SCIPtreeGetLowerbound(tree, set);
 
-         SCIP_CALL( SCIPpriceLoop(blkmem, set, stat, prob, tree, lp, pricestore, branchcand, eventqueue,
+         SCIP_CALL( SCIPpriceLoop(blkmem, set, stat, prob, primal, tree, lp, pricestore, branchcand, eventqueue,
                root, root, -1, &npricedcolvars, &mustsepa, lperror) );
          mustprice = FALSE;
 

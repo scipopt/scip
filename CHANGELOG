@@ -21,6 +21,9 @@ features:
   parameters are set to FALSE in default which yields the same behavior as before. With the methods SCIPvarMarkLazyLb() and 
   SCIPvarMarkLazyUb() these parameters can be set to TRUE. (This of interest if SCIP gets used as a
   branch-and-price framework).
+- added new timing point, SCIP_HEURTIMING_DURINGPRICINGLOOP, for calling heuristics; If this timing point is used the corresponding 
+  heuristics is called during the pricing loop of variables; we also added this timing point to heur_simplerounding.{h,c} which
+  has the effect that a LP solution which satisfies all integrality conditions during the pricing loop is detected
 
 performance improvements:
 - replaced some function calls in loop conditions
