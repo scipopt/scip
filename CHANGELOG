@@ -28,6 +28,7 @@ features:
 performance improvements:
 - replaced some function calls in loop conditions
 - in sepa_cmir.c, if mksetcoefs is invalid for delta=1 no other values of delta are tested anymore
+- changed the timing of the feasibility pump in case of pricing
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 

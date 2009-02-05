@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.58 2008/10/21 14:21:10 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.59 2009/02/05 13:42:48 bzfheinz Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -405,16 +405,16 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    /* reset the timing mask to its default value (at the root node it could be different) */
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
-   /* only call the heuristic before cutting planes if we do not have an incumbent */
-   if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetNSolsFound(scip) > 0 )
+   /* only call the heuristic before cutting planes if we do not have an incumbent and no pricer exists */
+   if( heurtiming == SCIP_HEURTIMING_DURINGLPLOOP && SCIPgetNSolsFound(scip) > 0 && SCIPgetNPricers(scip) == 0 )
       return SCIP_OKAY;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* only apply heuristic, if only a few solutions have been found */
-   if( heurdata->maxsols >= 0 && SCIPgetNSolsFound(scip) > heurdata->maxsols )
+   /* only apply heuristic, if only a few solutions have been found and no pricer exists */
+   if( heurdata->maxsols >= 0 && SCIPgetNSolsFound(scip) > heurdata->maxsols && SCIPgetNPricers(scip) == 0 )
       return SCIP_OKAY;
 
    /* get all variables of LP and number of fractional variables in LP solution that should be integral */
