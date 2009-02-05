@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.488 2009/02/05 14:11:44 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.489 2009/02/05 17:40:49 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4333,8 +4333,6 @@ SCIP_RETCODE exitPresolve(
    /* flatten all variables */
    vars = SCIPgetFixedVars(scip);
    nvars = SCIPgetNFixedVars(scip);
-   assert(vars != NULL);
-   assert(nvars >= 0);
 
    for( v = nvars - 1; v >= 0; --v )
    { 
@@ -4342,13 +4340,11 @@ SCIP_RETCODE exitPresolve(
 #ifndef NDEBUG      
       SCIP_VAR** multvars;
       int i;
-#endif      
+#endif
+      assert(vars != NULL);
       var = vars[v];
+      assert(var != NULL);
 
-      assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL );
-      //var = SCIPvarGetTransVar(var);
-      assert( var != NULL );
-      
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
       {
          /** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
