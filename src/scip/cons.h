@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.119 2008/12/09 14:57:46 bzforlow Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.120 2009/02/05 08:34:20 bzfberth Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -227,6 +227,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_Bool             forced,             /**< should enforcement of pseudo solution be forced? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

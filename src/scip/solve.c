@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.265 2008/11/12 13:26:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.266 2009/02/05 08:34:20 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1932,8 +1932,8 @@ SCIP_RETCODE enforceConstraints(
    SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the LP/pseudo solution is infeasible */
    SCIP_Bool*            propagateagain,     /**< pointer to store TRUE, if domain propagation should be applied again */
    SCIP_Bool*            solvelpagain,       /**< pointer to store TRUE, if the node's LP has to be solved again */
-   SCIP_Bool*            solverelaxagain     /**< pointer to store TRUE, if the external relaxators should be called
-                                              *   again */
+   SCIP_Bool*            solverelaxagain,    /**< pointer to store TRUE, if the external relaxators should be called again */
+   SCIP_Bool             forced              /**< should enforcement of pseudo solution be forced? */
    )
 {
    SCIP_RESULT result;
@@ -1974,7 +1974,7 @@ SCIP_RETCODE enforceConstraints(
       objinfeasible = SCIPsetIsLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
    }
 
-   /* during constraint enforcemenst, generated cuts should enter the LP in any case; otherwise, a constraint handler
+   /* during constraint enforcement, generated cuts should enter the LP in any case; otherwise, a constraint handler
     * would fail to enforce its constraints if it relies on the modification of the LP relaxation
     */
    SCIPsepastoreStartForceCuts(sepastore);
@@ -2000,7 +2000,7 @@ SCIP_RETCODE enforceConstraints(
       else
       {
          SCIP_CALL( SCIPconshdlrEnforcePseudoSol(set->conshdlrs_enfo[h], blkmem, set, stat, tree, branchcand, *infeasible,
-               objinfeasible, &result) );
+               objinfeasible,forced, &result) );
          if( SCIPsepastoreGetNCuts(sepastore) != 0 )
          {
             SCIPerrorMessage("pseudo enforcing method of constraint handler <%s> separated cuts\n",
@@ -2374,6 +2374,7 @@ SCIP_RETCODE solveNode(
       SCIP_Bool solverelax;
       SCIP_Bool solvelp;
       SCIP_Bool propagate;
+      SCIP_Bool forcedenforcement;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -2385,6 +2386,7 @@ SCIP_RETCODE solveNode(
       solvelpagain = FALSE;
       propagate = propagateagain;
       propagateagain = FALSE;
+      forcedenforcement = FALSE;
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
       SCIP_CALL( applyBounding(blkmem, set, stat, prob, primal, tree, lp, conflict, cutoff) );
@@ -2459,7 +2461,10 @@ SCIP_RETCODE solveNode(
          }
          
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT )
+         {
             SCIPtreeSetFocusNodeLP(tree, FALSE);
+            forcedenforcement = TRUE;
+         }
 
          /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
           * we have to forget about the LP and use the pseudo solution instead
@@ -2574,7 +2579,7 @@ SCIP_RETCODE solveNode(
         
          /* call constraint enforcement */
          SCIP_CALL( enforceConstraints(blkmem, set, stat, tree, lp, sepastore, branchcand,
-               &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain) );
+               &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain, forcedenforcement) );
          assert(branched == (tree->nchildren > 0));
          assert(!branched || (!(*cutoff) && *infeasible && !propagateagain && !solvelpagain));
          assert(!(*cutoff) || (!branched && *infeasible && !propagateagain && !solvelpagain));
@@ -2694,7 +2699,7 @@ SCIP_RETCODE solveNode(
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT )
                {
                   SCIP_NODE* node;
-
+               
                   /* as we hit the time or iteration limit, we do not want to solve the LP again.
                    * in order to terminate correctly, we create a "branching" with only one child node 
                    * that is a copy of the focusnode 

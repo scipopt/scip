@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.317 2009/01/30 16:48:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.318 2009/02/05 08:34:20 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4036,9 +4036,9 @@ SCIP_RETCODE checkCons(
       activity = consdataGetActivity(scip, consdata, sol);
    
    SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hascurrentnodelp=%d)\n",
-      activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
-      consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
-      consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
+         activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
+         consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
+         consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
    
    if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
@@ -8204,8 +8204,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinear)
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
-
-   /*debugMessage("Enfops method of linear constraints\n");*/
 
    /* if the solution is infeasible anyway due to objective value, skip the enforcement */
    if( objinfeasible )

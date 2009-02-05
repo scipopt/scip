@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.178 2008/12/09 14:57:46 bzforlow Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.179 2009/02/05 08:34:20 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2748,6 +2748,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_Bool             forced,             /**< should enforcement of pseudo solution be forced? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -2781,7 +2782,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       SCIP_Bool pschanged;
 
       /* check, if this LP solution was already enforced at this node */
-      if( conshdlr->lastenfopsdomchgcount == stat->domchgcount && conshdlr->lastenfopsnode == stat->nnodes )
+      if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount && conshdlr->lastenfopsnode == stat->nnodes )
       {
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
@@ -2804,7 +2805,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       assert(nusefulconss <= nconss);
 
       /* constraint handlers without constraints should only be called once */
-      if( nconss > 0 || (!conshdlr->needscons && pschanged) )
+      if( nconss > 0 || (!conshdlr->needscons && pschanged) ) 
       {
          SCIP_CONS** conss;
          SCIP_Longint oldndomchgs;
