@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.490 2009/02/08 15:43:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.491 2009/02/08 15:59:40 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4333,7 +4333,7 @@ SCIP_RETCODE exitPresolve(
    /* flatten all variables */
    vars = SCIPgetFixedVars(scip);
    nvars = SCIPgetNFixedVars(scip);
-   assert(vars != NULL);
+   assert(nvars == 0 || vars != NULL);
       
    for( v = nvars - 1; v >= 0; --v )
    { 
