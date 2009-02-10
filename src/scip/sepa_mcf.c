@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.84 2009/01/28 12:00:36 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.85 2009/02/10 15:00:57 bzfraack Exp $"
 
-/* #define MCF_DEBUG */
+/*#define SCIP_DEBUG*/
+/* #define MCF_DEBUG*/
 
 /**@file   sepa_mcf.c
  * @ingroup SEPARATORS
@@ -3854,7 +3855,8 @@ SCIP_RETCODE identifySourcesTargets(
    else
       *effortlevel = MCFEFFORTLEVEL_DEFAULT;
 
-   MCFdebugMessage("extracted network has %d inconsistencies -> separating with effort %d\n", mcfdata->ninconsistencies, *effortlevel);
+   MCFdebugMessage("extracted network has %d inconsistencies (ratio %g) -> separating with effort %d\n",
+                   mcfdata->ninconsistencies, (SCIP_Real)mcfdata->ninconsistencies/(SCIP_Real)(narcs*ncommodities), *effortlevel);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &touchednodes);
@@ -5172,6 +5174,8 @@ SCIP_RETCODE generateClusterCuts(
    unsigned int partition;
    unsigned int allpartitions;
    unsigned int startpartition;
+   SCIP_Bool useinverted;
+   SCIP_Bool inverted;
    int maxtestdelta;
 
    assert( effortlevel == MCFEFFORTLEVEL_AGGRESSIVE || effortlevel == MCFEFFORTLEVEL_DEFAULT );
@@ -5229,533 +5233,549 @@ SCIP_RETCODE generateClusterCuts(
       /* loop over all nodes and generate single-node cuts */
       startpartition = 0;
       allpartitions = (unsigned int) nnodes;
+      MCFdebugMessage("maxtestdelta: %d, maxsepacuts: %d, nnodes: %d \n", maxtestdelta, maxsepacuts, nnodes);
    }
    else
    {
-      MCFdebugMessage(" maxtestdelta: %d, maxsepacuts: %d, nclusters: %d \n", maxtestdelta, maxsepacuts, nodepartition->nclusters);
       /* loop over all possible partitions of the clusters;
        * cluster i is in S iff bit i of 'partition' is 1
        */
       int nclusters = nodepartition->nclusters;
 
       assert((unsigned int)nclusters <= 8*sizeof(unsigned int));
+      MCFdebugMessage("maxtestdelta: %d, maxsepacuts: %d, nclusters: %d \n", maxtestdelta, maxsepacuts, nclusters);
 
+      /* We fix the last cluster to belong to partition T. In the undirected case, this is sufficient,
+       * because S-T is equivalent to T-S. In the directed case, the loop below is conducted two times,
+       * one with regular S-T and one with inverted partitions.
+       */
       startpartition = 1;
-      if( mcfnetwork->modeltype == SCIP_MCFMODELTYPE_DIRECTED )
-      {
-         /* in the directed case, we try all (non-trivial) partitions */
-         allpartitions = (1 << nclusters) - 1;
-      }
-      else
-      {
-         /* In the undirected case, we only need to try half of the partitions, since they are pairwise
-          * equivalent (S-T is equivalent to T-S). Thus, we fix the last cluster to belong to partition T.
-          */
-         assert(mcfnetwork->modeltype == SCIP_MCFMODELTYPE_UNDIRECTED);
-         allpartitions = (1 << (nclusters-1));
-      }
+      allpartitions = (1 << (nclusters-1));
    }
-   for( partition = startpartition; partition <= allpartitions-1 && !SCIPisStopped(scip) && *ncuts < maxsepacuts; partition++ )
+   useinverted = (mcfnetwork->modeltype == SCIP_MCFMODELTYPE_DIRECTED);
+
+   for( inverted = FALSE; inverted <= useinverted; inverted++ )
    {
-      int v;
-      int a;
-      int k;
-      int d;
+      for( partition = startpartition; partition <= allpartitions-1 && !SCIPisStopped(scip) && *ncuts < maxsepacuts; partition++ )
+      {
+         int v;
+         int a;
+         int k;
+         int d;
 #ifdef SEPARATEFLOWCUTS
-      SCIP_Real baserhs;
-      SCIP_Real bestdelta;
-      SCIP_Real bestrelviolation;
-      SCIP_Real bestabsviolation;
-      SCIP_Real f0;
+         SCIP_Real baserhs;
+         SCIP_Real bestdelta = 1.0;
+         SCIP_Real bestrelviolation;
+         SCIP_Real bestabsviolation;
+         SCIP_Real f0;
 #endif
 
-      if( nodepartition == NULL )
-      {
-         SCIPdebugMessage("generating single-node cuts for node %d\n", partition);
-      }
-      else
-      {
-         SCIPdebugMessage("generating cluster cuts for partition 0x%x\n", partition);
-      }
+         if( nodepartition == NULL )
+         {
+            SCIPdebugMessage("generating single-node cuts for node %d (inverted: %d)\n", partition, inverted);
+         }
+         else
+         {
+            SCIPdebugMessage("generating cluster cuts for partition 0x%x (inverted: %d)\n", partition, inverted);
+         }
 
 #ifdef OUTPUTGRAPH
-      SCIP_CALL( outputGraph(scip, mcfnetwork, nodepartition, partition) );
+         SCIP_CALL( outputGraph(scip, mcfnetwork, nodepartition, partition) );
 #endif
 
-      /* clear memory */
-      BMSclearMemoryArray(rowweights, nrows);
-      BMSclearMemoryArray(comcutdemands, ncommodities);
-      BMSclearMemoryArray(comdemands, ncommodities);
+         /* clear memory */
+         BMSclearMemoryArray(rowweights, nrows);
+         BMSclearMemoryArray(comcutdemands, ncommodities);
+         BMSclearMemoryArray(comdemands, ncommodities);
 #ifdef SEPARATEFLOWCUTS
-      baserhs = 0.0;
+         baserhs = 0.0;
 #endif
-      ndeltas = 0;
+         ndeltas = 0;
 
-      /* Identify commodities with positive T -> S demand */
-      for( v = 0; v < nnodes; v++ )
-      {
-         /* check if node belongs to S */
-         if( !nodeInPartition(nodepartition, partition, v) )
-            continue;
-
-         /* update commodity demand */
-         for( k = 0; k < ncommodities; k++ )
+         /* Identify commodities with positive T -> S demand */
+         for( v = 0; v < nnodes; v++ )
          {
-            SCIP_Real rhs;
-
-            if( nodeflowrows[v][k] == NULL )
+            /* check if node belongs to S */
+            if( nodeInPartition(nodepartition, partition, v) == inverted )
                continue;
 
-            if( nodeflowscales[v][k] > 0.0 )
-               rhs = SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]);
-            else
-               rhs = SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]);
-            if( nodeflowinverted[v][k] )
-               rhs *= -1.0;
+            /* update commodity demand */
+            for( k = 0; k < ncommodities; k++ )
+            {
+               SCIP_Real rhs;
 
-            comcutdemands[k] += rhs * nodeflowscales[v][k];
+               if( nodeflowrows[v][k] == NULL )
+                  continue;
+
+               if( nodeflowscales[v][k] > 0.0 )
+                  rhs = SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]);
+               else
+                  rhs = SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]);
+               if( nodeflowinverted[v][k] )
+                  rhs *= -1.0;
+
+               comcutdemands[k] += rhs * nodeflowscales[v][k];
+            }
          }
-      }
 
-      /* check if there is at least one useful commodity */
-      if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
-      {
-         for( k = 0; k < ncommodities; k++ )
-         {
-            /* in the directed case, use commodities with positive demand (negative -d_k) */
-            SCIPdebugMessage(" -> commodity %d: cutdemand=%g\n", k, comcutdemands[k]);
-            if( SCIPisNegative(scip, comcutdemands[k]) )
-               break;
-         }
-      }
-      else
-      {
-         for( k = 0; k < ncommodities; k++ )
-         {
-            /* in the undirected case, use commodities with non-zero demand */
-            SCIPdebugMessage(" -> commodity %d: cutdemand=%g\n", k, comcutdemands[k]);
-            if( !SCIPisZero(scip, comcutdemands[k]) )
-               break;
-         }
-      }
-      if( k == ncommodities )
-         continue;
-
-      /* set weights of capacity rows that go from T to S, i.e., a \in A^- */
-      for( a = 0; a < narcs; a++ )
-      {
-         SCIP_COL** rowcols;
-         SCIP_Real* rowvals;
-         SCIP_Real feasibility;
-         int rowlen;
-         int r;
-         int j;
-
-         assert(arcsources[a] < nnodes);
-         assert(arctargets[a] < nnodes);
-
-         /* check if this is an arc of our cut */
+         /* check if there is at least one useful commodity */
          if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
          {
-            /* in the directed case, check if arc goes from T to S */
-            if( nodeInPartition(nodepartition, partition, arcsources[a]) || !nodeInPartition(nodepartition, partition, arctargets[a]) )
-               continue;
+            for( k = 0; k < ncommodities; k++ )
+            {
+               /* in the directed case, use commodities with positive demand (negative -d_k) */
+               SCIPdebugMessage(" -> commodity %d: cutdemand=%g\n", k, comcutdemands[k]);
+               if( SCIPisNegative(scip, comcutdemands[k]) )
+                  break;
+            }
          }
          else
          {
-            /* in the undirected case, check if the arc has endpoints in S and T */
-            if( nodeInPartition(nodepartition, partition, arcsources[a]) && nodeInPartition(nodepartition, partition, arctargets[a]) )
+            for( k = 0; k < ncommodities; k++ )
             {
-               /* both endpoints are in S */
-               continue;
-            }
-            if( !nodeInPartition(nodepartition, partition, arcsources[a]) && !nodeInPartition(nodepartition, partition, arctargets[a]) )
-            {
-               /* both endpoints are in T */
-               continue;
+               /* in the undirected case, use commodities with non-zero demand */
+               SCIPdebugMessage(" -> commodity %d: cutdemand=%g\n", k, comcutdemands[k]);
+               if( !SCIPisZero(scip, comcutdemands[k]) )
+                  break;
             }
          }
-
-         /* arc might be uncapacitated */
-         if( arccapacityrows[a] == NULL )
+         if( k == ncommodities )
             continue;
 
-         /* use capacity row in c-MIR cut */
-         r = SCIProwGetLPPos(arccapacityrows[a]);
-         assert(r < nrows);
-         if( r == -1 ) /* row might have been removed from LP in the meantime */
-            continue;
-         assert(rowweights[r] == 0.0);
-
-         /* if one of the arc nodes is unknown, we only use the capacity row if it does not have slack,
-          * otherwise, we discard it if the slack is too large
-          */
-         feasibility = SCIPgetRowSolFeasibility(scip, arccapacityrows[a], sol);
-         if( arcsources[a] == -1 || arctargets[a] == -1 )
-         {
-            if( SCIPisFeasPositive(scip, feasibility) )
-               continue;
-         }
-         else
-         {
-            SCIP_Real maxcoef;
-
-            maxcoef = SCIPgetRowMaxCoef(scip, arccapacityrows[a]);
-            assert(maxcoef > 0.0);
-            if( SCIPisFeasGT(scip, feasibility/maxcoef, MAXCAPACITYSLACK) )
-               continue;
-         }
-
-         rowweights[r] = arccapacityscales[a];
-         SCIPdebugMessage(" -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), rowweights[r],
-                          SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
-         /*SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));*/
-
-#ifdef SEPARATEFLOWCUTS
-         if( rowweights[r] > 0.0 )
-            baserhs += rowweights[r] * (SCIProwGetRhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
-         else
-            baserhs += rowweights[r] * (SCIProwGetLhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
-#endif
-
-         /* extract useful deltas for c-MIR scaling and update the demand value for commodities (in binary flow model) */
-         rowcols = SCIProwGetCols(arccapacityrows[a]);
-         rowvals = SCIProwGetVals(arccapacityrows[a]);
-         rowlen = SCIProwGetNLPNonz(arccapacityrows[a]);
-         for( j = 0; j < rowlen; j++ )
-         {
-            SCIP_Real coef;
-            int c;
-
-            coef = rowvals[j] * arccapacityscales[a];
-            coef = ABS(coef);
-
-            /* update commodity demands */
-            c = SCIPcolGetLPPos(rowcols[j]);
-            assert(0 <= c && c < SCIPgetNLPCols(scip));
-            k = colcommodity[c];
-            if( k >= 0 )
-               comdemands[k] = coef;
-            else if ( !SCIPisFeasZero(scip, coef) )
-            {
-               SCIP_Bool exists;
-               int left;
-               int right;
-
-               /* binary search if we already know this coefficient */
-               exists = FALSE;
-               left = 0;
-               right = ndeltas-1;
-               while( left <= right )
-               {
-                  int mid = (left+right)/2;
-                  /* take deltas that are not too close */
-                  if( REALABS( deltas[mid] / coef - 1.0 ) <  1e-03 )
-                  {
-                     exists = TRUE;
-                     break;
-                  }
-                  else if( coef < deltas[mid] )
-                     right = mid-1;
-                  else
-                     left = mid+1;
-               }
-
-               /* insert new candidate value */
-               if( !exists )
-               {
-                  assert(right == left-1);
-                  assert(ndeltas <= deltassize);
-                  if( ndeltas == deltassize )
-                  {
-                     deltassize *= 2;
-                     SCIP_CALL( SCIPreallocMemoryArray(scip, &deltas, deltassize) );
-                  }
-                  if( left < ndeltas )
-                  {
-                     for( d = ndeltas; d > left; d-- )
-                        deltas[d] = deltas[d-1];
-                  }
-                  deltas[left] = coef;
-                  ndeltas++;
-               }
-            }
-         }
-      }
-
-      /* set weights of node flow conservation constraints in c-MIR aggregation */
-      for( v = 0; v < nnodes; v++ )
-      {
-         /* aggregate flow conservation constraints of the 'active' commodities */
-         for( k = 0; k < ncommodities; k++ )
-         {
-            SCIP_Real scale;
-            int r;
-
-            /* if commodity was not hit by the capacity constraints of the cut in the graph, ignore the commodity */
-            if ( comdemands[k] == 0.0 )
-               continue;
-
-            scale = comdemands[k];
-            if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
-            {
-               /* in the directed case, use rows of commodities with positive demand (negative -d_k) */
-               if( !SCIPisNegative(scip, comcutdemands[k]) )
-                  continue;
-
-               /* check if node belongs to S */
-               if( !nodeInPartition(nodepartition, partition, v) )
-                  continue;
-            }
-            else
-            {
-               /* in the undirected case, use rows of commodities with non-zero demand */
-               if( SCIPisZero(scip, comcutdemands[k]) )
-                  continue;
-
-               /* If the demand (-d_k) is negative (i.e., points into the wrong direction), we use the flow
-                * in the opposite direction, i.e., sum over all nodes in T instead of S.
-                */
-               if( comcutdemands[k] > 0.0 ) {
-                  /* check if node belongs to T */
-                  if( nodeInPartition(nodepartition, partition, v) )
-                     continue;
-               }
-               else {
-                  /* check if node belongs to S */
-                  if( !nodeInPartition(nodepartition, partition, v) )
-                     continue;
-               }
-            }
-            if( nodeflowrows[v][k] == NULL )
-               continue;
-
-            r = SCIProwGetLPPos(nodeflowrows[v][k]);
-            assert(r < nrows);
-            if( r >= 0 ) /* row might have been removed from LP in the meantime */
-            {
-               SCIP_Real feasibility;
-
-               assert(rowweights[r] == 0.0);
-
-               /* ignore rows with slack */
-               feasibility = SCIPgetRowSolFeasibility(scip, nodeflowrows[v][k], sol);
-               if( !SCIPisFeasPositive(scip, feasibility) )
-               {
-                  rowweights[r] = scale * nodeflowscales[v][k];
-                  if( nodeflowinverted[v][k] )
-                     rowweights[r] *= -1.0;
-                  SCIPdebugMessage(" -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
-                                   v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, rowweights[r],
-                                   SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
-                  /*SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));*/
-#ifdef SEPARATEFLOWCUTS
-                  if( nodeflowscales[v][k] > 0.0 )
-                     baserhs += rowweights[r] * (SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
-                  else
-                     baserhs += rowweights[r] * (SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
-#endif
-               }
-            }
-         }
-      }
-
-      /* try out deltas to generate c-MIR cuts: use larger deltas first */
-      /** @todo use only the best delta instead of generating all cuts */
-#ifdef SEPARATEFLOWCUTS
-      bestdelta = deltas[ndeltas-1];  /* if nothing else is found, use maxdelta */
-      bestrelviolation = SCIP_REAL_MIN;
-      bestabsviolation = SCIP_REAL_MIN;
-#endif
-
-      for( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
-      {
-         SCIP_Real cutrhs;
-         SCIP_Real cutact;
-         SCIP_Bool success;
-         SCIP_Bool cutislocal;
-#ifdef SEPARATEFLOWCUTS
-         SCIP_Real abscutrhs;
-         SCIP_Real relviolation;
-#endif
-
-         /* do not use too small deltas */
-         if( SCIPisFeasZero(scip, deltas[d]) )
-            continue;
-
-         SCIPdebugMessage("applying MIR with delta = %g\n", deltas[d]);
-         SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
-	       (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/deltas[d],
-	       NULL, NULL, cutcoefs, &cutrhs, &cutact,
-	       &success, &cutislocal) );
-         assert(ALLOWLOCAL || !cutislocal);
-
-#ifdef SEPARATEFLOWCUTS
-         abscutrhs = REALABS(cutrhs);
-         relviolation = (cutact - cutrhs) / MAX( abscutrhs , 1.0 );
-         if( success && relviolation > bestrelviolation )
-         {
-            bestdelta = deltas[d];
-            bestrelviolation = relviolation;
-            bestabsviolation = (cutact - cutrhs);
-         }
-#endif
-
-         if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
-         {
-            SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
-            SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
-
-#ifdef SCIP_DEBUG
-            for( a = 0; a < narcs; a++ )
-            {
-               printf(" -> arc %d, capacity row <%s>: weight=%g slack=%g prod=%g dual=%g\n", a,
-                      SCIProwGetName(arccapacityrows[a]), arccapacityscales[a],
-                      SCIPgetRowFeasibility(scip, arccapacityrows[a]),
-                      SCIPgetRowFeasibility(scip, arccapacityrows[a]) * arccapacityscales[a], SCIProwGetDualsol(arccapacityrows[a]));
-            }
-#endif
-         }
-      }
-
-#ifdef SEPARATEFLOWCUTS
-      /* try to separate flow cuts for the best delta */
-      f0 = SCIPfrac(scip, baserhs/bestdelta);
-      if( MINFRAC <= f0 && f0 <= MAXFRAC )
-      {
-         SCIP_Real onedivoneminsf0;
-         SCIP_Real totalviolationdelta;
-         totalviolationdelta = 0.0;
-         onedivoneminsf0 = 1.0/(1.0 - f0);
+         /* set weights of capacity rows that go from T to S, i.e., a \in A^- */
          for( a = 0; a < narcs; a++ )
          {
             SCIP_COL** rowcols;
             SCIP_Real* rowvals;
+            SCIP_Real feasibility;
             int rowlen;
-            SCIP_Real rowweight;
-            SCIP_Real rowlhs;
-            SCIP_Real rowrhs;
-            SCIP_Real rowconstant;
-            SCIP_Real violationdelta;
             int r;
             int j;
+
+            assert(arcsources[a] < nnodes);
+            assert(arctargets[a] < nnodes);
+
+            /* check if this is an arc of our cut */
+            if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
+            {
+               /* in the directed case, check if arc goes from T to S */
+               if( nodeInPartition(nodepartition, partition, arcsources[a]) == !inverted ||
+                   nodeInPartition(nodepartition, partition, arctargets[a]) == inverted )
+                  continue;
+            }
+            else
+            {
+               /* in the undirected case, check if the arc has endpoints in S and T */
+               if( nodeInPartition(nodepartition, partition, arcsources[a]) == !inverted &&
+                   nodeInPartition(nodepartition, partition, arctargets[a]) == !inverted )
+               {
+                  /* both endpoints are in S */
+                  continue;
+               }
+               if( nodeInPartition(nodepartition, partition, arcsources[a]) == inverted &&
+                   nodeInPartition(nodepartition, partition, arctargets[a]) == inverted )
+               {
+                  /* both endpoints are in T */
+                  continue;
+               }
+            }
 
             /* arc might be uncapacitated */
             if( arccapacityrows[a] == NULL )
                continue;
 
+            /* use capacity row in c-MIR cut */
             r = SCIProwGetLPPos(arccapacityrows[a]);
-
-            /* row might have been removed from LP in the meantime */
             assert(r < nrows);
-            if( r == -1 )
+            if( r == -1 ) /* row might have been removed from LP in the meantime */
                continue;
+            assert(rowweights[r] == 0.0);
 
-            /* ignore rows that are not in the aggregation */
-            if( rowweights[r] == 0.0 )
-               continue;
-
-            /* check if removing the capacity inequality will lead to a more violated MIR inequality:
-             * in a "perfect" MCF model, adding the capacity constraints means to cancel the flow
-             * variables of the capacity constraints and instead to add the capacity variables.
-             * Thus, removing it means to add the flow variables (with negative sign) and to remove
-             * the capacity variables.
-             * We assume that the right hand side of the scaled capacity inequality is integral (usually 0)
-             * and thus, the fractionality of the rhs of the base inequality does not change, hence the
-             * cut coefficients of all other involved variables do not change.
+            /* if one of the arc nodes is unknown, we only use the capacity row if it does not have slack,
+             * otherwise, we discard it if the slack is too large
              */
+            feasibility = SCIPgetRowSolFeasibility(scip, arccapacityrows[a], sol);
+            if( arcsources[a] == -1 || arctargets[a] == -1 )
+            {
+               if( SCIPisFeasPositive(scip, feasibility) )
+                  continue;
+            }
+            else
+            {
+               SCIP_Real maxcoef;
+
+               maxcoef = SCIPgetRowMaxCoef(scip, arccapacityrows[a]);
+               assert(maxcoef > 0.0);
+               if( SCIPisFeasGT(scip, feasibility/maxcoef, MAXCAPACITYSLACK) )
+                  continue;
+            }
+
+            rowweights[r] = arccapacityscales[a];
+            SCIPdebugMessage(" -> arc %d, r=%d, capacity row <%s>: weight=%g slack=%g dual=%g\n", a, r, SCIProwGetName(arccapacityrows[a]), rowweights[r],
+                             SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
+            /*SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));*/
+
+#ifdef SEPARATEFLOWCUTS
+            if( rowweights[r] > 0.0 )
+               baserhs += rowweights[r] * (SCIProwGetRhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
+            else
+               baserhs += rowweights[r] * (SCIProwGetLhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
+#endif
+
+            /* extract useful deltas for c-MIR scaling and update the demand value for commodities (in binary flow model) */
             rowcols = SCIProwGetCols(arccapacityrows[a]);
             rowvals = SCIProwGetVals(arccapacityrows[a]);
             rowlen = SCIProwGetNLPNonz(arccapacityrows[a]);
-            rowweight = rowweights[r]/bestdelta;
-            rowlhs = SCIProwGetLhs(arccapacityrows[a]);
-            rowrhs = SCIProwGetRhs(arccapacityrows[a]);
-            rowconstant = SCIProwGetConstant(arccapacityrows[a]);
-            if( SCIPisInfinity(scip, rowrhs) || (!SCIPisInfinity(scip, -rowlhs) && rowweight < 0.0) )
-               violationdelta = rowweight * (rowlhs - rowconstant);
-            else
-               violationdelta = rowweight * (rowrhs - rowconstant);
-
             for( j = 0; j < rowlen; j++ )
             {
-               SCIP_VAR* var;
                SCIP_Real coef;
-               SCIP_Real mircoef;
-               SCIP_Real solval;
                int c;
 
-               coef = rowvals[j] * rowweight;
+               coef = rowvals[j] * arccapacityscales[a];
+               coef = ABS(coef);
 
+               /* update commodity demands */
                c = SCIPcolGetLPPos(rowcols[j]);
                assert(0 <= c && c < SCIPgetNLPCols(scip));
-               var = SCIPcolGetVar(rowcols[j]);
+               k = colcommodity[c];
+               if( k >= 0 )
+                  comdemands[k] = coef;
 
-               /* variable is flow variable: if we are not using the capacity constraint, this
-                *   would appear with negative coefficient in the base inequality instead of being canceled.
-                * variable is capacity variable: if we are not using the capacity constraint, this
-                *   would not appear in the base inequality.
-                */
-               if( colcommodity[c] >= 0 )
-                  coef *= -1.0;
-
-               if( SCIPvarIsIntegral(var) )
+               /* insert coefficients of integer variables into deltas array */
+               if ( !SCIPisFeasZero(scip, coef) && SCIPcolIsIntegral(rowcols[j]) )
                {
-                  SCIP_Real fj;
+                  SCIP_Bool exists;
+                  int left;
+                  int right;
 
-                  fj = SCIPfrac(scip, coef);
-                  if( fj <= f0 )
-                     mircoef = SCIPfloor(scip, coef);
-                  else
-                     mircoef = SCIPfloor(scip, coef) + (fj - f0)*onedivoneminsf0;
+                  /* binary search if we already know this coefficient */
+                  exists = FALSE;
+                  left = 0;
+                  right = ndeltas-1;
+                  while( left <= right )
+                  {
+                     int mid = (left+right)/2;
+                     /* take deltas that are not too close */
+                     if( REALABS( deltas[mid] / coef - 1.0 ) <  1e-03 )
+                     {
+                        exists = TRUE;
+                        break;
+                     }
+                     else if( coef < deltas[mid] )
+                        right = mid-1;
+                     else
+                        left = mid+1;
+                  }
+
+                  /* insert new candidate value */
+                  if( !exists )
+                  {
+                     assert(right == left-1);
+                     assert(ndeltas <= deltassize);
+                     if( ndeltas == deltassize )
+                     {
+                        deltassize *= 2;
+                        SCIP_CALL( SCIPreallocMemoryArray(scip, &deltas, deltassize) );
+                     }
+                     if( left < ndeltas )
+                     {
+                        for( d = ndeltas; d > left; d-- )
+                           deltas[d] = deltas[d-1];
+                     }
+                     deltas[left] = coef;
+                     ndeltas++;
+                     SCIPdebugMessage(" -> new capacity %g considered as delta\n", coef);
+                  }
                }
-               else
-               {
-                  if( coef >= 0.0 )
-                     mircoef = 0.0;
-                  else
-                     mircoef = coef * onedivoneminsf0;
-               }
-
-               /* add flow variable MIR coefficients, and subtract capacity variable MIR coefficients */
-               solval = SCIPgetSolVal(scip, sol, var);
-               if( colcommodity[c] >= 0 )
-                  violationdelta += mircoef * solval;
-               else
-                  violationdelta -= mircoef * solval;
-            }
-
-            if( SCIPisPositive(scip, violationdelta) )
-            {
-               SCIPdebugMessage(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
-                                SCIProwGetName(arccapacityrows[a]), rowweights[r], SCIPgetRowFeasibility(scip, arccapacityrows[a]),
-                                violationdelta);
-               rowweights[r] = 0.0;
-               totalviolationdelta += violationdelta;
             }
          }
 
-         /* if we removed a capacity constraint from the aggregation, try the new aggregation */
-         if( totalviolationdelta > 0.0 && totalviolationdelta + bestabsviolation > 0.0 )
+         /* set weights of node flow conservation constraints in c-MIR aggregation */
+         for( v = 0; v < nnodes; v++ )
+         {
+            /* aggregate flow conservation constraints of the 'active' commodities */
+            for( k = 0; k < ncommodities; k++ )
+            {
+               SCIP_Real scale;
+               int r;
+
+               /* if commodity was not hit by the capacity constraints of the cut in the graph, ignore the commodity */
+               if ( comdemands[k] == 0.0 )
+                  continue;
+
+               scale = comdemands[k];
+               if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
+               {
+                  /* in the directed case, use rows of commodities with positive demand (negative -d_k) */
+                  if( !SCIPisNegative(scip, comcutdemands[k]) )
+                     continue;
+
+                  /* check if node belongs to S */
+                  if( nodeInPartition(nodepartition, partition, v) == inverted )
+                     continue;
+               }
+               else
+               {
+                  /* in the undirected case, use rows of commodities with non-zero demand */
+                  if( SCIPisZero(scip, comcutdemands[k]) )
+                     continue;
+
+                  /* If the demand (-d_k) is negative (i.e., points into the wrong direction), we use the flow
+                   * in the opposite direction, i.e., sum over all nodes in T instead of S.
+                   */
+                  if( comcutdemands[k] > 0.0 ) {
+                     /* check if node belongs to T */
+                     if( nodeInPartition(nodepartition, partition, v) == !inverted )
+                        continue;
+                  }
+                  else {
+                     /* check if node belongs to S */
+                     if( nodeInPartition(nodepartition, partition, v) == inverted )
+                        continue;
+                  }
+               }
+               if( nodeflowrows[v][k] == NULL )
+                  continue;
+
+               r = SCIProwGetLPPos(nodeflowrows[v][k]);
+               assert(r < nrows);
+               if( r >= 0 ) /* row might have been removed from LP in the meantime */
+               {
+                  SCIP_Real feasibility;
+
+                  assert(rowweights[r] == 0.0);
+
+                  /* ignore rows with slack */
+                  feasibility = SCIPgetRowSolFeasibility(scip, nodeflowrows[v][k], sol);
+                  if( !SCIPisFeasPositive(scip, feasibility) )
+                  {
+                     rowweights[r] = scale * nodeflowscales[v][k];
+                     if( nodeflowinverted[v][k] )
+                        rowweights[r] *= -1.0;
+                     SCIPdebugMessage(" -> node %d, commodity %d, r=%d, flow row <%s>: scale=%g weight=%g slack=%g dual=%g\n",
+                                      v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, rowweights[r],
+                                      SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
+                     /*SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));*/
+#ifdef SEPARATEFLOWCUTS
+                     if( nodeflowscales[v][k] > 0.0 )
+                        baserhs += rowweights[r] * (SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
+                     else
+                        baserhs += rowweights[r] * (SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
+#endif
+                  }
+               }
+            }
+         }
+
+         /* try out deltas to generate c-MIR cuts: use larger deltas first */
+         /** @todo use only the best delta instead of generating all cuts */
+#ifdef SEPARATEFLOWCUTS
+         if( ndeltas > 0 )
+            bestdelta = deltas[ndeltas-1];  /* if nothing else is found, use maxdelta */
+         bestrelviolation = SCIP_REAL_MIN;
+         bestabsviolation = SCIP_REAL_MIN;
+#endif
+
+         SCIPdebugMessage(" -> found %d different deltas to try\n", ndeltas);
+         for( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
          {
             SCIP_Real cutrhs;
             SCIP_Real cutact;
             SCIP_Bool success;
             SCIP_Bool cutislocal;
+#ifdef SEPARATEFLOWCUTS
+            SCIP_Real abscutrhs;
+            SCIP_Real relviolation;
+#endif
 
-            SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
+            /* do not use too small deltas */
+            if( SCIPisFeasZero(scip, deltas[d]) )
+               continue;
+
+            SCIPdebugMessage("applying MIR with delta = %g\n", deltas[d]);
             SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
-		      (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, NULL,
-            cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+                                   (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/deltas[d],
+                                   NULL, NULL, cutcoefs, &cutrhs, &cutact,
+                                   &success, &cutislocal) );
             assert(ALLOWLOCAL || !cutislocal);
+
+#ifdef SEPARATEFLOWCUTS
+            abscutrhs = REALABS(cutrhs);
+            relviolation = (cutact - cutrhs) / MAX( abscutrhs , 1.0 );
+            if( success && relviolation > bestrelviolation )
+            {
+               bestdelta = deltas[d];
+               bestrelviolation = relviolation;
+               bestabsviolation = (cutact - cutrhs);
+            }
+#endif
 
             if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
             {
-               SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
+               SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
                SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+
+#ifdef SCIP_DEBUG
+               for( a = 0; a < narcs; a++ )
+               {
+                  if( arccapacityrows[a] != NULL )
+                  {
+                     int r;
+
+                     r = SCIProwGetLPPos(arccapacityrows[a]);
+                     assert(r < nrows);
+                     if( r >= 0 && rowweights[r] != 0.0 )
+                     {
+                        printf(" -> arc %d, capacity row <%s>: weight=%g slack=%g prod=%g dual=%g\n", a,
+                               SCIProwGetName(arccapacityrows[a]), rowweights[r],
+                               SCIPgetRowFeasibility(scip, arccapacityrows[a]),
+                               SCIPgetRowFeasibility(scip, arccapacityrows[a]) * arccapacityscales[a], SCIProwGetDualsol(arccapacityrows[a]));
+                     }
+                  }
+               }
+#endif
             }
          }
-      }
+
+#ifdef SEPARATEFLOWCUTS
+         /* try to separate flow cuts for the best delta */
+         f0 = SCIPfrac(scip, baserhs/bestdelta);
+         if( MINFRAC <= f0 && f0 <= MAXFRAC )
+         {
+            SCIP_Real onedivoneminsf0;
+            SCIP_Real totalviolationdelta;
+            totalviolationdelta = 0.0;
+            onedivoneminsf0 = 1.0/(1.0 - f0);
+            for( a = 0; a < narcs; a++ )
+            {
+               SCIP_COL** rowcols;
+               SCIP_Real* rowvals;
+               int rowlen;
+               SCIP_Real rowweight;
+               SCIP_Real rowlhs;
+               SCIP_Real rowrhs;
+               SCIP_Real rowconstant;
+               SCIP_Real violationdelta;
+               int r;
+               int j;
+
+               /* arc might be uncapacitated */
+               if( arccapacityrows[a] == NULL )
+                  continue;
+
+               r = SCIProwGetLPPos(arccapacityrows[a]);
+
+               /* row might have been removed from LP in the meantime */
+               assert(r < nrows);
+               if( r == -1 )
+                  continue;
+
+               /* ignore rows that are not in the aggregation */
+               if( rowweights[r] == 0.0 )
+                  continue;
+
+               /* check if removing the capacity inequality will lead to a more violated MIR inequality:
+                * in a "perfect" MCF model, adding the capacity constraints means to cancel the flow
+                * variables of the capacity constraints and instead to add the capacity variables.
+                * Thus, removing it means to add the flow variables (with negative sign) and to remove
+                * the capacity variables.
+                * We assume that the right hand side of the scaled capacity inequality is integral (usually 0)
+                * and thus, the fractionality of the rhs of the base inequality does not change, hence the
+                * cut coefficients of all other involved variables do not change.
+                */
+               rowcols = SCIProwGetCols(arccapacityrows[a]);
+               rowvals = SCIProwGetVals(arccapacityrows[a]);
+               rowlen = SCIProwGetNLPNonz(arccapacityrows[a]);
+               rowweight = rowweights[r]/bestdelta;
+               rowlhs = SCIProwGetLhs(arccapacityrows[a]);
+               rowrhs = SCIProwGetRhs(arccapacityrows[a]);
+               rowconstant = SCIProwGetConstant(arccapacityrows[a]);
+               if( SCIPisInfinity(scip, rowrhs) || (!SCIPisInfinity(scip, -rowlhs) && rowweight < 0.0) )
+                  violationdelta = rowweight * (rowlhs - rowconstant);
+               else
+                  violationdelta = rowweight * (rowrhs - rowconstant);
+
+               for( j = 0; j < rowlen; j++ )
+               {
+                  SCIP_VAR* var;
+                  SCIP_Real coef;
+                  SCIP_Real mircoef;
+                  SCIP_Real solval;
+                  int c;
+
+                  coef = rowvals[j] * rowweight;
+
+                  c = SCIPcolGetLPPos(rowcols[j]);
+                  assert(0 <= c && c < SCIPgetNLPCols(scip));
+                  var = SCIPcolGetVar(rowcols[j]);
+
+                  /* variable is flow variable: if we are not using the capacity constraint, this
+                   *   would appear with negative coefficient in the base inequality instead of being canceled.
+                   * variable is capacity variable: if we are not using the capacity constraint, this
+                   *   would not appear in the base inequality.
+                   */
+                  if( colcommodity[c] >= 0 )
+                     coef *= -1.0;
+
+                  if( SCIPvarIsIntegral(var) )
+                  {
+                     SCIP_Real fj;
+
+                     fj = SCIPfrac(scip, coef);
+                     if( fj <= f0 )
+                        mircoef = SCIPfloor(scip, coef);
+                     else
+                        mircoef = SCIPfloor(scip, coef) + (fj - f0)*onedivoneminsf0;
+                  }
+                  else
+                  {
+                     if( coef >= 0.0 )
+                        mircoef = 0.0;
+                     else
+                        mircoef = coef * onedivoneminsf0;
+                  }
+
+                  /* add flow variable MIR coefficients, and subtract capacity variable MIR coefficients */
+                  solval = SCIPgetSolVal(scip, sol, var);
+                  if( colcommodity[c] >= 0 )
+                     violationdelta += mircoef * solval;
+                  else
+                     violationdelta -= mircoef * solval;
+               }
+
+               if( SCIPisPositive(scip, violationdelta) )
+               {
+                  SCIPdebugMessage(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
+                                   SCIProwGetName(arccapacityrows[a]), rowweights[r], SCIPgetRowFeasibility(scip, arccapacityrows[a]),
+                                   violationdelta);
+                  rowweights[r] = 0.0;
+                  totalviolationdelta += violationdelta;
+               }
+            }
+
+            /* if we removed a capacity constraint from the aggregation, try the new aggregation */
+            if( totalviolationdelta > 0.0 && totalviolationdelta + bestabsviolation > 0.0 )
+            {
+               SCIP_Real cutrhs;
+               SCIP_Real cutact;
+               SCIP_Bool success;
+               SCIP_Bool cutislocal;
+
+               SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
+               SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
+                                      (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, NULL,
+                                      cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+               assert(ALLOWLOCAL || !cutislocal);
+
+               if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
+               {
+                  SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
+                  SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+               }
+            }
+         }
 #endif
+      }
    }
 
    /* free local memory */
