@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.41 2008/09/26 18:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.42 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_objpscostdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -339,11 +339,11 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
-   while( !SCIPisStopped(scip) && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && nlpcands <= startnlpcands - divedepth/10
-            && heurdata->nlpiterations < maxnlpiterations)) )
+	     && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
    {
 #ifdef NDEBUG
       SCIP_RETCODE retstat;

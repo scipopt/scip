@@ -528,6 +528,9 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( timelimit < 10.0 || memorylimit <= 0.0 )
       return SCIP_OKAY;
 
+   if( SCIPisStopped(scip) )
+     return SCIP_OKAY;
+
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData( scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL ) );
    assert( nvars > 0 );

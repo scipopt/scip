@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.23 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.24 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_octane.c
  * @ingroup PRIMALHEURISTICS
@@ -733,7 +733,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    
    firstrule = heurdata->lastrule;
    firstrule++;
-   for( r = firstrule; r <= firstrule+10; r++ )
+   for( r = firstrule; r <= firstrule+10 && !SCIPisStopped(scip); r++ )
    {
       SCIP_ROW** rows;
      

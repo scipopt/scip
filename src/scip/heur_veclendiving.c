@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.12 2008/09/26 18:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.13 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_veclendiving.c
  * @ingroup PRIMALHEURISTICS
@@ -297,10 +297,11 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    cutoff = FALSE;
    divedepth = 0;
    startnlpcands = nlpcands;
-   while( !SCIPisStopped(scip) && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound))
+	  && !SCIPisStopped(scip) )
    {
       SCIP_VAR* var;
       SCIP_Real bestscore;

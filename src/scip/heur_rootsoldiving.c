@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.43 2008/09/26 18:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.44 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_rootsoldiving.c
  * @ingroup PRIMALHEURISTICS
@@ -284,10 +284,11 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    ncycles = 0;
    lpsolchanged = TRUE;
    startnlpcands = nlpcands;
-   while( !SCIPisStopped(scip) && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0 && ncycles < 10
+   while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0 && ncycles < 10
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) 
+	  && !SCIPisStopped(scip) )
    {
       SCIP_Bool success;
       int hardroundingidx;

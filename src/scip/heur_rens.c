@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.23 2009/01/16 16:08:02 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.24 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -284,7 +284,7 @@ SCIP_RETCODE SCIPapplyRens(
    int nvars;                     
    int i;   
 
-#ifndef NDEBUG
+#ifdef NDEBUG
    SCIP_RETCODE retstat;
 #endif
 
@@ -402,7 +402,7 @@ SCIP_RETCODE SCIPapplyRens(
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
     * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
     */
-#ifndef NDEBUG
+#ifdef NDEBUG
    retstat = SCIPpresolve(subscip);
    if( retstat != SCIP_OKAY )
    { 
@@ -438,7 +438,7 @@ SCIP_RETCODE SCIPapplyRens(
 
       SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, maxnodes);
 
-#ifndef NDEBUG
+#ifdef NDEBUG
       retstat = SCIPsolve(subscip);
       if( retstat != SCIP_OKAY )
       { 
@@ -552,7 +552,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
-   
+
    *result = SCIP_DIDNOTRUN;
  
    /* calculate the maximal number of branching nodes until heuristic is aborted */
@@ -582,6 +582,9 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit < 10.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
+
+   if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;

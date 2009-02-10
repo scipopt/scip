@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.43 2008/09/26 18:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.44 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -311,10 +311,11 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
    cutoff = FALSE;
    divedepth = 0;
    startnlpcands = nlpcands;
-   while( !SCIPisStopped(scip) && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) 
+	  && !SCIPisStopped(scip) )
    {
       SCIP_CALL( SCIPnewProbingNode(scip) );
       divedepth++;

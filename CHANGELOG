@@ -67,7 +67,9 @@ fixed bugs:
 - fixed bug in vbc tools concerning of marking probing nodes
 - fixed infinity loop in simplify inequalities in cons_linear.c
 - fixed exponential calculation of solution values during check of original solution, therefor changed SCIPvarGetActiveRepresentatives() in var.c and flattened all multiaggregated vars at the end of presolving in exitPresolve()
-	
+- added and changed some SCIPisStopped() calls in several heuristics
+- changed wrong writing of mps files due to constraints without any name
+
 plugins:
 - added interface to QSopt due to Daniel Espinoza
 - added reader for FlatZinc models (reader_fzn.{c,h})

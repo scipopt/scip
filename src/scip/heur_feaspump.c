@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_feaspump.c,v 1.59 2009/02/05 13:42:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_feaspump.c,v 1.60 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_feaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -484,9 +484,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    nstallloops = 0;
    nbestsolsfound = SCIPgetNBestSolsFound(scip);
    bestnfracs = INT_MAX;
-   while( !SCIPisStopped(scip) && nfracs > 0
+   while( nfracs > 0
       && heurdata->nlpiterations < adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops)
-      && nloops < maxloops && nstallloops < maxstallloops )
+      && nloops < maxloops && nstallloops < maxstallloops 
+	  && !SCIPisStopped(scip) )
    {
       SCIP_Longint nlpiterationsleft;
       int iterlimit;

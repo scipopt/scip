@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.31 2009/02/05 13:38:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.32 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_simplerounding.c
  * @ingroup PRIMALHEURISTICS
@@ -188,9 +188,6 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       return SCIP_OKAY;
    
    *result = SCIP_DIDNOTFIND;
-
-//    if( !strncmp(SCIPgetProbName(scip), "111Orders", 9) && heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP )
-//       printf("start heuristic\n");
 
    SCIPdebugMessage("executing simple rounding heuristic: %d fractionals\n", nlpcands);
 

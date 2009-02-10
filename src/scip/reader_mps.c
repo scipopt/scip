@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.108 2009/01/09 10:11:19 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.109 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -2064,7 +2064,8 @@ SCIP_RETCODE checkConsnames(
    int*               nconss,             /**< number of relevant constraints */
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    unsigned int*      maxnamelen,         /**< pointer to store rhe maximum name lenght */
-   const char***      consnames           /**< pointer to array of constraint names */
+   const char***      consnames,          /**< pointer to array of constraint names */
+   SCIP_Bool*         error               /**< pointer to store whether all constraintnames exist */
    )
 {
    int c, i;
@@ -2077,6 +2078,7 @@ SCIP_RETCODE checkConsnames(
    assert( maxnamelen != NULL );
 
    faulty = 0;
+   *error = FALSE;
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, conss, norigconss) );
@@ -2103,6 +2105,23 @@ SCIP_RETCODE checkConsnames(
       }
 
       l = strlen(SCIPconsGetName(cons));
+
+      if( l == 0 )
+      {
+         SCIPwarningMessage("At least one name of a constraint is empty, so file will be written with generic names.\n");
+         
+         --c;
+         for( ; c >= 0; --c)
+            SCIPfreeBufferArray(scip, &((*consnames)[c]));
+         
+         SCIPfreeBufferArray(scip, &consnames);
+         SCIPfreeBufferArray(scip, &conss);
+         
+         *error = TRUE;
+
+         return SCIP_OKAY;
+      }
+
       (*maxnamelen) = MAX(*maxnamelen, l);
       
       SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) *maxnamelen + 1) );
@@ -2596,16 +2615,39 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_Bool needRANGES = FALSE;
    unsigned int maxnamelen = 0;
 
+   SCIP_Bool error;
+
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
    
+   nrelconss = -1;
+
+   /* check if the constraint names are too long and build the constraint names */
+   SCIP_CALL( checkConsnames(scip, conss, nconss, &relconss, &nrelconss, transformed, &maxnamelen, &consnames, &error) );
+   if( error )
+   {
+      /* todo call writing with generic names */
+      if( transformed )
+      {
+         SCIPwarningMessage("write transformed problem with generic variable and constraint names\n");
+         SCIP_CALL( SCIPprintTransProblem(scip, file, "mps", TRUE) );
+      }
+      else
+      {
+         SCIPwarningMessage("write original problem with generic variable and constraint names\n");
+         SCIP_CALL( SCIPprintOrigProblem(scip, file, "mps", TRUE) );
+      }
+      *result = SCIP_SUCCESS;
+
+      return SCIP_OKAY;
+   }
+   
+   assert(nrelconss >= 0);
+
    /* check if the variable names are not too long and build the "variable" -> "variable name" hash map */
    SCIP_CALL( checkVarnames(scip, vars, nvars, &maxnamelen, &varnames, &varnameHashmap) );
- 
-   /* check if the constraint names are too long and build the constraint names */
-   SCIP_CALL( checkConsnames(scip, conss, nconss, &relconss, &nrelconss, transformed, &maxnamelen, &consnames) );
 
    conss = relconss;
    nconss = nrelconss;

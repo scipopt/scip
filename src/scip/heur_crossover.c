@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.37 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.38 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_crossover.c
  * @ingroup PRIMALHEURISTICS
@@ -759,6 +759,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit < 10.0 || memorylimit <= 0.0 )
       return SCIP_OKAY;
+
+   if( SCIPisStopped(scip) )
+     return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 

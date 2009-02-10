@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.25 2008/09/22 19:16:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.26 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_fixandinfer.c
  * @ingroup PRIMALHEURISTICS
@@ -198,8 +198,9 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    cutoff = FALSE;
    divedepth = 0;
    startncands = ncands;
-   while( !SCIPisStopped(scip) && !cutoff && ncands > 0
-      && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) )
+   while( !cutoff && ncands > 0
+      && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) 
+	  && !SCIPisStopped(scip) )
    {
       divedepth++;
 

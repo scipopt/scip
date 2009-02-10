@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.9 2008/09/26 18:20:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.10 2009/02/10 14:22:48 bzfwinkm Exp $"
 
 /**@file   heur_intshifting.c
  * @ingroup PRIMALHEURISTICS
@@ -739,7 +739,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    nnonimprovingshifts = 0;
    minnviolrows = INT_MAX;
    increaseweight = 1.0;
-   while( !SCIPisStopped(scip) && (nfrac > 0 || nviolrows > 0) && nnonimprovingshifts < MAXSHIFTINGS )
+   while( (nfrac > 0 || nviolrows > 0) && nnonimprovingshifts < MAXSHIFTINGS && !SCIPisStopped(scip) )
    {
       SCIP_VAR* shiftvar;
       SCIP_Real oldsolval;
