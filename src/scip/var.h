@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.119 2008/08/22 13:36:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.120 2009/02/10 15:24:03 bzfberth Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -967,6 +967,47 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
    );
+
+/* begin ????????????????????? */
+
+/** increases the number of active conflicts by one and the overall length of the variable by the given length */
+SCIP_RETCODE SCIPvarIncNActiveConflicts(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_Real             length              /**< length of the conflict */
+   );
+
+/**  gets the number of active conflicts containing this variable in given direction */
+SCIP_Real SCIPvarGetNActiveConflicts(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/**  gets the number of active conflicts containing this variable in given direction
+ *  in the current run
+ */
+SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/**  gets the average conflict length in given direction due to branching on the variable */
+SCIP_Real SCIPvarGetAvgConflictlength(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/**  gets the average conflict length in given direction due to branching on the variable
+ *   in the current run
+ */
+SCIP_Real SCIPvarGetAvgConflictlengthCurrentRun(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/* end ???????????????????????????? */
 
 /** increases the number of branchings counter of the variable */
 extern

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.143 2009/01/19 17:33:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.144 2009/02/10 15:24:03 bzfberth Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1180,6 +1180,7 @@ static
 SCIP_RETCODE conflictAddConflictCons(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set to add to the tree */
    int                   insertdepth,        /**< depth level at which the conflict set should be added */
@@ -1208,6 +1209,7 @@ SCIP_RETCODE conflictAddConflictCons(
             tree->path[conflictset->validdepth], conflictset->bdchginfos, conflictset->nbdchginfos, *success, &result) );
       if( result == SCIP_CONSADDED )
       {
+         
          *success = TRUE;
          if( insertdepth > 0 )
          {
@@ -1216,6 +1218,26 @@ SCIP_RETCODE conflictAddConflictCons(
          }
          else
          {
+            int i;
+            int conflictlength;
+            conflictlength = conflictset->nbdchginfos;
+
+            /* ??????????????????????? */
+            for( i = 0; i < conflictlength; i++ )
+            {
+               SCIP_VAR* var;
+               SCIP_BRANCHDIR branchdir;
+               unsigned int boundtype;
+               
+               var = conflictset->bdchginfos[i]->var;
+               boundtype =  conflictset->bdchginfos[i]->boundtype;
+               assert(stat != NULL);               
+               branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+               
+               SCIP_CALL( SCIPvarIncNActiveConflicts(var, branchdir, conflictlength) );
+               SCIPhistoryIncNActiveConflicts(stat->glbhistory, branchdir, conflictlength);
+               SCIPhistoryIncNActiveConflicts(stat->glbhistorycrun, branchdir, conflictlength);
+            }
             conflict->nappliedglbconss++;
             conflict->nappliedglbliterals += conflictset->nbdchginfos;
          }
@@ -1329,7 +1351,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
             SCIP_Bool success;
 
             /* call conflict handlers to create a conflict constraint */
-            SCIP_CALL( conflictAddConflictCons(conflict, set, tree, conflictset, conflictset->insertdepth, &success) );
+            SCIP_CALL( conflictAddConflictCons(conflict, set, stat, tree, conflictset, conflictset->insertdepth, &success) );
 
             if( success )
             {
@@ -1363,7 +1385,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
             assert(repropconflictset->repropagate);
             assert(repropconflictset->repropdepth == repropdepth);
 
-            SCIP_CALL( conflictAddConflictCons(conflict, set, tree, repropconflictset, repropdepth, &success) );
+            SCIP_CALL( conflictAddConflictCons(conflict, set, stat, tree, repropconflictset, repropdepth, &success) );
 #ifdef SCIP_DEBUG
             if( success )
             {

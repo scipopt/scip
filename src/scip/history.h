@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.26 2008/04/17 17:49:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.27 2009/02/10 15:24:03 bzfberth Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -135,6 +135,32 @@ SCIP_Real SCIPhistoryGetConflictScore(
    SCIP_BRANCHDIR        dir                 /**< branching direction */
    );
 
+/* begin ???????? */
+
+/** increases the number of active conflicts by one and the overall length of the history entry by the given weight */
+extern
+void SCIPhistoryIncNActiveConflicts(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   int                   length              /**< length of the conflict */
+   );
+
+/** gets the number of active conflicts of the history entry */
+extern
+SCIP_Longint SCIPhistoryGetNActiveConflicts(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/** gets the average conflict length of the history entry */
+extern
+SCIP_Real SCIPhistoryGetAvgConflictlength(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir                 /**< branching direction */
+   );
+
+/* end ???????? */
+
 /** increases the number of branchings counter */
 extern
 void SCIPhistoryIncNBranchings(
@@ -219,6 +245,13 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 #define SCIPhistoryScaleConflictScores(history,scalar) { (history)->conflictscore[0] *= (scalar); \
       (history)->conflictscore[1] *= (scalar); }
 #define SCIPhistoryGetConflictScore(history,dir)   ((history)->conflictscore[dir])
+/* begin ???????? */
+#define SCIPhistoryIncNActiveConflicts(history,dir,length) { (history)->nactiveconflicts[dir]++; \
+      (history)->conflengthsum[dir] += length; }
+#define SCIPhistoryGetNActiveConflicts(history,dir) ((history)->nactiveconflicts[dir])
+#define SCIPhistoryGetAvgConflictlength(history,dir) ((history)->conflengthsum[dir] > 0 \
+      ? (SCIP_Real)(history)->nactiveconflicts[dir]/(SCIP_Real)(history)->conflengthsum[dir] : 0.0)
+/* end ???????? */
 #define SCIPhistoryIncNBranchings(history,depth,dir) { (history)->nbranchings[dir]++; \
       (history)->branchdepthsum[dir] += depth; }
 #define SCIPhistoryIncNInferences(history,dir)     (history)->ninferences[dir]++
@@ -226,12 +259,12 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 #define SCIPhistoryGetNBranchings(history,dir)     ((history)->nbranchings[dir])
 #define SCIPhistoryGetNInferences(history,dir)     ((history)->ninferences[dir])
 #define SCIPhistoryGetAvgInferences(history,dir)   ((history)->nbranchings[dir] > 0 \
-      ? (SCIP_Real)(history)->ninferences[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0)
+      ? (SCIP_Real)(history)->ninferences[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0.0)
 #define SCIPhistoryGetNCutoffs(history,dir)        ((history)->ncutoffs[dir])
 #define SCIPhistoryGetAvgCutoffs(history,dir)      ((history)->nbranchings[dir] > 0 \
-      ? (SCIP_Real)(history)->ncutoffs[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0)
+      ? (SCIP_Real)(history)->ncutoffs[dir]/(SCIP_Real)(history)->nbranchings[dir] : 0.0)
 #define SCIPhistoryGetAvgBranchdepth(history,dir)  ((history)->nbranchings[dir] > 0 \
-      ? (SCIP_Real)(history)->branchdepthsum[dir]/(SCIP_Real)(history)->nbranchings[dir] : 1)
+      ? (SCIP_Real)(history)->branchdepthsum[dir]/(SCIP_Real)(history)->nbranchings[dir] : 1.0)
 
 #endif
 

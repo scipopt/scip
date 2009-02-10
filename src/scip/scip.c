@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.491 2009/02/08 15:59:40 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.492 2009/02/10 15:24:03 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8401,6 +8401,68 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, var, downscore, upscore);
 }
 
+/* begin ????????????????????? */
+
+/** returns the variable's conflict length score */
+SCIP_Real SCIPgetVarConflictlengthScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_Real downscore;
+   SCIP_Real upscore;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictlengthScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   downscore = SCIPvarGetAvgConflictlength(var, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPvarGetAvgConflictlength(var, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, downscore, upscore);
+}
+
+/** returns the variable's conflict length score only using conflicts of the current run */
+SCIP_Real SCIPgetVarConflictlengthScoreCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   SCIP_Real downscore;
+   SCIP_Real upscore;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarConflictlengthScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   downscore = SCIPvarGetAvgConflictlengthCurrentRun(var, SCIP_BRANCHDIR_DOWNWARDS);
+   upscore = SCIPvarGetAvgConflictlengthCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, var, downscore, upscore);
+}
+
+/** returns the variable's average conflict length */
+SCIP_Real SCIPgetVarAvgConflictlength(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgConflictlength", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPvarGetAvgConflictlength(var, dir);
+}
+
+/** returns the variable's average  conflict length only using conflicts of the current run */
+SCIP_Real SCIPgetVarAvgConflictlengthCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarAvgConflictlengthCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPvarGetAvgConflictlengthCurrentRun(var, dir);
+}
+
+/* end ????????????????????????? */
+
 /** returns the average number of inferences found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
  *  over all variables for branching in the given direction is returned
@@ -13919,6 +13981,42 @@ SCIP_Real SCIPgetAvgInferencesCurrentRun(
 
    return SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, dir);
 }
+
+/* begin ????????????????????????????????? */
+
+/** gets the average inference score value over all variables */
+SCIP_Real SCIPgetAvgConflictlengthScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real conflictlengthdown;
+   SCIP_Real conflictlengthup;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgConflictlengthScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   conflictlengthdown = SCIPhistoryGetAvgConflictlength(scip->stat->glbhistory, SCIP_BRANCHDIR_DOWNWARDS);
+   conflictlengthup = SCIPhistoryGetAvgConflictlength(scip->stat->glbhistory, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, NULL, conflictlengthdown, conflictlengthup);
+}
+
+/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the current run */
+SCIP_Real SCIPgetAvgConflictlengthScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real conflictlengthdown;
+   SCIP_Real conflictlengthup;
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgConflictlengthScoreCurrentRun", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   conflictlengthdown = SCIPhistoryGetAvgConflictlength(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_DOWNWARDS);
+   conflictlengthup = SCIPhistoryGetAvgConflictlength(scip->stat->glbhistorycrun, SCIP_BRANCHDIR_UPWARDS);
+
+   return SCIPbranchGetScore(scip->set, NULL, conflictlengthdown, conflictlengthup);
+}
+
+/* end ????????????????????????????????? */
 
 /** gets the average inference score value over all variables */
 SCIP_Real SCIPgetAvgInferenceScore(

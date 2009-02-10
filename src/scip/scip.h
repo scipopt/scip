@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.334 2009/02/05 14:11:44 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.335 2009/02/10 15:24:03 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2705,6 +2705,40 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/* begin ????????????????????? */
+
+/** returns the variable's conflict length score */
+extern
+SCIP_Real SCIPgetVarConflictlengthScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the variable's conflict length score only using conflicts of the current run */
+extern
+SCIP_Real SCIPgetVarConflictlengthScoreCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the variable's average conflict length */
+extern
+SCIP_Real SCIPgetVarAvgConflictlength(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the variable's average conflict length only using conflicts of the current run */
+extern
+SCIP_Real SCIPgetVarAvgConflictlengthCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/* end ????????????????????????? */
+
 /** returns the average number of inferences found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
  *  over all variables for branching in the given direction is returned
@@ -5383,6 +5417,18 @@ SCIP_Real SCIPgetAvgConflictScore(
 /** gets the average conflict score value over all variables, only using the pseudo cost information of the current run */
 extern
 SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average inference score value over all variables */
+extern
+SCIP_Real SCIPgetAvgConflictlengthScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the current run */
+extern
+SCIP_Real SCIPgetAvgConflictlengthScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
