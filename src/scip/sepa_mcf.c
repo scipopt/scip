@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.85 2009/02/10 15:00:57 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.86 2009/02/12 20:03:13 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
-/* #define MCF_DEBUG*/
+/*#define MCF_DEBUG*/
 
 /**@file   sepa_mcf.c
  * @ingroup SEPARATORS
@@ -4770,15 +4770,18 @@ static
 SCIP_Bool nodeInPartition(
    NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
    unsigned int          partition,          /**< partition of nodes, or node number in single-node partition */
+   SCIP_Bool             inverted,           /**< should partition be inverted? */
    int                   v                   /**< node to check */
    )
 {
-   /* if the node does not exist, it is not in the partition */
+   /* if the node does not exist, it is not in the partition
+    * (and also not in the inverted partition)
+    */
    if( v < 0 )
       return FALSE;
 
    if( nodepartition == NULL )
-      return (v == (int)partition);
+      return ((v == (int)partition) == !inverted);
    else
    {
       int cluster;
@@ -4788,7 +4791,7 @@ SCIP_Bool nodeInPartition(
       assert(0 <= cluster && cluster < nodepartition->nclusters);
       clusterbit = (1 << cluster);
 
-      return ((partition & clusterbit) != 0);
+      return (((partition & clusterbit) != 0) == !inverted);
    }
 }
 
@@ -4819,6 +4822,7 @@ SCIP_RETCODE outputGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_MCFNETWORK*      mcfnetwork,         /**< MCF network structure */
    NODEPARTITION*        nodepartition,      /**< node partition data structure, or NULL */
+   SCIP_Bool             inverted,           /**< should partition be inverted? */
    unsigned int          partition           /**< partition of nodes, or node number */
    )
 {
@@ -4857,7 +4861,7 @@ SCIP_RETCODE outputGraph(
          (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "%s", SCIProwGetName(mcfnetwork->nodeflowrows[v][0]));
       else
          (void) SCIPsnprintf(label, SCIP_MAXSTRLEN, "%d", v);
-      inpartition = nodeInPartition(nodepartition, partition, v);
+      inpartition = nodeInPartition(nodepartition, partition, inverted, v);
 
       fprintf(file, "        node\n");
       fprintf(file, "        [\n");
@@ -5280,7 +5284,7 @@ SCIP_RETCODE generateClusterCuts(
          }
 
 #ifdef OUTPUTGRAPH
-         SCIP_CALL( outputGraph(scip, mcfnetwork, nodepartition, partition) );
+         SCIP_CALL( outputGraph(scip, mcfnetwork, nodepartition, inverted, partition) );
 #endif
 
          /* clear memory */
@@ -5296,8 +5300,11 @@ SCIP_RETCODE generateClusterCuts(
          for( v = 0; v < nnodes; v++ )
          {
             /* check if node belongs to S */
-            if( nodeInPartition(nodepartition, partition, v) == inverted )
+            if( !nodeInPartition(nodepartition, partition, inverted, v) )
+            {
+               /* node does not belong to S */
                continue;
+            }
 
             /* update commodity demand */
             for( k = 0; k < ncommodities; k++ )
@@ -5359,21 +5366,24 @@ SCIP_RETCODE generateClusterCuts(
             if( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
             {
                /* in the directed case, check if arc goes from T to S */
-               if( nodeInPartition(nodepartition, partition, arcsources[a]) == !inverted ||
-                   nodeInPartition(nodepartition, partition, arctargets[a]) == inverted )
+               if( nodeInPartition(nodepartition, partition, inverted, arcsources[a])  ||
+                   !nodeInPartition(nodepartition, partition, inverted, arctargets[a])   )
+               {
+                  /* arc has source in S or target in T */
                   continue;
+               }
             }
             else
             {
                /* in the undirected case, check if the arc has endpoints in S and T */
-               if( nodeInPartition(nodepartition, partition, arcsources[a]) == !inverted &&
-                   nodeInPartition(nodepartition, partition, arctargets[a]) == !inverted )
+               if( nodeInPartition(nodepartition, partition, inverted, arcsources[a]) &&
+                   nodeInPartition(nodepartition, partition, inverted, arctargets[a])   )
                {
                   /* both endpoints are in S */
                   continue;
                }
-               if( nodeInPartition(nodepartition, partition, arcsources[a]) == inverted &&
-                   nodeInPartition(nodepartition, partition, arctargets[a]) == inverted )
+               if( !nodeInPartition(nodepartition, partition, inverted, arcsources[a]) &&
+                   !nodeInPartition(nodepartition, partition, inverted, arctargets[a])   )
                {
                   /* both endpoints are in T */
                   continue;
@@ -5511,8 +5521,11 @@ SCIP_RETCODE generateClusterCuts(
                      continue;
 
                   /* check if node belongs to S */
-                  if( nodeInPartition(nodepartition, partition, v) == inverted )
+                  if( !nodeInPartition(nodepartition, inverted, partition, v) )
+                  {
+                     /* node belongs to T */
                      continue;
+                  }
                }
                else
                {
@@ -5525,13 +5538,19 @@ SCIP_RETCODE generateClusterCuts(
                    */
                   if( comcutdemands[k] > 0.0 ) {
                      /* check if node belongs to T */
-                     if( nodeInPartition(nodepartition, partition, v) == !inverted )
+                     if( nodeInPartition(nodepartition, inverted, partition, v) )
+                     {
+                        /* node belongs to S */
                         continue;
+                     }
                   }
                   else {
                      /* check if node belongs to S */
-                     if( nodeInPartition(nodepartition, partition, v) == inverted )
+                     if( !nodeInPartition(nodepartition, inverted, partition, v) )
+                     {
+                        /* node belongs to T */
                         continue;
+                     }
                   }
                }
                if( nodeflowrows[v][k] == NULL )
