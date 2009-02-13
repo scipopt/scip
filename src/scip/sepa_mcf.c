@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.86 2009/02/12 20:03:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.87 2009/02/13 11:34:07 bzfpfend Exp $"
 
 /*#define SCIP_DEBUG*/
 /*#define MCF_DEBUG*/
@@ -5521,7 +5521,7 @@ SCIP_RETCODE generateClusterCuts(
                      continue;
 
                   /* check if node belongs to S */
-                  if( !nodeInPartition(nodepartition, inverted, partition, v) )
+                  if( !nodeInPartition(nodepartition, partition, inverted, v) )
                   {
                      /* node belongs to T */
                      continue;
@@ -5538,7 +5538,7 @@ SCIP_RETCODE generateClusterCuts(
                    */
                   if( comcutdemands[k] > 0.0 ) {
                      /* check if node belongs to T */
-                     if( nodeInPartition(nodepartition, inverted, partition, v) )
+                     if( nodeInPartition(nodepartition, partition, inverted, v) )
                      {
                         /* node belongs to S */
                         continue;
@@ -5546,7 +5546,7 @@ SCIP_RETCODE generateClusterCuts(
                   }
                   else {
                      /* check if node belongs to S */
-                     if( !nodeInPartition(nodepartition, inverted, partition, v) )
+                     if( !nodeInPartition(nodepartition, partition, inverted, v) )
                      {
                         /* node belongs to T */
                         continue;
