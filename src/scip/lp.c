@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.304 2009/01/28 08:24:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.305 2009/02/13 14:08:20 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3016,6 +3016,10 @@ SCIP_RETCODE colStrongbranch(
       col->sbdownvalid = sbdownvalid;
       col->sbupvalid = sbupvalid;
 
+      /* ?????????????????????????
+      if( strcmp( SCIPvarGetName(col->var), "t_x101") == 0 && col->sbdown == 401 && col->sbup == 401 )
+	assert(0);
+      */
       /* update strong branching statistics */
       if( iter == -1 )
       {
@@ -13064,7 +13068,8 @@ SCIP_RETCODE SCIPlpWriteMip(
       case 'r':
       case 'l':
       case 'e':
-         SCIPmessageFPrintInfo(file,"%s: ", rowname);
+         if( strlen(rowname) > 0 )
+            SCIPmessageFPrintInfo(file,"%s: ", rowname);
          break;
       case 'b':
          SCIPmessageFPrintInfo(file,"%s_lhs: ", rowname);
