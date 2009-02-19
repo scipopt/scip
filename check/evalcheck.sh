@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.12 2008/09/26 16:33:40 bzfberth Exp $
+# $Id: evalcheck.sh,v 1.13 2009/02/19 16:39:00 bzfheinz Exp $
 
 export LANG=C
 
@@ -38,7 +38,7 @@ do
     TEXFILE=$DIR/$NAME.tex
     PAVFILE=$DIR/$NAME.pav
 
-    TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g'`
+    TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
     if test -f $TSTNAME.test
     then
