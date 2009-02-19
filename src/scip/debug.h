@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.30 2008/09/25 20:13:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.31 2009/02/19 14:15:05 bzfwinkm Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -39,6 +39,12 @@
 
 
 #ifdef SCIP_DEBUG_SOLUTION
+
+/** frees debugging data */
+extern
+SCIP_RETCODE SCIPdebugFreeDebugData(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
 
 /** checks whether given row is valid for the debugging solution */
 extern
@@ -77,6 +83,7 @@ SCIP_RETCODE SCIPdebugCheckInference(
 /** informs solution debugger, that the given node will be freed */
 extern
 SCIP_RETCODE SCIPdebugRemoveNode(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node                /**< node that will be freed */
    );
@@ -121,11 +128,12 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 
 #else
 
+#define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
 #define SCIPdebugCheckLbGlobal(set,var,lb) SCIP_OKAY
 #define SCIPdebugCheckUbGlobal(set,var,ub) SCIP_OKAY
 #define SCIPdebugCheckInference(blkmem,set,node,var,newbound,boundtype) SCIP_OKAY
-#define SCIPdebugRemoveNode(set,node) SCIP_OKAY
+#define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,conflictset,nliterals) SCIP_OKAY

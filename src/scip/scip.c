@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.492 2009/02/10 15:24:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.493 2009/02/19 14:15:05 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2789,6 +2789,9 @@ SCIP_RETCODE SCIPfreeProb(
    SCIP_CALL( SCIPfreeTransform(scip) );
    assert(scip->set->stage == SCIP_STAGE_INIT || scip->set->stage == SCIP_STAGE_PROBLEM);
 
+   /* free all debug data */ 
+   SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
+
    if( scip->set->stage == SCIP_STAGE_PROBLEM )
    {
       int p;
@@ -4991,6 +4994,9 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
    SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->solvemem, scip->set) );
    SCIP_CALL( SCIPeventqueueFree(&scip->eventqueue) );
+
+   /* free all debug data */ 
+   SCIP_CALL( SCIPdebugFreeDebugData(scip->set) );
 
    /* free the transformed block memory */
 #ifndef NDEBUG

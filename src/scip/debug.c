@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.33 2008/09/05 15:28:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.34 2009/02/19 14:15:05 bzfwinkm Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -40,6 +40,8 @@
 
 #ifdef SCIP_DEBUG_SOLUTION
 
+#define SCIP_HASHSIZE_DEBUG        131101    /**< minimum size of hash map for storing whether a solution is valid for the node */
+
 static char** solnames = NULL;
 static SCIP_Real* solvals = NULL;
 static int nsolvals = 0;
@@ -47,6 +49,8 @@ static SCIP_SET* mainscipset = NULL;
 static SCIP_HASHMAP* solinnode = NULL;       /**< maps nodes to bools, storing whether the solution is valid for the node */
 static SCIP_Bool falseptr = FALSE;
 static SCIP_Bool trueptr = TRUE;
+static SCIP_Bool solisachieved = FALSE;      /**< means if current bestsolution is better than the given debugsolution */
+static SCIP_Real debugsolval = 0.0;          /**< objective value for debug solution */
 
 /** reads solution from given file into given arrays */
 static
@@ -60,6 +64,7 @@ SCIP_RETCODE readSolfile(
 {
    FILE* file;
    int solsize;
+   int i;
 
    assert(*names == NULL);
    assert(*vals == NULL);
@@ -84,9 +89,14 @@ SCIP_RETCODE readSolfile(
       char objstring[SCIP_MAXSTRLEN];
       SCIP_Real val;
       int nread;
-      int i;
 
-      fgets(buf, SCIP_MAXSTRLEN, file);
+      if( fgets(buf, SCIP_MAXSTRLEN, file) == NULL )
+      {
+         if( feof(file) )
+            break;
+         else
+            return SCIP_READERROR;
+      }
 
       /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
       if( strncmp(buf, "solution", 8) == 0 || strncmp(buf, "objective", 9) == 0 )
@@ -120,6 +130,18 @@ SCIP_RETCODE readSolfile(
       (*vals)[i] = val;
       (*nvals)++;
    }
+   
+   debugsolval = 0.0;
+
+   /* get solution value */
+   for( i = *nvals - 1; i >= 0; --i) 
+   {
+      SCIP_VAR* var;
+      var = SCIPfindVar(set->scip, (*names)[i]);
+      if( var != NULL )
+         debugsolval += (*vals)[i] * SCIPvarGetObj(var);
+   }
+   SCIPdebugMessage("Debug Solution value is %g.\n", debugsolval);
 
    /* close file */
    fclose(file);
@@ -162,6 +184,7 @@ SCIP_RETCODE getSolutionValue(
    int right;
    int middle;
    int cmp;
+   
    assert(val != NULL);
 
    SCIP_CALL( readSolution(set) );
@@ -223,6 +246,38 @@ SCIP_RETCODE getSolutionValue(
    return SCIP_OKAY;
 }
 
+/** returns whether the debug solution is worse as the best known solution or if the debug solution was found */
+static
+SCIP_Bool debugSolIsAchieved(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_SOL* bestsol;
+   SCIP* scip;
+
+   if( solisachieved )
+      return TRUE;
+
+   assert(set != NULL);
+
+   scip = set->scip;
+   assert(scip != NULL);
+
+   bestsol = SCIPgetBestSol(scip);
+   
+   if( bestsol != NULL )
+   {
+      SCIP_Real solvalue;
+
+      solvalue = SCIPgetSolOrigObj(scip, bestsol);
+
+      if( (SCIPgetObjsense(scip) == SCIP_OBJSEN_MINIMIZE && solvalue <= debugsolval) || (SCIPgetObjsense(scip) == SCIP_OBJSEN_MAXIMIZE && solvalue >= debugsolval) )
+         solisachieved = TRUE;
+   }
+
+   return solisachieved;
+}
+
 /** returns whether the solution belongs to the current SCIP instance */
 static
 SCIP_Bool isSolutionInMip(
@@ -253,7 +308,7 @@ SCIP_RETCODE isSolutionInNode(
    /* generate the hashmap */
    if( solinnode == NULL )
    {
-      SCIP_CALL( SCIPhashmapCreate(&solinnode, blkmem, 107377) );
+      SCIP_CALL( SCIPhashmapCreate(&solinnode, blkmem, SCIPcalcHashtableSize(SCIP_HASHSIZE_DEBUG)) );
    }
 
    /* check, whether we know already whether the solution is contained in the given node */
@@ -327,6 +382,34 @@ SCIP_RETCODE isSolutionInNode(
    return SCIP_OKAY;
 }
 
+/** frees all debugging solution data*/
+SCIP_RETCODE SCIPdebugFreeDebugData(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int s;
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   for( s = nsolvals - 1; s >= 0; --s )
+      BMSfreeMemoryArrayNull(&solnames[s]);
+   
+   BMSfreeMemoryArrayNull(&solnames);
+   BMSfreeMemoryArrayNull(&solvals);
+   
+   nsolvals = 0;
+   debugsolval = 0.0;
+   mainscipset = NULL;
+   solisachieved = FALSE;
+   
+   if( solinnode != NULL)
+      SCIPhashmapFree(&solinnode);
+   
+   return SCIP_OKAY;
+}
+
 /** checks whether given row is valid for the debugging solution */
 SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -345,6 +428,10 @@ SCIP_RETCODE SCIPdebugCheckRow(
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
       return SCIP_OKAY;
 
    /* if the row is only locally valid, check whether the debugging solution is contained in the local subproblem */
@@ -430,6 +517,10 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
 
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
+      return SCIP_OKAY;
+
    /* get solution value of variable */
    SCIP_CALL( getSolutionValue(set, var, &varsol) );
    SCIPdebugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
@@ -455,6 +546,10 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
       return SCIP_OKAY;
 
    /* get solution value of variable */
@@ -516,6 +611,7 @@ SCIP_RETCODE SCIPdebugCheckInference(
 
 /** informs solution debugger, that the given node will be freed */
 SCIP_RETCODE SCIPdebugRemoveNode(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node                /**< node that will be freed */
    )
@@ -523,6 +619,27 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
+      return SCIP_OKAY;
+
+   /* check if a solution will be cutoff in tree */
+   if( SCIPgetStage(set->scip) != SCIP_STAGE_FREESOLVE && SCIPgetStage(set->scip) != SCIP_STAGE_PRESOLVING && !SCIPlpDiving(set->scip->lp) && !SCIPtreeProbing(set->scip->tree) )
+   {
+      SCIP_Bool solisinnode;
+      
+      solisinnode = FALSE;
+      
+      SCIP_CALL( isSolutionInNode(blkmem, set, node, &solisinnode) );
+      /* wrong node will be cutoff */
+      if( solisinnode )
+      {
+         SCIPerrorMessage("debugging solution was cut off in local node %p at depth %d\n",
+            node, SCIPnodeGetDepth(node));
+         SCIPABORT();
+      }
+   }
 
    /* remove node from the hash map */
    if( solinnode != NULL )
@@ -549,6 +666,10 @@ SCIP_RETCODE SCIPdebugCheckVbound(
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
       return SCIP_OKAY;
 
    /* get solution value of variables */
@@ -588,6 +709,10 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isSolutionInMip(set) )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
       return SCIP_OKAY;
 
    /* get solution value of variable */
@@ -646,6 +771,10 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    if( !isSolutionInMip(set) )
       return SCIP_OKAY;
 
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(set) )
+      return SCIP_OKAY;
+
    /* check whether the debugging solution is contained in the local subproblem */
    SCIP_CALL( isSolutionInNode(blkmem, set, node, &solcontained) );
    if( !solcontained )
@@ -699,6 +828,10 @@ SCIP_DECL_PROPEXEC(propExecDebug)
       return SCIP_OKAY;
 
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
+   if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
 
 #if 1
