@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.493 2009/02/19 14:15:05 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.494 2009/02/19 15:56:32 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4440,8 +4440,8 @@ SCIP_Bool isPresolveFinished(
       || (scip->stat->npresolfixedvars - lastnfixedvars
          + scip->stat->npresolaggrvars - lastnaggrvars
          + scip->stat->npresolchgvartypes - lastnchgvartypes
-         + (scip->stat->npresolchgbds - lastnchgbds)/10
-         + (scip->stat->npresoladdholes - lastnaddholes)/10 <= abortfac * scip->transprob->nvars)); /*lint !e653*/
+         + (scip->stat->npresolchgbds - lastnchgbds)/10.0
+         + (scip->stat->npresoladdholes - lastnaddholes)/10.0 <= abortfac * scip->transprob->nvars)); /*lint !e653*/
 
    /* don't abort, if enough changes were applied to the constraints */
    finished = finished

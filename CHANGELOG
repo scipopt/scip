@@ -75,6 +75,8 @@ fixed bugs:
 - now frees debug memory
 - fixed a bug during reading debug solution file 
 - interrupts optimization prozess if a node will be cutoff, which allows the solution
+- fixed bug with wrong abort criterion in presolving
+
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
