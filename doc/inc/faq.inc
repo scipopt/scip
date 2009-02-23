@@ -472,11 +472,11 @@
       <a name="Q23">How do I get the data of the current LP-relaxation?</a>
     </p>
     <p class="a">
-      You can get all rows in the current LP-relaxation by calling <code>SCIPgetRowsData()</code>. The methods
+      You can get all rows in the current LP-relaxation by calling <code>SCIPgetLPRowsData()</code>. The methods
       <code>SCIProwGetConstant()</code>, <code>SCIProwGetLhs()</code>, <code>SCIProwGetRhs()</code>,
       <code>SCIProwGetVals()</code>, <code>SCIProwGetNNonz()</code>, <code>SCIProwGetCols()</code> then give you
       information about each row, see <a href="#Q22">previous question</a>.<br> You get a columnwise representation by
-      calling <code>SCIPgetColsData()</code>. The methods <code>SCIPcolGetLb()</code> and <code>SCIPcolGetUb()</code>
+      calling <code>SCIPgetLPColsData()</code>. The methods <code>SCIPcolGetLb()</code> and <code>SCIPcolGetUb()</code>
       give you the locally valid bounds of a column in the LP relaxation of the current branch-and-bound-node.<br> If
       you are interested in global information, you have to call <code>SCIPcolGetVar()</code> to get the variable
       associated to a column (see <a href="#Q24">next question</a>), which you can ask for global bounds via

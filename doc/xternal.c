@@ -3744,8 +3744,9 @@
  *   printed. This reflects the changes in the constraint handlers above, which allow the automation of the feasibility
  *   test. The pointers to store the constraint handler or constraint are not needed anymore.
  *
- * - New parameters "extension" and "genericnames" in SCIPprintTransProblem() and SCIPprintOrigProblem() defining the
- *   requested format or NULL for default CIP format and using generic names for the variables and constraints. Examples are
+ * - New parameters "extension" and "genericnames" in SCIPprintTransProblem(), SCIPprintOrigProblem(), 
+ *   SCIPwriteOrigProblem(), and SCIPwriteTransProblem() defining the requested format or NULL for default CIP format 
+ *   and using generic names for the variables and constraints. Examples are
  *   - <code>SCIPprintTransProblem(scip, NULL, NULL, TRUE)</code> displays the transformed problem in CIP format with
  *     generic variables and constraint names
  *   - <code>SCIPprintOrigProblem(scip, NULL, "lp", FALSE)</code> displays the original problem in LP format with
@@ -3759,7 +3760,7 @@
  *
  * - Added user pointer to callback methods of hash table, see pub_misc.h.
  *
- * - New parameters "extension" in SCIPreadProb() defining a desired file format or NULL if file extension should be use.
+ * - New parameters "extension" in SCIPreadProb(),    defining a desired file format or NULL if file extension should be used.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
