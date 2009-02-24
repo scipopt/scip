@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.179 2009/02/05 08:34:20 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.180 2009/02/24 08:52:45 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -663,7 +663,7 @@ void conshdlrDelInitcons(
    assert(cons != NULL);
    assert(cons->conshdlr == conshdlr);
    assert(!cons->original);
-   assert(cons->initial);
+   assert(!cons->initial);
    assert(0 <= cons->initconsspos && cons->initconsspos < conshdlr->ninitconss);
 
    delpos = cons->initconsspos;
