@@ -59,7 +59,7 @@
 =opt= ilp_bol1                                  2412
 =opt= keller4.clq                                 11
 =opt= le450_5d.stab                               90
-=inf= markshare4_0                             1e+20
+=opt= markshare4_0                                 1
 =inf= markshare_4_5                            1e+20
 =opt= mas74                               11801.1857
 =opt= mas76                               40005.0541
