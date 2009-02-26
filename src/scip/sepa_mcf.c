@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.88 2009/02/26 14:32:41 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.89 2009/02/26 15:35:15 bzfraack Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -43,9 +43,11 @@
 #define NEWEXTRACTCAPACITIES
 
 
+/* old algorithmic defines */
+/* #define SEPARATEKNAPSACKCOVERS */
+/* #define SEPARATEFLOWCUTS */
+
 /* algorithmic defines */
-#define SEPARATEKNAPSACKCOVERS
-#define SEPARATEFLOWCUTS
 #define SEPARATESINGLENODECUTS
 #define BETTERWEIGHTFORDEMANDNODES
 #define NEWINCONSISTENCYRATIO
@@ -53,9 +55,7 @@
 #include <assert.h>
 
 #include "scip/sepa_mcf.h"
-#ifdef SEPARATEKNAPSACKCOVERS
 #include "scip/cons_knapsack.h"
-#endif
 #include "scip/pub_misc.h"
 
 
@@ -78,6 +78,8 @@
 #define DEFAULT_MAXSEPACUTSROOT             200   /**< maximal number of cuts separated per separation round in root node (-1: unlimited) */
 #define DEFAULT_MAXINCONSISTENCYRATIO       0.2   /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
 #define DEFAULT_CHECKCUTSHORECONNECTIVITY   FALSE /**< should we only separate if the cuts shores are connected */
+#define DEFAULT_SEPARATEFLOWCUTSET          TRUE  /**< should we separate flowcutset inequalities */
+#define DEFAULT_SEPARATEKNAPSACK            TRUE  /**< should we separate knapsack cover inequalities */
 
 /* fixed parameters */
 #define BOUNDSWITCH                         0.5
@@ -177,6 +179,8 @@ struct SCIP_SepaData
    int                   maxsepacutsroot;            /**< maximal number of cmir cuts separated per separation round in root node -- default separation */
    SCIP_Real             maxinconsistencyratio;      /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) for separation at all*/
    SCIP_Bool             checkcutshoreconnectivity;  /**< should we only separate if the cuts shores are connected */
+   SCIP_Bool             separateflowcutset;         /**< should we separate flowcutset inequalities on the network cuts */
+   SCIP_Bool             separateknapsack;           /**< should we separate knapsack cover inequalities on the network cuts */
    SCIP_Bool             lastroundsuccess;           /**< did we find a cut in the last round? */
    MCFEFFORTLEVEL        effortlevel;                /**< effort level of separation (off / aggressive / default) */
 };
@@ -5925,11 +5929,12 @@ SCIP_RETCODE addCut(
    SCIP_VAR** vars;
    int nvars;
    int v;
-#ifdef SEPARATEKNAPSACKCOVERS
+
+/* variables for knapsack cover separation */
    SCIP_VAR** cutvars;
    SCIP_Real* cutvals;
    int ncutvars;
-#endif
+
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -5940,12 +5945,13 @@ SCIP_RETCODE addCut(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    assert(nvars == 0 || vars != NULL);
 
-#ifdef SEPARATEKNAPSACKCOVERS
-   /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
    ncutvars = 0;
-#endif
+   if( sepadata->separateknapsack )
+   {
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
+   }
 
    /* create the cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
@@ -5961,11 +5967,13 @@ SCIP_RETCODE addCut(
 
       SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[v], cutcoefs[v]) );
 
-#ifdef SEPARATEKNAPSACKCOVERS
-      cutvars[ncutvars] = vars[v];
-      cutvals[ncutvars] = cutcoefs[v];
-      ncutvars++;
-#endif
+      if ( sepadata->separateknapsack )
+      {
+         cutvars[ncutvars] = vars[v];
+         cutvals[ncutvars] = cutcoefs[v];
+         ncutvars++;
+      }
+
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
 
@@ -5987,14 +5995,15 @@ SCIP_RETCODE addCut(
    /* release the row */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
-#ifdef SEPARATEKNAPSACKCOVERS
-   /* relax cut to knapsack row and separate lifted cover cuts */
-   SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts) );
+   if ( sepadata->separateknapsack)
+   {
+      /* relax cut to knapsack row and separate lifted cover cuts */
+      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, ncuts) );
 
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &cutvals);
-   SCIPfreeBufferArray(scip, &cutvars);
-#endif
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &cutvals);
+      SCIPfreeBufferArray(scip, &cutvars);
+   }
 
    return SCIP_OKAY;
 }
@@ -6128,13 +6137,13 @@ SCIP_RETCODE generateClusterCuts(
       int k;
       int d;
       int nnodesinS;
-#ifdef SEPARATEFLOWCUTS
+      /* variables for flowcutset separation */
       SCIP_Real baserhs;
       SCIP_Real bestdelta = 1.0;
       SCIP_Real bestrelviolation;
       SCIP_Real bestabsviolation;
       SCIP_Real f0;
-#endif
+
 
       if ( sepadata->checkcutshoreconnectivity )
       {
@@ -6174,9 +6183,8 @@ SCIP_RETCODE generateClusterCuts(
          BMSclearMemoryArray(rowweights, nrows);
          BMSclearMemoryArray(comcutdemands, ncommodities);
          BMSclearMemoryArray(comdemands, ncommodities);
-#ifdef SEPARATEFLOWCUTS
+
          baserhs = 0.0;
-#endif
          ndeltas = 0;
 
          /* Identify commodities with positive T -> S demand */
@@ -6321,12 +6329,13 @@ SCIP_RETCODE generateClusterCuts(
                              SCIPgetRowFeasibility(scip, arccapacityrows[a]), SCIProwGetDualsol(arccapacityrows[a]));
             /*SCIPdebug(SCIPprintRow(scip, arccapacityrows[a], NULL));*/
 
-#ifdef SEPARATEFLOWCUTS
-            if ( rowweights[r] > 0.0 )
-               baserhs += rowweights[r] * (SCIProwGetRhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
-            else
-               baserhs += rowweights[r] * (SCIProwGetLhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
-#endif
+            if ( sepadata->separateflowcutset )
+            {
+               if ( rowweights[r] > 0.0 )
+                  baserhs += rowweights[r] * (SCIProwGetRhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
+               else
+                  baserhs += rowweights[r] * (SCIProwGetLhs(arccapacityrows[a]) - SCIProwGetConstant(arccapacityrows[a]));
+            }
 
             /* extract useful deltas for c-MIR scaling and update the demand value for commodities (in binary flow model) */
             rowcols = SCIProwGetCols(arccapacityrows[a]);
@@ -6473,12 +6482,13 @@ SCIP_RETCODE generateClusterCuts(
                                       v, k, r, SCIProwGetName(nodeflowrows[v][k]), scale, rowweights[r],
                                       SCIPgetRowFeasibility(scip, nodeflowrows[v][k]), SCIProwGetDualsol(nodeflowrows[v][k]));
                      /*SCIPdebug(SCIPprintRow(scip, nodeflowrows[v][k], NULL));*/
-#ifdef SEPARATEFLOWCUTS
-                     if ( nodeflowscales[v][k] > 0.0 )
-                        baserhs += rowweights[r] * (SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
-                     else
-                        baserhs += rowweights[r] * (SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
-#endif
+                     if ( sepadata->separateflowcutset )
+                     {
+                        if ( nodeflowscales[v][k] > 0.0 )
+                           baserhs += rowweights[r] * (SCIProwGetRhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
+                        else
+                           baserhs += rowweights[r] * (SCIProwGetLhs(nodeflowrows[v][k]) - SCIProwGetConstant(nodeflowrows[v][k]));
+                     }
                   }
                }
             }
@@ -6486,12 +6496,18 @@ SCIP_RETCODE generateClusterCuts(
 
          /* try out deltas to generate c-MIR cuts: use larger deltas first */
          /** @todo use only the best delta instead of generating all cuts */
-#ifdef SEPARATEFLOWCUTS
-         if ( ndeltas > 0 )
-            bestdelta = deltas[ndeltas-1];  /* if nothing else is found, use maxdelta */
+
+         /* use best delta for flowcutset separation */
          bestrelviolation = SCIP_REAL_MIN;
          bestabsviolation = SCIP_REAL_MIN;
-#endif
+
+         if ( sepadata->separateflowcutset )
+         {
+            if ( ndeltas > 0 )
+               bestdelta = deltas[ndeltas-1];  /* if nothing else is found, use maxdelta */
+         }
+
+
 
          SCIPdebugMessage(" -> found %d different deltas to try\n", ndeltas);
          for ( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
@@ -6500,10 +6516,10 @@ SCIP_RETCODE generateClusterCuts(
             SCIP_Real cutact;
             SCIP_Bool success;
             SCIP_Bool cutislocal;
-#ifdef SEPARATEFLOWCUTS
-            SCIP_Real abscutrhs;
-            SCIP_Real relviolation;
-#endif
+            /* variables for flowcutset separation */
+            SCIP_Real abscutrhs = 0.0;
+            SCIP_Real relviolation = 0.0;
+
 
             /* do not use too small deltas */
             if ( SCIPisFeasZero(scip, deltas[d]) )
@@ -6516,16 +6532,18 @@ SCIP_RETCODE generateClusterCuts(
                                    &success, &cutislocal) );
             assert(ALLOWLOCAL || !cutislocal);
 
-#ifdef SEPARATEFLOWCUTS
-            abscutrhs = REALABS(cutrhs);
-            relviolation = (cutact - cutrhs) / MAX( abscutrhs , 1.0 );
-            if ( success && relviolation > bestrelviolation )
+            if ( sepadata->separateflowcutset )
             {
-               bestdelta = deltas[d];
-               bestrelviolation = relviolation;
-               bestabsviolation = (cutact - cutrhs);
+               abscutrhs = REALABS(cutrhs);
+               relviolation = (cutact - cutrhs) / MAX( abscutrhs , 1.0 );
+               if ( success && relviolation > bestrelviolation )
+               {
+                  bestdelta = deltas[d];
+                  bestrelviolation = relviolation;
+                  bestabsviolation = (cutact - cutrhs);
+               }
             }
-#endif
+
 
             if ( success && SCIPisFeasGT(scip, cutact, cutrhs) )
             {
@@ -6554,144 +6572,145 @@ SCIP_RETCODE generateClusterCuts(
             }
          }
 
-#ifdef SEPARATEFLOWCUTS
-         /* try to separate flow cuts for the best delta */
-         f0 = SCIPfrac(scip, baserhs/bestdelta);
-         if ( MINFRAC <= f0 && f0 <= MAXFRAC )
+         if ( sepadata->separateflowcutset )
          {
-            SCIP_Real onedivoneminsf0;
-            SCIP_Real totalviolationdelta;
-            totalviolationdelta = 0.0;
-            onedivoneminsf0 = 1.0/(1.0 - f0);
-            for ( a = 0; a < narcs; a++ )
+            /* try to separate flow cuts for the best delta */
+            f0 = SCIPfrac(scip, baserhs/bestdelta);
+            if ( MINFRAC <= f0 && f0 <= MAXFRAC )
             {
-               SCIP_COL** rowcols;
-               SCIP_Real* rowvals;
-               int rowlen;
-               SCIP_Real rowweight;
-               SCIP_Real rowlhs;
-               SCIP_Real rowrhs;
-               SCIP_Real rowconstant;
-               SCIP_Real violationdelta;
-               int r;
-               int j;
-
-               /* arc might be uncapacitated */
-               if ( arccapacityrows[a] == NULL )
-                  continue;
-
-               r = SCIProwGetLPPos(arccapacityrows[a]);
-
-               /* row might have been removed from LP in the meantime */
-               assert(r < nrows);
-               if ( r == -1 )
-                  continue;
-
-               /* ignore rows that are not in the aggregation */
-               if ( rowweights[r] == 0.0 )
-                  continue;
-
-               /* check if removing the capacity inequality will lead to a more violated MIR inequality:
-                * in a "perfect" MCF model, adding the capacity constraints means to cancel the flow
-                * variables of the capacity constraints and instead to add the capacity variables.
-                * Thus, removing it means to add the flow variables (with negative sign) and to remove
-                * the capacity variables.
-                * We assume that the right hand side of the scaled capacity inequality is integral (usually 0)
-                * and thus, the fractionality of the rhs of the base inequality does not change, hence the
-                * cut coefficients of all other involved variables do not change.
-                */
-               rowcols = SCIProwGetCols(arccapacityrows[a]);
-               rowvals = SCIProwGetVals(arccapacityrows[a]);
-               rowlen = SCIProwGetNLPNonz(arccapacityrows[a]);
-               rowweight = rowweights[r]/bestdelta;
-               rowlhs = SCIProwGetLhs(arccapacityrows[a]);
-               rowrhs = SCIProwGetRhs(arccapacityrows[a]);
-               rowconstant = SCIProwGetConstant(arccapacityrows[a]);
-               if ( SCIPisInfinity(scip, rowrhs) || (!SCIPisInfinity(scip, -rowlhs) && rowweight < 0.0) )
-                  violationdelta = rowweight * (rowlhs - rowconstant);
-               else
-                  violationdelta = rowweight * (rowrhs - rowconstant);
-
-               for ( j = 0; j < rowlen; j++ )
+               SCIP_Real onedivoneminsf0;
+               SCIP_Real totalviolationdelta;
+               totalviolationdelta = 0.0;
+               onedivoneminsf0 = 1.0/(1.0 - f0);
+               for ( a = 0; a < narcs; a++ )
                {
-                  SCIP_VAR* var;
-                  SCIP_Real coef;
-                  SCIP_Real mircoef;
-                  SCIP_Real solval;
-                  int c;
+                  SCIP_COL** rowcols;
+                  SCIP_Real* rowvals;
+                  int rowlen;
+                  SCIP_Real rowweight;
+                  SCIP_Real rowlhs;
+                  SCIP_Real rowrhs;
+                  SCIP_Real rowconstant;
+                  SCIP_Real violationdelta;
+                  int r;
+                  int j;
 
-                  coef = rowvals[j] * rowweight;
+                  /* arc might be uncapacitated */
+                  if ( arccapacityrows[a] == NULL )
+                     continue;
 
-                  c = SCIPcolGetLPPos(rowcols[j]);
-                  assert(0 <= c && c < SCIPgetNLPCols(scip));
-                  var = SCIPcolGetVar(rowcols[j]);
+                  r = SCIProwGetLPPos(arccapacityrows[a]);
 
-                  /* variable is flow variable: if we are not using the capacity constraint, this
-                   *   would appear with negative coefficient in the base inequality instead of being canceled.
-                   * variable is capacity variable: if we are not using the capacity constraint, this
-                   *   would not appear in the base inequality.
+                  /* row might have been removed from LP in the meantime */
+                  assert(r < nrows);
+                  if ( r == -1 )
+                     continue;
+
+                  /* ignore rows that are not in the aggregation */
+                  if ( rowweights[r] == 0.0 )
+                     continue;
+
+                  /* check if removing the capacity inequality will lead to a more violated MIR inequality:
+                   * in a "perfect" MCF model, adding the capacity constraints means to cancel the flow
+                   * variables of the capacity constraints and instead to add the capacity variables.
+                   * Thus, removing it means to add the flow variables (with negative sign) and to remove
+                   * the capacity variables.
+                   * We assume that the right hand side of the scaled capacity inequality is integral (usually 0)
+                   * and thus, the fractionality of the rhs of the base inequality does not change, hence the
+                   * cut coefficients of all other involved variables do not change.
                    */
-                  if ( colcommodity[c] >= 0 )
-                     coef *= -1.0;
-
-                  if ( SCIPvarIsIntegral(var) )
-                  {
-                     SCIP_Real fj;
-
-                     fj = SCIPfrac(scip, coef);
-                     if ( fj <= f0 )
-                        mircoef = SCIPfloor(scip, coef);
-                     else
-                        mircoef = SCIPfloor(scip, coef) + (fj - f0)*onedivoneminsf0;
-                  }
+                  rowcols = SCIProwGetCols(arccapacityrows[a]);
+                  rowvals = SCIProwGetVals(arccapacityrows[a]);
+                  rowlen = SCIProwGetNLPNonz(arccapacityrows[a]);
+                  rowweight = rowweights[r]/bestdelta;
+                  rowlhs = SCIProwGetLhs(arccapacityrows[a]);
+                  rowrhs = SCIProwGetRhs(arccapacityrows[a]);
+                  rowconstant = SCIProwGetConstant(arccapacityrows[a]);
+                  if ( SCIPisInfinity(scip, rowrhs) || (!SCIPisInfinity(scip, -rowlhs) && rowweight < 0.0) )
+                     violationdelta = rowweight * (rowlhs - rowconstant);
                   else
+                     violationdelta = rowweight * (rowrhs - rowconstant);
+
+                  for ( j = 0; j < rowlen; j++ )
                   {
-                     if ( coef >= 0.0 )
-                        mircoef = 0.0;
+                     SCIP_VAR* var;
+                     SCIP_Real coef;
+                     SCIP_Real mircoef;
+                     SCIP_Real solval;
+                     int c;
+
+                     coef = rowvals[j] * rowweight;
+
+                     c = SCIPcolGetLPPos(rowcols[j]);
+                     assert(0 <= c && c < SCIPgetNLPCols(scip));
+                     var = SCIPcolGetVar(rowcols[j]);
+
+                     /* variable is flow variable: if we are not using the capacity constraint, this
+                      *   would appear with negative coefficient in the base inequality instead of being canceled.
+                      * variable is capacity variable: if we are not using the capacity constraint, this
+                      *   would not appear in the base inequality.
+                      */
+                     if ( colcommodity[c] >= 0 )
+                        coef *= -1.0;
+
+                     if ( SCIPvarIsIntegral(var) )
+                     {
+                        SCIP_Real fj;
+
+                        fj = SCIPfrac(scip, coef);
+                        if ( fj <= f0 )
+                           mircoef = SCIPfloor(scip, coef);
+                        else
+                           mircoef = SCIPfloor(scip, coef) + (fj - f0)*onedivoneminsf0;
+                     }
                      else
-                        mircoef = coef * onedivoneminsf0;
+                     {
+                        if ( coef >= 0.0 )
+                           mircoef = 0.0;
+                        else
+                           mircoef = coef * onedivoneminsf0;
+                     }
+
+                     /* add flow variable MIR coefficients, and subtract capacity variable MIR coefficients */
+                     solval = SCIPgetSolVal(scip, sol, var);
+                     if ( colcommodity[c] >= 0 )
+                        violationdelta += mircoef * solval;
+                     else
+                        violationdelta -= mircoef * solval;
                   }
 
-                  /* add flow variable MIR coefficients, and subtract capacity variable MIR coefficients */
-                  solval = SCIPgetSolVal(scip, sol, var);
-                  if ( colcommodity[c] >= 0 )
-                     violationdelta += mircoef * solval;
-                  else
-                     violationdelta -= mircoef * solval;
+                  if ( SCIPisPositive(scip, violationdelta) )
+                  {
+                     SCIPdebugMessage(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
+                                      SCIProwGetName(arccapacityrows[a]), rowweights[r], SCIPgetRowFeasibility(scip, arccapacityrows[a]),
+                                      violationdelta);
+                     rowweights[r] = 0.0;
+                     totalviolationdelta += violationdelta;
+                  }
                }
 
-               if ( SCIPisPositive(scip, violationdelta) )
+               /* if we removed a capacity constraint from the aggregation, try the new aggregation */
+               if ( totalviolationdelta > 0.0 && totalviolationdelta + bestabsviolation > 0.0 )
                {
-                  SCIPdebugMessage(" -> discarding capacity row <%s> of weight %g and slack %g: increases MIR violation by %g\n",
-                                   SCIProwGetName(arccapacityrows[a]), rowweights[r], SCIPgetRowFeasibility(scip, arccapacityrows[a]),
-                                   violationdelta);
-                  rowweights[r] = 0.0;
-                  totalviolationdelta += violationdelta;
-               }
-            }
+                  SCIP_Real cutrhs;
+                  SCIP_Real cutact;
+                  SCIP_Bool success;
+                  SCIP_Bool cutislocal;
 
-            /* if we removed a capacity constraint from the aggregation, try the new aggregation */
-            if ( totalviolationdelta > 0.0 && totalviolationdelta + bestabsviolation > 0.0 )
-            {
-               SCIP_Real cutrhs;
-               SCIP_Real cutact;
-               SCIP_Bool success;
-               SCIP_Bool cutislocal;
+                  SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
+                  SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
+                                         (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, NULL,
+                                         cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+                  assert(ALLOWLOCAL || !cutislocal);
 
-               SCIPdebugMessage("applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
-               SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
-                                      (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, 1.0/bestdelta, NULL, NULL,
-                                      cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
-               assert(ALLOWLOCAL || !cutislocal);
-
-               if ( success && SCIPisFeasGT(scip, cutact, cutrhs) )
-               {
-                  SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
-                  SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+                  if ( success && SCIPisFeasGT(scip, cutact, cutrhs) )
+                  {
+                     SCIPdebugMessage(" -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
+                     SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
+                  }
                }
             }
          }
-#endif
       }
    }
 
@@ -7048,6 +7067,14 @@ SCIP_RETCODE SCIPincludeSepaMcf(
                                "separating/mcf/checkcutshoreconnectivity",
                                "should we separate only if the cuts shores are connected?",
                                &sepadata->checkcutshoreconnectivity, TRUE, DEFAULT_CHECKCUTSHORECONNECTIVITY, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "separating/mcf/separateflowcutset",
+                               "should we separate flowcutset inequalities on the network cuts?",
+                               &sepadata->separateflowcutset, TRUE, DEFAULT_SEPARATEFLOWCUTSET, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "separating/mcf/separateknapsack",
+                               "should we separate knapsack cover inequalities on the network cuts?",
+                               &sepadata->separateknapsack, TRUE, DEFAULT_SEPARATEKNAPSACK, NULL, NULL) );
 
    return SCIP_OKAY;
 }
