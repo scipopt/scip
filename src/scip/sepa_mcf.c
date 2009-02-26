@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.89 2009/02/26 15:35:15 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.90 2009/02/26 15:42:39 bzfraack Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -76,7 +76,7 @@
 #define DEFAULT_MODELTYPE                     0   /**< model type of network (0: auto, 1:directed, 2:undirected) */
 #define DEFAULT_MAXSEPACUTS                 100   /**< maximal number of cuts separated per separation round (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTSROOT             200   /**< maximal number of cuts separated per separation round in root node (-1: unlimited) */
-#define DEFAULT_MAXINCONSISTENCYRATIO       0.2   /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
+#define DEFAULT_MAXINCONSISTENCYRATIO       0.05  /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
 #define DEFAULT_CHECKCUTSHORECONNECTIVITY   FALSE /**< should we only separate if the cuts shores are connected */
 #define DEFAULT_SEPARATEFLOWCUTSET          TRUE  /**< should we separate flowcutset inequalities */
 #define DEFAULT_SEPARATEKNAPSACK            TRUE  /**< should we separate knapsack cover inequalities */
