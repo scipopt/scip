@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.90 2009/02/26 15:42:39 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.91 2009/02/26 15:59:45 bzfraack Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -67,7 +67,7 @@
 #define SEPA_DELAY                        FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 /* changeable parameters*/
-#define DEFAULT_NCLUSTERS                     4   /**< number of clusters to generate in the shrunken network */
+#define DEFAULT_NCLUSTERS                     5   /**< number of clusters to generate in the shrunken network */
 #define DEFAULT_MAXWEIGHTRANGE            1e+06   /**< maximal valid range max(|weights|)/min(|weights|) of row weights for CMIR */
 #define DEFAULT_MAXTESTDELTA                 20   /**< maximal number of different deltas to try (-1: unlimited) for CMIR */
 #define DEFAULT_TRYNEGSCALING             FALSE   /**< should negative values also be tested in scaling? for CMIR */
