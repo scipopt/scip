@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.24 2009/01/08 12:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.25 2009/02/27 14:12:47 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -735,6 +735,7 @@ SCIP_RETCODE getVariable(
          SCIP_Bool separate;
          SCIP_Bool propagate;
          SCIP_Bool removable;
+         SCIP_Bool enforced;
          
          SCIP_CONS* cons;
          char varname[128];
@@ -746,9 +747,10 @@ SCIP_RETCODE getVariable(
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcseparate", &separate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcpropagate", &propagate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcremovable", &removable) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcenforced", &enforced) );
          
          SCIP_CALL( SCIPcreateConsAnd(scip, &cons, "", *var, nvars, vars,
-               TRUE, separate, TRUE, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
+               TRUE, separate, enforced, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
          
          if(opbinput->nandconss == opbinput->sandconss)
          {
@@ -1755,13 +1757,16 @@ SCIP_RETCODE SCIPincludeReaderOpb(
          "reading/opbreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
          NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/nlcseparate", "should the non linear constraint be separated during LP processing?",
+         "reading/opbreader/nlcseparate", "should the nonlinear constraint be separated during LP processing?",
          NULL, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/nlcpropagate", "should the constraint be propagated during node processing?",
+         "reading/opbreader/nlcpropagate", "should the nonlinear constraint be propagated during node processing?",
          NULL, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/nlcremovable", "should the non linear constraints be removable?",
+         "reading/opbreader/nlcremovable", "should the nonlinear constraints be removable?",
+         NULL, TRUE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/opbreader/nlcenforced", "should the nonlinear constraints be enforced?",
          NULL, TRUE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
