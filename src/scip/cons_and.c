@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.100 2008/12/17 10:48:20 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.101 2009/02/27 15:52:25 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -52,6 +52,7 @@
 #define DEFAULT_PRESOLPAIRWISE    FALSE /**< should pairwise constraint comparison be performed in presolving? */
 #define DEFAULT_LINEARIZE         FALSE /**< should constraint get linearize and removed? */
 #define DEFAULT_INITIALLP             1 /**< should lp relaxation be in the initial LP? (0: FALSE, 1: auto, 2: TRUE) */
+#define DEFAULT_ENFORCECUTS        TRUE /**< should cuts be separated during LP enforcing? */
 
 
 /*
@@ -86,6 +87,7 @@ struct SCIP_ConshdlrData
    int                   initiallp;          /**< should lp relaxation be in the initial LP? (0: FALSE, 1: auto, 2: TRUE) */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             linearize;          /**< should constraint get linearize and removed? */
+   SCIP_Bool             enforcecuts;        /**< should cuts be separated during LP enforcing? */
 };
 
 
@@ -1967,8 +1969,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolAnd)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpAnd)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool separated;
    SCIP_Bool violated;
    int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
@@ -1976,15 +1983,24 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
       SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
       if( violated )
       {
-         SCIP_Bool separated;
-
-         SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
-         assert(separated); /* because the solution is integral, the separation always finds a cut */
-         *result = SCIP_SEPARATED;
-         return SCIP_OKAY;
+         if( conshdlrdata->enforcecuts )
+         {
+            
+            SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
+            assert(separated); /* because the solution is integral, the separation always finds a cut */
+         }
+         else
+         {
+            *result = SCIP_INFEASIBLE;
+            return SCIP_OKAY;
+         }
       }
    } 
-   *result = SCIP_FEASIBLE;
+
+   if( separated )
+      *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -2348,18 +2364,21 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
 
    /* add and constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/and/presolpairwise",
+         "constraints/"CONSHDLR_NAME"/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/and/initiallp",
+         "constraints/"CONSHDLR_NAME"/initiallp",
          "should the lp relaxation be in the initial LP (0: FALSE, 1: auto, 2: TRUE)",
          &conshdlrdata->initiallp, TRUE, DEFAULT_INITIALLP, 0, 2, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/and/linearize",
+         "constraints/"CONSHDLR_NAME"/linearize",
          "should the \"and\" constraint get linearized and removed (in presolving)?",
          &conshdlrdata->linearize, TRUE, DEFAULT_LINEARIZE, NULL, NULL) );
-   
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/enforcecuts",
+         "should cuts be separated during LP enforcing?",
+         &conshdlrdata->enforcecuts, TRUE, DEFAULT_ENFORCECUTS, NULL, NULL) );
    return SCIP_OKAY;
 }
 

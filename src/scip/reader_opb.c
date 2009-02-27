@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.25 2009/02/27 14:12:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.26 2009/02/27 15:52:25 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -735,7 +735,6 @@ SCIP_RETCODE getVariable(
          SCIP_Bool separate;
          SCIP_Bool propagate;
          SCIP_Bool removable;
-         SCIP_Bool enforced;
          
          SCIP_CONS* cons;
          char varname[128];
@@ -747,10 +746,9 @@ SCIP_RETCODE getVariable(
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcseparate", &separate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcpropagate", &propagate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcremovable", &removable) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcenforced", &enforced) );
          
          SCIP_CALL( SCIPcreateConsAnd(scip, &cons, "", *var, nvars, vars,
-               TRUE, separate, enforced, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
+               TRUE, separate, TRUE, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
          
          if(opbinput->nandconss == opbinput->sandconss)
          {
@@ -1764,9 +1762,6 @@ SCIP_RETCODE SCIPincludeReaderOpb(
          NULL, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/opbreader/nlcremovable", "should the nonlinear constraints be removable?",
-         NULL, TRUE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/nlcenforced", "should the nonlinear constraints be enforced?",
          NULL, TRUE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;

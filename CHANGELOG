@@ -15,8 +15,8 @@ interface:
   the set of variable branchings that were performed in the parent node / all ancestor nodes to create a given node
 - new methods SCIPgetVarConflictlengthScore(), SCIPgetVarAvgConflictlength(), SCIPgetAvgConflictlengthScore() and their pendants for the 
   current run
-- new (advanced) parameter <reading/opbreader/nlcenforced> in reader_opb.c to influence the enforce flag of the "and" constraints
 - new method to deactivate a pricer SCIPdeactivatePricer() in scip.c
+- new parameter <constraints/and/enforcecuts> in cons_and.c, should cuts be separated during LP enforcing?
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
