@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.335 2009/02/10 15:24:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.336 2009/02/27 14:14:04 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -651,6 +651,13 @@ SCIP_RETCODE SCIPsetPricerPriority(
  */
 extern
 SCIP_RETCODE SCIPactivatePricer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   );
+
+/** deactivates pricer */
+extern
+SCIP_RETCODE SCIPdeactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */
    );

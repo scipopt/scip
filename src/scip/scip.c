@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.494 2009/02/19 15:56:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.495 2009/02/27 14:14:04 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1417,6 +1417,19 @@ SCIP_RETCODE SCIPactivatePricer(
    SCIP_CALL( checkStage(scip, "SCIPactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPpricerActivate(pricer, scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** deactivates pricer */
+SCIP_RETCODE SCIPdeactivatePricer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPactivatePricer", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPpricerDeactivate(pricer, scip->set) );
 
    return SCIP_OKAY;
 }
