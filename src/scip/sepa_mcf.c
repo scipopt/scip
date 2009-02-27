@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.92 2009/02/26 19:29:07 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.93 2009/02/27 13:38:58 bzfwinkm Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -4025,8 +4025,8 @@ SCIP_RETCODE identifySourcesTargets(
          totalsourcecnt = totalnodecnt;
          totaltargetcnt = totalnodecnt;
       }
-      assert(SCIPisGT(totalsourcecnt,bestsourcecnt));
-      assert(SCIPisGT(totaltargetcnt,besttargetcnt));
+      assert(SCIPisGT(scip,totalsourcecnt,bestsourcecnt));
+      assert(SCIPisGT(scip,totaltargetcnt,besttargetcnt));
       nsourceinconsistencies = (totalsourcecnt - bestsourcecnt)/ntouchedcoms;
       ntargetinconsistencies = (totaltargetcnt - besttargetcnt)/ntouchedcoms;
 
