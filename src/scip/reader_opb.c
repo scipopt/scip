@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.26 2009/02/27 15:52:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.27 2009/03/03 11:54:29 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -634,7 +634,7 @@ SCIP_RETCODE createVariable(
    SCIP_Bool initial;
    SCIP_Bool removable;
    
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamiccols", &dynamiccols) );
    initial = !dynamiccols;
    removable = dynamiccols;
    
@@ -656,8 +656,9 @@ SCIP_RETCODE createVariable(
 static
 SCIP_RETCODE getVariable(
    SCIP*                 scip,               /**< SCIP data structure */
-   OPBINPUT*             opbinput,            /**< OPB reading data */
-   SCIP_VAR**            var                 /**< pointer to store the variable */
+   OPBINPUT*             opbinput,           /**< OPB reading data */
+   SCIP_VAR**            var,                /**< pointer to store the variable */
+   SCIP_Bool*            isAndResultant      /**< pointer to store if we found an AND */
    )
 {
    SCIP_Bool negated;
@@ -677,6 +678,7 @@ SCIP_RETCODE getVariable(
    name = opbinput->token; 
    assert(name != NULL);
    
+   *isAndResultant = FALSE;
 
    /* parse AND terms */
    while(!isdigit( *name ) && !isTokenChar(*name) && !opbinput->haserror )
@@ -727,6 +729,8 @@ SCIP_RETCODE getVariable(
    
    if( nvars > 1 )
    {
+      *isAndResultant = TRUE;
+
       if (!created)
          *var = exitsAndCons(scip, opbinput, vars, nvars);
       
@@ -743,9 +747,9 @@ SCIP_RETCODE getVariable(
          SCIP_CALL( createVariable(scip, var, varname) );
          assert( var != NULL );
         
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcseparate", &separate) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcpropagate", &propagate) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/nlcremovable", &removable) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"opbreader/nlcseparate", &separate) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"opbreader/nlcpropagate", &propagate) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"opbreader/nlcremovable", &removable) );
          
          SCIP_CALL( SCIPcreateConsAnd(scip, &cons, "", *var, nvars, vars,
                TRUE, separate, TRUE, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
@@ -782,11 +786,13 @@ SCIP_RETCODE readCoefficients(
    SCIP_VAR***           vars,               /**< pointer to store the array with variables (must be freed by caller) */
    SCIP_Real**           coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
    int*                  ncoefs,             /**< pointer to store the number of coefficients */
-   SCIP_Bool*            newsection          /**< pointer to store whether a new section was encountered */
+   SCIP_Bool*            newsection,         /**< pointer to store whether a new section was encountered */
+   SCIP_Bool*            isNonlinear         /**< pointer to store if we have an nonlinear constraint */
    )
 {
    SCIP_Bool havesign;
    SCIP_Bool havevalue;
+   SCIP_Bool isAndResultant;
    SCIP_Real coef;
    int coefsign;
    int coefssize;
@@ -803,6 +809,7 @@ SCIP_RETCODE readCoefficients(
    *name = '\0';
    *ncoefs = 0;
    *newsection = FALSE;
+   *isNonlinear = FALSE;
 
    SCIPdebugMessage("read coefficients\n");
 
@@ -901,8 +908,11 @@ SCIP_RETCODE readCoefficients(
       }
 
       /* the token is a variable name: get the corresponding variable (or create a new one) */
-      SCIP_CALL( getVariable(scip, opbinput, &var) );
+      SCIP_CALL( getVariable(scip, opbinput, &var, &isAndResultant) );
       
+      if( isAndResultant )
+         *isNonlinear = TRUE;
+
       /* insert the coefficient */
       SCIPdebugMessage("(line %d) found term: %+g<%s>\n", opbinput->linenumber, coefsign * coef, SCIPvarGetName(var));
       if( !SCIPisZero(scip, coef) )
@@ -968,7 +978,8 @@ SCIP_RETCODE setObjective(
 static
 SCIP_RETCODE readConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
-   OPBINPUT*             opbinput            /**< OPB reading data */
+   OPBINPUT*             opbinput,           /**< OPB reading data */
+   int*                  nNonlinearConss     /**< pointer to store number of nonlinear constraints */
    )
 {
    char name[OPB_MAX_LINELEN];
@@ -991,13 +1002,14 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
+   SCIP_Bool isNonlinear;
    int ncoefs;
    int sidesign;
 
    assert(opbinput != NULL);
 
    /* read the objective coefficients */
-   SCIP_CALL( readCoefficients(scip, opbinput, name, &vars, &coefs, &ncoefs, &newsection) );
+   SCIP_CALL( readCoefficients(scip, opbinput, name, &vars, &coefs, &ncoefs, &newsection, &isNonlinear) );
 
    if( hasError(opbinput) || opbinput->eof )
       goto TERMINATE;
@@ -1007,6 +1019,8 @@ SCIP_RETCODE readConstraints(
       {
          /* set objective function  */
          SCIP_CALL( setObjective(scip, opbinput, name, vars, coefs, ncoefs) );
+         if( isNonlinear )
+            printf("@98 nonlinear objective function\n");
       }
       else if( ncoefs > 0 )
          syntaxError(scip, opbinput, "expected constraint sense '=' or '>='");
@@ -1075,8 +1089,8 @@ SCIP_RETCODE readConstraints(
    }
 
    /* create and add the linear constraint */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/dynamicconss", &dynamicconss) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/opbreader/dynamicrows", &dynamicrows) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
    initial = !dynamicrows;
    separate = TRUE;
    enforce = TRUE;
@@ -1092,6 +1106,9 @@ SCIP_RETCODE readConstraints(
    SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   if( isNonlinear )
+      (*nNonlinearConss)++;
 
  TERMINATE:
    /* free memory */
@@ -1109,6 +1126,8 @@ SCIP_RETCODE readOPBFile(
    const char*           filename            /**< name of the input file */
    )
 {
+   int nNonlinearConss;
+
    assert(opbinput != NULL);
 
    /* open file */
@@ -1123,10 +1142,16 @@ SCIP_RETCODE readOPBFile(
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
 
+   nNonlinearConss = 0;
+
    while( !SCIPfeof( opbinput->file ) && !hasError(opbinput) )
    {
-      SCIP_CALL( readConstraints(scip, opbinput) );
+      SCIP_CALL( readConstraints(scip, opbinput, &nNonlinearConss) );
    }
+
+   printf("@95 linear constraints: %d\n", SCIPgetNConss(scip) - opbinput->nandconss - nNonlinearConss);
+   printf("@96 nonlinear constraints: %d\n", nNonlinearConss);
+   printf("@97 AND constraints: %d\n", opbinput->nandconss);
 
    /* close file */
    SCIPfclose(opbinput->file);
@@ -1323,7 +1348,8 @@ void printRow(
    SCIP_Real*            vals,               /**< array of values */
    int                   nvars,              /**< number of variables */
    SCIP_Real             lhs,                /**< left hand side */
-   SCIP_Longint*         mult                /**< multiplier for the coefficients */  
+   SCIP_Longint*         mult,               /**< multiplier for the coefficients */  
+   const char*           multisymbol         /**< the multiplication symbol to use between coefficient and variable */
    )
 {
    int v;
@@ -1359,8 +1385,8 @@ void printRow(
       var = vars[v];
       assert( var != NULL );
       
-      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT" %s ", 
-         (SCIP_Longint) (vals[v] * (*mult)), SCIPvarGetName(var) );
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s ", 
+         (SCIP_Longint) (vals[v] * (*mult)), multisymbol, SCIPvarGetName(var) );
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    }
    
@@ -1385,7 +1411,8 @@ SCIP_RETCODE printLinearCons(
    int                   nvars,              /**< number of variables */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
-   SCIP_Bool             transformed         /**< transformed constraint? */
+   SCIP_Bool             transformed,        /**< transformed constraint? */
+   const char*           multisymbol         /**< the multiplication symbol to use between coefficient and variable */
    )
 {
    int v;
@@ -1428,14 +1455,14 @@ SCIP_RETCODE printLinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* equal constrain */
-      printRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, &mult);
+      printRow(scip, file, "=", activevars, activevals, nactivevars, rhs - activeconstant, &mult, multisymbol);
    }
    else
    { 
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
-         printRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, &mult);
+         printRow(scip, file, ">=", activevars, activevals, nactivevars, lhs - activeconstant, &mult, multisymbol);
       }
 
       
@@ -1444,7 +1471,7 @@ SCIP_RETCODE printLinearCons(
          mult *= -1;
 
          /* print inequality ">=" and multiplying all coefficients by -1 */
-         printRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, &mult);
+         printRow(scip, file, ">=", activevars, activevals, nactivevars, rhs - activeconstant, &mult, multisymbol);
       }
    }
    
@@ -1485,6 +1512,9 @@ SCIP_RETCODE writeOpb(
    int linecnt;
    char linebuffer[OPB_MAX_LINELEN];
    char buffer[OPB_MAX_LINELEN];
+
+   char multisymbol[OPB_MAX_LINELEN];
+   SCIP_Bool usesymbole;
    
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
@@ -1497,6 +1527,10 @@ SCIP_RETCODE writeOpb(
    SCIP_VAR* var;
 
    assert( scip != NULL );
+   
+   /* check if should use a multipliers symbol star '*' between coefficients and variables */
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/multisymbol", &usesymbole) );
+   (void) SCIPsnprintf(multisymbol, OPB_MAX_LINELEN, "%s", usesymbole ? " * " : " ");
    
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
@@ -1564,8 +1598,8 @@ SCIP_RETCODE writeOpb(
          
          assert( linecnt != 0 );
          
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT" %s", 
-            (SCIP_Longint) (SCIPvarGetObj(var) * mult), SCIPvarGetName(var) );
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s", 
+            (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, SCIPvarGetName(var) );
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
       }
       
@@ -1593,7 +1627,7 @@ SCIP_RETCODE writeOpb(
       {
          SCIP_CALL( printLinearCons(scip, file,
                SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
-               SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
+               SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed, multisymbol) );
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
@@ -1604,15 +1638,15 @@ SCIP_RETCODE writeOpb(
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printLinearCons(scip, file,
-                  consvars, NULL, nconsvars, 1.0, 1.0, transformed) );
+                  consvars, NULL, nconsvars, 1.0, 1.0, transformed, multisymbol) );
             break;
          case SCIP_SETPPCTYPE_PACKING :
             SCIP_CALL( printLinearCons(scip, file,
-                  consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, transformed) );
+                  consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, transformed, multisymbol) );
             break;
          case SCIP_SETPPCTYPE_COVERING :
             SCIP_CALL( printLinearCons(scip, file,
-                  consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), transformed) );
+                  consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), transformed, multisymbol) );
             break;
          }
       }
@@ -1620,7 +1654,7 @@ SCIP_RETCODE writeOpb(
       {
          SCIP_CALL( printLinearCons(scip, file,
                SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
-               1.0, SCIPinfinity(scip), transformed) );
+               1.0, SCIPinfinity(scip), transformed, multisymbol) );
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
@@ -1636,7 +1670,7 @@ SCIP_RETCODE writeOpb(
             consvals[v] = weights[v];
 
          SCIP_CALL( printLinearCons(scip, file, consvars, consvals, nconsvars, -SCIPinfinity(scip), 
-				    (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
+				    (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed, multisymbol) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }
@@ -1653,7 +1687,7 @@ SCIP_RETCODE writeOpb(
 
          SCIP_CALL( printLinearCons(scip, file,
                consvars, consvals, 2,
-               SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed) );
+               SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed, multisymbol) );
 
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
@@ -1746,23 +1780,26 @@ SCIP_RETCODE SCIPincludeReaderOpb(
 
    /* add opb reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/dynamicconss", "should model constraints be subject to aging?",
+         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
          NULL, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/dynamiccols", "should columns be added and removed dynamically to the LP?",
+         "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the LP?",
          NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/dynamicrows", "should rows be added and removed dynamically to the LP?",
+         "reading/"READER_NAME"/dynamicrows", "should rows be added and removed dynamically to the LP?",
          NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/nlcseparate", "should the nonlinear constraint be separated during LP processing?",
+         "reading/"READER_NAME"/nlcseparate", "should the nonlinear constraint be separated during LP processing?",
          NULL, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/nlcpropagate", "should the nonlinear constraint be propagated during node processing?",
+         "reading/"READER_NAME"/nlcpropagate", "should the nonlinear constraint be propagated during node processing?",
          NULL, TRUE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/opbreader/nlcremovable", "should the nonlinear constraints be removable?",
+         "reading/"READER_NAME"/nlcremovable", "should the nonlinear constraints be removable?",
          NULL, TRUE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/"READER_NAME"/multisymbol", "use '*' between coefficients and variables by writing to problem?",
+         NULL, TRUE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
