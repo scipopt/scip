@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.93 2009/02/27 13:38:58 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.94 2009/03/03 15:04:32 bzfraack Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -40,14 +40,16 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-#define NEWEXTRACTCAPACITIES
-
 
 /* old algorithmic defines */
 /* #define SEPARATEKNAPSACKCOVERS */
 /* #define SEPARATEFLOWCUTS */
 
 /* algorithmic defines */
+// #define USEFLOWFORTIEBREAKING
+// #define USECAPACITYFORTIEBREAKING
+// #define TIEBREAKING
+#define NEWEXTRACTCAPACITIES
 #define SEPARATESINGLENODECUTS
 #define BETTERWEIGHTFORDEMANDNODES
 #define NEWINCONSISTENCYRATIO
@@ -77,7 +79,7 @@
 #define DEFAULT_MAXSEPACUTS                 100   /**< maximal number of cuts separated per separation round (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTSROOT             200   /**< maximal number of cuts separated per separation round in root node (-1: unlimited) */
 #define DEFAULT_MAXINCONSISTENCYRATIO       0.05  /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
-#define DEFAULT_CHECKCUTSHORECONNECTIVITY   FALSE /**< should we only separate if the cuts shores are connected */
+#define DEFAULT_CHECKCUTSHORECONNECTIVITY   TRUE  /**< should we only separate if the cuts shores are connected */
 #define DEFAULT_SEPARATEFLOWCUTSET          TRUE  /**< should we separate flowcutset inequalities */
 #define DEFAULT_SEPARATEKNAPSACK            TRUE  /**< should we separate knapsack cover inequalities */
 
@@ -4025,8 +4027,8 @@ SCIP_RETCODE identifySourcesTargets(
          totalsourcecnt = totalnodecnt;
          totaltargetcnt = totalnodecnt;
       }
-      assert(SCIPisGT(scip,totalsourcecnt,bestsourcecnt));
-      assert(SCIPisGT(scip,totaltargetcnt,besttargetcnt));
+      assert(SCIPisGE(scip,totalsourcecnt,bestsourcecnt));
+      assert(SCIPisGE(scip,totaltargetcnt,besttargetcnt));
       nsourceinconsistencies = (totalsourcecnt - bestsourcecnt)/ntouchedcoms;
       ntargetinconsistencies = (totaltargetcnt - besttargetcnt)/ntouchedcoms;
 
@@ -5086,9 +5088,13 @@ SCIP_RETCODE nodepairqueueCreate(
    SCIP_Real    minweight;
 #endif
 
+#ifdef TIEBREAKING
+   int*         colcommodity   = mcfnetwork->colcommodity;
+#endif
+
+
    SCIP_HASHTABLE* hashtable;
    NODEPAIRENTRY*  nodepairs;
-
 
    int hashtablesize;
    int a;
@@ -5117,6 +5123,9 @@ SCIP_RETCODE nodepairqueueCreate(
    {
       NODEPAIRENTRY  nodepair;
       NODEPAIRENTRY* nodepairptr;
+      SCIP_ROW* capacityrow;
+
+      capacityrow = mcfnetwork->arccapacityrows[a];
 
       SCIPdebugMessage("arc %i = (%i %i)\n", a, mcfnetwork->arcsources[a], mcfnetwork->arctargets[a]);
 
@@ -5138,12 +5147,20 @@ SCIP_RETCODE nodepairqueueCreate(
          continue;
 
       /* construct arc weight of a */
-      if ( mcfnetwork->arccapacityrows[a] != NULL )
+      if ( capacityrow != NULL )
       {
          SCIP_Real maxval;
          SCIP_Real slack;
          SCIP_Real dualsol;
          SCIP_Real scale;
+#ifdef TIEBREAKING
+         SCIP_Real totalflow;
+         SCIP_Real totalcap;
+         SCIP_COL** rowcols;
+         int rowlen;
+         int i;
+         int c;
+#endif
 
          slack = SCIPgetRowFeasibility(scip, mcfnetwork->arccapacityrows[a]);
          slack = MAX(slack, 0.0); /* can only be negative due to numerics */
@@ -5152,10 +5169,49 @@ SCIP_RETCODE nodepairqueueCreate(
          scale = ABS(mcfnetwork->arccapacityscales[a])/maxval; /* divide by maxval to normalize rows */
          assert(scale > 0.0);
 
-         SCIPdebugMessage("cap arc -- slack:%g -- dual:%g\n", scale * slack, dualsol/scale);
+#ifdef TIEBREAKING
+         /* get flow on arc for tie breaking */
+         rowcols   = SCIProwGetCols(capacityrow);
+         rowlen    = SCIProwGetNLPNonz(capacityrow);
+         totalflow = 0.0;
+         totalcap  = 0.0;
+         SCIPdebugMessage(" row <%s>: \n", SCIProwGetName(capacityrow));
+
+         for ( i = 0; i < rowlen; i++ )
+         {
+            c = SCIPcolGetLPPos(rowcols[i]);
+            assert(0 <= c && c < SCIPgetNLPCols(scip));
+
+            SCIPdebugMessage("    col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), SCIPcolGetPrimsol(rowcols[i]) );
+            /* sum up flow on arc a*/
+            if (colcommodity[c] >= 0)
+            {
+               SCIPdebugMessage("  flow  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), ABS(SCIPcolGetPrimsol(rowcols[i])) );
+               totalflow += ABS(SCIPcolGetPrimsol(rowcols[i]));
+            }
+            else
+            {
+               SCIPdebugMessage("  cap  col <%s>: %g\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), ABS(SCIPcolGetPrimsol(rowcols[i])) );
+               totalcap += ABS(SCIPcolGetPrimsol(rowcols[i]));
+            }
+         }
+
+         SCIPdebugMessage("cap arc -- slack:%g -- dual:%g -- flow:%g -- cap:%g \n", scale * slack, dualsol/scale, totalflow * scale, totalcap * scale);
+#else
+         SCIPdebugMessage("cap arc -- slack:%g -- dual:%g1\n", scale * slack, dualsol/scale);
+#endif
 
          /* put the arc weight into a fresh nodepair */
          nodepair.weight = scale * slack - ABS(dualsol)/scale;
+#ifdef USEFLOWFORTIEBREAKING
+         if( !SCIPisPositive(scip, nodepair.weight) )
+            nodepair.weight -= totalflow * scale;
+#endif
+#ifdef USECAPACITYFORTIEBREAKING
+         if( !SCIPisPositive(scip, nodepair.weight) )
+            nodepair.weight -= totalcap * scale;
+#endif
+
       }
       else
       {
@@ -5201,12 +5257,15 @@ SCIP_RETCODE nodepairqueueCreate(
    */
 
    /* calculate max and min weight */
-   maxweight = 0;
-   minweight = SCIP_REAL_MAX;
+   maxweight = +1; /* we want maxweight to be positive */
+   minweight = -1; /* we want minweight to be negative */
    nodepairs = (*nodepairqueue)->nodepairs;
    for ( n = 0; n < nnodepairs; n++ )
    {
-      maxweight = MAX(maxweight, nodepairs[n].weight);
+      /* maxweight should not be infinity (uncap arcs have infinity weight)*/
+      if(!SCIPisInfinity(scip,nodepairs[n].weight))
+         maxweight = MAX(maxweight, nodepairs[n].weight);
+
       minweight = MIN(minweight, nodepairs[n].weight);
    }
 
@@ -5219,12 +5278,14 @@ SCIP_RETCODE nodepairqueueCreate(
    /* fill priority queue using array nodepairs */
    for ( n = 0; n < nnodepairs; n++ )
    {
-#ifdef BETTERWEIGHTFORDEMANDNODES
       int node1 = nodepairs[n].node1;
       int node2 = nodepairs[n].node2;
+
+#ifdef BETTERWEIGHTFORDEMANDNODES
       SCIP_Real rhs = 0;
       SCIP_Bool hasdemand1 = FALSE;
       SCIP_Bool hasdemand2 = FALSE;
+
       int k; /* commodity */
 
       SCIPdebugMessage("nodepair [%d,%d] weight %g\n", node1,node2,nodepairs[n].weight);
@@ -5243,11 +5304,14 @@ SCIP_RETCODE nodepairqueueCreate(
          else
             rhs = SCIProwGetLhs(nodeflowrows[node1][k]) - SCIProwGetConstant(nodeflowrows[node1][k]);
 
+         assert( !SCIPisInfinity(scip,ABS(rhs)) );
+
          if ( ! SCIPisZero(scip, rhs) )
          {
             hasdemand1 = TRUE;
             break;
          }
+
       }
       /* node2 */
       for ( k = 0; k < ncommodities; k++ )
@@ -5260,21 +5324,14 @@ SCIP_RETCODE nodepairqueueCreate(
          else
             rhs = SCIProwGetLhs(nodeflowrows[node2][k]) - SCIProwGetConstant(nodeflowrows[node2][k]);
 
+         assert(! SCIPisInfinity(scip, ABS(rhs)));
+
          if ( ! SCIPisZero(scip, rhs) )
          {
             hasdemand2 = TRUE;
             break;
          }
       }
-
-      if (hasdemand1)
-         SCIPdebugMessage("    node %d has demand\n", node1);
-      else
-         SCIPdebugMessage("    node %d has no demand\n", node1);
-      if (hasdemand2)
-         SCIPdebugMessage("    node %d has demand\n", node2);
-      else
-         SCIPdebugMessage("    node %d has no demand\n", node2);
 
       /* if one of the nodes has no demand increase the score
        * (slack arcs are still shrunk first)
@@ -5283,25 +5340,19 @@ SCIP_RETCODE nodepairqueueCreate(
       if ( SCIPisPositive(scip, nodepairs[n].weight))
       {
          assert(SCIPisPositive(scip, maxweight));
+
          if ( !hasdemand1 || !hasdemand2 )
             nodepairs[n].weight += maxweight;
-//          if ( !hasdemand1 )
-//             nodepairs[n].weight += maxweight;
-//          if ( !hasdemand2 )
-//             nodepairs[n].weight += maxweight;
       }
       else
       {
-         assert(!SCIPisPositive(scip, minweight));
+         assert( SCIPisNegative(scip, minweight));
+
          if ( hasdemand1 && hasdemand2)
             nodepairs[n].weight += minweight;
-//          if ( hasdemand1 )
-//             nodepairs[n].weight += minweight;
-//          if ( hasdemand2 )
-//             nodepairs[n].weight += minweight;
       }
-      SCIPdebugMessage("nodepair [%d,%d] weight %g\n", node1,node2,nodepairs[n].weight);
 #endif
+      SCIPdebugMessage("nodepair [%d,%d] weight %g\n", node1,node2,nodepairs[n].weight);
 
       /* fill priority queue */
       SCIP_CALL( SCIPpqueueInsert((*nodepairqueue)->pqueue, (void*)&(*nodepairqueue)->nodepairs[n]) );
