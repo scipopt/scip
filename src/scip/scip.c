@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.495 2009/02/27 14:14:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.496 2009/03/03 15:03:46 bzforlow Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12180,7 +12180,7 @@ SCIP_RETCODE SCIPgetSolVals(
          {
             if( SCIPvarIsTransformed(vars[v]) )
             {
-               SCIPerrorMessage("cannot set value of transformed variable <%s> in original space solution\n",
+               SCIPerrorMessage("cannot get value of transformed variable <%s> in original space solution\n",
                   SCIPvarGetName(vars[v]));
                return SCIP_INVALIDCALL;
             }
