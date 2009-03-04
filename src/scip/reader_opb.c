@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.27 2009/03/03 11:54:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.28 2009/03/04 23:08:04 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -747,9 +747,9 @@ SCIP_RETCODE getVariable(
          SCIP_CALL( createVariable(scip, var, varname) );
          assert( var != NULL );
         
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"opbreader/nlcseparate", &separate) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"opbreader/nlcpropagate", &propagate) );
-         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"opbreader/nlcremovable", &removable) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/nlcseparate", &separate) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/nlcpropagate", &propagate) );
+         SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/nlcremovable", &removable) );
          
          SCIP_CALL( SCIPcreateConsAnd(scip, &cons, "", *var, nvars, vars,
                TRUE, separate, TRUE, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
