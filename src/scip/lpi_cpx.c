@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.122 2008/09/22 19:25:08 bzfwanie Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.123 2009/03/04 16:43:51 bzfpfets Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -1337,7 +1337,7 @@ SCIP_RETCODE SCIPlpiChgSides(
       for( i = 0; i < rngcount; ++i )
       {
          assert(0 <= lpi->rngindarray[i] && lpi->rngindarray[i] < nrows);
-         assert(lpi->senarray[i] == 'R');
+         assert(lpi->senarray[lpi->rngindarray[i]] == 'R');
          lpi->rngindarray[i] = ind[lpi->rngindarray[i]];
       }
 
