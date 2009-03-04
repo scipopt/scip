@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.24 2009/01/23 15:26:27 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.25 2009/03/04 21:51:07 bzfheinz Exp $
 #
 # Call with "make testcluster"
 
@@ -56,7 +56,7 @@ DISPFREQ=$9
 CONTINUE=${10}
 LOCK=${11}
 VERSION=${12}
-OPT=${13}
+LPS=${13}
 
 # get current SCIP path
 SCIPPATH=`pwd`
@@ -66,7 +66,35 @@ then
     mkdir $SCIPPATH/results
 fi
 
+if test ! -e $SCIPPATH/locks
+then
+    mkdir $SCIPPATH/locks
+fi
+
+LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
+
 SETTINGS=$SCIPPATH/../settings/$SETNAME.set
+
+# check if the settings file exists
+if test $SETNAME != "default"
+then
+    if test ! -e $SETTINGS
+    then
+	echo skipping test due to not existes of the settings file $SETTINGS
+	exit
+    fi
+fi
+
+if test "$LOCK" = "true"
+then
+    if test -e $LOCKFILE
+    then
+	echo skipping test due to existing lock file $LOCKFILE
+	exit
+    fi
+    date > $LOCKFILE
+fi
+
 
 # we add 10% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
@@ -81,6 +109,9 @@ HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
 EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$SETNAME.eval
 echo > $EVALFILE
 
+# counter to define file names for a test set uniquely 
+COUNT=1
+
 for i in `cat $TSTNAME.test` DONE
 do
   if test "$i" = "DONE"
@@ -91,11 +122,9 @@ do
   SHORTFILENAME=`basename $i .gz`
   SHORTFILENAME=`basename $SHORTFILENAME .mps`
   SHORTFILENAME=`basename $SHORTFILENAME .lp`
+  SHORTFILENAME=`basename $SHORTFILENAME .opb`
 
-  DIR=`dirname $i`
-  DIR=$(echo $DIR|sed 's/\//_/g')
-
-  FILENAME=check.$TSTNAME.$DIR"_"$SHORTFILENAME.$BINID.$SETNAME
+  FILENAME=$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
   BASENAME=$SCIPPATH/results/$FILENAME
 
   TMPFILE=$BASENAME.tmp
@@ -121,6 +150,7 @@ do
   echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
   echo set save $SETFILE                 >> $TMPFILE
   echo read /workbig/$i                  >> $TMPFILE
+#  echo presolve                          >> $TMPFILE
   echo optimize                          >> $TMPFILE
   echo display statistics                >> $TMPFILE
 #	    echo display solution                  >> $TMPFILE
@@ -128,4 +158,7 @@ do
   echo quit                              >> $TMPFILE
 
   qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTFILENAME -v SCIPPATH=$SCIPPATH,BINNAME=$BINNAME,FILENAME=$i,BASENAME=$FILENAME -q $QUEUE -o /dev/null -e /dev/null runcluster.sh
+
+  COUNT=`expr $COUNT + 1`
 done
+
