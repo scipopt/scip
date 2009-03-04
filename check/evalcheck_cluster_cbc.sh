@@ -13,36 +13,44 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster_cbc.sh,v 1.3 2008/09/26 16:33:40 bzfberth Exp $
+# $Id: evalcheck_cluster_cbc.sh,v 1.4 2009/03/04 21:55:33 bzfheinz Exp $
 export LANG=C
 
 AWKARGS=""
-FILES=""
 DIR=`dirname $1`
 EVALFILE=`basename $1 .eval`
 
 OUTFILE=$DIR/$EVALFILE.out 
+ERRFILE=$DIR/$EVALFILE.err
 RESFILE=$DIR/$EVALFILE.res
 TEXFILE=$DIR/$EVALFILE.tex
 PAVFILE=$DIR/$EVALFILE.pav
 
 echo > $OUTFILE
-echo create overall output file
+echo > $ERRFILE
+echo create overall output and error file
 for i in `cat $DIR/$EVALFILE.eval` DONE
   do
   if test "$i" = "DONE"
       then
       break
   fi
-  
-  if test -e $i
+
+  FILE=$i.out
+  if test -e $FILE
       then
-      cat $i >> $OUTFILE
+      cat $FILE >> $OUTFILE
+  fi
+
+  FILE=$i.err
+  if test -e $FILE
+      then
+      cat $FILE >> $ERRFILE
   fi
 done
 
 
-TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g'`
+TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
 if test -f $TSTNAME.test
     then
@@ -62,4 +70,5 @@ else
 fi
 fi
 awk -f check_cbc.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+
 

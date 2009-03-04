@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.6 2008/09/26 16:33:40 bzfberth Exp $
+# $Id: evalcheck_cluster.sh,v 1.7 2009/03/04 21:55:33 bzfheinz Exp $
 export LANG=C
 
 AWKARGS=""
@@ -50,7 +50,7 @@ for i in `cat $DIR/$EVALFILE.eval` DONE
 done
 
 
-TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g'`
+TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
 if test -f $TSTNAME.test
     then
