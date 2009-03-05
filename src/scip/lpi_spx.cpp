@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.89 2008/11/06 16:41:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.90 2009/03/05 14:41:19 bzfwinkm Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -152,8 +152,6 @@ public:
       setTester(&m_ratio);
       setPricer(&m_price_steep);
       /* no starter, no simplifier, no scaler */
-
-      m_slu.setUtype(SLUFactor::ETA);
 
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
