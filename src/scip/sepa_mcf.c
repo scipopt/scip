@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.94 2009/03/03 15:04:32 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.95 2009/03/06 16:42:04 bzfraack Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -69,7 +69,7 @@
 #define SEPA_DELAY                        FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 /* changeable parameters*/
-#define DEFAULT_NCLUSTERS                     5   /**< number of clusters to generate in the shrunken network */
+#define DEFAULT_NCLUSTERS                     7   /**< number of clusters to generate in the shrunken network */
 #define DEFAULT_MAXWEIGHTRANGE            1e+06   /**< maximal valid range max(|weights|)/min(|weights|) of row weights for CMIR */
 #define DEFAULT_MAXTESTDELTA                 20   /**< maximal number of different deltas to try (-1: unlimited) for CMIR */
 #define DEFAULT_TRYNEGSCALING             FALSE   /**< should negative values also be tested in scaling? for CMIR */
@@ -5205,11 +5205,17 @@ SCIP_RETCODE nodepairqueueCreate(
          nodepair.weight = scale * slack - ABS(dualsol)/scale;
 #ifdef USEFLOWFORTIEBREAKING
          if( !SCIPisPositive(scip, nodepair.weight) )
-            nodepair.weight -= totalflow * scale;
+         {
+            nodepair.weight += totalflow * scale;
+            nodepair.weight = MIN( nodepair.weight, -0.0001);
+         }
 #endif
 #ifdef USECAPACITYFORTIEBREAKING
          if( !SCIPisPositive(scip, nodepair.weight) )
-            nodepair.weight -= totalcap * scale;
+         {
+            nodepair.weight += totalcap * scale;
+            nodepair.weight = MIN( nodepair.weight, -0.0001);
+         }
 #endif
 
       }
