@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.168 2008/12/11 14:59:16 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.169 2009/03/07 19:28:48 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -2744,7 +2744,8 @@ SCIP_RETCODE simplifyInequalities(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
    int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
-   int*                  nchgsides           /**< pointer to store the amount of changed sides */
+   int*                  nchgsides,          /**< pointer to store the amount of changed sides */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2765,10 +2766,13 @@ SCIP_RETCODE simplifyInequalities(
    assert( cons != NULL );
    assert( nchgcoefs != NULL );
    assert( nchgsides != NULL );
+   assert( cutoff != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( !SCIPisInfinity(scip, consdata->capacity) );
+
+   *cutoff = FALSE;
 
    if( !consdata->merged )
       return SCIP_OKAY;
@@ -2789,7 +2793,7 @@ SCIP_RETCODE simplifyInequalities(
       weights = consdata->weights;
       nvars = consdata->nvars;
       
-      assert(nvars > 1);
+      assert(nvars > 0);
 
       oddbinvar = NULL;
       oddbinval = 0;
@@ -2820,11 +2824,23 @@ SCIP_RETCODE simplifyInequalities(
          SCIPdebugMessage("linear constraint <%s>: decreasing coefficient for variable <%s> to <%lld> and rhs to <%lld>\n", 
             SCIPconsGetName(cons), SCIPvarGetName(oddbinvar), oddbinval , capacity - 1);
 
+	 if( consdata->capacity == 0 )
+	 {
+	    *cutoff = TRUE;
+	    return SCIP_OKAY;
+	 }
+
          --(consdata->capacity);
-         
+
          if( SCIPisZero(scip, oddbinval) )
          {
             SCIP_CALL( delCoefPos( scip, cons, pos ) );
+	    /* if the last variable was erased delete the constraint too */
+	    if( nvars == 1 )
+	    {
+	       assert(consdata->capacity >= 0);
+	       SCIP_CALL( SCIPdelCons(scip, cons) );
+	    }
          }
          else
          {
@@ -4243,7 +4259,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          /* try to simplify inequalities */
          if( conshdlrdata->simplifyinequalities )
          {
-            SCIP_CALL( simplifyInequalities(scip, cons, nchgcoefs, nchgsides) );
+	   SCIP_CALL( simplifyInequalities(scip, cons, nchgcoefs, nchgsides, &cutoff) );
+	   if( cutoff )
+	      break;
          }
       }
    } 
