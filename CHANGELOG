@@ -38,6 +38,7 @@ performance improvements:
 - in sepa_cmir.c, if mksetcoefs is invalid for delta=1 no other values of delta are tested anymore
 - changed the timing of the feasibility pump in case of pricing
 - removed changing of update rule to "ETA" from standard soplex update "Forrest-Tomlin" in lpi_spx.cpp
+- improved memory usage in heur_octane.c
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 
