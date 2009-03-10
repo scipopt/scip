@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.70 2008/10/18 15:20:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.71 2009/03/10 10:31:25 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -43,6 +43,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/cons_indicator.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "lpreader"
@@ -2326,6 +2327,7 @@ SCIP_RETCODE SCIPwriteLp(
    char linebuffer[LP_MAX_PRINTLEN];
 
    char varname[LP_MAX_NAMELEN];
+   char varname2[LP_MAX_NAMELEN];
    char buffer[LP_MAX_PRINTLEN];
 
    SCIP_CONSHDLR* conshdlr;
@@ -2400,7 +2402,7 @@ SCIP_RETCODE SCIPwriteLp(
    /* print "Subsect to" section */
    SCIPinfoMessage(scip, file, "Subject to\n");
 
-   /* collect SOS constraints in array for later output */
+   /* collect SOS and indicator constraints in array for later output */
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS1, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consSOS2, nconss) );
 
@@ -2498,6 +2500,19 @@ SCIP_RETCODE SCIPwriteLp(
       {
 	 /* store constraint */
 	 consSOS2[nConsSOS2++] = cons;
+      }
+      else if ( strcmp(conshdlrname, "indicator") == 0 )
+      {
+	 SCIP_CONS* lincons;
+	 SCIP_VAR* binvar;
+	 SCIP_VAR* slackvar;
+
+	 lincons = SCIPgetLinearConsIndicator(cons);
+	 binvar = SCIPgetBinaryVarIndicator(cons);
+	 slackvar = SCIPgetSlackVarIndicator(cons);
+	 (void) SCIPsnprintf(varname, LP_MAX_NAMELEN, "%s", SCIPvarGetName(binvar) );
+	 (void) SCIPsnprintf(varname2, LP_MAX_NAMELEN, "%s", SCIPvarGetName(slackvar) );
+         SCIPinfoMessage(scip, file, " %s: %s = 1 -> %s <= 0\n", consname, varname, varname2);
       }
       else
       {
