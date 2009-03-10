@@ -33,6 +33,7 @@ features:
   heuristics is called during the pricing loop of variables; we also added this timing point to heur_simplerounding.{h,c} which
   has the effect that a LP solution which satisfies all integrality conditions during the pricing loop is detected
 - extended hybrid relpscost branching rule by usage of the average length of conflicts a variable appears in
+- one can now write indicator constraints in LP-format
 
 performance improvements:
 - replaced some function calls in loop conditions
