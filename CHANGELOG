@@ -34,6 +34,7 @@ features:
   has the effect that a LP solution which satisfies all integrality conditions during the pricing loop is detected
 - extended hybrid relpscost branching rule by usage of the average length of conflicts a variable appears in
 - one can now write indicator constraints in LP-format
+- now it's possible to write strings with more than "SCIP_MAXSTRLEN" amount of characters in all message.c functions
 
 performance improvements:
 - replaced some function calls in loop conditions
@@ -41,6 +42,7 @@ performance improvements:
 - changed the timing of the feasibility pump in case of pricing
 - removed changing of update rule to "ETA" from standard soplex update "Forrest-Tomlin" in lpi_spx.cpp
 - improved memory usage in heur_octane.c
+- improved reading time of opb-files, due to using a hashmap for all "and"-constraints
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.30 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.31 2009/03/10 20:00:14 bzfwinkm Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -362,9 +362,28 @@ void SCIPmessagePrintError(
    int n;
 
    va_start(ap, formatstr); /*lint !e826*/
+
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); /*lint !e718 !e746*/
-   if( n < 0 || n >= SCIP_MAXSTRLEN )
+   if( n < 0 )
       msg[SCIP_MAXSTRLEN-1] = '\0';
+   else if( n >= SCIP_MAXSTRLEN )
+   {
+      char* bigmsg;
+      int m;
+      va_list aq;
+   
+      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         return;
+      
+      va_start(aq, formatstr); /*lint !e826*/
+      m = vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+      assert(m == n);
+      va_end(aq);
+      messagePrintError(bigmsg);
+      BMSfreeMemory(&bigmsg);
+      return;
+   }   
+
    messagePrintError(msg);
    va_end(ap);
 }
@@ -396,8 +415,25 @@ void SCIPmessagePrintWarning(
    va_start(ap, formatstr); /*lint !e826*/
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    va_end(ap);
-   if( n < 0 || n >= SCIP_MAXSTRLEN )
+   if( n < 0 )
       msg[SCIP_MAXSTRLEN-1] = '\0';
+   else if( n >= SCIP_MAXSTRLEN )
+   {
+      va_list aq;
+      char* bigmsg;
+      int m;
+
+      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         return;
+
+      va_start(aq, formatstr); /*lint !e826*/
+      m = vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
+      assert(m == n);
+      va_end(aq);
+      messagePrintWarning(bigmsg);
+      BMSfreeMemory(&bigmsg);
+      return;
+   }   
    messagePrintWarning(msg);
 }
 
@@ -446,11 +482,30 @@ void SCIPmessageVFPrintDialog(
 {
    char msg[SCIP_MAXSTRLEN];
    int n;
+   va_list aq;
+   
+   va_copy(aq, ap);
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
-   if( n < 0 || n >= SCIP_MAXSTRLEN )
+   if( n < 0 )
       msg[SCIP_MAXSTRLEN-1] = '\0';
+   else if( n >= SCIP_MAXSTRLEN )
+   {
+      char* bigmsg;
+      int m;
+
+      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         return;
+
+      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+      assert(m == n);
+      va_end(aq);
+      messagePrintDialog(file, bigmsg);
+      BMSfreeMemory(&bigmsg);
+      return;
+   }   
    messagePrintDialog(file, msg);
+   va_end(aq);
 }
 
 /** prints a message, acting like the printf() command */
@@ -498,11 +553,30 @@ void SCIPmessageVFPrintInfo(
 {
    char msg[SCIP_MAXSTRLEN];
    int n;
+   va_list aq;
 
-   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
-   if( n < 0 || n >= SCIP_MAXSTRLEN )
+   va_copy(aq, ap);
+   
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); 
+   if( n < 0 )
       msg[SCIP_MAXSTRLEN-1] = '\0';
+   else if( n >= SCIP_MAXSTRLEN )
+   {
+      char* bigmsg;
+      int m;
+
+      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         return;
+
+      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+      assert(m == n);
+      va_end(aq);
+      messagePrintInfo(file, bigmsg);
+      BMSfreeMemory(&bigmsg);
+      return;
+   }   
    messagePrintInfo(file, msg);
+   va_end(aq);
 }
 
 /** prints a message depending on the verbosity level, acting like the printf() command */
@@ -564,10 +638,29 @@ void SCIPmessageVFPrintVerbInfo(
    {
       char msg[SCIP_MAXSTRLEN];
       int n;
+      va_list aq;
+
+      va_copy(aq, ap);
 
       n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
-      if( n < 0 || n >= SCIP_MAXSTRLEN )
+      if( n < 0 )
          msg[SCIP_MAXSTRLEN-1] = '\0';
+      else if( n >= SCIP_MAXSTRLEN )
+      {
+         char* bigmsg;
+         int m;
+         
+         if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+            return;
+         
+         m = vsnprintf(bigmsg, n+1, formatstr, aq);
+         assert(m == n);
+         va_end(aq);
+         messagePrintInfo(file, bigmsg);
+         BMSfreeMemory(&bigmsg);
+         return;
+      }   
       messagePrintInfo(file, msg);
+      va_end(aq);
    }
 }

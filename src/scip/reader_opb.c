@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.28 2009/03/04 23:08:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.29 2009/03/10 20:00:14 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -90,9 +90,11 @@
 /*
  * Data structures
  */
-#define OPB_MAX_LINELEN       65536     /**< size of the line buffer for reading or writing */
+#define HASHSIZE_OPBANDCONS   131101 /**< minimal size of hash table in and constraint tables */
+#define OPB_MAX_LINELEN       65536  /**< size of the line buffer for reading or writing */
 #define OPB_MAX_PUSHEDTOKENS  2
 #define OPB_INIT_COEFSSIZE    8192
+#define TRYUSINGCOMMENTANDINFO       /**< should comments being read to use additional information about the number of and constraints */
 
 /** Section in OPB File */
 enum OpbExpType {
@@ -104,6 +106,15 @@ enum OpbSense {
    OPB_SENSE_NOTHING, OPB_SENSE_LE, OPB_SENSE_GE, OPB_SENSE_EQ
 };
 typedef enum OpbSense OPBSENSE;
+
+struct ConsAndData
+{
+   SCIP_VAR**           vars;
+   SCIP_VAR*            resultant;
+   int                  nvars;
+};
+
+typedef struct ConsAndData CONSANDDATA;
 
 /** OPB reading data */
 struct OpbInput
@@ -121,10 +132,13 @@ struct OpbInput
    SCIP_Bool            endline;
    SCIP_Bool            eof;
    SCIP_Bool            haserror;
-   SCIP_CONS**          andconss;
-   int                  nandconss;
-   int                  sandconss;
+   CONSANDDATA**        consanddata;
+   int                  nconsanddata;
+   int                  sconsanddata;
+   int                  maxvarsperand;
    int                  nproblemcoeffs;
+   SCIP_HASHTABLE*      hashtable;
+   int                  hashtablesize;
 };
 
 typedef struct OpbInput OPBINPUT;
@@ -136,6 +150,104 @@ static const char commentchars[] = "*";
 /*
  * Local methods (for reading)
  */
+/** gets the key of the given element */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyOpbAndcons)
+{  /*lint --e{715}*/
+   /* the key is the element itself */ 
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal; two constraints are equal if they have the same variables */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqOpbAndcons)
+{
+   SCIP* scip;
+   CONSANDDATA* consanddata1;
+   CONSANDDATA* consanddata2;
+   SCIP_Bool coefsequal;
+   int i;
+
+   consanddata1 = (CONSANDDATA*)key1;
+   consanddata2 = (CONSANDDATA*)key2;
+   scip = (SCIP*)userptr; 
+
+   assert(scip != NULL);
+   assert(consanddata1 != NULL);
+   assert(consanddata2 != NULL);
+   assert(consanddata1->vars != NULL);
+   assert(consanddata1->nvars > 1);
+#ifndef NDEBUG
+   {
+      /* check that these variables are sorted */
+      int v;
+      for( v = consanddata1->nvars - 1; v > 0; --v )
+         assert(SCIPvarGetIndex(consanddata1->vars[v]) >= SCIPvarGetIndex(consanddata1->vars[v - 1]));
+   }
+#endif
+   assert(consanddata2->vars != NULL);
+   assert(consanddata2->nvars > 1);
+#ifndef NDEBUG
+   {
+      /* check that these variables are sorted */
+      int v;
+      for( v = consanddata2->nvars - 1; v > 0; --v )
+         assert(SCIPvarGetIndex(consanddata2->vars[v]) >= SCIPvarGetIndex(consanddata2->vars[v - 1]));
+   }
+#endif
+
+   /* checks trivial case */
+   if( consanddata1->nvars != consanddata2->nvars )
+      return FALSE;
+
+   coefsequal = TRUE;
+
+   for( i = 0; i < consanddata1->nvars ; ++i )
+   {
+      /* tests if variables are equal */
+      if( consanddata1->vars[i] != consanddata2->vars[i] )
+      {
+         assert(SCIPvarCompare(consanddata1->vars[i], consanddata2->vars[i]) == 1 || 
+            SCIPvarCompare(consanddata1->vars[i], consanddata2->vars[i]) == -1);
+         coefsequal = FALSE;
+         break;
+      }
+      assert(SCIPvarCompare(consanddata1->vars[i], consanddata2->vars[i]) == 0); 
+   } 
+   
+   return coefsequal;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValOpbAndcons)
+{  /*lint --e{715}*/
+   CONSANDDATA* consanddata;
+   int minidx;
+   int mididx;
+   int maxidx;
+   
+   consanddata = (CONSANDDATA*)key;
+   
+   assert(consanddata != NULL);
+   assert(consanddata->vars != NULL);
+   assert(consanddata->nvars > 1);
+#ifndef NDEBUG
+   {
+      /* check that these variables are sorted */
+      int v;
+      for( v = consanddata->nvars - 1; v > 0; --v )
+         assert(SCIPvarGetIndex(consanddata->vars[v]) >= SCIPvarGetIndex(consanddata->vars[v - 1]));
+   }
+#endif
+
+   minidx = SCIPvarGetIndex(consanddata->vars[0]);
+   mididx = SCIPvarGetIndex(consanddata->vars[consanddata->nvars / 2]);
+   maxidx = SCIPvarGetIndex(consanddata->vars[consanddata->nvars - 1]);
+   assert(minidx >= 0 && minidx <= maxidx);
+
+   return (consanddata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+}
 
 /** issues an error message and marks the OPB data to have errors */
 static
@@ -575,6 +687,8 @@ SCIP_Bool isSense(
    return FALSE;
 }
 
+#if 0
+
 /** check if an and constraint exist with these variables */
 static
 SCIP_VAR* exitsAndCons(
@@ -586,26 +700,60 @@ SCIP_VAR* exitsAndCons(
 {
    int i;
    int nandconss;
-   int j,k;
    SCIP_CONS* cons;
+#if 1
    SCIP_VAR** andvars;
    SCIP_Bool found;
-   
+   int j,k;
+#else
+   unsigned int hashval;
+   unsigned int keyval;
+   unsigned int currentkeyval;
+#endif
    assert( opbinput != NULL );
    assert( vars != NULL );
    assert( nvars > 1 );
-   
+
+#if 0   
+   hashtablelists = SCIPhashtableGetHashtableLists(opbinput->hashtable);
+   keyval = hashKeyValOpbVars(vars, nvars);
+   hashval = keyval % hashtable->nlists; /*lint !e573*/
+#endif   
+
    nandconss = opbinput->nandconss;
 
-   for( i = 0; i < nandconss; ++i )
+#if 0   
+   hashtablelist = hashtablelists[hashval];
+   while( hashtablelist != NULL )
+   {
+#else
+   for( i = nandconss - 1; i >= 0; --i )
    {
       cons = opbinput->andconss[i];
-
+#endif 
+      
+#if 0
+      //currentkeyval = hashKeyValOpbAndcons(scip, cons);
+      currentkeyval = hashKeyValOpbAndcons(scip, (SCIP_CONS*))SCIPhashtablelistGetElem(hashtablelist));
+      if( currentkeyval == keyval && hashKeyEqOpbAndcons(scip, cons, vars, nvars) )
+         return SCIPgetResultantAnd(scip, cons);
+      hashtablelist = SCIPhashtablelistGetNext(hashtablelist);
+   }
+#else
       if( SCIPgetNVarsAnd(scip, cons) == nvars )
       {
          andvars = SCIPgetVarsAnd(scip, cons);
          
          found = TRUE;
+         for( k = 0; k < nvars; ++k )
+         {
+            if( andvars[k] != vars[k] )
+            {
+               found = FALSE;
+               break;
+            }
+         }
+         /*
          for( k = 0; k < nvars && found; ++k )
          {
             found = FALSE;
@@ -613,13 +761,17 @@ SCIP_VAR* exitsAndCons(
                if( andvars[k] == vars[j] )
                   found=TRUE;
          }
+         */
          if (found)
             return SCIPgetResultantAnd(scip, cons);
       }
+#endif
    }
    
    return NULL;
 }
+
+#endif
 
 /** create binary variable with given name */
 static
@@ -665,15 +817,19 @@ SCIP_RETCODE getVariable(
    SCIP_Bool created = FALSE;
    char* name;
 
-   SCIP_VAR** vars;
+   CONSANDDATA* newdata;
+   /*   SCIP_VAR** vars;
    int nvars;
+   */
    int svars;
 
    assert(var != NULL);
    
-   nvars = 0;
-   svars = 10;
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, svars) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &newdata) );
+
+   newdata->nvars = 0;
+   svars = opbinput->maxvarsperand;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(newdata->vars), svars) );
    
    name = opbinput->token; 
    assert(name != NULL);
@@ -706,14 +862,14 @@ SCIP_RETCODE getVariable(
       }
       
       /* reallocated memory */
-      if( nvars == svars )
+      if( newdata->nvars == svars )
       {
          svars *= 2;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, svars) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &(newdata->vars), svars) );
       }
       
-      vars[nvars] = *var;
-      nvars++;
+      newdata->vars[newdata->nvars] = *var;
+      ++(newdata->nvars);
       
       if( !getNextToken(opbinput) )
          opbinput->haserror = TRUE;
@@ -722,17 +878,29 @@ SCIP_RETCODE getVariable(
    }
    
    /* check if we found at least on variable */
-   if( nvars == 0 )
+   if( newdata->nvars == 0 )
       syntaxError(scip, opbinput, "expected a variable name");
 
    pushToken(opbinput);
    
-   if( nvars > 1 )
+   if( newdata->nvars > 1 )
    {
       *isAndResultant = TRUE;
 
+      /* sort vars to be able to check easily whether this andconstraint exists again */
+      SCIPsortPtr((void**)(newdata->vars), SCIPvarComp, newdata->nvars);
+      
       if (!created)
-         *var = exitsAndCons(scip, opbinput, vars, nvars);
+      {
+	CONSANDDATA* tmpdata;
+	//*var = exitsAndCons(scip, opbinput, vars, nvars);
+	/* get constraint from current hash table with same variables as cons0 */
+	tmpdata = (CONSANDDATA*)(SCIPhashtableRetrieve(opbinput->hashtable, (void*)newdata));
+	if( tmpdata != NULL )
+	  *var = tmpdata->resultant;
+	else 
+	  *var = NULL;
+      }
       
       if( created || *var == NULL )
       {
@@ -743,7 +911,7 @@ SCIP_RETCODE getVariable(
          SCIP_CONS* cons;
          char varname[128];
          
-         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "andresultant%d", opbinput->nandconss);
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "andresultant%d", opbinput->nconsanddata);
          SCIP_CALL( createVariable(scip, var, varname) );
          assert( var != NULL );
         
@@ -751,27 +919,33 @@ SCIP_RETCODE getVariable(
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/nlcpropagate", &propagate) );
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/nlcremovable", &removable) );
          
-         SCIP_CALL( SCIPcreateConsAnd(scip, &cons, "", *var, nvars, vars,
+         SCIP_CALL( SCIPcreateConsAnd(scip, &cons, "", *var, newdata->nvars, newdata->vars,
                TRUE, separate, TRUE, TRUE, propagate, FALSE, FALSE, FALSE, removable, FALSE) );
          
-         if(opbinput->nandconss == opbinput->sandconss)
+	 newdata->resultant = *var;
+
+         if(opbinput->nconsanddata == opbinput->sconsanddata)
          {
-            opbinput->sandconss *= 2;
-            SCIP_CALL( SCIPreallocBufferArray(scip, &(opbinput->andconss), opbinput->sandconss) );
+            opbinput->sconsanddata *= 2;
+            SCIP_CALL( SCIPreallocMemoryArray(scip, &(opbinput->consanddata), opbinput->sconsanddata) );
          }
          
-         opbinput->andconss[opbinput->nandconss] = cons;
-         opbinput->nandconss++;
+         opbinput->consanddata[opbinput->nconsanddata] = newdata;
+         ++(opbinput->nconsanddata);
+         /* no such constraint in current hash table: insert cons0 into hash table */  
+         SCIP_CALL( SCIPhashtableInsert(opbinput->hashtable, (void*) newdata) );
 
          SCIPdebug( SCIPprintCons(scip, cons, NULL) );
          
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
+	 return SCIP_OKAY;
       }
    }
    
-   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeMemoryArray(scip, &(newdata->vars));
+   SCIPfreeBlockMemory(scip, &newdata);
 
    return SCIP_OKAY;
 }
@@ -1019,8 +1193,6 @@ SCIP_RETCODE readConstraints(
       {
          /* set objective function  */
          SCIP_CALL( setObjective(scip, opbinput, name, vars, coefs, ncoefs) );
-         if( isNonlinear )
-            printf("@98 nonlinear objective function\n");
       }
       else if( ncoefs > 0 )
          syntaxError(scip, opbinput, "expected constraint sense '=' or '>='");
@@ -1128,6 +1300,15 @@ SCIP_RETCODE readOPBFile(
 {
    int nNonlinearConss;
 
+#ifdef TRYUSINGCOMMENTANDINFO
+   SCIP_Bool stop;
+   char* commentstart;
+   char* nproducts;
+   int i;
+
+   stop = FALSE;
+#endif
+
    assert(opbinput != NULL);
 
    /* open file */
@@ -1139,6 +1320,69 @@ SCIP_RETCODE readOPBFile(
       return SCIP_NOFILE;
    }
 
+   /* reading additional information about the number of and constraints in comments to avoid reallocating "opbinput.andconss" */
+#ifdef TRYUSINGCOMMENTANDINFO
+   BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
+   
+   do
+   {   
+      if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
+      {
+         assert(SCIPfeof( opbinput->file ) );
+         opbinput->eof = TRUE;
+         goto TERMINATE;
+      }
+      
+      /* read characters after comment symbol */
+      for( i = 0; commentchars[i] != '\0'; ++i )
+      {
+         commentstart = strchr(opbinput->linebuf, commentchars[i]);
+         
+         /* found a commentline */
+         if( commentstart != NULL )
+         { 
+	    /* search for "#product= xxx" in commentline, where xxx represents the number of and constraints */
+            nproducts = strstr(opbinput->linebuf, "#product= ");
+            if( nproducts != NULL )
+            {
+               char* pos;
+               nproducts += strlen("#product= ");
+
+               pos = strtok(nproducts, delimchars);
+               
+               opbinput->sconsanddata = atoi(pos);
+               SCIPdebugMessage("%d of and constraints supposed to be in file.\n", opbinput->sconsanddata);
+
+               if( opbinput->sconsanddata < 0 )
+                  opbinput->sconsanddata = 10;
+
+	       pos = strtok (NULL, delimchars);
+
+	       if( strcmp(pos, "sizeproduct=") == 0 )
+	       {
+		  pos = strtok (NULL, delimchars);
+		  opbinput->maxvarsperand = atoi(pos) / opbinput->sconsanddata + 1;
+		  SCIPdebugMessage("%d max length of and constraints in file.\n", opbinput->maxvarsperand);
+	       }
+	       
+	       if( opbinput->maxvarsperand < 0 )
+                  opbinput->maxvarsperand = 10;
+
+               stop = TRUE;
+            }
+            break;
+         }
+      }
+   }while(commentstart != NULL && !stop);
+
+   opbinput->linebuf[0] = '\0';
+
+   /* reset filereader pointer to the beginning */
+   SCIPfseek(opbinput->file, 0, SEEK_SET);
+#endif
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(opbinput->consanddata), opbinput->sconsanddata ) );
+
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
 
@@ -1149,10 +1393,15 @@ SCIP_RETCODE readOPBFile(
       SCIP_CALL( readConstraints(scip, opbinput, &nNonlinearConss) );
    }
 
-   printf("@95 linear constraints: %d\n", SCIPgetNConss(scip) - opbinput->nandconss - nNonlinearConss);
-   printf("@96 nonlinear constraints: %d\n", nNonlinearConss);
-   printf("@97 AND constraints: %d\n", opbinput->nandconss);
+   for( i = opbinput->nconsanddata - 1; i >= 0; --i )
+   {
+     SCIPfreeMemoryArray(scip, &((opbinput->consanddata)[i]->vars) );
+      SCIPfreeBlockMemory(scip, &(opbinput->consanddata)[i] );
+   }
+   /* free dynamically allocated memory */
+   SCIPfreeMemoryArrayNull(scip, &(opbinput->consanddata) );
 
+ TERMINATE:
    /* close file */
    SCIPfclose(opbinput->file);
 
@@ -1192,18 +1441,24 @@ SCIP_RETCODE readFile(
    opbinput.endline = FALSE;
    opbinput.eof = FALSE;
    opbinput.haserror = FALSE;
-   opbinput.andconss = NULL;
-   opbinput.nandconss = 0;
-   opbinput.sandconss = 10;
+   opbinput.consanddata = NULL;
+   opbinput.nconsanddata = 0;
+   opbinput.sconsanddata = 10;
    opbinput.nproblemcoeffs = 0;
+   opbinput.maxvarsperand = 10;
    
-   SCIP_CALL( SCIPallocBufferArray(scip, &(opbinput.andconss), opbinput.sandconss ) );
-   
+   /* create a hash table for the constraint set */
+   opbinput.hashtablesize = SCIPcalcHashtableSize(HASHSIZE_OPBANDCONS);
+   SCIP_CALL( SCIPhashtableCreate(&(opbinput.hashtable), SCIPblkmem(scip), opbinput.hashtablesize,
+         hashGetKeyOpbAndcons, hashKeyEqOpbAndcons, hashKeyValOpbAndcons, (void*) scip) );
+
    /* read the file */
    SCIP_CALL( readOPBFile(scip, &opbinput, filename) );
+
+   /* free hash table */
+   SCIPhashtableFree(&(opbinput.hashtable));
    
    /* free dynamically allocated memory */
-   SCIPfreeBufferArrayNull(scip, &(opbinput.andconss) );
    SCIPfreeBufferArrayNull(scip, &opbinput.token);
    SCIPfreeBufferArrayNull(scip, &opbinput.tokenbuf);
    for( i = 0; i < OPB_MAX_PUSHEDTOKENS; ++i )
