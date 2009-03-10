@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.29 2009/03/10 09:23:32 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.30 2009/03/10 10:30:49 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3109,10 +3109,10 @@ SCIP_RETCODE SCIPaddVarIndicator(
    )
 {
    SCIP_CONSDATA* consdata;
-   
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
-   
+
    assert( cons != NULL );
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
@@ -3128,10 +3128,10 @@ SCIP_CONS* SCIPgetLinearConsIndicator(
    )
 {
    SCIP_CONSDATA* consdata;
-   
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
-   
+
    assert( cons != NULL );
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
@@ -3146,9 +3146,9 @@ SCIP_VAR* SCIPgetBinaryVarIndicator(
 {
    SCIP_CONSDATA* consdata;
 
+   assert( cons != NULL );
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
 
-   assert( cons != NULL );
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
@@ -3163,9 +3163,9 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
 {
    SCIP_CONSDATA* consdata;
 
+   assert( cons != NULL );
    assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
 
-   assert( cons != NULL );
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
