@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.102 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.103 2009/03/10 10:24:52 bzfpfets Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1355,6 +1355,20 @@ const char* SCIPprobGetName(
 {
    assert(prob != NULL);
    return prob->name;
+}
+
+/** sets problem name */
+SCIP_RETCODE SCIPprobSetName(
+   SCIP_PROB*            prob,               /**< problem data */
+   const char*           name                /**< name to be set */
+   )
+{
+   assert(prob != NULL);
+
+   BMSfreeMemoryArray(&(prob->name));
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(prob->name), name, strlen(name)+1) );
+
+   return SCIP_OKAY;
 }
 
 /** gets user problem data */

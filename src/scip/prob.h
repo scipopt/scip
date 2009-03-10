@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.61 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.62 2009/03/10 10:24:52 bzfpfets Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -293,6 +293,12 @@ SCIP_RETCODE SCIPprobExitSolve(
 extern
 const char* SCIPprobGetName(
    SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** sets problem name */
+SCIP_RETCODE SCIPprobSetName(
+   SCIP_PROB*            prob,               /**< problem data */
+   const char*           name                /**< name to be set */
    );
 
 /** gets user problem data */
