@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.496 2009/03/03 15:03:46 bzforlow Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.497 2009/03/10 10:24:31 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2898,6 +2898,17 @@ const char* SCIPgetProbName(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetProbName", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return SCIPprobGetName(scip->origprob);
+}
+
+/** sets name of the current problem instance */
+SCIP_RETCODE SCIPsetProbName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name to be set */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPsetProbName", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPprobSetName(scip->origprob, name);
 }
 
 /** gets objective sense of original problem */

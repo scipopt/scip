@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.336 2009/02/27 14:14:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.337 2009/03/10 10:24:31 bzfpfets Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1366,6 +1366,13 @@ SCIP_RETCODE SCIPsetProbData(
 extern
 const char* SCIPgetProbName(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets name of the current problem instance */
+extern
+SCIP_RETCODE SCIPsetProbName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name to be set */
    );
 
 /** gets objective sense of original problem */
