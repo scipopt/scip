@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.97 2009/03/11 15:05:35 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.98 2009/03/11 15:33:12 bzfpfend Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -2944,6 +2944,7 @@ SCIP_RETCODE extractNodes(
             }
          }
       }
+      assert(bestflowrows[basecommodity] == NULL);
 
       /* for each commodity, pick the best flow conservation constraint to define this node */
       for ( i = 0; i < ncommodities; i++ )
