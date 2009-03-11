@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.95 2009/03/06 16:42:04 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.96 2009/03/11 14:59:46 bzfpfend Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -1261,9 +1261,9 @@ SCIP_RETCODE extractCapacityRows(
          if ( SCIPisEQ(scip, ABS(sameflowcoef), 1.0) )
             capacityrowscores[r] += 500.0;
 
-         /* all coefficients of flow variables are equal: score +200 */
+         /* all coefficients of flow variables are equal: score +250 */
          if ( sameflowcoef != 0.0 && sameflowcoef != SCIP_REAL_MAX )
-            capacityrowscores[r] += 200.0;
+            capacityrowscores[r] += 250.0;
 
          /* all coefficients of flow variables are +1 or -1: score +100 */
          if ( SCIPisEQ(scip, sameabsflowcoef, 1.0) )
@@ -1272,10 +1272,6 @@ SCIP_RETCODE extractCapacityRows(
          /* there is at least one capacity variable with coefficient not equal to +/-1: score +100 */
          if ( maxabscapacitycoef > 0.0 && !SCIPisEQ(scip, maxabscapacitycoef, 1.0) )
             capacityrowscores[r] += 100.0;
-
-         /* all coefficients of flow variables are equal in their absolute values: score +50 */
-         if ( sameflowcoef != 0.0 && sameflowcoef != SCIP_REAL_MAX )
-            capacityrowscores[r] += 50.0;
 
          /* flow coefficients are mostly of the same sign: score +20*max(npos,nneg)/(npos+nneg) */
          capacityrowscores[r] += 20.0 * MAX(nposflowcoefs, nnegflowcoefs)/MAX(1.0,(SCIP_Real)(nposflowcoefs + nnegflowcoefs));
