@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.96 2009/03/11 14:59:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.97 2009/03/11 15:05:35 bzfpfend Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -1362,7 +1362,7 @@ SCIP_RETCODE extractCapacityRows(
             dualsol = ABS(dualsol);
          else if ( capacityrowsigns[r] == RHSPOSSIBLE )
             dualsol = -dualsol;
-         capacityrowscores[r] += dualsol/maxdualcapacity;
+         capacityrowscores[r] += MAX(dualsol, 0.0)/maxdualcapacity;
          assert(capacityrowscores[r] > 0.0);
       }
    }
