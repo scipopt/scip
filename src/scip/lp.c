@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.305 2009/02/13 14:08:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.306 2009/03/12 17:49:54 bzforlow Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -26,7 +26,7 @@
  *  the LP solvers data has to be updated to the current LP with a call to
  *  lpFlush().
  */
- 
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
@@ -10725,7 +10725,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 
                /* the solution is still not exceeding the objective limit and the solving process
                   was stopped due to time or iteration limit, solve again with fastmip turned off */
-               if( solstat == SCIP_LPSOLSTAT_ITERLIMIT  && objval < lp->cutoffbound - lp->looseobjval )
+               if( solstat == SCIP_LPSOLSTAT_ITERLIMIT  && SCIPsetIsRelLT(set, objval, lp->cutoffbound - lp->looseobjval) )
                {
                   assert(!(*lperror));
 
@@ -10738,7 +10738,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   /* get solution status for the lp */
                   solstat = SCIPlpGetSolstat(lp);
                   
-                  SCIPdebugMessage(" ---> new objval = %f (solstat: %d, with fastmip)\n", objval, solstat);
+                  SCIPdebugMessage(" ---> new objval = %f (solstat: %d, without fastmip)\n", objval, solstat);
                }
 
                /* check for lp errors */
@@ -10759,14 +10759,14 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
                if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT 
                   || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT) 
-                     && objval >= lp->cutoffbound - lp->looseobjval ) )
+                     && SCIPsetIsRelLT(set, objval, lp->cutoffbound - lp->looseobjval) ) )
                {
                   /* get new solution and objective value */
                   SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
                   /* if objective value is larger than the cutoff bound, set solution status to objective 
                      limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
                      this was already done in the lpSolve() method */               
-                  if( objval >= lp->cutoffbound - lp->looseobjval )
+                  if( SCIPsetIsRelGE(set, objval, lp->cutoffbound - lp->looseobjval) )
                   {
                      lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
                      lp->lpobjval = SCIPsetInfinity(set);
@@ -10792,7 +10792,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   SCIPdebugMessage(" -> LP has unbounded primal ray\n");                  
                }
                             
-               assert(objval >= lp->cutoffbound - lp->looseobjval || solstat != SCIP_LPSOLSTAT_OBJLIMIT);
+               assert(SCIPsetIsRelGE(set, objval, lp->cutoffbound - lp->looseobjval) || solstat != SCIP_LPSOLSTAT_OBJLIMIT);
             }
             else
             {
