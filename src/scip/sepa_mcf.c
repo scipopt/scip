@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.98 2009/03/11 15:33:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.99 2009/03/12 09:18:51 bzfpfend Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -2573,7 +2573,7 @@ void collectIncidentFlowCols(
  *  score is 0.0 if the rows are incompatible
  */
 static
-SCIP_RETCODE getNodeSilimarityScore(
+SCIP_RETCODE getNodeSimilarityScore(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
    int                   baserowlen,         /**< length of base node flow row */
@@ -2934,7 +2934,7 @@ SCIP_RETCODE extractNodes(
                continue;
 
             /* compare row against arc pattern and calculate score */
-            SCIP_CALL( getNodeSilimarityScore(scip, mcfdata, rowlen, arcpattern, colrows[j], &score, &invertcommodity) );
+            SCIP_CALL( getNodeSimilarityScore(scip, mcfdata, rowlen, arcpattern, colrows[j], &score, &invertcommodity) );
 
             if ( score > bestscores[rowcom] )
             {
