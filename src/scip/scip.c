@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.497 2009/03/10 10:24:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.498 2009/03/12 17:51:20 bzforlow Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12607,6 +12607,7 @@ SCIP_RETCODE SCIPtrySolFree(
    )
 {
    assert(stored != NULL);
+   assert(sol != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
