@@ -18,6 +18,7 @@ interface:
 - new method to deactivate a pricer SCIPdeactivatePricer() in scip.c
 - new parameter <constraints/and/enforcecuts> in cons_and.c, should cuts be separated during LP enforcing?
 - new function SCIPsetProbName() to set problem name in scip.h/c (SCIPprobSetName() in prob.h/c)
+- new parameter <constraints/and/presolusehashing> in cons_and.c, should pairwise presolving use hashing?, default TRUE
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -42,7 +43,8 @@ performance improvements:
 - changed the timing of the feasibility pump in case of pricing
 - removed changing of update rule to "ETA" from standard soplex update "Forrest-Tomlin" in lpi_spx.cpp
 - improved memory usage in heur_octane.c
-- improved reading time of opb-files, due to using a hashmap for all "and"-constraints
+- improved reading time of opb-files, due to using a hashtable for all "and"-constraints
+- improved pairwise presolving in cons_and.c due to using a hashtable 
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 
