@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.498 2009/03/12 17:51:20 bzforlow Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.499 2009/03/13 17:20:20 bzforlow Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12155,7 +12155,6 @@ SCIP_Real SCIPgetSolVal(
          return 0.0;
       }
       assert(!SCIPvarIsTransformed(origvar));
-
       return scalar * SCIPgetSolVal(scip, sol, origvar) + constant;
    }
    else if( sol != NULL )
@@ -12187,19 +12186,36 @@ SCIP_RETCODE SCIPgetSolVals(
 
       if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
       {
+         SCIP_VAR* origvar;
+         SCIP_Real scalar;
+         SCIP_Real constant;
+
          for( v = 0; v < nvars; ++v )
          {
-            if( SCIPvarIsTransformed(vars[v]) )
+            /* we cannot get the value of a transformed variable for a solution that lives in the original problem space
+             * -> get the corresponding original variable first
+             */
+            origvar = vars[v];
+            scalar = 1.0;
+            constant = 0.0;
+            SCIP_CALL_ABORT( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+            if( origvar == NULL )
             {
-               SCIPerrorMessage("cannot get value of transformed variable <%s> in original space solution\n",
-                  SCIPvarGetName(vars[v]));
-               return SCIP_INVALIDCALL;
+               /* the variable has no original counterpart: in the original solution, it has a value of zero */
+               vals[v] = 0.0;
+            }
+            else
+            {
+               assert(!SCIPvarIsTransformed(origvar));
+               vals[v] = scalar * SCIPgetSolVal(scip, sol, origvar) + constant;
             }
          }
       }
-
-      for( v = 0; v < nvars; ++v )
-         vals[v] = SCIPsolGetVal(sol, scip->set, scip->stat, vars[v]);
+      else
+      {
+         for( v = 0; v < nvars; ++v )
+            vals[v] = SCIPsolGetVal(sol, scip->set, scip->stat, vars[v]);
+      }
    }
    else
    {

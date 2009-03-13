@@ -87,6 +87,7 @@ fixed bugs:
 - interrupts optimization prozess if a node will be cutoff, which allows the solution
 - fixed bug with wrong abort criterion in presolving
 - fixed wrong assert in cons_knapsack.c and handled a special this case in simplifyInequalities()
+- fixed bug in SCIPgetSolVals() similar to SCIPgetSolVal(): try to get original variables of transformed ones if the solution lives in original space
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
