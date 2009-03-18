@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.29 2009/03/10 20:00:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.30 2009/03/18 11:59:59 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -687,92 +687,6 @@ SCIP_Bool isSense(
    return FALSE;
 }
 
-#if 0
-
-/** check if an and constraint exist with these variables */
-static
-SCIP_VAR* exitsAndCons(
-   SCIP*                 scip,               /**< SCIP data structure */
-   OPBINPUT*             opbinput,           /**< OPB reading data */
-   SCIP_VAR**            vars,               /**< variable array */
-   int                   nvars               /**< number of variables */
-   )
-{
-   int i;
-   int nandconss;
-   SCIP_CONS* cons;
-#if 1
-   SCIP_VAR** andvars;
-   SCIP_Bool found;
-   int j,k;
-#else
-   unsigned int hashval;
-   unsigned int keyval;
-   unsigned int currentkeyval;
-#endif
-   assert( opbinput != NULL );
-   assert( vars != NULL );
-   assert( nvars > 1 );
-
-#if 0   
-   hashtablelists = SCIPhashtableGetHashtableLists(opbinput->hashtable);
-   keyval = hashKeyValOpbVars(vars, nvars);
-   hashval = keyval % hashtable->nlists; /*lint !e573*/
-#endif   
-
-   nandconss = opbinput->nandconss;
-
-#if 0   
-   hashtablelist = hashtablelists[hashval];
-   while( hashtablelist != NULL )
-   {
-#else
-   for( i = nandconss - 1; i >= 0; --i )
-   {
-      cons = opbinput->andconss[i];
-#endif 
-      
-#if 0
-      //currentkeyval = hashKeyValOpbAndcons(scip, cons);
-      currentkeyval = hashKeyValOpbAndcons(scip, (SCIP_CONS*))SCIPhashtablelistGetElem(hashtablelist));
-      if( currentkeyval == keyval && hashKeyEqOpbAndcons(scip, cons, vars, nvars) )
-         return SCIPgetResultantAnd(scip, cons);
-      hashtablelist = SCIPhashtablelistGetNext(hashtablelist);
-   }
-#else
-      if( SCIPgetNVarsAnd(scip, cons) == nvars )
-      {
-         andvars = SCIPgetVarsAnd(scip, cons);
-         
-         found = TRUE;
-         for( k = 0; k < nvars; ++k )
-         {
-            if( andvars[k] != vars[k] )
-            {
-               found = FALSE;
-               break;
-            }
-         }
-         /*
-         for( k = 0; k < nvars && found; ++k )
-         {
-            found = FALSE;
-            for( j = 0; j < nvars && !found; ++j )
-               if( andvars[k] == vars[j] )
-                  found=TRUE;
-         }
-         */
-         if (found)
-            return SCIPgetResultantAnd(scip, cons);
-      }
-#endif
-   }
-   
-   return NULL;
-}
-
-#endif
-
 /** create binary variable with given name */
 static
 SCIP_RETCODE createVariable(
@@ -893,7 +807,7 @@ SCIP_RETCODE getVariable(
       if (!created)
       {
 	CONSANDDATA* tmpdata;
-	//*var = exitsAndCons(scip, opbinput, vars, nvars);
+
 	/* get constraint from current hash table with same variables as cons0 */
 	tmpdata = (CONSANDDATA*)(SCIPhashtableRetrieve(opbinput->hashtable, (void*)newdata));
 	if( tmpdata != NULL )
@@ -1307,6 +1221,8 @@ SCIP_RETCODE readOPBFile(
    int i;
 
    stop = FALSE;
+   commentstart = NULL;
+   nproducts = NULL;
 #endif
 
    assert(opbinput != NULL);
