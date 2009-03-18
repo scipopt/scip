@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.99 2009/03/12 09:18:51 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.100 2009/03/18 11:26:12 bzfpfend Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -884,6 +884,11 @@ SCIP_RETCODE extractFlowRows(
       flowrowscalars[r] = 0.0;
       flowrowscores[r] = 0.0;
 
+      /* ignore modifiable rows */
+      if( SCIProwIsModifiable(row) )
+         continue;
+
+      /* ignore empty rows */
       rowlen = SCIProwGetNLPNonz(row);
       if ( rowlen == 0 )
          continue;
@@ -1114,6 +1119,10 @@ SCIP_RETCODE extractCapacityRows(
 
       capacityrowsigns[r] = 0;
       capacityrowscores[r] = 0.0;
+
+      /* ignore modifiable rows */
+      if( SCIProwIsModifiable(row) )
+         continue;
 
       /* ignore empty rows */
       rowlen = SCIProwGetNLPNonz(row);
