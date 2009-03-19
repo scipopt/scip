@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.306 2009/03/12 17:49:54 bzforlow Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.307 2009/03/19 12:04:56 bzforlow Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10691,7 +10691,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                SCIP_LPSOLSTAT solstat;
                char tmppricingchar;
 
-               SCIPdebugMessage("objval = %f < %f = lp->lpiuobjlim, but status objlimit ", objval, lp->lpiuobjlim);
+               SCIPdebugMessage("objval = %f < %f = lp->lpiuobjlim, but status objlimit\n", objval, lp->lpiuobjlim);
 
                /* temporarily disable cutoffbound, which also disables the objective limit */ 
                tmpcutoff = lp->cutoffbound;
@@ -10759,7 +10759,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
                if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT 
                   || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT) 
-                     && SCIPsetIsRelLT(set, objval, lp->cutoffbound - lp->looseobjval) ) )
+                     && SCIPsetIsRelGE(set, objval, lp->cutoffbound - lp->looseobjval) ) )
                {
                   /* get new solution and objective value */
                   SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
@@ -10792,7 +10792,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                   SCIPdebugMessage(" -> LP has unbounded primal ray\n");                  
                }
                             
-               assert(SCIPsetIsRelGE(set, objval, lp->cutoffbound - lp->looseobjval) || solstat != SCIP_LPSOLSTAT_OBJLIMIT);
+               assert(lp->lpsolstat != SCIP_LPSOLSTAT_ITERLIMIT);
+               assert(SCIPsetIsRelGE(set, objval, lp->cutoffbound - lp->looseobjval) || lp->lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT);
             }
             else
             {
