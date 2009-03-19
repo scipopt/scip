@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.76 2009/02/19 16:39:00 bzfheinz Exp $
+# $Id: check.awk,v 1.77 2009/03/19 10:46:15 bzfheinz Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -140,7 +140,7 @@ BEGIN {
    origvars = 0;
    origcons = 0;
    timeout = 0;
-   feasible = 1;
+   feasible = 0;
    pb = +1e20;
    db = -1e20;
    simpiters = 0;
@@ -285,7 +285,10 @@ BEGIN {
       feasible = 0;
    }
    else
+   {
       pb = $4;
+      feasible = 1;
+   }
 }
 /^  Dual Bound       :/ { 
    if( $4 != "-" ) 
