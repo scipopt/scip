@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.100 2009/03/18 11:26:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.101 2009/03/20 10:11:03 bzfraack Exp $"
 
 // #define COUNTNETWORKVARIABLETYPES
 // #define SCIP_DEBUG
@@ -224,7 +224,7 @@ struct mcfdata
    int                   narcs;              /**< number of arcs in the extracted graph */
    int                   nnodes;             /**< number of nodes in the extracted graph */
 #ifdef NEWINCONSISTENCYRATIO
-   double                ninconsistencies;   /**< number of inconsistencies between the commodity graphs */
+   SCIP_Real                ninconsistencies;   /**< number of inconsistencies between the commodity graphs */
 #else
    int                   ninconsistencies;   /**< number of inconsistencies between the commodity graphs */
 #endif
@@ -3786,15 +3786,15 @@ SCIP_RETCODE identifySourcesTargets(
    int*              nextoutarcs;
    int*              nextinarcs;
 
-   double *sourcenodecnt;
-   double *targetnodecnt;
+   SCIP_Real *sourcenodecnt;
+   SCIP_Real *targetnodecnt;
    int *flowvarspercom;
    int *comtouched;
    int *touchednodes;
    int ntouchednodes;
 
    int ncols;
-   double maxninconsistencies;
+   SCIP_Real maxninconsistencies;
 
    int c;
    int v;
@@ -3865,13 +3865,13 @@ SCIP_RETCODE identifySourcesTargets(
       int rowlen;
       int bestsourcev;
       int besttargetv;
-      double bestsourcecnt;
-      double besttargetcnt;
-      double totalsourcecnt;
-      double totaltargetcnt;
-      double totalnodecnt;
-      double nsourceinconsistencies;
-      double ntargetinconsistencies;
+      SCIP_Real bestsourcecnt;
+      SCIP_Real besttargetcnt;
+      SCIP_Real totalsourcecnt;
+      SCIP_Real totaltargetcnt;
+      SCIP_Real totalnodecnt;
+      SCIP_Real nsourceinconsistencies;
+      SCIP_Real ntargetinconsistencies;
       int ntouchedcoms;
       int r;
       int i;
@@ -3936,7 +3936,7 @@ SCIP_RETCODE identifySourcesTargets(
             int k = colcommodity[c];
             int sourcev;
             int targetv;
-            double weight;
+            SCIP_Real weight;
 
             assert (0 <= k && k < ncommodities);
             assert (comtouched[k]);
@@ -4004,7 +4004,7 @@ SCIP_RETCODE identifySourcesTargets(
          }
          else
          {
-            double nodecnt = sourcenodecnt[v] + targetnodecnt[v];
+            SCIP_Real nodecnt = sourcenodecnt[v] + targetnodecnt[v];
 
             /* in the undirected model, we use source for the maximum and target for the second largest number of total hits */
             assert( modeltype == SCIP_MCFMODELTYPE_UNDIRECTED );
