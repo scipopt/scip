@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.106 2009/03/23 11:18:24 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.107 2009/03/23 11:22:09 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -48,7 +48,6 @@
 /* #define TIEBREAKING */
 
 #define BETTERWEIGHTFORDEMANDNODES
-#define NEWINCONSISTENCYRATIO
 
 /* fixed algorithmic defines */
 #define SEPARATESINGLENODECUTS
@@ -223,11 +222,7 @@ struct mcfdata
    int                   nnewcols;           /**< number of newcols */
    int                   narcs;              /**< number of arcs in the extracted graph */
    int                   nnodes;             /**< number of nodes in the extracted graph */
-#ifdef NEWINCONSISTENCYRATIO
-   SCIP_Real                ninconsistencies;   /**< number of inconsistencies between the commodity graphs */
-#else
-   int                   ninconsistencies;   /**< number of inconsistencies between the commodity graphs */
-#endif
+   SCIP_Real             ninconsistencies;   /**< number of inconsistencies between the commodity graphs */
    SCIP_ROW**            capacityrows;       /**< capacity row for each arc */
    int                   capacityrowssize;   /**< size of array */
    SCIP_Bool*            colisincident;      /**< temporary memory for column collection */
@@ -3682,7 +3677,6 @@ SCIP_RETCODE cleanupNetwork(
    return SCIP_OKAY;
 }
 
-#ifdef NEWINCONSISTENCYRATIO
 /** for each arc identifies a source and target node */
 static
 SCIP_RETCODE identifySourcesTargets(
@@ -4025,260 +4019,6 @@ SCIP_RETCODE identifySourcesTargets(
    return SCIP_OKAY;
 }
 
-#else
-/** for each arc identifies a source and target node */
-static
-SCIP_RETCODE identifySourcesTargets(
-   SCIP*                 scip,                  /**< SCIP data structure */
-   MCFDATA*              mcfdata,               /**< internal MCF extraction data to pass to subroutines */
-   SCIP_SEPADATA*        sepadata,              /**< separator data */
-   MCFEFFORTLEVEL*       effortlevel            /**< pointer to store effort level of separation */
-)
-{
-   int*              colarcid              = mcfdata->colarcid;
-   int               narcs                 = mcfdata->narcs;
-   int               nnodes                = mcfdata->nnodes;
-   int               ncommodities          = mcfdata->ncommodities;
-   SCIP_ROW**        capacityrows          = mcfdata->capacityrows;
-   SCIP_MCFMODELTYPE modeltype             = mcfdata->modeltype;
-   SCIP_Real         maxinconsistencyratio = sepadata->maxinconsistencyratio;
-   int*              arcsources;
-   int*              arctargets;
-   int*              firstoutarcs;
-   int*              firstinarcs;
-   int*              nextoutarcs;
-   int*              nextinarcs;
-
-   int *sourcenodecnt;
-   int *targetnodecnt;
-   int *touchednodes;
-   int ntouchednodes;
-   int ncols;
-   int maxninconsistencies;
-
-   int c;
-   int v;
-   int a;
-
-   /* initialise effort level of separation */
-   assert(effortlevel != NULL);
-   *effortlevel = MCFEFFORTLEVEL_DEFAULT;
-
-   ncols = SCIPgetNLPCols(scip);
-
-   /* allocate memory in mcfdata */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->arcsources, narcs) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->arctargets, narcs) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->colsources, ncols) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->coltargets, ncols) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->firstoutarcs, nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->firstinarcs, nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->nextoutarcs, narcs) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &mcfdata->nextinarcs, narcs) );
-   arcsources   = mcfdata->arcsources;
-   arctargets   = mcfdata->arctargets;
-   firstoutarcs = mcfdata->firstoutarcs;
-   firstinarcs  = mcfdata->firstinarcs;
-   nextoutarcs  = mcfdata->nextoutarcs;
-   nextinarcs   = mcfdata->nextinarcs;
-
-   mcfdata->arcarraysize = narcs;
-
-   /* initialize colsources and coltargets */
-   for ( c = 0; c < ncols; c++ )
-   {
-      mcfdata->colsources[c] = -2;
-      mcfdata->coltargets[c] = -2;
-   }
-
-   /* initialize adjacency lists */
-   for ( v = 0; v < nnodes; v++ )
-   {
-      firstoutarcs[v] = -1;
-      firstinarcs[v] = -1;
-   }
-   for ( a = 0; a < narcs; a++ )
-   {
-      nextoutarcs[a] = -1;
-      nextinarcs[a] = -1;
-   }
-
-   /* allocate temporary memory for source and target node identification */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sourcenodecnt, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &targetnodecnt, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &touchednodes, nnodes) );
-   BMSclearMemoryArray(sourcenodecnt, nnodes);
-   BMSclearMemoryArray(targetnodecnt, nnodes);
-
-   mcfdata->ninconsistencies = 0;
-   maxninconsistencies = maxinconsistencyratio * (SCIP_Real)narcs * (SCIP_Real)ncommodities;
-
-   /* search for source and target nodes */
-   for ( a = 0; a < narcs; a++ )
-   {
-      SCIP_COL** rowcols;
-      int rowlen;
-      int bestsourcev;
-      int besttargetv;
-      int bestsourcecnt;
-      int besttargetcnt;
-      int totalnodecnt;
-      int r;
-      int i;
-
-      r = SCIProwGetLPPos(capacityrows[a]);
-      assert(0 <= r && r < SCIPgetNLPRows(scip));
-      assert((mcfdata->capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) != 0);
-      assert(mcfdata->rowarcid[r] == a);
-
-#ifndef NDEBUG
-      for ( i = 0; i < nnodes; i++ )
-      {
-         assert(sourcenodecnt[i] == 0);
-         assert(targetnodecnt[i] == 0);
-      }
-#endif
-
-      /* check the flow variables of the capacity row for flow conservation constraints */
-      rowcols = SCIProwGetCols(capacityrows[a]);
-      rowlen = SCIProwGetNLPNonz(capacityrows[a]);
-      ntouchednodes = 0;
-      totalnodecnt = 0;
-      for ( i = 0; i < rowlen; i++ )
-      {
-         c = SCIPcolGetLPPos(rowcols[i]);
-         assert(0 <= c && c < SCIPgetNLPCols(scip));
-         if ( colarcid[c] >= 0 )
-         {
-            int sourcev;
-            int targetv;
-
-            /* identify the (at most) two nodes which contain this flow variable */
-            getIncidentNodes(scip, mcfdata, rowcols[i], &sourcev, &targetv);
-
-            /* count the nodes */
-            if ( sourcev >= 0 )
-            {
-               if ( sourcenodecnt[sourcev] == 0 && targetnodecnt[sourcev] == 0 )
-               {
-                  touchednodes[ntouchednodes] = sourcev;
-                  ntouchednodes++;
-               }
-               sourcenodecnt[sourcev]++;
-               totalnodecnt++;
-            }
-            if ( targetv >= 0 )
-            {
-               if ( sourcenodecnt[targetv] == 0 && targetnodecnt[targetv] == 0 )
-               {
-                  touchednodes[ntouchednodes] = targetv;
-                  ntouchednodes++;
-               }
-               targetnodecnt[targetv]++;
-               totalnodecnt++;
-            }
-         }
-      }
-
-      /* perform a majority vote on source and target node */
-      bestsourcev = -1;
-      besttargetv = -1;
-      bestsourcecnt = 0;
-      besttargetcnt = 0;
-      for ( i = 0; i < ntouchednodes; i++ )
-      {
-         v = touchednodes[i];
-         assert(0 <= v && v < nnodes);
-
-         if ( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
-         {
-            /* in the directed model, we distinguish between source and target */
-            if ( sourcenodecnt[v] >= targetnodecnt[v] )
-            {
-               if ( sourcenodecnt[v] > bestsourcecnt )
-               {
-                  bestsourcev = v;
-                  bestsourcecnt = sourcenodecnt[v];
-               }
-            }
-            else
-            {
-               if ( targetnodecnt[v] > besttargetcnt )
-               {
-                  besttargetv = v;
-                  besttargetcnt = targetnodecnt[v];
-               }
-            }
-         }
-         else
-         {
-            int nodecnt = sourcenodecnt[v] + targetnodecnt[v];
-
-            /* in the undirected model, we use source for the maximum and target for the second largest number of total hits */
-            if ( nodecnt > bestsourcecnt )
-            {
-               besttargetv = bestsourcev;
-               besttargetcnt = bestsourcecnt;
-               bestsourcev = v;
-               bestsourcecnt = nodecnt;
-            }
-            else if ( nodecnt > besttargetcnt )
-            {
-               besttargetv = v;
-               besttargetcnt = nodecnt;
-            }
-         }
-
-         /* clear the nodecnt arrays */
-         sourcenodecnt[v] = 0;
-         targetnodecnt[v] = 0;
-      }
-
-      /* assign the incident nodes */
-      assert(bestsourcev == -1 || bestsourcev != besttargetv);
-      arcsources[a] = bestsourcev;
-      arctargets[a] = besttargetv;
-      SCIPdebugMessage("arc %d: %d -> %d (sourcecnt=%d, targetcnt=%d, %d inconsistencies)\n",
-                       a, bestsourcev, besttargetv, bestsourcecnt, besttargetcnt, totalnodecnt - bestsourcecnt - besttargetcnt);
-
-      /* update adjacency lists */
-      if ( bestsourcev != -1 )
-      {
-         nextoutarcs[a] = firstoutarcs[bestsourcev];
-         firstoutarcs[bestsourcev] = a;
-      }
-      if ( besttargetv != -1 )
-      {
-         nextinarcs[a] = firstinarcs[besttargetv];
-         firstinarcs[besttargetv] = a;
-      }
-
-      /* update the number of inconsistencies */
-      assert(totalnodecnt >= bestsourcecnt + besttargetcnt);
-      mcfdata->ninconsistencies += totalnodecnt - bestsourcecnt - besttargetcnt;
-
-      if ( mcfdata->ninconsistencies > maxninconsistencies )
-         break;
-   }
-
-   /**@todo should we also use an aggressive parameter setting -- this should be done here */
-   if ( mcfdata->ninconsistencies > maxninconsistencies )
-      *effortlevel = MCFEFFORTLEVEL_OFF;
-   else
-      *effortlevel = MCFEFFORTLEVEL_DEFAULT;
-
-   MCFdebugMessage("extracted network has %d inconsistencies (ratio %g) -> separating with effort %d\n",
-                   mcfdata->ninconsistencies, (SCIP_Real)mcfdata->ninconsistencies/(SCIP_Real)(narcs*ncommodities), *effortlevel);
-
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &touchednodes);
-   SCIPfreeBufferArray(scip, &targetnodecnt);
-   SCIPfreeBufferArray(scip, &sourcenodecnt);
-
-   return SCIP_OKAY;
-}
-#endif
-
 #define UNKNOWN 0  /**< node has not yet been seen */
 #define ONSTACK 1  /**< node is currently on the processing stack */
 #define VISITED 2  /**< node has been visited and assigned to some component */
@@ -4501,11 +4241,7 @@ SCIP_RETCODE mcfnetworkExtract(
    mcfdata.nnewcols = 0;
    mcfdata.narcs = 0;
    mcfdata.nnodes = 0;
-#ifdef NEWINCONSISTENCYRATIO
    mcfdata.ninconsistencies = 0.0;
-#else
-   mcfdata.ninconsistencies = 0;
-#endif
    mcfdata.capacityrows = NULL;
    mcfdata.capacityrowssize = 0;
    mcfdata.colisincident = NULL;
