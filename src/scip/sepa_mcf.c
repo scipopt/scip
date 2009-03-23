@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.109 2009/03/23 11:43:11 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.110 2009/03/23 11:50:46 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -2458,7 +2458,7 @@ SCIP_RETCODE getNodeSimilarityScore(
    SCIP*                 scip,               /**< SCIP data structure */
    MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
    int                   baserowlen,         /**< length of base node flow row */
-   int*                  basearcpattern,     /**< arc patern of base node flow row */
+   int*                  basearcpattern,     /**< arc pattern of base node flow row */
    int                   basenposuncap,      /**< number of uncapacitated vars in base node flow row with positive coeff*/
    int                   basenneguncap,      /**< number of uncapacitated vars in base node flow row with negative coeff*/
    SCIP_ROW*             row,                /**< row to compare against base node flow row */
@@ -2866,6 +2866,7 @@ SCIP_RETCODE extractNodes(
             /* compare row against arc pattern and calculate score */
             SCIP_CALL( getNodeSimilarityScore(scip, mcfdata, rowlen, arcpattern,
                        nposuncap, nneguncap, colrows[j], &score, &invertcommodity) );
+            assert( !SCIPisNegative(scip, score) );
 
             if ( score > bestscores[rowcom] )
             {
@@ -6238,10 +6239,10 @@ SCIP_RETCODE generateClusterCuts(
          SCIPdebugMessage(" -> found %d different deltas to try\n", ndeltas);
          for ( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
          {
-            SCIP_Real cutrhs;
-            SCIP_Real cutact;
-            SCIP_Bool success;
-            SCIP_Bool cutislocal;
+            SCIP_Real cutrhs = 0.0;
+            SCIP_Real cutact = 0.0;
+            SCIP_Bool success = FALSE;
+            SCIP_Bool cutislocal = FALSE;
             /* variables for flowcutset separation */
             SCIP_Real abscutrhs = 0.0;
             SCIP_Real relviolation = 0.0;
@@ -6258,11 +6259,14 @@ SCIP_RETCODE generateClusterCuts(
                                    &success, &cutislocal) );
             assert(ALLOWLOCAL || !cutislocal);
 
+            if ( ! success )
+               continue;
+
             if ( sepadata->separateflowcutset )
             {
                abscutrhs = REALABS(cutrhs);
                relviolation = (cutact - cutrhs) / MAX( abscutrhs , 1.0 );
-               if ( success && relviolation > bestrelviolation )
+               if ( relviolation > bestrelviolation )
                {
                   bestdelta = deltas[d];
                   bestrelviolation = relviolation;
@@ -6271,7 +6275,7 @@ SCIP_RETCODE generateClusterCuts(
             }
 
 
-            if ( success && SCIPisFeasGT(scip, cutact, cutrhs) )
+            if ( SCIPisFeasGT(scip, cutact, cutrhs) )
             {
                SCIPdebugMessage("success -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
                SCIP_CALL( addCut(scip, sepadata, sol, cutcoefs, cutrhs, cutislocal, ncuts) );
