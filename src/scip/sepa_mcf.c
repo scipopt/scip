@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.105 2009/03/23 11:10:21 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.106 2009/03/23 11:18:24 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -2307,10 +2307,10 @@ SCIP_RETCODE extractCapacities(
       }
 
       /* Ignore row if all of its flow variables have already been assigned to some other arc.
-       * Only accept the row as capacity constraint if at least 50% of its flow vars are
+       * Only accept the row as capacity constraint if at least 1/3 of its flow vars are
        * not yet assigned to some other arc.
        */
-      if ( nunassignedflowvars == 0 || nassignedflowvars >= MAX(nunassignedflowvars, 2) )
+      if ( nunassignedflowvars == 0 || nassignedflowvars >= nunassignedflowvars * 2 )
       {
          SCIPdebugMessage("discarding capacity candidate row %d <%s> [score:%g]: %d assigned flowvars, %d unassigned flowvars\n",
                           r, SCIProwGetName(capacityrow), mcfdata->capacityrowscores[r], nassignedflowvars, nunassignedflowvars);
