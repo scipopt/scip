@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.111 2009/03/23 13:52:19 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.112 2009/03/23 15:33:39 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -63,7 +63,7 @@
 #define SEPA_DELAY                        FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 /* changeable parameters*/
-#define DEFAULT_NCLUSTERS                     7   /**< number of clusters to generate in the shrunken network */
+#define DEFAULT_NCLUSTERS                     5   /**< number of clusters to generate in the shrunken network */
 #define DEFAULT_MAXWEIGHTRANGE            1e+06   /**< maximal valid range max(|weights|)/min(|weights|) of row weights for CMIR */
 #define DEFAULT_MAXTESTDELTA                 20   /**< maximal number of different deltas to try (-1: unlimited) for CMIR */
 #define DEFAULT_TRYNEGSCALING             FALSE   /**< should negative values also be tested in scaling? for CMIR */
@@ -72,7 +72,7 @@
 #define DEFAULT_MODELTYPE                     0   /**< model type of network (0: auto, 1:directed, 2:undirected) */
 #define DEFAULT_MAXSEPACUTS                 100   /**< maximal number of cuts separated per separation round (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTSROOT             200   /**< maximal number of cuts separated per separation round in root node (-1: unlimited) */
-#define DEFAULT_MAXINCONSISTENCYRATIO       0.03  /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
+#define DEFAULT_MAXINCONSISTENCYRATIO       0.02  /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
 #define DEFAULT_CHECKCUTSHORECONNECTIVITY   TRUE  /**< should we only separate if the cuts shores are connected */
 #define DEFAULT_SEPARATESINGLENODECUTS      TRUE  /**< should we separate inequalities based on single node cuts */
 #define DEFAULT_SEPARATEFLOWCUTSET          TRUE  /**< should we separate flowcutset inequalities */
@@ -1215,8 +1215,6 @@ SCIP_RETCODE extractCapacityRows(
             if ( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) == SCIP_VARTYPE_CONTINUOUS )
                nbadcoefs++;
          }
-
-
       }
 
       /* check if this is a valid capacity constraint */
