@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.102 2009/03/23 10:39:40 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.103 2009/03/23 10:48:22 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -1203,7 +1203,8 @@ SCIP_RETCODE extractCapacityRows(
             if ( ncolspercommodity[k] >= 2 )
                capacityrowsigns[r] |= UNDIRECTED;
          }
-         else if ( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) != SCIP_VARTYPE_CONTINUOUS )
+         else
+/*             if ( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) != SCIP_VARTYPE_CONTINUOUS ) */
          {
             SCIP_Real abscoef;
 
@@ -1212,28 +1213,18 @@ SCIP_RETCODE extractCapacityRows(
             if ( abscoef > maxabscapacitycoef )
                maxabscapacitycoef = abscoef;
 
-            /* an integer variable which is not a flow variable can be used as capacity variable */
+            /* a variable which is not a flow variable can be used as capacity variable */
             if ( rowvals[i] > 0.0 )
                nposcapacitycoefs++;
             else
                nnegcapacitycoefs++;
 
+            /* a continuous variable is considered to be not so nice*/
+            if ( SCIPvarGetType(SCIPcolGetVar(rowcols[i])) == SCIP_VARTYPE_CONTINUOUS )
+               nbadcoefs++;
          }
-         else if ( SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i]))  >= 1 )
-         {
-            /* */
-            /** @todo a continuous variable having a variable upper bound (VUB: f<=cx +d ) with
-               x beeing integer or binary behaves like a non-continous variable since
-               it will be substitued in the row aggregation of cmir */
-/*             printf(" found %d vubs for variable %s\n", SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i])), SCIPvarGetName(SCIPcolGetVar(rowcols[i])) ); */
-            nbadcoefs++;
-         }
-         else
-         {
-            /* a continuous variable which is not a flow variable without VUB cannot be used for anything: we assume this is bad! */
-/*             printf(" continous variable %s with %d vubs not flow variable\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i]))); */
-            nbadcoefs++;
-         }
+
+
       }
 
       /* check if this is a valid capacity constraint */
@@ -1257,8 +1248,8 @@ SCIP_RETCODE extractCapacityRows(
             capacityrowscores[r] += 1000.0;
 
          /* row has no continuous variables that are not flow variables: score +1000 */
-         if ( nbadcoefs == 0 )
-            capacityrowscores[r] += 1000.0;
+/*         if ( nbadcoefs == 0 )
+            capacityrowscores[r] += 1000.0;*/
 
          /* almost all commodities are covered: score +2000*ncoveredcommodities/(nactivecommodities+3)
           * use slightly increased denominator in order to not increase score too much for very few commodities
