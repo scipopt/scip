@@ -12,11 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.101 2009/03/20 10:11:03 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.102 2009/03/23 10:39:40 bzfraack Exp $"
 
-// #define COUNTNETWORKVARIABLETYPES
-// #define SCIP_DEBUG
-// #define MCF_DEBUG
+/* #define COUNTNETWORKVARIABLETYPES */
+/* #define SCIP_DEBUG */
+/* #define MCF_DEBUG */
 
 /**@file   sepa_mcf.c
  * @ingroup SEPARATORS
@@ -41,18 +41,18 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/* old algorithmic defines */
-/* #define SEPARATEKNAPSACKCOVERS */
-/* #define SEPARATEFLOWCUTS */
 
-/* algorithmic defines */
-// #define USEFLOWFORTIEBREAKING
-// #define USECAPACITYFORTIEBREAKING
-// #define TIEBREAKING
-#define NEWEXTRACTCAPACITIES
-#define SEPARATESINGLENODECUTS
+/* algorithmic defines in testing phase*/
+/* #define USEFLOWFORTIEBREAKING */
+/* #define USECAPACITYFORTIEBREAKING */
+/* #define TIEBREAKING */
+
 #define BETTERWEIGHTFORDEMANDNODES
 #define NEWINCONSISTENCYRATIO
+
+/* fixed algorithmic defines */
+#define SEPARATESINGLENODECUTS
+
 
 #include <assert.h>
 
@@ -78,7 +78,7 @@
 #define DEFAULT_MODELTYPE                     0   /**< model type of network (0: auto, 1:directed, 2:undirected) */
 #define DEFAULT_MAXSEPACUTS                 100   /**< maximal number of cuts separated per separation round (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTSROOT             200   /**< maximal number of cuts separated per separation round in root node (-1: unlimited) */
-#define DEFAULT_MAXINCONSISTENCYRATIO       0.05  /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
+#define DEFAULT_MAXINCONSISTENCYRATIO       0.03  /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
 #define DEFAULT_CHECKCUTSHORECONNECTIVITY   TRUE  /**< should we only separate if the cuts shores are connected */
 #define DEFAULT_SEPARATEFLOWCUTSET          TRUE  /**< should we separate flowcutset inequalities */
 #define DEFAULT_SEPARATEKNAPSACK            TRUE  /**< should we separate knapsack cover inequalities */
@@ -1225,13 +1225,13 @@ SCIP_RETCODE extractCapacityRows(
             /** @todo a continuous variable having a variable upper bound (VUB: f<=cx +d ) with
                x beeing integer or binary behaves like a non-continous variable since
                it will be substitued in the row aggregation of cmir */
-//             printf(" found %d vubs for variable %s\n", SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i])), SCIPvarGetName(SCIPcolGetVar(rowcols[i])) );
+/*             printf(" found %d vubs for variable %s\n", SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i])), SCIPvarGetName(SCIPcolGetVar(rowcols[i])) ); */
             nbadcoefs++;
          }
          else
          {
             /* a continuous variable which is not a flow variable without VUB cannot be used for anything: we assume this is bad! */
-//             printf(" continous variable %s with %d vubs not flow variable\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i])));
+/*             printf(" continous variable %s with %d vubs not flow variable\n", SCIPvarGetName(SCIPcolGetVar(rowcols[i])), SCIPvarGetNVubs( SCIPcolGetVar(rowcols[i]))); */
             nbadcoefs++;
          }
       }
@@ -2247,16 +2247,13 @@ SCIP_RETCODE extractCapacities(
    for ( r = 0; r < nrows; r++ )
       rowarcid[r] = -1;
 
-#ifdef NEWEXTRACTCAPACITIES
 #ifndef NDEBUG
    SCIP_Real* capacityrowscores  = mcfdata->capacityrowscores;
 #endif
    int        *capacitycands     = mcfdata->capacitycands;
    int        ncapacitycands     = mcfdata->ncapacitycands;
 
-   /** use capacity candidates in their score order
-   *   instead of looping through the used flow columns and their column vectors
-   *   ->  loop through the list of capacity cands in non-increasing score order
+   /**  ->  loop through the list of capacity cands in non-increasing score order
    */
    for ( i = 0; i < ncapacitycands; i++ )
    {
@@ -2366,130 +2363,6 @@ SCIP_RETCODE extractCapacities(
       /* increase number of arcs */
       mcfdata->narcs++;
    }
-#else
-   /**  looping through the used flow columns and their column vectors
-   *  search for a nice capacity constraint and assign arc-id
-   */
-   SCIP_Real* capacityrowscores  = mcfdata->capacityrowscores;
-   /* for each column, search for a capacity constraint */
-   for ( c = 0; c < ncols; c++ )
-   {
-      SCIP_ROW* bestcapacityrow;
-      SCIP_Real bestscore;
-      SCIP_ROW** colrows;
-      int collen;
-
-      /* ignore columns that are not flow variables */
-      if ( colcommodity[c] == -1 )
-         continue;
-
-      /* ignore columns that are already assigned to an arc */
-      if ( colarcid[c] >= 0 )
-         continue;
-
-      /* scan the column to search for valid capacity constraints */
-      bestcapacityrow = NULL;
-      bestscore = 0.0;
-      colrows = SCIPcolGetRows(cols[c]);
-      collen = SCIPcolGetNLPNonz(cols[c]);
-      for ( i = 0; i < collen; i++ )
-      {
-         r = SCIProwGetLPPos(colrows[i]);
-         assert(0 <= r && r < nrows);
-
-         /* row must not be already assigned */
-         assert((capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0);
-
-         /* ignore rows that are not capacity candidates */
-         if ( (capacityrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == 0 )
-            continue;
-
-         /* ignore discarded rows */
-         if ( (capacityrowsigns[r] & DISCARDED) != 0 )
-            continue;
-
-         /* ignore rows that are already used as flow conservation constraints */
-         if ( rowcommodity[r] != -1 )
-            continue;
-
-         /* check if this capacity candidate has better score */
-         assert(capacityrowscores[r] > 0.0);
-         if ( capacityrowscores[r] > bestscore )
-         {
-            bestcapacityrow = colrows[i];
-            bestscore = capacityrowscores[r];
-         }
-      }
-
-      /* if no capacity row has been found, leave the column unassigned */
-      if ( bestcapacityrow != NULL )
-      {
-         SCIP_COL** rowcols;
-         int rowlen;
-
-         /* store the row */
-         assert(mcfdata->narcs <= mcfdata->capacityrowssize);
-         if ( mcfdata->narcs == mcfdata->capacityrowssize )
-         {
-            mcfdata->capacityrowssize = MAX(2*mcfdata->capacityrowssize, mcfdata->narcs+1);
-            SCIP_CALL( SCIPreallocMemoryArray(scip, &mcfdata->capacityrows, mcfdata->capacityrowssize) );
-         }
-         assert(mcfdata->narcs < mcfdata->capacityrowssize);
-         mcfdata->capacityrows[mcfdata->narcs] = bestcapacityrow;
-
-         /* assign the capacity row to a new arc id */
-         r = SCIProwGetLPPos(bestcapacityrow);
-         assert(0 <= r && r < nrows);
-         rowarcid[r] = mcfdata->narcs;
-
-         /* decide which sign to use */
-         if ( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 )
-            capacityrowsigns[r] |= RHSASSIGNED;
-         else
-         {
-            assert((capacityrowsigns[r] & LHSPOSSIBLE) != 0);
-            capacityrowsigns[r] |= LHSASSIGNED;
-         }
-
-         SCIPdebugMessage("assigning capacity row %d <%s> with sign %+d to arc %d [score:%g]\n",
-                          r, SCIProwGetName(bestcapacityrow), (capacityrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1, mcfdata->narcs,
-                          mcfdata->capacityrowscores[r]);
-
-         /* assign all involved flow variables to the new arc id */
-         /*SCIPdebugMessage(" -> flow:");*/
-         rowcols = SCIProwGetCols(bestcapacityrow);
-         rowlen = SCIProwGetNLPNonz(bestcapacityrow);
-         for ( i = 0; i < rowlen; i++ )
-         {
-            int rowc;
-
-            rowc = SCIPcolGetLPPos(rowcols[i]);
-            assert(0 <= rowc && rowc < ncols);
-
-            /* due to aggregations in preprocessing it may happen that a flow variable appears in multiple capacity constraints;
-            * in this case, assign it to the first that has been found, and count the number of occurrences
-            */
-            if ( colcommodity[rowc] >= 0 )
-            {
-               if ( colarcid[rowc] == -1 )
-               {
-                  /*SCIPdebug( printf(" x%d<%s>[%d]", rowc, SCIPvarGetName(SCIPcolGetVar(rowcols[i])), colcommodity[rowc]) );*/
-                  colarcid[rowc] = mcfdata->narcs;
-               }
-            }
-         }
-         /*SCIPdebug( printf("\n") );*/
-
-         /* increase number of arcs */
-         mcfdata->narcs++;
-      }
-      else
-      {
-         SCIPdebugMessage("no capacity row found for column x%d <%s> in commodity %d\n", c, SCIPvarGetName(SCIPcolGetVar(cols[c])), colcommodity[c]);
-      }
-   }
-
-#endif
    return SCIP_OKAY;
 }  /* END extractcapacities */
 
