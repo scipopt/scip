@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.110 2009/03/23 11:50:46 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.111 2009/03/23 13:52:19 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -46,12 +46,7 @@
 /* #define USEFLOWFORTIEBREAKING */
 /* #define USECAPACITYFORTIEBREAKING */
 /* #define TIEBREAKING */
-
 #define BETTERWEIGHTFORDEMANDNODES
-
-/* fixed algorithmic defines */
-#define SEPARATESINGLENODECUTS
-
 
 #include <assert.h>
 
@@ -79,6 +74,7 @@
 #define DEFAULT_MAXSEPACUTSROOT             200   /**< maximal number of cuts separated per separation round in root node (-1: unlimited) */
 #define DEFAULT_MAXINCONSISTENCYRATIO       0.03  /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
 #define DEFAULT_CHECKCUTSHORECONNECTIVITY   TRUE  /**< should we only separate if the cuts shores are connected */
+#define DEFAULT_SEPARATESINGLENODECUTS      TRUE  /**< should we separate inequalities based on single node cuts */
 #define DEFAULT_SEPARATEFLOWCUTSET          TRUE  /**< should we separate flowcutset inequalities */
 #define DEFAULT_SEPARATEKNAPSACK            TRUE  /**< should we separate knapsack cover inequalities */
 
@@ -180,8 +176,9 @@ struct SCIP_SepaData
    int                   maxsepacutsroot;            /**< maximal number of cmir cuts separated per separation round in root node -- default separation */
    SCIP_Real             maxinconsistencyratio;      /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) for separation at all*/
    SCIP_Bool             checkcutshoreconnectivity;  /**< should we only separate if the cuts shores are connected */
-   SCIP_Bool             separateflowcutset;         /**< should we separate flowcutset inequalities on the network cuts */
-   SCIP_Bool             separateknapsack;           /**< should we separate knapsack cover inequalities on the network cuts */
+   SCIP_Bool             separatesinglenodecuts;     /**< should we separate inequalities based on single node cuts ? */
+   SCIP_Bool             separateflowcutset;         /**< should we separate flowcutset inequalities on the network cuts ? */
+   SCIP_Bool             separateknapsack;           /**< should we separate knapsack cover inequalities on the network cuts ? */
    SCIP_Bool             lastroundsuccess;           /**< did we find a cut in the last round? */
    MCFEFFORTLEVEL        effortlevel;                /**< effort level of separation (off / aggressive / default) */
 };
@@ -5945,16 +5942,14 @@ SCIP_RETCODE generateClusterCuts(
          }
          assert (1 <= nnodesinS && nnodesinS <= nnodes-1);
 
-#ifdef SEPARATESINGLENODECUTS
          /* ignore cuts with only a single node in S or in T, since these have
           * already been tried as single node cuts
           */
-         if ( nodepartition != NULL && (nnodesinS == 1 || nnodesinS == nnodes-1) )
+         if ( sepadata->separatesinglenodecuts && nodepartition != NULL && (nnodesinS == 1 || nnodesinS == nnodes-1) )
          {
             SCIPdebugMessage(" -> shore S or T has only one node - skip partition.\n");
             break;
          }
-#endif
 
          /* check if there is at least one useful commodity */
          if ( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
@@ -6567,10 +6562,10 @@ SCIP_RETCODE separateCuts(
             continue;
          }
 
-#ifdef SEPARATESINGLENODECUTS
          /* enumerate single node cuts */
-         SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, NULL, &ncuts) );
-#endif
+         if( sepadata->separatesinglenodecuts )
+            SCIP_CALL( generateClusterCuts(scip, sepadata, sol, mcfnetwork, NULL, &ncuts) );
+
 
          /* partition nodes into a small number of clusters */
          SCIP_CALL( nodepartitionCreate(scip, mcfnetwork, &nodepartition,
@@ -6797,6 +6792,10 @@ SCIP_RETCODE SCIPincludeSepaMcf(
                                "separating/mcf/checkcutshoreconnectivity",
                                "should we separate only if the cuts shores are connected?",
                                &sepadata->checkcutshoreconnectivity, TRUE, DEFAULT_CHECKCUTSHORECONNECTIVITY, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+                               "separating/mcf/separatesinglenodecuts",
+                               "should we separate inequalities based on single-node cuts?",
+                               &sepadata->separatesinglenodecuts, TRUE, DEFAULT_SEPARATESINGLENODECUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
                                "separating/mcf/separateflowcutset",
                                "should we separate flowcutset inequalities on the network cuts?",
