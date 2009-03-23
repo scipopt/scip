@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.107 2009/03/23 11:22:09 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.108 2009/03/23 11:37:39 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -105,7 +105,7 @@
 #define UNCAPACITATEDARCSTRESHOLD           0.8 /**< treshold for the percentage of commodities an uncapacitated arc should appear in */
 #define HASHSIZE_NODEPAIRS               131101 /**< minimal size of hash table for nodepairs */
 
-/*#define OUTPUTGRAPH*/                     /* should a .gml graph of the network be generated for debugging purposes? */
+/* #define OUTPUTGRAPH                                   should a .gml graph of the network be generated for debugging purposes? */
 
 
 #ifdef SCIP_DEBUG
@@ -1223,7 +1223,8 @@ SCIP_RETCODE extractCapacityRows(
       }
 
       /* check if this is a valid capacity constraint */
-      if ( i == rowlen && rowsign != 0 && nposflowcoefs + nnegflowcoefs > 0 )
+      /* it has at least one flow variable */
+      if ( rowsign != 0 && nposflowcoefs + nnegflowcoefs > 0 )
       {
          SCIP_Real commodityexcessratio;
 
@@ -1308,7 +1309,7 @@ SCIP_RETCODE extractCapacityRows(
                directedcandsscore += capacityrowscores[r];
          }
       }
-      else if ( i == rowlen )
+      else
       {
          SCIPdebugMessage("row <%s>: rowsign = %d  nposflowcoefs = %d  nnegflowcoefs = %d -> discard\n",
                           SCIProwGetName(row), rowsign, nposflowcoefs, nnegflowcoefs);
