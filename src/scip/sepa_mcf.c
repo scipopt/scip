@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.103 2009/03/23 10:48:22 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.104 2009/03/23 10:54:41 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -1230,6 +1230,8 @@ SCIP_RETCODE extractCapacityRows(
       /* check if this is a valid capacity constraint */
       if ( i == rowlen && rowsign != 0 && nposflowcoefs + nnegflowcoefs > 0 )
       {
+         SCIP_Real commodityexcessratio;
+
          capacityrowsigns[r] |= rowsign;
          capacitycands[mcfdata->ncapacitycands] = r;
          mcfdata->ncapacitycands++;
@@ -1237,9 +1239,16 @@ SCIP_RETCODE extractCapacityRows(
          /* calculate capacity row score */
          capacityrowscores[r] = 1.0;
 
+         /* calculate mean commodity excess: in the (un)directed case there should be exactly */
+         /* one (two) flow variable per commodity. in this case commodityexcessratio = 0   */
+         commodityexcessratio =
+               ABS((nposflowcoefs + nnegflowcoefs)/(SCIP_Real)ncoveredcommodities - maxcolspercommoditylimit);
+
+         capacityrowscores[r] += 1000.0 * MAX(0.0, 2.0 - commodityexcessratio);
+
          /* row has at most 'maxcolspercommoditylimit' columns per commodity: score +1000 */
-         if ( maxcolspercommodity[r] <= maxcolspercommoditylimit )
-            capacityrowscores[r] += 1000.0;
+/*         if ( maxcolspercommodity[r] <= maxcolspercommoditylimit )
+            capacityrowscores[r] += 1000.0;*/
 
          /* row is of type f - c*x <= b: score +1000 */
          if ( (capacityrowsigns[r] & RHSPOSSIBLE) != 0 && nnegflowcoefs == 0 && nposcapacitycoefs == 0 && nnegcapacitycoefs > 0 )
