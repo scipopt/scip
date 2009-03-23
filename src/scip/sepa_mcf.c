@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.108 2009/03/23 11:37:39 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.109 2009/03/23 11:43:11 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -2211,7 +2211,10 @@ SCIP_RETCODE extractCapacities(
 
    unsigned char*    capacityrowsigns   = mcfdata->capacityrowsigns;
    int*              colcommodity       = mcfdata->colcommodity;
+#ifndef NDEBUG
+   unsigned char*    flowrowsigns       = mcfdata->capacityrowsigns;
    int*              rowcommodity       = mcfdata->rowcommodity;
+#endif
 
    int* colarcid;
    int* rowarcid;
@@ -2274,9 +2277,9 @@ SCIP_RETCODE extractCapacities(
       assert((capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0);
       assert(rowarcid[r] == -1);
 
-      /* ignore rows that are already used as flow conservation constraints */
-      if ( rowcommodity[r] != -1 )
-         continue;
+      /* row should not be a flow conservation constraint */
+      assert( rowcommodity[r] == -1 );
+      assert( (flowrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0 );
 
       /* count the number of already assigned and not yet assigned flow variables */
       rowcols = SCIProwGetCols(capacityrow);
