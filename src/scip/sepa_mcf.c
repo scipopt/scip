@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.104 2009/03/23 10:54:41 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.105 2009/03/23 11:10:21 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -2460,6 +2460,8 @@ SCIP_RETCODE getNodeSimilarityScore(
    MCFDATA*              mcfdata,            /**< internal MCF extraction data to pass to subroutines */
    int                   baserowlen,         /**< length of base node flow row */
    int*                  basearcpattern,     /**< arc patern of base node flow row */
+   int                   basenposuncap,      /**< number of uncapacitated vars in base node flow row with positive coeff*/
+   int                   basenneguncap,      /**< number of uncapacitated vars in base node flow row with negative coeff*/
    SCIP_ROW*             row,                /**< row to compare against base node flow row */
    SCIP_Real*            score,              /**< pointer to store the similarity score */
    SCIP_Bool*            invertcommodity     /**< pointer to store whether the arcs in the commodity of the row have
@@ -2476,6 +2478,9 @@ SCIP_RETCODE getNodeSimilarityScore(
 
    SCIP_COL** rowcols;
    SCIP_Real* rowvals;
+   int nposuncap;
+   int nneguncap;
+   int ncols;
    int rowlen;
    int rowcom;
    int rowcomsign;
@@ -2510,6 +2515,9 @@ SCIP_RETCODE getNodeSimilarityScore(
    rowlen = SCIProwGetNLPNonz(row);
    incompatible = FALSE;
    noverlappingarcs = 0;
+   nposuncap=0;
+   nneguncap=0;
+   ncols = SCIPgetNLPCols(scip);
    for ( i = 0; i < rowlen; i++ )
    {
       int c;
@@ -2519,17 +2527,23 @@ SCIP_RETCODE getNodeSimilarityScore(
       c = SCIPcolGetLPPos(rowcols[i]);
       assert(0 <= c && c < SCIPgetNLPCols(scip));
 
-      arcid = colarcid[c];
-      if ( arcid == -1 )
-         continue;
-      assert(arcid < narcs);
-
       /* get the sign of the coefficient in the flow conservation constraint */
       valsign = (rowvals[i] > 0.0 ? +1 : -1);
       if ( (flowrowsigns[r] & LHSASSIGNED) != 0 )
          valsign *= -1;
       if ( (flowrowsigns[r] & INVERTED) != 0 )
          valsign *= -1;
+
+      arcid = colarcid[c];
+      if ( arcid == -1 )
+      {
+         if( valsign > 0.0 )
+            nposuncap++;
+         else
+            nneguncap++;
+         continue;
+      }
+      assert(arcid < narcs);
 
       /* check if this arc is also member of the base row */
       if ( basearcpattern[arcid] != 0 )
@@ -2597,17 +2611,39 @@ SCIP_RETCODE getNodeSimilarityScore(
       arcpattern[arcid] = 0;
    }
 
-   /* calculate the score: maximize overlap and use minimal number of non-overlapping entries as tie breaker */
+/* calculate the score: maximize overlap and use minimal number of non-overlapping entries as tie breaker */
    if ( !incompatible && overlap > 0.0 )
    {
       assert(overlap <= rowlen);
       assert(overlap <= baserowlen);
       assert(noverlappingarcs >= 1);
-      *score = overlap - (rowlen + baserowlen - 2.0*overlap)/(narcs+1.0);
-      if ( noverlappingarcs >= 2 ) /* only one overlapping arc is very dangerous, since this can also be the other end node of the arc */
-         *score += 1000.0;
-      *score = MAX(*score, 1e-6); /* score may get negative due to many columns in row without an arcid */
+
       *invertcommodity = (rowcomsign == -1);
+
+      /* only one overlapping arc is very dangerous,
+      since this can also be the other end node of the arc */
+      if ( noverlappingarcs >= 2 )
+         *score += 1000.0;
+
+      /* flow variables with arc-id */
+      int rowarcs = rowlen - nposuncap - nneguncap;
+      int baserowarcs = baserowlen - basenposuncap - basenneguncap;
+
+      assert(rowarcs >= 0 && baserowarcs >= 0 );
+      /* in the ideal undirected case there are two flow variables with the same arc-id */
+      if ( modeltype == SCIP_MCFMODELTYPE_DIRECTED )
+         *score = overlap - (rowarcs + baserowarcs - 2.0 * overlap)/(2.0 * ncols + 1.0);
+      else
+         *score = overlap - (rowarcs + baserowarcs - 4.0 * overlap)/(2.0 * ncols + 1.0);
+
+      /* Also use number of uncapacitated flowvars (variables without arcid) as tiebreaker */
+      if(*invertcommodity)
+         *score += 1.0 - (ABS(nneguncap - basenposuncap) + ABS(nposuncap - basenneguncap))/(2.0 * ncols + 1.0);
+      else
+         *score += 1.0 - (ABS(nposuncap - basenposuncap) + ABS(nneguncap - basenneguncap))/(2.0 * ncols + 1.0);
+
+      *score = MAX(*score, 1e-6); /* score may get negative due to many columns having the same arcid */
+
    }
 
    SCIPdebugMessage(" -> node similarity: row <%s>: incompatible=%d overlap=%g rowlen=%d baserowlen=%d score=%g\n",
@@ -2646,6 +2682,8 @@ SCIP_RETCODE extractNodes(
    int ncols;
 
    int* arcpattern;
+   int  nposuncap;
+   int  nneguncap;
    SCIP_ROW** bestflowrows;
    SCIP_Real* bestscores;
    SCIP_Bool* bestinverted;
@@ -2721,6 +2759,9 @@ SCIP_RETCODE extractNodes(
 
       /* get the arc pattern of the flow row */
       BMSclearMemoryArray(arcpattern, narcs);
+      nposuncap=0;
+      nneguncap=0;
+
       rowcols = SCIProwGetCols(rows[r]);
       rowvals = SCIProwGetVals(rows[r]);
       rowlen = SCIProwGetNLPNonz(rows[r]);
@@ -2747,6 +2788,14 @@ SCIP_RETCODE extractNodes(
                arcpattern[arcid]++;
             else
                arcpattern[arcid]--;
+         }
+         /* we also count variables that have no arc -- these have no capacity constraint --> uncapacitated */
+         else
+         {
+            if ( modeltype == SCIP_MCFMODELTYPE_UNDIRECTED || rowscale * rowvals[i] > 0.0 )
+               nposuncap++;
+            else
+               nneguncap++;
          }
       }
 
@@ -2816,7 +2865,8 @@ SCIP_RETCODE extractNodes(
                continue;
 
             /* compare row against arc pattern and calculate score */
-            SCIP_CALL( getNodeSimilarityScore(scip, mcfdata, rowlen, arcpattern, colrows[j], &score, &invertcommodity) );
+            SCIP_CALL( getNodeSimilarityScore(scip, mcfdata, rowlen, arcpattern,
+                       nposuncap, nneguncap, colrows[j], &score, &invertcommodity) );
 
             if ( score > bestscores[rowcom] )
             {
