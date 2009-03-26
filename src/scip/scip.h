@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.337 2009/03/10 10:24:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.338 2009/03/26 19:20:38 bzfgamra Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3305,6 +3305,12 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+extern
+SCIP_Bool SCIPisLPRelax(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets objective value of current LP (which is the sum of column and loose objective value) */
 extern
 SCIP_Real SCIPgetLPObjval(
@@ -3326,6 +3332,12 @@ SCIP_Real SCIPgetLPLooseObjval(
 /** gets pseudo objective value of the current LP */
 extern
 SCIP_Real SCIPgetPseudoObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+extern
+SCIP_Bool SCIPisRootLPRelax(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.c,v 1.5 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.c,v 1.6 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   pricer_coloring.c
  * @brief  coloring variable pricer
@@ -42,6 +42,7 @@
 #include "probdata_coloring.h"
 #include "reader_col.h"
 #include "scip/cons_linear.h"
+#include "scip/scip.h"
 #include "cons_storeGraph.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,6 +98,7 @@ struct SCIP_PricerData
    int              maxroundsroot;           /* maximum number of pricing rounds in the root, -1 for infinity, attention: positive value may lead to a non-optimal solution */
    int              maxroundsnode;           /* maximum number of pricing rounds in the B&B-nodes, -1 for infinity, attention: positive value may lead to a non-optimal solution */
    int              maxtcliquenodes;         /* maximum number of nodes used in the tclique algorithm for solving the stable set problem */
+   SCIP_Real        lowerbound;              /* lower bound computed by the pricer */
 };
 
 
@@ -355,6 +357,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
    int              nmaxstablesetnodes;    /* number of nodes in the maximum weight clique */
    TCLIQUE_WEIGHT   maxstablesetweight;    /* weight of the maximum weight clique */
    TCLIQUE_STATUS   status;                /* status of clique-computation */
+   SCIP_Real        maxredcost;
 
    SCIP_VAR*        var;                   /* pointer to the new created variable */
    int              setnumber;             /* index of the new created variable */
@@ -374,19 +377,22 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
    assert(pricerdata != NULL);
 
    /* count down number of remaining pricing rounds at the current node */
-   if ( pricerdata->bbnode == SCIPgetCurrentNode(scip) && pricerdata->noderounds > 0 )
+   if ( pricerdata->bbnode == SCIPgetCurrentNode(scip) )
    {
-      pricerdata->noderounds--;
+      if ( pricerdata->noderounds > 0 )
+         pricerdata->noderounds--;
    }
    else
    {
       if ( pricerdata->bbnode == NULL )
       {
          pricerdata->noderounds = pricerdata->maxroundsroot;
+         pricerdata->lowerbound = - SCIPinfinity(scip);
       }
       else
       {
          pricerdata->noderounds = pricerdata->maxroundsnode;
+         pricerdata->lowerbound = - SCIPinfinity(scip);
       }
       pricerdata->bbnode = SCIPgetCurrentNode(scip);
    }
@@ -394,9 +400,16 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
    if ( pricerdata->noderounds == 0 )
    {
       SCIPdebugMessage("maxrounds reached, pricing interrupted\n");
+
+      /* set result and lowerbound pointer */
+      *result = SCIP_DIDNOTRUN;
+      *lowerbound = pricerdata->lowerbound;
+
       return SCIP_OKAY;
    }
 
+   /* set result pointer */
+   *result = SCIP_SUCCESS;
 
    /* get graph and number of nodes */
    graph = COLORconsGetCurrentGraph(scip);
@@ -490,6 +503,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
    if ( pricerdata->nstablesetsfound == 0 && pricerdata->usetclique )
    {
       SCIPdebugMessage("starting tclique algorithm...\n");
+      maxredcost = 0;
       /* get the complementary graph from the current cons */
       cgraph = COLORconsGetComplementaryGraph(scip);
       SCIP_CALL( SCIPallocBufferArray(scip, &maxstablesetnodes, nnodes) );
@@ -563,6 +577,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
             {
                maxstablesetweightreal += pricerdata->pi[pricerdata->improvingstablesets[i][j]];
             }
+            if ( maxredcost < maxstablesetweightreal )
+            {
+               maxredcost = maxstablesetweightreal;
+            }
             if ( SCIPisFeasGT(scip, maxstablesetweightreal, 1.0) )
             {
                setnumber = -1;
@@ -589,14 +607,34 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
             }
          }
       }
+      if ( SCIPisFeasGT(scip, maxredcost, 1.0) )
+      {
+         if ( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         {
+            pricerdata->lowerbound = MAX( pricerdata->lowerbound, (SCIPgetLPObjval(scip) + ((1.0 - maxredcost) * SCIPgetPrimalbound(scip))) );
+         }
+      }
    }
+
+   
    return SCIP_OKAY;
 }
+
+
+/** farkas pricing method of variable pricer for infeasible LPs */
+static
+SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
+{  
+
+   COLORreaderCreateSetsForUncoveredNodes(scip, COLORconsGetCurrentGraph(scip));
+
+   return SCIP_OKAY;
+}
+
 
 /* define not used callbacks as NULL */
 #define pricerInitColoring NULL
 #define pricerExitColoring NULL
-#define pricerFarkasColoring NULL
 
 /** method to call, when the maximal number of variables priced in each round is changed */
 static

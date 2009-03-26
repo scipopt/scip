@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloringplugins.h,v 1.2 2008/09/29 19:49:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: coloringplugins.h,v 1.3 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   coloringplugins.h
  * @brief  SCIP plugins for coloring
@@ -101,6 +101,7 @@
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_redcost.h"
 #include "scip/sepa_strongcg.h"
+#include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
 #include "cons_storeGraph.h"
 #include "branch_coloring.h"

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.26 2008/09/29 20:41:26 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.27 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -294,7 +294,9 @@ SCIP_Bool SCIPpricerIsActive(
 SCIP_RETCODE SCIPpricerRedcost(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_RESULT*          result              /**< result of the pricing process */    
    )
 {
    int oldnvars;
@@ -304,6 +306,8 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(pricer->pricerredcost != NULL);
    assert(set != NULL);
    assert(prob != NULL);
+   assert(lowerbound != NULL);
+   assert(result != NULL);
 
    SCIPdebugMessage("executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
    
@@ -313,7 +317,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    SCIPclockStart(pricer->pricerclock, set);
    
    /* call external method */
-   SCIP_CALL( pricer->pricerredcost(set->scip, pricer) );
+   SCIP_CALL( pricer->pricerredcost(set->scip, pricer, lowerbound, result) );
    
    /* stop timing */
    SCIPclockStop(pricer->pricerclock, set);
@@ -369,10 +373,18 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_PRICESTORE*      pricestore          /**< pricing storage */
+   SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_RESULT*          result              /**< result of the pricing process */
    )
 {
    assert(pricer != NULL);
+   assert(lowerbound != NULL);
+   assert(result != NULL);
+
+   /* set lowerbound and result pointer */
+   *lowerbound = - SCIPsetInfinity(set);
+   *result = SCIP_SUCCESS;
 
    /* check if pricer should be delayed */
    if( pricer->delay && SCIPpricestoreGetNVars(pricestore) > 0 )
@@ -384,7 +396,8 @@ SCIP_RETCODE SCIPpricerExec(
    }
    else
    {
-      SCIP_CALL( SCIPpricerRedcost(pricer, set, prob) );
+      *result = SCIP_DIDNOTRUN;
+      SCIP_CALL( SCIPpricerRedcost(pricer, set, prob, lowerbound, result) );
    }
 
    return SCIP_OKAY;

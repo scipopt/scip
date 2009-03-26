@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.9 2008/10/09 19:32:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.10 2009/03/26 19:20:38 bzfgamra Exp $"
 
 /**@file   sepa_redcost.c
  * @ingroup SEPARATORS
@@ -114,6 +114,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
 
    /* reduced cost strengthening can only be applied, if we have a finite upper bound on the LP value */
    if( SCIPisInfinity(scip, cutoffbound) )
+      return SCIP_OKAY;
+
+   /* only call separator, if the current LP is a valid relaxation */
+   if( !SCIPisLPRelax(scip) )
       return SCIP_OKAY;
 
    /* get LP columns */

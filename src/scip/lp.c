@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.307 2009/03/19 12:04:56 bzforlow Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.308 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6125,6 +6125,8 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->primalfeasible = TRUE;
    (*lp)->dualfeasible = TRUE;
    (*lp)->solisbasic = FALSE;
+   (*lp)->rootlpisrelax = TRUE;
+   (*lp)->isrelax = TRUE;
    (*lp)->probing = FALSE;
    (*lp)->diving = FALSE;
    (*lp)->divingobjchg = FALSE;
@@ -10841,6 +10843,27 @@ SCIP_LPSOLSTAT SCIPlpGetSolstat(
    return (lp->flushed ? lp->lpsolstat : SCIP_LPSOLSTAT_NOTSOLVED);
 }
 
+/** sets whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+void SCIPlpSetIsRelax(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             isrelax             /**< is the current lp a relaxation? */
+   )
+{
+   assert(lp != NULL);
+
+   lp->isrelax = isrelax;
+}
+
+/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+SCIP_Bool SCIPlpIsRelax(
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->isrelax;
+}
+
 /** gets objective value of current LP */
 SCIP_Real SCIPlpGetObjval(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -13806,6 +13829,27 @@ SCIP_Real SCIPlpGetObjNorm(
    assert(lp != NULL);
 
    return SQRT(lp->objsqrnorm);
+}
+
+/** sets whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+void SCIPlpSetRootLPIsRelax(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             isrelax             /**< is the root lp a relaxation of the problem? */
+   )
+{
+   assert(lp != NULL);
+
+   lp->rootlpisrelax = isrelax;
+}
+
+/** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+SCIP_Bool SCIPlpIsRootLPRelax(
+   SCIP_LP*              lp                  /**< LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->rootlpisrelax;
 }
 
 /** gets the objective value of the root node LP; returns SCIP_INVALID if the root node LP was not (yet) solved */

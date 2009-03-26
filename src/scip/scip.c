@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.499 2009/03/13 17:20:20 bzforlow Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.500 2009/03/26 19:20:38 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9474,6 +9474,16 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
       return SCIP_LPSOLSTAT_NOTSOLVED;
 }
 
+/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+SCIP_Bool SCIPisLPRelax(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisLPRelax", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsRelax(scip->lp);
+}
+
 /** gets objective value of current LP (which is the sum of column and loose objective value) */
 SCIP_Real SCIPgetLPObjval(
    SCIP*                 scip                /**< SCIP data structure */
@@ -9512,6 +9522,16 @@ SCIP_Real SCIPgetPseudoObjval(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPseudoObjval", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPlpGetPseudoObjval(scip->lp, scip->set);
+}
+
+/** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+SCIP_Bool SCIPisRootLPRelax(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisRootLPRelax", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPlpIsRootLPRelax(scip->lp);
 }
 
 /** gets the objective value of the root node LP; returns SCIP_INVALID if the root node LP was not (yet) solved */
@@ -11488,11 +11508,13 @@ SCIP_RETCODE solveProbingLP(
       {
          SCIP_Bool mustsepa;
          int npricedcolvars;
+         SCIP_Real lowerbound;
+         SCIP_RESULT result;
 
          mustsepa = FALSE;
          SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp,
                scip->pricestore, scip->branchcand, scip->eventqueue, pretendroot, displayinfo, maxpricerounds,
-               &npricedcolvars, &mustsepa, lperror) );
+               &npricedcolvars, &mustsepa, &lowerbound, lperror, &result) );
 
 	 /* mark the probing node again to update the LP size in the node and the tree path */
 	 if( !(*lperror) )
@@ -11505,7 +11527,7 @@ SCIP_RETCODE solveProbingLP(
    /* analyze an infeasible LP (not necessary in the root node)
     * the infeasibility in probing is only proven, if all columns are in the LP (and no external pricers exist)
     */
-   if( !(*lperror) && !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0
+   if( !(*lperror) && !scip->set->misc_exactsolve && SCIPtreeGetCurrentDepth(scip->tree) > 0 && SCIPlpIsRelax(scip->lp)
       && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
          || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT)
       && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )

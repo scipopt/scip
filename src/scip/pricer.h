@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.24 2008/04/17 17:49:13 bzfpfets Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.25 2009/03/26 19:20:38 bzfgamra Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
+#include "scip/type_result.h"
 #include "scip/type_set.h"
 #include "scip/type_lp.h"
 #include "scip/type_prob.h"
@@ -112,7 +113,9 @@ extern
 SCIP_RETCODE SCIPpricerRedcost(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_RESULT*          result              /**< result of the pricing process */    
    );
 
 /** calls farkas pricing method of variable pricer */
@@ -130,7 +133,9 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_PRICESTORE*      pricestore          /**< pricing storage */
+   SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_RESULT*          result              /**< result of the pricing process */
    );
 
 /** sets priority of variable pricer */

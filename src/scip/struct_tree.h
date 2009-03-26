@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.39 2008/04/17 17:49:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.40 2009/03/26 19:20:38 bzfgamra Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -193,7 +193,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasflushed;/**< was the LP flushed before we entered the probing mode? */
    SCIP_Bool             probinglpwassolved; /**< was the LP solved before we entered the probing mode? */
    SCIP_Bool             probingloadlpistate;/**< must the LP state be reloaded because of a backtrack in probing? */
+   SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
 };
-
 
 #endif

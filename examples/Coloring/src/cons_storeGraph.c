@@ -403,7 +403,6 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
    int   inserted;
    int   nnodes;
 
-   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
@@ -418,7 +417,7 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
 
    SCIPdebugMessage("Activating store graph constraint: <%s(%d,%d)> [stack size: %d].\n", SCIPconsGetName(cons), 
                          (consdata->node1+1), (consdata->node2+1), conshdlrData->nstack+1);
-
+   
    /* put constraint on the stack */
    if ( conshdlrData->nstack >= conshdlrData->maxstacksize )
    {

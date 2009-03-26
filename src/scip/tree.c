@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.213 2009/02/19 14:15:05 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.214 2009/03/26 19:20:38 bzfgamra Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1889,6 +1889,8 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    {
       SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
    }
+   else if ( !(lp->isrelax) )
+      return SCIP_OKAY;
    else
       lpobjval = SCIPlpGetObjval(lp, set);
 
@@ -3892,6 +3894,7 @@ SCIP_RETCODE SCIPtreeCreate(
    (*tree)->probinglpwasflushed = FALSE;
    (*tree)->probinglpwassolved = FALSE;
    (*tree)->probingloadlpistate = FALSE;
+   (*tree)->probinglpwasrelax = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3968,6 +3971,7 @@ SCIP_RETCODE SCIPtreeClear(
    tree->probinglpwasflushed = FALSE;
    tree->probinglpwassolved = FALSE;
    tree->probingloadlpistate = FALSE;
+   tree->probinglpwasrelax = FALSE;
 
    return SCIP_OKAY;
 }
@@ -4650,6 +4654,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
       tree->probinglpwasflushed = lp->flushed;
       tree->probinglpwassolved = lp->solved;
       tree->probingloadlpistate = FALSE;
+      tree->probinglpwasrelax = lp->isrelax;
 
       /* remember the LP state in order to restore the LP solution quickly after probing */
       if( lp->flushed && lp->solved )
@@ -4935,7 +4940,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          /* reset the LP state before probing started */
          SCIP_CALL( SCIPlpSetState(lp, blkmem, set, tree->probinglpistate) );
          SCIP_CALL( SCIPlpFreeState(lp, blkmem, &tree->probinglpistate) );
-
+         SCIPlpSetIsRelax(lp, tree->probinglpwasrelax);
          /* resolve LP to reset solution */
          SCIP_CALL( SCIPlpSolveAndEval(lp, blkmem, set, stat, prob, -1, FALSE, FALSE, &lperror) );
          if( lperror )
@@ -4964,6 +4969,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    tree->probinglpwasflushed = FALSE;
    tree->probinglpwassolved = FALSE;
    tree->probingloadlpistate = FALSE;
+   tree->probinglpwasrelax = FALSE;
 
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );

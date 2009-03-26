@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.132 2008/12/09 09:03:31 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.133 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -872,6 +872,32 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 extern
 SCIP_LPSOLSTAT SCIPlpGetSolstat(
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** sets whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+extern
+void SCIPlpSetIsRelax(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             isrelax             /**< is the current lp a relaxation? */
+   );
+
+/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+extern
+SCIP_Bool SCIPlpIsRelax(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** sets whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+extern
+void SCIPlpSetRootLPIsRelax(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             isrelax             /**< is the root lp a relaxation of the problem? */
+   );
+
+/** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+extern 
+SCIP_Bool SCIPlpIsRootLPRelax(
+   SCIP_LP*              lp                  /**< LP data */
    );
 
 /** gets objective value of current LP */

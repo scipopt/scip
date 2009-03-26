@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.9 2008/09/22 19:16:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.10 2009/03/26 19:20:38 bzfgamra Exp $"
 
 /**@file   prop_rootredcost.c
  * @ingroup PROPAGATORS
@@ -110,6 +110,10 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
    /* propagator can only be applied during solving stage */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* propagator can only be applied if the root lp was a valid relaxation */
+   if ( !SCIPisRootLPRelax(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

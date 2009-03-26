@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.26 2008/09/26 16:52:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.27 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -150,7 +150,9 @@ public:
     */
    virtual SCIP_RETCODE scip_redcost(
       SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRICER*       pricer              /**< the variable pricer itself */
+      SCIP_PRICER*       pricer,             /**< the variable pricer itself */
+      SCIP_Real*         lowerbound,         /**< pointer to store a lower bound found by the pricer */
+      SCIP_RESULT*       result              /**< pointer to store the result of the pricer call */
       ) = 0;
    
    /** farkas pricing method of variable pricer for infeasible LPs

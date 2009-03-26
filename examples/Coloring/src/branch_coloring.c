@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.c,v 1.6 2008/09/29 19:49:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_coloring.c,v 1.7 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   branch_coloring.c
  * @brief  coloring branching rule
@@ -264,13 +264,83 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    return SCIP_OKAY;
 }
 
+
+/** branching execution method for not completely fixed pseudo solutions */
+static
+SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
+{  
+   /* the 2 nodes, for which the branching is done by DIFFER and SAME */
+   int node1;
+   int node2;
+   /* the nodes in the branch&bound-tree which are created */
+   SCIP_NODE* childsame;
+   SCIP_NODE* childdiffer;
+   /* the constraints for the created b&b-nodes */
+   SCIP_CONS* conssame;
+   SCIP_CONS* consdiffer;
+   /* the constraint of the processed b&b-node */
+   SCIP_CONS* currentcons;
+
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* search for two nodes node1, node2 such that: 
+      node1 and node2 are neither in the same union nor adjacent */
+   for ( node1 = 0; node1 < COLORprobGetNNodes(scip); ++node1 )
+   {
+      if ( node1 != COLORconsGetRepresentative(scip, node1) )
+      {
+         continue;
+      }
+      for ( node2 = node1+1; node2 < COLORprobGetNNodes(scip); ++node2 )
+      {
+         if ( node2 != COLORconsGetRepresentative(scip, node2) )
+         {
+            continue;
+         }
+         if ( (node2 != node1) && !tcliqueIsEdge(COLORconsGetCurrentGraph(scip), node1, node2))
+         {
+            /* create the b&b-tree child-nodes of the current node */
+            SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+            SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+            
+            /* create corresponding constraints */
+            currentcons = COLORconsGetActiveStoreGraphCons(scip);
+            SCIP_CALL( COLORcreateConsStoreGraph(scip, &conssame,   "same",   currentcons, COLOR_CONSTYPE_SAME,   node1, node2, childsame) );
+            SCIP_CALL( COLORcreateConsStoreGraph(scip, &consdiffer, "differ", currentcons, COLOR_CONSTYPE_DIFFER, node1, node2, childdiffer) );
+            
+            /* add constraints to nodes */
+            SCIP_CALL( SCIPaddConsNode(scip, childsame, conssame, NULL) );
+            SCIP_CALL( SCIPaddConsNode(scip, childdiffer, consdiffer, NULL) );
+            
+            /* release constraints */
+            SCIP_CALL( SCIPreleaseCons(scip, &conssame) );
+            SCIP_CALL( SCIPreleaseCons(scip, &consdiffer) );
+            
+            *result = SCIP_BRANCHED;
+
+            return SCIP_OKAY;
+         }
+      }      
+   }
+
+   SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+   *result = SCIP_BRANCHED;
+
+   return SCIP_OKAY;
+}
+
+
 /* define not used callbacks as NULL */
 #define branchFreeColoring NULL
 #define branchInitColoring NULL
 #define branchExitColoring NULL
 #define branchInitsolColoring NULL
 #define branchExitsolColoring NULL
-#define branchExecpsColoring NULL
 
 
 /*

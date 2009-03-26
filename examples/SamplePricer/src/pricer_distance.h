@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.9 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.10 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -38,7 +38,7 @@ extern "C"
 #include "scip/misc.h"
 }
 
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 /***
     Generate a derived class of ObjPricer.
@@ -108,12 +108,12 @@ public:
      return SCIP_OKAY;
    }
 
-  virtual SCIP_RETCODE scip_redcost(SCIP* scip, SCIP_PRICER* pricer) {
+   virtual SCIP_RETCODE scip_redcost(SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, SCIP_RESULT* result) {
     
     // find variable.
 
 #ifdef SCIP_DEBUG
-    cout << "Here is scip_redcost(SCIP* scip, SCIP_PRICER* pricer)" << endl;
+    cout << "Here is scip_redcost(SCIP* scip, SCIP_PRICER* pricer, SCIP_Real lowerbound, SCIP_RESULT* result)" << endl;
     cout << "Current Solution:" << endl;
     SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL, FALSE));
     // int nofVars = SCIPgetNVars(scip);
@@ -137,7 +137,7 @@ public:
     }	   
     
 #endif
-
+    *result = SCIP_SUCCESS;
     double best_reduced_cost(SCIPinfinity(scip));
     double best_primal_cost(SCIPinfinity(scip));
     vector<int> best_sol_vec;
@@ -241,7 +241,7 @@ public:
 				 1));
 
     SCIP_CALL(SCIPreleaseVar(scip, &var));
-    
+
     return SCIP_OKAY;
   }
   

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloringplugins.c,v 1.3 2008/09/29 19:49:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: coloringplugins.c,v 1.4 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   coloringplugins.c
  * @brief  SCIP plugins for coloring
@@ -74,6 +74,24 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
    SCIP_CALL( SCIPincludeHeurVeclendiving(scip) );
 #endif
+
+#if 0
+   SCIP_CALL( SCIPincludePropPseudoobj(scip) );
+   SCIP_CALL( SCIPincludePropRootredcost(scip) );
+#endif
+#if 0
+   SCIP_CALL( SCIPincludeSepaClique(scip) );
+   SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
+   SCIP_CALL( SCIPincludeSepaGomory(scip) );
+   SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
+   SCIP_CALL( SCIPincludeSepaIntobj(scip) );
+   SCIP_CALL( SCIPincludeSepaMcf(scip) );
+   SCIP_CALL( SCIPincludeSepaRedcost(scip) );
+   SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
+   SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
+#endif
+
 
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeDialogDefault(scip) );

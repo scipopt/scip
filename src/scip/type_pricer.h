@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.18 2008/04/17 17:49:22 bzfpfets Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.19 2009/03/26 19:20:39 bzfgamra Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -88,11 +88,29 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
  *  methods of the constraint handlers to add the necessary variable entries to the constraints.
  *
+ *  In the usual case that the pricer either adds a new variable or ensures that there are no further variables with negative dual feasibility,
+ *  the result pointer should be set to SCIP_SUCCESS. Only if the pricer aborts pricing without creating a new variable, but
+ *  there might exist additional variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
+ *  In this case, which sometimes is refered to as "early branching", the lp solution will not be used as a lower bound. 
+ *  The pricer can, however, store a valid lower bound in the lowerbound pointer.
+ *  If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
+ *  Otherwise, SCIP will use its default branching rules (which all branch on variables). This
+ *  could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - pricer          : the variable pricer itself
+ *  - lowerbound      : pointer to store a lower bound found by the pricer
+ *  - result          : pointer to store the result of the pricer call
+ *
+ *  possible return values for *result:
+ *  - SCIP_SUCCESS    : at least one improving variable was found, or it is ensured that no such variable exists
+ *  - SCIP_DIDNOTRUN  : the pricing process was aborted by the pricer, there is no guarantee that the current LP solution is 
+ *                      optimal
+ *
  */
-#define SCIP_DECL_PRICERREDCOST(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
+#define SCIP_DECL_PRICERREDCOST(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, \
+      SCIP_RESULT* result)
 
 /** farkas pricing method of variable pricer for infeasible LPs
  *

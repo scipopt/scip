@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.3 2008/09/29 19:49:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.4 2009/03/26 19:20:37 bzfgamra Exp $"
 
 #include "pricer_vrp.h"
 #include "pqueue.h"
@@ -104,7 +104,9 @@ SCIP_RETCODE
 ObjPricerVRP::
 scip_redcost
 ( SCIP*              scip,               /**< SCIP data structure */
-  SCIP_PRICER*       pricer )            /**< the variable pricer itself */
+  SCIP_PRICER*       pricer,             /**< the variable pricer itself */
+  SCIP_Real*         lowerbound,         /**< a lowerbound computed by the pricer */
+  SCIP_RESULT*       result )            /**< the result of the pricer call */
 {
 #if ( SCIP_DEBUG >= 2 )
    cerr << "CALL scip_redcost" << endl;
@@ -114,6 +116,9 @@ scip_redcost
    // store only lower triangualar matrix, i.e., 
    // red_length[i][j] only for i > j
    //--------------------
+
+   // set result pointer
+   *result = SCIP_SUCCESS;
 
    // allocate array
    vector< vector<double> > red_length ( num_nodes() );

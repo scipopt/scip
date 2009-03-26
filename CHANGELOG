@@ -19,6 +19,12 @@ interface:
 - new parameter <constraints/and/enforcecuts> in cons_and.c, should cuts be separated during LP enforcing?
 - new function SCIPsetProbName() to set problem name in scip.h/c (SCIPprobSetName() in prob.h/c)
 - new parameter <constraints/and/presolusehashing> in cons_and.c, should pairwise presolving use hashing?, default TRUE
+- new parameters "lowerbound" and "result" in type_pricer.h: lowerbound can save a lower bound computed by the pricer,
+  result indicates whether the pricer guarantees that there exist no more variables if no variable was found
+- new methods SCIPisLPRelax() and SCIPisRootLPRelax() in scip.c and scip.h returning whether the current/root LP is a 
+  relaxation of the current/root problem and thus defines a valid lower bound
+- new methods SCIPlpSetIsRelax() and SCIPlpSetRootLPIsRelax() in lp.c and lp.h to set the information, whether the lp is a valid relaxation;
+  this information is per default set to true
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -28,7 +34,7 @@ features:
 - each variable has now two additional Bool parameter which determine whether the lower or upper bound are lazy; lazy means 
   that there exists a constraint which implies this bound. Variable bounds which are marked as lazy are not in the LP. These 
   parameters are set to FALSE in default which yields the same behavior as before. With the methods SCIPvarMarkLazyLb() and 
-  SCIPvarMarkLazyUb() these parameters can be set to TRUE. (This of interest if SCIP gets used as a
+  SCIPvarMarkLazyUb() these parameters can be set to TRUE. (This is of interest if SCIP gets used as a
   branch-and-price framework).
 - added new timing point, SCIP_HEURTIMING_DURINGPRICINGLOOP, for calling heuristics; If this timing point is used the corresponding 
   heuristics is called during the pricing loop of variables; we also added this timing point to heur_simplerounding.{h,c} which
@@ -36,6 +42,9 @@ features:
 - extended hybrid relpscost branching rule by usage of the average length of conflicts a variable appears in
 - one can now write indicator constraints in LP-format
 - now it's possible to write strings with more than "SCIP_MAXSTRLEN" amount of characters in all message.c functions
+- the current/root lp can be marked to be no relaxation of the current/root problem
+- "early branching"-functionality added: in a branch-and-price code, the user can stop pricing at a node although there may exist variables 
+  with negative reduced costs. In this case, the lp-lowerbound will not be used. The pricer has, however, the option to return a lower bound.
 
 performance improvements:
 - replaced some function calls in loop conditions

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.103 2009/03/10 10:24:52 bzfpfets Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.104 2009/03/26 19:20:38 bzfgamra Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1256,7 +1256,10 @@ void SCIPprobStoreRootSol(
       SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
 
    if( roothaslp )
+   {
+      SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
       SCIPlpStoreRootObjval(lp, set);
+   }
 }
 
 /** informs problem, that the presolving process was finished, and updates all internal data structures */

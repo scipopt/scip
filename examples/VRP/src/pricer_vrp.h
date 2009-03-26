@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.h,v 1.2 2008/09/29 19:49:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_vrp.h,v 1.3 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   
  * @brief  VRP pricer plugin
@@ -60,7 +60,7 @@ public:
 
    virtual SCIP_RETCODE scip_init   ( SCIP* scip, SCIP_PRICER* pricer );
 
-   virtual SCIP_RETCODE scip_redcost( SCIP* scip, SCIP_PRICER* pricer );
+   virtual SCIP_RETCODE scip_redcost( SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, SCIP_RESULT* result );
   
    virtual SCIP_RETCODE scip_farkas ( SCIP* scip, SCIP_PRICER* pricer );
 

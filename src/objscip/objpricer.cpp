@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.21 2008/09/26 16:52:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.22 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -152,7 +152,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostObj)
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   SCIP_CALL( pricerdata->objpricer->scip_redcost(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_redcost(scip, pricer, lowerbound, result) );
 
    return SCIP_OKAY;
 }
@@ -160,7 +160,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostObj)
 
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
-SCIP_DECL_PRICERREDCOST(pricerFarkasObj)
+SCIP_DECL_PRICERFARKAS(pricerFarkasObj)
 {  /*lint --e{715}*/
    SCIP_PRICERDATA* pricerdata;
 

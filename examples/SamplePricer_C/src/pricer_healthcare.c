@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.5 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.6 2009/03/26 19:20:37 bzfgamra Exp $"
 
 /**@file   pricer_healthcare.c
  * @brief  healthcare variable pricer
@@ -190,6 +190,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostHealthcare)
       SCIP_CALL( SCIPaddPricedVar(scip, var, 0.0) );
       SCIP_CALL( SCIPreleaseVar(scip, &var) );
    }
+
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }

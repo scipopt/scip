@@ -19,6 +19,7 @@
  * @brief  main document page
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Gerald Gamrath
  * @author Mathias Kinder
  * @author Marc Pfetsch
  * @author Kati Wolter
@@ -91,6 +92,7 @@
  *
  * - \ref CHG1    "Changes between version 0.9 and 1.0"
  * - \ref CHG2    "Changes between version 1.0 and 1.1"
+ * - \ref CHG3    "Changes since version 1.1"
  *
  */
 
@@ -1084,6 +1086,15 @@
  * Whenever the pricer finds a variable with negative dual feasibility, it should call SCIPcreateVar()
  * and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
  * methods of the constraint handlers to add the necessary variable entries to the constraints.
+ *
+ * In the usual case that the pricer either adds a new variable or ensures that there are no further variables with negative dual feasibility,
+ * the result pointer should be set to SCIP_SUCCESS. Only if the pricer aborts pricing without creating a new variable, but
+ * there might exist additional variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
+ * In this case, which sometimes is refered to as "early branching", the lp solution will not be used as a lower bound. 
+ * The pricer can, however, store a valid lower bound in the lowerbound pointer.
+ * If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
+ * Otherwise, SCIP will use its default branching rules (which all branch on variables). This
+ * could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
  *
  * Pricers usually need the dual LP solution as input for the pricing algorithm.
  * Since SCIP does not know the semantics of the individual constraints in the problem, the dual solution
@@ -3761,6 +3772,14 @@
  * - Added user pointer to callback methods of hash table, see pub_misc.h.
  *
  * - New parameters "extension" in SCIPreadProb(),    defining a desired file format or NULL if file extension should be used.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page CHG3 Interface changes since SCIP 1.1
+ *
+ * - The callback \ref PRICERREDCOST in the pricers got two new parameters: A result pointer and a pointer for providing a 
+ *   lower bound. For details, see the documentation of \ref PRICERREDCOST. 
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
