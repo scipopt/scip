@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.308 2009/03/26 19:20:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.309 2009/03/26 19:48:33 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7660,7 +7660,7 @@ SCIP_RETCODE transformMIRRow(
  *
  *  (lb or ub):
  * \f[
- * \begin{array}{llll}
+ * \begin{array}{lllll}
  *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
  *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
  * \end{array}
@@ -8784,8 +8784,8 @@ void transformStrongCGRow(
  *  (vlb or vub):
  * \f[
  * \begin{array}{lllll}
- *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),$   x_j == x^\prime_j + (bl_j * zl_j + dl_j),$   a^\prime_j ==  a_j,$   \hat{a}_j :=  \tilde{a}_j,$   \mbox{(vlb)} \\
- *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,$   x_j == (bu_j * zu_j + du_j) - x^\prime_j,$   a^\prime_j == -a_j,$   \hat{a}_j := -\tilde{a}_j,$   \mbox{(vub)}
+ *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),&   x_j == x^\prime_j + (bl_j * zl_j + dl_j),&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{(vlb)} \\
+ *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,&   x_j == (bu_j * zu_j + du_j) - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{(vub)}
  * \end{array}
  * \f]
  *  move the constant terms
