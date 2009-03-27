@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.28 2008/12/17 11:34:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.29 2009/03/27 14:08:52 bzfwinkm Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -318,7 +318,7 @@ SCIP_RETCODE checkParameters(
          value);
    }
    
-   if( !valid && SCIPgetVerbLevel(scip) != SCIP_VERBLEVEL_FULL )
+   if( !valid && SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL )
       SCIPwarningMessage("The current parameter setting might cause a wrong counting process. Please use <emphasis/counter.set> settings.");
    
    return SCIP_OKAY;
