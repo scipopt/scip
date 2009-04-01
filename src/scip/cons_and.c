@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.103 2009/04/01 19:50:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.104 2009/04/01 21:11:48 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -1954,33 +1954,33 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
          
          nvars = consdata->nvars;
          
-         vars[0] = consdata->resvar;
-         vals[0] = 1.0;
-         vals[1] = -1.0;
-         
-         /* create operator linear constraints */
-         for( v = 0; v < nvars; ++v )
+         if( !conshdlrdata->aggrlinearization )
          {
-            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), v);
-            vars[1] = consdata->vars[v];
+            vars[0] = consdata->resvar;
+            vals[0] = 1.0;
+            vals[1] = -1.0;
+         
+            /* create operator linear constraints */
+            for( v = 0; v < nvars; ++v )
+            {
+               (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), v);
+               vars[1] = consdata->vars[v];
             
-            SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 2, vars, vals, -SCIPinfinity(scip), 0.0,
-                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
-                  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-                  SCIPconsIsStickingAtNode(cons)) );
-            
-            /* add constraint */
-            SCIP_CALL( SCIPaddCons(scip, newcons) );
-            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+               SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, 2, vars, vals, -SCIPinfinity(scip), 0.0,
+                     SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                     SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+                     SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+                     SCIPconsIsStickingAtNode(cons)) );
+               
+               /* add constraint */
+               SCIP_CALL( SCIPaddCons(scip, newcons) );
+               SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            }
          }
          
          /* realloc  buffer array */
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, nvars + 1) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &vals, nvars + 1) );
-
-         /* create additional linear constraint */
-         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
 
          for( v = 0; v < nvars; ++v )
          {
@@ -1989,8 +1989,30 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
          }
          
          vars[nvars] = consdata->resvar;
+
+         if( conshdlrdata->aggrlinearization )
+         {
+            /* create additional linear constraint */
+            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
+
+            vals[nvars] = (SCIP_Real) nvars;
+
+            SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, nvars + 1, vars, vals, -SCIPinfinity(scip), 0.0,
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
+                  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+                  SCIPconsIsStickingAtNode(cons)) );
+
+            /* add constraint */
+            SCIP_CALL( SCIPaddCons(scip, newcons) );
+            SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         }
+
+         /* create additional linear constraint */
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
+
          vals[nvars] = 1.0;
-         
+
          SCIP_CALL( SCIPcreateConsLinear(scip, &newcons, consname, nvars + 1, vars, vals, -nvars + 1.0, SCIPinfinity(scip),
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), 
@@ -2003,7 +2025,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
          
          /* delete constraint */
          SCIP_CALL( SCIPdelCons(scip, cons) );
-         
       }
       
       /* free buffer array */
