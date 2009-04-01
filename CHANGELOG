@@ -25,6 +25,8 @@ interface:
   relaxation of the current/root problem and thus defines a valid lower bound
 - new methods SCIPlpSetIsRelax() and SCIPlpSetRootLPIsRelax() in lp.c and lp.h to set the information, whether the lp is a valid relaxation;
   this information is per default set to true
+- new parameters <constraints/and/aggrlinearization> in cons_and.c, should an aggregated version of the linearization of the 
+  and constraint be used. The aggregated version has only 2 linear constraints the default linearization has nvars + 1
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh

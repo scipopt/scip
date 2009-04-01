@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.102 2009/03/12 17:01:41 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.103 2009/04/01 19:50:42 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -53,6 +53,7 @@
 #define DEFAULT_LINEARIZE         FALSE /**< should constraint get linearize and removed? */
 #define DEFAULT_INITIALLP             1 /**< should lp relaxation be in the initial LP? (0: FALSE, 1: auto, 2: TRUE) */
 #define DEFAULT_ENFORCECUTS        TRUE /**< should cuts be separated during LP enforcing? */
+#define DEFAULT_AGGRLINEARIZATION FALSE /**< should an aggregated linearization be used? */
 
 #define HASHSIZE_ANDCONS         131101 /**< minimal size of hash table in and constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
@@ -72,7 +73,7 @@ struct SCIP_ConsData
    SCIP_ROW**            rows;               /**< rows for linear relaxation of and constraint */
    int                   nvars;              /**< number of variables in and operation */
    int                   varssize;           /**< size of vars array */
-   int                   rowssize;           /**< size of rows array */
+   int                   nrows;              /**< number of rows for linear relaxation of and constraint */
    int                   watchedvar1;        /**< position of first watched operator variable */
    int                   watchedvar2;        /**< position of second watched operator variable */
    int                   filterpos1;         /**< event filter position of first watched operator variable */
@@ -94,6 +95,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             linearize;          /**< should constraint get linearize and removed? */
    SCIP_Bool             enforcecuts;        /**< should cuts be separated during LP enforcing? */
+   SCIP_Bool             aggrlinearization;  /**< should an aggregated linearization be used?  */
 };
 
 
@@ -188,11 +190,15 @@ SCIP_RETCODE conshdlrdataFree(
 /** gets number of LP rows needed for the LP relaxation of the constraint */
 static
 int consdataGetNRows(
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Bool             aggrlinearization   /**< use aggregated linearization */
    )
 {
    assert(consdata != NULL);
 
+   if( aggrlinearization )
+      return 2;
+   
    return consdata->nvars + 1;
 }
 
@@ -400,7 +406,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->rows = NULL;
    (*consdata)->nvars = nvars;
    (*consdata)->varssize = nvars;
-   (*consdata)->rowssize = 0;
+   (*consdata)->nrows = 0;
    (*consdata)->watchedvar1 = -1;
    (*consdata)->watchedvar2 = -1;
    (*consdata)->filterpos1 = -1;
@@ -438,15 +444,11 @@ SCIP_RETCODE consdataFreeRows(
 
    if( consdata->rows != NULL )
    {
-      int nrows;
-
-      nrows = consdataGetNRows(consdata);
-
-      for( r = 0; r < nrows; ++r )
+      for( r = 0; r < consdata->nrows; ++r )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
-      SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->rowssize);
+      SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->nrows);
    }
 
    return SCIP_OKAY;
@@ -838,14 +840,12 @@ SCIP_RETCODE applyFixings(
    return SCIP_OKAY;
 }
 
-/** creates LP rows corresponding to and constraint:
- *   - for each operator variable vi:  resvar - vi            <= 0
- *   - one additional row:             resvar - v1 - ... - vn >= 1-n
- */
+/** creates a linearization of the and constraint */
 static 
 SCIP_RETCODE createRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to check */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool             aggrlinearization   /**< use aggregated linearization */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -860,27 +860,50 @@ SCIP_RETCODE createRelaxation(
    nvars = consdata->nvars;
 
    /* get memory for rows */
-   consdata->rowssize = consdataGetNRows(consdata);
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdata->rowssize) );
-   assert(consdata->rowssize == nvars+1);
-
-   /* create operator rows */
-   for( i = 0; i < nvars; ++i )
+   consdata->nrows = consdataGetNRows(consdata, aggrlinearization);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->rows, consdata->nrows) );
+   
+   if( aggrlinearization )
    {
-      (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[i], rowname, -SCIPinfinity(scip), 0.0,
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
-      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->vars[i], -1.0) );
-   }
+      /** creates LP rows corresponding to and constraint:
+       *   - aggregated operator variables row: n*resvar - v1 - ... - vn <= 0
+       *   - one additional row:                resvar - v1 - ... - vn >= -1
+       */
 
+       /* aggregate the linear constraints for the operators */
+      (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[0], rowname, SCIPinfinity(scip), 0.0,
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+      SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->resvar, (SCIP_Real) nvars) );
+      SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], nvars, consdata->vars, -1.0) );
+   }
+   else
+   {   
+      /* creates LP rows corresponding to and constraint:
+       *   - for each operator variable vi:  resvar - vi            <= 0
+       *   - one additional row:             resvar - v1 - ... - vn >= 1-n
+       */
+
+      /* create operator rows */
+      for( i = 0; i < nvars; ++i )
+      {
+         (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
+         SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[i], rowname, -SCIPinfinity(scip), 0.0,
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
+         SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
+         SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->vars[i], -1.0) );
+      }
+
+   }
+   
    /* create additional row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
-   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[nvars], rowname, -consdata->nvars + 1.0, SCIPinfinity(scip),
+   SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[consdata->nrows-1], rowname, 
+         -consdata->nvars + 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[nvars], nvars, consdata->vars, -1.0) );
-
+   
    return SCIP_OKAY;
 }  
 
@@ -888,24 +911,22 @@ SCIP_RETCODE createRelaxation(
 static 
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to check */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool             aggrlinearization   /**< use aggregated linearization */
    )
 {
    SCIP_CONSDATA* consdata;
    int r;
-   int nrows; 
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
    if( consdata->rows == NULL )
    {
-      SCIP_CALL( createRelaxation(scip, cons) );
+      SCIP_CALL( createRelaxation(scip, cons, aggrlinearization) );
    }
 
-   nrows = consdataGetNRows(consdata);
-
-   for( r = 0; r < nrows; ++r )
+   for( r = 0; r < consdata->nrows; ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
@@ -943,12 +964,9 @@ SCIP_RETCODE checkCons(
    mustcheck = mustcheck || (consdata->rows == NULL);
    if( !mustcheck )
    {
-      int nrows;
-
       assert(consdata->rows != NULL);
-
-      nrows = consdataGetNRows(consdata);
-      for( r = 0; r < nrows; ++r )
+      
+      for( r = 0; r < consdata->nrows; ++r )
       {
          mustcheck = !SCIProwIsInLP(consdata->rows[r]);
          if( mustcheck )
@@ -1011,13 +1029,13 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool             aggrlinearization,  /**< use aggregated linearization */
    SCIP_Bool*            separated           /**< pointer to store whether a cut was found */
    )
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real feasibility;
    int r;
-   int nrows;
 
    assert(separated != NULL);
 
@@ -1029,14 +1047,12 @@ SCIP_RETCODE separateCons(
    /* create all necessary rows for the linear relaxation */
    if( consdata->rows == NULL )
    {
-      SCIP_CALL( createRelaxation(scip, cons) );
+      SCIP_CALL( createRelaxation(scip, cons, aggrlinearization) );
    }
    assert(consdata->rows != NULL);
 
-   nrows = consdataGetNRows(consdata);
-
    /* test all rows for feasibility and add infeasible rows */
-   for( r = 0; r < nrows; ++r )
+   for( r = 0; r < consdata->nrows; ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
@@ -2049,9 +2065,14 @@ SCIP_DECL_CONSINITSOL(consInitsolAnd)
           * if this size is smaller than MAX_INITIALSIZE then the LP
           * relaxation of the AND constraints are added */
          
-         for( c = 0; c < nconss; ++c )
-            notherconss += 2 + SCIPgetNVarsAnd(scip, conss[c]);
-         
+         if( conshdlrdata->aggrlinearization )
+            notherconss += 2 * nconss;
+         else
+         {
+            for( c = 0; c < nconss; ++c )
+               notherconss += 1 + SCIPgetNVarsAnd(scip, conss[c]);
+         }
+
          if( notherconss <= MAX_INITIALSIZE )
             initial = TRUE;
       }
@@ -2078,6 +2099,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolAnd)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int c;
+
 
    /* release and free the rows of all constraints */
    for( c = 0; c < nconss; ++c )
@@ -2138,12 +2160,16 @@ SCIP_DECL_CONSTRANS(consTransAnd)
 static
 SCIP_DECL_CONSINITLP(consInitlpAnd)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    for( i = 0; i < nconss; i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], conshdlrdata->aggrlinearization) );
    }
 
    return SCIP_OKAY;
@@ -2154,15 +2180,19 @@ SCIP_DECL_CONSINITLP(consInitlpAnd)
 static
 SCIP_DECL_CONSSEPALP(consSepalpAnd)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
    int c;
 
    *result = SCIP_DIDNOTFIND;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &separated) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->aggrlinearization, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    } 
@@ -2178,15 +2208,19 @@ SCIP_DECL_CONSSEPALP(consSepalpAnd)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolAnd)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool separated;
    int c;
 
    *result = SCIP_DIDNOTFIND;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* separate all useful constraints */
    for( c = 0; c < nusefulconss; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &separated) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->aggrlinearization, &separated) );
       if( separated )
          *result = SCIP_SEPARATED;
    } 
@@ -2219,7 +2253,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
          if( conshdlrdata->enforcecuts )
          {
             
-            SCIP_CALL( separateCons(scip, conss[i], NULL, &separated) );
+            SCIP_CALL( separateCons(scip, conss[i], NULL, conshdlrdata->aggrlinearization, &separated) );
             assert(separated); /* because the solution is integral, the separation always finds a cut */
          }
          else
@@ -2562,9 +2596,6 @@ SCIP_DECL_CONSPRINT(consPrintAnd)
    return SCIP_OKAY;
 }
 
-
-
-
 /*
  * Callback methods of event handler
  */
@@ -2648,6 +2679,11 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "constraints/"CONSHDLR_NAME"/enforcecuts",
          "should cuts be separated during LP enforcing?",
          &conshdlrdata->enforcecuts, TRUE, DEFAULT_ENFORCECUTS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/aggrlinearization",
+         "should an aggregated linearization be used?",
+         &conshdlrdata->aggrlinearization, TRUE, DEFAULT_AGGRLINEARIZATION, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
