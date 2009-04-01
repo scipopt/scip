@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.24 2008/04/17 17:49:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.25 2009/04/01 19:12:11 bzfpfets Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -77,7 +77,7 @@
 #define SCIP_EVENTTYPE_DOMCHANGED     (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED)
 #define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED \
                                        | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED)
-#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_VARCHANGED)
+#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_VARCHANGED)
    
 /* event masks for node events */
 #define SCIP_EVENTTYPE_NODESOLVED     (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE \
