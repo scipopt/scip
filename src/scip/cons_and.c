@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.104 2009/04/01 21:11:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.105 2009/04/03 10:00:56 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -870,9 +870,9 @@ SCIP_RETCODE createRelaxation(
        *   - one additional row:                resvar - v1 - ... - vn >= -1
        */
 
-       /* aggregate the linear constraints for the operators */
+      /* aggregate the linear constraints for the operators */
       (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
-      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[0], rowname, SCIPinfinity(scip), 0.0,
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[0], rowname, -SCIPinfinity(scip), 0.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[0], consdata->resvar, (SCIP_Real) nvars) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[0], nvars, consdata->vars, -1.0) );
@@ -901,8 +901,8 @@ SCIP_RETCODE createRelaxation(
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[consdata->nrows-1], rowname, 
          -consdata->nvars + 1.0, SCIPinfinity(scip),
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-   SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
-   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[nvars], nvars, consdata->vars, -1.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[consdata->nrows-1], consdata->resvar, 1.0) );
+   SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[consdata->nrows-1], nvars, consdata->vars, -1.0) );
    
    return SCIP_OKAY;
 }  
