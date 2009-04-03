@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.30 2009/03/10 10:30:49 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.31 2009/04/03 20:41:33 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -167,6 +167,14 @@
  *
  * Taken together, these two observations yield the conclusion that the new system is roughly as
  * large as the original one.
+ *
+ *
+ * @todo Accept arbitrary ranged linear constraints as input (in particular: equations). Internally
+ * create two indicator constraints or correct alternative polyhedron accordingly (need to split the
+ * variables there, but not in original problem).
+ *
+ * @todo Treat variable upper bounds in a special way: Do not create the artificial slack variable,
+ * but directly enforce the propagations etc.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -2012,7 +2020,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
 
-      SCIPdebugMessage("Initializing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+      /* SCIPdebugMessage("Initializing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) ); */
 
       /* if not happend already, get transformed linear constraint */
       if ( ! SCIPconsIsTransformed(consdata->lincons) )
@@ -2025,6 +2033,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       if ( conshdlrdata->sepaAlternativeLP && consdata->colIndex < 0 )
 	 SCIP_CALL( addAltLPConstraint(scip, conshdlr, conss[c]) );
    }
+
+   SCIPdebugMessage("Initialized %d indicator constraints.\n", nconss);
 
    return SCIP_OKAY;
 }
@@ -2154,6 +2164,13 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
    SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->slackvar, &(consdata->slackvar)) );
    assert( consdata->binvar != NULL );
    assert( consdata->slackvar != NULL );
+
+   if ( SCIPvarGetType(consdata->binvar) != SCIP_VARTYPE_BINARY )
+   {
+      SCIPerrorMessage("Indicator variable <%s> is not binary %d.\n", SCIPvarGetName(consdata->binvar), SCIPvarGetType(consdata->binvar));
+      return SCIP_ERROR;
+   }
+
    consdata->colIndex = -1;
    consdata->lincons = sourcedata->lincons;
 
@@ -2225,6 +2242,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
    assert( eventhdlr != NULL );
 
+   SCIPdebugMessage("Presolving indicator constraints.\n");
+
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
    {
@@ -2248,7 +2267,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 	 assert( consdata->lincons != NULL );
       }
 
-      SCIPdebugMessage("Presolving indicator constraint <%s>.\n", SCIPconsGetName(cons) );
+      /* SCIPdebugMessage("Presolving indicator constraint <%s>.\n", SCIPconsGetName(cons) ); */
 
       *result = SCIP_DIDNOTFIND;
 
@@ -2257,10 +2276,10 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
       {
 	 SCIP_Bool infeasible, fixed;
 
-	 /* if the binary variable if fixed to nonzero */
+	 /* if the binary variable is fixed to nonzero */
 	 if ( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
 	 {
-	    SCIPdebugMessage("Presolving: Binary variable fixed to 1.\n");
+	    SCIPdebugMessage("Presolving <%s>: Binary variable fixed to 1.\n", SCIPconsGetName(cons));
 
 	    /* if slack variable is fixed to nonzero, we are infeasible */
 	    if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
@@ -2285,10 +2304,10 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 	    continue;
 	 }
 
-	 /* if the binary variable if fixed to zero */
+	 /* if the binary variable is fixed to zero */
 	 if ( SCIPvarGetUbLocal(consdata->binvar) < 0.5 )
 	 {
-	    SCIPdebugMessage("Presolving: Binary variable fixed to 0.\n");
+	    SCIPdebugMessage("Presolving <%s>: Binary variable fixed to 0.\n", SCIPconsGetName(cons));
 
 	    /* delete constraint */
 	    assert( ! SCIPconsIsModifiable(cons) );
@@ -2298,14 +2317,16 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 	    continue;
 	 }
 
+	 /*
 	 SCIPdebugMessage("bounds of slack variable <%s>: (%f, %f)\n", SCIPvarGetName(consdata->slackvar),
 	    SCIPvarGetLbLocal(consdata->slackvar),
 	    SCIPvarGetUbLocal(consdata->slackvar));
+	 */
 
-	 /* if the slack variable if fixed to nonzero */
+	 /* if the slack variable is fixed to nonzero */
 	 if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(consdata->slackvar)) )
 	 {
-	    SCIPdebugMessage("Presolving: Slack variable fixed to nonzero.\n");
+	    SCIPdebugMessage("Presolving <%s>: Slack variable fixed to nonzero.\n", SCIPconsGetName(cons));
 
 	    /* if binary variable is fixed to nonzero, we are infeasible */
 	    if ( SCIPvarGetLbLocal(consdata->slackvar) > 0.5 )
@@ -2330,25 +2351,10 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 	    continue;
 	 }
 
-	 /* if the slack variable if fixed to zero */
+	 /* if the slack variable is fixed to zero */
 	 if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
 	 {
-	    SCIPdebugMessage("Presolving: Slack variable fixed to zero.\n");
-
-	    /* otherwise fix binary variable to 0/1 */
-	    if ( SCIPvarGetObj(consdata->binvar) >= 0 )
-	    {
-	       SCIPdebugMessage("Fix binary variable to 0 and delete constraint.\n");
-	       SCIP_CALL( SCIPfixVar(scip, consdata->binvar, 0.0, &infeasible, &fixed) );
-	    }
-	    else
-	    {
-	       SCIPdebugMessage("Fix binary variable to 1 and delete constraint.\n");
-	       SCIP_CALL( SCIPfixVar(scip, consdata->binvar, 1.0, &infeasible, &fixed) );
-	    }
-	    assert( ! infeasible );
-	    if ( fixed )
-	       ++(*nfixedvars);
+	    SCIPdebugMessage("Presolving <%s>: Slack variable fixed to zero, delete redundant constraint.\n", SCIPconsGetName(cons));
 
 	    /* delete constraint */
 	    assert( ! SCIPconsIsModifiable(cons) );
@@ -2360,8 +2366,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
       }
    }
 
-   SCIPdebugMessage("presolving fixed %d variables, removed %d variables, and deleted %d constraints.\n",
-		    *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
+   SCIPdebugMessage("Presolved %d constraints (fixed %d variables, removed %d variables, and deleted %d constraints).\n",
+      nconss, *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
 
    return SCIP_OKAY;
 }
@@ -2447,6 +2453,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 static
 SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
@@ -2455,31 +2463,27 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 
    *result = SCIP_DIDNOTRUN;
 
-   if ( nconss > 0 )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->sepaAlternativeLP && nconss > 0 )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata;
       int nGen = 0;
 
       SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
-
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert( conshdlrdata != NULL );
-
-      if ( conshdlrdata->sepaAlternativeLP )
+      
+      *result = SCIP_DIDNOTFIND;
+      
+      /* start separation */
+      SCIP_CALL( separateIISRounding(scip, conshdlr, NULL, nconss, conss, &nGen) );
+      SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
+      
+      if ( nGen > 0 )
       {
-	 *result = SCIP_DIDNOTFIND;
-
-	 /* start separation */
-	 SCIP_CALL( separateIISRounding(scip, conshdlr, NULL, nconss, conss, &nGen) );
-	 SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
-
-	 if ( nGen > 0 )
-	 {
-	    if ( conshdlrdata->genLogicor )
-	       *result = SCIP_CONSADDED;
-	    else
-	       *result = SCIP_SEPARATED;
-	 }
+	 if ( conshdlrdata->genLogicor )
+	    *result = SCIP_CONSADDED;
+	 else
+	    *result = SCIP_SEPARATED;
       }
    }
 
@@ -2491,36 +2495,34 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   if ( nconss > 0 )
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   if ( conshdlrdata->sepaAlternativeLP && nconss > 0 )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata;
       int nGen = 0;
-
+      
       SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
-
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert( conshdlrdata != NULL );
-
-      if ( conshdlrdata->sepaAlternativeLP )
+      
+      *result = SCIP_DIDNOTFIND;
+      /* start separation */
+      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, &nGen) );
+      SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
+      
+      if ( nGen > 0 )
       {
-	 *result = SCIP_DIDNOTFIND;
-	 /* start separation */
-	 SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, &nGen) );
-	 SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
-
-	 if ( nGen > 0 )
-	 {
-	    if ( conshdlrdata->genLogicor )
-	       *result = SCIP_CONSADDED;
-	    else
-	       *result = SCIP_SEPARATED;
-	 }
+	 if ( conshdlrdata->genLogicor )
+	    *result = SCIP_CONSADDED;
+	 else
+	    *result = SCIP_SEPARATED;
       }
    }
 
@@ -2576,7 +2578,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   SCIPdebugMessage("Checking indicator constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
+   SCIPdebugMessage("Checking %d indicator constraints <%s>.\n", nconss, SCIPconshdlrGetName(conshdlr) );
 
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
@@ -2596,6 +2598,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
 	 SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
 	 *result = SCIP_INFEASIBLE;
 
+	 SCIPdebugMessage("Indicator constraints are not feasible.\n");
          if ( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
@@ -2608,6 +2611,8 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
       }
    }
    *result = SCIP_FEASIBLE;
+
+   SCIPdebugMessage("Indicator constraints are feasible.\n");
 
    return SCIP_OKAY;
 }
@@ -2750,6 +2755,8 @@ static
 SCIP_DECL_CONSPRINT(consPrintIndicator)
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* binvar;
+   int rhs;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2763,8 +2770,15 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
    assert( consdata->slackvar != NULL );
    assert( consdata->lincons != NULL );
 
-   SCIPinfoMessage(scip, file, "<%s> = 1", SCIPvarGetName(consdata->binvar));
-   SCIPinfoMessage(scip, file, " -> <%s> = 0)\n", SCIPvarGetName(consdata->slackvar));
+   binvar = consdata->binvar;
+   rhs = 1;
+   if ( SCIPvarGetStatus(binvar) == SCIP_VARSTATUS_NEGATED )
+   {
+      rhs = 0;
+      binvar = SCIPvarGetNegatedVar(binvar);
+   }
+   SCIPinfoMessage(scip, file, "<%s> = %d", SCIPvarGetName(binvar), rhs);
+   SCIPinfoMessage(scip, file, " -> <%s> = 0\n", SCIPvarGetName(consdata->slackvar));
 
    return SCIP_OKAY;
 }
@@ -3012,6 +3026,9 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
  *  We set the constraint to not be modifiable. If the weights are non
  *  NULL, the variables are ordered according to these weights (in
  *  ascending order).
+ *
+ *  Note: @a binvar is checked to be binary only later. This enables a change of the type in
+ *  procedures reading an instance.
  */
 SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3056,12 +3073,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    {
       SCIPerrorMessage("<%s> constraint handler not found\n", CONSHDLR_NAME);
       return SCIP_PLUGINNOTFOUND;
-   }
-
-   if ( SCIPvarGetType(binvar) != SCIP_VARTYPE_BINARY )
-   {
-      SCIPerrorMessage("indicator variable is not binary.\n");
-      return SCIP_ERROR;
    }
 
    /* create constraint data */
