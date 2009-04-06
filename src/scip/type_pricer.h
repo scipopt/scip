@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.19 2009/03/26 19:20:39 bzfgamra Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.20 2009/04/06 09:30:06 bzforlow Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -91,7 +91,7 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *  In the usual case that the pricer either adds a new variable or ensures that there are no further variables with negative dual feasibility,
  *  the result pointer should be set to SCIP_SUCCESS. Only if the pricer aborts pricing without creating a new variable, but
  *  there might exist additional variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
- *  In this case, which sometimes is refered to as "early branching", the lp solution will not be used as a lower bound. 
+ *  In this case, which sometimes is referred to as "early branching", the lp solution will not be used as a lower bound. 
  *  The pricer can, however, store a valid lower bound in the lowerbound pointer.
  *  If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
  *  Otherwise, SCIP will use its default branching rules (which all branch on variables). This

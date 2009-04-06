@@ -1090,7 +1090,7 @@
  * In the usual case that the pricer either adds a new variable or ensures that there are no further variables with negative dual feasibility,
  * the result pointer should be set to SCIP_SUCCESS. Only if the pricer aborts pricing without creating a new variable, but
  * there might exist additional variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
- * In this case, which sometimes is refered to as "early branching", the lp solution will not be used as a lower bound. 
+ * In this case, which sometimes is referred to as "early branching", the lp solution will not be used as a lower bound. 
  * The pricer can, however, store a valid lower bound in the lowerbound pointer.
  * If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
  * Otherwise, SCIP will use its default branching rules (which all branch on variables). This
