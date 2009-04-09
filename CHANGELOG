@@ -29,6 +29,7 @@ interface:
   and constraint be used. The aggregated version has only 2 linear constraints the default linearization has nvars + 1
 - removed parameter "constraints/and/initiallp" since it is not needed anymore;
 - set "constraints/and/sepafreq" default value to 1
+- added function SCIPgetTransObjscale() and SCIPgetTransObjoffset() in scip.c
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh

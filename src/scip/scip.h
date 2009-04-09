@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.339 2009/04/06 13:06:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.340 2009/04/09 16:04:48 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1378,6 +1378,18 @@ SCIP_RETCODE SCIPsetProbName(
 /** gets objective sense of original problem */
 extern
 SCIP_OBJSENSE SCIPgetObjsense(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the objective offset of the tranformed problem */
+extern
+SCIP_Real SCIPgetTransObjoffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the objective scale of the tranformed problem */
+extern
+SCIP_Real SCIPgetTransObjscale(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

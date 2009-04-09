@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.501 2009/04/06 13:06:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.502 2009/04/09 16:04:48 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2919,6 +2919,26 @@ SCIP_OBJSENSE SCIPgetObjsense(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetObjsense", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    return scip->origprob->objsense;
+}
+
+/** returns the objective offset of the tranformed problem */
+SCIP_Real SCIPgetTransObjoffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   )   
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetTransObjoffset", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   
+   return scip->transprob->objoffset;
+}
+
+/** returns the objective scale of the tranformed problem */
+SCIP_Real SCIPgetTransObjscale(
+   SCIP*                 scip                /**< SCIP data structure */
+   )   
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetTransObjscale", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   
+   return scip->transprob->objscale;
 }
 
 /** sets objective sense of problem */
