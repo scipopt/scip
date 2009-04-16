@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.52 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.53 2009/04/16 07:49:38 bzfheinz Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -469,6 +469,16 @@ void SCIPsortLongPtrPtrInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortLongPtrPtrBoolInt(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be sorted */
+   int                   len                 /**< length of arrays */
+   );
 
 /* now all downwards-sorting methods */
 
@@ -697,6 +707,16 @@ void SCIPsortDownLongPtrPtrInt(
    int                   len                 /**< length of arrays */
    );
 
+/** sort of five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortDownLongPtrPtrBoolInt(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be sorted */
+   int                   len                 /**< length of arrays */
+   );
 
 
 /*
@@ -984,6 +1004,22 @@ void SCIPsortedvecInsertLongPtrPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertLongPtrPtrBoolInt(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Longint          keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   SCIP_Bool             field3val,          /**< additional value of new element */
+   int                   field4val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 
 /* downwards insertion */
 
@@ -1266,6 +1302,22 @@ void SCIPsortedvecInsertDownLongPtrPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecInsertDownLongPtrPtrBoolInt(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be sorted */
+   SCIP_Longint          keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   void*                 field2val,          /**< additional value of new element */
+   SCIP_Bool             field3val,          /**< additional value of new element */
+   int                   field4val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
+
 
 /* upwards position deletion */
 
@@ -1510,6 +1562,18 @@ void SCIPsortedvecDelPosLongPtrPtrInt(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosLongPtrPtrBoolInt(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be sorted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
 
 /* downwards position deletion */
 
@@ -1748,6 +1812,18 @@ void SCIPsortedvecDelPosDownLongPtrPtrInt(
    SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
    void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
    void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   int*                  intarray,           /**< int array to be sorted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from five joint arrays of Long/pointer/pointer/Bool/ints, sorted by first array in non-increasing order */
+extern
+void SCIPsortedvecDelPosDownLongPtrPtrBoolInt(
+   SCIP_Longint*         longarray,          /**< SCIP_Longint array to be sorted */
+   void**                ptrarray1,          /**< first pointer array to be permuted in the same way */
+   void**                ptrarray2,          /**< second pointer array to be permuted in the same way */
+   SCIP_Bool*            boolarray,          /**< SCIP_Bool array to be permuted in the same way */
    int*                  intarray,           /**< int array to be sorted */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
