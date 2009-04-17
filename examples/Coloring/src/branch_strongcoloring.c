@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.9 2008/09/29 20:37:21 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.10 2009/04/17 12:13:32 bzfgamra Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -601,7 +601,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
       if ( bestdiffer <= 999 )
       {
          /* create the b&b-tree child-nodes of the current node */
-         SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+         SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalTransEstimate(scip)) );
       
          /* create corresponding constraints */
          SCIP_CALL( COLORcreateConsStoreGraph(scip, &consdiffer, "differ", currentcons, COLOR_CONSTYPE_DIFFER, node1, node2, childdiffer) );
@@ -618,7 +618,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
       if ( bestsame <= 999 )
       {
          /* create the b&b-tree child-nodes of the current node */
-         SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+         SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalTransEstimate(scip)) );
       
          /* create corresponding constraints */
          SCIP_CALL( COLORcreateConsStoreGraph(scip, &conssame,   "same",   currentcons, COLOR_CONSTYPE_SAME,   node1, node2, childsame) );
@@ -636,8 +636,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
    else
    {
       /* create the b&b-tree child-nodes of the current node */
-      SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalOrigEstimate(scip)) );
-      SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+      SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalTransEstimate(scip)) );
+      SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalTransEstimate(scip)) );
 
       /* create corresponding constraints */
       currentcons = COLORconsGetActiveStoreGraphCons(scip);

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.502 2009/04/09 16:04:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.503 2009/04/17 12:13:32 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -11796,7 +11796,7 @@ SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           node,               /**< pointer to node data structure */
    SCIP_Real             nodeselprio,        /**< node selection priority of new node */
-   SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
+   SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    )
 {
    assert(node != NULL);

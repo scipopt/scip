@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.100 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.101 2009/04/17 12:13:33 bzfgamra Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -59,7 +59,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_Real             nodeselprio,        /**< node selection priority of new node */
-   SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
+   SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    );
 
 /** frees node */

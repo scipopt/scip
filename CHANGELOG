@@ -104,6 +104,9 @@ fixed bugs:
 - fixed bug with wrong abort criterion in presolving
 - fixed wrong assert in cons_knapsack.c and handled a special this case in simplifyInequalities()
 - fixed bug in SCIPgetSolVals() similar to SCIPgetSolVal(): try to get original variables of transformed ones if the solution lives in original space
+- fixed potential bug in coloring example: SCIPcreateCild() is now given an estimate in terms of the transformed problem by 
+  SCIPgetLocalTransEstimate(), no longer the estimated original problem value. Also clarified this in the comments for SCIPcreateChild()
+  
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

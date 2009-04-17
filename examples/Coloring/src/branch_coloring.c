@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.c,v 1.7 2009/03/26 19:20:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_coloring.c,v 1.8 2009/04/17 12:13:32 bzfgamra Exp $"
 
 /**@file   branch_coloring.c
  * @brief  coloring branching rule
@@ -243,8 +243,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    assert(!tcliqueIsEdge(COLORconsGetCurrentGraph(scip), node1, node2));
 
    /* create the b&b-tree child-nodes of the current node */
-   SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalOrigEstimate(scip)) );
-   SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+   SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalTransEstimate(scip)) );
+   SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalTransEstimate(scip)) );
 
    /* create corresponding constraints */
    currentcons = COLORconsGetActiveStoreGraphCons(scip);
@@ -305,8 +305,8 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
          if ( (node2 != node1) && !tcliqueIsEdge(COLORconsGetCurrentGraph(scip), node1, node2))
          {
             /* create the b&b-tree child-nodes of the current node */
-            SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalOrigEstimate(scip)) );
-            SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+            SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalTransEstimate(scip)) );
+            SCIP_CALL( SCIPcreateChild(scip, &childdiffer, 0.0, SCIPgetLocalTransEstimate(scip)) );
             
             /* create corresponding constraints */
             currentcons = COLORconsGetActiveStoreGraphCons(scip);
@@ -328,7 +328,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
       }      
    }
 
-   SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalOrigEstimate(scip)) );
+   SCIP_CALL( SCIPcreateChild(scip, &childsame, 0.0, SCIPgetLocalTransEstimate(scip)) );
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.340 2009/04/09 16:04:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.341 2009/04/17 12:13:33 bzfgamra Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -4390,7 +4390,7 @@ SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           node,               /**< pointer to node data structure */
    SCIP_Real             nodeselprio,        /**< node selection priority of new node */
-   SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
+   SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    );
 
 /** branches on a variable v; if solution value x' is fractional, two child nodes are created
