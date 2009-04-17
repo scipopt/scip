@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.134 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.135 2009/04/17 09:24:58 bzfberth Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -68,13 +68,6 @@ SCIP_RETCODE SCIPcolFree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< current LP data */
-   );
-
-/** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
- */
-extern
-void SCIPcolSort(
-   SCIP_COL*             col                 /**< column to be sorted */
    );
 
 /** adds a previously non existing coefficient to an LP column */
@@ -295,14 +288,6 @@ SCIP_RETCODE SCIProwRelease(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< current LP data */
-   );
-
-/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
- *  higher ones
- */
-extern
-void SCIProwSort(
-   SCIP_ROW*             row                 /**< row to be sorted */
    );
 
 /** enables delaying of row sorting */

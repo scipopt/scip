@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.311 2009/04/15 18:18:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.312 2009/04/17 09:24:58 bzfberth Exp $"
  
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3017,10 +3017,6 @@ SCIP_RETCODE colStrongbranch(
       col->sbdownvalid = sbdownvalid;
       col->sbupvalid = sbupvalid;
 
-      /* ?????????????????????????
-      if( strcmp( SCIPvarGetName(col->var), "t_x101") == 0 && col->sbdown == 401 && col->sbup == 401 )
-	assert(0);
-      */
       /* update strong branching statistics */
       if( iter == -1 )
       {
@@ -10167,7 +10163,6 @@ SCIP_RETCODE lpSolveStable(
    return SCIP_OKAY;
 }
 
-
 /** solves the LP with the given algorithm and evaluates return status */
 static
 SCIP_RETCODE lpSolve(
@@ -10194,20 +10189,20 @@ SCIP_RETCODE lpSolve(
    assert(set != NULL);
    assert(stat != NULL);
    assert(lperror != NULL);
-   
+
    checkLinks(lp);
-   
+
    solvedprimal = FALSE;
    solveddual = FALSE;
    timelimit = FALSE;
-   
+
  SOLVEAGAIN:
    /* call simplex */
    SCIP_CALL( lpSolveStable(lp, set, stat, lpalgo, resolve, fastmip, tightfeastol, fromscratch, keepsol, &timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
    solvedprimal = solvedprimal || (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX);
    solveddual = solveddual || (lpalgo == SCIP_LPALGO_DUALSIMPLEX);
-   
+
    /* check, if an error occured */
    if( *lperror )
    {
@@ -13220,6 +13215,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIPcolGetMaxPrimsol
 #undef SCIPcolGetBasisStatus
 #undef SCIPcolGetVar
+#undef SCIPcolGetIndex
 #undef SCIPcolIsIntegral
 #undef SCIPcolIsRemovable
 #undef SCIPcolGetLPPos
@@ -13370,6 +13366,16 @@ SCIP_VAR* SCIPcolGetVar(
    assert(col != NULL);
 
    return col->var;
+}
+
+/** gets unique index of col */
+int SCIPcolGetIndex(
+   SCIP_COL*             col                 /**< LP col */
+   )
+{
+   assert(col != NULL);
+
+   return col->index;
 }
 
 /** returns whether the associated variable is of integral type (binary, integer, implicit integer) */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.41 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.42 2009/04/17 09:24:58 bzfberth Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -51,6 +51,13 @@ extern
 void SCIPcolPrint(
    SCIP_COL*             col,                /**< LP column */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
+ */
+extern
+void SCIPcolSort(
+   SCIP_COL*             col                 /**< column to be sorted */
    );
 
 #ifndef NDEBUG
@@ -113,6 +120,12 @@ SCIP_BASESTAT SCIPcolGetBasisStatus(
 extern
 SCIP_VAR* SCIPcolGetVar(
    SCIP_COL*             col                 /**< LP column */
+   );
+
+/** gets unique index of col */
+extern
+int SCIPcolGetIndex(
+   SCIP_COL*             col                 /**< LP col */
    );
 
 /** returns whether the associated variable is of integral type (binary, integer, implicit integer) */
@@ -207,6 +220,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 #define SCIPcolGetMaxPrimsol(col)       ((col)->maxprimsol)
 #define SCIPcolGetBasisStatus(col)      ((col)->basisstatus)
 #define SCIPcolGetVar(col)              (col)->var
+#define SCIPcolGetIndex(col)            (col)->index
 #define SCIPcolIsIntegral(col)          (col)->integral
 #define SCIPcolIsRemovable(col)        (col)->removable
 #define SCIPcolGetLPPos(col)            (col)->lppos
@@ -280,6 +294,14 @@ extern
 void SCIProwPrint(
    SCIP_ROW*             row,                /**< LP row */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
+ *  higher ones
+ */
+extern
+void SCIProwSort(
+   SCIP_ROW*             row                 /**< row to be sorted */
    );
 
 #ifndef NDEBUG
