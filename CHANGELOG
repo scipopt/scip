@@ -30,6 +30,7 @@ interface:
 - removed parameter "constraints/and/initiallp" since it is not needed anymore;
 - set "constraints/and/sepafreq" default value to 1
 - added function SCIPgetTransObjscale() and SCIPgetTransObjoffset() in scip.c
+- new interface methods SCIPcolSort(), SCIProwSort(), SCIPcolGetIndex()
 - extended the sort template functions in sorttpl.c with a "five" array; now it possible to used this template to sort up to five arrays
 
 features:
