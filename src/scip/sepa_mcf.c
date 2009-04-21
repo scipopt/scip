@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.113 2009/04/06 13:07:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.114 2009/04/21 10:14:06 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -946,9 +946,9 @@ SCIP_RETCODE extractFlowRows(
       /* calculate flow row score */
       if ( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0 )
       {
-         /* row is an equation: score +1000 */
+         /* row is an equation: score +1, only tiebreaking */
          if ( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == (LHSPOSSIBLE | RHSPOSSIBLE) )
-            flowrowscores[r] += 1000.0;
+            flowrowscores[r] += 1.0;
 
          /* row does not need to be scaled: score +1000 */
          if ( SCIPisEQ(scip, flowrowscalars[r], 1.0) )
@@ -971,6 +971,7 @@ SCIP_RETCODE extractFlowRows(
             flowrowscores[r] += 100.0;
 
          /* the longer the row, the earlier we want to process it: score +10*len/(len+10) */
+         /* value is in [1,10) */
          flowrowscores[r] += 10.0*rowlen/(rowlen+10.0);
 
          assert(flowrowscores[r] > 0.0);
@@ -2547,7 +2548,7 @@ SCIP_RETCODE getNodeSimilarityScore(
          {
             int validcomsign;
 
-            if ( valsign * basearcpattern[arcid] > 0 )
+            if ( ( valsign * basearcpattern[arcid] ) > 0 )
                validcomsign = +1;
             else
                validcomsign = -1;
@@ -3011,7 +3012,7 @@ void getIncidentNodes(
                scale *= -1;
 
             /* decide whether this node is source or target */
-            if ( scale * colvals[i] > 0.0 )
+            if ( ( scale * colvals[i] ) > 0.0 )
             {
                assert(*sourcenode == -1);
                *sourcenode = v;
@@ -5775,6 +5776,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_Bool inverted;
    int maxtestdelta;
 
+   int oldncuts = 0; // to check success of separation for one nodeset
 
    assert( effortlevel == MCFEFFORTLEVEL_AGGRESSIVE || effortlevel == MCFEFFORTLEVEL_DEFAULT );
    nrows = SCIPgetNLPRows(scip);
@@ -5785,7 +5787,7 @@ SCIP_RETCODE generateClusterCuts(
       maxsepacuts = sepadata->maxsepacutsroot;
    else
       maxsepacuts = sepadata->maxsepacuts;
-   if ( maxsepacuts <= 0)
+   if ( maxsepacuts <= 0 )
       maxsepacuts = INT_MAX;
    else if ( effortlevel == MCFEFFORTLEVEL_AGGRESSIVE )
       maxsepacuts *= 2;
@@ -5863,7 +5865,6 @@ SCIP_RETCODE generateClusterCuts(
       SCIP_Real baserhs;
       SCIP_Real bestdelta = 1.0;
       SCIP_Real bestrelviolation;
-      SCIP_Real bestabsviolation;
       SCIP_Real f0;
 
 
@@ -6215,11 +6216,10 @@ SCIP_RETCODE generateClusterCuts(
          }
 
          /* try out deltas to generate c-MIR cuts: use larger deltas first */
-         /** @todo use only the best delta instead of generating all cuts */
+         /** @todo use only the best delta instead of generating all cuts ?? */
 
          /* use best delta for flowcutset separation */
          bestrelviolation = SCIP_REAL_MIN;
-         bestabsviolation = SCIP_REAL_MIN;
 
          if ( sepadata->separateflowcutset )
          {
@@ -6227,7 +6227,7 @@ SCIP_RETCODE generateClusterCuts(
                bestdelta = deltas[ndeltas-1];  /* if nothing else is found, use maxdelta */
          }
 
-
+         oldncuts = *ncuts; // save number of cuts
 
          SCIPdebugMessage(" -> found %d different deltas to try\n", ndeltas);
          for ( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
@@ -6263,10 +6263,8 @@ SCIP_RETCODE generateClusterCuts(
                {
                   bestdelta = deltas[d];
                   bestrelviolation = relviolation;
-                  bestabsviolation = (cutact - cutrhs);
                }
             }
-
 
             if ( SCIPisFeasGT(scip, cutact, cutrhs) )
             {
@@ -6295,7 +6293,8 @@ SCIP_RETCODE generateClusterCuts(
             }
          }
 
-         if ( sepadata->separateflowcutset )
+         // only separate flowcutset inequalities if no cutset inequalities have been found
+         if ( sepadata->separateflowcutset && oldncuts == *ncuts )
          {
             /* try to separate flow cuts for the best delta */
             f0 = SCIPfrac(scip, baserhs/bestdelta);
@@ -6413,7 +6412,7 @@ SCIP_RETCODE generateClusterCuts(
                }
 
                /* if we removed a capacity constraint from the aggregation, try the new aggregation */
-               if ( totalviolationdelta > 0.0 && totalviolationdelta + bestabsviolation > 0.0 )
+               if ( totalviolationdelta > 0.0 )
                {
                   SCIP_Real cutrhs;
                   SCIP_Real cutact;
