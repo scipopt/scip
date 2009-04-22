@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.31 2009/04/06 13:06:58 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.32 2009/04/22 13:28:44 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -823,7 +823,7 @@ SCIP_RETCODE getVariable(
          SCIP_Bool removable;
          
          SCIP_CONS* cons;
-         char varname[128];
+         char varname[SCIP_MAXSTRLEN];
          
          (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "andresultant%d", opbinput->nconsanddata);
          SCIP_CALL( createVariable(scip, var, varname) );
