@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.320 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.321 2009/04/27 08:42:07 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -2758,7 +2758,7 @@ SCIP_RETCODE addCoef(
    consdata->propagated = FALSE;
    consdata->boundstightened = FALSE;
    consdata->presolved = FALSE;
-   consdata->removedfixings = consdata->removedfixings || !SCIPvarIsActive(var);
+   consdata->removedfixings = consdata->removedfixings && !SCIPvarIsActive(var);
    if( consdata->validsignature )
       consdataUpdateSignatures(consdata, consdata->nvars-1);
    consdata->changed = TRUE;
