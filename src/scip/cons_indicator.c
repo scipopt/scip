@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.32 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.33 2009/04/29 19:40:54 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2329,7 +2329,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 	    SCIPdebugMessage("Presolving <%s>: Slack variable fixed to nonzero.\n", SCIPconsGetName(cons));
 
 	    /* if binary variable is fixed to nonzero, we are infeasible */
-	    if ( SCIPvarGetLbLocal(consdata->slackvar) > 0.5 )
+	    if ( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
 	    {
 	       SCIPdebugMessage("The problem is infeasible: binary and slack variable are fixed to be nonzero.\n");
 	       *result = SCIP_CUTOFF;
