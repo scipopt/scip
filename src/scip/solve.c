@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.269 2009/04/06 13:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.270 2009/04/29 14:16:54 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2843,7 +2843,8 @@ SCIP_RETCODE solveNode(
          || (actdepth == 0
             && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
             && stat->nrootintfixingsrun > set->presol_immrestartfac * (prob->nvars - prob->ncontvars)
-            && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars));
+            && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)
+            && set->nactivepricers == 0 );
 
       SCIPdebugMessage("node solving iteration %d finished: cutoff=%d, propagateagain=%d, solverelaxagain=%d, solvelpagain=%d, nlperrors=%d, restart=%d\n",
          nloops, *cutoff, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
@@ -2868,7 +2869,8 @@ SCIP_RETCODE solveNode(
    *restart = *restart
       || ((set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
          && stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars)
-         && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars));
+         && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)
+         && set->nactivepricers == 0 );
 
    /* remember root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) )
@@ -3011,7 +3013,8 @@ SCIP_RETCODE SCIPsolveCIP(
       restartfac = MIN(restartfac, set->presol_restartfac);
    *restart = (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
       && stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars)
-      && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars);
+      && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)
+      && set->nactivepricers == 0;
 
    /* calculate the number of successful conflict analysis calls that should trigger a restart */
    if( set->conf_restartnum > 0 )
@@ -3219,7 +3222,7 @@ SCIP_RETCODE SCIPsolveCIP(
       nsuccessconflicts = SCIPconflictGetNPropSuccess(conflict) + SCIPconflictGetNInfeasibleLPSuccess(conflict)
          + SCIPconflictGetNBoundexceedingLPSuccess(conflict) + SCIPconflictGetNStrongbranchSuccess(conflict)
          + SCIPconflictGetNPseudoSuccess(conflict);
-      if( nsuccessconflicts >= restartconfnum )
+      if( nsuccessconflicts >= restartconfnum && set->nactivepricers == 0 )
       {
          SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "(run %d, node %"SCIP_LONGINT_FORMAT") restarting after %"SCIP_LONGINT_FORMAT" successful conflict analysis calls\n",
