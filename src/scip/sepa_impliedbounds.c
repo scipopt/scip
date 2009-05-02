@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.23 2009/04/06 13:07:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.24 2009/05/02 13:18:38 bzfviger Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS
@@ -163,11 +163,13 @@ SCIP_RETCODE separateCuts(
          
             /* implication x == 1 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
-            assert(SCIPisLE(scip, implbounds[j], ub));
             
-            /* add cut if violated */
-            SCIP_CALL( addCut(scip, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
-                  ub, ncuts) );
+            if (SCIPisLE(scip, implbounds[j], ub))
+            {
+               /* add cut if violated */
+               SCIP_CALL( addCut(scip, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
+                     ub, ncuts) );
+            }
          }
          else
          {
@@ -175,11 +177,14 @@ SCIP_RETCODE separateCuts(
 
             /* implication x == 1 -> y >= p */
             lb = SCIPvarGetLbGlobal(implvars[j]);
-            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, implbounds[j], lb));
+            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
  
-            /* add cut if violated */
-            SCIP_CALL( addCut(scip, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
-                  -lb, ncuts) );
+            if (SCIPisGE(scip, implbounds[j], lb))
+            {
+               /* add cut if violated */
+               SCIP_CALL( addCut(scip, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
+                     -lb, ncuts) );
+            }
          }
       } 
 
