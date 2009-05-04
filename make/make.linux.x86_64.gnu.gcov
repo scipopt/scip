@@ -1,10 +1,10 @@
-#--- $Id: make.linux.x86_64.gnu.gcov,v 1.2 2008/09/30 13:07:03 bzfheinz Exp $
+#--- $Id: make.linux.x86_64.gnu.gcov,v 1.3 2009/05/04 18:59:49 bzfpfets Exp $
 FLAGS		+=	# -DROUNDING_FE
 OFLAGS		+=	-O0 -m64 -fprofile-arcs -ftest-coverage
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
-LDFLAGS		+=      -Wl,-rpath,$(CURDIR)/$(LIBDIR)
+LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

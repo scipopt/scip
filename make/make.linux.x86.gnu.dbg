@@ -1,10 +1,10 @@
-#--- $Id: make.linux.x86.gnu.dbg,v 1.10 2008/09/05 13:40:17 bzforlow Exp $
+#--- $Id: make.linux.x86.gnu.dbg,v 1.11 2009/05/04 18:59:49 bzfpfets Exp $
 FLAGS		+=	# -DROUNDING_FE
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
-LDFLAGS		+=      -Wl,-rpath,$(CURDIR)/$(LIBDIR)
+LDFLAGS		+=      -Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
