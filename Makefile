@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.287 2009/04/09 13:46:04 bzfheinz Exp $
+# $Id: Makefile,v 1.288 2009/05/04 18:49:54 bzfpfets Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -124,6 +124,9 @@ BINDIR		=	bin
 LIBDIR		=	lib
 EXEEXTENSION	=
 ALLSRC		=
+
+# define to be able to locate library files
+SCIPDIR		=	$(realpath .)
 
 #-----------------------------------------------------------------------------
 include make/make.$(BASE)
@@ -283,6 +286,19 @@ SOFTLINKS     	+=      $(LIBDIR)/qsinc
 SOFTLINKS     	+=      $(LIBDIR)/libqsopt.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 LPIINSTMSG	=	"  -> \"qsinc\" is the path to the QSopt \"include\" directory, e.g., \"<QSopt-path>\".\n"
 LPIINSTMSG	+=	" -> \"libqsopt.*\" is the path to the QSopt library, e.g., \"<QSopt-path>/libqsopt.a\""
+endif
+
+LPSOPTIONS	+=	grb
+ifeq ($(LPS),grb)
+FLAGS		+=	-I$(LIBDIR)/grbinc
+LPSLDFLAGS	=	$(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPILIBOBJ	=	scip/lpi_grb.o blockmemshell/memory.o scip/message.o
+LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
+SOFTLINKS	+=	$(LIBDIR)/grbinc
+SOFTLINKS	+=	$(LIBDIR)/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+LPIINSTMSG	=	"  -> \"grbinc\" is the path to the Gurobi \"include\" directory, e.g., \"<Gurobi-path>/include\".\n"
+LPIINSTMSG	+=	" -> \"libgurobi.*\" is the path to the Gurobi library, e.g., \"<Gurobi-path>/lib/libgurobi.so\""
 endif
 
 LPSOPTIONS	+=	none
