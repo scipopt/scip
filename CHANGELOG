@@ -32,6 +32,7 @@ interface:
 - added function SCIPgetTransObjscale() and SCIPgetTransObjoffset() in scip.c
 - new interface methods SCIPcolSort(), SCIProwSort(), SCIPcolGetIndex()
 - extended the sort template functions in sorttpl.c with a "five" array; now it possible to used this template to sort up to five arrays
+- new parameters <constraints/countsols/sollimit> in cons_countsols.c, counting stops, if the given number of solutions were found (-1: no limit)  
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -107,7 +108,7 @@ fixed bugs:
 - fixed potential bug in coloring example: SCIPcreateChild() is now given an estimate in terms of the transformed problem by 
   SCIPgetLocalTransEstimate(), no longer the estimated original problem value. Also clarified this in the comments for SCIPcreateChild()
 - fixed potential bug: restarts are now only done if no active pricers exist
-  
+- fixed bug in cons_countsols.c we respect to warning message that "The current parameter setting might cause ..."  
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

@@ -538,10 +538,6 @@ constraints/and/delaypresol = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/and/presolpairwise = FALSE
 
-# should the lp relaxation be in the initial LP (0: FALSE, 1: auto, 2: TRUE)
-# [type: int, range: [0,2], default: 1]
-constraints/and/initiallp = 1
-
 # should the "and" constraint get linearized and removed (in presolving)?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/and/linearize = FALSE
@@ -2801,10 +2797,6 @@ separating/mcf/maxtestdelta = -1
 # model type of network (0: auto, 1:directed, 2:undirected)
 # [type: int, range: [0,2], default: 0]
 separating/mcf/modeltype = 0
-
-# type of flow variables in the network (0: auto, 1:continuous/integer, 2:binary)
-# [type: int, range: [0,2], default: 0]
-separating/mcf/flowtype = 0
 
 # should negative values also be tested in scaling?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.30 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.31 2009/05/04 20:56:37 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -62,6 +62,7 @@ typedef SCIP_Longint         Int;
 #define DEFAULT_DISCARDSOLS        TRUE /**< is it allowed to discard solutions */
 #define DEFAULT_ACTIVE            FALSE /**< is the constraint handler active */
 #define DEFAULT_COLLECT           FALSE /**< should the solutions be collected */
+#define DEFAULT_SOLLIMIT             -1 /**< counting stops, if the given number of solutions were found (-1: no limit) */
 
 /* default column settings */
 #define DISP_SOLS_NAME             "sols"
@@ -105,6 +106,7 @@ struct SCIP_ConshdlrData
    CUTOFF_CONSTRAINT((*cutoffSolution));     /**< method for cutting of a solution */
 
    /* constraint handler parameters */
+   SCIP_Longint          sollimit;           /**< counting stops, if the given number of solutions were found (-1: no limit) */
    SCIP_Bool             active;             /**< constraint handler active */
    SCIP_Bool             discardsols;        /**< allow to discard solutions */
    SCIP_Bool             sparsetest;         /**< allow to check for sparse solutions */
@@ -219,6 +221,26 @@ void toString(
 }
 
 
+/* method for creating a SCIP_Longing out of an Int */
+static
+SCIP_Longint getNCountedSols(
+   Int                   value,             /**< number to convert */
+   SCIP_Bool*            valid              /**< pointer to store if the return value is valid */             
+   )
+{
+#ifdef WITH_GMP
+   *valid = FALSE;
+   if( 0 != mpz_fits_slong_p(value) )
+      (*valid) = TRUE;
+   
+   return mpz_get_si(value);
+#else
+   *valid = TRUE;
+   return value;
+#endif
+}
+
+
 /*
  * Local methods
  */
@@ -319,11 +341,12 @@ SCIP_RETCODE checkParameters(
    }
    
    if( !valid && SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL )
+   {
       SCIPwarningMessage("The current parameter setting might cause a wrong counting process. Please use <emphasis/counter.set> settings.");
-   
+   }
+
    return SCIP_OKAY;
 }
-
 
 /** creates and adds a constraints which cuts off the current solution from the
  *  feasibility region in the case there are only binary variables */
@@ -1115,19 +1138,21 @@ SCIP_RETCODE checkSolution(
    assert( SCIPsolGetHeur(sol) == NULL);
 
 #ifdef SCIP_DEBUG
-   SCIP_VAR* var;
-   SCIP_VAR** vars;
-   int v;
-   int nvars;
-
-   nvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
-
-   for( v = 0; v < nvars; ++v )
    {
-      var = vars[v];
-      SCIPdebugMessage("variables <%s> Local Bounds are [%g,%g] Global Bounds are [%g,%g]\n",
-         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      SCIP_VAR* var;
+      SCIP_VAR** vars;
+      int v;
+      int nvars;
+
+      nvars = SCIPgetNVars(scip);
+      vars = SCIPgetVars(scip);
+
+      for( v = 0; v < nvars; ++v )
+      {
+         var = vars[v];
+         SCIPdebugMessage("variables <%s> Local Bounds are [%g,%g] Global Bounds are [%g,%g]\n",
+            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      }
    }
 #endif
    
@@ -1152,6 +1177,13 @@ SCIP_RETCODE checkSolution(
    {
       SCIP_CALL( checkFeasSubtree(scip, sol, &feasible) ) ;
       SCIP_CALL( countSparsesol(scip, sol, feasible, conshdlrdata, result) );
+   }
+   
+   /* check if the solution limit is achived and stop SCIP if this is the case */
+   if( conshdlrdata->sollimit > -1 && conshdlrdata->sollimit <= getNCountedSols(conshdlrdata->nsols, &feasible) )
+   {
+      assert( feasible );
+      SCIP_CALL( SCIPinterruptSolve(scip) );
    }
    
    assert( *result == SCIP_INFEASIBLE || *result == SCIP_CUTOFF );
@@ -1425,7 +1457,7 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
 
    if( conshdlrdata->active )
    {
-      SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; right now these solutions are ignored\n");
+      SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
       *result = SCIP_INFEASIBLE;
    }
    else
@@ -1721,6 +1753,10 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          "constraints/"CONSHDLR_NAME"/collect", 
          "should the solutions be collected?",
          &conshdlrdata->collect, FALSE, DEFAULT_COLLECT, NULL, NULL));
+   SCIP_CALL( SCIPaddLongintParam(scip, 
+         "constraints/"CONSHDLR_NAME"/sollimit", 
+         "counting stops, if the given number of solutions were found (-1: no limit)",
+         &conshdlrdata->sollimit, FALSE, DEFAULT_SOLLIMIT, -1, SCIP_LONGINT_MAX, NULL, NULL));
    
    /* add dialog entry for counting */
    root = SCIPgetRootDialog(scip);
@@ -1798,16 +1834,7 @@ SCIP_Longint SCIPgetNCountedSols(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-#ifdef WITH_GMP
-   *valid = FALSE;
-   if( 0 != mpz_fits_slong_p(conshdlrdata->nsols) )
-      (*valid) = TRUE;
-   
-   return mpz_get_si(conshdlrdata->nsols);
-#else
-   *valid = TRUE;
-   return conshdlrdata->nsols;
-#endif
+   return getNCountedSols(conshdlrdata->nsols, valid);
 }
 
 
@@ -1841,7 +1868,6 @@ void SCIPgetNCountedSolsstr(
    }
    else
       *requiredsize = 21;
-   
 #endif
 }
 
