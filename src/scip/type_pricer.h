@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.21 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.22 2009/05/06 10:13:31 bzfberth Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -109,8 +109,7 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  *                      optimal
  *
  */
-#define SCIP_DECL_PRICERREDCOST(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, \
-      SCIP_RESULT* result)
+#define SCIP_DECL_PRICERREDCOST(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, SCIP_RESULT* result)
 
 /** farkas pricing method of variable pricer for infeasible LPs
  *
