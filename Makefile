@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.289 2009/05/07 09:27:18 bzfheinz Exp $
+# $Id: Makefile,v 1.290 2009/05/07 09:35:37 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -644,7 +644,7 @@ testclustercbc:
 
 .PHONY: tags
 tags:
-		cd src/scip/; ctags *.c *.h;
+		cd src/scip/; rm -f TAGS; ctags -e *.c *.h;
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
