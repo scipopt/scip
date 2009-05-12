@@ -109,6 +109,7 @@ fixed bugs:
   SCIPgetLocalTransEstimate(), no longer the estimated original problem value. Also clarified this in the comments for SCIPcreateChild()
 - fixed potential bug: restarts are now only done if no active pricers exist
 - fixed bug in cons_countsols.c we respect to warning message that "The current parameter setting might cause ..."  
+- fixed bug when using lazy lower/upper bounds: columns deleted from the lp are now always deleted from the lazycols array, too
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

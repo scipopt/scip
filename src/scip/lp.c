@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.312 2009/04/17 09:24:58 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.313 2009/05/12 13:40:32 bzfgamra Exp $"
  
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -5147,6 +5147,19 @@ SCIP_RETCODE lpFlushDelCols(
       }
       lp->nlpicols = lp->lpifirstchgcol;
       lp->flushdeletedcols = TRUE;
+
+      /* remove columns which are deleted from the lazy column array */
+      i = 0;
+      while( i < lp->nlazycols )
+      {
+         if( lp->lazycols[i]->lpipos < 0 )
+         {
+            lp->lazycols[i] = lp->lazycols[lp->nlazycols-1];
+            lp->nlazycols--;
+         }
+         else
+            i++;
+      }
 
       /* mark the LP unsolved */
       lp->solved = FALSE;
