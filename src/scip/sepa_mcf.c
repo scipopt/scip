@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.114 2009/04/21 10:14:06 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.115 2009/05/13 16:34:50 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -5833,7 +5833,7 @@ SCIP_RETCODE generateClusterCuts(
       /* loop over all nodes and generate single-node cuts */
       startpartition = 0;
       allpartitions = (unsigned int) nnodes;
-      MCFdebugMessage("maxtestdelta: %d, maxsepacuts: %d, nnodes: %d \n", maxtestdelta, maxsepacuts, nnodes);
+      SCIPdebugMessage("maxtestdelta: %d, maxsepacuts: %d, nnodes: %d \n", maxtestdelta, maxsepacuts, nnodes);
    }
    else
    {
@@ -5843,7 +5843,7 @@ SCIP_RETCODE generateClusterCuts(
       int nclusters = nodepartition->nclusters;
 
       assert((unsigned int)nclusters <= 8*sizeof(unsigned int));
-      MCFdebugMessage("maxtestdelta: %d, maxsepacuts: %d, nclusters: %d \n", maxtestdelta, maxsepacuts, nclusters);
+      SCIPdebugMessage("maxtestdelta: %d, maxsepacuts: %d, nclusters: %d \n", maxtestdelta, maxsepacuts, nclusters);
 
       /* We fix the last cluster to belong to partition T. In the undirected case, this is sufficient,
        * because S-T is equivalent to T-S. In the directed case, the loop below is conducted two times,
