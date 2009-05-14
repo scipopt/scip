@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.49 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.50 2009/05/14 20:27:16 bzfheinz Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -790,6 +790,13 @@ SCIP_RETCODE SCIPdialogExec(
    return SCIP_OKAY;
 }
 
+/** comparison method for sorting dialogs by non-decreasing index */
+static
+SCIP_DECL_SORTPTRCOMP(dialogComp)
+{
+   return strcmp( ((SCIP_DIALOG*)elem1)->name, ((SCIP_DIALOG*)elem2)->name);
+}
+
 /** adds a sub dialog to the given dialog as menu entry and captures the sub dialog */
 SCIP_RETCODE SCIPdialogAddEntry(
    SCIP_DIALOG*          dialog,             /**< dialog */
@@ -811,9 +818,8 @@ SCIP_RETCODE SCIPdialogAddEntry(
    /* resize the subdialogs array */
    SCIP_CALL( ensureSubdialogMem(dialog, set, dialog->nsubdialogs+1) );
 
-   /* link the dialogs as parent-child pair */
-   dialog->subdialogs[dialog->nsubdialogs] = subdialog;
-   dialog->nsubdialogs++;
+   /* link the dialogs as parent-child pair; the subdialogs are sorted non-decreasing w.r.t. their name */
+   SCIPsortedvecInsertPtr((void**)dialog->subdialogs, dialogComp, (void*)subdialog, &dialog->nsubdialogs);
    subdialog->parent = dialog;
 
    /* capture sub dialog */
