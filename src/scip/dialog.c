@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.50 2009/05/14 20:27:16 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.51 2009/05/14 20:31:51 bzfheinz Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -794,7 +794,7 @@ SCIP_RETCODE SCIPdialogExec(
 static
 SCIP_DECL_SORTPTRCOMP(dialogComp)
 {
-   return strcmp( ((SCIP_DIALOG*)elem1)->name, ((SCIP_DIALOG*)elem2)->name);
+   return strcmp( SCIPdialogGetName((SCIP_DIALOG*)elem1), SCIPdialogGetName((SCIP_DIALOG*)elem2) );
 }
 
 /** adds a sub dialog to the given dialog as menu entry and captures the sub dialog */
