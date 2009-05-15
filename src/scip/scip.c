@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.503 2009/04/17 12:13:32 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.504 2009/05/15 10:12:39 bzfshina Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6441,7 +6441,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarLbGlobal", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarLbGlobal", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
@@ -6457,6 +6457,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
       SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       return SCIP_OKAY;
@@ -6482,7 +6483,7 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarUbGlobal", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarUbGlobal", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
@@ -6498,6 +6499,7 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
       SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       return SCIP_OKAY;
