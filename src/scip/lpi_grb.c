@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_grb.c,v 1.1 2009/04/17 19:37:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_grb.c,v 1.2 2009/05/20 17:03:28 bzfpfets Exp $"
 
 /**@file   lpi_grb.c
  * @ingroup LPIS
@@ -765,9 +765,10 @@ void convertSides(
 
    /* convert lhs/rhs into sen/rhs */
    *rngcount = 0;
-   for ( i = 0; i < nrows; ++i )
+   for (i = 0; i < nrows; ++i)
    {
       assert(lhs[i] <= rhs[i]);
+
       if ( lhs[i] == rhs[i] ) /*lint !e777*/
       {
          assert(-GRB_INFINITY < rhs[i] && rhs[i] < GRB_INFINITY);
