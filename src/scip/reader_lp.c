@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.73 2009/05/04 19:02:25 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.74 2009/05/21 15:22:11 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -1227,15 +1227,18 @@ SCIP_RETCODE readConstraints(
    {
       if ( strcmp(lpinput->token, "-") == 0 )
       {
-	 /* remember the token in the token buffer */
+	 /* remember '-' in token buffer */
 	 swapTokenBuffer(lpinput);
 
-	 if ( getNextToken(lpinput) && ! isNewSection(lpinput) )
+	 /* check next token - cannot be a new section */
+	 if ( getNextToken(lpinput) )
 	 {
+	    /* check for "->" */
 	    if ( strcmp(lpinput->token, ">") == 0 )
 	       isIndicatorCons = TRUE;
 	    else
 	    {
+	       /* push back last token and '-' */
 	       pushToken(lpinput);
 	       pushBufferToken(lpinput);
 	    }
