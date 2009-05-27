@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.115 2009/05/13 16:34:50 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.116 2009/05/27 15:20:50 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -946,10 +946,6 @@ SCIP_RETCODE extractFlowRows(
       /* calculate flow row score */
       if ( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) != 0 )
       {
-         /* row is an equation: score +1, only tiebreaking */
-         if ( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == (LHSPOSSIBLE | RHSPOSSIBLE) )
-            flowrowscores[r] += 1.0;
-
          /* row does not need to be scaled: score +1000 */
          if ( SCIPisEQ(scip, flowrowscalars[r], 1.0) )
             flowrowscores[r] += 1000.0;
@@ -973,6 +969,10 @@ SCIP_RETCODE extractFlowRows(
          /* the longer the row, the earlier we want to process it: score +10*len/(len+10) */
          /* value is in [1,10) */
          flowrowscores[r] += 10.0*rowlen/(rowlen+10.0);
+
+         /* row is an equation: score +50, tiebreaking */
+         if ( (flowrowsigns[r] & (LHSPOSSIBLE | RHSPOSSIBLE)) == (LHSPOSSIBLE | RHSPOSSIBLE) )
+            flowrowscores[r] += 50.0;
 
          assert(flowrowscores[r] > 0.0);
 
@@ -2102,6 +2102,7 @@ SCIP_RETCODE extractFlow(
       assert((newrowsign & INVERTED) == 0);
 
       /* start new commodity */
+      SCIPdebugMessage(" -------------------start new commodity %d--------------------- \n", mcfdata->ncommodities );
       SCIP_CALL( createNewCommodity(scip, mcfdata) );
       nnodes = 0;
       ncomcolids = 0;
@@ -2114,6 +2115,7 @@ SCIP_RETCODE extractFlow(
             invertCommodity(scip, mcfdata, mcfdata->ncommodities-1, comrows, nnodes, comcolids, ncomcolids);
 
          /* add new row to commodity */
+         SCIPdebugMessage(" -> add flow row  <%s> \n",  SCIProwGetName(newrow));
          addFlowrowToCommodity(scip, mcfdata, newrow, newrowsign, comcolids, &ncomcolids);
          comrows[nnodes] = newrow;
          nnodes++;
