@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.52 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.53 2009/06/05 20:28:59 bzfheinz Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -69,6 +69,10 @@ struct SCIP_Col
    SCIP_Real             obj;                /**< current objective value of column in LP */
    SCIP_Real             lb;                 /**< current lower bound of column in LP */
    SCIP_Real             ub;                 /**< current upper bound of column in LP */
+   SCIP_Real             lazylb;             /**< lazy lower bound of the column; if the current lower bound is not greater than 
+                                              *   the lazy lower bound, then the lower bound has not to be added to the LP */
+   SCIP_Real             lazyub;             /**< lazy upper bound of the column; if the current upper bound is not smaller than 
+                                              *   the lazy upper bound, then the upper bound has not to be added to the LP */
    SCIP_Real             flushedobj;         /**< objective value of column already flushed to the LP solver */
    SCIP_Real             flushedlb;          /**< lower bound of column already flushed to the LP solver */
    SCIP_Real             flushedub;          /**< upper bound of column already flushed to the LP solver */
@@ -115,8 +119,6 @@ struct SCIP_Col
                                               *   otherwise, it can only be used as an estimate value */
    unsigned int          sbupvalid:1;        /**< stores whether the stored strong branching up value is a valid dual bound;
                                               *   otherwise, it can only be used as an estimate value */
-   unsigned int          lazylb:1;           /**< TRUE iff the global lower bound is lazy, this means a constraint ensures this bound */
-   unsigned int          lazyub:1;           /**< TRUE iff the global upper bound is lazy, this means a constraint ensures this bound */
 };
 
 /** LP row
@@ -206,7 +208,7 @@ struct SCIP_Lp
    SCIP_COL**            chgcols;            /**< array of changed columns not yet applied to the LP solver */
    SCIP_ROW**            chgrows;            /**< array of changed rows not yet applied to the LP solver */
    SCIP_COL**            cols;               /**< array with current LP columns in correct order */
-   SCIP_COL**            lazycols;           /**< array with current LP lazy columns in correct order */
+   SCIP_COL**            lazycols;           /**< array with current LP lazy columns */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    int                   lpicolssize;        /**< available slots in lpicols vector */

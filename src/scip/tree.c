@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.216 2009/04/17 12:13:33 bzfgamra Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.217 2009/06/05 20:28:59 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -2868,7 +2868,7 @@ SCIP_RETCODE SCIPtreeLoadLP(
       assert(lpforkdepth == -1 || tree->pathnlprows[tree->correctlpdepth] <= tree->pathnlprows[lpforkdepth]);
       assert(lpforkdepth >= 0 || tree->pathnlpcols[tree->correctlpdepth] == 0);
       assert(lpforkdepth >= 0 || tree->pathnlprows[tree->correctlpdepth] == 0);
-      SCIP_CALL( SCIPlpShrinkCols(lp, tree->pathnlpcols[tree->correctlpdepth]) );
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, tree->pathnlpcols[tree->correctlpdepth]) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, tree->pathnlprows[tree->correctlpdepth]) );
    }
    else
@@ -3264,7 +3264,7 @@ SCIP_RETCODE focusnodeToFork(
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
-      SCIP_CALL( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
@@ -3370,7 +3370,7 @@ SCIP_RETCODE focusnodeToSubroot(
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
-      SCIP_CALL( SCIPlpShrinkCols(lp, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, SCIPlpGetNCols(lp) - SCIPlpGetNNewcols(lp)) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
    
       /* convert node into a junction */
@@ -4843,7 +4843,7 @@ SCIP_RETCODE treeBacktrackProbing(
       treeCheckPath(tree);
 
       /* undo LP extensions */
-      SCIP_CALL( SCIPlpShrinkCols(lp, ncols) );
+      SCIP_CALL( SCIPlpShrinkCols(lp, set, ncols) );
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, nrows) );
       tree->probingloadlpistate = FALSE; /* LP state must be reloaded if the next LP is solved */
 

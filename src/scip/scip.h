@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.341 2009/04/17 12:13:33 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.342 2009/06/05 20:28:58 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2238,6 +2238,22 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             newbound            /**< new value for bound */
+   );
+
+/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
+extern
+SCIP_RETCODE SCIPchgVarLbLazy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   );
+
+/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet */
+extern
+SCIP_RETCODE SCIPchgVarUbLazy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             lazyub              /**< the lazy lower bound to be set */
    );
 
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.121 2009/04/06 13:07:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.122 2009/06/05 20:28:59 bzfheinz Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -616,6 +616,22 @@ SCIP_RETCODE SCIPvarChgUbLocal(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
    SCIP_Real             newbound            /**< new bound for variable */
    );
+
+/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
+extern
+SCIP_RETCODE SCIPvarChgLbLazy(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   );
+
+/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet */
+SCIP_RETCODE SCIPvarChgUbLazy(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   );
+
 
 /** changes current local bound of variable; if possible, adjusts bound to integral value; stores inference
  *  information in variable

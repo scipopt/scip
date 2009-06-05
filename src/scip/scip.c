@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.504 2009/05/15 10:12:39 bzfshina Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.505 2009/06/05 20:28:58 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6514,6 +6514,40 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_ERROR;
    }  /*lint !e788*/
+}
+
+/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
+SCIP_RETCODE SCIPchgVarLbLazy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPchgVarLbLazy", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPvarChgLbLazy(var, scip->set, lazylb) );
+
+   return SCIP_OKAY;
+}
+
+/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet */
+SCIP_RETCODE SCIPchgVarUbLazy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Real             lazyub              /**< the lazy lower bound to be set */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPchgVarUbLazy", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPvarChgUbLazy(var, scip->set, lazyub) );
+
+   return SCIP_OKAY;
 }
 
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter

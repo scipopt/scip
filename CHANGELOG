@@ -6,8 +6,10 @@ interface:
   whether "mksetcoefs" computed in SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows 
   is empty or contains too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
 - new parameter "set" in SCIPconsSetInitial().
-- new methods SCIPvarMarkLazyLb() and SCIPvarMarkLazyUb() in pub_var.h and var.c; These methods can be used to set the lower or upper bound 
-  of a variable as lazy; This has the consequences that these bounds are not in LP.
+- new methods SCIPchgVarLbLazy() and SCIPchgVarUbLazy() in scip.h; These methods can be used to change the lazy lower or upper bound 
+  of a variable; This might has the consequences that the bounds of the corresponding variable is  not in LP. This is the case if the 
+  lazy lower or upper bound is greater or less than the local lower or upper bound, respectively 
+- new method SCIPvarGetLbLazy() and SCIPvarGetUbLazy() in pub_var.h; These methods return the lazy lower or upper bound, respectively
 - new methods SCIPgetNFixedonesSetppc() and SCIPgetNFixedzerosSetppc() in cons_setppc.{h,c}; these methods returns current (local) 
   number of variables fixed to one/zero in the given setppc constraint
 - new methods SCIPprintNodeRootPath() in scip.h This method prints all branching decisions on variables from the root to the given node
@@ -39,11 +41,11 @@ features:
 - new interface to QSopt due to Daniel Espinoza
 - new reader for reading and writing FlatZinc models
 - new presolving step in cons_knapsack.c, same like "simplifyinequalities" in cons_linear.c
-- each variable has now two additional Bool parameter which determine whether the lower or upper bound are lazy; lazy means 
-  that there exists a constraint which implies this bound. Variable bounds which are marked as lazy are not in the LP. These 
-  parameters are set to FALSE in default which yields the same behavior as before. With the methods SCIPvarMarkLazyLb() and 
-  SCIPvarMarkLazyUb() these parameters can be set to TRUE. (This is of interest if SCIP gets used as a
-  branch-and-price framework).
+- each variable has now two additional SCIP_Real parameter which define a lazy lower and upper bound; lazy means that there exists 
+  constraints which implies these (lazy) bounds. If the lazy lower or upper bound is greater or less than the local lower or upper bound, 
+  respectively, then the corresponding bound is not put into the LP. The bounds are set to minus and plus infinity per default which yields 
+  the same behavior as before. With the methods SCIPchgVarLbLazy() and SCIPchgVarUbLazy() these bounds can be set. 
+  This is of interest if SCIP gets used as a  branch-and-price framework.
 - added new timing point, SCIP_HEURTIMING_DURINGPRICINGLOOP, for calling heuristics; If this timing point is used the corresponding 
   heuristics is called during the pricing loop of variables; we also added this timing point to heur_simplerounding.{h,c} which
   has the effect that a LP solution which satisfies all integrality conditions during the pricing loop is detected
@@ -109,7 +111,6 @@ fixed bugs:
   SCIPgetLocalTransEstimate(), no longer the estimated original problem value. Also clarified this in the comments for SCIPcreateChild()
 - fixed potential bug: restarts are now only done if no active pricers exist
 - fixed bug in cons_countsols.c we respect to warning message that "The current parameter setting might cause ..."  
-- fixed bug when using lazy lower/upper bounds: columns deleted from the lp are now always deleted from the lazycols array, too
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

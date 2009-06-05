@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.247 2009/04/06 13:07:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.248 2009/06/05 20:28:59 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1662,6 +1662,8 @@ SCIP_RETCODE varCreate(
    (*var)->primsolavg = 0.5 * (lb + ub);
    (*var)->conflictlb = SCIP_REAL_MIN;
    (*var)->conflictub = SCIP_REAL_MAX;
+   (*var)->lazylb = -SCIPsetInfinity(set);
+   (*var)->lazyub = SCIPsetInfinity(set);
    (*var)->glbdom.holelist = NULL;
    (*var)->glbdom.lb = lb;
    (*var)->glbdom.ub = ub;
@@ -1707,8 +1709,6 @@ SCIP_RETCODE varCreate(
    (*var)->removable = removable;
    (*var)->deleted = FALSE;
    (*var)->donotmultaggr = FALSE;
-   (*var)->lazylb = FALSE;
-   (*var)->lazyub = FALSE;
    (*var)->vartype = vartype; /*lint !e641*/
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
@@ -2127,13 +2127,13 @@ void SCIPvarPrint(
    else if( SCIPsetIsInfinity(set, -lb) )
       SCIPmessageFPrintInfo(file, "[-inf,");
    else
-      SCIPmessageFPrintInfo(file, "[%.15g%s", lb, SCIPvarLazyLb(var) ? "\'," : ",");
+      SCIPmessageFPrintInfo(file, "[%.15g%s", lb, SCIPsetIsInfinity(set, -SCIPvarGetLbLazy(var)) ? "," : "(%.15g),", SCIPvarGetLbLazy(var));
    if( SCIPsetIsInfinity(set, ub) )
       SCIPmessageFPrintInfo(file, "+inf]");
    else if( SCIPsetIsInfinity(set, -ub) )
       SCIPmessageFPrintInfo(file, "-inf]");
    else
-      SCIPmessageFPrintInfo(file, "%.15g%s", ub, SCIPvarLazyUb(var) ? "\']" : "]");
+      SCIPmessageFPrintInfo(file, "%.15g%s", ub, SCIPsetIsInfinity(set, SCIPvarGetUbLazy(var)) ? "," : "(%.15g),", SCIPvarGetUbLazy(var));
 
    /* holes */
    /**@todo print holes */
@@ -2482,7 +2482,7 @@ SCIP_RETCODE SCIPvarTransform(
       /* copy doNotMultiaggr status */
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
 
-      /* copy lazy bound status */
+      /* copy lazy bounds */
       (*transvar)->lazylb = origvar->lazylb;
       (*transvar)->lazyub = origvar->lazyub;
 
@@ -3894,9 +3894,9 @@ SCIP_RETCODE SCIPvarNegate(
       /* copy doNotMultiaggr status */
       (*negvar)->donotmultaggr = var->donotmultaggr;
 
-      /* copy lazy bound status (they have to be flipped) */
-      (*negvar)->lazylb = var->lazyub;
-      (*negvar)->lazyub = var->lazylb;
+      /* copy lazy bounds (they have to be flipped) */
+      (*negvar)->lazylb = (*negvar)->data.negate.constant - var->lazyub;
+      (*negvar)->lazyub = (*negvar)->data.negate.constant - var->lazylb;
 
       /* make negated variable a parent of the negation variable (negated variable is captured as a parent) */
       SCIP_CALL( varAddParent(var, blkmem, set, *negvar) );
@@ -4018,40 +4018,6 @@ void SCIPvarMarkDoNotMultaggr(
    assert(var->probindex != -1);
 
    var->donotmultaggr = TRUE;
-}
-
-/** marks the variable to have a lazy lower bound, this only possible if the variable is not in the LP yet */
-SCIP_RETCODE SCIPvarMarkLazyLb(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(var->probindex != -1);
-
-   /* variable should not be in the LP */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIP_INVALIDCALL;
-   
-   var->lazylb = TRUE;
-   
-   return SCIP_OKAY;
-}
-
-/** marks the variable to have a lazy upper bound, this only possible if the variable is not in the LP yet */
-SCIP_RETCODE SCIPvarMarkLazyUb(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   assert(var->probindex != -1);
-
-   /* variable should not be in the LP */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
-      return SCIP_INVALIDCALL;
-   
-   var->lazyub = TRUE;
-   
-   return SCIP_OKAY;
 }
 
 /** changes type of variable; cannot be called, if var belongs to a problem */
@@ -5097,6 +5063,49 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 
    return SCIP_OKAY;
 }
+
+/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
+SCIP_RETCODE SCIPvarChgLbLazy(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lazylb              /**< the lazy lower bound to be set */
+   )
+{
+   assert(var != NULL);
+   assert(var->probindex != -1);
+   assert(SCIPsetIsFeasGE(set, var->glbdom.ub, lazylb));
+   assert(SCIPsetIsFeasGE(set, var->lazyub, lazylb));
+
+   /* variable should not be in the LP */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIP_INVALIDCALL;
+   
+   var->lazylb = lazylb;
+   
+   return SCIP_OKAY;
+}
+
+/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet */
+SCIP_RETCODE SCIPvarChgUbLazy(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             lazyub              /**< the lazy lower bound to be set */
+   )
+{
+   assert(var != NULL);
+   assert(var->probindex != -1);
+   assert(SCIPsetIsFeasGE(set, lazyub, var->glbdom.lb));
+   assert(SCIPsetIsFeasGE(set, lazyub, var->lazylb));
+
+   /* variable should not be in the LP */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
+      return SCIP_INVALIDCALL;
+   
+   var->lazyub = lazyub;
+   
+   return SCIP_OKAY;
+}
+
 
 /** changes global bound of variable; if possible, adjusts bound to integral value;
  *  updates local bound if the global bound is tighter
@@ -10919,8 +10928,6 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarIsDeleted
 #undef SCIPvarIsActive
 #undef SCIPvarDoNotMultaggr
-#undef SCIPvarLazyLb
-#undef SCIPvarLazyUb
 #undef SCIPvarGetIndex
 #undef SCIPvarGetProbindex
 #undef SCIPvarGetTransVar
@@ -10943,6 +10950,8 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetUbGlobal
 #undef SCIPvarGetLbLocal
 #undef SCIPvarGetUbLocal
+#undef SCIPvarGetLbLazy
+#undef SCIPvarGetUbLazy
 #undef SCIPvarGetBranchFactor
 #undef SCIPvarGetBranchPriority
 #undef SCIPvarGetBranchDirection
@@ -11235,27 +11244,6 @@ SCIP_Bool SCIPvarDoNotMultaggr(
    return var->donotmultaggr;
 }
 
-/** returns whether variable has lazy lower bound */
-SCIP_Bool SCIPvarLazyLb(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-
-   return var->lazylb;
-}
-
-/** returns whether variable has lazy upper bound */
-SCIP_Bool SCIPvarLazyUb(
-   SCIP_VAR*             var                 /**< problem variable */
-   )
-{
-   assert(var != NULL);
-   
-   return var->lazyub;
-}
-
-
 /** gets unique index of variable */
 int SCIPvarGetIndex(
    SCIP_VAR*             var                 /**< problem variable */
@@ -11509,6 +11497,26 @@ SCIP_Real SCIPvarGetUbLocal(
    assert(var != NULL);
 
    return var->locdom.ub;
+}
+
+/** gets lazy lower bound of variable, returns -infinity if the variable has no lazy lower bound */
+SCIP_Real SCIPvarGetLbLazy(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->lazylb;
+}
+
+/** gets lazy upper bound of variable, returns infinity if the variable has no lazy upper bound */
+SCIP_Real SCIPvarGetUbLazy(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->lazyub;
 }
 
 /** gets the branch factor of the variable; this value can be used in the branching methods to scale the score

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.49 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.50 2009/06/05 20:28:59 bzfheinz Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -199,6 +199,8 @@ struct SCIP_Var
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
    SCIP_Real             conflictlb;         /**< maximal lower bound of variable in the current conflict */
    SCIP_Real             conflictub;         /**< minimal upper bound of variable in the current conflict */
+   SCIP_Real             lazylb;             /**< global lower bound that is ensured by constraints and has not to be added to the LP */
+   SCIP_Real             lazyub;             /**< global upper bound that is ensured by constraints and has not to be added to the LP */
    SCIP_DOM              glbdom;             /**< domain of variable in global problem */
    SCIP_DOM              locdom;             /**< domain of variable in current subproblem */
    union
@@ -250,8 +252,6 @@ struct SCIP_Var
    unsigned int          removable:1;        /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
    unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */
    unsigned int          donotmultaggr:1;    /**< TRUE iff variable is not allowed to be multi-aggregated */
-   unsigned int          lazylb:1;           /**< TRUE iff the global lower bound is lazy, this means a constraint ensures this bound */
-   unsigned int          lazyub:1;           /**< TRUE iff the global upper bound is lazy, this means a constraint ensures this bound */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */

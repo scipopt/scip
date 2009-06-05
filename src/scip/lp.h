@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.135 2009/04/17 09:24:58 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.136 2009/06/05 20:28:58 bzfheinz Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -631,6 +631,7 @@ SCIP_RETCODE SCIPlpAddRow(
 extern
 SCIP_RETCODE SCIPlpShrinkCols(
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    int                   newncols            /**< new number of columns in the LP */
    );
 

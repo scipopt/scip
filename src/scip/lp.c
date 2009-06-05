@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.313 2009/05/12 13:40:32 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.314 2009/06/05 20:28:58 bzfheinz Exp $"
  
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2282,8 +2282,8 @@ SCIP_RETCODE SCIPcolCreate(
    (*col)->removable = removable;
    (*col)->sbdownvalid = FALSE;
    (*col)->sbupvalid = FALSE;
-   (*col)->lazylb = SCIPvarLazyLb(var);
-   (*col)->lazyub = SCIPvarLazyUb(var);
+   (*col)->lazylb = SCIPvarGetLbLazy(var);
+   (*col)->lazyub = SCIPvarGetUbLazy(var);
 
    return SCIP_OKAY;
 }
@@ -5148,19 +5148,6 @@ SCIP_RETCODE lpFlushDelCols(
       lp->nlpicols = lp->lpifirstchgcol;
       lp->flushdeletedcols = TRUE;
 
-      /* remove columns which are deleted from the lazy column array */
-      i = 0;
-      while( i < lp->nlazycols )
-      {
-         if( lp->lazycols[i]->lpipos < 0 )
-         {
-            lp->lazycols[i] = lp->lazycols[lp->nlazycols-1];
-            lp->nlazycols--;
-         }
-         else
-            i++;
-      }
-
       /* mark the LP unsolved */
       lp->solved = FALSE;
       lp->primalfeasible = FALSE;
@@ -5268,11 +5255,11 @@ SCIP_RETCODE lpFlushAddCols(
       col->ubchanged = FALSE;
       col->coefchanged = FALSE;
       obj[pos] = col->obj;
-      if( SCIPsetIsInfinity(set, -col->lb) || col->lazylb )
+      if( SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsLE(set, col->lb, col->lazylb) )
          lb[pos] = -lpiinf;
       else
          lb[pos] = col->lb;
-      if( SCIPsetIsInfinity(set, col->ub) || col->lazyub )
+      if( SCIPsetIsInfinity(set, col->ub) || SCIPsetIsGE(set, col->ub, col->lazyub) )
          ub[pos] = lpiinf;
       else
          ub[pos] = col->ub;
@@ -6340,7 +6327,7 @@ SCIP_RETCODE SCIPlpAddCol(
    if( col->removable )
       lp->nremovablecols++;
 
-   if( col->lazylb || col->lazyub )
+   if( !SCIPsetIsInfinity(set, -col->lazylb) || !SCIPsetIsInfinity(set, col->lazyub) )
    {
       SCIP_CALL( ensureLazycolsSize(lp, set, lp->nlazycols+1) );
       lp->lazycols[lp->nlazycols] = col;
@@ -6408,9 +6395,63 @@ SCIP_RETCODE SCIPlpAddRow(
    return SCIP_OKAY;
 }
 
+
+#ifndef NDEBUG
+/** method check if all columns in the lazycols array have at least one lazy bound and also have a counter part in the
+ *  cols array; furthermore, it is checked if columns in the cols which have a lazy bound have a counter part in the
+ *  lazycols array  */
+static
+void checkLazyColArray(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Bool contained;
+   int c;
+   int i;
+
+   assert(lp != NULL);
+   
+   /* check if each column in the lazy column array has a counter part in the column array */
+   for( i = 0; i < lp->nlazycols; ++i )
+   {
+      /* check if each lazy column has at least on lazy bound */
+      assert(!SCIPsetIsInfinity(set, lp->lazycols[i]->lazyub) || !SCIPsetIsInfinity(set, -lp->lazycols[i]->lazylb));
+
+      contained = FALSE;
+      for( c = 0; c < lp->ncols; ++c )
+      {
+         if ( lp->lazycols[i] == lp->cols[c] )
+         {
+            assert(!SCIPsetIsInfinity(set, lp->cols[c]->lazyub) || !SCIPsetIsInfinity(set, -lp->cols[c]->lazylb));
+            contained = TRUE;
+         }
+      }
+      assert( contained );
+   }
+
+   /* check if each column in the column array which has at least one lazy bound has a counter part in the lazy column *
+    * array */
+   for( c = 0; c < lp->ncols; ++c )
+   {
+      contained = FALSE;
+      for( i = 0; i < lp->nlazycols; ++i )
+      {
+         if ( lp->lazycols[i] == lp->cols[c] )
+         {
+            contained = TRUE;
+         }
+      }
+
+      assert(contained == (!SCIPsetIsInfinity(set, lp->cols[c]->lazyub) || !SCIPsetIsInfinity(set, -lp->cols[c]->lazylb)));
+   }
+}
+#endif
+
 /** removes all columns after the given number of cols from the LP */
 SCIP_RETCODE SCIPlpShrinkCols(
    SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    int                   newncols            /**< new number of columns in the LP */
    )
 {
@@ -6450,6 +6491,27 @@ SCIP_RETCODE SCIPlpShrinkCols(
       }
       assert(lp->ncols == newncols);
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
+
+      /* remove columns which are deleted from the lazy column array */
+      c = 0;
+      while( c < lp->nlazycols )
+      {
+         if( lp->lazycols[c]->lppos < 0 )
+         {
+            lp->lazycols[c] = lp->lazycols[lp->nlazycols-1];
+            lp->nlazycols--;
+         }
+         else
+            c++;
+      }
+      
+#ifndef NDEBUG
+      /** method check if all columns in the lazycols array have at least one lazy bound and also have a counter part in
+       *  the cols array; furthermore, it is checked if columns in the cols which have a lazy bound have a counter part
+       *  in the lazycols array  */
+      checkLazyColArray(lp, set);
+#endif
+
 
       /* mark the current LP unflushed */
       lp->flushed = FALSE;
@@ -6526,7 +6588,7 @@ SCIP_RETCODE SCIPlpClear(
    assert(!lp->diving);
 
    SCIPdebugMessage("clearing LP\n");
-   SCIP_CALL( SCIPlpShrinkCols(lp, 0) );
+   SCIP_CALL( SCIPlpShrinkCols(lp, set, 0) );
    SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, 0) );
 
    return SCIP_OKAY;
@@ -10412,8 +10474,7 @@ SCIP_RETCODE lpFlushAndSolve(
    return SCIP_OKAY;
 }
 
-/** checks if the lazy bound are valid; if not add these bounds to the LP and denote the corresponding column bound as
- *  not lazy and resolve the LP */
+/** checks if the lazy bounds are valid; if not add these bounds to the LP and resolve the LP */
 static
 SCIP_RETCODE checkLazyBounds(
    SCIP_LP*              lp,                 /**< LP data */
@@ -10435,8 +10496,11 @@ SCIP_RETCODE checkLazyBounds(
       ub = col->ub;
 
       /* check lower bound */
-      if( col->lazylb && SCIPsetIsFeasNegative(set, col->primsol - lb) )
+      if( !SCIPsetIsInfinity(set, -col->lazylb) && SCIPsetIsFeasNegative(set, col->primsol - col->lazylb) )
       {
+         SCIPwarningMessage("variable <%s>: lazy lower bound (%.15g) is violated by the current LP solution (%.15g), add lower bound to the LP!\n", 
+            SCIPvarGetName(col->var), col->lazylb, col->primsol);
+
          /* insert column in the chgcols list (if not already there) */
          SCIP_CALL( insertColChgcols(col, set, lp) );
 
@@ -10444,14 +10508,17 @@ SCIP_RETCODE checkLazyBounds(
          col->lbchanged = TRUE;
 
          /* remove lazy flag */
-         col->lazylb = FALSE;
+         col->lazylb = -SCIPsetInfinity(set);
 
          (*primalfeasible) = FALSE;
       }
          
       /* check upper bound */
-      if( col->lazyub && SCIPsetIsFeasPositive(set, col->primsol - ub))
+      if( !SCIPsetIsInfinity(set, col->lazyub) && SCIPsetIsFeasPositive(set, col->primsol - col->lazyub))
       {
+         SCIPwarningMessage("variable <%s>: lazy upper bound (%.15g) is violated by the current LP solution (%.15g), add upper bound to the LP!\n", 
+            SCIPvarGetName(col->var), col->lazyub, col->primsol);
+
          /* insert column in the chgcols list (if not already there) */
          SCIP_CALL( insertColChgcols(col, set, lp) );
 
@@ -10459,13 +10526,13 @@ SCIP_RETCODE checkLazyBounds(
          col->ubchanged = TRUE;
 
          /* remove lazy flag */
-         col->lazyub = FALSE;
+         col->lazyub = SCIPsetInfinity(set);
 
          (*primalfeasible) = FALSE;
       }
 
       /* remove lazy column entry if both columns are in the LP */
-      if( !col->lazylb && !col->lazyub )
+      if( SCIPsetIsInfinity(set, -col->lazylb) && SCIPsetIsInfinity(set, -col->lazyub) )
       {
          lp->nlazycols--;
          lp->lazycols[c] = lp->lazycols[lp->nlazycols];
@@ -12009,6 +12076,7 @@ SCIP_RETCODE SCIPlpUpdateAges(
 static
 SCIP_RETCODE lpDelColset(
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    int*                  coldstat            /**< deletion status of columns:  1 if column should be deleted, 0 if not */
    )
 {
@@ -12078,6 +12146,13 @@ SCIP_RETCODE lpDelColset(
       else
          c++;
    }
+
+#ifndef NDEBUG
+   /** method check if all columns in the lazycols array have at least one lazy bound and also have a counter part in
+    *  the cols array; furthermore, it is checked if columns in the cols which have a lazy bound have a counter part in
+    *  the lazycols array  */
+   checkLazyColArray(lp, set);
+#endif
 
    /* mark LP to be unsolved */
    if( lp->ncols < ncols )
@@ -12247,7 +12322,7 @@ SCIP_RETCODE lpRemoveObsoleteCols(
    /* delete the marked columns in the LP solver interface, update the LP respectively */
    if( ndelcols > 0 )
    {
-      SCIP_CALL( lpDelColset(lp, coldstat) );
+      SCIP_CALL( lpDelColset(lp, set, coldstat) );
    }
    assert(lp->ncols == ncols - ndelcols);
 
@@ -12442,7 +12517,7 @@ SCIP_RETCODE lpCleanupCols(
    /* delete the marked columns in the LP solver interface, update the LP respectively */
    if( ndelcols > 0 )
    {
-      SCIP_CALL( lpDelColset(lp, coldstat) );
+      SCIP_CALL( lpDelColset(lp, set, coldstat) );
    }
    assert(lp->ncols == ncols - ndelcols);
 
