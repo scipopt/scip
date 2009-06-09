@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.74 2009/05/21 15:22:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.75 2009/06/09 09:40:27 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -184,7 +184,7 @@ SCIP_Bool isValueChar(
 
    if( isdigit(c) )
       return TRUE;
-   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') )
+   else if( (*exptype == LP_EXP_NONE) && !(*hasdot) && (c == '.') && isdigit(nextc) )
    {
       *hasdot = TRUE;
       return TRUE;

@@ -111,6 +111,7 @@ fixed bugs:
   SCIPgetLocalTransEstimate(), no longer the estimated original problem value. Also clarified this in the comments for SCIPcreateChild()
 - fixed potential bug: restarts are now only done if no active pricers exist
 - fixed bug in cons_countsols.c we respect to warning message that "The current parameter setting might cause ..."  
+- fixed bug in reader_lp.c with respect to constraint and variable names which start with two or more dots ".."
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
