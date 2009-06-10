@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.220 2007/11/15 10:53:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.218.2.1 2009/06/10 17:47:14 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -2105,7 +2105,7 @@ void SCIPvarPrint(
    SCIPmessageFPrintInfo(file, " <%s>:", var->name);
 
    /* objective value */
-   SCIPmessageFPrintInfo(file, " obj=%.15g", var->obj);
+   SCIPmessageFPrintInfo(file, " obj=%g", var->obj);
 
    /* bounds (global bounds for transformed variables, original bounds for original variables) */
    if( SCIPvarIsTransformed(var) )
@@ -2124,13 +2124,13 @@ void SCIPvarPrint(
    else if( SCIPsetIsInfinity(set, -lb) )
       SCIPmessageFPrintInfo(file, "[-inf,");
    else
-      SCIPmessageFPrintInfo(file, "[%.15g,", lb);
+      SCIPmessageFPrintInfo(file, "[%g,", lb);
    if( SCIPsetIsInfinity(set, ub) )
       SCIPmessageFPrintInfo(file, "+inf]");
    else if( SCIPsetIsInfinity(set, -ub) )
       SCIPmessageFPrintInfo(file, "-inf]");
    else
-      SCIPmessageFPrintInfo(file, "%.15g]", ub);
+      SCIPmessageFPrintInfo(file, "%g]", ub);
 
    /* holes */
    /**@todo print holes */
@@ -2150,26 +2150,26 @@ void SCIPvarPrint(
       else if( SCIPsetIsInfinity(set, -var->glbdom.lb) )
          SCIPmessageFPrintInfo(file, "-inf");
       else
-         SCIPmessageFPrintInfo(file, "%.15g", var->glbdom.lb);
+         SCIPmessageFPrintInfo(file, "%g", var->glbdom.lb);
       break;
 
    case SCIP_VARSTATUS_AGGREGATED:
       SCIPmessageFPrintInfo(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.aggregate.constant) )
-         SCIPmessageFPrintInfo(file, " %.15g", var->data.aggregate.constant);
-      SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
+         SCIPmessageFPrintInfo(file, " %g", var->data.aggregate.constant);
+      SCIPmessageFPrintInfo(file, " %+g<%s>", var->data.aggregate.scalar, SCIPvarGetName(var->data.aggregate.var));
       break;
 
    case SCIP_VARSTATUS_MULTAGGR:
       SCIPmessageFPrintInfo(file, ", aggregated:");
       if( !SCIPsetIsZero(set, var->data.multaggr.constant) )
-         SCIPmessageFPrintInfo(file, " %.15g", var->data.multaggr.constant);
+         SCIPmessageFPrintInfo(file, " %g", var->data.multaggr.constant);
       for( i = 0; i < var->data.multaggr.nvars; ++i )
-         SCIPmessageFPrintInfo(file, " %+.15g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
+         SCIPmessageFPrintInfo(file, " %+g<%s>", var->data.multaggr.scalars[i], SCIPvarGetName(var->data.multaggr.vars[i]));
       break;
 
    case SCIP_VARSTATUS_NEGATED:
-      SCIPmessageFPrintInfo(file, ", negated: %.15g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
+      SCIPmessageFPrintInfo(file, ", negated: %g - <%s>", var->data.negate.constant, SCIPvarGetName(var->negatedvar));
       break;
 
    default:
@@ -2652,6 +2652,12 @@ SCIP_RETCODE SCIPvarFix(
    *infeasible = FALSE;
    *fixed = FALSE;
 
+   if( set->misc_exactsolve )
+   {
+      SCIPerrorMessage("in exact solving modus, fixing of variables is not supported yet\n");
+      return SCIP_INVALIDDATA;
+   }
+
    if( (SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPsetIsFeasIntegral(set, fixedval))
       || SCIPsetIsFeasLT(set, fixedval, var->locdom.lb)
       || SCIPsetIsFeasGT(set, fixedval, var->locdom.ub) )
@@ -3006,6 +3012,12 @@ SCIP_RETCODE SCIPvarAggregate(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
+   if( set->misc_exactsolve )
+   {
+      SCIPerrorMessage("in exact solving modus, aggregation of variables is not supported yet\n");
+      return SCIP_INVALIDDATA;
+   }
+
    /* get active problem variable of aggregation variable */
    SCIP_CALL( SCIPvarGetProbvarSum(&aggvar, &scalar, &constant) );
 
@@ -3285,6 +3297,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    *infeasible = FALSE;
    *aggregated = FALSE;
 
+   if( set->misc_exactsolve )
+   {
+      SCIPerrorMessage("in exact solving modus, multiaggregation of variables is not supported yet\n");
+      return SCIP_INVALIDDATA;
+   }
+
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
@@ -3540,19 +3558,6 @@ void SCIPvarSetProbindex(
    assert(probindex >= 0);
 
    varSetProbindex(var, probindex);
-}
-
-/** gives the variable a new name; ATTENTION: to old pointer is over written that might
- *  result in a memory leakage */
-void SCIPvarSetNamePointer(
-   SCIP_VAR*             var,                /**< problem variable */
-    const char*          name                /**< new name of variable */
-   )
-{
-   assert(var != NULL);
-   assert(name != NULL);
-   
-   var->name = (char*)name;
 }
 
 /** informs variable that it will be removed from the problem; adjusts probindex and removes variable from the

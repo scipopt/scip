@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.86 2007/11/21 15:03:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.85.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -228,7 +228,7 @@ SCIP_RETCODE primalSetUpperbound(
    primal->upperbound = upperbound;
    
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
-   if( SCIPprobIsObjIntegral(prob) && !SCIPsetIsInfinity(set, upperbound) )
+   if( !set->misc_exactsolve && SCIPprobIsObjIntegral(prob) && !SCIPsetIsInfinity(set, upperbound) )
    {
       SCIP_Real delta;
 
@@ -361,7 +361,6 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    {
       SCIP_Real obj;
 
-      assert(SCIPsolGetOrigin(primal->sols[0]) == SCIP_SOLORIGIN_ORIGINAL);
       obj = SCIPsolGetObj(primal->sols[0], set, prob);
       upperbound = MIN(upperbound, obj);
    }
@@ -569,8 +568,8 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, prob);
-      assert( SCIPsetIsLE(set, solobj, obj) );
-      if( SCIPsetIsLT(set, solobj, obj) )
+      assert((set->misc_exactsolve && solobj <= obj) || (!set->misc_exactsolve && SCIPsetIsLE(set, solobj, obj)));
+      if( (set->misc_exactsolve && solobj < obj) || (!set->misc_exactsolve && SCIPsetIsLT(set, solobj, obj)) )
          break;
       if( SCIPsolGetOrigin(primal->sols[i]) != SCIP_SOLORIGIN_ORIGINAL
          && SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob) )
@@ -583,8 +582,8 @@ SCIP_Bool primalExistsSol(
       SCIP_Real solobj;
 
       solobj = SCIPsolGetObj(primal->sols[i], set, prob);
-      assert( SCIPsetIsGE(set, solobj, obj) );
-      if( SCIPsetIsGT(set, solobj, obj) )
+      assert((set->misc_exactsolve && solobj >= obj) || (!set->misc_exactsolve && SCIPsetIsGE(set, solobj, obj)));
+      if( (set->misc_exactsolve && solobj > obj) || (!set->misc_exactsolve && SCIPsetIsGT(set, solobj, obj)) )
          break;
       if( SCIPsolGetOrigin(primal->sols[i]) != SCIP_SOLORIGIN_ORIGINAL
          && SCIPsolsAreEqual(sol, primal->sols[i], set, stat, prob) )
@@ -688,6 +687,7 @@ SCIP_RETCODE primalLinkCurrentSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
@@ -697,11 +697,11 @@ SCIP_RETCODE primalLinkCurrentSol(
 
    if( primal->currentsol == NULL )
    {
-      SCIP_CALL( SCIPsolCreateCurrentSol(&primal->currentsol, blkmem, set, stat, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreateCurrentSol(&primal->currentsol, blkmem, set, stat, prob, primal, tree, lp, heur) );
    }
    else
    {
-      SCIP_CALL( SCIPsolLinkCurrentSol(primal->currentsol, set, stat, tree, lp) );
+      SCIP_CALL( SCIPsolLinkCurrentSol(primal->currentsol, set, stat, prob, tree, lp) );
       SCIPsolSetHeur(primal->currentsol, heur);
    }
 
@@ -725,7 +725,7 @@ SCIP_RETCODE SCIPprimalAddCurrentSol(
    assert(primal != NULL);
 
    /* link temporary solution to current solution */
-   SCIP_CALL( primalLinkCurrentSol(primal, blkmem, set, stat, tree, lp, heur) );
+   SCIP_CALL( primalLinkCurrentSol(primal, blkmem, set, stat, prob, tree, lp, heur) );
 
    /* add solution to solution storage */
    SCIP_CALL( SCIPprimalAddSol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, primal->currentsol, stored) );
@@ -872,7 +872,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    assert(primal != NULL);
 
    /* link temporary solution to current solution */
-   SCIP_CALL( primalLinkCurrentSol(primal, blkmem, set, stat, tree, lp, heur) );
+   SCIP_CALL( primalLinkCurrentSol(primal, blkmem, set, stat, prob, tree, lp, heur) );
 
    /* add solution to solution storage */
    SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, stat, prob, tree, lp, eventfilter, primal->currentsol,

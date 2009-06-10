@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdisp.h,v 1.1 2007/08/17 08:46:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objdisp.h,v 1.1.2.1 2009/06/10 17:47:12 bzfwolte Exp $"
 
 /**@file   objdisp.h
  * @brief  C++ wrapper for display column
@@ -26,7 +26,7 @@
 #ifndef __SCIP_OBJDISP_H__
 #define __SCIP_OBJDISP_H__
 
-#include <string>
+#include <cstring>
 
 extern "C" 
 {

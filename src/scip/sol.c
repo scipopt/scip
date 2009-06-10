@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.82 2007/11/15 10:53:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.81.2.1 2009/06/10 17:47:14 bzfwolte Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -188,7 +188,7 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
-      if( !SCIPsetIsZero(set, solval) )
+      if( (set->misc_exactsolve && solval != 0.0) || (!set->misc_exactsolve && !SCIPsetIsZero(set, solval)) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       }
@@ -196,7 +196,7 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_PSEUDOSOL:
       solval = SCIPvarGetPseudoSol(var);
-      if( !SCIPsetIsZero(set, solval) )
+      if( (set->misc_exactsolve && solval != 0.0) || (!set->misc_exactsolve && !SCIPsetIsZero(set, solval)) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
       }
@@ -329,6 +329,7 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -340,7 +341,7 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    assert(lp->solved);
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, tree, lp) );
+   SCIP_CALL( SCIPsolLinkLPSol(*sol, set, stat, prob, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -351,6 +352,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -360,7 +362,7 @@ SCIP_RETCODE SCIPsolCreatePseudoSol(
    assert(sol != NULL);
 
    SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
-   SCIP_CALL( SCIPsolLinkPseudoSol(*sol, set, stat, tree, lp) );
+   SCIP_CALL( SCIPsolLinkPseudoSol(*sol, set, stat, prob, tree, lp) );
 
    return SCIP_OKAY;
 }
@@ -371,6 +373,7 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -381,11 +384,11 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
 
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
-      SCIP_CALL( SCIPsolCreateLPSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreateLPSol(sol, blkmem, set, stat, prob, primal, tree, lp, heur) );
    }
    else
    {
-      SCIP_CALL( SCIPsolCreatePseudoSol(sol, blkmem, set, stat, primal, tree, lp, heur) );
+      SCIP_CALL( SCIPsolCreatePseudoSol(sol, blkmem, set, stat, prob, primal, tree, lp, heur) );
    }
 
    return SCIP_OKAY;
@@ -447,6 +450,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -463,33 +467,38 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    /* clear the old solution arrays */
    SCIP_CALL( solClearArrays(sol) );
 
-   /* link solution to LP solution */
-   if( SCIPlpDivingObjChanged(lp) )
-   {
-      /* the objective value has to be calculated manually, because the LP's value is invalid;
-       * use objective values of variables, because columns objective values are changed to dive values
-       */
-      sol->obj = SCIPlpGetLooseObjval(lp, set);
-      if( !SCIPsetIsInfinity(set, -sol->obj) )
-      {
-         SCIP_VAR* var;
-         SCIP_COL** cols;
-         int ncols;
-         int c;
-         
-         cols = SCIPlpGetCols(lp);
-         ncols = SCIPlpGetNCols(lp);
-         for( c = 0; c < ncols; ++c )
-         {
-            var = SCIPcolGetVar(cols[c]);
-            sol->obj += SCIPvarGetObj(var) * cols[c]->primsol;
-         }
-      }
-   }
+   if( set->misc_exactsolve )
+      sol->obj = SCIPlpGetPrimalprovedObjval(set, prob);
    else
    {
-      /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
-      sol->obj = SCIPlpGetObjval(lp, set);
+      /* link solution to LP solution */
+      if( SCIPlpDivingObjChanged(lp) )
+      {
+         /* the objective value has to be calculated manually, because the LP's value is invalid;
+          * use objective values of variables, because columns objective values are changed to dive values
+          */
+         sol->obj = SCIPlpGetLooseObjval(lp, set);
+         if( !SCIPsetIsInfinity(set, -sol->obj) )
+         {
+            SCIP_VAR* var;
+            SCIP_COL** cols;
+            int ncols;
+            int c;
+         
+            cols = SCIPlpGetCols(lp);
+            ncols = SCIPlpGetNCols(lp);
+            for( c = 0; c < ncols; ++c )
+            {
+               var = SCIPcolGetVar(cols[c]);
+               sol->obj += SCIPvarGetObj(var) * cols[c]->primsol;
+            }
+         }
+      }
+      else
+      {
+         /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
+         sol->obj = SCIPlpGetObjval(lp, set);
+      }
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
    solStamp(sol, stat, tree);
@@ -504,6 +513,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -518,7 +528,11 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
    SCIP_CALL( solClearArrays(sol) );
 
    /* link solution to pseudo solution */
-   sol->obj = SCIPlpGetPseudoObjval(lp, set);
+   if( set->misc_exactsolve )
+      sol->obj = SCIPlpGetPrimalprovedPseudoObjval(set, prob);
+   else
+      sol->obj = SCIPlpGetPseudoObjval(lp, set);
+   
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
    solStamp(sol, stat, tree);
 
@@ -532,6 +546,7 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
    )
@@ -542,11 +557,11 @@ SCIP_RETCODE SCIPsolLinkCurrentSol(
 
    if( SCIPtreeHasCurrentNodeLP(tree) )
    {
-      SCIP_CALL( SCIPsolLinkLPSol(sol, set, stat, tree, lp) );
+      SCIP_CALL( SCIPsolLinkLPSol(sol, set, stat, prob, tree, lp) );
    }
    else
    {
-      SCIP_CALL( SCIPsolLinkPseudoSol(sol, set, stat, tree, lp) );
+      SCIP_CALL( SCIPsolLinkPseudoSol(sol, set, stat, prob, tree, lp) );
    }
 
    return SCIP_OKAY;
@@ -690,7 +705,7 @@ SCIP_RETCODE SCIPsolSetVal(
       oldval = SCIPvarGetLbGlobal(var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
+         SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %g to different value %g\n",
             SCIPvarGetName(var), oldval, val);
          return SCIP_INVALIDDATA;
       }
@@ -953,7 +968,10 @@ SCIP_RETCODE SCIPsolCheck(
 
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
-            *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
+            if( set->misc_exactsolve)
+               *feasible = *feasible && (solval >= lb) && (solval <= ub);
+            else
+               *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
          }
 
 #ifdef SCIP_DEBUG
@@ -1152,7 +1170,8 @@ SCIP_Bool SCIPsolsAreEqual(
    assert(sol2->solorigin != SCIP_SOLORIGIN_ORIGINAL);
    assert(prob != NULL);
 
-   if( !SCIPsetIsEQ(set, sol1->obj, sol2->obj) )
+   if( (set->misc_exactsolve && sol1->obj != sol2->obj) 
+      || (!set->misc_exactsolve && !SCIPsetIsEQ(set, sol1->obj, sol2->obj)) )
       return FALSE;
 
    for( v = 0; v < prob->nvars; ++v )
@@ -1162,7 +1181,7 @@ SCIP_Bool SCIPsolsAreEqual(
 
       val1 = SCIPsolGetVal(sol1, set, stat, prob->vars[v]);
       val2 = SCIPsolGetVal(sol2, set, stat, prob->vars[v]);
-      if( !SCIPsetIsEQ(set, val1, val2) )
+      if( (set->misc_exactsolve && val1 != val2) || (!set->misc_exactsolve && !SCIPsetIsEQ(set, val1, val2)) )
          return FALSE;
    }
 
@@ -1202,8 +1221,8 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+            SCIPmessageFPrintInfo(file, " % 20.9g", solval);
+         SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->fixedvars[v]));
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -1220,8 +1239,8 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+            SCIPmessageFPrintInfo(file, " % 20.9g", solval);
+         SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }
 
@@ -1246,8 +1265,8 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+               SCIPmessageFPrintInfo(file, " % 20.9g", solval);
+            SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -1267,8 +1286,8 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+               SCIPmessageFPrintInfo(file, " % 20.9g", solval);
+            SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->vars[v]));
          }
       }
    }

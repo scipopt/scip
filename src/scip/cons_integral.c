@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.47 2007/06/06 11:25:14 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
 
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
@@ -26,6 +26,7 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <gmp.h>
 
 #include "scip/cons_integral.h"
 
@@ -153,8 +154,26 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-         if( !SCIPisFeasIntegral(scip, solval) )
-            *result = SCIP_INFEASIBLE;
+         if( !SCIPisExactSolve(scip) )
+         {
+            if( !SCIPisFeasIntegral(scip, solval) )
+               *result = SCIP_INFEASIBLE;
+         }
+         else
+         {
+            mpq_t solvalexact;
+         
+            mpq_init(solvalexact);
+            mpq_set_d(solvalexact, solval);
+
+            /**@todo: This only works if presolving is disabled (solval may already be an approximation since 
+             * solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
+             */ 
+            if( mpz_get_si(mpq_denref(solvalexact)) != 1 ) 
+               *result = SCIP_INFEASIBLE;
+
+            mpq_clear(solvalexact);
+         }
       }
    }
 #ifndef NDEBUG
@@ -163,7 +182,19 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < nbin + nint; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-         assert(SCIPisFeasIntegral(scip, solval));
+         if( !SCIPisExactSolve(scip) )
+            assert(SCIPisFeasIntegral(scip, solval));
+         else
+         {
+            mpq_t solvalexact;
+            
+            mpq_init(solvalexact);
+            mpq_set_d(solvalexact, solval);
+
+            assert(mpz_get_si(mpq_denref(solvalexact)) == 1); 
+
+            mpq_clear(solvalexact);
+         }
       }
    }
 #endif

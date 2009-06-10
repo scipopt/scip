@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.22 2007/06/06 11:25:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.22.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -26,7 +26,7 @@
 #ifndef __SCIP_OBJPRESOL_H__
 #define __SCIP_OBJPRESOL_H__
 
-#include <string>
+#include <cstring>
 
 extern "C" 
 {

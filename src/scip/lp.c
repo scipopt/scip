@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.257 2008/01/28 14:22:09 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3315,7 +3315,7 @@ void SCIPcolPrint(
    assert(col->var != NULL);
 
    /* print bounds */
-   SCIPmessageFPrintInfo(file, "(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
+   SCIPmessageFPrintInfo(file, "(obj: %g) [%g,%g], ", col->obj, col->lb, col->ub);
 
    /* print coefficients */
    if( col->len == 0 )
@@ -3324,7 +3324,7 @@ void SCIPcolPrint(
    {
       assert(col->rows[r] != NULL);
       assert(col->rows[r]->name != NULL);
-      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", col->vals[r], col->rows[r]->name);
+      SCIPmessageFPrintInfo(file, "%+g<%s> ", col->vals[r], col->rows[r]->name);
    }
    SCIPmessageFPrintInfo(file, "\n");
 }
@@ -5136,7 +5136,7 @@ void SCIProwPrint(
    }
 
    /* print left hand side */
-   SCIPmessageFPrintInfo(file, "%.15g <= ", row->lhs);
+   SCIPmessageFPrintInfo(file, "%g <= ", row->lhs);
 
    /* print coefficients */
    if( row->len == 0 )
@@ -5147,15 +5147,15 @@ void SCIProwPrint(
       assert(row->cols[i]->var != NULL);
       assert(SCIPvarGetName(row->cols[i]->var) != NULL);
       assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+      SCIPmessageFPrintInfo(file, "%+g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
    }
 
    /* print constant */
    if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
-      SCIPmessageFPrintInfo(file, "%+.15g ", row->constant);
+      SCIPmessageFPrintInfo(file, "%+g ", row->constant);
 
    /* print right hand side */
-   SCIPmessageFPrintInfo(file, "<= %.15g\n", row->rhs);
+   SCIPmessageFPrintInfo(file, "<= %g\n", row->rhs);
 }
 
 
@@ -7484,25 +7484,25 @@ SCIP_RETCODE transformMIRRow(
  *  continuous: a~_j = 0                               , if a'_j >= 0
  *              a~_j = a'_j/(1 - f0)                   , if a'_j <  0
  *
- *  Transform inequality back to a°*x <= rhs:
+ *  Transform inequality back to aÂ°*x <= rhs:
  *
  *  (lb or ub):
- *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
- *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+ *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   aÂ°_j :=  a~_j,   if lb was used in transformation
+ *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   aÂ°_j := -a~_j,   if ub was used in transformation
  *  and move the constant terms
- *    -a~_j * lb_j == -a°_j * lb_j, or
- *     a~_j * ub_j == -a°_j * ub_j
+ *    -a~_j * lb_j == -aÂ°_j * lb_j, or
+ *     a~_j * ub_j == -aÂ°_j * ub_j
  *  to the rhs.
  *
  *  (vlb or vub):
- *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
- *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+ *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   aÂ°_j :=  a~_j,   (vlb)
+ *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   aÂ°_j := -a~_j,   (vub)
  *  move the constant terms
- *    -a~_j * dl_j == -a°_j * dl_j, or
- *     a~_j * du_j == -a°_j * du_j
+ *    -a~_j * dl_j == -aÂ°_j * dl_j, or
+ *     a~_j * du_j == -aÂ°_j * du_j
  *  to the rhs, and update the VB variable coefficients:
- *    a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
- *    a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
+ *    aÂ°_{zl_j} := aÂ°_{zl_j} - a~_j * bl_j == aÂ°_{zl_j} - aÂ°_j * bl_j, or
+ *    aÂ°_{zu_j} := aÂ°_{zu_j} + a~_j * bu_j == aÂ°_{zu_j} - aÂ°_j * bu_j
  */
 static
 void roundMIRRow(
@@ -7553,9 +7553,9 @@ void roundMIRRow(
       fj = aj - downaj;
       
       if( SCIPsetIsSumLE(set, fj, f0) )
-         cutaj = varsign[v] * downaj; /* a°_j */
+         cutaj = varsign[v] * downaj; /* aÂ°_j */
       else
-         cutaj = varsign[v] * (downaj + (fj - f0) * onedivoneminusf0); /* a°_j */
+         cutaj = varsign[v] * (downaj + (fj - f0) * onedivoneminusf0); /* aÂ°_j */
 
       if( SCIPsetIsZero(set, cutaj) )
          mircoef[v] = 0.0;
@@ -7564,7 +7564,7 @@ void roundMIRRow(
          mircoef[v] = cutaj;
          (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
 
-         /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
+         /* move the constant term  -a~_j * lb_j == -aÂ°_j * lb_j , or  a~_j * ub_j == -aÂ°_j * ub_j  to the rhs */
          if( varsign[v] == +1 )
          {
             /* lower bound was used */
@@ -7612,7 +7612,7 @@ void roundMIRRow(
          mircoef[v] = 0.0;
          continue;
       }
-      cutaj = varsign[v] * aj * onedivoneminusf0; /* a°_j */
+      cutaj = varsign[v] * aj * onedivoneminusf0; /* aÂ°_j */
       if( SCIPsetIsZero(set, cutaj) )
       {
          mircoef[v] = 0.0;
@@ -7626,7 +7626,7 @@ void roundMIRRow(
       {
          /* standard bound */
 
-         /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
+         /* move the constant term  -a~_j * lb_j == -aÂ°_j * lb_j , or  a~_j * ub_j == -aÂ°_j * ub_j  to the rhs */
          if( varsign[v] == +1 )
          {
             /* lower bound was used */
@@ -7702,12 +7702,12 @@ void roundMIRRow(
  *     a'_r = scale * weight[r] * slacksign[r].
  *
  *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
- *    integers :  a°_r = a~_r = down(a'_r)                      , if f_r <= f0
- *                a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
- *    continuous: a°_r = a~_r = 0                               , if a'_r >= 0
- *                a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+ *    integers :  aÂ°_r = a~_r = down(a'_r)                      , if f_r <= f0
+ *                aÂ°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+ *    continuous: aÂ°_r = a~_r = 0                               , if a'_r >= 0
+ *                aÂ°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
  *
- *  Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+ *  Substitute aÂ°_r * s_r by adding aÂ°_r times the slack's definition to the cut.
  */
 static
 void substituteMIRRow(
@@ -7762,14 +7762,14 @@ void substituteMIRRow(
       /* get the slack's coefficient a'_r in the aggregated row */
       ar = slacksign[r] * scale * weights[r];
 
-      /* calculate slack variable's coefficient a°_r in the cut */
+      /* calculate slack variable's coefficient aÂ°_r in the cut */
       if( row->integral
          && ((slacksign[r] == +1 && SCIPsetIsFeasIntegral(set, row->rhs - row->constant))
             || (slacksign[r] == -1 && SCIPsetIsFeasIntegral(set, row->lhs - row->constant))) )
       {
          /* slack variable is always integral:
-          *    a°_r = a~_r = down(a'_r)                      , if f_r <= f0
-          *    a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+          *    aÂ°_r = a~_r = down(a'_r)                      , if f_r <= f0
+          *    aÂ°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
          downar = SCIPsetFloor(set, ar);
          fr = ar - downar;
@@ -7781,8 +7781,8 @@ void substituteMIRRow(
       else
       {
          /* slack variable is continuous:
-          *    a°_r = a~_r = 0                               , if a'_r >= 0
-          *    a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+          *    aÂ°_r = a~_r = 0                               , if a'_r >= 0
+          *    aÂ°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
           */
          if( ar >= 0.0 )
             continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
@@ -7796,11 +7796,11 @@ void substituteMIRRow(
 
       /* depending on the slack's sign, we have
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
-       * substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+       * substitute aÂ°_r * s_r by adding aÂ°_r times the slack's definition to the cut.
        */
       mul = -slacksign[r] * cutar;
 
-      /* add the slack's definition multiplied with a°_j to the cut */
+      /* add the slack's definition multiplied with aÂ°_j to the cut */
       for( i = 0; i < row->len; ++i )
       {
          assert(row->cols[i] != NULL);
@@ -7818,13 +7818,13 @@ void substituteMIRRow(
       /* move slack's constant to the right hand side */
       if( slacksign[r] == +1 )
       {
-         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a°_r * (rhs - c) to the right hand side */
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move aÂ°_r * (rhs - c) to the right hand side */
          assert(!SCIPsetIsInfinity(set, row->rhs));
          (*mirrhs) -= cutar * (row->rhs - row->constant);
       }
       else
       {
-         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a°_r * (c - lhs) to the right hand side */
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move aÂ°_r * (c - lhs) to the right hand side */
          assert(!SCIPsetIsInfinity(set, -row->lhs));
          (*mirrhs) -= cutar * (row->constant - row->lhs);
       }
@@ -7970,25 +7970,25 @@ SCIP_RETCODE SCIPlpCalcMIR(
     * continuous: a~_j = 0                               , if a'_j >= 0
     *             a~_j = a'_j/(1 - f0)                   , if a'_j <  0
     *
-    * Transform inequality back to a°*x <= rhs:
+    * Transform inequality back to aÂ°*x <= rhs:
     *
     * (lb or ub):
-    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
-    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   aÂ°_j :=  a~_j,   if lb was used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   aÂ°_j := -a~_j,   if ub was used in transformation
     * and move the constant terms
-    *   -a~_j * lb_j == -a°_j * lb_j, or
-    *    a~_j * ub_j == -a°_j * ub_j
+    *   -a~_j * lb_j == -aÂ°_j * lb_j, or
+    *    a~_j * ub_j == -aÂ°_j * ub_j
     * to the rhs.
     *
     * (vlb or vub):
-    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
-    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   aÂ°_j :=  a~_j,   (vlb)
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   aÂ°_j := -a~_j,   (vub)
     * move the constant terms
-    *   -a~_j * dl_j == -a°_j * dl_j, or
-    *    a~_j * du_j == -a°_j * du_j
+    *   -a~_j * dl_j == -aÂ°_j * dl_j, or
+    *    a~_j * du_j == -aÂ°_j * du_j
     * to the rhs, and update the VB variable coefficients:
-    *   a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
-    *   a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
+    *   aÂ°_{zl_j} := aÂ°_{zl_j} - a~_j * bl_j == aÂ°_{zl_j} - aÂ°_j * bl_j, or
+    *   aÂ°_{zu_j} := aÂ°_{zu_j} + a~_j * bu_j == aÂ°_{zu_j} - aÂ°_j * bu_j
     */
    downrhs = SCIPsetSumFloor(set, rhs);
    f0 = rhs - downrhs;
@@ -8006,12 +8006,12 @@ SCIP_RETCODE SCIPlpCalcMIR(
     *    a'_r = scale * weight[r] * slacksign[r].
     *
     * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
-    *   integers :  a°_r = a~_r = down(a'_r)                      , if f_r <= f0
-    *               a°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
-    *   continuous: a°_r = a~_r = 0                               , if a'_r >= 0
-    *               a°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+    *   integers :  aÂ°_r = a~_r = down(a'_r)                      , if f_r <= f0
+    *               aÂ°_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+    *   continuous: aÂ°_r = a~_r = 0                               , if a'_r >= 0
+    *               aÂ°_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
     *
-    * Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+    * Substitute aÂ°_r * s_r by adding aÂ°_r times the slack's definition to the cut.
     */
    substituteMIRRow(set, stat, lp, weights, scale, mircoef, mirrhs, slacksign, f0, cutactivity);
    SCIPdebug(printMIR(prob, mircoef, *mirrhs));
@@ -8419,25 +8419,25 @@ void transformStrongCGRow(
  * continuous: a~_j = 0                         , if a'_j >= 0
  *             no strong CG cut found          , if a'_j <  0
  *
- * Transform inequality back to a°*x <= rhs:
+ * Transform inequality back to aÂ°*x <= rhs:
  *
  *  (lb or ub):
- *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
- *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+ *    x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   aÂ°_j :=  a~_j,   if lb was used in transformation
+ *    x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   aÂ°_j := -a~_j,   if ub was used in transformation
  *  and move the constant terms
- *    -a~_j * lb_j == -a°_j * lb_j, or
- *     a~_j * ub_j == -a°_j * ub_j
+ *    -a~_j * lb_j == -aÂ°_j * lb_j, or
+ *     a~_j * ub_j == -aÂ°_j * ub_j
  *  to the rhs.
  *
  *  (vlb or vub):
- *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
- *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+ *    x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   aÂ°_j :=  a~_j,   (vlb)
+ *    x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   aÂ°_j := -a~_j,   (vub)
  *  move the constant terms
- *    -a~_j * dl_j == -a°_j * dl_j, or
- *     a~_j * du_j == -a°_j * du_j
+ *    -a~_j * dl_j == -aÂ°_j * dl_j, or
+ *     a~_j * du_j == -aÂ°_j * du_j
  *  to the rhs, and update the VB variable coefficients:
- *    a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
- *    a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
+ *    aÂ°_{zl_j} := aÂ°_{zl_j} - a~_j * bl_j == aÂ°_{zl_j} - aÂ°_j * bl_j, or
+ *    aÂ°_{zu_j} := aÂ°_{zu_j} + a~_j * bu_j == aÂ°_{zu_j} - aÂ°_j * bu_j
  */
 static
 void roundStrongCGRow(
@@ -8489,13 +8489,13 @@ void roundStrongCGRow(
       fj = aj - downaj;
 
       if( SCIPsetIsSumLE(set, fj, f0) )
-         cutaj = varsign[v] * downaj; /* a°_j */
+         cutaj = varsign[v] * downaj; /* aÂ°_j */
       else
       {
          pj = SCIPsetCeil(set, k * (fj - f0) * onedivoneminusf0);
          assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj almost equal to f0 */ 
          assert(pj <= k);
-         cutaj = varsign[v] * (downaj + pj / (k + 1)); /* a°_j */
+         cutaj = varsign[v] * (downaj + pj / (k + 1)); /* aÂ°_j */
       }
       if( SCIPsetIsZero(set, cutaj) )
          strongcgcoef[v] = 0.0;
@@ -8504,7 +8504,7 @@ void roundStrongCGRow(
          strongcgcoef[v] = cutaj;
          (*cutactivity) += cutaj * SCIPvarGetLPSol(var);
 
-         /* move the constant term  -a~_j * lb_j == -a°_j * lb_j , or  a~_j * ub_j == -a°_j * ub_j  to the rhs */
+         /* move the constant term  -a~_j * lb_j == -aÂ°_j * lb_j , or  a~_j * ub_j == -aÂ°_j * ub_j  to the rhs */
          if( varsign[v] == +1 )
          {
             /* lower bound was used */
@@ -8560,12 +8560,12 @@ void roundStrongCGRow(
  *     a'_r = scale * weight[r] * slacksign[r].
  *
  *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
- *    integers:   a°_r = a~_r = down(a'_r)                  , if f_r <= f0
- *                a°_r = a~_r = down(a'_r) + p_r/(k + 1)    , if f_r >  f0
- *    continuous: a°_r = a~_r = 0                           , if a'_r >= 0
+ *    integers:   aÂ°_r = a~_r = down(a'_r)                  , if f_r <= f0
+ *                aÂ°_r = a~_r = down(a'_r) + p_r/(k + 1)    , if f_r >  f0
+ *    continuous: aÂ°_r = a~_r = 0                           , if a'_r >= 0
  *                no strong CG cut found                    , if a'_r <  0
  *
- *  Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+ *  Substitute aÂ°_r * s_r by adding aÂ°_r times the slack's definition to the cut.
  */
 static
 void substituteStrongCGRow(
@@ -8623,7 +8623,7 @@ void substituteStrongCGRow(
       /* get the slack's coefficient a'_r in the aggregated row */
       ar = slacksign[r] * scale * weights[r];
 
-      /* calculate slack variable's coefficient a°_r in the cut */
+      /* calculate slack variable's coefficient aÂ°_r in the cut */
       if( row->integral )
       {
          /* slack variable is always integral: */
@@ -8653,11 +8653,11 @@ void substituteStrongCGRow(
 
       /* depending on the slack's sign, we have
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
-       * substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+       * substitute aÂ°_r * s_r by adding aÂ°_r times the slack's definition to the cut.
        */
       mul = -slacksign[r] * cutar;
 
-      /* add the slack's definition multiplied with a°_j to the cut */
+      /* add the slack's definition multiplied with aÂ°_j to the cut */
       for( i = 0; i < row->len; ++i )
       {
          assert(row->cols[i] != NULL);
@@ -8677,7 +8677,7 @@ void substituteStrongCGRow(
       {
  	 SCIP_Real rhs;
 
-         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a°_r * (rhs - c) to the right hand side */
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move aÂ°_r * (rhs - c) to the right hand side */
          assert(!SCIPsetIsInfinity(set, row->rhs));
 	 rhs = row->rhs - row->constant;
 	 if( row->integral )
@@ -8692,7 +8692,7 @@ void substituteStrongCGRow(
       {
  	 SCIP_Real lhs;
 
-         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a°_r * (c - lhs) to the right hand side */
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move aÂ°_r * (c - lhs) to the right hand side */
          assert(!SCIPsetIsInfinity(set, -row->lhs));
 	 lhs = row->lhs - row->constant;
          if( row->integral )
@@ -8817,25 +8817,25 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     * continuous: a~_j = 0                         , if a'_j >= 0
     *             no strong CG cut found          , if a'_j <  0 
     *
-    * Transform inequality back to a°*x <= rhs:
+    * Transform inequality back to aÂ°*x <= rhs:
     *
     * (lb or ub):
-    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a°_j :=  a~_j,   if lb was used in transformation
-    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   if ub was used in transformation
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   aÂ°_j :=  a~_j,   if lb was used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   aÂ°_j := -a~_j,   if ub was used in transformation
     * and move the constant terms
-    *   -a~_j * lb_j == -a°_j * lb_j, or
-    *    a~_j * ub_j == -a°_j * ub_j
+    *   -a~_j * lb_j == -aÂ°_j * lb_j, or
+    *    a~_j * ub_j == -aÂ°_j * ub_j
     * to the rhs.
     *
     * (vlb or vub):
-    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a°_j :=  a~_j,   (vlb)
-    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a°_j := -a~_j,   (vub)
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   aÂ°_j :=  a~_j,   (vlb)
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   aÂ°_j := -a~_j,   (vub)
     * move the constant terms
-    *   -a~_j * dl_j == -a°_j * dl_j, or
-    *    a~_j * du_j == -a°_j * du_j
+    *   -a~_j * dl_j == -aÂ°_j * dl_j, or
+    *    a~_j * du_j == -aÂ°_j * du_j
     * to the rhs, and update the VB variable coefficients:
-    *   a°_{zl_j} := a°_{zl_j} - a~_j * bl_j == a°_{zl_j} - a°_j * bl_j, or
-    *   a°_{zu_j} := a°_{zu_j} + a~_j * bu_j == a°_{zu_j} - a°_j * bu_j
+    *   aÂ°_{zl_j} := aÂ°_{zl_j} - a~_j * bl_j == aÂ°_{zl_j} - aÂ°_j * bl_j, or
+    *   aÂ°_{zu_j} := aÂ°_{zu_j} + a~_j * bu_j == aÂ°_{zu_j} - aÂ°_j * bu_j
     */
    downrhs = SCIPsetFloor(set, rhs);
    f0 = rhs - downrhs;
@@ -8854,12 +8854,12 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
     *    a'_r = scale * weight[r] * slacksign[r].
     *
     * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
-    *   integers :  a°_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
-    *               a°_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
-    *   continuous: a°_r = a~_r = 0                           , if a'_r >= 0
-    *               a°_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
+    *   integers :  aÂ°_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
+    *               aÂ°_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
+    *   continuous: aÂ°_r = a~_r = 0                           , if a'_r >= 0
+    *               aÂ°_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
     *
-    * Substitute a°_r * s_r by adding a°_r times the slack's definition to the cut.
+    * Substitute aÂ°_r * s_r by adding aÂ°_r times the slack's definition to the cut.
     */
    substituteStrongCGRow(set, stat, lp, weights, scale, strongcgcoef, strongcgrhs, slacksign, f0, k, cutactivity);
    SCIPdebug(printMIR(prob, strongcgcoef, *strongcgrhs));
@@ -8989,7 +8989,7 @@ SCIP_RETCODE SCIPlpSetCutoffbound(
 static
 const char* lpalgoName(
    SCIP_LPALGO           lpalgo              /**< LP algorithm */
-   )
+)
 {
    switch( lpalgo )
    {
@@ -9039,7 +9039,7 @@ SCIP_RETCODE lpPrimalSimplex(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -9140,7 +9140,7 @@ SCIP_RETCODE lpDualSimplex(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%g, feastol=%g/%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -9241,7 +9241,7 @@ SCIP_RETCODE lpBarrier(
       char fname[SCIP_MAXSTRLEN];
       sprintf(fname, "lp%"SCIP_LONGINT_FORMAT"_%d.lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%g, feastol=%g/%g, convtol=%g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -10018,11 +10018,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
          {
             /* update ages and remove obsolete columns and rows from LP */
             SCIP_CALL( SCIPlpUpdateAges(lp, stat) );
-	    if ( stat->nlps % ((set->lp_rowagelimit+1)/2 + 1) == 0 )
-	    {
-	       SCIP_CALL( SCIPlpRemoveNewObsoletes(lp, blkmem, set, stat) );
-            }
-
+            SCIP_CALL( SCIPlpRemoveNewObsoletes(lp, blkmem, set, stat) );
+            
             if( !lp->solved )
             {
                /* resolve LP after removing obsolete columns and rows */
@@ -10153,6 +10150,57 @@ SCIP_Real SCIPlpGetObjval(
       return lp->lpobjval + lp->looseobjval;
 }
 
+/** gets objective value of current LP; performs calculations with interval arithmetic to get an exact upper bound */
+SCIP_Real SCIPlpGetPrimalprovedObjval(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   )
+{
+   SCIP_INTERVAL objvalint;
+   SCIP_INTERVAL solvalint;
+   SCIP_INTERVAL objint;
+   SCIP_INTERVAL prod;
+   SCIP_VAR* var;
+   SCIP_Real objval;
+   SCIP_Real solval;
+   SCIP_Real obj;
+   int v;
+
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(prob->nvars == 0 || prob->vars != NULL);
+
+   objval = 0.0;
+   SCIPintervalSet(&objvalint, objval);
+   assert(objval == SCIPintervalGetSup(objvalint));
+
+   for(v = 0; v < prob->nvars && !SCIPsetIsInfinity(set, -objval); ++v )
+   {
+      var = prob->vars[v];
+      obj = SCIPvarGetObj(var);
+
+      if( obj != 0.0 )
+      {
+         solval = SCIPvarGetLPSol(var);
+
+         if( SCIPsetIsInfinity(set, REALABS(solval)) )
+         {
+            assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+            objval = -SCIPsetInfinity(set);
+         }
+         else
+         {
+            SCIPintervalSet(&solvalint, solval);
+            SCIPintervalSet(&objint, obj);
+            SCIPintervalMul(&prod, solvalint, objint); 
+            SCIPintervalAdd(&objvalint, objvalint, prod);
+            objval = SCIPintervalGetSup(objvalint);
+         }
+      }
+   }
+   return objval;
+}
+
 /** gets part of objective value of current LP that results from COLUMN variables only */
 SCIP_Real SCIPlpGetColumnObjval(
    SCIP_LP*              lp                  /**< current LP data */
@@ -10222,6 +10270,54 @@ SCIP_Real SCIPlpGetPseudoObjval(
       return lp->pseudoobjval;
 }
 
+/** gets current pseudo objective value; performs calculations with interval arithmetic to get an exact upper bound */
+SCIP_Real SCIPlpGetPrimalprovedPseudoObjval(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   )
+{
+   SCIP_INTERVAL objvalint;
+   SCIP_INTERVAL solvalint;
+   SCIP_INTERVAL objint;
+   SCIP_INTERVAL prod;
+   SCIP_VAR* var;
+   SCIP_Real objval;
+   SCIP_Real solval;
+   SCIP_Real obj;
+   int v;
+
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(prob->nvars == 0 || prob->vars != NULL);
+
+   objval = 0.0;
+   SCIPintervalSet(&objvalint, objval);
+   assert(objval == SCIPintervalGetSup(objvalint));
+
+   for(v = 0; v < prob->nvars && !SCIPsetIsInfinity(set, -objval); ++v )
+   {
+      var = prob->vars[v];
+      obj = SCIPvarGetObj(var);
+
+      if( obj != 0.0 )
+      {
+         solval = SCIPvarGetPseudoSol(var);
+
+         if( SCIPsetIsInfinity(set, REALABS(solval)) )
+            objval = -SCIPsetInfinity(set);
+         else
+         {
+            SCIPintervalSet(&solvalint, solval);
+            SCIPintervalSet(&objint, obj);
+            SCIPintervalMul(&prod, solvalint, objint); 
+            SCIPintervalAdd(&objvalint, objvalint, prod);
+            objval = SCIPintervalGetSup(objvalint);
+         }
+      }
+   }
+   return objval;
+}
+
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */
 SCIP_Real SCIPlpGetModifiedPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -10278,7 +10374,7 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
    pseudoobjval = lp->pseudoobjval;
    pseudoobjvalinf = lp->pseudoobjvalinf;
    obj = SCIPvarGetObj(var);
-   if( !SCIPsetIsZero(set, obj) && boundtype == SCIPvarGetBestBoundType(var) )
+   if( obj != 0.0 && boundtype == SCIPvarGetBestBoundType(var) )
    {
       SCIP_INTERVAL objint;
       SCIP_INTERVAL bd;
@@ -10541,7 +10637,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
       if( oldobj != newobj ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+                        newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
       }
    }
    else
@@ -10549,7 +10645,7 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
       if( !SCIPsetIsEQ(set, oldobj, newobj) )
       {
          SCIP_CALL( lpUpdateVar(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+                        newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
       }
    }
    
@@ -10573,7 +10669,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
-               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+                        SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
       }
    }
    else
@@ -10581,7 +10677,7 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
       if( !SCIPsetIsEQ(set, oldlb, newlb) && SCIPsetIsPositive(set, SCIPvarGetObj(var)) )
       {
          SCIP_CALL( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
-               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+                        SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
       }
    }
    
@@ -10605,7 +10701,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
          SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
-               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+                        SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
       }
    }
    else
@@ -10613,7 +10709,7 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
       if( !SCIPsetIsEQ(set, oldub, newub) && SCIPsetIsNegative(set, SCIPvarGetObj(var)) )
       {
          SCIP_CALL( lpUpdateVar(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
-               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+                        SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
       }
    }
 
@@ -10751,7 +10847,7 @@ SCIP_RETCODE lpUpdateVarColumnProved(
          SCIPintervalSub(&loose, loose, prod);  /* lp->looseobjval -= lb * obj; */
       }
    }
-   else if( SCIPsetIsNegative(set, obj) )
+   else if( obj < 0.0 )
    {
       ub = SCIPvarGetUbLocal(var);
       if( SCIPsetIsInfinity(set, ub) )
@@ -10879,7 +10975,7 @@ SCIP_RETCODE lpUpdateVarLooseProved(
          SCIPintervalAdd(&loose, loose, prod);  /* lp->looseobjval += lb * obj; */
       }
    }
-   else if( SCIPsetIsNegative(set, obj) )
+   else if( obj < 0.0 )
    {
       ub = SCIPvarGetUbLocal(var);
       if( SCIPsetIsInfinity(set, ub) )
@@ -12225,7 +12321,26 @@ SCIP_RETCODE SCIPlpWrite(
    assert(fname != NULL);
 
    SCIP_CALL( SCIPlpiWriteLP(lp->lpi, fname) );
-   
+
+#if 0
+   {
+      FILE* f;
+      int c;
+
+      SCIPmessagePrintInfo("storing integrality conditions in <%s>\n", fname);
+      f = fopen(fname, "a");
+      SCIPmessageFPrintInfo(f, "General\n");
+      for( c = 0; c < lp->ncols; ++c )
+      {
+         assert(lp->cols[c] == lp->lpicols[c]);
+         if( SCIPvarGetType(SCIPcolGetVar(lp->cols[c])) != SCIP_VARTYPE_CONTINUOUS )
+            SCIPmessageFPrintInfo(f, "%s\n", SCIPvarGetName(SCIPcolGetVar(lp->cols[c])));
+      }
+      SCIPmessageFPrintInfo(f, "End\n");
+      fclose(f);
+   }
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -12258,28 +12373,28 @@ SCIP_RETCODE SCIPlpWriteMip(
 
    /* print comments */
    if( genericnames )
-      SCIPmessageFPrintInfo(file, "\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
+      fprintf(file, "\\\\ Original Variable and Constraint Names have been replaced by generic names.\n"); 
    else
    {
-      SCIPmessageFPrintInfo(file,"\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
-      SCIPmessageFPrintInfo(file, "\\ If this is the case, the model may be corrupted!\n");
+      fprintf(file,"\\\\ Warning: Variable and Constraint Names should not contain special characters like '+', '=' etc.\n");
+      fprintf(file, "\\\\ If this is the case, the model may be corrupted!\n");
    }
 
    if( origobj && objoffset != 0.0 )
    {
-      SCIPmessageFPrintInfo(file, "\\ An artifical variable 'objoffset' has been added and fixed to 1.\n"); 
-      SCIPmessageFPrintInfo(file, "\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
+      fprintf(file, "\\\\ An artifical variable 'objoffset' has been added and fixed to 1.\n"); 
+      fprintf(file, "\\\\ Switching this variable to 0 will disable the offset in the objective.\n\n"); 
    }
    
    /* print objective function */
-   /**@note the transformed problem in SCIP is always an minimization problem */
+   /**@note the transformed prblem in SCIP is always an minimization problem */
    if( !origobj || objsense == SCIP_OBJSENSE_MINIMIZE )
-      SCIPmessageFPrintInfo(file, "Minimize");
+      fprintf(file, "Minimize");
    else
-      SCIPmessageFPrintInfo(file, "Maximize");
+      fprintf(file, "Maximize");
    
    /* print objective */
-   SCIPmessageFPrintInfo(file, "\n Obj:");
+   fprintf(file, "\n Obj:");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -12293,20 +12408,20 @@ SCIP_RETCODE SCIPlpWriteMip(
          }
 
          if( genericnames )
-            SCIPmessageFPrintInfo(file," %+.15g x_%d", coeff, lp->cols[i]->lppos);
+            fprintf(file," %+g x_%d", coeff, lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %+.15g %s", coeff, lp->cols[i]->var->name);
+            fprintf(file," %+g %s", coeff, lp->cols[i]->var->name);
          
          ++j;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(file,"\n     ");
+            fprintf(file,"\n     ");
       }
    }
    if( origobj && objoffset != 0.0 ) 
-      SCIPmessageFPrintInfo(file," %+.15g objoffset", objoffset * objsense * objscale);
+      fprintf(file," %+gobjoffset", objoffset * objsense * objscale);
 
    /* print constraint section */
-   SCIPmessageFPrintInfo(file,"\n\nSubject to\n");
+   fprintf(file,"\n\nSubject to\n");
    for( i = 0; i < lp->nrows; i++ )
    {
       char type;
@@ -12337,17 +12452,17 @@ SCIP_RETCODE SCIPlpWriteMip(
       case 'r':
       case 'l':
       case 'e':
-         SCIPmessageFPrintInfo(file,"%s: ", rowname);
+         fprintf(file,"%s: ", rowname);
          break;
       case 'b':
-         SCIPmessageFPrintInfo(file,"%s_lhs: ", rowname);
+         fprintf(file,"%s_lhs: ", rowname);
          break;
       case 'B':
-         SCIPmessageFPrintInfo(file,"%s_rhs: ", rowname);
+         fprintf(file,"%s_rhs: ", rowname);
          break;
       case 'i':
-         SCIPmessageFPrintInfo(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
-         SCIPmessageFPrintInfo(file,"are not in a valid range. The following two constraints may be corrupted!\n");
+         fprintf(file,"\\\\ WARNING: The lhs and the rhs of the row with original name <%s>",lp->rows[i]->name); 
+         fprintf(file,"are not in a valid range. The following two constraints may be corrupted!\n");
          SCIPwarningMessage("The lhs and rhs of row <%s> are not in a valid range.\n",lp->rows[i]->name);
          type = 'b';
          goto WRITEROW;
@@ -12360,30 +12475,30 @@ SCIP_RETCODE SCIPlpWriteMip(
       for( j = 0; j < lp->rows[i]->nlpcols; ++j )
       {
          if( genericnames )
-            SCIPmessageFPrintInfo(file," %+.15g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
+            fprintf(file," %+g x_%d", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %+.15g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
+            fprintf(file," %+g %s", lp->rows[i]->vals[j], lp->rows[i]->cols[j]->var->name);
          
          if( (j+1) % 10 == 0 )
-            SCIPmessageFPrintInfo(file,"\n          ");
+            fprintf(file,"\n          ");
       }
       
       /* print right hand side */
       switch( type )
       {
       case 'b':
-         SCIPmessageFPrintInfo(file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
+         fprintf(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);         
          type = 'B';
          goto WRITEROW;
       case 'l':
-         SCIPmessageFPrintInfo(file," >= %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         fprintf(file," >= %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       case 'B':
       case 'r':
-         SCIPmessageFPrintInfo(file," <= %.15g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
+         fprintf(file," <= %g\n",lp->rows[i]->rhs - lp->rows[i]->constant);
          break;
       case 'e':
-         SCIPmessageFPrintInfo(file," = %.15g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
+         fprintf(file," = %g\n",lp->rows[i]->lhs - lp->rows[i]->constant);
          break;
       default:
          SCIPerrorMessage("Undefined row type!\n");
@@ -12392,7 +12507,7 @@ SCIP_RETCODE SCIPlpWriteMip(
    }
 
    /* print variable bounds */
-   SCIPmessageFPrintInfo(file,"\n\nBounds\n");
+   fprintf(file,"\n\nBounds\n");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -12400,27 +12515,27 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print lower bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) )
-            SCIPmessageFPrintInfo(file," %.15g <=", lp->cols[i]->lb);
+            fprintf(file," %g <=", lp->cols[i]->lb);
          
          /* print variable name */
          if( genericnames )
-            SCIPmessageFPrintInfo(file," x_%d ", lp->cols[i]->lppos);
+            fprintf(file," x_%d ", lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %s ", lp->cols[i]->var->name);
+            fprintf(file," %s ", lp->cols[i]->var->name);
          
          /* print upper bound as far this one is not infinity */
          if( !SCIPsetIsInfinity(set,lp->cols[i]->ub) )
-            SCIPmessageFPrintInfo(file,"<= %.15g", lp->cols[i]->ub);
-         SCIPmessageFPrintInfo(file,"\n");
+            fprintf(file,"<= %g", lp->cols[i]->ub);
+         fprintf(file,"\n");
       }
    }
    if( origobj && objoffset != 0.0 )
    {   
-      SCIPmessageFPrintInfo(file," objoffset = 1");
+      fprintf(file," objoffset = 1");
    }
 
    /* print integer variables */
-   SCIPmessageFPrintInfo(file,"\n\nGenerals\n ");
+   fprintf(file,"\n\nGenerals\n ");
    j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
@@ -12428,17 +12543,17 @@ SCIP_RETCODE SCIPlpWriteMip(
       {
          /* print variable name */
          if( genericnames )
-            SCIPmessageFPrintInfo(file," x_%d ", lp->cols[i]->lppos);
+            fprintf(file," x_%d ", lp->cols[i]->lppos);
          else
-            SCIPmessageFPrintInfo(file," %s ", lp->cols[i]->var->name);
+            fprintf(file," %s ", lp->cols[i]->var->name);
 
          j++;
          if( j % 10 == 0 )
-            SCIPmessageFPrintInfo(file,"\n ");
+            fprintf(file,"\n ");
       }
    }
    
-   SCIPmessageFPrintInfo(file,"\n\nEnd");
+   fprintf(file,"\n\nEnd");
    fclose(file);
    
    return SCIP_OKAY;

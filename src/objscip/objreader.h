@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.20 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.19.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -26,7 +26,7 @@
 #ifndef __SCIP_OBJREADER_H__
 #define __SCIP_OBJREADER_H__
 
-#include <string>
+#include <cstring>
 
 extern "C" 
 {
@@ -97,16 +97,13 @@ public:
       SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
       ) = 0;
 
-   /** problem writing method of reader; NOTE: if the parameter "genericnames" is TRUE, then
-    *  SCIP already set all variable and constraint names to generic names; therefore, this
-    *  method should always use SCIPvarGetName() and SCIPconsGetName(); 
+   /** problem writing method of reader
     *
     *  possible return values for *result:
     *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
     *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
     *
-    *  If the reader detected an error in the writing to the file stream, it should return
-    *  with RETCODE SCIP_WRITEERROR.
+    *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
     */
    virtual SCIP_RETCODE scip_write(
       SCIP*              scip,               /**< SCIP data structure */
@@ -134,7 +131,6 @@ public:
       int                nconss,             /**< number of constraints in the problem */
       int                maxnconss,          /**< maximum number of constraints existing at the same time */
       int                startnconss,        /**< number of constraints existing when problem solving started */
-      SCIP_Bool          genericnames,       /**< using generic variable and constraint names? */
       SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
       ) = 0;
 };

@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.202 2007/11/27 10:34:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.201.2.1 2009/06/10 17:47:14 bzfwolte Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1671,7 +1671,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       /* get the solution value of variable in last solved LP on the active path:
        *  - if the LP was solved at the current node, the LP values of the columns are valid
        *  - if the last solved LP was the one in the current lpstatefork, the LP value in the columns are still valid
-       *  - otherwise, the LP values are invalid
+       *Â  - otherwise, the LP values are invalid
        */
       if( SCIPtreeHasCurrentNodeLP(tree)
          || (tree->focuslpstateforklpcount == stat->lpcount && SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN) )
@@ -1856,7 +1856,22 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
 
    if( set->misc_exactsolve )
    {
-      SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
+      if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
+      {
+         SCIP_Bool proved;
+         
+         /* checks whether an exact certificate for infeasibility exists */
+         SCIP_CALL( SCIPlpIsInfeasibilityProved(lp, set, &proved) );
+
+         if( proved )
+            lpobjval = SCIPsetInfinity(set);  /* node will be cut off */
+         else
+            lpobjval = -SCIPsetInfinity(set); /* lower bound of node does not change */
+      }
+      else
+      {
+         SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
+      }
    }
    else
       lpobjval = SCIPlpGetObjval(lp, set);
@@ -3019,7 +3034,8 @@ SCIP_RETCODE nodeToLeaf(
 #endif
 
    /* if node is good enough to keep, put it on the node queue */
-   if( SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound) )
+   if( (set->misc_exactsolve && (*node)->lowerbound < cutoffbound)
+      || (!set->misc_exactsolve && SCIPsetIsLT(set, (*node)->lowerbound, cutoffbound)) )
    {
       /* insert leaf in node queue */
       SCIP_CALL( SCIPnodepqInsert(tree->leaves, set, *node) );
@@ -4112,7 +4128,8 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nsiblings-1; i >= 0; --i )
    {
       node = tree->siblings[i];
-      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+      if( (set->misc_exactsolve && node->lowerbound >= cutoffbound)
+         || (!set->misc_exactsolve && SCIPsetIsGE(set, node->lowerbound, cutoffbound)) )
       {
          SCIPdebugMessage("cut off sibling #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n", 
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
@@ -4125,7 +4142,8 @@ SCIP_RETCODE SCIPtreeCutoff(
    for( i = tree->nchildren-1; i >= 0; --i )
    {
       node = tree->children[i];
-      if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
+      if( (set->misc_exactsolve && node->lowerbound >= cutoffbound)
+         || (!set->misc_exactsolve && SCIPsetIsGE(set, node->lowerbound, cutoffbound)) )
       {
          SCIPdebugMessage("cut off child #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
@@ -4312,12 +4330,8 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    return estimate;
 }
 
-/** branches on a variable v; if solution value x' is fractional, two child nodes are created
- *  (x <= floor(x'), x >= ceil(x')), 
- *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
- *  variable and the bounds of v are finite, then two child nodes are created
- *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
- *  otherwise three child nodes are created
+/** branches on a variable; if solution value x' is fractional, two child nodes are created
+ *  (x <= floor(x'), x >= ceil(x')), if solution value is integral, three child nodes are created
  *  (x <= x'-1, x == x', x >= x'+1)
  */
 SCIP_RETCODE SCIPtreeBranchVar(
@@ -4339,10 +4353,6 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_Real priority;
    SCIP_Real estimate;
 
-   SCIP_Real downub;
-   SCIP_Real fixval;
-   SCIP_Real uplb;
-   
    assert(tree != NULL);
    assert(set != NULL);
    assert(var != NULL);
@@ -4378,88 +4388,35 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPsetIsGE(set, solval, SCIPvarGetLbLocal(var)));
    assert(SCIPsetIsLE(set, solval, SCIPvarGetUbLocal(var)));
 
-   downub = SCIP_INVALID;
-   fixval = SCIP_INVALID;
-   uplb = SCIP_INVALID;
-   
    if( SCIPsetIsFeasIntegral(set, solval) )
    {
-      SCIP_Real lb;
-      SCIP_Real ub;
-       
-      lb = SCIPvarGetLbLocal(var);
-      ub = SCIPvarGetUbLocal(var);
+      SCIP_Real fixval;
 
-      if( !SCIPsetIsInfinity(set, lb) && !SCIPsetIsInfinity(set, ub) && 
-         (  SCIPsetIsEQ(set, solval, lb) || SCIPsetIsEQ(set, solval, ub) ) )
-      {
-         SCIP_Real center;
-
-         /* create child nodes with x <= x", and x >= x"+1 with x" = floor((lb + ub)/2);
-          * if x" is integral, make the interval smaller in the child in which the current soluton x'
-          * is still feasible
-          */
-         center = (ub + lb) / 2.0;
-         if( solval <= center )
-         {
-            downub = SCIPsetFeasFloor(set, center);
-            uplb = downub + 1.0;
-         }
-         else
-         {
-            uplb = SCIPsetFeasCeil(set, center);
-            downub = uplb - 1.0;
-         }
-      }
-      else
-      {
-         /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
-         assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, solval), SCIPsetFeasFloor(set, solval)));
-         
-         fixval = solval;
-         
-         /* create child node with x <= x'-1, if this would be feasible */
-         if( SCIPsetIsGE(set, fixval-1.0, lb) )
-            downub = fixval - 1.0;
-         
-         /* create child node with x >= x'+1, if this would be feasible */
-         if( SCIPsetIsLE(set, fixval+1.0, ub) )
-            uplb = fixval + 1.0;
-      }
-      SCIPdebugMessage("integral branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
+      /* create child nodes with x <= x'-1, x = x', and x >= x'+1;
+       * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
+       * as the deviation from the variable's root solution; evaluate x = x' first in any way
+       */
+      fixval = SCIPsetFeasCeil(set, solval);
+      assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, solval), SCIPsetFeasFloor(set, solval)));
+      
+      SCIPdebugMessage("pseudo branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
          SCIPvarGetName(var), solval, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
-   }
-   else
-   {
-      /* create child nodes with x <= floor(x'), and x >= ceil(x') */
-      downub = SCIPsetFeasFloor(set, solval);
-      uplb = downub + 1.0;
-      assert( SCIPsetIsEQ(set, SCIPsetFeasCeil(set, solval), uplb) );
-      SCIPdebugMessage("fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n", 
-         SCIPvarGetName(var), solval, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
-   }
-   
-   /* perform the branching;
-    * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
-    * as the deviation from the variable's root solution
-    */
-   if( downub != SCIP_INVALID )
-   {
-      /* create child node x <= downub */
-      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, downub);
-      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, downub);
-      SCIPdebugMessage(" -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n",
-         SCIPvarGetName(var), downub, priority, estimate);
-      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
-      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue, 
-            var, downub, SCIP_BOUNDTYPE_UPPER, FALSE) );
-      if( downchild != NULL )
-         *downchild = node;
-   }
-   
-   if( fixval != SCIP_INVALID )
-   {
-      /* create child node with x = fixval */
+      
+      /* create child node with x <= x'-1, if this would be feasible */
+      if( SCIPsetIsGE(set, fixval-1, SCIPvarGetLbLocal(var)) )
+      {
+         priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, fixval-1.0);
+         estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, fixval-1.0);
+         SCIPdebugMessage(" -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n", 
+            SCIPvarGetName(var), fixval-1.0, priority, estimate);
+         SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue, 
+               var, fixval-1.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
+         if( downchild != NULL )
+            *downchild = node;
+      }
+                  
+      /* create child node with x = x' */
       priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, fixval);
       estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, fixval);
       SCIPdebugMessage(" -> creating child: <%s> == %g (priority: %g, estimate: %g)\n",
@@ -4477,18 +4434,53 @@ SCIP_RETCODE SCIPtreeBranchVar(
       }
       if( eqchild != NULL )
          *eqchild = node;
+      
+      /* create child node with x >= x'+1, if this would be feasible */
+      if( SCIPsetIsLE(set, fixval+1, SCIPvarGetUbLocal(var)) )
+      {
+         priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, fixval+1.0);
+         estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, fixval+1.0);
+         SCIPdebugMessage(" -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
+            SCIPvarGetName(var), fixval+1.0, priority, estimate);
+         SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+         SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue, 
+               var, fixval+1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
+         if( upchild != NULL )
+            *upchild = node;
+      }
    }
-   
-   if( uplb != SCIP_INVALID )
+   else
    {
-      /* create child node with x >= uplb */
-      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, uplb);
-      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, uplb);
-      SCIPdebugMessage(" -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
-         SCIPvarGetName(var), uplb, priority, estimate);
+      SCIP_Real newval;
+
+      /* create child nodes with x <= floor(x'), and x >= ceil(x');
+       * set the node selection priority in a way, s.t. a node is preferred whose branching goes in the same direction
+       * as the deviation from the variable's root solution
+       */
+      SCIPdebugMessage("LP branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n", 
+         SCIPvarGetName(var), solval, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+      
+      /* create child node with x <= floor(x') */
+      newval = SCIPsetFeasFloor(set, solval);
+      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, newval);
+      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, newval);
+      SCIPdebugMessage(" -> creating child: <%s> <= %g (priority: %g, estimate: %g)\n",
+         SCIPvarGetName(var), newval, priority, estimate);
       SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
       SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue, 
-            var, uplb, SCIP_BOUNDTYPE_LOWER, FALSE) );
+            var, newval, SCIP_BOUNDTYPE_UPPER, FALSE) );
+      if( downchild != NULL )
+         *downchild = node;
+      
+      /* create child node with x >= ceil(x') */
+      newval = SCIPsetFeasCeil(set, solval);
+      priority = SCIPtreeCalcNodeselPriority(tree, set, stat, var, newval);
+      estimate = SCIPtreeCalcChildEstimate(tree, set, stat, var, newval);
+      SCIPdebugMessage(" -> creating child: <%s> >= %g (priority: %g, estimate: %g)\n",
+         SCIPvarGetName(var), newval, priority, estimate);
+      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, priority, estimate) );
+      SCIP_CALL( SCIPnodeAddBoundchg(node, blkmem, set, stat, tree, lp, branchcand, eventqueue, 
+            var, newval, SCIP_BOUNDTYPE_LOWER, FALSE) );
       if( upchild != NULL )
          *upchild = node;
    }

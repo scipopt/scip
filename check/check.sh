@@ -15,7 +15,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.48 2007/11/21 14:13:30 bzfberth Exp $
+# $Id: check.sh,v 1.45.2.1 2009/06/10 17:47:12 bzfwolte Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -112,9 +112,8 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-HARDTIMELIMIT=`echo "($TIMELIMIT*1.1)+10" | bc`
-HARDMEMLIMIT=`echo "($MEMLIMIT*1.1+10)*1024" | bc`
-
+HARDTIMELIMIT=`echo $TIMELIMIT+60 | bc`
+HARDMEMLIMIT=`echo $MEMLIMIT*1229 | bc`
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
@@ -160,7 +159,8 @@ do
 	    date >>$ERRFILE
 	    echo -----------------------------
 	    date +"@03 %s"
-	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT k; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
+#	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT k; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
+	    bash -c "ulimit -t $HARDTIMELIMIT -v $HARDMEMLIMIT -f 200000; ../$2 < $TMPFILE" 2>>$ERRFILE
 	    date +"@04 %s"
 	    echo -----------------------------
 	    date

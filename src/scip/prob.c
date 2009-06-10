@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.94 2007/11/21 15:03:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.92.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -35,7 +35,6 @@
 #include "scip/lp.h"
 #include "scip/var.h"
 #include "scip/prob.h"
-#include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
@@ -372,8 +371,12 @@ SCIP_RETCODE SCIPprobTransform(
       }
    }
 
-   /* objective value is always integral, iff original objective value is always integral and shift is integral */
-   (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
+   /* in exact solving mode, we can not rely on this integrality check as it is not safe yet */
+   if( !set->misc_exactsolve )
+   {
+      /* objective value is always integral, iff original objective value is always integral and shift is integral */
+      (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
+   }
 
    /* check, wheter objective value is always integral by inspecting the problem */
    SCIPprobCheckObjIntegral(*target, set);
@@ -1049,6 +1052,10 @@ void SCIPprobCheckObjIntegral(
    if( prob->objisintegral )
       return;
 
+   /* in exact solving mode, we can not rely on the integrality check procedure as it is not safe yet */
+   if( set->misc_exactsolve )
+      return;
+
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
    if( set->nactivepricers != 0 )
       return;
@@ -1085,9 +1092,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -1097,6 +1102,10 @@ SCIP_RETCODE SCIPprobScaleObj(
 
    assert(prob != NULL);
    assert(set != NULL);
+
+   /* in exact solving mode, we can not rely on the scaling procedure as it is not safe yet */
+   if( set->misc_exactsolve )
+      return SCIP_OKAY;
 
    /* do not change objective if there are pricers involved */
    if( set->nactivepricers != 0 )
@@ -1187,9 +1196,6 @@ SCIP_RETCODE SCIPprobScaleObj(
                   prob->objscale /= intscalar;
                   prob->objisintegral = TRUE;
                   SCIPdebugMessage("integral objective scalar: objscale=%g\n", prob->objscale);
-
-                  /* update upperbound and cutoffbound in primal data structure */
-                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
                }
             }
          }
@@ -1445,7 +1451,7 @@ void SCIPprobPrintPseudoSol(
       assert(var != NULL);
       solval = SCIPvarGetPseudoSol(var);
       if( !SCIPsetIsZero(set, solval) )
-         SCIPmessagePrintInfo(" <%s>=%.15g", SCIPvarGetName(var), solval);
+         SCIPmessagePrintInfo(" <%s>=%g", SCIPvarGetName(var), solval);
    }
    SCIPmessagePrintInfo("\n");
 }

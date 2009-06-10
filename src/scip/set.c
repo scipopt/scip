@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194 2007/08/01 13:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.1 2009/06/10 17:47:14 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -178,7 +178,7 @@
 /* Miscellaneous */
 
 #define SCIP_DEFAULT_MISC_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be caught by SCIP? */
-#define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
+#define SCIP_DEFAULT_MISC_EXACTSOLVE       TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
 
 
 /* Node Selection */
@@ -774,7 +774,7 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_catchctrlc, FALSE, SCIP_DEFAULT_MISC_CATCHCTRLC,
          NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
-#if 0
+#if 1
    SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
          "misc/exactsolve",
          "should the problem be solved exactly (with proven dual bounds)?",

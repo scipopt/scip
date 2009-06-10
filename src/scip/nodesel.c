@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.54 2007/06/06 11:25:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.54.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -604,7 +604,8 @@ SCIP_RETCODE SCIPnodepqBound(
       node = nodepq->slots[pos];
       assert(node != NULL);
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
-      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
+      if( (set->misc_exactsolve && SCIPnodeGetLowerbound(node) >= cutoffbound)
+         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound)) )
       {
          SCIPdebugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
@@ -613,9 +614,13 @@ SCIP_RETCODE SCIPnodepqBound(
           * lower bound than the cut off value
           */
          assert(PQ_LEFTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound));
+            || (set->misc_exactsolve && SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]) < cutoffbound)
+            || (!set->misc_exactsolve 
+               && SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_LEFTCHILD(pos)]), cutoffbound)));
          assert(PQ_RIGHTCHILD(pos) >= nodepq->len
-            || SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound));
+            || (set->misc_exactsolve && SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]) < cutoffbound)
+            || (!set->misc_exactsolve
+               && SCIPsetIsLT(set, SCIPnodeGetLowerbound(nodepq->slots[PQ_RIGHTCHILD(pos)]), cutoffbound)));
 
          /* free the slot in the node PQ */
          parentfelldown = nodepqDelPos(nodepq, set, pos);

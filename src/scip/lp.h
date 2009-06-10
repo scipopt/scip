@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.126 2007/10/17 19:57:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.126.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -879,6 +879,12 @@ SCIP_Real SCIPlpGetObjval(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** gets objective value of current LP; performs calculations with interval arithmetic to get an exact upper bound */
+SCIP_Real SCIPlpGetPrimalprovedObjval(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
+   );
+
 /** gets part of objective value of current LP that results from COLUMN variables only */
 extern
 SCIP_Real SCIPlpGetColumnObjval(
@@ -910,6 +916,12 @@ extern
 SCIP_Real SCIPlpGetPseudoObjval(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** gets current pseudo objective value; performs calculations with interval arithmetic to get an exact upper bound */
+SCIP_Real SCIPlpGetPrimalprovedPseudoObjval(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< transformed problem data */
    );
 
 /** gets pseudo objective value, if a bound of the given variable would be modified in the given way */

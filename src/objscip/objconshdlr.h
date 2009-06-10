@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.49 2007/10/31 09:26:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.49.2.1 2009/06/10 17:47:12 bzfwolte Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -28,7 +28,7 @@
 
 
 #include <cassert>
-#include <string>
+#include <cstring>
 
 extern "C" 
 {

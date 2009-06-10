@@ -14,7 +14,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254 2007/08/22 13:20:56 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.1 2009/06/10 17:47:14 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -82,10 +82,14 @@ SCIP_Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_TIMELIMIT;
    else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1024.0*1024.0 )
       stat->status = SCIP_STATUS_MEMLIMIT;
-   else if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
+   else if( set->stage >= SCIP_STAGE_SOLVING 
+      && ((set->misc_exactsolve && SCIPgetGap(set->scip) < set->limit_gap)
+         ||(!set->misc_exactsolve && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap))) )
       stat->status = SCIP_STATUS_GAPLIMIT;
    else if( set->stage >= SCIP_STAGE_SOLVING
-      && SCIPsetIsLT(set, SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip), set->limit_absgap) )
+      && ((set->misc_exactsolve && SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip) < set->limit_absgap) 
+         || (!set->misc_exactsolve && 
+            SCIPsetIsLT(set, SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip), set->limit_absgap))) )
       stat->status = SCIP_STATUS_GAPLIMIT;
    else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
       && SCIPgetNSolsFound(set->scip) >= set->limit_solutions )
@@ -1929,8 +1933,15 @@ SCIP_RETCODE enforceConstraints(
       objinfeasible = FALSE;
    else
    {
-      pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
-      objinfeasible = SCIPsetIsLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
+      /* only a safe lower bound on the pseudo solution's objectiv value has been computed yet */
+      /**@todo test whether it's worse calculating a safe upper bound manually at this point */
+      if( set-> misc_exactsolve)
+         objinfeasible = FALSE;
+      else
+      {
+         pseudoobjval = SCIPlpGetPseudoObjval(lp, set);
+         objinfeasible = SCIPsetIsLT(set, pseudoobjval, SCIPnodeGetLowerbound(SCIPtreeGetFocusNode(tree)));
+      }
    }
 
    /* during constraint enforcemenst, generated cuts should enter the LP in any case; otherwise, a constraint handler
@@ -2292,7 +2303,8 @@ SCIP_RETCODE solveNode(
    focusnodehaslp = focusnodehaslp && (set->lp_solvefreq >= 1 && actdepth % set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp || (actdepth == 0 && set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp || (actdepth == 0 && prob->ncontvars > 0);
-   focusnodehaslp = focusnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set), primal->cutoffbound);
+   focusnodehaslp = focusnodehaslp && ((set->misc_exactsolve && SCIPlpGetPseudoObjval(lp, set) < primal->cutoffbound)
+         || (!set->misc_exactsolve && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set), primal->cutoffbound)));
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
 
    /* call primal heuristics that should be applied before the node was solved */
@@ -2752,7 +2764,7 @@ SCIP_RETCODE addCurrentSolution(
       SCIPclockStart(stat->lpsoltime, set);
 
       /* add solution to storage */
-      SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, primal, tree, lp, NULL) );
+      SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, prob, primal, tree, lp, NULL) );
       if( set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
@@ -2775,7 +2787,7 @@ SCIP_RETCODE addCurrentSolution(
       SCIPclockStart(stat->pseudosoltime, set);
 
       /* add solution to storage */
-      SCIP_CALL( SCIPsolCreatePseudoSol(&sol, blkmem, set, stat, primal, tree, lp, NULL) );
+      SCIP_CALL( SCIPsolCreatePseudoSol(&sol, blkmem, set, stat, prob, primal, tree, lp, NULL) );
       if( set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
@@ -3020,6 +3032,7 @@ SCIP_RETCODE SCIPsolveCIP(
                   {
                      /**@todo call PerPlex */
                      SCIPerrorMessage("cannot branch on all-fixed LP -- have to call PerPlex instead\n");
+                     return SCIP_LPERROR;
                   }
                }
                else
@@ -3085,7 +3098,8 @@ SCIP_RETCODE SCIPsolveCIP(
     * feasible solution with the same value was found at this node)
     */
    if( tree->focusnode != NULL && SCIPtreeGetNNodes(tree) == 0
-      && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
+      && ((set->misc_exactsolve && tree->focusnode->lowerbound >= primal->cutoffbound)
+         || (!set->misc_exactsolve && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound))) )
    {
       focusnode = NULL;
       SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, stat, prob, primal, tree, lp, branchcand, conflict,
@@ -3104,9 +3118,11 @@ SCIP_RETCODE SCIPsolveCIP(
          /* switch status to UNBOUNDED */
          stat->status = SCIP_STATUS_UNBOUNDED;
       }
-      else if( primal->nsols == 0
-         || SCIPsetIsGE(set, SCIPsolGetObj(primal->sols[0], set, prob), 
-            SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set))) )
+      else if( primal->nsols == 0 
+         || (set->misc_exactsolve 
+            && SCIPsolGetObj(primal->sols[0], set, prob) >= SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set)))
+         || (!set->misc_exactsolve && SCIPsetIsGE(set, SCIPsolGetObj(primal->sols[0], set, prob), 
+               SCIPprobInternObjval(prob, set, SCIPprobGetObjlim(prob, set)))) )
       {
          /* switch status to INFEASIBLE */
          stat->status = SCIP_STATUS_INFEASIBLE;
