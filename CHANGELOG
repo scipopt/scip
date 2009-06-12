@@ -112,6 +112,7 @@ fixed bugs:
 - fixed potential bug: restarts are now only done if no active pricers exist
 - fixed bug in cons_countsols.c we respect to warning message that "The current parameter setting might cause ..."  
 - fixed bug in reader_lp.c with respect to constraint and variable names which start with two or more dots ".."
+- fixed bug in all readers w.r.t. SCIPgetProbvarLinearSum()
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
