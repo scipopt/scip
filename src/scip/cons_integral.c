@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.51 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.52 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -217,6 +217,11 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 /** constraint display method of constraint handler */
 #define consPrintIntegral NULL
 
+/** constraint copying method of constraint handler */
+#define consCopyIntegral NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseIntegral NULL
 
 
 
@@ -246,7 +251,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
          consPropIntegral, consPresolIntegral, consRespropIntegral, consLockIntegral,
          consActiveIntegral, consDeactiveIntegral, 
          consEnableIntegral, consDisableIntegral,
-         consPrintIntegral,
+         consPrintIntegral, consCopyIntegral, consParseIntegral,
          conshdlrdata) );
 
    return SCIP_OKAY;

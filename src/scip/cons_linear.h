@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.56 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.57 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -126,6 +126,34 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   );
+
+/** creates by copying and captures a linear constraint */
+extern
+SCIP_RETCODE SCIPcopyConsLinear(
+   SCIP*                 scip,               /**< target SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in source variable array */
+   SCIP_VAR**            sourcevars,         /**< source variables of the linear constraints */
+   SCIP_Real*            sourcecoefs,        /**< coefficient array of the linear constraint, or NULL if all coefficients are one */
+   SCIP_Real             lhs,                /**< left hand side of the linear constraint */
+   SCIP_Real             rhs,                /**< right hand side of the linear constraint */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+                                              *   variables of the target SCIP */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
+   SCIP_Bool*            succeed             /**< pointer to store whether the copying was successful or not */
    );
 
 /** adds coefficient to linear constraint (if it is not zero) */

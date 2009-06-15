@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.71 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.72 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -370,7 +370,8 @@ static
 void consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< xor constraint data */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             endline             /**< should an endline be set? */
    )
 {
    int v;
@@ -386,7 +387,10 @@ void consdataPrint(
          SCIPinfoMessage(scip, file, ", ");
       SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   SCIPinfoMessage(scip, file, ") = %d\n", consdata->rhs);
+   SCIPinfoMessage(scip, file, ") = %d", consdata->rhs);
+
+   if( endline )
+      SCIPinfoMessage(scip, file, "\n");
 }
 
 /** adds coefficient to xor constraint */
@@ -635,7 +639,7 @@ SCIP_RETCODE applyFixings(
    assert(nchgcoefs != NULL);
 
    SCIPdebugMessage("before fixings: ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    v = 0;
    while( v < consdata->nvars )
@@ -684,7 +688,7 @@ SCIP_RETCODE applyFixings(
    SCIP_CALL( consdataSort(scip, consdata) );
 
    SCIPdebugMessage("after sort    : ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    /* delete pairs of equal or negated variables; scan from back to front because deletion doesn't affect the
     * order of the front variables
@@ -717,7 +721,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMessage("after fixings : ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    return SCIP_OKAY;
 }
@@ -2006,11 +2010,16 @@ SCIP_DECL_CONSPRINT(consPrintXor)
    assert( conshdlr != NULL );
    assert( cons != NULL );
  
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   consdataPrint(scip, SCIPconsGetData(cons), file, FALSE);
     
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopyXor NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseXor NULL
 
 
 
@@ -2069,7 +2078,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          consPropXor, consPresolXor, consRespropXor, consLockXor,
          consActiveXor, consDeactiveXor, 
          consEnableXor, consDisableXor,
-         consPrintXor,
+         consPrintXor, consCopyXor, consParseXor,
          conshdlrdata) );
 
    /* add xor constraint handler parameters */

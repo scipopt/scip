@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.107 2009/04/09 13:43:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.108 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -503,7 +503,7 @@ void consdataPrint(
          SCIPinfoMessage(scip, file, ", ");
       SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ")");
 }
 
 /** adds coefficient to and constraint */
@@ -831,6 +831,7 @@ SCIP_RETCODE applyFixings(
 
    SCIPdebugMessage("after fixings: ");
    SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebugPrintf("\n");
 
    return SCIP_OKAY;
 }
@@ -2531,6 +2532,24 @@ SCIP_DECL_CONSPRINT(consPrintAnd)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyAnd)
+{  /*lint --e{715}*/
+#if 0
+   SCIP_VAR** vars;
+   SCIP_VAR* resvar;
+   int nvars;
+   
+   SCIP_CALL( SCIPcreateConsAnd(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+#endif
+   return SCIP_OKAY;
+}
+
+/** constraint parsing method of constraint handler */
+#define consParseAnd NULL
+
 /*
  * Callback methods of event handler
  */
@@ -2590,7 +2609,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          consPropAnd, consPresolAnd, consRespropAnd, consLockAnd,
          consActiveAnd, consDeactiveAnd, 
          consEnableAnd, consDisableAnd,
-         consPrintAnd,
+         consPrintAnd, consCopyAnd, consParseAnd,
          conshdlrdata) );
 
    /* add and constraint handler parameters */

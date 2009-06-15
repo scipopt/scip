@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.c,v 1.25 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_sos2.c,v 1.26 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   cons_sos2.c
  * @ingroup CONSHDLRS 
@@ -1684,6 +1684,11 @@ SCIP_DECL_CONSPRINT(consPrintSOS2)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopySOS2 NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseSOS2 NULL
 
 
 
@@ -1815,7 +1820,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
 	 consSepalpSOS2, consSepasolSOS2, consEnfolpSOS2, consEnfopsSOS2, consCheckSOS2,
 	 consPropSOS2, consPresolSOS2, consRespropSOS2, consLockSOS2,
 	 consActiveSOS2, consDeactiveSOS2, consEnableSOS2, consDisableSOS2,
-	 consPrintSOS2, conshdlrdata) );
+	 consPrintSOS2, consCopySOS2, consParseSOS2, conshdlrdata) );
 
    return SCIP_OKAY;
 }

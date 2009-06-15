@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.182 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.183 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1751,6 +1751,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSENABLE  ((*consenable)),    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable)),   /**< disabling notification method */
    SCIP_DECL_CONSPRINT   ((*consprint)),     /**< constraint display method */
+   SCIP_DECL_CONSCOPY    ((*conscopy)),      /**< constraint copying method */
+   SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -1797,6 +1799,8 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consenable = consenable;
    (*conshdlr)->consdisable = consdisable;
    (*conshdlr)->consprint = consprint;
+   (*conshdlr)->conscopy = conscopy;
+   (*conshdlr)->consparse = consparse;
    (*conshdlr)->conshdlrdata = conshdlrdata;
    (*conshdlr)->conss = NULL;
    (*conshdlr)->consssize = 0;
@@ -4425,6 +4429,144 @@ SCIP_RETCODE SCIPconsCreate(
 
    return SCIP_OKAY;
 }
+
+/** copies source constraint of source SCIP into the target constraint for the target SCIP, using the variable map for
+ *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
+ *  a constraint is creates and captures;
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  may be declared feasible even if it violates this particular constraint.
+ *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
+ *  local constraint is redundant due to the variable's local bounds.
+ */
+SCIP_RETCODE SCIPconsCopy(
+   SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
+   SCIP_SET*             set,                /**< global SCIP settings of the target SCIP */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+                                              *   variables of the target SCIP */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
+   SCIP_Bool*            succeed             /**< pointer to store whether the copying was successful or not */
+   )
+{
+   assert(cons != NULL);
+   assert(conshdlr != NULL);
+
+   (*succeed) = FALSE;
+   
+   if( conshdlr->conscopy != NULL )
+   {
+      SCIP_CALL( conshdlr->conscopy(set->scip, conshdlr, cons, sourcescip, sourcecons, varmap,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+   }
+#if 0
+   else
+   {
+      SCIPwarningMessage("constraint handler <%s> doesn't support copying constraints\n", conshdlr->name);
+   }
+#endif
+   return SCIP_OKAY;
+
+   
+}
+
+
+/** parses constrint information (in cip format) out of a string; if the parsing process was successful a constraint is
+ *  creates and captures, and inserts it into the conss array of its constraint handler
+ *  Warning! If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  may be declared feasible even if it violates this particular constraint.
+ *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
+ *  local constraint is redundant due to the variable's local bounds.
+ */
+SCIP_RETCODE SCIPconsParse(
+   SCIP_CONS**           cons,               /**< pointer to constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           str,                /**< name of constraint */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility?
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing?
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally?
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node?
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   char conshdlrname[SCIP_MAXSTRLEN];
+   char consname[SCIP_MAXSTRLEN];
+   char* copystr;
+   char* token;
+   char* saveptr;
+
+   assert(cons != NULL);
+
+   (*succeed) = FALSE;
+   
+   /* copy string */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
+   
+   /* pasre constraint handler name */
+   token = SCIPstrtok(copystr, " []", &saveptr);
+   (void) SCIPsnprintf(conshdlrname, strlen(token)+1, "%s", token);
+   
+   /* pasre constraint name */
+   token = SCIPstrtok(NULL, " <>", &saveptr);
+   (void) SCIPsnprintf(consname, strlen(token) + 1, "%s", token);
+
+
+   token = SCIPstrtok(NULL, ":;", &saveptr);
+   
+   /* check if a constraint handler with parsed name exists */
+   conshdlr = SCIPsetFindConshdlr(set, conshdlrname);
+
+   if( conshdlr != NULL && conshdlr->consparse != NULL )
+   {
+      SCIP_CALL( conshdlr->consparse(set->scip, conshdlr, cons, consname, token, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+   }
+#if 0
+   else
+   {
+      if( conshdlr == NULL )
+         SCIPwarningMessage("constraint handler <%s> doesn't exit in SCIP data structure\n", conshdlrname);
+      else if( conshdlr->consparse == NULL )
+         SCIPwarningMessage("constraint handler <%s> doesn't support parsing constraints\n", conshdlrname);
+   }
+#endif
+
+   BMSfreeMemoryArray(&copystr);
+   
+   return SCIP_OKAY;
+}
+
 
 /** frees a constraint and removes it from the conss array of its constraint handler */
 SCIP_RETCODE SCIPconsFree(

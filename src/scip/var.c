@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.248 2009/06/05 20:28:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.249 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1803,6 +1803,232 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    return SCIP_OKAY;   
 }
 
+/** parse given string for a SCIP_Real bound */
+static
+void parseValue(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           str,                /**< string to parse */
+   SCIP_Real*            value               /**< pointer to store the parsed value */
+   )
+{                                                
+   int cnt;
+   
+   if(strncmp(str, "+inf", 4) == 0 )
+      *value = SCIPsetInfinity(set);
+   else if(strncmp(str, "-inf", 4) == 0 )
+      *value = -SCIPsetInfinity(set);
+   else 
+   {
+      cnt = sscanf(str, "%"SCIP_REAL_FORMAT"", value);
+      assert(cnt == 1);
+   }
+}
+
+/** parses a given string for a variable informations */
+static
+SCIP_RETCODE varParse(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           str,                /**< stirng to parse */
+   char*                 name,               /**< pointer to store the variable name */
+   SCIP_Real*            lb,                 /**< pointer to store the lower bound */
+   SCIP_Real*            ub,                 /**< pointer to store the upper bound */  
+   SCIP_Real*            obj,                /**< pointer to store the objective coefficient */  
+   SCIP_VARTYPE*         vartype,            /**< pointer to store the variable type */   
+   SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
+   SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
+   SCIP_Bool             local,              /**< should the local bound be applied */            
+   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   )
+{
+   char* copystr;
+   char* token;
+   char* saveptr;
+   int cnt;
+
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(obj != NULL);
+   assert(vartype != NULL);
+   assert(lazylb != NULL);
+   assert(lazyub != NULL);
+   assert(succeed != NULL);
+   
+   (*succeed) = TRUE;
+   
+   /* copy string */
+   SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
+   
+   token = SCIPstrtok(copystr, " []", &saveptr);
+   
+   /* get varibale type */
+   if( strncmp(token, "binary", 3) == 0 )
+      (*vartype) = SCIP_VARTYPE_BINARY;
+   else if( strncmp(token, "integer", 3) == 0 )
+      (*vartype) = SCIP_VARTYPE_INTEGER;
+   else if( strncmp(token, "implicit", 3) == 0 )
+      (*vartype) = SCIP_VARTYPE_IMPLINT;
+   else if( strncmp(token, "continuous", 3) == 0 )
+      (*vartype) = SCIP_VARTYPE_CONTINUOUS;
+   else
+   {
+      SCIPwarningMessage("unknown variable type\n");
+      (*succeed) = FALSE;
+      goto TERMINATE;
+   }
+   
+   /* get variable name */
+   token = SCIPstrtok(NULL, " <>:", &saveptr);
+   (void) SCIPsnprintf(name, strlen(token)+1, "%s", token);
+   
+   /* get objective coefficient */
+   token = SCIPstrtok(NULL, " ,:", &saveptr);
+   cnt = sscanf(token, "obj=%"SCIP_REAL_FORMAT",", obj);
+   assert(cnt == 1);
+   
+   /* get global bound */
+   token = SCIPstrtok(NULL, "[", &saveptr);
+   token = SCIPstrtok(NULL, ",", &saveptr);
+   parseValue(set, token, lb);
+   token = SCIPstrtok(NULL, "]", &saveptr);
+   parseValue(set, token, ub);
+
+   /* get local bound */
+   token = SCIPstrtok(NULL, "[", &saveptr);
+   token = SCIPstrtok(NULL, ",", &saveptr);
+   if( local )
+      parseValue(set, token, lb);
+   token = SCIPstrtok(NULL, "]", &saveptr);
+   if( local )
+      parseValue(set, token, ub);
+
+   /* get lazy bound */
+   token = SCIPstrtok(NULL, "[", &saveptr);
+   token = SCIPstrtok(NULL, ",", &saveptr);
+   parseValue(set, token, lazylb);
+   token = SCIPstrtok(NULL, "]", &saveptr);
+   parseValue(set, token, lazyub);
+   
+ TERMINATE:
+   BMSfreeMemoryArray(&copystr);
+   
+   return SCIP_OKAY;
+}
+
+/** parses variable information (in cip format) out of a string; if the parsing process was successful an original
+ *  problem variable is creates and captures; an integer variable with bounds zero and one is automatically converted
+ *  into a binary variable
+ */
+SCIP_RETCODE SCIPvarParseOriginal(
+   SCIP_VAR**            var,                /**< pointer to variable data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   const char*           str,                /**< stirng to parse */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   )
+{
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
+   SCIP_VARTYPE vartype;
+   SCIP_Real lazylb;
+   SCIP_Real lazyub;
+   
+   assert(var != NULL);
+   assert(blkmem != NULL);
+   assert(stat != NULL);
+   
+   /* parse string in cip format for variable information */
+   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, succeed) );
+
+   if( *succeed )
+   {
+      /* create variable */
+      SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
+            vardelorig, vartrans, vardeltrans, vardata) );
+
+      /* set variable status and data */
+      (*var)->varstatus = SCIP_VARSTATUS_ORIGINAL; /*lint !e641*/
+      (*var)->data.original.origdom.holelist = NULL;
+      (*var)->data.original.origdom.lb = lb;
+      (*var)->data.original.origdom.ub = ub;
+      (*var)->data.original.transvar = NULL;
+
+      /* set lazy status of variable bounds */
+      (*var)->lazylb = lazylb;
+      (*var)->lazyub = lazyub;
+      
+      /* capture variable */
+      SCIPvarCapture(*var);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** parses variable information (in cip format) out of a string; if the parsing process was successful a loose variable
+ *  belonging to the transformed problem is creates and captures; an integer variable with bounds zero and one is
+ *  automatically converted into a binary variable
+ */
+SCIP_RETCODE SCIPvarParseTransformed(
+   SCIP_VAR**            var,                /**< pointer to variable data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   const char*           str,                /**< stirng to parse */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   )
+{
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Real obj;
+   SCIP_VARTYPE vartype;
+   SCIP_Real lazylb;
+   SCIP_Real lazyub;
+
+
+   assert(var != NULL);
+   assert(blkmem != NULL);
+
+   /* parse string in cip format for variable information */
+   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, succeed) );
+
+   if( *succeed )
+   {
+      /* create variable */
+      SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
+            vardelorig, vartrans, vardeltrans, vardata) );
+      
+      /* create event filter for transformed variable */
+      SCIP_CALL( SCIPeventfilterCreate(&(*var)->eventfilter, blkmem) );
+
+      /* set variable status and data */
+      (*var)->varstatus = SCIP_VARSTATUS_LOOSE; /*lint !e641*/
+
+      /* set lazy status of variable bounds */
+      (*var)->lazylb = lazylb;
+      (*var)->lazyub = lazyub;
+
+      /* capture variable */
+      SCIPvarCapture(*var);
+   }
+   
+   return SCIP_OKAY;   
+}
+
 /** ensures, that parentvars array of var can store at least num entries */
 static
 SCIP_RETCODE varEnsureParentvarsSize(
@@ -2071,6 +2297,33 @@ void SCIPvarInitSolve(
    var->conflictubcount = 0;
 }
 
+/** outputs the given bounds into the file stream */
+static 
+void printBounds(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Real             lb,                 /**< lower bound */
+   SCIP_Real             ub,                 /**< upper bound */
+   const char*           name                /**< bound name */
+   )
+{
+   assert(set != NULL);
+   
+   SCIPmessageFPrintInfo(file, ", %s=", name);
+   if( SCIPsetIsInfinity(set, lb) )
+      SCIPmessageFPrintInfo(file, "[+inf,");
+   else if( SCIPsetIsInfinity(set, -lb) )
+      SCIPmessageFPrintInfo(file, "[-inf,");
+   else
+      SCIPmessageFPrintInfo(file, "[%.15g,", lb);
+   if( SCIPsetIsInfinity(set, ub) )
+      SCIPmessageFPrintInfo(file, "+inf]");
+   else if( SCIPsetIsInfinity(set, -ub) )
+      SCIPmessageFPrintInfo(file, "-inf]");
+   else
+      SCIPmessageFPrintInfo(file, "%.15g]", ub);
+}
+
 /** outputs variable information into file stream */
 void SCIPvarPrint(
    SCIP_VAR*             var,                /**< problem variable */
@@ -2121,19 +2374,17 @@ void SCIPvarPrint(
       lb = SCIPvarGetLbOriginal(var);
       ub = SCIPvarGetUbOriginal(var);
    }
-   SCIPmessageFPrintInfo(file, ", bounds=");
-   if( SCIPsetIsInfinity(set, lb) )
-      SCIPmessageFPrintInfo(file, "[+inf,");
-   else if( SCIPsetIsInfinity(set, -lb) )
-      SCIPmessageFPrintInfo(file, "[-inf,");
-   else
-      SCIPmessageFPrintInfo(file, "[%.15g%s", lb, SCIPsetIsInfinity(set, -SCIPvarGetLbLazy(var)) ? "," : "(%.15g),", SCIPvarGetLbLazy(var));
-   if( SCIPsetIsInfinity(set, ub) )
-      SCIPmessageFPrintInfo(file, "+inf]");
-   else if( SCIPsetIsInfinity(set, -ub) )
-      SCIPmessageFPrintInfo(file, "-inf]");
-   else
-      SCIPmessageFPrintInfo(file, "%.15g%s", ub, SCIPsetIsInfinity(set, SCIPvarGetUbLazy(var)) ? "," : "(%.15g),", SCIPvarGetUbLazy(var));
+   printBounds(set, file, lb, ub, "global bounds");
+
+   /* output local bound */
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   printBounds(set, file, lb, ub, "local bounds");
+
+   /* output lazy bound */
+   lb = SCIPvarGetLbLazy(var);
+   ub = SCIPvarGetUbLazy(var);
+   printBounds(set, file, lb, ub, "lazy bounds");
 
    /* holes */
    /**@todo print holes */
@@ -2938,7 +3189,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          if( nmultvars + ntmpvars > tmpvarssize )
          {
 	    while( nmultvars + ntmpvars > tmpvarssize )
-	      tmpvarssize *= 2;
+               tmpvarssize *= 2;
             SCIP_ALLOC( BMSreallocMemoryArray(&tmpvars, tmpvarssize) );
             SCIP_ALLOC( BMSreallocMemoryArray(&tmpscalars, tmpvarssize) );
             assert(nmultvars + ntmpvars <= tmpvarssize);
@@ -6641,67 +6892,67 @@ SCIP_RETCODE SCIPvarAddVlb(
             SCIP_Real newzub;
 	    
 	    if( !SCIPsetIsInfinity(set, xub) )
-	      {
-		/* x >= b*z + d  ->  z <= (x-d)/b */
-		newzub = (xub - vlbconstant)/vlbcoef;
-		if( SCIPsetIsFeasLT(set, newzub, zlb) )
-		  {
-		    *infeasible = TRUE;
-		    return SCIP_OKAY;
-		  }
-		if( SCIPsetIsFeasLT(set, newzub, zub) )
-		  {
-		    SCIP_CALL( SCIPvarChgUbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
-		    zub = SCIPvarGetUbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
-		    if( nbdchgs != NULL )
-		      (*nbdchgs)++;
-		  }
-		maxvlb = vlbcoef * zub + vlbconstant;
-		if( !SCIPsetIsInfinity(set, -zlb) )
+            {
+               /* x >= b*z + d  ->  z <= (x-d)/b */
+               newzub = (xub - vlbconstant)/vlbcoef;
+               if( SCIPsetIsFeasLT(set, newzub, zlb) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               if( SCIPsetIsFeasLT(set, newzub, zub) )
+               {
+                  SCIP_CALL( SCIPvarChgUbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
+                  zub = SCIPvarGetUbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
+                  if( nbdchgs != NULL )
+                     (*nbdchgs)++;
+               }
+               maxvlb = vlbcoef * zub + vlbconstant;
+               if( !SCIPsetIsInfinity(set, -zlb) )
 		  minvlb = vlbcoef * zlb + vlbconstant;
-	      }
+            }
 	    else
-	      {
-		if( !SCIPsetIsInfinity(set, zub) )
+            {
+               if( !SCIPsetIsInfinity(set, zub) )
 		  maxvlb = vlbcoef * zub + vlbconstant;
-		if( !SCIPsetIsInfinity(set, -zlb) )
+               if( !SCIPsetIsInfinity(set, -zlb) )
 		  minvlb = vlbcoef * zlb + vlbconstant;
-	      }
+            }
 	 }
          else
          {
             SCIP_Real newzlb;
 
 	    if( !SCIPsetIsInfinity(set, xub) )
-	      {
-		/* x >= b*z + d  ->  z >= (x-d)/b */
-		newzlb = (xub - vlbconstant)/vlbcoef;
-		if( SCIPsetIsFeasGT(set, newzlb, zub) )
-		  {
-		    *infeasible = TRUE;
-		    return SCIP_OKAY;
-		  }
-		if( SCIPsetIsFeasGT(set, newzlb, zlb) )
-		  {
-		    SCIP_CALL( SCIPvarChgLbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
-		    zlb = SCIPvarGetLbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
-		    if( nbdchgs != NULL )
-		      (*nbdchgs)++;
-		  }
-		maxvlb = vlbcoef * zlb + vlbconstant;
-		if( !SCIPsetIsInfinity(set, zub) )
+            {
+               /* x >= b*z + d  ->  z >= (x-d)/b */
+               newzlb = (xub - vlbconstant)/vlbcoef;
+               if( SCIPsetIsFeasGT(set, newzlb, zub) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               if( SCIPsetIsFeasGT(set, newzlb, zlb) )
+               {
+                  SCIP_CALL( SCIPvarChgLbGlobal(vlbvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
+                  zlb = SCIPvarGetLbGlobal(vlbvar); /* bound might have been adjusted due to integrality condition */
+                  if( nbdchgs != NULL )
+                     (*nbdchgs)++;
+               }
+               maxvlb = vlbcoef * zlb + vlbconstant;
+               if( !SCIPsetIsInfinity(set, zub) )
 		  minvlb = vlbcoef * zub + vlbconstant;
-	      }
+            }
 	    else
-	      {
-		if( !SCIPsetIsInfinity(set, -zlb) )
+            {
+               if( !SCIPsetIsInfinity(set, -zlb) )
 		  maxvlb = vlbcoef * zlb + vlbconstant;
-		if( !SCIPsetIsInfinity(set, zub) )
+               if( !SCIPsetIsInfinity(set, zub) )
 		  minvlb = vlbcoef * zub + vlbconstant;
-	      }
+            }
          }
 	 if( maxvlb < minvlb )
-	   maxvlb = minvlb;
+            maxvlb = minvlb;
 
          /* adjust bounds due to integrality of variable */
          minvlb = adjustedLb(set, SCIPvarGetType(var), minvlb);
@@ -6912,64 +7163,64 @@ SCIP_RETCODE SCIPvarAddVub(
             SCIP_Real newzlb;
 
 	    if( !SCIPsetIsInfinity(set, -xlb) )
-	      {
-		/* x <= b*z + d  ->  z >= (x-d)/b */
-		newzlb = (xlb - vubconstant)/vubcoef;
-		if( SCIPsetIsFeasGT(set, newzlb, zub) )
-		  {
-		    *infeasible = TRUE;
-		    return SCIP_OKAY;
-		  }
-		if( SCIPsetIsFeasGT(set, newzlb, zlb) )
-		  {
-		    SCIP_CALL( SCIPvarChgLbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
-		    zlb = SCIPvarGetLbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
-		  }
-		minvub = vubcoef * zlb + vubconstant;
-		if( !SCIPsetIsInfinity(set, zub) )
+            {
+               /* x <= b*z + d  ->  z >= (x-d)/b */
+               newzlb = (xlb - vubconstant)/vubcoef;
+               if( SCIPsetIsFeasGT(set, newzlb, zub) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               if( SCIPsetIsFeasGT(set, newzlb, zlb) )
+               {
+                  SCIP_CALL( SCIPvarChgLbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzlb) );
+                  zlb = SCIPvarGetLbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
+               }
+               minvub = vubcoef * zlb + vubconstant;
+               if( !SCIPsetIsInfinity(set, zub) )
 		  maxvub = vubcoef * zub + vubconstant;
-	      }
+            }
 	    else
-	      {
-		if( !SCIPsetIsInfinity(set, zub) )
+            {
+               if( !SCIPsetIsInfinity(set, zub) )
 		  maxvub = vubcoef * zub + vubconstant;
-		if( !SCIPsetIsInfinity(set, -zlb) )
+               if( !SCIPsetIsInfinity(set, -zlb) )
 		  minvub = vubcoef * zlb + vubconstant;
-	      }
+            }
          }
          else
          {
             SCIP_Real newzub;
 
 	    if( !SCIPsetIsInfinity(set, -xlb) )
-	      {
-		/* x <= b*z + d  ->  z <= (x-d)/b */
-		newzub = (xlb - vubconstant)/vubcoef;
-		if( SCIPsetIsFeasLT(set, newzub, zlb) )
-		  {
-		    *infeasible = TRUE;
-		    return SCIP_OKAY;
-		  }
-		if( SCIPsetIsFeasLT(set, newzub, zub) )
-		  {
-		    SCIP_CALL( SCIPvarChgUbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
-		    zub = SCIPvarGetUbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
-		  }
-		minvub = vubcoef * zub + vubconstant;
-		if( !SCIPsetIsInfinity(set, -zlb) )
+            {
+               /* x <= b*z + d  ->  z <= (x-d)/b */
+               newzub = (xlb - vubconstant)/vubcoef;
+               if( SCIPsetIsFeasLT(set, newzub, zlb) )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
+               if( SCIPsetIsFeasLT(set, newzub, zub) )
+               {
+                  SCIP_CALL( SCIPvarChgUbGlobal(vubvar, blkmem, set, stat, lp, branchcand, eventqueue, newzub) );
+                  zub = SCIPvarGetUbGlobal(vubvar); /* bound might have been adjusted due to integrality condition */
+               }
+               minvub = vubcoef * zub + vubconstant;
+               if( !SCIPsetIsInfinity(set, -zlb) )
 		  maxvub = vubcoef * zlb + vubconstant;
-	      }
+            }
 	    else
-	      {
-		if( !SCIPsetIsInfinity(set, zub) )
+            {
+               if( !SCIPsetIsInfinity(set, zub) )
 		  minvub = vubcoef * zub + vubconstant;
-		if( !SCIPsetIsInfinity(set, -zlb) )
+               if( !SCIPsetIsInfinity(set, -zlb) )
 		  maxvub = vubcoef * zlb + vubconstant;
-	      }
+            }
 
          }
 	 if( minvub > maxvub )
-	   minvub = maxvub;
+            minvub = maxvub;
 
          /* adjust bounds due to integrality of vub variable */
          minvub = adjustedUb(set, SCIPvarGetType(var), minvub);

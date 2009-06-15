@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.23 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.24 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -278,7 +278,8 @@ static
 void consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< bound disjunction constraint data */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             endline             /**< should an endline be set? */
    )
 {
    int v;
@@ -295,7 +296,10 @@ void consdataPrint(
       SCIPinfoMessage(scip, file, "<%s> %s %.15g", SCIPvarGetName(consdata->vars[v]),
          consdata->boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", consdata->bounds[v]);
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ")");
+
+   if( endline )
+      SCIPinfoMessage(scip, file, "\n");
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
@@ -473,7 +477,7 @@ SCIP_RETCODE applyGlobalBounds(
    }
 
    SCIPdebugMessage("after global bounds: ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    return SCIP_OKAY;
 }
@@ -1394,7 +1398,7 @@ SCIP_DECL_CONSACTIVE(consActiveBounddisjunction)
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    SCIPdebugMessage("activating information for bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    /* catch events on watched variables */
    if( consdata->watchedvar1 != -1 )
@@ -1431,7 +1435,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveBounddisjunction)
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    SCIPdebugMessage("deactivating information for bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    /* drop events on watched variables */
    if( consdata->watchedvar1 != -1 )
@@ -1466,12 +1470,16 @@ SCIP_DECL_CONSPRINT(consPrintBounddisjunction)
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   consdataPrint(scip, SCIPconsGetData(cons), file, FALSE);
   
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopyBounddisjunction NULL
 
+/** constraint parsing method of constraint handler */
+#define consParseBounddisjunction NULL
 
 
 /*
@@ -1617,7 +1625,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
          consPropBounddisjunction, consPresolBounddisjunction, consRespropBounddisjunction, consLockBounddisjunction,
          consActiveBounddisjunction, consDeactiveBounddisjunction,
          consEnableBounddisjunction, consDisableBounddisjunction,
-         consPrintBounddisjunction,
+         consPrintBounddisjunction, consCopyBounddisjunction, consParseBounddisjunction,
          conshdlrdata) );
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.322 2009/04/27 14:18:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.323 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -47,10 +47,11 @@
 #include <assert.h>
 #include <string.h>
 #include <limits.h>
+#include <ctype.h>
 
 #include "scip/cons_linear.h"
 #include "scip/cons_knapsack.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 
 #define CONSHDLR_NAME          "linear"
 #define CONSHDLR_DESC          "linear constraints of the form  lhs <= a^T x <= rhs"
@@ -198,7 +199,22 @@ struct SCIP_LinConsUpgrade
    SCIP_Bool             active;             /**< is upgrading enabled */
 };
 
+/** data structure to for tokenizing strings */
+struct SCIP_Tokenizer
+{
+   const char* strbuf;                       /**< string to be tokenized */
+   char* token;                              /**< current token */
+   char* tokenbuf;                           /**< token buffer */
+   int strpos;                               /**< current position in string */
+};
+typedef struct SCIP_Tokenizer SCIP_TOKENIZER;     /**< data structure for tokenizing a string */
 
+/** enum type for constraint sense */
+enum CipSense
+{
+   CIP_SENSE_NOTHING, CIP_SENSE_LE, CIP_SENSE_GE, CIP_SENSE_EQ
+};
+typedef enum CipSense CIPSENSE;                   /**< enum type for constraint sense */
 
 
 /*
@@ -468,8 +484,222 @@ SCIP_RETCODE conshdlrdataIncludeUpgrade(
    return SCIP_OKAY;
 }
 
+/*
+ * local methods for handling parsing 
+ */
 
+static const char delimchars[] = " \f\n\r\t\v";
+static const char tokenchars[] = "-+<>=";
 
+/** returns whether the given character is a token delimiter */
+static
+SCIP_Bool isDelimChar(
+   char                  c                   /**< input character */
+   )
+{
+   return (c == '\0') || (strchr(delimchars, c) != NULL);
+}
+
+/** returns whether the given character is a single token */
+static
+SCIP_Bool isTokenChar(
+   char                  c                   /**< input character */
+   )
+{
+   return (strchr(tokenchars, c) != NULL);
+}
+
+/** returns whether the current token is an equation sense */
+static
+SCIP_Bool isSense(
+   SCIP_TOKENIZER*       tokenizer,          /**< LP reading data */
+   CIPSENSE*             sense               /**< pointer to store the equation sense */
+   )
+{
+   assert(tokenizer != NULL);
+   assert(sense != NULL);
+
+   if( strcmp(tokenizer->token, "<=") == 0 )
+   {
+      *sense = CIP_SENSE_LE;
+      return TRUE;
+   }
+   else if( strcmp(tokenizer->token, ">=") == 0 )
+   {
+      *sense = CIP_SENSE_GE;
+      return TRUE;
+   }
+   else if( strcmp(tokenizer->token, "==") == 0 )
+   {
+      *sense = CIP_SENSE_EQ;
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** returns whether the current token is a sign */
+static
+SCIP_Bool isSign(
+   SCIP_TOKENIZER*       tokenizer,          /**< LP reading data */
+   int*                  sign                /**< pointer to update the sign */
+   )
+{
+   assert(tokenizer != NULL);
+   assert(sign != NULL);
+   assert(*sign == +1 || *sign == -1);
+
+   if( tokenizer->token[1] == '\0' )
+   {
+      if( *tokenizer->token == '+' )
+         return TRUE;
+      else if( *tokenizer->token == '-' )
+      {
+         *sign *= -1;
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+/** returns whether the current token is a value */
+static
+SCIP_Bool isValue(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_TOKENIZER*       lpinput,            /**< LP reading data */
+   SCIP_Real*            value               /**< pointer to store the value (unchanged, if token is no value) */
+   )
+{
+   assert(lpinput != NULL);
+   assert(value != NULL);
+
+   if( strcasecmp(lpinput->token, "INFINITY") == 0 || strcasecmp(lpinput->token, "INF") == 0 )
+   {
+      *value = SCIPinfinity(scip);
+      return TRUE;
+   }
+   else
+   {
+      double val;
+      char* endptr;
+
+      val = strtod(lpinput->token, &endptr);
+      if( endptr != lpinput->token && *endptr == '\0' )
+      {
+         *value = val;
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
+/** returns whether the current character is member of a value string */
+static
+SCIP_Bool isValueChar(
+   char                  c,                  /**< input character */
+   char                  nextc,              /**< next input character */
+   SCIP_Bool             firstchar,          /**< is the given character the first char of the token? */
+   SCIP_Bool*            hasdot              /**< pointer to update the dot flag */
+   )
+{
+   assert(hasdot != NULL);
+
+   if( isdigit(c) )
+      return TRUE;
+   else if( !(*hasdot) && (c == '.') && isdigit(nextc) )
+   {
+      *hasdot = TRUE;
+      return TRUE;
+   }
+
+   return FALSE;
+}
+
+/** reads the next token from the string into the token buffer; returns whether a token was read */
+static
+SCIP_Bool getNextToken(
+   SCIP_TOKENIZER*       tokenizer           /**< string tokenizer */
+   )
+{
+   SCIP_Bool hasdot;
+   int tokenlen;
+   const char* buf;
+   
+   /* skip delimiters */
+   buf = tokenizer->strbuf;
+   while( isDelimChar(buf[tokenizer->strpos]) )
+   {
+      if( buf[tokenizer->strpos] == '\0' )
+      {
+         SCIPdebugMessage("end of string\n");
+         return FALSE;
+      }
+      
+      tokenizer->strpos++;
+   }
+
+   assert(!isDelimChar(buf[tokenizer->strpos]));
+
+   /* check if the token is a value */
+   hasdot = FALSE;
+   if( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], TRUE, &hasdot) )
+   {
+      /* read value token */
+      tokenlen = 0;
+      do
+      {
+         assert(tokenlen < SCIP_MAXSTRLEN);
+         assert(!isDelimChar(buf[tokenizer->strpos]));
+         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
+         tokenlen++;
+         tokenizer->strpos++;
+      }
+      while( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], FALSE, &hasdot) );
+   }
+   else
+   {
+      /* read non-value token */
+      tokenlen = 0;
+      do
+      {
+         assert(tokenlen < SCIP_MAXSTRLEN);
+         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
+         tokenlen++;
+         tokenizer->strpos++;
+         if( tokenlen == 1 && isTokenChar(tokenizer->token[0]) )
+            break;
+      }
+      while( !isDelimChar(buf[tokenizer->strpos]) && !isTokenChar(buf[tokenizer->strpos]) );
+
+      /* if the token is an equation sense '<', '>', or '=', skip a following '='
+       * if the token is an equality token '=' and the next character is a '<' or '>', replace the token by the inequality sense
+       */
+      if( tokenlen == 1
+         && (tokenizer->token[0] == '<' || tokenizer->token[0] == '>' || tokenizer->token[0] == '=')
+         && buf[tokenizer->strpos] == '=' )
+      {
+         tokenizer->token[tokenlen] = buf[tokenizer->strpos];
+         tokenlen++;
+         tokenizer->strpos++;
+      }
+      else if( tokenlen == 1 && tokenizer->token[0] == '=' && (buf[tokenizer->strpos] == '<' || buf[tokenizer->strpos] == '>') )
+      {
+         tokenlen++;
+         tokenizer->token[1] = tokenizer->token[0];
+         tokenizer->token[0] = buf[tokenizer->strpos];
+         tokenizer->token[1] = buf[tokenizer->strpos];
+         tokenizer->strpos++;
+      }
+   }
+   assert(tokenlen < SCIP_MAXSTRLEN);
+   tokenizer->token[tokenlen] = '\0';
+
+   SCIPdebugMessage("read token: '%s'\n", tokenizer->token);
+
+   return TRUE;
+}
 
 /*
  * local methods
@@ -681,7 +911,7 @@ SCIP_RETCODE consdataCreate(
    if( SCIPisGT(scip, lhs, rhs) )
    {
       SCIPerrorMessage("left hand side of linear constraint greater than right hand side\n");
-      SCIPerrorMessage(" -> lhs=%f, rhs=%f", lhs, rhs);
+      SCIPerrorMessage(" -> lhs=%g, rhs=%g\n", lhs, rhs);
       return SCIP_INVALIDDATA;
    }
 
@@ -841,13 +1071,13 @@ void consdataPrint(
    
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
-      SCIPinfoMessage(scip, file, "== %.15g\n", consdata->rhs);
+      SCIPinfoMessage(scip, file, "== %.15g", consdata->rhs);
    else if( !SCIPisInfinity(scip, consdata->rhs) )
-      SCIPinfoMessage(scip, file, "<= %.15g\n", consdata->rhs);
+      SCIPinfoMessage(scip, file, "<= %.15g", consdata->rhs);
    else if( !SCIPisInfinity(scip, -consdata->lhs) )
-      SCIPinfoMessage(scip, file, ">= %.15g\n", consdata->lhs);
+      SCIPinfoMessage(scip, file, ">= %.15g", consdata->lhs);
    else
-      SCIPinfoMessage(scip, file, " [free]\n");
+      SCIPinfoMessage(scip, file, " [free]");
 }
 
 /** invalidates pseudo activity and activity bounds, such that they are recalculated in next get */
@@ -8812,8 +9042,341 @@ SCIP_DECL_CONSPRINT(consPrintLinear)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyLinear)
+{  /*lint --e{715}*/
+   SCIP_VAR** sourcevars;
+   SCIP_Real* sourcecoefs;
+   int nvars;
 
+   /* get variables and coefficients of the source constraint */
+   sourcevars = SCIPgetVarsLinear(sourcescip, sourcecons);
+   sourcecoefs = SCIPgetValsLinear(sourcescip, sourcecons); 
+   nvars = SCIPgetNVarsLinear(sourcescip, sourcecons);
+   
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), nvars, sourcevars, sourcecoefs,
+         SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
 
+   return SCIP_OKAY;
+}   
+
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseLinear)
+{  /*lint --e{715}*/
+
+   SCIP_TOKENIZER tokenizer;
+   SCIP_VAR** vars;
+   SCIP_Real* coefs;
+
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+
+   SCIP_Bool havesign;
+   SCIP_Bool havevalue;
+   SCIP_Bool sense;
+   SCIP_Real coef;
+   int coefsign;
+   int coefssize;
+   int ncoefs;
+   
+   /* initialize tokenizer */
+   tokenizer.strbuf = str;
+   SCIP_CALL( SCIPallocBufferArray(scip, &tokenizer.token, SCIP_MAXSTRLEN) );
+   tokenizer.token[0] = '\0';
+   SCIP_CALL( SCIPallocBufferArray(scip, &tokenizer.tokenbuf, SCIP_MAXSTRLEN) );
+   tokenizer.tokenbuf[0] = '\0';
+   tokenizer.strpos = 0;
+   
+   /* initialize buffers for storing the coefficients */
+   coefssize = 100;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, coefssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
+   
+   /* set right hand and left side to their default values */
+   lhs = -SCIPinfinity(scip);
+   rhs = SCIPinfinity(scip);
+
+   (*succeed) = TRUE;
+
+   /* read the coefficients */
+   coefsign = +1;
+   coef = 1.0;
+   havesign = FALSE;
+   havevalue = FALSE;
+   sense = CIP_SENSE_NOTHING;
+   ncoefs = 0;
+
+   while( getNextToken(&tokenizer) )
+   {
+      SCIP_VAR* var;
+
+      /* if the variable type is given ignore it */
+      if( strncmp(tokenizer.token, "[B]", 3) == 0 && strlen(tokenizer.token) == 3 )
+      {
+         assert(var != NULL);
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
+         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
+         continue;
+      }
+      if( strncmp(tokenizer.token, "[I]", 3) == 0 && strlen(tokenizer.token) == 3 )
+      {
+         assert(var != NULL);
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
+         continue;
+      }
+      if( strncmp(tokenizer.token, "[C]", 3) == 0 && strlen(tokenizer.token) == 3 )
+      {
+         assert(var != NULL);
+         assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
+         continue;
+      }
+      
+      if( *tokenizer.token == '>' && strlen(tokenizer.token) == 1 )
+      {
+         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
+         continue;
+      }
+      if( *tokenizer.token == '<' && strlen(tokenizer.token) == 1 )
+      {
+         SCIPdebugMessage("ignoring token <%s>\n", tokenizer.token);
+         continue;
+      }
+      
+
+      /* check if we reached an equation sense */
+      if( isSense(&tokenizer, &sense) )
+      {
+         if( ncoefs == 0 && havevalue )
+         {
+            assert(sense == CIP_SENSE_LE);
+            lhs  = coef;
+            sense = CIP_SENSE_NOTHING;
+         }
+         
+         continue;
+      }
+      
+      /* check if we read a sign */
+      if( isSign(&tokenizer, &coefsign) )
+      {
+         SCIPdebugMessage("read coefficient sign: %+d\n", coefsign);
+         havesign = TRUE;
+         continue;
+      }
+
+      /* all but the first coefficient need a sign */
+      if( ncoefs > 0 && !havesign && sense == CIP_SENSE_NOTHING )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected sign ('+' or '-') or sense ('<' or '>')\n");
+         (*succeed) = FALSE;
+         break;
+      }
+
+      /* check if we read a value */
+      if( isValue(scip, &tokenizer, &coef) )
+      {
+         SCIPdebugMessage("read coefficient value: %g with sign %+d\n", coef, coefsign);
+         if( havevalue )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: two consecutive values");
+            (*succeed) = FALSE;
+            break;
+         }
+         havevalue = TRUE;
+         
+         if( sense == CIP_SENSE_EQ ) 
+         {
+            lhs = coef;
+            rhs = coef;
+         }
+         else if( sense == CIP_SENSE_LE ) 
+            rhs = coef;
+         if( sense == CIP_SENSE_GE ) 
+            lhs = coef;
+         
+         continue;
+      }
+
+      /* the token is a variable name: get the corresponding variable (or create a new one) */
+      var = SCIPfindVar(scip, tokenizer.token);
+      
+      if( var == NULL )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", tokenizer.token);
+         (*succeed) = FALSE;
+      }
+      
+      /* insert the coefficient */
+      SCIPdebugMessage("read coefficient: %+g<%s>\n", coefsign * coef, SCIPvarGetName(var));
+      if( !SCIPisZero(scip, coef) )
+      {
+         /* resize the vars and coefs array if needed */
+         if( ncoefs >= coefssize )
+         {
+            coefssize *= 2;
+            coefssize = MAX(coefssize, ncoefs+1);
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, coefssize) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
+         }
+         assert(ncoefs < coefssize);
+
+         /* add coefficient */
+         vars[ncoefs] = var;
+         coefs[ncoefs] = coefsign * coef;
+         ncoefs++;
+      }
+
+      /* reset the flags and coefficient value for the next coefficient */
+      coefsign = +1;
+      coef = 1.0;
+      havesign = FALSE;
+      havevalue = FALSE;
+   }
+
+   if( *succeed )
+   {
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, ncoefs, vars, coefs, lhs, rhs, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
+   tokenizer.token[0] = '\0';
+   SCIPfreeBufferArray(scip, &tokenizer.tokenbuf);
+   SCIPfreeBufferArray(scip, &tokenizer.token);
+   
+#if 0
+   enum Stage {VALUE, STRING, TYPE};
+   typedef enum Stage STAGE;
+
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nvars;
+   int varssize;
+
+   char* copystr;
+   char* token;
+   char* saveptr;
+   
+   SCIP_VAR* var;
+   SCIP_Real value;
+   int cnt;
+   
+   STAGE stage;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   (*succeed) = TRUE;
+   
+   /* set values to default values */
+   lhs = -SCIPinfinity(scip);
+   rhs = SCIPinfinity(scip);
+   value = SCIPinfinity(scip);
+   nvars = 0;
+   varssize = 10;
+
+   /* copy string such that truncated */
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &copystr, str, strlen(str)+1) );
+   SCIPdebugMessage("parsing <%s>\n", copystr);
+   
+   /* allocate memory for variable and value array */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, varssize) );
+   
+   /* start truncating the string */
+   token = SCIPstrtok(copystr, " ", &saveptr);
+
+   /* parse string until no token is left */
+   while ( token != NULL && (*succeed) )
+   {
+      /* check if we have an relation '==', '>=', or '<=' */
+      if( strncmp(token, "==", 2) == 0 && strlen(token) == 2 )
+      {
+         assert( !SCIPisInfinity(scip, value) );
+         lhs = value;
+         rhs = value;
+      }
+      else if( strncmp(token, ">=", 2) == 0 && strlen(token) == 2 )
+      {
+         assert( !SCIPisInfinity(scip, value) );
+         lhs = value;
+      }
+      else if( strncmp(token, "<=", 2) == 0 && strlen(token) == 2 )
+      {
+         assert( !SCIPisInfinity(scip, value) );
+         if( nvars == 0 )
+            lhs = value;
+         else
+            rhs = value;
+      }
+      else
+      {
+         char* varname;
+         cnt = sscanf(token, "%"SCIP_REAL_FORMAT"<%s", &value, varname);
+            
+         if( cnt == 2 )
+         {
+            char* endname;
+            
+            /* fix variable name */
+            endname = strrchr(varname, '>');
+            assert(endname != NULL);
+            (*endname) = '\0';
+
+            SCIPdebugMessage("variable name = <%s>, coefficients = <%.15g>\n", varname, value);
+            var = SCIPfindVar(scip, varname);
+            if( var != NULL )
+            {
+               /* ensure size of variable and value array */
+               if( nvars == varssize )
+               {
+                  assert(varssize > 0);
+                  varssize *= 2;
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
+                  SCIP_CALL( SCIPreallocBufferArray(scip, &vals, varssize) );
+               }
+               
+               vars[nvars] = var;
+               vals[nvars] = value;
+               nvars++;
+            }
+            else
+            {
+               SCIPwarningMessage("unknown variable <%s>\n", varname);
+               (*succeed) = FALSE;
+            }
+         }
+      }
+        
+      SCIPdebugMessage("token = <%s>\n", token);
+
+      /* get mnext token */
+      token = SCIPstrtok(NULL, " ", &saveptr);   
+   }
+   
+   if( *succeed )
+   {
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, vals, lhs, rhs, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   
+      SCIP_CALL( SCIPprintCons(scip, *cons, NULL) );
+   }
+
+   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArray(scip, &vars);
+   SCIPfreeMemoryArray(scip, &copystr);
+#endif   
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of event handler
@@ -9071,7 +9634,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          consPropLinear, consPresolLinear, consRespropLinear, consLockLinear,
          consActiveLinear, consDeactiveLinear,
          consEnableLinear, consDisableLinear,
-         consPrintLinear,
+         consPrintLinear, consCopyLinear, consParseLinear,
          conshdlrdata) );
 
    /* add linear constraint handler parameters */
@@ -9235,6 +9798,113 @@ SCIP_RETCODE SCIPcreateConsLinear(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+
+   return SCIP_OKAY;
+}
+
+/** creates by copying and captures a linear constraint */
+SCIP_RETCODE SCIPcopyConsLinear(
+   SCIP*                 scip,               /**< target SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in source variable array */
+   SCIP_VAR**            sourcevars,         /**< source variables of the linear constraints */
+   SCIP_Real*            sourcecoefs,        /**< coefficient array of the linear constraint, or NULL if all coefficients are one */
+   SCIP_Real             lhs,                /**< left hand side of the linear constraint */
+   SCIP_Real             rhs,                /**< right hand side of the linear constraint */
+   SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to corresponding
+                                              *   variables of the target SCIP */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? */
+   SCIP_Bool             local,              /**< is constraint only valid locally? */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
+   SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? */
+   SCIP_Bool*            succeed             /**< pointer to store whether the copying was successful or not */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real* coefs;
+   
+   SCIP_Real constant;
+   int requiredsize;
+   int v;
+
+   (*succeed) = TRUE;
+   
+   if( nvars == 0 )
+      return SCIP_OKAY;
+   
+   /* duplicate variable array */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, sourcevars, nvars) );
+
+   /* duplicate coefficient array */
+   if( sourcecoefs != NULL )
+   {
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &coefs, sourcecoefs, nvars) );
+   }
+   else 
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+      for( v = 0; v < nvars; ++v )
+         coefs[v] = 1.0;
+      
+   }
+   
+   /* transform source variable to active variables of the source SCIP since only these can be mapped to variables of
+    * the target SCIP */
+   if( SCIPisTransformed(sourcescip) )
+   {
+      SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, nvars, &constant, &requiredsize, TRUE) );
+      
+      if( requiredsize > nvars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requiredsize) );
+         
+         SCIP_CALL( SCIPgetProbvarLinearSum(sourcescip, vars, coefs, &nvars, requiredsize, &constant, &requiredsize, TRUE) );
+         assert( requiredsize <= nvars );
+      }
+   }
+   else
+   {
+      for( v = 0; v < nvars; ++v )
+         SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &coefs[v], &constant) );
+      
+   }
+   
+   (*succeed) = TRUE;
+
+   /* map variables of the source constraint to variables of the target SCIP */
+   for( v = 0; v < nvars && *succeed; ++v )
+   {
+      vars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, vars[v]);
+
+      if( vars[v] == NULL )
+         (*succeed) = FALSE;
+   }
+
+   if( *succeed )
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+         lhs -= constant;
+
+      if( !SCIPisInfinity(scip, rhs) )
+         rhs -= constant;
+      
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+   }
+
+   /* free buffer array */
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.46 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.47 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   cons_xxx.c
  * @ingroup CONSHDLRS 
@@ -431,6 +431,34 @@ SCIP_DECL_CONSPRINT(consPrintXxx)
 #endif
 
 
+/** constraint copying method of constraint handler */
+#if 0
+static
+SCIP_DECL_CONSCOPY(consCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consParseXxx NULL
+#endif
+
+
+/** constraint parsing method of constraint handler */
+#if 0
+static
+SCIP_DECL_CONSPARSE(consParseXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consParseXxx NULL
+#endif
 
 
 /*
@@ -497,7 +525,7 @@ SCIP_RETCODE SCIPincludeConshdlrXxx(
          consPropXxx, consPresolXxx, consRespropXxx, consLockXxx,
          consActiveXxx, consDeactiveXxx, 
          consEnableXxx, consDisableXxx,
-         consPrintXxx,
+         consPrintXxx, consCopyXxx, consParseXxx,
          conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY

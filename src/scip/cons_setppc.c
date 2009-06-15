@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.136 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.137 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -472,13 +472,13 @@ void consdataPrint(
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
-      SCIPinfoMessage(scip, file, "== 1\n");
+      SCIPinfoMessage(scip, file, "== 1");
       break;
    case SCIP_SETPPCTYPE_PACKING:
-      SCIPinfoMessage(scip, file, "<= 1\n");
+      SCIPinfoMessage(scip, file, "<= 1");
       break;
    case SCIP_SETPPCTYPE_COVERING:
-      SCIPinfoMessage(scip, file, ">= 1\n");
+      SCIPinfoMessage(scip, file, ">= 1");
       break;
    default:
       SCIPerrorMessage("unknown setppc type\n");
@@ -3335,6 +3335,53 @@ SCIP_DECL_CONSPRINT(consPrintSetppc)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopySetppc)
+{  /*lint --e{715}*/
+   SCIP_VAR** sourcevars;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nvars;
+   SCIP_SETPPCTYPE type;
+   
+   /* get variables and coefficients of the source constraint */
+   sourcevars = SCIPgetVarsSetppc(sourcescip, sourcecons);
+   nvars = SCIPgetNVarsSetppc(sourcescip, sourcecons);
+   
+   /* get setppc type */
+   type = SCIPgetTypeSetppc(sourcescip, sourcecons);
+   lhs = -SCIPinfinity(scip);
+   rhs = SCIPinfinity(scip);
+   
+   switch( type )
+   {
+   case SCIP_SETPPCTYPE_PARTITIONING:
+      lhs = 1.0;
+      rhs = 1.0;
+      break;
+   case SCIP_SETPPCTYPE_PACKING:
+      rhs = 1.0;
+      break;
+   case SCIP_SETPPCTYPE_COVERING:
+      lhs = 1.0;
+      break;
+   default:
+      SCIPerrorMessage("unknown setppc type\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* copy the logic using the linear constraint copy method */
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), nvars, sourcevars, NULL,
+         lhs, rhs, varmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint parsing method of constraint handler */
+#define consParseSetppc NULL
+
 
 
 
@@ -3721,7 +3768,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          consPropSetppc, consPresolSetppc, consRespropSetppc, consLockSetppc,
          consActiveSetppc, consDeactiveSetppc,
          consEnableSetppc, consDisableSetppc,
-         consPrintSetppc,
+         consPrintSetppc, consCopySetppc, consParseSetppc,
          conshdlrdata) );
 
    /* include the linear constraint to set partitioning constraint upgrade in the linear constraint handler */

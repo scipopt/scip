@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.46 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.47 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -602,6 +602,66 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSPRINT(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, FILE* file)
 
+/** constraint copying method of constraint handler
+ *
+ *  The constraint handler can provide a copy method which copy a constraint from one SCIP data structure into a other
+ *  SCIP data structure.
+ *
+ *  input:
+ *  - scip            : target SCIP data structure
+ *  - conshdlr        : the constraint handler of the source SCIP itself
+ *  - cons            : pointer to store the created target constraint
+ *  - sourcescip      : source SCIP data structure
+ *  - sourcecons      : source constraint of the source SCIP
+ *  - varmap          : a SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP
+ *  - initial         : should the LP relaxation of constraint be in the initial LP?
+ *  - separate        : should the constraint be separated during LP processing?
+ *  - enforce         : should the constraint be enforced during node processing?
+ *  - check           : should the constraint be checked for feasibility?
+ *  - propagate       : should the constraint be propagated during node processing?
+ *  - local           : is constraint only valid locally?
+ *  - modifiable      : is constraint modifiable (subject to column generation)?
+ *  - dynamic         : is constraint subject to aging?
+ *  - removable       : should the relaxation be removed from the LP due to aging or cleanup?
+ *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
+ *                      if it may be moved to a more global node?
+ *  output:
+ *  - succeed         : pointer to store whether the copying was successful or not 
+ */
+#define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, \
+      SCIP* sourcescip, SCIP_CONS* sourcecons,  SCIP_HASHMAP* varmap, \
+      SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
+      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* succeed)
+
+/** constraint parsing method of constraint handler
+ *
+ *  The constraint handler can provide a callback to parse the output created by the display method
+ *  (SCIP_DECL_CONSDISABLE) and to create constraint out of it.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : pointer to store the created constraint
+ *  - name            : name of the constrint
+ *  - str             : string to parse 
+ *  - initial         : should the LP relaxation of constraint be in the initial LP?
+ *  - separate        : should the constraint be separated during LP processing?
+ *  - enforce         : should the constraint be enforced during node processing?
+ *  - check           : should the constraint be checked for feasibility?
+ *  - propagate       : should the constraint be propagated during node processing?
+ *  - local           : is constraint only valid locally?
+ *  - modifiable      : is constraint modifiable (subject to column generation)?
+ *  - dynamic         : is constraint subject to aging?
+ *  - removable       : should the relaxation be removed from the LP due to aging or cleanup?
+ *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
+ *                      if it may be moved to a more global node?
+ *  output:
+ *  - succeed         : pointer to store whether the parsing was successful or not 
+ */
+#define SCIP_DECL_CONSPARSE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, \
+      const char* name, const char* str, \
+      SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
+      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* succeed)
 
 #include "scip/def.h"
 #include "scip/type_retcode.h"

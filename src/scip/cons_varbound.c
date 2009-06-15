@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.80 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.81 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -1494,10 +1494,39 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
       SCIPvarGetName(consdata->vbdvar));
    if( !SCIPisInfinity(scip, consdata->rhs) )
       SCIPinfoMessage(scip, file, " <= %.15g", consdata->rhs);
-   SCIPinfoMessage(scip, file, "\n");
+   
+   return SCIP_OKAY;
+}
+
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyVarbound)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   SCIP_Real* coefs;
+   
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, 2) );
+
+   vars[0] = SCIPgetVarVarbound(sourcescip, sourcecons);
+   vars[1] = SCIPgetVbdvarVarbound(sourcescip, sourcecons);
+
+   coefs[0] = 1.0;
+   coefs[1] = SCIPgetVbdcoefVarbound(sourcescip, sourcecons);
+
+   /* copy the varbound using the linear constraint copy method */
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), 2, vars, coefs,
+         SCIPgetLhsVarbound(sourcescip, sourcecons), SCIPgetRhsVarbound(sourcescip, sourcecons), varmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+   
+   SCIPfreeBufferArray(scip, &coefs);
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
+
+/** constraint parsing method of constraint handler */
+#define consParseVarbound NULL
 
 
 
@@ -1623,7 +1652,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          consPropVarbound, consPresolVarbound, consRespropVarbound, consLockVarbound,
          consActiveVarbound, consDeactiveVarbound, 
          consEnableVarbound, consDisableVarbound,
-         consPrintVarbound,
+         consPrintVarbound, consCopyVarbound, consParseVarbound,
          conshdlrdata) );
 
    /* include event handler for bound change events */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.39 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.40 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -468,8 +468,41 @@ SCIP_DECL_CONSPRINT(consPrintObj)
 
    return SCIP_OKAY;
 }
+
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_copy(scip, conshdlr, cons, sourcescip, sourcecons, varmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+   
+   return SCIP_OKAY;
 }
 
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_parse(scip, conshdlr, cons, name, str, 
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+
+   return SCIP_OKAY;
+}
+}
 
 
 /*
@@ -504,7 +537,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consPropObj, consPresolObj, consRespropObj, consLockObj,
          consActiveObj, consDeactiveObj, 
          consEnableObj, consDisableObj,
-         consPrintObj,
+         consPrintObj, consCopyObj, consParseObj,
          conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

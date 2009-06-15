@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.44 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.45 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_eqknapsack.c
  * @ingroup CONSHDLRS 
@@ -408,7 +408,11 @@ SCIP_DECL_CONSPRINT(consPrintEqknapsack)
 #define consPrintEqknapsack NULL
 #endif
 
+/** constraint copying method of constraint handler */
+#define consCopyEqknapsack NULL
 
+/** constraint parsing method of constraint handler */
+#define consParseEqknapsack NULL
 
 
 /*
@@ -479,7 +483,7 @@ SCIP_RETCODE SCIPincludeConshdlrEqknapsack(
          consPropEqknapsack, consPresolEqknapsack, consRespropEqknapsack, consLockEqknapsack,
          consActiveEqknapsack, consDeactiveEqknapsack, 
          consEnableEqknapsack, consDisableEqknapsack,
-         consPrintEqknapsack,
+         consPrintEqknapsack, consCopyEqknapsack, consParseEqknapsack,
          conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY

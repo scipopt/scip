@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.37 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.38 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_conjunction.c
  * @ingroup CONSHDLRS 
@@ -501,11 +501,16 @@ SCIP_DECL_CONSPRINT(consPrintConjunction)
          SCIPinfoMessage(scip, file, ", ");
       SCIPinfoMessage(scip, file, "<%s>", SCIPconsGetName(consdata->conss[i]));
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ")");
    
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopyConjuction NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseConjuction NULL
 
 
 
@@ -535,7 +540,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          consCheckConjunction, consPropConjunction, consPresolConjunction, consRespropConjunction, consLockConjunction,
          consActiveConjunction, consDeactiveConjunction, 
          consEnableConjunction, consDisableConjunction,
-         consPrintConjunction,
+         consPrintConjunction, consCopyConjuction, consParseConjuction,
          conshdlrdata) );
 
    return SCIP_OKAY;

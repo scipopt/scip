@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.128 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.129 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -243,7 +243,8 @@ static
 void consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< logic or constraint data */
-   FILE*                 file                /**< output file (or NULL for standard output) */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             endline             /**< should an endline be set? */
    )
 {
    int v;
@@ -259,7 +260,10 @@ void consdataPrint(
          SCIPinfoMessage(scip, file, ", ");
       SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName(consdata->vars[v]));
    }
-   SCIPinfoMessage(scip, file, ")\n");
+   SCIPinfoMessage(scip, file, ")");
+   
+   if( endline )
+      SCIPinfoMessage(scip, file, ")\n");
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
@@ -433,7 +437,7 @@ SCIP_RETCODE applyFixings(
    }
 
    SCIPdebugMessage("after fixings: ");
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    return SCIP_OKAY;
 }
@@ -2180,7 +2184,7 @@ SCIP_DECL_CONSACTIVE(consActiveLogicor)
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    SCIPdebugMessage("activating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    /* catch events on watched variables */
    if( consdata->watchedvar1 != -1 )
@@ -2219,7 +2223,7 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveLogicor)
    assert(consdata->watchedvar1 == -1 || consdata->watchedvar1 != consdata->watchedvar2);
 
    SCIPdebugMessage("deactivating information for logic or constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug(consdataPrint(scip, consdata, NULL));
+   SCIPdebug(consdataPrint(scip, consdata, NULL, TRUE));
 
    /* drop events on watched variables */
    if( consdata->watchedvar1 != -1 )
@@ -2258,11 +2262,47 @@ SCIP_DECL_CONSPRINT(consPrintLogicor)
    assert( conshdlr != NULL );
    assert( cons != NULL );
 
-   consdataPrint(scip, SCIPconsGetData(cons), file);
+   consdataPrint(scip, SCIPconsGetData(cons), file, FALSE);
     
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyLogicor)
+{  /*lint --e{715}*/
+   SCIP_VAR** sourcevars;
+   int nvars;
+
+   /* get variables and coefficients of the source constraint */
+   sourcevars = SCIPgetVarsLogicor(sourcescip, sourcecons);
+   nvars = SCIPgetNVarsLogicor(sourcescip, sourcecons);
+   
+   /* copy the logic using the linear constraint copy method */
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), nvars, sourcevars, NULL,
+         1.0, SCIPinfinity(scip), varmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+
+   return SCIP_OKAY;
+}
+
+/** constraint parsing method of constraint handler */
+static
+SCIP_DECL_CONSPARSE(consParseLogicor)
+{  /*lint --e{715}*/
+
+#if 0
+   char* name;
+   
+
+
+   SCIP_CALL( SCIPcreateConsLogicor(scip, cons, name, nvars, vars,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+#endif
+   return SCIP_OKAY;
+
+}
 
 
 
@@ -2512,7 +2552,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
          consPropLogicor, consPresolLogicor, consRespropLogicor, consLockLogicor,
          consActiveLogicor, consDeactiveLogicor,
          consEnableLogicor, consDisableLogicor,
-         consPrintLogicor,
+         consPrintLogicor, consCopyLogicor, consParseLogicor,
          conshdlrdata) );
 
    /* include the linear constraint to logicor constraint upgrade in the linear constraint handler */

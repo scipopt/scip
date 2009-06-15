@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_binpack.c,v 1.46 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_binpack.c,v 1.47 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_binpack.c
  * @ingroup CONSHDLRS 
@@ -408,7 +408,11 @@ SCIP_DECL_CONSPRINT(consPrintBinpack)
 #define consPrintBinpack NULL
 #endif
 
+/** constraint copying method of constraint handler */
+#define consCopyBinpack NULL
 
+/** constraint parsing method of constraint handler */
+#define consParseBinpack NULL
 
 
 /*
@@ -506,7 +510,7 @@ SCIP_RETCODE SCIPincludeConshdlrBinpack(
          consPropBinpack, consPresolBinpack, consRespropBinpack, consLockBinpack,
          consActiveBinpack, consDeactiveBinpack, 
          consEnableBinpack, consDisableBinpack,
-         consPrintBinpack,
+         consPrintBinpack, consCopyBinpack, consParseBinpack,
          conshdlrdata) );
 
 #ifdef LINCONSUPGD_PRIORITY

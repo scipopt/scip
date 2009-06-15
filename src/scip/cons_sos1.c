@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.24 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.25 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -1622,6 +1622,11 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopySOS1 NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseSOS1 NULL
 
 
 
@@ -1755,7 +1760,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 	 consPropSOS1, consPresolSOS1, consRespropSOS1, consLockSOS1,
 	 consActiveSOS1, consDeactiveSOS1,
 	 consEnableSOS1, consDisableSOS1,
-	 consPrintSOS1, conshdlrdata) );
+	 consPrintSOS1, consCopySOS1, consParseSOS1, conshdlrdata) );
 
    /* add SOS1 constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchSOS", "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",

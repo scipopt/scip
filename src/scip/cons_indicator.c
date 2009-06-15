@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.33 2009/04/29 19:40:54 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.34 2009/06/15 09:57:31 bzfheinz Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2778,10 +2778,16 @@ SCIP_DECL_CONSPRINT(consPrintIndicator)
       binvar = SCIPvarGetNegatedVar(binvar);
    }
    SCIPinfoMessage(scip, file, "<%s> = %d", SCIPvarGetName(binvar), rhs);
-   SCIPinfoMessage(scip, file, " -> <%s> = 0\n", SCIPvarGetName(consdata->slackvar));
+   SCIPinfoMessage(scip, file, " -> <%s> = 0", SCIPvarGetName(consdata->slackvar));
 
    return SCIP_OKAY;
 }
+
+/** constraint copying method of constraint handler */
+#define consCopyIndicator NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseIndicator NULL
 
 
 /** constraint enabling notification method of constraint handler */
@@ -2988,7 +2994,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          consSepasolIndicator, consEnfolpIndicator, consEnfopsIndicator, consCheckIndicator,
          consPropIndicator, consPresolIndicator, consRespropIndicator, consLockIndicator,
          consActiveIndicator, consDeactiveIndicator, consEnableIndicator, consDisableIndicator,
-         consPrintIndicator, conshdlrdata) );
+         consPrintIndicator, consCopyIndicator, consParseIndicator, conshdlrdata) );
 
    /* add indicator constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

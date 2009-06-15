@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.10 2009/04/06 13:06:57 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.11 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -23,6 +23,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 
+#include <string.h>
+#include <ctype.h>
+
 #include "scip/reader_cip.h"
 
 
@@ -30,6 +33,14 @@
 #define READER_DESC             "file reader for CIP (Constraint Integer Program) format"
 #define READER_EXTENSION        "cip"
 
+#define MAX_LINE_LEN   65536
+
+/** Section of the in CIP files */
+enum CipSection 
+{
+   CIP_START, CIP_STATISTIC, CIP_OBJECTIVE, CIP_VARS, CIP_FIXEDVARS, CIP_CONSTRAINTS, CIP_END 
+};
+typedef enum CipSection CIPSECTION;          /**< Section of the in CIP files */
 
 
 
@@ -37,24 +48,346 @@
  * Data structures
  */
 
-/** data for cip reader */
-struct SCIP_ReaderData
+/** CIP reading data */
+struct CipInput
 {
-	char dummy; /* to have at least one member */
+   SCIP_FILE*           file;
+   char*                strbuf;
+   int                  len;
+   int                  linenumber;
+   CIPSECTION           section;
+   SCIP_Bool            haserror;
+   SCIP_Bool            endfile;
 };
-
+typedef struct CipInput CIPINPUT;            /**< CIP reading data */
 
 
 
 /*
- * Local methods
+ * Local methods for reading/parsing
  */
 
-/* put your local methods here, and declare them static */
+/** get next input line; this are all characters until the next semicolon */
+static
+SCIP_RETCODE getInputString(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CIPINPUT*             cipinput            /**< CIP parsing data */
+   )
+{
+   char* endline;
+
+   assert(cipinput != NULL);
+
+   /* clear the line */
+   BMSclearMemoryArray(cipinput->strbuf, cipinput->len);
+   
+   /* read next line */
+   cipinput->endfile = (SCIPfgets(cipinput->strbuf, cipinput->len, cipinput->file) == NULL);
+   
+   if( cipinput-> endfile )
+      return SCIP_OKAY;
+   
+   cipinput->linenumber++;
+   endline = strchr(cipinput->strbuf, '\n');
+   
+   if( endline == NULL )
+   {
+      SCIPerrorMessage("Error: line %d exceeds %d characters\n", cipinput->linenumber, cipinput->len);
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+   
+   *endline = '\0';
+   
+   return SCIP_OKAY;
+}
+
+/** read the problem name out of the statistics */
+static
+SCIP_RETCODE getStart(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CIPINPUT*             cipinput            /**< CIP parsing data */
+   )
+{
+   if( strncmp(cipinput->strbuf, "STATISTICS", 9) == 0 )
+   {
+      cipinput->section = CIP_STATISTIC;
+      return SCIP_OKAY;
+   }
+   
+   return SCIP_OKAY;
+}
 
 
+/** read the problem name out of the statistics */
+static
+SCIP_RETCODE getStatistic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CIPINPUT*             cipinput            /**< CIP parsing data */
+   )
+{
+   char* buf;
+   char* name;
+   char* s;
+   
+   buf = cipinput->strbuf;
 
+   if( strncmp(buf, "OBJECTIVE", 9) == 0 )
+   {
+      cipinput->section = CIP_OBJECTIVE;
+      return SCIP_OKAY;
+   }
 
+   SCIPdebugMessage("parse statistic\n");
+   
+   if( strncmp(buf, "  Problem name", 14) == 0 )
+   {
+      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      {
+         SCIPwarningMessage("did not find problem name\n");
+         return SCIP_OKAY;
+      }
+      
+      /* remove tabs new line form string */
+      if( NULL != (s = strpbrk(name, "#\r\n")) )
+         *s = '\0';
+      
+      /* remove white space in front of the name */
+      while(isspace(*name))
+         name++;
+         
+      /* set problem name */
+      SCIP_CALL( SCIPsetProbName(scip, name) );
+         
+      SCIPdebugMessage("problem name <%s>\n", name);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** read objective sense, offset, and scale */
+static
+SCIP_RETCODE getObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CIPINPUT*             cipinput            /**< CIP parsing data */
+   )
+{
+   char* buf;
+   char* name;
+
+   buf = cipinput->strbuf;
+
+   if( strncmp(buf, "VARIABLES", 8) == 0 )
+      cipinput->section = CIP_VARS;
+   else if( strncmp(buf, "FIXED", 5) == 0 )
+      cipinput->section = CIP_FIXEDVARS;
+   else if( strncmp(buf, "CONSTRAINTS", 11) == 0 )
+      cipinput->section = CIP_CONSTRAINTS;
+   else if( strncmp(buf, "END", 3) == 0 )
+      cipinput->section = CIP_END;
+   
+   if( cipinput->section != CIP_OBJECTIVE )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("parse objective information\n");
+   
+   if( strncmp(buf, "  Sense", 7) == 0 )
+   {
+      SCIP_OBJSENSE objsense;
+      
+      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      {
+         SCIPwarningMessage("did not find objective sense\n");
+         return SCIP_OKAY;
+      }
+      
+      /* remove white space in front of the name */
+      while(isspace(*name))
+         name++;
+      
+      if( strncmp(name, "minimize", 3) == 0 )
+         objsense = SCIP_OBJSENSE_MINIMIZE;
+      else if( strncmp(name, "maximize", 3) == 0 )
+         objsense = SCIP_OBJSENSE_MAXIMIZE;
+      else
+      {
+         SCIPwarningMessage("unknown objective sense\n");
+         return SCIP_OKAY;
+      }
+      
+      /* set problem name */
+      SCIP_CALL( SCIPsetObjsense(scip, objsense) );
+      SCIPdebugMessage("objective sense <%s>\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+         
+   }
+   else if( strncmp(buf, "  Offset", 7) == 0 )
+   {
+      double offset;
+      char* endptr;
+
+      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      {
+         SCIPwarningMessage("did not find offset\n");
+         return SCIP_OKAY;
+      }
+
+      /* remove white space in front of the name */
+      while(isspace(*name))
+         name++;
+         
+      offset = strtod(name, &endptr);
+      SCIPwarningMessage("ignore objective offset of <%g>\n", offset);
+   }
+   else if( strncmp(buf, "  Scale", 7) == 0 )
+   {
+      double scale;
+      char* endptr;
+
+      if( SCIPstrtok(buf, ":", &name) == NULL || name == NULL )
+      {
+         SCIPwarningMessage("did not find scale\n");
+         return SCIP_OKAY;
+      }
+
+      /* remove white space in front of the name */
+      while(isspace(*name))
+         name++;
+         
+      scale = strtod(name, &endptr);
+      SCIPwarningMessage("ignore objective scale of <%g>\n", scale);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** read variables */
+static
+SCIP_RETCODE getVariable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CIPINPUT*             cipinput,           /**< CIP parsing data */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable           /**< is var's column removable from the LP (due to aging or cleanup)? */
+   )
+{
+   SCIP_VAR* var;
+   char* buf;
+   SCIP_Bool succeed;
+   
+   buf = cipinput->strbuf;
+   
+   if( strncmp(buf, "FIXED", 5) == 0 )
+      cipinput->section = CIP_FIXEDVARS;
+   else if( strncmp(buf, "CONSTRAINTS", 4) == 0 )
+      cipinput->section = CIP_CONSTRAINTS;
+   else if( strncmp(buf, "END", 3) == 0 )
+      cipinput->section = CIP_END;
+   
+   if( cipinput->section != CIP_VARS )
+      return SCIP_OKAY;
+   
+   SCIPdebugMessage("parse variable\n");
+   
+   /* parse the variable */
+   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, &succeed) );
+   
+   if( !succeed )
+   {
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+   
+   SCIP_CALL( SCIPaddVar(scip, var) );
+
+   SCIPdebug(SCIPprintVar(scip, var, NULL) );
+
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
+   
+   return SCIP_OKAY;
+}
+
+/** read fixed variables */
+static
+SCIP_RETCODE getFixedVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CIPINPUT*             cipinput            /**< CIP parsing data */
+   )
+{
+   char* buf;
+
+   buf = cipinput->strbuf;
+
+   if( strncmp(buf, "CONSTRAINTS", 11) == 0 )
+      cipinput->section = CIP_CONSTRAINTS;
+   else if( strncmp(buf, "END", 3) == 0 )
+      cipinput->section = CIP_END;
+   
+   if( cipinput->section != CIP_FIXEDVARS )
+      return SCIP_OKAY;
+   
+   SCIPdebugMessage("parse fixed variables\n");
+   
+   return SCIP_OKAY;
+}
+
+/** read constraints */
+static
+SCIP_RETCODE getConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CIPINPUT*             cipinput,           /**< CIP parsing data */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             dynamic,            /**< Is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
+   SCIP_Bool             removable           /**< should the relaxation be removed from the LP due to aging or cleanup?
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   )
+{
+   SCIP_CONS* cons;
+   char* buf;
+   
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+
+   SCIP_Bool succeed;
+
+   buf = cipinput->strbuf;
+
+   if( strncmp(buf, "END", 3) == 0 )
+   {
+      cipinput->section = CIP_END;
+      return SCIP_OKAY;
+   }
+   
+   SCIPdebugMessage("parse constraints\n");
+   
+   separate = TRUE;
+   enforce = TRUE;
+   check = TRUE;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   
+   /* parse the variable */
+   SCIP_CALL( SCIPparseCons(scip, &cons, cipinput->strbuf,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &succeed) );
+   
+   if( !succeed )
+   {
+      cipinput->haserror = TRUE;
+      return SCIP_OKAY;
+   }
+   
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of reader
@@ -65,7 +398,99 @@ struct SCIP_ReaderData
 
 
 /** problem reading method of reader */
-#define readerReadCip NULL
+static
+SCIP_DECL_READERREAD(readerReadCip)
+{
+   CIPINPUT cipinput;
+   SCIP_Bool dynamicconss;
+   SCIP_Bool dynamiccols;
+   SCIP_Bool dynamicrows;
+
+   SCIP_Bool initialvar;
+   SCIP_Bool removablevar;
+   SCIP_Bool initialcons;
+   SCIP_Bool removablecons;
+   
+
+   if( NULL == (cipinput.file = SCIPfopen(filename, "r")) )
+   {
+      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
+      SCIPprintSysError(filename);
+      return SCIP_READERROR;
+   }
+
+   cipinput.len = 100000;
+   SCIP_CALL( SCIPallocBufferArray(scip, &(cipinput.strbuf), cipinput.len) );
+
+   cipinput.linenumber = 0;
+   cipinput.section = CIP_START;
+   cipinput.haserror = FALSE;
+   cipinput.endfile = FALSE;
+
+   SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
+   
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamiccols", &dynamiccols) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicconss", &dynamicconss) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/"READER_NAME"/dynamicrows", &dynamicrows) );
+
+   initialvar = !dynamiccols;
+   removablevar = dynamiccols;
+   
+   initialcons = !dynamicrows;
+   removablecons = dynamicrows;
+
+
+   while( cipinput.section != CIP_END && !cipinput.haserror )
+   {
+      /* get next input string */
+      SCIP_CALL( getInputString(scip, &cipinput) );
+
+      if( cipinput.endfile )
+         break;
+      
+      switch( cipinput.section )
+      {
+      case CIP_START:
+         SCIP_CALL( getStart(scip, &cipinput) );
+         break;
+      case CIP_STATISTIC:
+         SCIP_CALL( getStatistic(scip, &cipinput) );
+         break;
+      case CIP_OBJECTIVE:
+         SCIP_CALL( getObjective(scip, &cipinput) );
+         break;
+      case CIP_VARS:
+         SCIP_CALL( getVariable(scip, &cipinput, initialvar, removablevar) );
+         break;
+      case CIP_FIXEDVARS:
+         SCIP_CALL( getFixedVariables(scip, &cipinput) );
+         break;
+      case CIP_CONSTRAINTS:
+         SCIP_CALL( getConstraints(scip, &cipinput, initialcons, dynamicconss, removablecons) );
+         break;
+      default:
+         SCIPerrorMessage("invalid CIP state\n");
+         SCIPABORT();
+      }	
+   }
+
+   /* close file stream */
+   SCIPfclose(cipinput.file);
+   
+   if( cipinput.section != CIP_END && !cipinput.haserror )
+   {
+      SCIPerrorMessage("unexpected EOF\n");
+   }
+   
+   SCIPfreeBufferArray(scip, &cipinput.strbuf);
+   
+   if( cipinput.haserror )
+      return SCIP_PARSEERROR;
+   
+   /* successfully parse cip format */
+   *result = SCIP_SUCCESS;
+   return SCIP_OKAY;
+}
 
 
 /** problem writing method of reader */
@@ -92,14 +517,18 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    {
       SCIPinfoMessage(scip, file, "VARIABLES\n");
       for( i = 0; i < nvars; ++i )
+      {
          SCIP_CALL( SCIPprintVar(scip, vars[i], file) );
+      }
    }
 
    if( nfixedvars > 0 )
    {
       SCIPinfoMessage(scip, file, "FIXED\n");
       for( i = 0; i < nfixedvars; ++i )
+      {
          SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
+      }
    }
 
    if( nconss > 0 )
@@ -113,6 +542,7 @@ SCIP_DECL_READERWRITE(readerWriteCip)
             continue;
          
          SCIP_CALL( SCIPprintCons(scip, conss[i], file) );
+         SCIPinfoMessage(scip, file, ";\n");
       }
    }
    
@@ -143,7 +573,15 @@ SCIP_RETCODE SCIPincludeReaderCip(
          readerFreeCip, readerReadCip, readerWriteCip, readerdata) );
 
    /* add cip reader parameters */
-   /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/"READER_NAME"/dynamicconss", "should model constraints be subject to aging?",
+         NULL, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/"READER_NAME"/dynamiccols", "should columns be added and removed dynamically to the LP?",
+         NULL, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/"READER_NAME"/dynamicrows", "should rows be added and removed dynamically to the LP?",
+         NULL, FALSE, FALSE, NULL, NULL) );
    
    return SCIP_OKAY;
 }

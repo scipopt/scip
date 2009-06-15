@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.170 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.171 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -4383,11 +4383,42 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
          SCIPinfoMessage(scip, file, " ");
       SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT"<%s>", consdata->weights[i], SCIPvarGetName(consdata->vars[i]));
    }
-   SCIPinfoMessage(scip, file, " <= %"SCIP_LONGINT_FORMAT"\n", consdata->capacity);
+   SCIPinfoMessage(scip, file, " <= %"SCIP_LONGINT_FORMAT"", consdata->capacity);
    
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyKnapsack)
+{  /*lint --e{715}*/
+   SCIP_VAR** sourcevars;
+   SCIP_Longint* weights;
+   SCIP_Real* coefs;
+   int nvars;
+   int v;
+   
+   /* get variables and coefficients of the source constraint */
+   sourcevars = SCIPgetVarsKnapsack(sourcescip, sourcecons);
+   nvars = SCIPgetNVarsKnapsack(sourcescip, sourcecons);
+   weights = SCIPgetWeightsKnapsack(sourcescip, sourcecons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
+   for( v = 0; v < nvars; ++v )
+      coefs[v] = (SCIP_Real) weights[v];
+   
+   /* copy the logic using the linear constraint copy method */
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), nvars, sourcevars, coefs,
+         -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+
+   SCIPfreeBufferArray(scip, &coefs);
+
+   return SCIP_OKAY;
+}
+
+/** constraint parsing method of constraint handler */
+#define consParseKnapsack NULL
 
 
 
@@ -4607,7 +4638,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          consPropKnapsack, consPresolKnapsack, consRespropKnapsack, consLockKnapsack,
          consActiveKnapsack, consDeactiveKnapsack, 
          consEnableKnapsack, consDisableKnapsack,
-         consPrintKnapsack,
+         consPrintKnapsack, consCopyKnapsack, consParseKnapsack,
          conshdlrdata) );
   
    /* include the linear constraint upgrade in the linear constraint handler */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.31 2009/05/04 20:56:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.32 2009/06/15 09:57:31 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1517,6 +1517,11 @@ SCIP_DECL_CONSLOCK(consLockCountsols)
 /** constraint display method of constraint handler */
 #define consPrintCountsols NULL
 
+/** constraint copying method of constraint handler */
+#define consCopyCountsol NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseCountsol NULL
 
 /*
  * Interface methods
@@ -1733,7 +1738,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          consPropCountsols, consPresolCountsols, consRespropCountsols, consLockCountsols,
          consActiveCountsols, consDeactiveCountsols, 
          consEnableCountsols, consDisableCountsols,
-         consPrintCountsols,
+         consPrintCountsols, consCopyCountsol, consParseCountsol,
          conshdlrdata) );
 
    /* add countsols constraint handler parameters */

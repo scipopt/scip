@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.48 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.49 2009/06/15 09:57:32 bzfheinz Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -142,6 +142,8 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSENABLE  ((*consenable));    /**< enabling notification method */
    SCIP_DECL_CONSDISABLE ((*consdisable));   /**< disabling notification method */
    SCIP_DECL_CONSPRINT   ((*consprint));     /**< constraint display method */
+   SCIP_DECL_CONSCOPY    ((*conscopy));      /**< constraint copying method */
+   SCIP_DECL_CONSPARSE   ((*consparse));     /**< constraint parsing method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed incative ones */
    SCIP_CONS**           initconss;          /**< array with active constraints that must enter the LP with their initial representation */

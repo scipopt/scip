@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.122 2009/06/05 20:28:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.123 2009/06/15 09:57:33 bzfheinz Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -234,6 +234,46 @@ SCIP_RETCODE SCIPvarCreateTransformed(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata             /**< user data for this specific variable */
+   );
+
+/** parses variable information (in cip format) out of a string; if the parsing process was successful an original
+ *  problem variable is creates and captures; an integer variable with bounds zero and one is automatically converted
+ *  into a binary variable
+ */
+extern
+SCIP_RETCODE SCIPvarParseOriginal(
+   SCIP_VAR**            var,                /**< pointer to variable data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   const char*           str,                /**< stirng to parse */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   );
+
+/** parses variable information (in cip format) out of a string; if the parsing process was successful a loose variable
+ *  belonging to the transformed problem is creates and captures; an integer variable with bounds zero and one is
+ *  automatically converted into a binary variable
+ */
+extern
+SCIP_RETCODE SCIPvarParseTransformed(
+   SCIP_VAR**            var,                /**< pointer to variable data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   const char*           str,                /**< stirng to parse */
+   SCIP_Bool             initial,            /**< should var's column be present in the initial root LP? */
+   SCIP_Bool             removable,          /**< is var's column removable from the LP (due to aging or cleanup)? */
+   SCIP_DECL_VARDELORIG  ((*vardelorig)),    /**< frees user data of original variable */
+   SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
+   SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
+   SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
+   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
    );
 
 /** increases usage counter of variable */

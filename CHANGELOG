@@ -35,6 +35,14 @@ interface:
 - new interface methods SCIPcolSort(), SCIProwSort(), SCIPcolGetIndex()
 - extended the sort template functions in sorttpl.c with a "five" array; now it possible to used this template to sort up to five arrays
 - new parameters <constraints/countsols/sollimit> in cons_countsols.c, counting stops, if the given number of solutions were found (-1: no limit)  
+- new callback method SCIP_DECL_CONSCOPY(x) in type_cons.h; this method can be use to copy a constraint
+- new callback method SCIP_DECL_CONSPARSE(x) in type_cons.h; this method can be use to pasre a constraint in CIP format
+- added function SCIPaddObjoffset() in scip.h; sets offset of objective function
+- added function SCIPgetOrigObjoffset() in scip.h; returns the objective offset of the original problem
+- added function SCIPgetOrigObjscale() in scip.h; returns the objective scale of the original problem 
+- added function SCIPparseVars() in scip.h; parses variable information (in cip format) out of a string
+- added function SCIPparseCons() in scip.h; parses constrint information (in cip format) out of a string
+- added function SCIPcopyCons() in scip.h; parses constrint information (in cip format) out of a string
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -55,6 +63,10 @@ features:
 - the current/root lp can be marked to be no relaxation of the current/root problem
 - "early branching"-functionality added: in a branch-and-price code, the user can stop pricing at a node although there may exist variables 
   with negative reduced costs. In this case, the lp-lowerbound will not be used. The pricer has, however, the option to return a lower bound.
+- the infrastructure for parsing CIP format is set; each constraint handler has now an callback method SCIP_DECL_CONSPARSE() (see type_cons.h)
+- the infrastructure for copying constraints is set; each constraint handler has now an callback method SCIP_DECL_CONSCOPYE() (see type_cons.h)
+- all linear type constraint handlers are able to copy constraints using the function SCIPcopyCons() in scip.h
+- the linear constraint handler is able to parse a string in CIP format and create a corresponding linear constraint
 
 performance improvements:
 - replaced some function calls in loop conditions
