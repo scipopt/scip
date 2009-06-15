@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.323 2009/06/15 09:57:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.324 2009/06/15 13:13:42 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9856,6 +9856,8 @@ SCIP_RETCODE SCIPcopyConsLinear(
          coefs[v] = 1.0;
       
    }
+
+   constant = 0.0;
    
    /* transform source variable to active variables of the source SCIP since only these can be mapped to variables of
     * the target SCIP */
