@@ -239,6 +239,8 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CONS How to add constraint handlers
  *
+ * @todo extend the documentation with the new callback methods CONSCOPY and CONSPARSE.
+ *
  * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.
  * A single constraint handler is responsible for all the constraints belonging to his constraint class.
  * For example, there is one \ref cons_knapsack.c "knapsack constraint handler" that ensures that only solutions are accepted that
