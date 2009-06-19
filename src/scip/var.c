@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.249 2009/06/15 09:57:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.250 2009/06/19 14:54:26 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9512,8 +9512,6 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
    }
 }
 
-/* begin ????????????????????? */
-
 /** increases the number of active conflicts by one and the overall length of the variable by the given length */
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
@@ -9682,14 +9680,7 @@ SCIP_Real SCIPvarGetAvgConflictlength(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
-      {
-         /* ??????????????????????????????????????? 
-          * if( SCIPhistoryGetAvgConflictlength(var->history, dir) > 0 )
-          *   printf("Variable %s appears in %d conflicts with average length %f.\n", SCIPvarGetName(var), 
-          *      (int)SCIPhistoryGetNActiveConflicts(var->history,dir), SCIPhistoryGetAvgConflictlength(var->history, dir));
-          */
          return  SCIPhistoryGetAvgConflictlength(var->history, dir);
-      }
    case SCIP_VARSTATUS_FIXED:
       return 0.0;
 
@@ -9756,8 +9747,6 @@ SCIP_Real SCIPvarGetAvgConflictlengthCurrentRun(
       return 0.0; /*lint !e527*/
    }
 }
-
-/* end ???????????????????????????? */
 
 /** increases the number of branchings counter of the variable */
 SCIP_RETCODE SCIPvarIncNBranchings(
