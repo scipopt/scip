@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.23 2007/06/06 11:25:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.23.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
 
 /**@file   type_event.h
  * @brief  type definitions for managing events
@@ -79,7 +77,7 @@
 #define SCIP_EVENTTYPE_DOMCHANGED     (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_HOLECHANGED)
 #define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED \
                                        | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED)
-#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARCREATED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_VARCHANGED)
+#define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_VARCHANGED)
    
 /* event masks for node events */
 #define SCIP_EVENTTYPE_NODESOLVED     (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE \

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.37 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.36.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -25,15 +23,12 @@
 
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h>
-#endif
+#include <math.h>
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/reader.h"
 #include "scip/prob.h"
 #include "scip/pub_var.h"
@@ -117,24 +112,16 @@ SCIP_RETCODE SCIPreaderRead(
    SCIP_READER*          reader,             /**< reader */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           filename,           /**< name of the input file */
+   const char*           extension,          /**< extension of the input file name */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
    SCIP_RETCODE retcode;
-   char* tmpfilename;
-   char* path;
-   char* name;
-   char* extension;
-   char* compression;
 
    assert(reader != NULL);
    assert(set != NULL);
    assert(filename != NULL);
    assert(result != NULL);
-
-   /* get path, name and extension from filename */
-   SCIP_ALLOC( BMSduplicateMemoryArray(&tmpfilename, filename, strlen(filename)+1) );
-   SCIPsplitFilename(tmpfilename, &path, &name, &extension, &compression);
 
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerread != NULL )
@@ -148,11 +135,12 @@ SCIP_RETCODE SCIPreaderRead(
       retcode = SCIP_OKAY;
    }
 
-   BMSfreeMemoryArray(&tmpfilename);
-
    /* check for reader errors */
-   if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+   if( retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
       return retcode;
+
+   /* check if the result code is valid in case no reader error occurred */
+   assert( *result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS );
 
    SCIP_CALL( retcode );
 
@@ -232,46 +220,49 @@ SCIP_RETCODE SCIPreaderWrite(
          /* save variable and constraint names and replace these names by generic names */
 
          /* alloac memory for saving the original variable and constraint names */
-         SCIP_ALLOC( BMSallocMemoryArray(&varnames, nvars ) );
-         SCIP_ALLOC( BMSallocMemoryArray(&fixedvarnames, nfixedvars ) );
-         SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss ) );
+         SCIP_ALLOC( BMSallocMemoryArray(&varnames, nvars) );
+         SCIP_ALLOC( BMSallocMemoryArray(&fixedvarnames, nfixedvars) );
+         SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss) );
 
-         /* compute length of the generic variable names */
-         size = nvars % 10 + 2;
-         
+         /* compute length of the generic variable names:
+	  * - nvars + 1 to avoid log of zero
+	  * - +3 (zero at end + 'x' + 1 because we round down)
+	  * Example: 10 -> need 4 chars ("x10\0") */
+         size = (int) log10(nvars+1.0) + 3;
+
          for( i = 0; i < nvars; ++i )
          {
             var = vars[i];
             varnames[i] = SCIPvarGetName(var);
             
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size ) );
-            sprintf(name, "x%d", i);
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            (void) SCIPsnprintf(name, size, "x%d", i);
             SCIPvarSetNamePointer(var, name);
          }  
-         
+
          /* compute length of the generic variable names */
-         size = nfixedvars % 10 + 2;
+         size = (int) log10(nfixedvars+1.0) + 3;
 
          for( i = 0; i < nfixedvars; ++i )
          {
             var = fixedvars[i];
             fixedvarnames[i] = SCIPvarGetName(var);
             
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size ) );
-            sprintf(name, "y%d", i);
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            (void) SCIPsnprintf(name, size, "y%d", i);
             SCIPvarSetNamePointer(var, name);
          }
-         
+
          /* compute length of the generic constraint names */
-         size = nconss % 10 + 2;
-         
+         size = (int) log10(nconss+1.0) + 3;
+
          for( i = 0; i < nconss; ++i )
          {
             cons = conss[i];
             consnames[i] = SCIPconsGetName(cons);
 
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size ) );
-            sprintf(name, "c%d", i);
+            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            (void) SCIPsnprintf(name, size, "c%d", i);
             SCIPconsSetNamePointer(cons, name);
          }
       }
@@ -284,7 +275,7 @@ SCIP_RETCODE SCIPreaderWrite(
          conss, nconss, prob->maxnconss, prob->startnconss, genericnames, result);
          
       if( genericnames )
-      {
+      {  /*lint --e{644}  suppress not initialized for varnames and fixedvarnames */
          /* reset variable and constraint names to original names */
          
          for( i = 0; i < nvars; ++i )
@@ -376,4 +367,25 @@ const char* SCIPreaderGetExtension(
 
    return reader->extension;
 }
+
+/** return whether the reader can read files */
+SCIP_Bool SCIPreaderCanRead(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+   
+   return (reader->readerread != NULL);
+}
+
+/** return whether the reader can write files */
+SCIP_Bool SCIPreaderCanWrite(
+   SCIP_READER*          reader              /**< reader */
+   )
+{
+   assert(reader != NULL);
+
+   return (reader->readerwrite != NULL);
+}
+
 

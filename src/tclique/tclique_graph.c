@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.3 2007/06/06 11:25:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.3.2.1 2009/06/19 07:53:55 bzfwolte Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -99,7 +99,7 @@ TCLIQUE_ISEDGE(tcliqueIsEdge)
    currentadjedge = tcliqueGetFirstAdjedge(tcliquegraph, node1);
    lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, node1);
    
-   if( *lastadjedge < node2 )
+   if( currentadjedge > lastadjedge || *lastadjedge < node2 )
       return FALSE;
 
    /* checks if node2 is contained in adjacency list of node1 
@@ -443,7 +443,7 @@ TCLIQUE_Bool tcliqueFlush(
          for( i = tcliquegraph->adjedges[n].last - 1; i >= tcliquegraph->adjedges[n].first; --i, --pos )
          {
             assert(0 <= i && i < pos && pos < tcliquegraph->nedges + tcliquegraph->ncachededges);
-            tcliquegraph->adjedges[pos] = tcliquegraph->adjedges[i];
+            tcliquegraph->adjnodes[pos] = tcliquegraph->adjnodes[i];
          }
 
          /* adjust the first and last edge pointers of the node */
@@ -453,7 +453,7 @@ TCLIQUE_Bool tcliqueFlush(
          assert(n == tcliquegraph->nnodes-1
             || tcliquegraph->adjedges[n].first + tcliquegraph->degrees[n] == tcliquegraph->adjedges[n+1].first);
       }
-      assert(ninsertedholes == tcliquegraph->ncachededges - tcliquegraph->nedges);
+      assert(ninsertedholes == tcliquegraph->ncachededges);
       assert(tcliquegraph->adjedges[n].last == pos+1);
 #ifndef NDEBUG
       for( --n; n >= 0; --n )
@@ -560,7 +560,10 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
  
    if( !tcliqueCreate(tcliquegraph) )
+   {
+      fclose(file);
       return FALSE;
+   }
  
    /* set name of problem, number of nodes and number of edges in graph */
    fscanf(file, "%s", probname);
@@ -625,7 +628,7 @@ TCLIQUE_Bool tcliqueSaveFile(
    /* create file */
    if( (file = fopen(filename, "w")) == NULL )
    {
-     infoMessage("\nCan't create file: %s", filename);
+      infoMessage("\nCan't create file: %s", filename);
       return FALSE;
    }
  
@@ -750,13 +753,13 @@ void tcliquePrintGraph(
    degrees = tcliqueGetDegrees(tcliquegraph);
    weights = tcliqueGetWeights(tcliquegraph);
 
-  infoMessage("nnodes=%d, nedges=%d\n", tcliqueGetNNodes(tcliquegraph), tcliqueGetNEdges(tcliquegraph));
+   infoMessage("nnodes=%d, nedges=%d\n", tcliqueGetNNodes(tcliquegraph), tcliqueGetNEdges(tcliquegraph));
    for( i = 0; i < tcliqueGetNNodes(tcliquegraph); i++ )
    {
       int* currentadjedge;
       int* lastadjedge;
 
-     infoMessage("node %d: weight=%d, degree=%d, adjnodes=\n[ ", i, weights[i], degrees[i]);  
+      infoMessage("node %d: weight=%d, degree=%d, adjnodes=\n[ ", i, weights[i], degrees[i]);  
 
       currentadjedge = tcliqueGetFirstAdjedge(tcliquegraph, i);
       lastadjedge = tcliqueGetLastAdjedge(tcliquegraph, i);
@@ -764,8 +767,8 @@ void tcliquePrintGraph(
 
       for( ; currentadjedge <= lastadjedge; currentadjedge++ )
       {
-        infoMessage("%d, ", *currentadjedge);
+	 infoMessage("%d, ", *currentadjedge);
       }
-     infoMessage("]\n");
+      infoMessage("]\n");
    }
 }

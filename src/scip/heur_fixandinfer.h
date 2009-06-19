@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.h,v 1.10 2007/06/06 11:25:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.h,v 1.10.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
 
 /**@file   heur_fixandinfer.h
  * @brief  fix-and-infer primal heuristic

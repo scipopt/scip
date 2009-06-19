@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.2 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.2.2.1 2009/06/19 07:53:49 bzfwolte Exp $"
 
 /**@file   reader_sos.c
+ * @ingroup FILEREADERS 
  * @brief  SOS file reader
  * @author Marc Pfetsch
  *
@@ -34,6 +33,7 @@
 #include "scip/reader_sos.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/pub_misc.h"
 
 
 #define READER_NAME             "sosreader"
@@ -54,7 +54,7 @@
 enum SosSection
 {
    SOS_NAME,
-   [5~   SOS_SOSSECTION,
+   SOS_SOSSECTION,
    SOS_ENDATA
 };
 typedef enum SosSection SOSSECTION;
@@ -502,7 +502,7 @@ SCIP_RETCODE readSOS(
 	    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 	 }
 	 /* create new name, since we do not get a name from the file */
-	 snprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
+	 (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "SOS%d", ++cnt);
 
 	 /* create new SOS1 constraint */
 	 if ( type == 1 )
@@ -559,7 +559,7 @@ SCIP_RETCODE readSOS(
 	 {
 	 case 1: SCIP_CALL( SCIPaddVarSOS1(scip, cons, var, weight) ); break;
 	 case 2: SCIP_CALL( SCIPaddVarSOS2(scip, cons, var, weight) ); break;
-	 default: abort(); // should not happen
+	 default: abort(); /* should not happen */
 	 }
 	 SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
 
@@ -591,10 +591,11 @@ SCIP_RETCODE readSOSFile(
    assert(scip != NULL);
    assert(filename != NULL);
 
-   if (NULL == (fp = SCIPfopen(filename, "r")))
+   fp = SCIPfopen(filename, "r");
+   if (fp == NULL)
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      perror(filename);
+      SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
 
@@ -647,14 +648,14 @@ SCIP_DECL_READERREAD(readerReadSOS)
    {
       SCIPwarningMessage("reading of solution file is only possible after a problem was created.\n");
       *result = SCIP_DIDNOTRUN;
-      return SCIP_READERROR;
+      return SCIP_OKAY;
    }
 
    if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
    {
       SCIPwarningMessage("reading of solution file is only possible in problem creating stage.\n");
       *result = SCIP_DIDNOTRUN;
-      return SCIP_READERROR;
+      return SCIP_OKAY;
    }
 
    SCIP_CALL( readSOSFile(scip, filename) );

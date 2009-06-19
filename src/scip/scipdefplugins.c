@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.1 2009/06/10 17:47:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.2 2009/06/19 07:53:50 bzfwolte Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -63,6 +61,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
       SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
       SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
+      SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
+      SCIP_CALL( SCIPincludeConshdlrIndicator(scip) );
       SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
       SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
       SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
@@ -82,11 +82,16 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeReaderCip(scip) );
       SCIP_CALL( SCIPincludeReaderCnf(scip) );
       SCIP_CALL( SCIPincludeReaderFix(scip) );
+      SCIP_CALL( SCIPincludeReaderFzn(scip) );
+      SCIP_CALL( SCIPincludeReaderCcg(scip) );
       SCIP_CALL( SCIPincludeReaderLp(scip) );
       SCIP_CALL( SCIPincludeReaderMps(scip) );
+      SCIP_CALL( SCIPincludeReaderOpb(scip) );
+      SCIP_CALL( SCIPincludeReaderPpm(scip) );
       SCIP_CALL( SCIPincludeReaderRlp(scip) );
       SCIP_CALL( SCIPincludeReaderSol(scip) );
       SCIP_CALL( SCIPincludeReaderZpl(scip) );
+      SCIP_CALL( SCIPincludePresolBoundshift(scip) );
       SCIP_CALL( SCIPincludePresolDualfix(scip) );
       SCIP_CALL( SCIPincludePresolImplics(scip) );
       SCIP_CALL( SCIPincludePresolInttobinary(scip) );
@@ -108,6 +113,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );
       SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
       SCIP_CALL( SCIPincludeHeurCrossover(scip) );
+      SCIP_CALL( SCIPincludeHeurDins(scip) );
       SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
       SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
       SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
@@ -139,6 +145,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeSepaMcf(scip) );
       SCIP_CALL( SCIPincludeSepaRedcost(scip) );
       SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
+      SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
       SCIP_CALL( SCIPincludeDispDefault(scip) );
       SCIP_CALL( SCIPincludeDialogDefault(scip) );
 

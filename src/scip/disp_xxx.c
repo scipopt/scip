@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_xxx.c,v 1.1 2007/08/17 08:46:09 bzfwolte Exp $"
+#pragma ident "@(#) $Id: disp_xxx.c,v 1.1.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
 
 /**@file   disp_xxx.c
+ * @ingroup DISPLAYS
  * @brief  xxx display column
  * @author Kati Wolter
  */
@@ -28,13 +27,14 @@
 #include "scip/disp_xxx.h"
 
 
-#define DISP_NAME               "xxx"
+#define DISP_NAME               "xxx"                
 #define DISP_DESC               "xxx display column"
-#define DISP_HEADER             "xxx"
-#define DISP_WIDTH              14
-#define DISP_PRIORITY           110000
-#define DISP_POSITION           30100
-#define DISP_STRIPLINE          TRUE
+#define DISP_HEADER             "xxx" 
+#define DISP_WIDTH              14      /**< the width of the display column */
+#define DISP_PRIORITY           110000  /**< the priority of the display column */
+#define DISP_POSITION           30100   /**< the relative position of the display column */
+#define DISP_STRIPLINE          TRUE    /**< the default for whether the display column should be separated 
+                                         *   with a line from its right neighbor */
 
 
 

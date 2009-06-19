@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.18 2008/01/28 14:31:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.16.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -44,6 +42,7 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/cons_conjunction.h"
 #include "scip/cons_countsols.h"
+#include "scip/cons_indicator.h"
 #include "scip/cons_integral.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_linear.h"
@@ -59,6 +58,7 @@
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"
+#include "scip/heur_dins.h"
 #include "scip/heur_feaspump.h"
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"
@@ -84,6 +84,7 @@
 #include "scip/nodesel_estimate.h"
 #include "scip/nodesel_hybridestim.h"
 #include "scip/nodesel_restartdfs.h"
+#include "scip/presol_boundshift.h"
 #include "scip/presol_dualfix.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
@@ -94,9 +95,12 @@
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
 #include "scip/reader_fix.h"
+#include "scip/reader_fzn.h"
+#include "scip/reader_ccg.h"
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_opb.h"
+#include "scip/reader_ppm.h"
 #include "scip/reader_rlp.h"
 #include "scip/reader_sol.h"
 #include "scip/reader_zpl.h"
@@ -109,6 +113,7 @@
 #include "scip/sepa_mcf.h"
 #include "scip/sepa_redcost.h"
 #include "scip/sepa_strongcg.h"
+#include "scip/sepa_zerohalf.h"
 #include "scip/scipshell.h"
 
 #if 0

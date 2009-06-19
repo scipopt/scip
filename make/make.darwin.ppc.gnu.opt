@@ -1,5 +1,5 @@
-#--- $Id: make.darwin.ppc.gnu.opt,v 1.2 2008/01/28 14:31:07 bzfheinz Exp $
-FLAGS		+=	-DNDEBUG -DNO_REMOVE_HISTORY # -DROUNDING_FE
+#--- $Id: make.darwin.ppc.gnu.opt,v 1.1.2.1 2009/06/19 07:53:34 bzfwolte Exp $
+FLAGS		+=	-DNDEBUG # -DNO_REMOVE_HISTORY # -DROUNDING_FE
 OFLAGS		+=	-O2 -fomit-frame-pointer
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)

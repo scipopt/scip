@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.67 2008/01/23 13:16:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.66.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
 
 /**@file   sepa_gomory.c
+ * @ingroup SEPARATORS
  * @brief  Gomory MIR Cuts
  * @author Tobias Achterberg
  */
@@ -29,6 +28,7 @@
 #include <string.h>
 
 #include "scip/sepa_gomory.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "gomory"
@@ -58,6 +58,8 @@
 #define MINFRAC                    0.05
 #define MAXFRAC                    0.95
 
+#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
+
 
 /** separator data */
 struct SCIP_SepaData
@@ -67,6 +69,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of gomory cuts separated per separation round in root node */
+   int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
@@ -293,6 +296,24 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
 
+#if 0
+   /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
+   if( ncols >= 50*nrows )
+      return SCIP_OKAY;
+   if( ncols >= 5*nrows )
+   {
+      int ncutsfound;
+
+      ncutsfound = SCIPgetNCutsFound(scip);
+      if( ncutsfound > sepadata->lastncutsfound || !SCIPsepaWasLPDelayed(sepa) )
+      {
+         sepadata->lastncutsfound = ncutsfound;
+         *result = SCIP_DELAYED;
+         return SCIP_OKAY;
+      }
+   }
+#endif
+
    /* get the type of norm to use for efficacy calculations */
    SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
 
@@ -398,8 +419,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
          /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
-               sepadata->maxweightrange, MINFRAC, MAXFRAC,
-               binvrow, 1.0, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
+               (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
+               binvrow, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
 
@@ -444,9 +465,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
                /* create the cut */
                if( c >= 0 )
-                  sprintf(cutname, "gom%d_x%d", SCIPgetNLPs(scip), c);
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_x%d", SCIPgetNLPs(scip), c);
                else
-                  sprintf(cutname, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "gom%d_s%d", SCIPgetNLPs(scip), -c-1);
                SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                                              cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
@@ -531,6 +552,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
    SCIPdebugMessage("end searching gomory cuts: found %d cuts\n", ncuts);
 
+   sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
+
    return SCIP_OKAY;
 }
 
@@ -554,6 +577,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   sepadata->lastncutsfound = 0;
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,

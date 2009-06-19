@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.8 2007/11/01 13:53:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.8.2.1 2009/06/19 07:53:41 bzfwolte Exp $"
 
 /**@file   cons_sos1.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for SOS type 1 constraints
  * @author Marc Pfetsch
  *
@@ -30,6 +29,7 @@
 #include "scip/cons_sos1.h"
 #include "scip/cons_linear.h"
 #include <string.h>
+#include "scip/pub_misc.h"
 
 
 /* constraint handler properties */
@@ -70,6 +70,9 @@ struct SCIP_ConsData
 /** SOS1 constraint handler data */
 struct SCIP_ConshdlrData
 {
+   SCIP_Bool branchSOS;           /**< Branch on SOS condition in enforcing? */
+   SCIP_Bool branchNonzeros;      /**< Branch on SOS cons. with most number of nonzeros? */
+   SCIP_Bool branchWeight;        /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchNonzeros to be false */
    SCIP_EVENTHDLR* eventhdlr;     /**< event handler for bound change events */
 };
 
@@ -81,11 +84,11 @@ struct SCIP_ConshdlrData
 /** fix variable in given node to 0 or add constraint if variable is multi-aggregated */
 static
 SCIP_RETCODE fixVariableZeroNode(
-     SCIP* scip,            /**< SCIP pointer */
-     SCIP_VAR* var,         /**< variable to be fixed to 0*/
-     SCIP_NODE* node,       /**< node */
-     SCIP_Bool* infeasible  /**< if fixing is infeasible */
-     )
+   SCIP* scip,            /**< SCIP pointer */
+   SCIP_VAR* var,         /**< variable to be fixed to 0*/
+   SCIP_NODE* node,       /**< node */
+   SCIP_Bool* infeasible  /**< if fixing is infeasible */
+   )
 {
    /* if variable cannot be nonzero */
    *infeasible = FALSE;
@@ -126,13 +129,13 @@ SCIP_RETCODE fixVariableZeroNode(
 /** fix variable in local node to 0, and return whether the operation was feasible */
 static
 SCIP_RETCODE inferVariableZero(
-     SCIP* scip,            /**< SCIP pointer */
-     SCIP_VAR* var,         /**< variable to be fixed to 0*/
-     SCIP_CONS* cons,       /**< constraint */
-     int inferinfo,         /**< info for reverse prop. */
-     SCIP_Bool* infeasible, /**< if fixing is infeasible */
-     SCIP_Bool* tightened   /**< if fixing was performed */
-     )
+   SCIP* scip,            /**< SCIP pointer */
+   SCIP_VAR* var,         /**< variable to be fixed to 0*/
+   SCIP_CONS* cons,       /**< constraint */
+   int inferinfo,         /**< info for reverse prop. */
+   SCIP_Bool* infeasible, /**< if fixing is infeasible */
+   SCIP_Bool* tightened   /**< if fixing was performed */
+   )
 {
    *infeasible = FALSE;
    *tightened = FALSE;
@@ -436,12 +439,12 @@ SCIP_RETCODE deleteVarSOS1(
 /** propagate variables */
 static
 SCIP_RETCODE propSOS1(
-      SCIP* scip,               /**< SCIP pointer */
-      SCIP_CONS* cons,          /**< constraint */
-      SCIP_CONSDATA* consdata,  /**< constraint data */
-      SCIP_Bool* cutoff,        /**< whether a cutoff happend */
-      int* nGen                 /**< number of domain changes */
-      )
+   SCIP* scip,               /**< SCIP pointer */
+   SCIP_CONS* cons,          /**< constraint */
+   SCIP_CONSDATA* consdata,  /**< constraint data */
+   SCIP_Bool* cutoff,        /**< whether a cutoff happend */
+   int* nGen                 /**< number of domain changes */
+   )
 {
    assert( scip != NULL );
    assert( cons != NULL );
@@ -521,87 +524,164 @@ SCIP_RETCODE propSOS1(
 
 /** enforcement method
  *
- *  We check whether the current solution is feasible, i.e., contains
- *  at most one nonzero variable. If not, we branch along the lines
- *  indicated by Beale and Tomlin:
+ *  We check whether the current solution is feasible, i.e., contains at most one nonzero
+ *  variable. If not, we branch along the lines indicated by Beale and Tomlin:
  *
- *  We first compute \f$W = \sum_{j=1}^n |x_i|\f$ and \f$w =
- *  \sum_{j=1}^n j\, |x_i|\f$. Then we search for the index \f$k\f$ that
- *  satisfies
+ *  We first compute \f$W = \sum_{j=1}^n |x_i|\f$ and \f$w = \sum_{j=1}^n j\, |x_i|\f$. Then we
+ *  search for the index \f$k\f$ that satisfies
  *  \f[
  *        k \leq \frac{w}{W} < k+1.
  *  \f]
  *  The branches are then
  *  \f[
- *        x_1 = 0, \ldots, x_k = 0 \qquad \mbox{and}\qquad
- *        x_{k+1} = 0, \ldots, x_n = 0.
+ *        x_1 = 0, \ldots, x_k = 0 \qquad \mbox{and}\qquad x_{k+1} = 0, \ldots, x_n = 0.
  *  \f]
  *
- *  If the constraint contains two variables, the branching of course
- *  simplifies.
+ *  If the constraint contains two variables, the branching of course simplifies.
+ *
+ *  Depending on the parameters there are two ways to choose the branching constraint. Either the
+ *  constraint with the most number of nonzeros is choosen or the constraint with the largest
+ *  nonzero-variable weight. The later version allows the user to specify an order for the branching
+ *  importance of the constraints. Constraint branching can also be turned off.
  */
 static
 SCIP_RETCODE enforceSOS1(
-	 SCIP* scip,               /**< SCIP pointer */
-	 SCIP_CONS* cons,          /**< constraint */
-	 SCIP_CONSDATA* consdata,  /**< constraint data */
-	 SCIP_RESULT* result       /**< result */
-	 )
+   SCIP* scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR* conshdlr,  /**< constraint handler */
+   int nconss,               /**< number of constraints */
+   SCIP_CONS** conss,        /**< indicator constraints */
+   SCIP_RESULT* result       /**< result */
+   )
 {
-   SCIP_Bool cutoff;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_NODE* node1;
    SCIP_NODE* node2;
+   SCIP_CONS* branchCons = NULL;
    SCIP_VAR** Vars;
    int nVars;
-   int cnt = 0;
+   SCIP_Real maxWeight = -SCIP_REAL_MAX;
+   int c;
 
    assert( scip != NULL );
-   assert( cons != NULL );
-   assert( consdata != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
    assert( result != NULL );
 
+   SCIPdebugMessage("Enforcing SOS1 constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
+   *result = SCIP_FEASIBLE;
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* check each constraint */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONS* cons;
+      SCIP_Bool cutoff;
+      SCIP_Real weight;
+      int j;
+      int nGen = 0;
+      int cnt = 0;
+
+      cons = conss[c];
+      assert( cons != NULL );
+      consdata = SCIPconsGetData(cons);
+      assert( consdata != NULL );
+
+      nVars = consdata->nVars;
+      Vars = consdata->Vars;
+
+      /* do nothing if there are not enough variables - this is usually eliminated by preprocessing */
+      if ( nVars < 2 )
+	 continue;
+
+      /* first perform propagation (it might happen that standard propagation is turned off) */
+      SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &nGen) );
+      SCIPdebugMessage("propagation in enforcing <%s> (cutoff: %d, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, nGen);
+      if ( cutoff )
+      {
+	 *result = SCIP_CUTOFF;
+	 return SCIP_OKAY;
+      }
+      if ( nGen > 0 )
+      {
+	 *result = SCIP_REDUCEDDOM;
+	 return SCIP_OKAY;
+      }
+      assert( nGen == 0 );
+
+      /* check constraint */
+      weight = 0.0;
+      for (j = 0; j < nVars; ++j)
+      {
+	 SCIP_Real val = REALABS(SCIPgetSolVal(scip, NULL, Vars[j]));
+
+	 if ( ! SCIPisFeasZero(scip, val) )
+	 {
+	    if ( conshdlrdata->branchNonzeros )
+	       weight += 1.0;
+	    else
+	    {
+	       if ( conshdlrdata->branchWeight )
+	       {
+		  /* choose maximum nonzero-variable weight */
+		  if ( consdata->weights[j] > weight )
+		     weight = consdata->weights[j];
+	       }
+	       else
+		  weight += val;
+	    }
+	    ++cnt;
+	 }
+      }
+      /* if constraint is violated */
+      if ( cnt > 1 && weight > maxWeight )
+      {
+	 maxWeight = weight;
+	 branchCons = cons;
+      }
+   }
+
+   /* if all constraints are feasible */
+   if ( branchCons == NULL )
+   {
+      SCIPdebugMessage("All SOS1 constraints are feasible.\n");
+      return SCIP_OKAY;
+   }
+
+   /* if we should leave branching decision to branching rules */
+   if ( ! conshdlrdata->branchSOS )
+   {
+      *result = SCIP_INFEASIBLE;
+      return SCIP_OKAY;
+   }
+
+   /* otherwise create branches */
+   SCIPdebugMessage("Branching on constraint <%s> (weight: %f).\n", SCIPconsGetName(branchCons), maxWeight);
+   consdata = SCIPconsGetData(branchCons);
+   assert( consdata != NULL );
    nVars = consdata->nVars;
    Vars = consdata->Vars;
-
-   /* do nothing if there are not enough variables - this is usually eliminated by preprocessing */
-   if ( nVars < 2 )
-      return SCIP_OKAY;
-
-   /* first perform propagation (it might happen that standard propagation is turned off) */
-   SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &cnt) );
-   SCIPdebugMessage("propagation in enforcing (cutoff: %d, domain reductions: %d).\n", cutoff, cnt);
-   if ( cutoff )
-   {
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
-   if ( cnt > 0 )
-   {
-      *result = SCIP_REDUCEDDOM;
-      return SCIP_OKAY;
-   }
 
    if ( nVars == 2 )
    {
       SCIP_Bool infeasible;
 
-      /* if constraint is infeasible */
-      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[0])) && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[1])) )
-      {
-	 /* create branches */
-	 SCIPdebugMessage("Creating two branches.\n");
+      /* constraint is infeasible: */
+      assert( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[0])) && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, Vars[1])) );
 
-	 SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPcalcChildEstimate(scip, Vars[0], 0.0) ) );
-	 SCIP_CALL( fixVariableZeroNode(scip, Vars[0], node1, &infeasible) );
-	 assert( ! infeasible );
+      /* create branches */
+      SCIPdebugMessage("Creating two branches.\n");
 
-	 SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPcalcChildEstimate(scip, Vars[1], 0.0) ) );
-	 SCIP_CALL( fixVariableZeroNode(scip, Vars[1], node2, &infeasible) );
-	 assert( ! infeasible );
+      SCIP_CALL( SCIPcreateChild(scip, &node1, 0.0, SCIPcalcChildEstimate(scip, Vars[0], 0.0) ) );
+      SCIP_CALL( fixVariableZeroNode(scip, Vars[0], node1, &infeasible) );
+      assert( ! infeasible );
 
-	 SCIP_CALL( SCIPresetConsAge(scip, cons) );
-	 *result = SCIP_BRANCHED;
-      }
+      SCIP_CALL( SCIPcreateChild(scip, &node2, 0.0, SCIPcalcChildEstimate(scip, Vars[1], 0.0) ) );
+      SCIP_CALL( fixVariableZeroNode(scip, Vars[1], node2, &infeasible) );
+      assert( ! infeasible );
    }
    else
    {
@@ -609,23 +689,19 @@ SCIP_RETCODE enforceSOS1(
       SCIP_Real weight1 = 0.0;
       SCIP_Real weight2 = 0.0;
       SCIP_Real w = 0.0;
-      int j, ind;
+      int j, ind, cnt = 0;
 
       /* compute weight */
       assert( cnt == 0 );
       for (j = 0; j < nVars; ++j)
       {
-	 SCIP_Real val = fabs(SCIPgetSolVal(scip, NULL, Vars[j]));
+	 SCIP_Real val = REALABS(SCIPgetSolVal(scip, NULL, Vars[j]));
 	 weight1 += val * (SCIP_Real) j;
 	 weight2 += val;
 
 	 if ( ! SCIPisFeasZero(scip, val) )
 	    ++cnt;
       }
-
-      /* if at most one variable is nonzero, the constraint is feasible -> return */
-      if ( cnt <= 1 )
-	 return SCIP_OKAY;
 
       assert( cnt >= 2 );
       assert( !SCIPisFeasZero(scip, weight2) );
@@ -651,10 +727,9 @@ SCIP_RETCODE enforceSOS1(
 	 SCIP_CALL( fixVariableZeroNode(scip, Vars[j], node2, &infeasible) );
 	 assert( ! infeasible );
       }
-
-      SCIP_CALL( SCIPresetConsAge(scip, cons) );
-      *result = SCIP_BRANCHED;
    }
+   SCIP_CALL( SCIPresetConsAge(scip, branchCons) );
+   *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
 }
@@ -678,9 +753,9 @@ SCIP_RETCODE enforceSOS1(
  */
 static
 SCIP_RETCODE generateRowSOS1(
-      SCIP* scip,               /**< SCIP pointer */
-      SCIP_CONSDATA* consdata   /**< constraint data */
-      )
+   SCIP* scip,               /**< SCIP pointer */
+   SCIP_CONSDATA* consdata   /**< constraint data */
+   )
 {
    SCIP_VAR** Vars;
    SCIP_Real minLb = SCIPinfinity(scip);
@@ -851,7 +926,11 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
    if ( (*consdata)->weights != NULL )
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxVars);
 
+   /* free row - if still necessary */
+   if ( (*consdata)->row != NULL )
+      SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->row) );
    assert( (*consdata)->row == NULL );
+
    SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
@@ -912,26 +991,26 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    }
 
    /* create transformed constraint with the same flags */
-   snprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
+   (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
-			     SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
-			     SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
-			     SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
-			     SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
-			     SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+	 SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
+	 SCIPconsIsEnforced(sourcecons), SCIPconsIsChecked(sourcecons),
+	 SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
+	 SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
+	 SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    /* catch bound change events on variable */
    for (j = 0; j < consdata->nVars; ++j)
    {
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->Vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-				   (SCIP_EVENTDATA*)consdata, NULL) );
+	    (SCIP_EVENTDATA*)consdata, NULL) );
    }
 
 #ifdef SCIP_DEBUG
    if ( consdata->nFixedNonzero > 0 )
    {
       SCIPdebugMessage("constraint <%s> has %d variables fixed to be nonzero.\n", SCIPconsGetName(*targetcons),
-		       consdata->nFixedNonzero );
+	 consdata->nFixedNonzero );
    }
 #endif
 
@@ -1122,7 +1201,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    }
 
    SCIPdebugMessage("presolving fixed %d variables, removed %d variables, and deleted %d constraints.\n",
-		    *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
+      *nfixedvars - oldnfixedvars, removedvars, *ndelconss - oldndelconss);
 
    return SCIP_OKAY;
 }
@@ -1266,32 +1345,13 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
 {  /*lint --e{715}*/
-   int c;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_FEASIBLE;
-
-   /* check each constraint */
-   for (c = 0; c < nconss; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-      SCIPdebugMessage("Enforcing SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
-
-      SCIP_CALL( enforceSOS1(scip, conss[c], consdata, result) );
-
-      if ( *result != SCIP_FEASIBLE )
-	 return SCIP_OKAY;
-   }
-   SCIPdebugMessage("All SOS1 constraints are feasible.\n");
+   SCIP_CALL( enforceSOS1(scip, conshdlr, nconss, conss, result) );
 
    return SCIP_OKAY;
 }
@@ -1302,32 +1362,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
 {  /*lint --e{715}*/
-   int c;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_FEASIBLE;
-
-   /* check each constraint */
-   for (c = 0; c < nconss; ++c)
-   {
-      SCIP_CONSDATA* consdata;
-
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-      SCIPdebugMessage("Enforcing SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
-
-      SCIP_CALL( enforceSOS1(scip, conss[c], consdata, result) );
-
-      if ( *result != SCIP_FEASIBLE )
-	 return SCIP_OKAY;
-   }
-   SCIPdebugMessage("All SOS1 constraints are feasible.\n");
+   SCIP_CALL( enforceSOS1(scip, conshdlr, nconss, conss, result) );
 
    return SCIP_OKAY;
 }
@@ -1350,6 +1391,8 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
+   SCIPdebugMessage("Checking SOS1 constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
+
    /* check each constraint */
    for (c = 0; c < nconss; ++c)
    {
@@ -1361,7 +1404,6 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
-      SCIPdebugMessage("Checking SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* check all variables */
       for (j = 0; j < consdata->nVars; ++j)
@@ -1371,12 +1413,33 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
 	 {
 	    ++cnt;
 	    /* if more than one variable is nonzero */
-	    if ( cnt > 1 )
-	    {
-	       SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-	       *result = SCIP_INFEASIBLE;
-	       return SCIP_OKAY;
-	    }
+            if ( cnt > 1 )
+            {
+               SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+               *result = SCIP_INFEASIBLE;
+
+               if( printreason )
+               {
+                  SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+                  SCIPinfoMessage(scip, NULL, "violation: ");
+                  cnt = 0;
+
+                  for( j = 0; j < consdata->nVars && cnt < 2; ++j )
+                  {
+                     /* if variable is nonzero */
+                     if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->Vars[j])) )
+                     {
+                        SCIPinfoMessage(scip, NULL, "<%s> = %.15g ",
+                           SCIPvarGetName(consdata->Vars[j]), SCIPgetSolVal(scip, sol, consdata->Vars[j]));
+                        if( cnt == 0 )
+                           SCIPinfoMessage(scip, NULL, "and ");
+                        cnt++;
+                     }
+                  }
+                  SCIPinfoMessage(scip, NULL, "\n");
+               }
+               return SCIP_OKAY;
+            }
 	 }
       }
    }
@@ -1546,8 +1609,6 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
 
-   SCIPinfoMessage(scip, file, "  [%s] <%s>: SOS1(", CONSHDLR_NAME, SCIPconsGetName(cons));
-
    for (j = 0; j < consdata->nVars; ++j)
    {
       if ( j > 0 )
@@ -1557,7 +1618,6 @@ SCIP_DECL_CONSPRINT(consPrintSOS1)
       else
          SCIPinfoMessage(scip, file, "%s (%3.2f)", SCIPvarGetName(consdata->Vars[j]), consdata->weights[j]);
    }
-   SCIPinfoMessage(scip, file, ")\n");
 
    return SCIP_OKAY;
 }
@@ -1673,6 +1733,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   conshdlrdata->branchSOS = TRUE;
 
    /* get event handler for bound change events */
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
@@ -1684,18 +1745,28 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
-			  CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
-			  CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-			  CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-			  consFreeSOS1, consInitSOS1, consExitSOS1,
-			  consInitpreSOS1, consExitpreSOS1, consInitsolSOS1, consExitsolSOS1,
-			  consDeleteSOS1, consTransSOS1, consInitlpSOS1,
-			  consSepalpSOS1, consSepasolSOS1, consEnfolpSOS1, consEnfopsSOS1, consCheckSOS1,
-			  consPropSOS1, consPresolSOS1, consRespropSOS1, consLockSOS1,
-			  consActiveSOS1, consDeactiveSOS1,
-			  consEnableSOS1, consDisableSOS1,
-			  consPrintSOS1,
-			  conshdlrdata) );
+	 CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
+	 CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
+	 CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+	 consFreeSOS1, consInitSOS1, consExitSOS1,
+	 consInitpreSOS1, consExitpreSOS1, consInitsolSOS1, consExitsolSOS1,
+	 consDeleteSOS1, consTransSOS1, consInitlpSOS1,
+	 consSepalpSOS1, consSepasolSOS1, consEnfolpSOS1, consEnfopsSOS1, consCheckSOS1,
+	 consPropSOS1, consPresolSOS1, consRespropSOS1, consLockSOS1,
+	 consActiveSOS1, consDeactiveSOS1,
+	 consEnableSOS1, consDisableSOS1,
+	 consPrintSOS1, conshdlrdata) );
+
+   /* add SOS1 constraint handler parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchSOS", "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
+         &conshdlrdata->branchSOS, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchNonzeros", "Branch on SOS constraint with most number of nonzeros?",
+         &conshdlrdata->branchNonzeros, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/SOS1/branchWeight",
+	 "Branch on SOS cons. with highest nonzero-variable weight for branching (needs branchNonzeros = false)?",
+         &conshdlrdata->branchWeight, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1728,7 +1799,8 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP_Bool             local,              /**< is constraint only valid locally?
                                               *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -1757,20 +1829,25 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    consdata->nFixedNonzero = -1;
    consdata->weights = NULL;
    if ( nvars > 0 )
+   {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->Vars, vars, nvars) );
 
-   /* check weights */
-   if ( weights != NULL )
-   {
-      /* store weights */
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars) );
-      /* sort variables - ascending order */
-      SCIPbsortRealPtr(consdata->weights, (void**) consdata->Vars, nvars);
+      /* check weights */
+      if ( weights != NULL )
+      {
+	 /* store weights */
+	 SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, weights, nvars) );
+
+	 /* sort variables - ascending order */
+	 SCIPsortRealPtr(consdata->weights, (void**)consdata->Vars, nvars);
+      }
    }
+   else
+      assert( weights == NULL );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-			     local, modifiable, dynamic, removable, stickingatnode) );
+	 local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
 }

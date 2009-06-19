@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.96 2007/11/27 10:34:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.95.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -61,7 +59,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_Real             nodeselprio,        /**< node selection priority of new node */
-   SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
+   SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    );
 
 /** frees node */
@@ -208,6 +206,7 @@ SCIP_RETCODE SCIPnodeAddHolechg(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_HOLELIST**       ptr,                /**< changed list pointer */
    SCIP_HOLELIST*        newlist,            /**< new value of list pointer */
    SCIP_HOLELIST*        oldlist             /**< old value of list pointer */
@@ -230,6 +229,15 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< LP data */
    );
+
+/** change the node selection priority of the given child */
+extern
+void SCIPchildChgNodeselPrio(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_NODE*            child,              /**< child to update the node selection priority */
+   SCIP_Real             priority            /**< node selection priority value */
+   );
+
 
 /** sets the node's estimated bound to the new value */
 extern

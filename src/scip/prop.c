@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.18 2007/06/06 11:25:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.18.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -36,6 +34,7 @@
 #include "scip/var.h"
 #include "scip/scip.h"
 #include "scip/prop.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_prop.h"
 
@@ -112,18 +111,18 @@ SCIP_RETCODE SCIPpropCreate(
    (*prop)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "propagating/%s/priority", name);
-   sprintf(paramdesc, "priority of propagator <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of propagator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*prop)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdPropPriority, (SCIP_PARAMDATA*)(*prop)) ); /*lint !e740*/
 
-   sprintf(paramname, "propagating/%s/freq", name);
-   sprintf(paramdesc, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/freq", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*prop)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "propagating/%s/delay", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should propagator be delayed, if other propagators found reductions?",
          &(*prop)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
@@ -270,10 +269,12 @@ SCIP_RETCODE SCIPpropExec(
       if( !prop->delay || execdelayed )
       {
          SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
          
          SCIPdebugMessage("executing propagator <%s>\n", prop->name);
          
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          
          /* start timing */
          SCIPclockStart(prop->propclock, set);
@@ -289,7 +290,11 @@ SCIP_RETCODE SCIPpropExec(
             prop->ncalls++;
          if( *result == SCIP_CUTOFF )
             prop->ncutoffs++;
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
          prop->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         prop->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF

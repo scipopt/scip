@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.48 2007/06/06 11:25:26 bzfpfend Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.48.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -109,6 +107,7 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
@@ -120,7 +119,10 @@ SCIP_RETCODE SCIPpriceLoop(
                                               *   a finite limit means that the LP might not be solved to optimality! */
    int*                  npricedcolvars,     /**< pointer to store number of column variables after problem vars were priced */
    SCIP_Bool*            mustsepa,           /**< pointer to store TRUE if a separation round should follow */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Real*            lowerbound,         /**< lower bound computed by the pricers */
+   SCIP_Bool*            lperror,            /**< pointer to store whether an unresolved error in LP solving occured */
+   SCIP_Bool*            aborted             /**< pointer to store whether the pricing was aborted and the lower bound must 
+                                              *   not be used */
    );
 
 /** main solving loop */

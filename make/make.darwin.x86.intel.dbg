@@ -1,0 +1,17 @@
+#--- $Id: make.darwin.x86.intel.dbg,v 1.1.2.2 2009/06/19 07:53:34 bzfwolte Exp $
+CC		=	icc
+CXX		=	icc -Kc++
+LINKCC		=	icc
+LINKCXX		=	icc -Kc++
+FLAGS		+=	# -DROUNDING_FE
+OFLAGS		+=	-O0 -g -mp -w1 -fp-stack-check -wd279,383,444,810,981 -fno-rtti #-Xc
+CFLAGS		+=
+CXXFLAGS	+=	
+ARFLAGS		=	crs
+LDFLAGS		+=	-lm -lstdc++ -Bstatic
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

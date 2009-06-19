@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.39 2007/08/20 12:42:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.39.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -37,7 +35,7 @@
 #include "scip/message.h"
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/dialog.h"
 
 #include "scip/struct_dialog.h"
@@ -111,6 +109,20 @@ SCIP_RETCODE removeHistory(
    HIST_ENTRY* entry;
    
    entry = remove_history(pos);
+
+   /* Free readline/history storage: there seem to be differences in the versions (and the amount of
+    * data to be freed). The following should be a good approximation; if it doesn't work define
+    * NO_REMOVE_HISTORY - see the INSTALL file. This will produce minor memory leaks.
+    */
+#if RL_VERSION_MAJOR >= 5
+   (void)free_history_entry(entry);
+#else
+   if ( entry != NULL )
+   {
+      free((void*)entry->line);
+      free(entry);
+   }
+#endif
 #endif
 
    return SCIP_OKAY;
@@ -421,8 +433,7 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
       {
          /* use current dialog's path as prompt */
          SCIPdialogGetPath(dialog, '/', path);
-         snprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
-         p[SCIP_MAXSTRLEN-1] = '\0';
+         (void) SCIPsnprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
          prompt = p;
       }
 
@@ -597,7 +608,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
          strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
       else
       {
-         snprintf(s, SCIP_MAXSTRLEN-1, "%s %s", dialog->name, h);
+         (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s %s", dialog->name, h);
          (void)strncpy(h, s, SCIP_MAXSTRLEN-1);
       }
       dialog = dialog->parent;
@@ -934,9 +945,9 @@ SCIP_RETCODE SCIPdialogDisplayMenuEntry(
 
    /* display the dialog's name */
    if( dialog->issubmenu )
-      sprintf(name, "<%s>", dialog->name);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "<%s>", dialog->name);
    else
-      sprintf(name, "%s", dialog->name);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s", dialog->name);
    SCIPmessagePrintDialog("  %-21s ", name);
    if( strlen(name) > 21 )
    {
@@ -998,13 +1009,12 @@ void SCIPdialogGetPath(
 
    assert(dialog != NULL);
 
-   (void)strcpy(path, dialog->name);
+   (void)strncpy(path, dialog->name, SCIP_MAXSTRLEN);
    dialog = dialog->parent;
    while( dialog != NULL )
    {
-      snprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
-      s[SCIP_MAXSTRLEN-1] = '\0';
-      (void)strcpy(path, s);
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
+      (void) strncpy(path, s, SCIP_MAXSTRLEN);
       dialog = dialog->parent;
    }
 }

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.8 2007/06/06 11:25:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_veclendiving.c,v 1.8.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
 
 /**@file   heur_veclendiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that rounds variables with long column vectors
  * @author Tobias Achterberg
  */
@@ -298,10 +297,11 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    cutoff = FALSE;
    divedepth = 0;
    startnlpcands = nlpcands;
-   while( !SCIPisStopped(scip) && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound)) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound))
+	  && !SCIPisStopped(scip) )
    {
       SCIP_VAR* var;
       SCIP_Real bestscore;
@@ -390,17 +390,20 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
 
       var = lpcands[bestcand];
 
-      /* if the variable is already fixed, abort diving due to numerical troubles */
-      if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
-      {
-         SCIPdebugMessage("numerical troubles: selected variable <%s> already fixed to [%g,%g] (solval: %.9f)\n",
-            SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
-         break;
-      }
-
       backtracked = FALSE;
       do
       {
+         /* if the variable is already fixed, numerical troubles may have occured or 
+          * variable was fixed by propagation while backtracking => Abort diving! 
+          */
+         if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
+         {
+            SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
+               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
+            cutoff = TRUE;
+            break;
+         }
+
          /* apply rounding of best candidate */
          if( bestcandroundup == !backtracked )
          {
@@ -426,8 +429,22 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
          if( !cutoff )
          {
             /* resolve the diving LP */
+            /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+             * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+             */
+#ifdef NDEBUG
+            SCIP_RETCODE retstat;
+            nlpiterations = SCIPgetNLPIterations(scip);
+            retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+            if( retstat != SCIP_OKAY )
+            { 
+               SCIPwarningMessage("Error while solving LP in Veclendiving heuristic; LP solve terminated with code <%d>\n",retstat);
+            }
+#else
             nlpiterations = SCIPgetNLPIterations(scip);
             SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+#endif
+
             if( lperror )
                break;
             

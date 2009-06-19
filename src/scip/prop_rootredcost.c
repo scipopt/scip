@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.7 2007/08/24 16:02:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.7.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   prop_rootredcost.c
+ * @ingroup PROPAGATORS
  * @brief  reduced cost strengthening at the root node
  * @author Tobias Achterberg
  */
@@ -111,6 +110,10 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
 
    /* propagator can only be applied during solving stage */
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
+   /* propagator can only be applied if the root lp was a valid relaxation */
+   if ( !SCIPisRootLPRelax(scip) )
       return SCIP_OKAY;
 
    /* get propagator data */

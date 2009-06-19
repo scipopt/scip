@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,10 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.16 2007/06/06 11:25:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.16.2.1 2009/06/19 07:53:38 bzfwolte Exp $"
 
 /**@file   branch_pscost.c
- * @brief  pseudo costs branching rule
+ * @ingroup BRANCHINGRULES
+ * @brief  pseudo costs branching rule
  * @author Tobias Achterberg
  */
 
@@ -68,7 +67,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
 {  /*lint --e{715}*/
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
-   SCIP_Real* lpcandsfrac;
    SCIP_Real bestscore;
    SCIP_Real bestrootdiff;
    int nlpcands;
@@ -83,7 +81,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    SCIPdebugMessage("Execlp method of pscost branching\n");
 
    /* get branching candidates */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, NULL, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands) );
    assert(nlpcands > 0);
 
    bestcand = -1;

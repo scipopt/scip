@@ -25,6 +25,13 @@ typedef unsigned size_t;
 typedef int ssize_t;
 #endif
 
+/* added: (defined as for gcc) */
+typedef unsigned int uid_t;
+typedef unsigned int gid_t;
+typedef unsigned int pid_t;
+typedef long int off_t;
+/* --------------------------- */
+
 #ifndef SEEK_CUR
 #define SEEK_SET                0
 #define SEEK_CUR                1

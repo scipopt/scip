@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.60 2007/11/21 15:03:46 bzfpfend Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.59.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -295,6 +293,12 @@ SCIP_RETCODE SCIPprobExitSolve(
 extern
 const char* SCIPprobGetName(
    SCIP_PROB*            prob                /**< problem data */
+   );
+
+/** sets problem name */
+SCIP_RETCODE SCIPprobSetName(
+   SCIP_PROB*            prob,               /**< problem data */
+   const char*           name                /**< name to be set */
    );
 
 /** gets user problem data */

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.115 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.114.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -229,6 +227,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_Bool             forced,             /**< should enforcement of pseudo solution be forced? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -242,6 +241,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -398,7 +398,8 @@ SCIP_RETCODE SCIPconsCreate(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
@@ -463,8 +464,9 @@ SCIP_RETCODE SCIPconsTransform(
 
 /** sets the initial flag of the given constraint */
 extern
-void SCIPconsSetInitial(
+SCIP_RETCODE SCIPconsSetInitial(
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             initial             /**< new value */
    );
 
@@ -685,6 +687,7 @@ SCIP_RETCODE SCIPconsCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

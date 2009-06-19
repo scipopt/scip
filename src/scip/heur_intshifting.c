@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.5 2007/06/06 11:25:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.5.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
 
 /**@file   heur_intshifting.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities, shifts integer variables, and
  *         solves a final LP to calculate feasible values for continuous variables
  * @author Tobias Achterberg
@@ -174,20 +173,21 @@ SCIP_RETCODE updateActivities(
          /* update row activities */
          oldminactivity = minactivities[rowpos];
          oldmaxactivity = maxactivities[rowpos];
+
          if( !SCIPisInfinity(scip, -oldminactivity) )
          {
             newminactivity = oldminactivity + delta * colvals[r];
             minactivities[rowpos] = newminactivity;
          }
          else
-            newminactivity = oldminactivity;
+            newminactivity = -SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, oldmaxactivity) )
          {
             newmaxactivity = oldmaxactivity + delta * colvals[r];
             maxactivities[rowpos] = newmaxactivity;
          }
          else
-            newmaxactivity = oldmaxactivity;
+            newmaxactivity = SCIPinfinity(scip);
 
          /* update row violation arrays */
          updateViolations(scip, row, violrows, violrowpos, nviolrows, oldminactivity, oldmaxactivity,
@@ -739,7 +739,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
    nnonimprovingshifts = 0;
    minnviolrows = INT_MAX;
    increaseweight = 1.0;
-   while( !SCIPisStopped(scip) && (nfrac > 0 || nviolrows > 0) && nnonimprovingshifts < MAXSHIFTINGS )
+   while( (nfrac > 0 || nviolrows > 0) && nnonimprovingshifts < MAXSHIFTINGS && !SCIPisStopped(scip) )
    {
       SCIP_VAR* shiftvar;
       SCIP_Real oldsolval;
@@ -898,6 +898,9 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       SCIP_Bool lperror;
       int nintvars;
       int v;
+#ifdef NDEBUG
+      SCIP_RETCODE retstat;
+#endif
 
       SCIPdebugMessage("shifted solution is potentially feasible -> solve LP to fix continuous variables\n");
 
@@ -928,7 +931,20 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
       
       /* solve LP */
       SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+
+      /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       */
+#ifdef NDEBUG
+      retstat = SCIPsolveDiveLP(scip, -1, &lperror);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving LP in Intshifting heuristic; LP solve terminated with code <%d>\n",retstat);
+      }
+#else
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror) );
+#endif
+
       SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
       SCIPdebugMessage(" -> error=%d, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 

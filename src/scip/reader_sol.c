@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sol.c,v 1.9 2007/10/29 12:03:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_sol.c,v 1.9.2.1 2009/06/19 07:53:49 bzfwolte Exp $"
 
 /**@file   reader_sol.c
+ * @ingroup FILEREADERS 
  * @brief  file reader for primal solutions
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -26,10 +25,6 @@
 
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h>
-#endif
 
 #include "scip/reader_sol.h"
 
@@ -58,7 +53,7 @@ SCIP_DECL_READERREAD(readerReadSol)
    {
       SCIPwarningMessage("reading of solution file is only possible after a problem was created\n");
       *result = SCIP_DIDNOTRUN;
-      return SCIP_READERROR;
+      return SCIP_OKAY;
    }
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED )

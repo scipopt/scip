@@ -3,9 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2006 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2006 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -14,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.5 2007/11/16 21:05:07 bzfpfets Exp $
+# $Id: Makefile,v 1.3.2.1 2009/06/19 07:53:32 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ NLP example using SCIP as a callable library
@@ -80,9 +78,10 @@ lint:		$(MAINSRC)
 doc:
 		cd doc; $(DOXY) $(MAINNAME).dxy
 
+
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
-		ln -s $(MAIN) $@
+		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
@@ -96,20 +95,26 @@ clean:
 
 .PHONY: depend
 depend:		$(SCIPDIR)
-		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(MAINDEP)'
 
 -include	$(MAINDEP)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(CXX) $(MAINOBJFILES) \
-		-L$(SCIPDIR)/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
+		$(LINKCXX) $(MAINOBJFILES) \
+		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKERLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKERLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKERLIBSUFFIX) \
+                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o) $@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o) $@
 
-# --- EOF ---------------------------------------------------------------------
+$(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
+		@echo "-> compiling $@"
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o) $@
+
+#---- EOF --------------------------------------------------------------------

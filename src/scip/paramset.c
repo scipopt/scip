@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.43 2007/11/15 10:53:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.42.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -26,15 +24,10 @@
 
 #include <assert.h>
 #include <string.h>
-#if defined(_WIN32) || defined(_WIN64)
-#else
-#include <strings.h>
-#endif
 
 #include "scip/def.h"
 #include "scip/message.h"
 #include "scip/set.h"
-#include "scip/misc.h"
 #include "scip/paramset.h"
 
 #include "scip/struct_paramset.h"
@@ -1253,7 +1246,7 @@ SCIP_RETCODE SCIPparamsetCreate(
    SCIP_ALLOC( BMSallocMemory(paramset) );
 
    SCIP_CALL( SCIPhashtableCreate(&(*paramset)->hashtable, blkmem, SCIP_HASHSIZE_PARAMS,
-                  hashGetKeyParam, SCIPhashKeyEqString, SCIPhashKeyValString) );
+         hashGetKeyParam, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
 
    (*paramset)->params = NULL;
    (*paramset)->nparams = 0;
@@ -2035,7 +2028,7 @@ SCIP_RETCODE SCIPparamsetRead(
    if( file == NULL )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      perror(filename);
+      SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }
 
@@ -2045,11 +2038,16 @@ SCIP_RETCODE SCIPparamsetRead(
    {
       lineno++;
       retcode = paramsetParse(paramset, set, line);
-      if( retcode == SCIP_PARSEERROR )
+      if ( retcode != SCIP_OKAY )
       {
-         SCIPerrorMessage("input error in file <%s> line %d\n", filename, lineno);
+	 fclose(file);
+      
+	 if( retcode == SCIP_PARSEERROR )
+	 {
+	    SCIPerrorMessage("input error in file <%s> line %d\n", filename, lineno);
+	 }
+	 SCIP_CALL( retcode );
       }
-      SCIP_CALL( retcode );
    }
 
    /* close input file */
@@ -2077,8 +2075,8 @@ SCIP_RETCODE SCIPparamsetWrite(
       file = fopen(filename, "w");
       if( file == NULL )
       {
-         SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
-         perror(filename);
+	 SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
+         SCIPprintSysError(filename);
          return SCIP_FILECREATEERROR;
       }
    }

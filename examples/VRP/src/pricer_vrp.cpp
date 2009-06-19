@@ -1,8 +1,18 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*  Pricer for tour variables in capacitated VRP                             */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License.             */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.1.2.1 2009/06/19 07:53:33 bzfwolte Exp $"
 
 #include "pricer_vrp.h"
 #include "pqueue.h"
@@ -10,6 +20,11 @@
 #include <iostream>
 #include <map>
 #include <vector>
+
+extern "C"
+{
+#include "scip/misc.h"
+}
 
 using namespace std;
 using namespace scip;
@@ -89,7 +104,9 @@ SCIP_RETCODE
 ObjPricerVRP::
 scip_redcost
 ( SCIP*              scip,               /**< SCIP data structure */
-  SCIP_PRICER*       pricer )            /**< the variable pricer itself */
+  SCIP_PRICER*       pricer,             /**< the variable pricer itself */
+  SCIP_Real*         lowerbound,         /**< a lowerbound computed by the pricer */
+  SCIP_RESULT*       result )            /**< the result of the pricer call */
 {
 #if ( SCIP_DEBUG >= 2 )
    cerr << "CALL scip_redcost" << endl;
@@ -99,6 +116,9 @@ scip_redcost
    // store only lower triangualar matrix, i.e., 
    // red_length[i][j] only for i > j
    //--------------------
+
+   // set result pointer
+   *result = SCIP_SUCCESS;
 
    // allocate array
    vector< vector<double> > red_length ( num_nodes() );
@@ -226,11 +246,11 @@ add_tour_variable
    char      var_name[255];
    
    // create meaningful variable name
-   sprintf(var_name, "T" );
+   SCIPsnprintf(var_name, 255, "T" );
    for ( list<int>::const_iterator it = tour.begin(); 
          it != tour.end(); 
          ++it ) {
-      sprintf(var_name, "%s_%d", var_name, *it );
+      SCIPsnprintf(var_name, 255, "%s_%d", var_name, *it );
    }
    
 #if ( SCIP_DEBUG >= 1 )

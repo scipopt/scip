@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.66 2007/06/15 10:06:40 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.66.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -68,6 +66,18 @@ SCIP_Bool SCIPvarMayRoundDown(
 /** is it possible, to round variable up and stay feasible? */
 extern
 SCIP_Bool SCIPvarMayRoundUp(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks the variable to have a lazy lower bound, this only possible if the variable is not in the LP yet */
+extern
+SCIP_RETCODE SCIPvarMarkLazyLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks the variable to have a lazy upper bound, this only possible if the variable is not in the LP yet */
+extern
+SCIP_RETCODE SCIPvarMarkLazyUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -342,6 +352,22 @@ SCIP_Bool SCIPvarIsDeleted(
 /** returns whether variable is an active (neither fixed nor aggregated) variable */
 extern
 SCIP_Bool SCIPvarIsActive(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether variable is not allowed to be multi-aggregated */
+extern
+SCIP_Bool SCIPvarDoNotMultaggr(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether variable has lazy lower bound */
+SCIP_Bool SCIPvarLazyLb(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns whether variable has lazy upper bound */
+SCIP_Bool SCIPvarLazyUb(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -623,6 +649,12 @@ SCIP_CLIQUE** SCIPvarGetCliques(
    SCIP_Bool             varfixing           /**< FALSE for cliques containing x == 0, TRUE for x == 1 */
    );
 
+/** gets primal LP solution value of variable */
+extern
+SCIP_Real SCIPvarGetLPSol(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -644,15 +676,19 @@ SCIP_CLIQUE** SCIPvarGetCliques(
 #define SCIPvarGetType(var)             ((SCIP_VARTYPE)((var)->vartype))
 #define SCIPvarIsIntegral(var)          ((var)->vartype != SCIP_VARTYPE_CONTINUOUS)
 #define SCIPvarIsInitial(var)           (var)->initial
-#define SCIPvarIsRemovable(var)        (var)->removable
+#define SCIPvarIsRemovable(var)         (var)->removable
 #define SCIPvarIsDeleted(var)           (var)->deleted
 #define SCIPvarIsActive(var)            ((var)->probindex >= 0)
+#define SCIPvarDoNotMultaggr(var)       (var)->donotmultaggr
+#define SCIPvarLazyLb(var)              (var)->lazylb
+#define SCIPvarLazyUb(var)              (var)->lazyub
 #define SCIPvarGetIndex(var)            (var)->index
 #define SCIPvarGetProbindex(var)        (var)->probindex
 #define SCIPvarGetTransVar(var)         (var)->data.original.transvar
 #define SCIPvarGetCol(var)              (var)->data.col
 #define SCIPvarIsInLP(var)              ((var)->varstatus == SCIP_VARSTATUS_COLUMN && SCIPcolIsInLP((var)->data.col))
-#define SCIPvarGetAggrVar(var)          (var)->data.aggregate.var
+/* use different name for var - otherwise we have clash with the var at the end */
+#define SCIPvarGetAggrVar(war)          (war)->data.aggregate.var
 #define SCIPvarGetAggrScalar(var)       (var)->data.aggregate.scalar
 #define SCIPvarGetAggrConstant(var)     (var)->data.aggregate.constant
 #define SCIPvarGetMultaggrNVars(var)    (var)->data.multaggr.nvars
@@ -692,6 +728,7 @@ SCIP_CLIQUE** SCIPvarGetCliques(
 #define SCIPvarGetImplIds(var, fix)     (SCIPimplicsGetIds((var)->implics, fix))
 #define SCIPvarGetNCliques(var, fix)    (SCIPcliquelistGetNCliques((var)->cliquelist, fix))
 #define SCIPvarGetCliques(var, fix)     (SCIPcliquelistGetCliques((var)->cliquelist, fix))
+#define SCIPvarGetLPSol(var)            ((var)->varstatus == SCIP_VARSTATUS_COLUMN ? SCIPcolGetPrimsol((var)->data.col) : SCIPvarGetLPSol_rec(var))
 #endif
 
 /** gets best local bound of variable with respect to the objective function */
@@ -720,7 +757,7 @@ SCIP_BOUNDTYPE SCIPvarGetWorstBoundType(
 
 /** gets primal LP solution value of variable */
 extern
-SCIP_Real SCIPvarGetLPSol(
+SCIP_Real SCIPvarGetLPSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    );
 

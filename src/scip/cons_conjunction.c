@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.32 2007/10/31 09:26:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.32.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
 
 /**@file   cons_conjunction.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
  */
@@ -214,6 +213,7 @@ SCIP_RETCODE checkAllConss(
    SCIP_SOL*             sol,                /**< solution to check */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -231,7 +231,7 @@ SCIP_RETCODE checkAllConss(
       /* check all constraints */
       for( i = 0; i < consdata->nconss && *result == SCIP_FEASIBLE; ++i )
       {
-         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, result) );
+         SCIP_CALL( SCIPcheckCons(scip, consdata->conss[i], sol, checkintegrality, checklprows, printreason, result) );
       }
 
       /* disable conjunction constraint, if it is unmodifiable */
@@ -240,7 +240,7 @@ SCIP_RETCODE checkAllConss(
          SCIP_CALL( SCIPdelConsLocal(scip, conss[c]) );
       }
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -376,7 +376,7 @@ SCIP_DECL_CONSCHECK(consCheckConjunction)
    *result = SCIP_FEASIBLE;
 
    /* check all constraints of the conjunction */
-   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, result) );
+   SCIP_CALL( checkAllConss(scip, conss, nconss, sol, checkintegrality, checklprows, printreason, result) );
 
    return SCIP_OKAY;
 }
@@ -558,7 +558,8 @@ SCIP_RETCODE SCIPcreateConsConjunction(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic             /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    )
 {
    SCIP_CONSHDLR* conshdlr;

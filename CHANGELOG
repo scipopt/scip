@@ -1,6 +1,125 @@
 current version
 ===============
 
+interface:
+- new parameter "mksetcoefsvalid" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR(), and sepa_cmir.c: tryDelta() to store
+  whether "mksetcoefs" computed in SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows 
+  is empty or contains too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
+- new parameter "set" in SCIPconsSetInitial().
+- new methods SCIPvarMarkLazyLb() and SCIPvarMarkLazyUb() in pub_var.h and var.c; These methods can be used to set the lower or upper bound 
+  of a variable as lazy; This has the consequences that these bounds are not in LP.
+- new methods SCIPgetNFixedonesSetppc() and SCIPgetNFixedzerosSetppc() in cons_setppc.{h,c}; these methods returns current (local) 
+  number of variables fixed to one/zero in the given setppc constraint
+- new methods SCIPprintNodeRootPath() in scip.h This method prints all branching decisions on variables from the root to the given node
+- new methods SCIPnodeGetParentBranchings(), SCIPnodeGetAncestorBranchings(), SCIPnodeGetAncestorBranchingPath(); These methods return
+  the set of variable branchings that were performed in the parent node / all ancestor nodes to create a given node
+- new methods SCIPgetVarConflictlengthScore(), SCIPgetVarAvgConflictlength(), SCIPgetAvgConflictlengthScore() and their pendants for the 
+  current run
+- new method to deactivate a pricer SCIPdeactivatePricer() in scip.c
+- new parameter <constraints/and/enforcecuts> in cons_and.c, should cuts be separated during LP enforcing?
+- new function SCIPsetProbName() to set problem name in scip.h/c (SCIPprobSetName() in prob.h/c)
+- new parameter <constraints/and/presolusehashing> in cons_and.c, should pairwise presolving use hashing?, default TRUE
+- new parameters "lowerbound" and "result" in type_pricer.h: lowerbound can save a lower bound computed by the pricer,
+  result indicates whether the pricer guarantees that there exist no more variables if no variable was found
+- new methods SCIPisLPRelax() and SCIPisRootLPRelax() in scip.c and scip.h returning whether the current/root LP is a 
+  relaxation of the current/root problem and thus defines a valid lower bound
+- new methods SCIPlpSetIsRelax() and SCIPlpSetRootLPIsRelax() in lp.c and lp.h to set the information, whether the lp is a valid relaxation;
+  this information is per default set to true
+- new parameters <constraints/and/aggrlinearization> in cons_and.c, should an aggregated version of the linearization of the 
+  and constraint be used. The aggregated version has only 2 linear constraints the default linearization has nvars + 1
+- removed parameter "constraints/and/initiallp" since it is not needed anymore;
+- set "constraints/and/sepafreq" default value to 1
+- added function SCIPgetTransObjscale() and SCIPgetTransObjoffset() in scip.c
+- new interface methods SCIPcolSort(), SCIProwSort(), SCIPcolGetIndex()
+- extended the sort template functions in sorttpl.c with a "five" array; now it possible to used this template to sort up to five arrays
+- new parameters <constraints/countsols/sollimit> in cons_countsols.c, counting stops, if the given number of solutions were found (-1: no limit)  
+
+features:
+- adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
+- new interface to QSopt due to Daniel Espinoza
+- new reader for reading and writing FlatZinc models
+- new presolving step in cons_knapsack.c, same like "simplifyinequalities" in cons_linear.c
+- each variable has now two additional Bool parameter which determine whether the lower or upper bound are lazy; lazy means 
+  that there exists a constraint which implies this bound. Variable bounds which are marked as lazy are not in the LP. These 
+  parameters are set to FALSE in default which yields the same behavior as before. With the methods SCIPvarMarkLazyLb() and 
+  SCIPvarMarkLazyUb() these parameters can be set to TRUE. (This is of interest if SCIP gets used as a
+  branch-and-price framework).
+- added new timing point, SCIP_HEURTIMING_DURINGPRICINGLOOP, for calling heuristics; If this timing point is used the corresponding 
+  heuristics is called during the pricing loop of variables; we also added this timing point to heur_simplerounding.{h,c} which
+  has the effect that a LP solution which satisfies all integrality conditions during the pricing loop is detected
+- extended hybrid relpscost branching rule by usage of the average length of conflicts a variable appears in
+- one can now write indicator constraints in LP-format
+- now it's possible to write strings with more than "SCIP_MAXSTRLEN" amount of characters in all message.c functions
+- the current/root lp can be marked to be no relaxation of the current/root problem
+- "early branching"-functionality added: in a branch-and-price code, the user can stop pricing at a node although there may exist variables 
+  with negative reduced costs. In this case, the lp-lowerbound will not be used. The pricer has, however, the option to return a lower bound.
+
+performance improvements:
+- replaced some function calls in loop conditions
+- in sepa_cmir.c, if mksetcoefs is invalid for delta=1 no other values of delta are tested anymore
+- changed the timing of the feasibility pump in case of pricing
+- removed changing of update rule to "ETA" from standard soplex update "Forrest-Tomlin" in lpi_spx.cpp
+- improved memory usage in heur_octane.c
+- improved reading time of opb-files, due to using a hashtable for all "and"-constraints
+- improved pairwise presolving in cons_and.c due to using a hashtable 
+
+fixed bugs:
+- fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 
+  the final pivot step in order to exceed the objlimit, do one additional simplex step with pricing strategy steepest 
+  edge, if this doesn't suffice, turn off fastmip temporarily and solve again. Also consider solstat of the new solution.
+- corrected two asserts in sepa_redcost.c (reduced costs can be negative for fixed variables - qsopt uses this)
+- corrected several bugs in the Clp-interface concerning return values
+- corrected bug in reader_lp.c: earlier read bounds were thrown away (implementation was not conforming to standard)
+- fixed potential interface bug: time limits of 0.0 are not anymore passed to the LP solver, which may have caused errors
+- fixed wrong result in check.awk, if infeasible problems are stopped in presolving
+- fixed wrong use of pointer in lp.c
+- fixed memory error in cons_countsols.c 
+- fixed bug in SCIPsolveNode() concerning the case that the time limit was hit while solving the LP relaxation 
+  of a subproblem which is already an LP (branching on pseudo solution is not possible)
+- fixed wrong fixing of reading bug which was in real a writing bug in MPS format; integer variables in mps format 
+  without bounds are binary variables, if the bound of an integer variable is infinity you have to write this bound
+- fixed bug in chgRhs() and chgLhs() of cons_linear.c: after changing lhs or rhs of a constraints
+  lhs <= rhs has to be satisfied without numerical tolerances
+- fixed bug in sepa_zerohalf.c; replacement of own sorting functions by template functions was incorrect
+- fixed bug in sepa_cmir.c concerning uninitialized mksetcoefs (if MIR-cut generation is aborted because the aggregated 
+  constraint is empty or contains too many nonzero elements mksetcoefs is invalid) 
+- fixed bug in SCIPconsSetInitial() that occurred in pairwise presolving: add or delete constraint in initconss when changing
+  the initial flag
+- fixed "GGT-Kaibel-Bug" in var.c, prop_pseudoobj.c and cons_varbound.c that occured while computing new values using infinity values
+- fixed assert in cons_and.c method SCIP_DECL_CONSINITSOL(consInitsolAnd)
+- fixed bug with exponential complexity for reallocating memory in SCIPvarGetActiveRepresentatives in var.c
+- fixed possible infinite loop while multiaggregating a variable in var.c
+- fixed bug with array dimension not reset to zero when array is freed in pseudoobj propagator
+- fixed bug with empty constraints in several writing routines 
+- fixed bug with invalid pseudo solution (lower bound was always >= 0) when using pricing.
+- fixed bug with incorrect pseudo activities when objective of a variable switches sign in linear constraint handler
+- fixed bug with enforcement of pseudo solutions: if pseudo solution is choosen because LP hit a limit, it has to be enforced in any case
+- fixed bug in vbc tools concerning of marking probing nodes
+- fixed infinity loop in simplify inequalities in cons_linear.c
+- fixed exponential calculation of solution values during check of original solution, therefor changed SCIPvarGetActiveRepresentatives() in var.c and flattened all multiaggregated vars at the end of presolving in exitPresolve()
+- added and changed some SCIPisStopped() calls in several heuristics
+- changed wrong writing of mps files due to constraints without any name
+- now frees debug memory
+- fixed a bug during reading debug solution file 
+- interrupts optimization prozess if a node will be cutoff, which allows the solution
+- fixed bug with wrong abort criterion in presolving
+- fixed wrong assert in cons_knapsack.c and handled a special this case in simplifyInequalities()
+- fixed bug in SCIPgetSolVals() similar to SCIPgetSolVal(): try to get original variables of transformed ones if the solution lives in original space
+- fixed potential bug in coloring example: SCIPcreateChild() is now given an estimate in terms of the transformed problem by 
+  SCIPgetLocalTransEstimate(), no longer the estimated original problem value. Also clarified this in the comments for SCIPcreateChild()
+- fixed potential bug: restarts are now only done if no active pricers exist
+- fixed bug in cons_countsols.c we respect to warning message that "The current parameter setting might cause ..."  
+- fixed bug when using lazy lower/upper bounds: columns deleted from the lp are now always deleted from the lazycols array, too
+
+plugins:
+- added interface to QSopt due to Daniel Espinoza
+- added reader for FlatZinc models (reader_fzn.{c,h})
+- added multi-commodity-flow cut separator
+
+
+SCIP version 1.1.0
+===============
+
 compiling:
 - added in all make/make.* "GMP_FLAGS" and "GMP_LDFLAGS"
 - new flag GMP with values ("auto", "true, and "false"); in case of "auto" the library gmp is linked if 
@@ -9,9 +128,16 @@ compiling:
   and removed LPS=spxdbg and LPS=clpdbg
 - added "make/make.project" as default make include for external projects using SCIP
 - adapted all makefiles of the examples accordingly
-- added possibilty in makefile to compile shared libraries (and added make/make.linux.x86.gnu.opt-shared)
+- added possibility to compile shared libraries in makefiles (and added make/make.linux.x86.gnu.opt-shared)
+- replaced <string> by <cstring> in all C++-interfaces to get 'strlen()' included (gcc-4.3 gave an error)
+- Moved -rpath option for ld to linux-specific Makefiles.
+- Re-activated readline library on darwin/ppc.
+- added target spx132 for SoPlex version 1.3.2
+- removed tag make testpre (useless without corresponding scripts)
+- added tag testcount (make testcount); this allows for testing counting problem 
 
 interface:
+- new method SCIPchgChildPrio() to change the node selection priority of the given child
 - new method SCIPconsGetPos()
 - new parameters "extension" and "genericnames" in SCIPprintTransProblem() defining the 
   requested format or NULL for default CIP format and using generic names for the variables and constraints
@@ -28,13 +154,60 @@ interface:
 - new method SCIPrepropagateNode() to mark a node for repropagation
 - new method SCIPcount() (in cons_countsols.h) for counting all feasible solution of a given CIP
 - new method SCIPcreateRootDialog() (in dialog_default.h) which creates a root dialog
+- new method SCIPbsortInd()
+- replaced sorting methods SCIPbsort...() by faster (quicksort/shellsort) algorithms SCIPsort...()
+  Note that the order of the paramters has been changed to simplify the template code in sorttpl.c!
+- expand sorttpl.c by some parameters
+- added some downwards-sorting methods
+- changed some names for sorting methods
+- new parameter 'maxfrac' for SCIPcalcStrongCG()
+- the parameter list of the method SCIPcheckSolOrig() (scip.h) has changed; the new advatage is,
+  that SCIP can print the reason for a violation as for as the violated component supports this
+- the parameter list of the method SCIPcheckCons() (scip.h) has changed; the new advatage is,
+  that SCIP can print the reason for the violation of a constraint as for as the constraint handler supports that
+- the interface method SCIP_DECL_CONSCHECK() has a new parameter "printreason"; if this comes in TRUE the constraint
+  handler is ask to print for violated constraint a reason;
+- the parameter list of the method scip_check() (objconshdlr.h) has an additional parameter "printreason" 
+  see for explanation the previous point
+- new method SCIPgetVectorEfficacyNorm()
+- new method SCIPcutGenerationHeuristicCmir() in sepa_cmir.h
+- new method SCIPseparateRelaxedKnapsack() in cons_knapsack.h
+- new method SCIPgetCutoffdepth() which returns the depth of first node in active path that is marked being cutoff
+- added user pointer to callback methods of hash table
+- new method SCIPflattenVarAggregationGraph()
+- new method SCIPclockGetLastTime()
+- new methods SCIPsortedvecInsert...(), SCIPsortedvecInsertDown...(), SCIPsortedvecDelPos...(), SCIPsortedvecDelPosDown...(),
+  SCIPsortedvecFind...(), and SCIPsortedvecFindDown...() to manage sorted vectors or groups of vectors of various data types
+  that are sorted w.r.t. the first vector
+- new method SCIPcalcHashtableSize() to get a reasonable hash table size
+- new methods SCIPheurGetTimingmask() and SCIPheurSetTimingmask()
+- added new LPI pricing option SCIP_PRICING_LPIDEFAULT, such that every LP interface can set the default pricing strategy
+  on its own ('auto' is not useful for this, because for CPLEX, for example, SCIP seems to be worse with 'auto' then with
+  'steepest edge')
+- SCIPgetVarRedcost() now returns 0 for variables that have been aggregated out or removed in presolving.
+- new methods SCIPgetVarFarkasCoef() and SCIPgetColFarkasCoef() to get the
+  farkas coefficient of a variable (analogon of reduced cost in case of infeasible LPs)
+- new parameter "maxmksetcoefs" for SCIPcalcMIR() and SCIPcalcStrongCG() methods
+- new method SCIPprintSysError which encapsulates the strerror_r calls, 
+  the NO_STRERROR_R flag switches between the use of strerror_r and strerror inside
+- new method SCIPgetRepropdepth() to get the depth of first node in active path that has to be propagated again 
+- new method SCIPsnprintf() safe version of snprintf (and sprintf)
+- Many changes in the SoPlex interface: The current one is tailored towards SoPlex 1.4 (aka 1.3.3). All SoPlex functions
+  (where applicable) should now have an exception handling. The Bugfix for adding columns has been moved to SoPlex. 
+  One can use ROW representation. Reading/writing of a basis has been implemented.
+- new parameters "extension" in SCIPreadProb() defining a desired file format or NULL if file extension should be use
+- new methods SCIPreaderCanRead() and SCIPreaderCanWrite() in pub_reader.h, these return TRUE if the corresponding 
+  reader is capable to read or write, respectively
+- new methods SCIPmajorVersion, SCIPminorVersion, and SCIPtechVersion() returning the corresponding version
+- changed default frequency parameters for RINS, Local Branching, Crossover and Mutation heuristic
+  This should not change the performance but happened just for consistency reasons
 
 features:
 - the MPS reader is now able to write a problem in MPS format
 - new method SCIPwriteOrigProblem(), e.g., 
-  SCIPwriteOrigProblem(scip, "orig.lp", FALSE) prints the original problem in LP format in the file "orig.lp"
+  SCIPwriteOrigProblem(scip, "orig.lp", NULL, FALSE) prints the original problem in LP format in the file "orig.lp"
 - new method SCIPwriteTransProblem(), e.g.,
-  SCIPwriteOrigProblem(scip, NULL, FALSE) displays the transformed problem in CIP format 
+  SCIPwriteTransProblem(scip, NULL, NULL, FALSE) displays the transformed problem in CIP format 
 - new method SCIPgetProbvarLinearSum()
 - added SOS2 example
 - extended TSP example
@@ -42,8 +215,30 @@ features:
 - the LP reader reads SOS constraints of type 1 and 2
 - the MPS reader reads the SOS section (but cannot yet handle 'MARKERS')
 - output of real values is now done with 15 digits after the decimal point
-- new method SCIPgetResultantAnd() which return the resultant variable of an "and" constraint 
-- SCIP is now able to count all feasible solutions of give CIP (SCIPcount() in cons_countsols.h)
+- new method SCIPgetResultantAnd() which returns the resultant variable of an "and" constraint 
+- SCIP is now able to count all feasible solutions of a given CIP (SCIPcount() in cons_countsols.h)
+- SCIP can now output a picture of the constraint matrix in PPM format.
+- replaced some old sorting methods in cons_knapsack.c, heur_octane.c, sepa_flowcover.c and presol_probing.c through SCIPsort... interfaces, adjusted misc.{c,h} and pub_misc.h for these changes
+- updated mmm.{test,solu}, mittelmann.{test,solu}, miplib3.solu, miplib.solu, shortmiplib.test and added mittelmann_current.test, mittelmann_old.test 
+- LPI now has a function SCIPlpiGetSolverPointer() that returns a solver dependent pointer. This can be used to directly access the LP solver. 
+  This should, of course, only be used by people that know exactly what they are doing.
+- added ccg-reader (weighted column connectivity graph)
+- cons_countsols.c is now able to store the collected solution if required
+- check.awk now uses TeX package supertabular which supports automatic pagebreak
+- struct SCIP_Stat has now two additional variables: nprobboundchgs, nprobholechgs; 
+  these are used to fix the domain reduction counts in sepa.c, cons.c, branch.c, and prop.c; 
+  this means, that now the domain reduction counts are reduced by those domain reduceds which are preformed during probing
+- The SoPlex LPI can now write basis files.
+- added capabilities to avoid multi-aggregation by setting a corresponding flag (SCIPmarkDoNotMultaggrVar())
+- added capabilities to flatten the (multi)-aggregation graph of variables
+- the ZPL reader is now able to pass a starting solution to SCIP
+- revised lpi_clp.cpp (many small changes, in particular writing and reading of bases)
+- added FASTMIP settings in lpi_clp.cpp that try to improve the performance of Clp as much as possible
+- added coloring example in examples/Coloring
+- added test scripts for testing counting (make testcount)
+- allow cut selection based on support of inequality in orthogonality computation
+- advanced reading and writing dialog in interactive shell
+- replaced tcsh by bash and gawk by awk in all check scripts to achieve higher compatibility
 
 plugins:
 - added first version of SOS type 1 constraint handler (cons_sos1.{c,h})
@@ -51,10 +246,15 @@ plugins:
 - less aggressive scaling in linear constraint handler presolve to improve numerics
 - added reader for pseudo-Boolean problems (reader_opb.{c,h})
 - added first version of constraint handler cons_countsols.{c,h}
+- pseudoobj propagator now also propagates the global lower (dual) bound
+- linear constraint handler now detects continuous variables that are implicit integer in dual presolve
+- the c-MIR separator now also tries to get rid of implicit integer variables by aggregation
+- new heuristic DINS (distance induced neighborhood search by Ghosh)
+- new presolver boundshift (presol_boundshift.{c,h}); this presolver is currently turned off with default parameter setting
+- new separator sepa_zerohalf.{c,h}; separates {0,1/2}-Cuts according to Caprara and Fischetti
 
 parameters:
 - new parameter "constraints/and/linearize" to enable linearization of all <and> constraints (in presolving),
-to enasearch for aggregations in equations in the presolving step
 - new parameter "constraints/linear/aggregatevariables" to search for aggregations in equations in the presolving step
 - changed parameter default values for the priority of presolver "dualfix" and "inttobinary"
 - new parameter "constraint/linear/upgrade/binpack" to enable or disable the linear upgrading process
@@ -64,6 +264,46 @@ to enasearch for aggregations in equations in the presolving step
 - new parameter "constraint/linear/upgrade/logicor" to enable or disable the linear upgrading process
 - new parameter "constraint/linear/upgrade/setppc" to enable or disable the linear upgrading process
 - new parameter "constraint/linear/upgrade/varbound" to enable or disable the linear upgrading process
+- new parameter "constraints/SOS1/branchSOS" to enable or disable branching on SOS1 constraints
+- new parameter "constraints/SOS1/branchNonzeros" to decide whether SOS1 constraint with largest number of nonzero variables is picked for branching
+- new parameter "constraints/indicator/branchIndicators"  to decide whether it is branched on indicator constraints in enforcing
+- new parameter "constraints/indicator/genLogicor" to decide whether logicor constraints instead of cuts are generated
+- new parameter "constraints/indicator/sepaAlternativeLP" to decide whether separation takes place using the alternative LP
+- new parameter "constraints/linear/simplifyinequalities" to enable a simplification step for inequalities; default value is set to FALSE = disabled
+- new parameter "constraints/linear/dualpresolving" to disable dual presolving step in the linear constraint handler; default value is TRUE
+- new parameter "heuristics/mutation/minimprove"
+- new parameter "constraints/and/initiallp" to turn on, off, or 'auto' that the LP relaxation of the AND constraints are in the initial LP;
+- new parameter "constraints/countsols/collect" to enable the storing of the solutions; default value FALSE;
+- new parameter "constraints/indicator/addCoupling" to enable generation of relaxation
+- removed parameter "separating/cmir/maxtestdeltaroot"
+- new value 'l' for parameter "lp/pricing", which is the new default
+- new parameter "separating/cmir/densityoffset" to allow for more c-MIR cuts on small models
+- new parameter "heuristics/feaspump/beforecuts" to allow the feaspump to be called before cut separation
+- new parameter "separating/orthofunc" to choose function for scalar product computation in orthogonality test
+- new parameter "constraints/setppc/presolusehashing" to use hashing comparison in cons_setppc.c; default value is TRUE
+- new parameter "constraints/logicor/presolusehashing" to use hashing comparison in cons_logicor.c; default value is TRUE
+- new parameter "constraints/linear/presolusehashing" to use hashing comparison in cons_linear.c; default value is TRUE
+- disabled zerohalf cuts by default
+- adjusted all predefined settings files, e.g., settings/cuts/fast.set, such that they are consistent wrt 
+  removed, added, and changed parameter values of scip.
+- added predefined settings file presolving/aggressive.set
+
+performance improvements:
+- improved the performance of SCIPcalcMIR() and SCIPcalcStrongCG() by exploiting sparsity
+- better branching in SOS1/SOS2 constraints
+- improved pairwise presolving in cons_linear.c: reduced cache misses, reduced number of SCIPisStopped() calls and 
+  included detecting of redundant constraints with hash table in advance
+- small performance improvement of c-MIR aggregation heuristic
+- tighter memory limits in knapsack presolve lifting procedure to avoid overly expensive presolving
+- heavily decreased the usage of SCIPisStopped(), which costs system time
+- fixed performance bug with large number of unnamed constraints that will kill the name hash table
+  (now, unnamed constraints are not put into the hash table)
+- reworked strong branching in lpi_clp.cpp (scaling works now, bounds can be trusted)
+- improved performance of SCIPvarGetLPSol(), which affects many parts of the code, in particular Gomory and strong CG cuts
+- do not calculate MIR and StrongCG cut aggregations if number of nonzeros in aggregated row is too large
+- included detecting of redundant constraints with hash table in advance in cons_logicor.c and limit other pairwise presolving
+- included detecting of redundant constraints with hash table in advance in cons_setppc.c and limit other pairwise presolving
+- limit pairwise presolving in cons_linear.c
 
 fixed bugs:
 - added handling of the case of roundable variables with 0 objective in presol_dualfix.c
@@ -75,14 +315,87 @@ fixed bugs:
 - fixed bug with writing the MIP relaxation to a file concerning the objective function; in case the original 
   objective function is requested, the transformed objective function gets re-transformed (scaling, offset)  
 - added checks whether a plugin (handler) has already been included to avoid later complications e.g. with parameters.
-- Fixed obvious bug in linear constraint data sorting. Most part of the code assumed pure index sorting, but in fact,
+- fixed obvious bug in linear constraint data sorting. Most part of the code assumed pure index sorting, but in fact,
   it was sorted by variable type as first criterion and index as second criterion.
-- Fixed bug with wrong objective sense output for transformed problem. The transformed problem is always a minimization
+- fixed bug with wrong objective sense output for transformed problem. The transformed problem is always a minimization
   problem!
 - fixed numerical issue in linear constraint propagation: need slightly more aggressive tightening such that probing does
   not choose a wrong value for fixing inside an epsilon interval
 - fixed bug with objective scaling after restart
-
+- fixed bug with useless objective cutoff in LNS heuristics
+- fixed bug with wrong 'tightened' return value of some of the change bounds methods
+- fixed bug with non-conformal parameter name in reader_ppm
+- fixed bugs in sorttpl.c: fixed wrong arraysize in shellsort; in case an has at most one element, then no sorting is applied
+- fixed bug in cons_countsols.c concerning variable locking
+- fixed wrong if condition for function call in sorttpl.c 
+- forced full propagation in presolving -> this fixes a bug that implied that variable locks became inconsistent
+- avoid aggregation of implicit integers with fractional aggregation scalars
+- fixed infinite loop in LP file reader if a line exceeds the character limit
+- replaced calls to perror() by SCIP error message using strerror(errno); this avoids problems with the error output stream
+- fixed bug in method SCIPgetProbvarLinearSum() 
+- fixed bug in aggregateActiveIntVars(): If a < 0, multiply a*x + b*y == c by -1 (algo for finding initial solution 
+  does only work for a > 0).
+- fixed bugs in second part of consdataTightenCoefs(): Removed min/maxleftactisinfinity (definition was not
+  correct), fixed calculation of min/maxleftactivity, and removed asserts concerning whether all redundant vars
+  were deleted (led to different behavior in debug and opt mod).
+- corrected invalid memory access in tcliqueIsEdge: added check whether node1 has no neighbors (tclique_graph.c)
+- fixed numerical bug in dual presolving of linear constraint handler
+- fixed typo in documentation: default value for "dynamic" parameter is FALSE for all constraint handlers!
+- fixed bug with multi-aggregated variables in cons_logicor: instead of fixing them, a linear constraint will be created
+- fixed bug with uncatched LPSOLSTAT after hitting a time or iteration limit
+- fixed bug with wrong update of activities in linear constraints after global upper bound changes
+- avoid fixing variables to infinity in order to get rid of numerical inconsistencies in the original model
+- fixed bug in reader_ppm while appending strings for output file
+- fixed bug with errors occurring in sub-MIPs. Search is only aborted in dbg mode, in opt mode a warning will be printed
+- fixed bug in tclique-graph datastructure concerning insertion of edges into nonempty graph
+- corrected bug in SCIPtreeBranchVar() (tree.c) - several comparison functions needed a 'feas'.
+- corrected bug in SCIPlpGetState if the LP is empty
+- corrected bug in cons_linear.c:applyFixings() [if variable was fixed to infinity the rhs/lhs were wrong]
+- corrected bug in priceAndCutLoop(): separation was aborted if domain reduction was applied
+- fixed bug in SCIPlpSolveAndEval(): added extra simplex step if objlimit reached, fastmip and pricers enabled 
+  in order to get dual solution for pricing.
+- fixed bug in cons_varbounds.c, concerning SCIPaddVarVlb() and SCIPaddVarVub()
+- fixed bugs in pairwise presolving of cons_linear.c concerning deletion of upgraded constraints and 
+  inconsistent update of nchgsides in case of coefsequal and coefsnegated  
+- avoiding aggregation that removes information about implicitly integer variables (removes bug)
+- fixed false assert and corrected a bug caused by deleting a constraint on "firstchanged" position in pairwise 
+  presolving with hashing in cons_linear.c
+- removed memory leak detected with the help of coverity in dialog.c
+- fixed bug in applyFixings() in cons_varbound.c concerning tightening the bound of a variable left in a 
+  redundant constraint (bound change is forced now)
+- fixed bug in SCIPtightenVarLb/Ub() in scip.c concering forcing a bound change (bound improvement is checked now)
+- fixed bug in preprocessConstraintPairs() in cons_linear.c concerning updating the flags of the constraint that
+  stayes in the problem (nonredundant information were lost before) 
+- fixed bug with exponential running times due to complicated recursive multi-aggregation
+- fixed bug with memory reallocation in SCIPgetProbvarLinearSum()
+- improved stage checking for bound computation
+- fixed usage of command test for string comparision in check-scripts (now compatible with ubuntu)
+- corrected imlementation of SCIPlpiGetBasisInd() in lpi_clp.cpp (this fixes the bug that almost no Gomory cuts are found with Clp).
+- weakened two too strong asserts in lp.c concerning the LP result OBJLIMIT
+- fixed bug in cons_linear.c caused by comparing two infinity values during checking of using variable as slackvariable
+- tried to fix memory leak in dialog.c occuring from different versions of the readline/history libraries
+- corrected bug in var.c occuring during applying boundchanges in varUpdateAggregationBounds method
+- replaced sprintf and snprintf by SCIPsnprintf fixed potential bug with overlong strings
+- fixed bug in SCIPlpSolveAndEval(): allow more than one extra simplex step for getting an objlimit exceeding solution with fastmip
+- fixed bug in sepa_mir.c: size of testeddeltas-array was too small
+- removed bug for values greater than (-)infinity, heur_shifting.c, heur_intshifting.c, heur_rounding.c, heur_oneopt.c
+- removed bug for rhs/lhs greater than (-)infinity, cons_linear.c
+- removed bug caused by hashcomparison for non-sorted constraints, cons_linear.c
+- fixed bugs with wrong presolving due to cancellation in (res-)activities in cons_linear.c
+- removed possible memory leak in objdialog.cpp
+- fixed bug in preprocessing of SOS2 constraints (cons_sos2.c)
+- removed BOUNDSCALETOL adjustment in cons_linear.c. This fixes bug with slightly infeasible variable fixings in presolving;
+  reliable resactivities should make the BOUNDSCALETOL relaxation redundant.
+- corrected bug in the case when soplex threw an exception in autopricing
+- removed "epsilontic" bug in cons_linear.c due to adjusting left/right hand side in applyfixing 
+- fixed bug in SCIPvarGetOrigvarSum() concerning the corner case the a negated variable has no parent variable in original problem
+- fixed some SCIP_RETCODE bugs in reader_fix.c, reader_sol.c, reader_sos.c, and reader_zpl.c
+- fixed docu in type_reader.h
+- fixed bug with multi-aggregated variables which are de facto aggregated or fixed after flattening the aggregation tree
+- fixed bug with bound changes of variables in modifiable constraints during full dual presolving of linear conshdlr
+- increased compiler compatibility for C++ wrapper classed by adding extern "C" in obj*.cpp files and 
+  changing strlen calls to std::strlen
+- fixed bug with errors occurring in heuristic LPs. In opt mode a warning will be printed, abort in dbg mode
 
 SCIP version 1.00
 =================
@@ -154,7 +467,7 @@ plugins:
 - less aggressive in Gomory cut separation
 - strong CG cuts are now also separated for integral slack variables
 - default dialog menu now includes the commands "set default" and "display parameters"
-- new dummy LP interface "lpi_none.c"; usefull for running SCIP without a LP solver
+- new dummy LP interface "lpi_none.c"; useful for running SCIP without a LP solver
 
 parameters:
 - new parameter "separating/clique/backtrackfreq" to speed up clique cut separation in heuristic fashion
@@ -205,6 +518,8 @@ features:
   memory overhead (2 ints per node in the leaf queue); this improves performance quite a bit on instances that
   take a large number of branching nodes
 - slightly modified automatic constraint aging strategy
+- the documentation has now a TAB Modules; there you can find list of available constraint handles, presolvers, 
+  propagators, lpi interfaces, file readers, and so on
 
 fixed bugs:
 - fixed bug in rowScale() concerning deletion of almost zero coefficients
@@ -255,7 +570,10 @@ fixed bugs:
 - fixed bug with almost integral multi-aggregation in dual presolve of linear constraint handler
 - fixed bug with numerics in update of min/maxactivity in linear constraint handler
 - fixed bug with numerics in linear constraint handler due to non-representable BOUNDSCALETOL
-
+- SCIPwrite{LP,MIP} may no longer be called after solving, since the LP data structures may not be valid
+- fixed potential bug with non-existent LP in SCIPwrite{LP,MIP}
+- fixed bug with multiple pending bound changes on some variable
+- fixed bug with fractional coefficients of binary variables in cont --> impl int upgrading
 
 SCIP version 0.90
 =================

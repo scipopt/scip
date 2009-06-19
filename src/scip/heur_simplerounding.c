@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.28 2007/06/06 11:25:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.28.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
 
 /**@file   heur_simplerounding.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  simple and fast LP rounding heuristic
  * @author Tobias Achterberg
  */
@@ -36,8 +35,7 @@
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
-
+#define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_DURINGPRICINGLOOP
 
 
 /* locally defined heuristic data */
@@ -135,7 +133,10 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
-
+   
+//    if( !strncmp(SCIPgetProbName(scip), "111Orders", 9)&& heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP  )
+//       printf("call heuristics --- \n");
+   
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
@@ -144,8 +145,8 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* on our first call, calculate the number of roundable variables */
-   if( heurdata->nroundablevars == -1 )
+   /* on our first call or after each pricing round, calculate the number of roundable variables */
+   if( heurdata->nroundablevars == -1  || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP )
    {
       SCIP_VAR** vars;
       int nvars;
@@ -163,8 +164,9 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       heurdata->nroundablevars = nroundablevars;
    }
 
-   /* don't call heuristic if there are no roundable variables */
-   if( heurdata->nroundablevars == 0 )
+   /* don't call heuristic if there are no roundable variables; except we are called during pricing, in this case we
+    * want to detect a (mixed) integer (LP) solution which is primal feasible */
+   if( heurdata->nroundablevars == 0 && heurtiming != SCIP_HEURTIMING_DURINGPRICINGLOOP )
       return SCIP_OKAY;
 
    /* don't call heuristic, if we have already processed the current LP solution */
@@ -176,15 +178,15 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    /* get fractional variables, that should be integral */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL) );
 
-   /* only call heuristic, if LP solution is fractional */
-   if( nlpcands == 0 )
+   /* only call heuristic, if LP solution is fractional; except we are called during pricing, in this case we
+    * want to detect a (mixed) integer (LP) solution which is primal feasible */
+   if( nlpcands == 0  && heurtiming != SCIP_HEURTIMING_DURINGPRICINGLOOP )
       return SCIP_OKAY;
 
    /* don't call heuristic, if there are more fractional variables than roundable ones */
    if( nlpcands > heurdata->nroundablevars )
       return SCIP_OKAY;
-
-
+   
    *result = SCIP_DIDNOTFIND;
 
    SCIPdebugMessage("executing simple rounding heuristic: %d fractionals\n", nlpcands);

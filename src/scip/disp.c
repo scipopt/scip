@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.52 2007/06/12 10:48:48 bzfpfend Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.52.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -33,7 +31,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/scip.h"
 #include "scip/disp.h"
 
@@ -106,8 +104,8 @@ SCIP_RETCODE SCIPdispCreate(
    (*disp)->active = (dispstatus == SCIP_DISPSTATUS_ON);
 
    /* add parameters */
-   sprintf(paramname, "display/%s/active", name);
-   sprintf(paramdesc, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "display/%s/active", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "display activation status of display column <%s> (0: off, 1: auto, 2:on)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          (int*)(&(*disp)->dispstatus), FALSE, (int)dispstatus, 0, 2, SCIPparamChgdDispActive, NULL) );
 
@@ -435,7 +433,7 @@ SCIP_RETCODE SCIPdispAutoActivate(
 
    /* sort display columns w.r. to their priority */
    SCIP_ALLOC( BMSduplicateMemoryArray(&disps, set->disps, set->ndisps) );
-   SCIPbsortPtr((void**)disps, set->ndisps, dispComp);
+   SCIPsortPtr((void**)disps, dispComp, set->ndisps);
 
    totalwidth = 0;
 
@@ -518,7 +516,7 @@ void SCIPdispLongint(
          decpower++;
          val /= 1000;
       }
-      sprintf(format, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
          SCIPmessageFPrintInfo(file, "-%c", decpowerchar[decpower]);
@@ -580,9 +578,9 @@ void SCIPdispTime(
          val /= timepowerval[timepower];
       }
       if( REALABS(val) + 0.05 < maxval/100 ) /*lint !e653*/
-         sprintf(format, "%%%d.1f%c", width-1, timepowerchar[timepower]);
+         (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.1f%c", width-1, timepowerchar[timepower]);
       else
-         sprintf(format, "%%%d.0f%c", width-1, timepowerchar[timepower]);
+         (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d.0f%c", width-1, timepowerchar[timepower]);
 
       if( width == 2 && val < 0.0 )
          SCIPmessageFPrintInfo(file, "-%c", timepowerchar[timepower]);

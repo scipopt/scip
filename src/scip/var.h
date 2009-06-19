@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.116 2007/11/13 17:21:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.115.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -43,6 +41,7 @@
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
 #include "scip/pub_var.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_var.h"
@@ -320,6 +319,35 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
    );
 
+/** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant
+ *
+ * If the number of needed active variables is greater than the available slots in the variable array, nothing happens except
+ * that the required size is stored in the corresponding variable; hence, if afterwards the required size is greater than the
+ * available slots (varssize), nothing happens; otherwise, the active variable representation is stored in the arrays.
+ *
+ * The reason for this approach is that we cannot reallocate memory, since we do not know how the
+ * memory has been allocated (e.g., by a C++ 'new' or SCIP functions).
+ */
+extern
+SCIP_RETCODE SCIPvarGetActiveRepresentatives(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< variable array to get active variables */
+   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
+   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
+   int                   varssize,           /**< available slots in vars and scalars array */
+   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
+   );
+
+/** flattens aggeregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+extern
+SCIP_RETCODE SCIPvarFlattenAggregationGraph(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** converts loose variable into aggregated variable */
 extern
 SCIP_RETCODE SCIPvarAggregate(
@@ -409,6 +437,12 @@ SCIP_RETCODE SCIPvarRemove(
 /** marks the variable to be deleted from the problem */
 extern
 void SCIPvarMarkDeleted(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** marks the variable to not to be multi-aggregated */
+extern
+void SCIPvarMarkDoNotMultaggr(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -933,6 +967,47 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
    );
+
+/* begin ????????????????????? */
+
+/** increases the number of active conflicts by one and the overall length of the variable by the given length */
+SCIP_RETCODE SCIPvarIncNActiveConflicts(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_Real             length              /**< length of the conflict */
+   );
+
+/**  gets the number of active conflicts containing this variable in given direction */
+SCIP_Real SCIPvarGetNActiveConflicts(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/**  gets the number of active conflicts containing this variable in given direction
+ *  in the current run
+ */
+SCIP_Real SCIPvarGetNActiveConflictsCurrentRun(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/**  gets the average conflict length in given direction due to branching on the variable */
+SCIP_Real SCIPvarGetAvgConflictlength(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/**  gets the average conflict length in given direction due to branching on the variable
+ *   in the current run
+ */
+SCIP_Real SCIPvarGetAvgConflictlengthCurrentRun(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/* end ???????????????????????????? */
 
 /** increases the number of branchings counter of the variable */
 extern

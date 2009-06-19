@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.5 2007/11/15 10:53:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.4.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
 
 /**@file   reader_fix.c
+ * @ingroup FILEREADERS 
  * @brief  file reader for variable fixings
  * @author Tobias Achterberg
  */
@@ -64,7 +63,7 @@ SCIP_RETCODE readSol(
    if( file == NULL )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      perror(filename);
+      SCIPprintSysError(filename);
       return SCIP_NOFILE;
    }   
 
@@ -155,7 +154,7 @@ SCIP_RETCODE readSol(
    SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "fixed %d variables from solution file <%s>\n", nfixed, filename);
 
    if( error )
-      return SCIP_READERROR;
+      return SCIP_PARSEERROR;
    else
       return SCIP_OKAY;
 }
@@ -183,7 +182,7 @@ SCIP_DECL_READERREAD(readerReadFix)
    {
       SCIPwarningMessage("reading of fixing file is only possible after a problem was created\n");
       *result = SCIP_DIDNOTRUN;
-      return SCIP_READERROR;
+      return SCIP_OKAY;
    }
 
    /* free transformed problem, s.t. fixings are applied to the original problem */

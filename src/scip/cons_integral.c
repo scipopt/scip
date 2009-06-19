@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.2 2009/06/19 07:53:40 bzfwolte Exp $"
 
 /**@file   cons_integral.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
  */
@@ -157,7 +156,15 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
          if( !SCIPisExactSolve(scip) )
          {
             if( !SCIPisFeasIntegral(scip, solval) )
+            {
                *result = SCIP_INFEASIBLE;
+
+               if( printreason )
+               {
+                  SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
+                     SCIPvarGetName(vars[v]), solval);
+               }
+            }
          }
          else
          {
@@ -170,7 +177,15 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
              * solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
              */ 
             if( mpz_get_si(mpq_denref(solvalexact)) != 1 ) 
+            {
                *result = SCIP_INFEASIBLE;
+
+               if( printreason )
+               {
+                  SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
+                     SCIPvarGetName(vars[v]), solval);
+               }
+            }
 
             mpq_clear(solvalexact);
          }

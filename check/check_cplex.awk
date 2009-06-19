@@ -1,12 +1,10 @@
-#!/bin/gawk -f
+#!/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2007 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2007 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -15,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.33 2007/07/03 11:21:54 bzfpfend Exp $
+# $Id: check_cplex.awk,v 1.33.2.1 2009/06/19 07:53:29 bzfwolte Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -69,6 +67,7 @@ BEGIN {
    pass     = 0;
    timeouts = 0;
    settings = "default";
+   version = "?";
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
@@ -117,6 +116,8 @@ BEGIN {
    tottime    = 0.0;
    aborted    = 1;
 }
+/^Welcome/ {version = $6;}
+
 /^CPLEX> Parameter file / {
    settings = $4;
    settings = substr(settings, 2, length(settings)-2);
@@ -403,5 +404,5 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
-   printf("@01 CPLEX:%s\n", settings);
+   printf("@01 CPLEX(%s):%s\n", version, settings);
 }

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.23.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.23.2.2 2009/06/19 07:53:38 bzfwolte Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -72,8 +70,8 @@ public:
         scip_priority_(priority),
         scip_delay_(delay)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
    }
 
    /** destructor */
@@ -149,10 +147,33 @@ public:
     *  Whenever the pricer finds a variable with negative feasibility, it should call SCIPcreateVar()
     *  and SCIPaddPricedVar() to add the variable to the problem. Furthermore, it should call the appropriate
     *  methods of the constraint handlers to add the necessary variable entries to the constraints.
+    *
+    *  In the usual case that the pricer either adds a new variable or ensures that there are no further variables with negative dual feasibility,
+    *  the result pointer should be set to SCIP_SUCCESS. Only if the pricer aborts pricing without creating a new variable, but
+    *  there might exist additional variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
+    *  In this case, which sometimes is referred to as "early branching", the lp solution will not be used as a lower bound. 
+    *  The pricer can, however, store a valid lower bound in the lowerbound pointer.
+    *  If you use your own branching rule (e.g., to branch on constraints), make sure that it is able to branch on pseudo solutions. 
+    *  Otherwise, SCIP will use its default branching rules (which all branch on variables). This
+    *  could disturb the pricing problem or branching might not even be possible, e.g., if all yet created variables have already been fixed.
+    *
+    *  input:
+    *  - scip            : SCIP main data structure
+    *  - pricer          : the variable pricer itself
+    *  - lowerbound      : pointer to store a lower bound found by the pricer
+    *  - result          : pointer to store the result of the pricer call
+    *
+    *  possible return values for *result:
+    *  - SCIP_SUCCESS    : at least one improving variable was found, or it is ensured that no such variable exists
+    *  - SCIP_DIDNOTRUN  : the pricing process was aborted by the pricer, there is no guarantee that the current LP solution is 
+    *                      optimal
+    *
     */
    virtual SCIP_RETCODE scip_redcost(
       SCIP*              scip,               /**< SCIP data structure */
-      SCIP_PRICER*       pricer              /**< the variable pricer itself */
+      SCIP_PRICER*       pricer,             /**< the variable pricer itself */
+      SCIP_Real*         lowerbound,         /**< pointer to store a lower bound found by the pricer */
+      SCIP_RESULT*       result              /**< pointer to store the result of the pricer call */
       ) = 0;
    
    /** farkas pricing method of variable pricer for infeasible LPs

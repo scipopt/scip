@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.45 2007/08/24 16:02:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.45.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   presol_probing.c
+ * @ingroup PRESOLVERS
  * @brief  probing presolver
  * @author Tobias Achterberg
  */
@@ -144,68 +143,6 @@ SCIP_RETCODE freeSortedvars(
    return SCIP_OKAY;
 }
 
-/** boring method, only swapping two elements of an array */
-static 
-void swap(
-   int*                  scores,             /* array in which two elements should be swapped */
-   SCIP_VAR**            vars,               /* array in which two elements should be swapped */
-   int                   i,                  /* position of the first element                 */
-   int                   j                   /* position of the second element                */
-   ) 
-{
-   int tmp_score;
-   SCIP_VAR* tmp_var;
-
-   tmp_score = scores[i]; 
-   scores[i] = scores[j]; 
-   scores[j] = tmp_score;
-
-   tmp_var = vars[i]; 
-   vars[i] = vars[j]; 
-   vars[j] = tmp_var;
-}
-
-/** quicksort algorithm that sorts scores and vars by the values of scores */
-static 
-void quicksort(
-   int*                  scores,             /**< the array which should be sorted */
-   SCIP_VAR**            vars,               /**< array which is permuted          */
-   int                   l,                  /**< left end                         */
-   int                   r                   /**< right end                        */
-   )
-{
-   int i;
-   int j;
-
-   if( r <= l )
-      return;
-   
-   i = l;
-   j = r-1;
-  
-   /* quicksort with right most element as pivot */
-   while( i <= j )
-   {      
-      while( i <= r && scores[i] > scores[r] )
-         i++;
-      while( j >= l && scores[j] < scores[r] )
-         j--;
-      if( i >= j ) 
-         break;
-      else 
-         swap(scores,vars,i,j);
-      i++;
-      j--;
-   }
-
-   /* put in the pivot */
-   swap(scores,vars,i,r);
-    
-   /* recursion */
-   quicksort(scores, vars, l, i-1);
-   quicksort(scores, vars, i+1, r);
-}
-
 /** sorts the binary variables starting with the given index by rounding locks and implications */
 static
 SCIP_RETCODE sortVariables(
@@ -246,7 +183,7 @@ SCIP_RETCODE sortVariables(
          scores[i] = -1;
    }
 
-   quicksort(scores, vars, 0, nvars-1);
+   SCIPsortDownIntPtr(scores, (void*) vars, nvars);
 
    SCIPfreeBufferArray(scip, &scores);
 
@@ -332,12 +269,12 @@ SCIP_RETCODE applyProbing(
          if( SCIPisGT(scip, proplbs[i], SCIPvarGetLbGlobal(vars[i])) )
          {
             SCIPdebugMessage(" -> <%s>[%g,%g] >= %g\n", SCIPvarGetName(vars[i]), 
-               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), lbs[i]);
+               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), proplbs[i]);
          }
          if( SCIPisLT(scip, propubs[i], SCIPvarGetUbGlobal(vars[i])) )
          {
             SCIPdebugMessage(" -> <%s>[%g,%g] <= %g\n", SCIPvarGetName(vars[i]), 
-               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), ubs[i]);
+               SCIPvarGetLbGlobal(vars[i]), SCIPvarGetUbGlobal(vars[i]), propubs[i]);
          }
 #endif
 #endif
@@ -520,6 +457,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
          SCIP_CALL( SCIPcaptureVar(scip, presoldata->sortedvars[i]) );
       }
    }
+   else
+      nbinvars = SCIPgetNBinVars(scip);
 
    /* if we probed all binary variables in previous runs, start again with the first one */
    if( !presoldata->called && presoldata->startidx >= nbinvars )
@@ -873,8 +812,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( zeroproplbs[j] > newlb + 0.5 && zeroproplbs[j] > zeroimpllbs[j] && !cutoff )
             {
                /* insert implication: x_i == 0  =>  x_j >= zeroproplbs[j] */
-               /*SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroproplbs[j]);*/
+               SCIPdebugMessage("found implication <%s> == 0  =>  <%s>[%g,%g] >= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, zeroproplbs[j]);
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], FALSE, vars[j], SCIP_BOUNDTYPE_LOWER, zeroproplbs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -885,8 +824,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( onepropubs[j] < newub - 0.5 && onepropubs[j] < oneimplubs[j] && !cutoff )
             {
                /* insert implication: x_i == 1  =>  x_j <= onepropubs[j] */
-               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onepropubs[j]);*/
+               SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] <= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, onepropubs[j]);
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_UPPER, onepropubs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;
@@ -897,8 +836,8 @@ SCIP_DECL_PRESOLEXEC(presolExecProbing)
             if( oneproplbs[j] > newlb + 0.5 && oneproplbs[j] > oneimpllbs[j] && !cutoff )
             {
                /* insert implication: x_i == 1  =>  x_j >= oneproplbs[j] */
-               /*SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
-                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneproplbs[j]);*/
+               SCIPdebugMessage("found implication <%s> == 1  =>  <%s>[%g,%g] >= %g\n", 
+                 SCIPvarGetName(vars[i]), SCIPvarGetName(vars[j]), newlb, newub, oneproplbs[j]);
                SCIP_CALL( SCIPaddVarImplication(scip, vars[i], TRUE, vars[j], SCIP_BOUNDTYPE_LOWER, oneproplbs[j],
                      &cutoff, &nboundchanges) );
                presoldata->nimplications++;

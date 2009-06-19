@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.62 2007/06/06 11:25:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.62.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -45,6 +43,17 @@
 extern
 const char* SCIPlpiGetSolverName(
    void
+   );
+
+/** gets pointer for LP solver - use only with great care 
+ *
+ *  The behavior of this function depends on the solver and its use is
+ *  therefore only recommended if you really know what you are
+ *  doing. In general, it returns a pointer to the LP solver object.
+ */
+extern
+void* SCIPlpiGetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
    );
 
 /**@} */
@@ -533,7 +542,7 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    );
 
-/** gets primal and dual solution vectors */
+/** gets primal and dual solution vectors for feasible LPs */
 extern 
 SCIP_RETCODE SCIPlpiGetSol(
    SCIP_LPI*             lpi,                /**< LP interface structure */

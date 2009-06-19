@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.17 2007/06/06 11:25:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.17.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
 
 /**@file   sepa_impliedbounds.c
+ * @ingroup SEPARATORS
  * @brief  implied bounds separator
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -27,6 +26,7 @@
 #include <assert.h>
 
 #include "scip/sepa_impliedbounds.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "impliedbounds"
@@ -73,7 +73,7 @@ SCIP_RETCODE addCut(
       char cutname[SCIP_MAXSTRLEN];
 
       /* create cut */
-      sprintf(cutname, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "implbd%d_%d", SCIPgetNLPs(scip), *ncuts);
       SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), rhs, FALSE, FALSE, TRUE) );
       SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
       SCIP_CALL( SCIPaddVarToRow(scip, cut, var1, val1) );
@@ -163,11 +163,13 @@ SCIP_RETCODE separateCuts(
          
             /* implication x == 1 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
-            assert(SCIPisLE(scip, implbounds[j], ub));
             
-            /* add cut if violated */
-            SCIP_CALL( addCut(scip, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
-                  ub, ncuts) );
+            if (SCIPisLE(scip, implbounds[j], ub))
+            {
+               /* add cut if violated */
+               SCIP_CALL( addCut(scip, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
+                     ub, ncuts) );
+            }
          }
          else
          {
@@ -175,11 +177,14 @@ SCIP_RETCODE separateCuts(
 
             /* implication x == 1 -> y >= p */
             lb = SCIPvarGetLbGlobal(implvars[j]);
-            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, implbounds[j], lb));
+            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
  
-            /* add cut if violated */
-            SCIP_CALL( addCut(scip, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
-                  -lb, ncuts) );
+            if (SCIPisGE(scip, implbounds[j], lb))
+            {
+               /* add cut if violated */
+               SCIP_CALL( addCut(scip, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
+                     -lb, ncuts) );
+            }
          }
       } 
 

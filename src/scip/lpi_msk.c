@@ -1,8 +1,9 @@
-/*  
-  MOSEK SCIP interface. 
-  
-  Heavily revised in feb. 2007 by Bo Jensen bo.jensen@mosek.com
-*/
+/**@file   lpi_msk.c
+ * @ingroup LPIS
+ * @brief  MOSEK SCIP interface
+ * @author Bo Jensen
+ * @note Heavily revised in feb. 2007 by Bo Jensen bo.jensen@mosek.com
+ */  
 
 #undef NDEBUG
 #include <assert.h>
@@ -638,6 +639,16 @@ const char* SCIPlpiGetSolverName(void)
     return mosekname;
 }
 
+
+/** gets pointer for LP solver - use only with great care */
+void* SCIPlpiGetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->task;
+}
+
+
 /*
  * LPI Creation and Destruction Methods
  */
@@ -719,7 +730,7 @@ SCIP_RETCODE SCIPlpiCreate(SCIP_LPI**            lpi,                /**< pointe
 
   (*lpi)->termcode   = MSK_RES_OK;
   (*lpi)->itercount  = 0;
-  (*lpi)->pricing    = SCIP_PRICING_AUTO;
+  (*lpi)->pricing    = SCIP_PRICING_LPIDEFAULT;
   (*lpi)->lpid       = nextlpid++;
   (*lpi)->skxsize    = 0;
   (*lpi)->skcsize    = 0;
@@ -2750,7 +2761,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(SCIP_LPI*             lpi                 /**< L
   if( optimizecount > WRITE_ABOVE )
   {
     char fname[40];
-    sprintf(fname,"primal_%d.mbt",optimizecount);
+    snprintf(fname,40,"primal_%d.mbt",optimizecount);
     printf("\nWriting mbt %s\n",fname);
     /*MOSEK_CALL( MSK_putintparam(lpi->task,MSK_IPAR_WRITE_GENERIC_NAMES,MSK_ON) );*/
     MSK_writedata(lpi->task,fname);
@@ -2887,7 +2898,7 @@ SCIP_RETCODE SCIPlpiSolveDual(SCIP_LPI*             lpi                 /**< LP 
   if( optimizecount > WRITE_ABOVE )
   {
     char fname[40];
-    sprintf(fname,"dual_%d.mbt",optimizecount);
+    snprintf(fname,40,"dual_%d.mbt",optimizecount);
     printf("\nWriting mbt %s\n",fname);
     MSK_writedata(lpi->task,fname);
   }
@@ -3013,7 +3024,7 @@ SCIP_RETCODE SCIPlpiSolveBarrier(SCIP_LPI*             lpi,                 /**<
   if( optimizecount > WRITE_ABOVE )
   {
     char fname[40];
-    sprintf(fname,"intpnt_%d.mbt",optimizecount);
+    snprintf(fname,40,"intpnt_%d.mbt",optimizecount);
     printf("\nWriting mbt %s\n",fname);
     /*MOSEK_CALL( MSK_putintparam(lpi->task,MSK_IPAR_WRITE_GENERIC_NAMES,MSK_ON) );*/
     MSK_writedata(lpi->task,fname);
@@ -5065,7 +5076,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 
   #if MSK_VERSION_MAJOR >= 5
   #if SCIP_CONTROLS_PRICING
-  static int pricing[6] = {
+  static int pricing[7] = {
+      MSK_SIM_SELECTION_SE,
       MSK_SIM_SELECTION_FREE,
       MSK_SIM_SELECTION_FULL,
       MSK_SIM_SELECTION_PARTIAL,
@@ -5075,7 +5087,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
   };
   #endif
   #else
-  static int pricing[6] = {
+  static int pricing[7] = {
+      MSK_SIM_SELECTION_SE,
       MSK_SIM_SELECTION_FREE,
       MSK_SIM_SELECTION_FULL,
       MSK_SIM_SELECTION_PARTIAL,
@@ -5085,12 +5098,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
   };
   #endif
 
-  assert(SCIP_PRICING_AUTO        == 0);
-  assert(SCIP_PRICING_FULL        == 1);
-  assert(SCIP_PRICING_PARTIAL     == 2);
-  assert(SCIP_PRICING_STEEP       == 3);
-  assert(SCIP_PRICING_STEEPQSTART == 4);
-  assert(SCIP_PRICING_DEVEX == 5);
+  assert(SCIP_PRICING_LPIDEFAULT  == 0);
+  assert(SCIP_PRICING_AUTO        == 1);
+  assert(SCIP_PRICING_FULL        == 2);
+  assert(SCIP_PRICING_PARTIAL     == 3);
+  assert(SCIP_PRICING_STEEP       == 4);
+  assert(SCIP_PRICING_STEEPQSTART == 5);
+  assert(SCIP_PRICING_DEVEX       == 6);
 
   #if DEBUG_PRINT_CALLS
   printf("Calling SCIPlpiSetIntpar (%d) %s = %d\n",lpi->lpid,paramty2str(type),ival);

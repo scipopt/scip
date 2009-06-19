@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.35 2007/10/31 09:26:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.35.2.1 2009/06/19 07:53:37 bzfwolte Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -48,6 +46,8 @@ struct SCIP_ConshdlrData
  * Callback methods of constraint handler
  */
 
+extern "C"
+{
 /** destructor of constraint handler to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeObj)
@@ -307,7 +307,7 @@ SCIP_DECL_CONSCHECK(consCheckObj)
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol, 
-         checkintegrality, checklprows, result) );
+         checkintegrality, checklprows, printreason, result) );
 
    return SCIP_OKAY;
 }
@@ -468,7 +468,7 @@ SCIP_DECL_CONSPRINT(consPrintObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

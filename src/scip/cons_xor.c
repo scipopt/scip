@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (c) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.57 2007/10/31 09:26:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.57.2.1 2009/06/19 07:53:41 bzfwolte Exp $"
 
 /**@file   cons_xor.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for xor constraints
  * @author Tobias Achterberg
  */
@@ -26,6 +25,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "scip/pub_misc.h"
 #include "scip/cons_xor.h"
 
 
@@ -48,8 +48,7 @@
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
-#define DEFAULT_MAXPRESOLPAIRROUNDS  -1 /**< maximal number of presolving rounds with pairwise constraint comparison
-                                         *   (-1: no limit) */
+#define DEFAULT_PRESOLPAIRWISE    FALSE /**< should pairwise constraint comparison be performed in presolving? */
 #define NROWS 4
 
 
@@ -80,8 +79,7 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
-   int                   maxpresolpairrounds;/**< maximal number of presolving rounds with pairwise constraint comparison
-                                              *   (-1: no limit) */
+   SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
 };
 
 
@@ -399,7 +397,7 @@ SCIP_RETCODE addCoef(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_VAR*             var                 /**< variable to add to the constraint */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_Bool transformed;
 
@@ -549,11 +547,12 @@ SCIP_RETCODE consdataSort(
 {
    assert(consdata != NULL);
 
-   if( consdata->nvars == 0 )
+   if( consdata->nvars <= 1 )
       consdata->sorted = TRUE;
    else if( !consdata->sorted )
    {
       SCIP_VAR* varv;
+
       int* perm;
       int v;
       int i;
@@ -562,8 +561,8 @@ SCIP_RETCODE consdataSort(
       /* get temporary memory to store the sorted permutation */
       SCIP_CALL( SCIPallocBufferArray(scip, &perm, consdata->nvars) );
 
-      /* call bubble sort */
-      SCIPbsort((void*)consdata, consdata->nvars, consdataCompVar, perm);
+      /* calculate sorted permutation of coefficients */
+      SCIPsort(perm, consdataCompVar, (void*)consdata, consdata->nvars);
 
       /* permute the variables in the constraint according to the resulting permutation */
       for( v = 0; v < consdata->nvars; ++v )
@@ -759,7 +758,7 @@ SCIP_RETCODE createRelaxation(
       {
          int ub;
 
-         sprintf(varname, "%s_int", SCIPconsGetName(cons));
+         (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s_int", SCIPconsGetName(cons));
          ub = consdata->nvars/2;
          SCIP_CALL( SCIPcreateVar(scip, &consdata->intvar, varname, 0.0, (SCIP_Real)ub, 0.0,
                consdata->nvars >= 4 ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_BINARY,
@@ -787,7 +786,7 @@ SCIP_RETCODE createRelaxation(
       {
          int v;
 
-         sprintf(rowname, "%s_%d", SCIPconsGetName(cons), r);
+         (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
          SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[r], rowname, -SCIPinfinity(scip), 0.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
@@ -797,7 +796,7 @@ SCIP_RETCODE createRelaxation(
       }
 
       /* create the <= 2 row with all positive signs */
-      sprintf(rowname, "%s_3", SCIPconsGetName(cons));
+      (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), 2.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, 1.0) );
@@ -812,7 +811,7 @@ SCIP_RETCODE createRelaxation(
       {
          int v;
 
-         sprintf(rowname, "%s_%d", SCIPconsGetName(cons), r);
+         (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), r);
          SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[r], rowname, -SCIPinfinity(scip), 1.0,
                SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
          for( v = 0; v < 3; ++v )
@@ -822,7 +821,7 @@ SCIP_RETCODE createRelaxation(
       }
 
       /* create the <= -1 row with all negative signs */
-      sprintf(rowname, "%s_3", SCIPconsGetName(cons));
+      (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_3", SCIPconsGetName(cons));
       SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[3], rowname, -SCIPinfinity(scip), -1.0,
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, consdata->rows[3], consdata->nvars, consdata->vars, -1.0) );
@@ -1601,12 +1600,8 @@ SCIP_DECL_CONSDELETE(consDeleteXor)
 static
 SCIP_DECL_CONSTRANS(consTransXor)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -1755,6 +1750,26 @@ SCIP_DECL_CONSCHECK(consCheckXor)
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
+         
+         if( printreason )
+         {
+            int v;
+            int sum = 0;
+            SCIP_CONSDATA* consdata;
+
+            consdata = SCIPconsGetData(conss[i]);
+            assert( consdata != NULL );
+
+            SCIP_CALL( SCIPprintCons(scip, conss[i], NULL) );
+            
+            for( v = 0; v < consdata->nvars; ++v )
+            {
+               if( SCIPgetSolVal(scip, sol, consdata->vars[i]) > 0.5 )
+                  sum++;
+            }
+            SCIPinfoMessage(scip, NULL, "violation: %d operands are set to TRUE\n", sum );
+         }
+
          return SCIP_OKAY;
       }
    } 
@@ -1899,9 +1914,9 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff && *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
+   if( !cutoff && conshdlrdata->presolpairwise )
    {
-      if( conshdlrdata->maxpresolpairrounds == -1 || nrounds < conshdlrdata->maxpresolpairrounds )
+      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
          for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
          {
@@ -1912,9 +1927,9 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
             }
          }
       }
+      else
+         delay = TRUE;
    }
-   else
-      delay = TRUE;
 
    /* return the correct result code */
    if( cutoff )
@@ -2058,10 +2073,10 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          conshdlrdata) );
 
    /* add xor constraint handler parameters */
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/xor/maxpresolpairrounds",
-         "maximal number of presolving rounds with pairwise constraint comparison (-1: no limit)",
-         &conshdlrdata->maxpresolpairrounds, TRUE, DEFAULT_MAXPRESOLPAIRROUNDS, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/xor/presolpairwise",
+         "should pairwise constraint comparison be performed in presolving?",
+         &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -2090,7 +2105,8 @@ SCIP_RETCODE SCIPcreateConsXor(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -2099,7 +2115,6 @@ SCIP_RETCODE SCIPcreateConsXor(
    )
 {
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
 
    /* find the xor constraint handler */
@@ -2109,9 +2124,6 @@ SCIP_RETCODE SCIPcreateConsXor(
       SCIPerrorMessage("xor constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
    /* create constraint data */
    SCIP_CALL( consdataCreate(scip, &consdata, rhs, nvars, vars) );

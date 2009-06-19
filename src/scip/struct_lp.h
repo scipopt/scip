@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.48 2007/06/06 11:25:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.48.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -117,6 +115,8 @@ struct SCIP_Col
                                               *   otherwise, it can only be used as an estimate value */
    unsigned int          sbupvalid:1;        /**< stores whether the stored strong branching up value is a valid dual bound;
                                               *   otherwise, it can only be used as an estimate value */
+   unsigned int          lazylb:1;           /**< TRUE iff the global lower bound is lazy, this means a constraint ensures this bound */
+   unsigned int          lazyub:1;           /**< TRUE iff the global upper bound is lazy, this means a constraint ensures this bound */
 };
 
 /** LP row
@@ -206,6 +206,7 @@ struct SCIP_Lp
    SCIP_COL**            chgcols;            /**< array of changed columns not yet applied to the LP solver */
    SCIP_ROW**            chgrows;            /**< array of changed rows not yet applied to the LP solver */
    SCIP_COL**            cols;               /**< array with current LP columns in correct order */
+   SCIP_COL**            lazycols;           /**< array with current LP lazy columns in correct order */
    SCIP_ROW**            rows;               /**< array with current LP rows in correct order */
    SCIP_LPISTATE*        divelpistate;       /**< stores LPI state (basis information) before diving starts */
    int                   lpicolssize;        /**< available slots in lpicols vector */
@@ -220,11 +221,13 @@ struct SCIP_Lp
    int                   nchgrows;           /**< current number of chgrows (number of used slots in chgrows vector) */
    int                   colssize;           /**< available slots in cols vector */
    int                   ncols;              /**< current number of LP columns (number of used slots in cols vector) */
-   int                   nremovablecols;    /**< number of removable columns in the LP */
+   int                   lazycolssize;       /**< available slots in lazycols vector */
+   int                   nlazycols;          /**< current number of LP lazy columns (number of used slots in lazycols vector) */
+   int                   nremovablecols;     /**< number of removable columns in the LP */
    int                   firstnewcol;        /**< first column added at the current node */
    int                   rowssize;           /**< available slots in rows vector */
    int                   nrows;              /**< current number of LP rows (number of used slots in rows vector) */
-   int                   nremovablerows;    /**< number of removable rows in the LP */
+   int                   nremovablerows;     /**< number of removable rows in the LP */
    int                   firstnewrow;        /**< first row added at the current node */
    int                   looseobjvalinf;     /**< number of loose variables with infinite best bound in current solution */
    int                   nloosevars;         /**< number of loose variables in LP */
@@ -244,6 +247,8 @@ struct SCIP_Lp
    SCIP_Bool             primalfeasible;     /**< is current LP solution primal feasible? */
    SCIP_Bool             dualfeasible;       /**< is current LP solution dual feasible? */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
+   SCIP_Bool             rootlpisrelax;      /**< is root LP solution a relaxation of the problem and its value a valid global lower bound? */
+   SCIP_Bool             isrelax;            /**< is current LP solution a relaxation of the current problem and its value a valid local lower bound? */
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
    SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't corresond to variables */
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */

@@ -1,4 +1,4 @@
-#--- $Id: make.osf1.alpha.gnu.dbg,v 1.10 2008/01/28 14:31:09 bzfheinz Exp $
+#--- $Id: make.osf1.alpha.gnu.dbg,v 1.9.2.1 2009/06/19 07:53:35 bzfwolte Exp $
 FLAGS		+=	
 OFLAGS		+=	-O -g
 CFLAGS		+=	$(GCCWARN)

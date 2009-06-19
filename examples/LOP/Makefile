@@ -3,9 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2006 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2006 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -14,10 +12,10 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.6 2007/11/16 21:03:43 bzfpfets Exp $
+# $Id: Makefile,v 1.3.2.1 2009/06/19 07:53:31 bzfwolte Exp $
 
 #@file    Makefile
-#@brief   Makefile for C++ example project featuring a linear ordering solver
+#@brief   Makefile for C example project featuring a linear ordering solver
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #@author  Marc Pfetsch
@@ -57,6 +55,10 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 # Rules
 #-----------------------------------------------------------------------------
 
+ifeq ($(VERBOSE),false)
+.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK)
+endif
+
 .PHONY: all
 all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
@@ -76,7 +78,7 @@ doc:
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
-		@ln -s $(MAIN) $@
+		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
@@ -91,40 +93,30 @@ clean:
 .PHONY: depend
 depend:		$(SCIPDIR)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(MAINSRC) \
-		| sed '\''s|^\([0-9A-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-z_/]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(MAINDEP)'
 
 -include	$(MAINDEP)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-ifeq ($(VERBOSE), true)
-		$(CXX) $(MAINOBJFILES) \
-		-L$(SCIPDIR)/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
-else
-		@$(CXX) $(MAINOBJFILES) \
-		-L$(SCIPDIR)/lib -l$(SCIPLIB) -l$(OBJSCIPLIB) -l$(LPILIB) $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) -o $@
-endif
+		$(LINKCXX) $(MAINOBJFILES) \
+		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
+                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LDFLAGS) $(LINKCXX_o)$@
 
-genRandomLOPInstance: $(BINDIR)
-		$(CC) -o $(BINDIR)/genRandomLOPInstance $(SRCDIR)/genRandomLOPInstance.c
+genRandomLOPInstance: $(BINDIR)/genRandomLOPInstance
+$(BINDIR)/genRandomLOPInstance: $(BINDIR) $(OBJDIR) $(OBJDIR)/genRandomLOPInstance.o
+		@echo "-> linking $@"
+		$(LINKCXX) $(OBJDIR)/genRandomLOPInstance.o $(OFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"
-ifeq ($(VERBOSE), true)
-		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
-else
-		@$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< -o $@
-endif
+		$(CC) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CFLAGS) -c $< $(CC_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
-ifeq ($(VERBOSE), true)
-		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
-else
-		@$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< -o $@
-endif
+		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -c $< $(CXX_o)$@
 
-# --- EOF ---------------------------------------------------------------------
+#---- EOF --------------------------------------------------------------------

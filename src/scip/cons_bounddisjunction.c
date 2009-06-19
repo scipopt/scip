@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.15 2007/11/15 10:53:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.14.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
 
 /**@file   cons_bounddisjunction.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for bound disjunction constraints
  * @author Tobias Achterberg
  */
@@ -28,6 +27,7 @@
 #include <limits.h>
 
 #include "scip/cons_bounddisjunction.h"
+#include "scip/pub_misc.h"
 
 
 #define CONSHDLR_NAME          "bounddisjunction"
@@ -838,7 +838,6 @@ SCIP_RETCODE checkCons(
          break;
       }
    }
-
    return SCIP_OKAY;
 }
 
@@ -1113,6 +1112,23 @@ SCIP_DECL_CONSCHECK(consCheckBounddisjunction)
       SCIP_CALL( checkCons(scip, cons, sol, &violated) );
       if( violated )
       {
+         if( printreason )
+         {
+            int v;
+
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, "violation: ");
+            for( v = 0; v < consdata->nvars; ++v )
+            {
+               assert(consdata->vars[v] != NULL);
+               if( v > 0 )
+                  SCIPinfoMessage(scip, NULL, ", ");
+               SCIPinfoMessage(scip, NULL, "<%s> = %.15g", 
+                  SCIPvarGetName(consdata->vars[v]), SCIPgetSolVal(scip, sol, consdata->vars[v]));
+            }
+            SCIPinfoMessage(scip, NULL, ")\n");
+         }
+
          /* constraint is violated */
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
@@ -1543,7 +1559,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
    /* create a constraint out of the conflict set */
    if( i == nbdchginfos )
    {
-      sprintf(consname, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, consname, nbdchginfos, vars, boundtypes, bounds,
             FALSE, TRUE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
@@ -1633,7 +1649,8 @@ SCIP_RETCODE SCIPcreateConsBounddisjunction(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

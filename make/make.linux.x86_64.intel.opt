@@ -1,0 +1,17 @@
+#--- $Id: make.linux.x86_64.intel.opt,v 1.1.2.2 2009/06/19 07:53:35 bzfwolte Exp $
+CC		=	icc
+CXX		=	icc -Kc++
+LINKCC		=	icc
+LINKCXX		=	icc -Kc++
+FLAGS		+=	-DNDEBUG # -DROUNDING_FE
+OFLAGS		+=	-O3 -axT -w1 -vec_report0 -ip -par_report0 -fno-rtti
+CFLAGS		+=
+CXXFLAGS	+=	
+ARFLAGS		=	crs
+LDFLAGS		+=	-lpthread -lm -lstdc++
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

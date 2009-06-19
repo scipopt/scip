@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2006 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_distance.h,v 1.6 2007/11/13 17:21:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_distance.h,v 1.5.2.1 2009/06/19 07:53:32 bzfwolte Exp $"
 
 /**@file   pricer_distance.h
  * @brief  p-median pricer plugin
@@ -35,13 +33,18 @@
 #include "objscip/objscip.h"
 #include "objscip/objscipdefplugins.h"
 
+extern "C" 
+{
+#include "scip/misc.h"
+}
 
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 /***
     Generate a derived class of ObjPricer.
 ***/
 
+#include <string>
 using namespace std;
 using namespace scip;
 
@@ -105,12 +108,12 @@ public:
      return SCIP_OKAY;
    }
 
-  virtual SCIP_RETCODE scip_redcost(SCIP* scip, SCIP_PRICER* pricer) {
+   virtual SCIP_RETCODE scip_redcost(SCIP* scip, SCIP_PRICER* pricer, SCIP_Real* lowerbound, SCIP_RESULT* result) {
     
     // find variable.
 
 #ifdef SCIP_DEBUG
-    cout << "Here is scip_redcost(SCIP* scip, SCIP_PRICER* pricer)" << endl;
+    cout << "Here is scip_redcost(SCIP* scip, SCIP_PRICER* pricer, SCIP_Real lowerbound, SCIP_RESULT* result)" << endl;
     cout << "Current Solution:" << endl;
     SCIP_CALL(SCIPprintTransProblem(scip, NULL, NULL, FALSE));
     // int nofVars = SCIPgetNVars(scip);
@@ -119,12 +122,14 @@ public:
 //     SCIP_CALL(SCIP
 //     SCIP_CALL(SCIPprintBestTransSol(scip, NULL, NULL));
     int nofRows;
+    int* basisIndexVec;
     SCIP_CALL(SCIPgetLPRowsData(scip, 0, &nofRows));
-    int basisIndexVec[nofRows];
+    basisIndexVec = new int[nofRows];
     SCIP_CALL(SCIPgetLPBasisInd(scip, basisIndexVec));
     for (int i = 0; i < nofRows; ++i) {
       cout << "basisIndexVec[" << i << "] = " << basisIndexVec[i] << endl;
     }
+    delete basisIndexVec;
     for (unsigned int i = 0; i < _var_name_vec.size(); ++i) {
       SCIP_VAR* variable = SCIPfindVar(scip, _var_name_vec[i].c_str());
       double value = SCIPgetSolVal(scip, 0, variable);
@@ -132,7 +137,7 @@ public:
     }	   
     
 #endif
-
+    *result = SCIP_SUCCESS;
     double best_reduced_cost(SCIPinfinity(scip));
     double best_primal_cost(SCIPinfinity(scip));
     vector<int> best_sol_vec;
@@ -193,10 +198,10 @@ public:
 
     char var_name[255];
     char name_part[255];
-    sprintf(var_name, "%d", best_sol_vec[0]);
+    SCIPsnprintf(var_name, 255, "%d", best_sol_vec[0]);
     strcat(var_name, "-");
     for (unsigned int i = 1; i < best_sol_vec.size(); ++i) {
-      sprintf(name_part, "%d", best_sol_vec[i]);
+      SCIPsnprintf(name_part, 255, "%d", best_sol_vec[i]);
       strcat(var_name, name_part);
     } 
     
@@ -236,7 +241,7 @@ public:
 				 1));
 
     SCIP_CALL(SCIPreleaseVar(scip, &var));
-    
+
     return SCIP_OKAY;
   }
   
@@ -284,10 +289,10 @@ public:
 
     char var_name[255];
     char name_part[255];
-    sprintf(var_name, "%d", best_sol_vec[0]);
+    SCIPsnprintf(var_name, 255, "%d", best_sol_vec[0]);
     strcat(var_name, "-");
     for (unsigned int i = 1; i < best_sol_vec.size(); ++i) {
-      sprintf(name_part, "%d", best_sol_vec[i]);
+      SCIPsnprintf(name_part, 255, "%d", best_sol_vec[i]);
       strcat(var_name, name_part);
     } 
     

@@ -3,18 +3,16 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.7 2007/08/10 09:12:27 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.7.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -126,7 +124,7 @@ SCIP_RETCODE fromCommandLine(
 
    SCIPinfoMessage(scip, NULL, "\nread problem <%s>\n", filename);
    SCIPinfoMessage(scip, NULL, "============\n\n");
-   SCIP_CALL( SCIPreadProb(scip, filename) );
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
 
    /*******************
@@ -240,6 +238,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
             if( file == NULL )
             {
                printf("cannot read command batch file <%s>\n", argv[i]);
+               SCIPprintSysError(argv[i]);
                paramerror = TRUE;
             }
             else

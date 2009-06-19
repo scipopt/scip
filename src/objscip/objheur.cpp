@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.cpp,v 1.23 2007/11/12 15:15:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objheur.cpp,v 1.22.2.1 2009/06/19 07:53:37 bzfwolte Exp $"
 
 /**@file   objheur.cpp
  * @brief  C++ wrapper for primal heuristics
@@ -48,6 +46,8 @@ struct SCIP_HeurData
  * Callback methods of primal heuristic
  */
 
+extern "C"
+{
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeObj)
@@ -156,7 +156,7 @@ SCIP_DECL_HEUREXEC(heurExecObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.c,v 1.23 2007/06/06 11:25:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: mem.c,v 1.23.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
 
 /**@file   mem.c
  * @brief  block memory pools and memory buffers
@@ -44,9 +42,9 @@ SCIP_RETCODE SCIPmemCreate(
    SCIP_ALLOC( (*mem)->probmem = BMScreateBlockMemory(1, 10) );
    SCIP_ALLOC( (*mem)->solvemem = BMScreateBlockMemory(1, 10) );
 
-   SCIPdebugMessage("created setmem   block memory at <%p>\n", (*mem)->setmem);
-   SCIPdebugMessage("created probmem  block memory at <%p>\n", (*mem)->probmem);
-   SCIPdebugMessage("created solvemem block memory at <%p>\n", (*mem)->solvemem);
+   SCIPdebugMessage("created setmem   block memory at <%p>\n", (void*)(*mem)->setmem);
+   SCIPdebugMessage("created probmem  block memory at <%p>\n", (void*)(*mem)->probmem);
+   SCIPdebugMessage("created solvemem block memory at <%p>\n", (void*)(*mem)->solvemem);
 
    return SCIP_OKAY;
 }

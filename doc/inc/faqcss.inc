@@ -1,13 +1,18 @@
 <style type="text/css">
 
- p.q {
+p.q {
   font-weight:   bold;
 }
 
- p.a {
+p.a {
   padding-left:   1em;
   type: circle;
 }
+
+ul {
+  list-style-type: circle;
+}
+
 h4 { 
   font-size: 14pt;
   color: #5050C0; 

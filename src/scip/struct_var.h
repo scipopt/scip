@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.45 2007/06/15 10:06:41 bzfpfend Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.45.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -251,6 +249,9 @@ struct SCIP_Var
    unsigned int          initial:1;          /**< TRUE iff var's column should be present in the initial root LP */
    unsigned int          removable:1;        /**< TRUE iff var's column is removable from the LP (due to aging or cleanup) */
    unsigned int          deleted:1;          /**< TRUE iff variable was deleted from the problem */
+   unsigned int          donotmultaggr:1;    /**< TRUE iff variable is not allowed to be multi-aggregated */
+   unsigned int          lazylb:1;           /**< TRUE iff the global lower bound is lazy, this means a constraint ensures this bound */
+   unsigned int          lazyub:1;           /**< TRUE iff the global upper bound is lazy, this means a constraint ensures this bound */
    unsigned int          vartype:2;          /**< type of variable: binary, integer, implicit integer, continuous */
    unsigned int          varstatus:3;        /**< status of variable: original, transformed, column, fixed, aggregated */
    unsigned int          pseudocostflag:2;   /**< temporary flag used in pseudo cost update */

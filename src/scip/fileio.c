@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: fileio.c,v 1.3 2007/06/06 11:25:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: fileio.c,v 1.3.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
 
 /**@file   fileio.c
  * @brief  wrapper functions to map file i/o to standard or zlib file i/o
@@ -65,11 +63,13 @@ int SCIPfprintf(SCIP_FILE *stream, const char *format, ...)
 {
    char buffer[BUFFER_LEN];
    va_list ap;
+   int n;
 
    va_start(ap, format); /*lint !e826*/
-   vsnprintf(buffer, BUFFER_LEN, format, ap);
+   n = vsnprintf(buffer, BUFFER_LEN, format, ap);
    va_end(ap);
-
+   if( n < 0 || n > BUFFER_LEN)
+      buffer[BUFFER_LEN-1] = '\0';
    return gzputs((gzFile*)stream, buffer);
 }
 

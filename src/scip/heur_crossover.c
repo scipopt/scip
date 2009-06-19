@@ -3,20 +3,19 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.c,v 1.24 2007/06/06 11:25:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_crossover.c,v 1.24.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
 
 /**@file   heur_crossover.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  crossover primal heuristic
  * @author Timo Berthold
  */
@@ -29,11 +28,12 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_crossover.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "crossover"
 #define HEUR_DESC             "LNS heuristic that fixes all variables that are identic in a couple of solutions"
 #define HEUR_DISPCHAR         'C'
-#define HEUR_PRIORITY         -1011000
+#define HEUR_PRIORITY         -1104000
 #define HEUR_FREQ             30
 #define HEUR_FREQOFS          10
 #define HEUR_MAXDEPTH         -1
@@ -493,7 +493,7 @@ SCIP_RETCODE createSubproblem(
       return SCIP_OKAY;
 
    /* get name of the original problem and add the string "_crossoversub" */
-   sprintf(consname, "%s_crossoversub", SCIPgetProbName(scip));
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -621,7 +621,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
     
    /* initialize hash table */
    SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
-         hashGetKeySols, hashKeyEqSols, hashKeyValSols) );
+         hashGetKeySols, hashKeyEqSols, hashKeyValSols, NULL) );
    assert(heurdata->hashtable != NULL );
 
    return SCIP_OKAY;
@@ -680,6 +680,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_Real memorylimit;                    /* memory limit for the subproblem                     */
    SCIP_Real timelimit;                      /* time limit for the subproblem                       */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
+   SCIP_Real upperbound;
    SCIP_Bool success; 
                   
    SCIP_Longint nstallnodes;                 /* node limit for the subproblem                       */
@@ -688,6 +689,10 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    int nvars;                                /* number of original problem's variables              */
    int nusedsols;
    int i;   
+
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
   
    assert(heur != NULL);
    assert(scip != NULL);
@@ -755,6 +760,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( timelimit < 10.0 || memorylimit <= 0.0 )
       return SCIP_OKAY;
 
+   if( SCIPisStopped(scip) )
+     return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -820,7 +828,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
 
    /* disable cut separation in sub problem */
    SCIP_CALL( SCIPsetIntParam(subscip, "separating/maxrounds", 0) );
@@ -836,7 +846,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
    SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
 
    /* disable conflict analysis */
@@ -848,23 +860,39 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* add an objective cutoff */
    cutoff = SCIPinfinity(scip);
-   assert(!SCIPisInfinity(scip,SCIPgetUpperbound(scip)));
-      
-   if( !SCIPgetLowerbound(scip) )
+   assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );   
+
+   upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+   if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
    {
-      SCIP_Real upperbound;
-      cutoff = (1.0 - heurdata->minimprove) * SCIPgetUpperbound(scip) - heurdata->minimprove * SCIPgetLowerbound(scip);
-      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-      cutoff = MIN(upperbound, cutoff );
+      cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) + heurdata->minimprove*SCIPgetLowerbound(scip);
    }
    else
-      cutoff = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-
+   {
+      if ( SCIPgetUpperbound ( scip ) >= 0 )
+         cutoff = ( 1 - heurdata->minimprove ) * SCIPgetUpperbound ( scip );
+      else
+         cutoff = ( 1 + heurdata->minimprove ) * SCIPgetUpperbound ( scip );
+   }
+   cutoff = MIN(upperbound, cutoff );
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
    
    /* solve the subproblem */
    SCIPdebugMessage("Solve Crossover subMIP\n");
+ 
+   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    */
+#ifdef NDEBUG
+   retstat = SCIPsolve(subscip);
+   if( retstat != SCIP_OKAY )
+   { 
+      SCIPwarningMessage("Error while solving subMIP in crossover heuristic; subSCIP terminated with code <%d>\n",
+         retstat);
+   }
+#else
    SCIP_CALL( SCIPsolve(subscip) );
+#endif
    
    heurdata->usednodes += SCIPgetNNodes(subscip);
 

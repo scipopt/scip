@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2005 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2005 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.5 2007/06/27 14:34:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.5.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
 
 /**@file   sepa_flowcover.c
+ * @ingroup SEPARATORS
  * @brief  flow cover cuts separator
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -28,6 +27,7 @@
 
 #include "scip/sepa_flowcover.h"
 #include "scip/cons_knapsack.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "flowcover"
@@ -60,7 +60,7 @@
 #define BOUNDSWITCH                 0.5
 #define ALLOWLOCAL                 TRUE 
 #define DENSSCORE                 1e-04
-#define MAKECONTINTEGRAL          FALSE
+/*#define MAKECONTINTEGRAL          FALSE*/
 #define MINFRAC                    0.01
 #define MAXFRAC                    0.95
 #define FIXINTEGRALRHS            FALSE
@@ -69,6 +69,8 @@
 #define MAXDELTA                  1e-09 
 #define MAXSCALE                 1000.0 
 #define MAXDYNPROGSPACE         1000000 
+
+#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
 
 
@@ -129,7 +131,7 @@ SCIP_RETCODE getClosestVlb(
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(bestsub == SCIPvarGetUbGlobal(var) || bestsub == SCIPvarGetUbLocal(var));
+   assert(bestsub == SCIPvarGetUbGlobal(var) || bestsub == SCIPvarGetUbLocal(var)); /*lint !e777*/
    assert(!SCIPisInfinity(scip, bestsub));
    assert(!SCIPisZero(scip, rowcoef));
    assert(rowcoefsbinary != NULL);
@@ -141,7 +143,7 @@ SCIP_RETCODE getClosestVlb(
    nvlbs = SCIPvarGetNVlbs(var);
 
    *closestvlbidx = -1;
-   *closestvlb = SCIP_REAL_MIN;
+   *closestvlb = -SCIPinfinity(scip); 
    if( nvlbs > 0 )
    {
       SCIP_VAR** vlbvars;
@@ -242,7 +244,7 @@ SCIP_RETCODE getClosestVub(
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(bestslb == SCIPvarGetLbGlobal(var) || bestslb == SCIPvarGetLbLocal(var));
+   assert(bestslb == SCIPvarGetLbGlobal(var) || bestslb == SCIPvarGetLbLocal(var)); /*lint !e777*/
    assert(!SCIPisInfinity(scip, - bestslb));
    assert(!SCIPisZero(scip, rowcoef));
    assert(rowcoefsbinary != NULL);
@@ -254,7 +256,7 @@ SCIP_RETCODE getClosestVub(
    nvubs = SCIPvarGetNVubs(var);
 
    *closestvubidx = -1;
-   *closestvub = SCIP_REAL_MAX;
+   *closestvub = SCIPinfinity(scip);
    if( nvubs > 0 )
    {
       SCIP_VAR** vubvars;
@@ -551,8 +553,8 @@ SCIP_RETCODE constructSNFRelaxation(
       int bestsubtype;
       int probidx;
       
-      bestlb = SCIP_REAL_MIN;
-      bestub = SCIP_REAL_MAX;
+      bestlb = -SCIPinfinity(scip);
+      bestub = SCIPinfinity(scip);
       bestlbtype = -3;
       bestubtype = -3;
 
@@ -593,8 +595,8 @@ SCIP_RETCODE constructSNFRelaxation(
             SCIP_Real bestvlb;
             int bestvlbidx;
             
-            getClosestVlb(scip, var, bestsub, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvlb, &bestvlbidx);
-            if( SCIPisGE(scip, bestvlb, bestlb) )
+            SCIP_CALL( getClosestVlb(scip, var, bestsub, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvlb, &bestvlbidx) );
+            if( SCIPisGT(scip, bestvlb, bestlb) )
             {
                bestlb = bestvlb;
                bestlbtype = bestvlbidx;
@@ -614,8 +616,8 @@ SCIP_RETCODE constructSNFRelaxation(
             SCIP_Real bestvub;
             int bestvubidx;
          
-            getClosestVub(scip, var, bestslb, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvub, &bestvubidx);
-            if( SCIPisLE(scip, bestvub, bestub) )
+            SCIP_CALL( getClosestVub(scip, var, bestslb, rowcoef, rowcoefsbinary, varsolvals, assoctransvars, &bestvub, &bestvubidx) );
+            if( SCIPisLT(scip, bestvub, bestub) )
             {
                bestub = bestvub;
                bestubtype = bestvubidx;
@@ -637,15 +639,16 @@ SCIP_RETCODE constructSNFRelaxation(
        * to define the real variable y'_j with 0 <= y'_j <= u'_j x_j in the 0-1 single node flow relaxation; 
        * prefer variable bounds 
        */
-      if( varsolvals[probidx] == (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub && bestlbtype >= 0 )
+      if( SCIPisEQ(scip, varsolvals[probidx], (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub) && bestlbtype >= 0 )
          uselb = TRUE;
-      else if( varsolvals[probidx] == (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub && bestubtype >= 0 )
+      else if( SCIPisEQ(scip, varsolvals[probidx], (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub) 
+         && bestubtype >= 0 )
          uselb = FALSE;
-      else if( varsolvals[probidx] <= (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub ) 
+      else if( SCIPisLE(scip, varsolvals[probidx], (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub) )
          uselb = TRUE;
       else
       {
-         assert(varsolvals[probidx] > (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub);
+         assert(SCIPisGT(scip, varsolvals[probidx], (1.0 - BOUNDSWITCH) * bestlb + BOUNDSWITCH * bestub));
          uselb = FALSE;
       }
       if( uselb )
@@ -889,7 +892,7 @@ SCIP_RETCODE constructSNFRelaxation(
       probidx = SCIPvarGetProbindex(var);
       rowcoef = rowweight * scale * nonzcoefs[nonzcolsbinary[c]];
 
-      assert(rowcoefsbinary[probidx] == rowcoef);
+      assert(rowcoefsbinary[probidx] == rowcoef); /*lint !e777*/
       assert(!SCIPisZero(scip, rowcoef));
 
       SCIPdebugMessage("  %d: %g <%s, idx=%d, lp=%g, [%g, %g]>:\n", c, rowcoef, SCIPvarGetName(var), probidx, varsolvals[probidx], 
@@ -971,160 +974,6 @@ SCIP_RETCODE constructSNFRelaxation(
    return SCIP_OKAY;
 }
 
-/** merge entries from index left to index middle, allready sorted such that 
- *  profits[left]/weights[left] >= ... >= profits[middle]/weights[middle], and index middle+1 to index right, allready 
- *  sorted such that profits[middle+1]/weights[middle+1] >= ... >=  profits[right]/weights[right] of given arrays such that
- *  profits[left]/weights[left] >= ... >= profits[right]/weights[right]
- */
-static
-SCIP_RETCODE mergeForSolveKnapsackLT(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            weights,            /**< item weights */
-   SCIP_Real*            profits,            /**< item profits */
-   int*                  items,              /**< item numbers */
-   int                   left,               /**< left index of the area, to be merged */
-   int                   middle,             /**< middle index of the area, to be merged  */ 
-   int                   right               /**< right index of the area, to be merged  */
-   )
-{
-   SCIP_Real* weights1;
-   SCIP_Real* weights2;
-   SCIP_Real* profits1;
-   SCIP_Real* profits2;
-   int* items1;
-   int* items2;
-   int i;
-   int j;
-   int k;
-   int m;
-   int n;
-
-   assert(scip != NULL);
-   assert(weights != NULL);
-   assert(profits != NULL);
-   assert(items != NULL);
-   assert(left >= 0);
-   assert(left <= middle && middle <= right); 
-
-   /* makes copy of first part */
-   m = middle - left + 1;
-   SCIP_CALL( SCIPallocBufferArray(scip, &items1, m) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &weights1, m) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &profits1, m) );
-   for( i = 0; i < m; i++ )
-   {
-      items1[i] = items[left + i];
-      weights1[i] = weights[left + i];
-      profits1[i] = profits[left + i];
-   }
-
-   /* makes copy of second part */
-   n = right - middle;
-   SCIP_CALL( SCIPallocBufferArray(scip, &items2, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &weights2, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &profits2, n) );
-   for( j = 0; j < n; j++ )
-   {
-      items2[j] = items[middle + 1 + j];
-      weights2[j] = weights[middle + 1 + j];
-      profits2[j] = profits[middle + 1 + j];
-   }
-
-   i = 0;
-   j = 0;
-   k = 0;
-   
-   /* merges both parts until i == m or j == n */
-   while( i < m && j < n )
-   {
-      if( SCIPisFeasGE(scip, profits1[i]/weights1[i], profits2[j]/weights2[j]) )
-      {
-         items[left + k] = items1[i];
-         weights[left + k] = weights1[i];
-         profits[left + k] = profits1[i];
-         assert(0 <= weights[left+k] && weights[left+k] < SCIP_REAL_MAX);
-         i++;
-         k++;
-         
-      }
-      else
-      {
-         items[left + k] = items2[j];
-         weights[left + k] = weights2[j];
-         profits[left + k] = profits2[j];
-         assert(0 <= weights[left+k] && weights[left+k] < SCIP_REAL_MAX);
-         j++;
-         k++;
-      }
-   }
-
-   /* copies rest of first part if necessary */
-   while( i < m )
-   {
-      items[left + k] = items1[i];
-      weights[left + k] = weights1[i];
-      profits[left + k] = profits1[i];
-      assert(0 <= weights[left+k] && weights[left+k] < SCIP_REAL_MAX);
-      i++;
-      k++;
-   }
-
-   /* copies rest of second part if necessary */
-   while( j < n )
-   {
-      items[left + k] = items2[j];
-      weights[left + k] = weights2[j];
-      profits[left + k] = profits2[j];
-      assert(0 <= weights[left+k] && weights[left+k] < SCIP_REAL_MAX);
-      j++;
-      k++;
-   }
-
-   /* frees temporary memory */
-   SCIPfreeBufferArray(scip, &profits2);
-   SCIPfreeBufferArray(scip, &weights2);
-   SCIPfreeBufferArray(scip, &items2);
-   SCIPfreeBufferArray(scip, &profits1);
-   SCIPfreeBufferArray(scip, &weights1);
-   SCIPfreeBufferArray(scip, &items1);
-
-   
-   return SCIP_OKAY;
-}
-
-/** sort all entries from index first to index last of given arrays such that 
- *  profits[first]/weights[first] >= ... >= profits[last]/weights[last]
- */
-static
-SCIP_RETCODE mergeSortForSolveKnapsackLT(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            weights,            /**< item weights */
-   SCIP_Real*            profits,            /**< item profits */
-   int*                  items,              /**< item numbers */
-   int                   first,              /**< first index of the area, to be sorted */        
-   int                   last                /**< last index of the area, to be sorted */        
-   )
-{
-   int middle;
-
-   assert(scip != NULL);
-   assert(weights != NULL);
-   assert(profits != NULL);
-   assert(items != NULL);
-   assert(first >= 0);
-   assert(last >= -1); 
-
-   if( first < last )
-   {
-      middle = (first + last)/2;
-      SCIP_CALL( mergeSortForSolveKnapsackLT(scip, weights, profits, items, first, middle) );
-      SCIP_CALL( mergeSortForSolveKnapsackLT(scip, weights, profits, items, middle + 1, last) );
-      SCIP_CALL( mergeForSolveKnapsackLT(scip, weights, profits, items, first, middle, last) );
-   }
-
-   return SCIP_OKAY;
-}
-
 /** solve knapsack problem in maximization form with "<" constraint approximately by greedy; if needed, one can provide 
  *  arrays to store all selected items and all not selected items
  */
@@ -1143,8 +992,10 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    ) 
 {
+   SCIP_Real* tempsort;
    SCIP_Real solitemsweight;
    int j;
+   int i;
    
    assert(weights != NULL);
    assert(profits != NULL);
@@ -1161,9 +1012,20 @@ SCIP_RETCODE SCIPsolveKnapsackApproximatelyLT(
    if( solval != NULL )
       *solval = 0.0;
 
-   /* sort items such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
-   SCIP_CALL( mergeSortForSolveKnapsackLT(scip, weights, profits, items, 0, nitems-1) );
+   /* allocate memory for temporary array used for sorting; array should contain profits devided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
+   /* initialize temporary array */ 
+   for (i = nitems - 1; i >= 0; --i)
+   {
+      tempsort[i] = profits[i] / weights [i];
+   }
 
+   /* sort tempsort, items, weights and profits such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
+   SCIPsortDownRealRealRealInt ( tempsort, weights, profits, items, nitems);
+
+   /* free temporary array */
+   SCIPfreeBufferArray(scip, &tempsort);
+   
    /* select items as long as they fit into the knapsack */
    solitemsweight = 0.0;
    for( j = 0; j < nitems && SCIPisFeasLT(scip, solitemsweight + weights[j], capacity); j++ )
@@ -1587,7 +1449,7 @@ SCIP_RETCODE getFlowCover(
 
       tmp1 = (SCIP_Real) (nitems + 1);
       tmp2 = (SCIP_Real) ((transcapacityint) + 1);
-      if( transcapacityint * nitems <= MAXDYNPROGSPACE && tmp1 * tmp2 <= INT_MAX / 8)
+      if( transcapacityint * nitems <= MAXDYNPROGSPACE && tmp1 * tmp2 <= INT_MAX / 8.0)
       {
          /* solve KP^SNF_int by dynamic programming */
          SCIP_CALL(SCIPsolveKnapsackExactly(scip, nitems, transweightsint, transprofitsint,transcapacityint, 
@@ -1673,7 +1535,7 @@ SCIP_RETCODE getFlowCover(
 
 }
 
-/** for a given flow cover and a given value of delta, choose L1 subset N1\C1 and L2 subset N2\C2 by comparison such that 
+/** for a given flow cover and a given value of delta, choose L1 subset N1 \ C1 and L2 subset N2 \ C2 by comparison such that 
  *  the violation of the resulting c-MIRFCI is maximized.
  */
 static
@@ -1793,7 +1655,7 @@ SCIP_RETCODE getBoundsForSubstitution(
    int*                  assoctransvars,     /**< associated var in transformed problem for all vars of current row */ 
    int*                  transvarcoefs,      /**< coefficient of all vars in transformed problem */ 
    int*                  flowcoverstatus,    /**< flow cover status of all nonbinary vars in transformed problem; 
-                                              *   1 if in C1 & C2, 2 if in L2, -1 N1\C1 & N2\(C2&L2) */ 
+                                              *   1 if in C1 & C2, 2 if in L2, -1 N1 \ C1 & N2 \ (C2&L2) */ 
    int                   ntransvars,         /**< number of vars in transformed problem */
    int*                  boundsforsubst,     /**< pointer to store bound that should be used for subst in c-mir for vars */
    SCIP_BOUNDTYPE*       boundtypesforsubst  /**< pointer to store type of bound that should be used for subst in c-mir for vars vars */
@@ -2039,7 +1901,7 @@ SCIP_RETCODE addCut(
       char cutname[SCIP_MAXSTRLEN];
       
       /* creates the cut */
-      sprintf(cutname, "flowcover%d_%d", SCIPgetNLPs(scip), *ncuts);
+      (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "flowcover%d_%d", SCIPgetNLPs(scip), *ncuts);
       SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
             cutislocal, FALSE, sepadata->dynamiccuts) );
       SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
@@ -2321,8 +2183,8 @@ SCIP_RETCODE cutGenerationHeuristic(
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and delta */
       SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
-            1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, cutcoefs, &cutrhs, &cutact, 
-            &success, &cutislocal) );
+            (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, NULL, cutcoefs, 
+            &cutrhs, &cutact, &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       
       /* delta leads to c-MIRFCI which is more violated */
@@ -2366,8 +2228,8 @@ SCIP_RETCODE cutGenerationHeuristic(
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and bestdelta */
       SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
-            1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, cutcoefs, &cutrhs, &cutact, 
-            &success, &cutislocal) );
+            (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, NULL, cutcoefs, 
+            &cutrhs, &cutact, &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
       assert(success); 
       
@@ -2475,6 +2337,10 @@ SCIP_RETCODE separateCuts(
    if( nvars == 0 )
       return SCIP_OKAY;
 
+   /* check whether SCIP was stopped in the meantime */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+   
    *result = SCIP_DIDNOTFIND;
 
    /* get the type of norm to use for efficacy calculations */

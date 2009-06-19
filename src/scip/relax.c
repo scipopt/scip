@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.17 2007/08/16 08:38:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.17.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -34,6 +32,7 @@
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/pub_misc.h"
 #include "scip/relax.h"
 
 #include "scip/struct_relax.h"
@@ -106,13 +105,13 @@ SCIP_RETCODE SCIPrelaxCreate(
    (*relax)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "relaxing/%s/priority", name);
-   sprintf(paramdesc, "priority of relaxator <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of relaxator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*relax)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdRelaxPriority, (SCIP_PARAMDATA*)(*relax)) ); /*lint !e740*/
-   sprintf(paramname, "relaxing/%s/freq", name);
-   sprintf(paramdesc, "frequency for calling relaxator <%s> (-1: never, 0: only in root node)", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/freq", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling relaxator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*relax)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 

@@ -4,9 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2007 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2007 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -45,7 +43,7 @@ SETFILE=results/check.$TSTNAME.$BINNAME.$SETNAME.cmd
 
 SETTINGS=settings/$SETNAME.cbcset
 
-if test "$CONTINUE" == "true"
+if test "$CONTINUE" = "true"
 then
     MVORCP=cp
 else
@@ -62,7 +60,7 @@ then
     $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
-if test "$CONTINUE" == "true"
+if test "$CONTINUE" = "true"
 then
     LASTPROB=`getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
@@ -78,14 +76,19 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-HARDTIMELIMIT=`echo $TIMELIMIT*1.1 | bc`
-HARDMEMLIMIT=`echo $MEMLIMIT*1.2 | bc`
-echo hard time limit: $HARDTIMELIMIT >>$OUTFILE
-echo hard mem limit: $HARDMEMLIMIT >>$OUTFILE
+# we add 10% to the hard time limit and additional 10 seconds in case of small time limits
+HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
+
+# we add 10% to the hard memory limit and additional 100mb to the hard memory limit
+HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
+HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
+
+echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
+echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
 for i in `cat $TSTNAME.test`
 do
-    if test "$LASTPROB" == ""
+    if test "$LASTPROB" = ""
     then
 	LASTPROB=""
 	if test -f $i
@@ -122,7 +125,7 @@ do
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
-	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT M; limit filesize 1000 M; $CBCBIN < $TMPFILE" 2>>$ERRFILE
+	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CBCBIN < $TMPFILE" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
@@ -133,7 +136,7 @@ do
 	fi
     else
 	echo skipping $i
-	if test "$LASTPROB" == "$i"
+	if test "$LASTPROB" = "$i"
 	then
 	    LASTPROB=""
         fi
@@ -147,7 +150,7 @@ date >>$ERRFILE
 
 if test -f $TSTNAME.solu
 then
-    gawk -f check_cbc.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
+    awk -f check_cbc.awk -vTEXFILE=$TEXFILE $TSTNAME.solu $OUTFILE | tee $RESFILE
 else
-    gawk -f check_cbc.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
+    awk -f check_cbc.awk -vTEXFILE=$TEXFILE $OUTFILE | tee $RESFILE
 fi

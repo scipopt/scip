@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.20 2007/06/06 11:25:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.20.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -58,12 +56,13 @@ typedef enum SCIP_LPParam SCIP_LPPARAM;
 /** LP pricing strategy */
 enum SCIP_Pricing
 {
-   SCIP_PRICING_AUTO        = 0,        /**< the LP solver should use its preferred strategy */
-   SCIP_PRICING_FULL        = 1,        /**< full pricing */
-   SCIP_PRICING_PARTIAL     = 2,        /**< partial pricing */
-   SCIP_PRICING_STEEP       = 3,        /**< steepest edge pricing */
-   SCIP_PRICING_STEEPQSTART = 4,        /**< steepest edge pricing without initial dual norms */
-   SCIP_PRICING_DEVEX       = 5         /**< devex pricing */
+   SCIP_PRICING_LPIDEFAULT  = 0,        /**< the SCIP/LP interface should use its preferred strategy */
+   SCIP_PRICING_AUTO        = 1,        /**< the LP solver should use its preferred strategy */
+   SCIP_PRICING_FULL        = 2,        /**< full pricing */
+   SCIP_PRICING_PARTIAL     = 3,        /**< partial pricing */
+   SCIP_PRICING_STEEP       = 4,        /**< steepest edge pricing */
+   SCIP_PRICING_STEEPQSTART = 5,        /**< steepest edge pricing without initial dual norms */
+   SCIP_PRICING_DEVEX       = 6         /**< devex pricing */
 };
 typedef enum SCIP_Pricing SCIP_PRICING;
 
@@ -79,6 +78,5 @@ typedef enum SCIP_BaseStat SCIP_BASESTAT;
 
 typedef struct SCIP_LPi SCIP_LPI;                 /**< solver dependent LP interface */
 typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete LP state (i.e. basis information, dual norms) */
-
 
 #endif

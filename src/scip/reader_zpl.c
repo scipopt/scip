@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,11 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.28 2007/11/13 16:13:34 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.1 2009/06/19 07:53:49 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
+ * @ingroup FILEREADERS 
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,6 +35,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/pub_misc.h"
 
 /* include the ZIMPL headers necessary to define the LP construction interface */
 #include "zimpl/bool.h"
@@ -62,6 +63,10 @@ Bool zpl_read_with_args(int argc, char** argv);
 
 /* ZIMPL does not support user data in callbacks - we have to use a static variables */
 static SCIP* scip_ = NULL;
+static SCIP_Real* startvals_ = NULL;
+static SCIP_VAR** startvars_ = NULL;
+static int startvalssize_ = 0;
+static int nstartvals_ = 0;
 static SCIP_Bool issuedbranchpriowarning_ = FALSE;
 static SCIP_Bool readerror_ = FALSE;
 
@@ -72,7 +77,7 @@ void xlp_alloc(const char* name, Bool need_startval)
 }
 
 void xlp_free(void)
-{
+{   
    /* nothing to be done here */
 }
 
@@ -102,11 +107,6 @@ void xlp_orderfile(FILE* fp, LpFormat format)
 }
 
 void xlp_mstfile(FILE* fp, LpFormat format)
-{  /*lint --e{715}*/
-   /* nothing to be done here */
-}
-
-void xlp_sosfile(FILE* fp, LpFormat format)
 {  /*lint --e{715}*/
    /* nothing to be done here */
 }
@@ -153,7 +153,7 @@ Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs
    case CON_EQUAL:
       sciplhs = (SCIP_Real)numb_todbl(lhs);
       sciprhs = (SCIP_Real)numb_todbl(rhs);
-      assert(sciplhs == sciprhs);
+      assert(sciplhs == sciprhs);/*lint !e777 */
       break;
    default:
       SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
@@ -208,6 +208,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
    case BOUND_MINUS_INFTY:
       lb = -SCIPinfinity(scip_);
       break;
+   case BOUND_ERROR:
    default:
       SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
       lb = 0.0;
@@ -225,6 +226,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
    case BOUND_MINUS_INFTY:
       ub = -SCIPinfinity(scip_);
       break;
+   case BOUND_ERROR:
    default:
       SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
       ub = 0.0;
@@ -269,7 +271,17 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
                           destroyed by SCIPreleaseVar() */
    SCIP_CALL_ABORT( SCIPaddVar(scip_, var) );
    SCIP_CALL_ABORT( SCIPchgVarBranchPriority(scip_, var, branchpriority) );
-   SCIP_CALL_ABORT( SCIPreleaseVar(scip_, &var) );
+
+   if( nstartvals_ >= startvalssize_ )
+   {
+      startvalssize_ *= 2;
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &startvals_, startvalssize_) );
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &startvars_, startvalssize_) );
+   }
+   assert( nstartvals_ < startvalssize_ );
+   startvals_[nstartvals_] = (SCIP_Real)numb_todbl(startval);
+   startvars_[nstartvals_] = var;
+   nstartvals_++;
 
    return zplvar;
 }
@@ -383,7 +395,7 @@ Bound* xlp_getlower(const Var* var)
 
    scipvar = (SCIP_VAR*)var;
    lb = SCIPvarGetLbGlobal(scipvar);
-   sprintf(s, "%.20f", lb);
+   (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%.20f", lb);
    numb = numb_new_ascii(s); /* ????? isn't there a method numb_new_dbl()? */
    if( SCIPisInfinity(scip_, -lb) )
       boundtype = BOUND_MINUS_INFTY;
@@ -415,7 +427,7 @@ Bound* xlp_getupper(const Var* var)
    else
    {
       boundtype = BOUND_VALUE;
-      sprintf(s, "%.20f", ub);
+      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%.20f", ub);
       numb = numb_new_ascii(s); /* ????? isn't there a method numb_new_dbl()? */
    }
    bound = bound_new(boundtype, numb);
@@ -502,8 +514,12 @@ SCIP_DECL_READERREAD(readerReadZpl)
    char* extension;
    char* compression;
    char* paramstr;
-   SCIP_Bool changedir;
+   SCIP_SOL* startsol;
 
+   int i;
+   SCIP_Bool changedir;
+   SCIP_Bool success;
+   
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
 
    path = NULL;
@@ -517,14 +533,14 @@ SCIP_DECL_READERREAD(readerReadZpl)
       buffer[SCIP_MAXSTRLEN-1] = '\0';
       SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
       if( compression != NULL )
-         sprintf(compextension, ".%s", compression);
+         (void) SCIPsnprintf(compextension, SCIP_MAXSTRLEN, ".%s", compression);
       else
          *compextension = '\0';
-      sprintf(namewithoutpath, "%s.%s%s", name, extension, compextension);
+      (void) SCIPsnprintf(namewithoutpath, SCIP_MAXSTRLEN, "%s.%s%s", name, extension, compextension);
       if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
-         return SCIP_READERROR;
+         return SCIP_PARSEERROR;
       }
       if( path != NULL )
       {
@@ -544,7 +560,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       if( getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
-         return SCIP_READERROR;
+         return SCIP_PARSEERROR;
       }
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\nbase directory for ZIMPL parsing: <%s>\n\n", currentpath);
    }
@@ -553,6 +569,9 @@ SCIP_DECL_READERREAD(readerReadZpl)
    scip_ = scip;
    issuedbranchpriowarning_ = FALSE;
    readerror_ = FALSE;
+   startvalssize_ = 1024;
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvals_,startvalssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvars_,startvalssize_) );
 
    /* get the parameter string */
    SCIP_CALL( SCIPgetStringParam(scip, "reading/zplreader/parameters", &paramstr) );
@@ -569,9 +588,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
       int argc;
       int p;
       int len;
-      int i;
 
-      len = strlen(paramstr);
+      len = (int) strlen(paramstr);
       SCIP_CALL( SCIPallocBufferArray(scip, &argv, len+1) );
       argv[0] = dummy; /* argument 0 is irrelevant */
       argc = 1;
@@ -630,7 +648,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* append file name as last argument */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &argv[argc], filename, strlen(filename)+1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &argv[argc], filename, (int) strlen(filename)+1) );
       argc++;
 
       /* display parsed arguments */
@@ -666,6 +684,25 @@ SCIP_DECL_READERREAD(readerReadZpl)
          }
       }
    }
+
+   /* transform the problem such that adding primal solutions is possible */
+   SCIP_CALL( SCIPtransformProb(scip) );
+   SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
+   for( i = 0; i < nstartvals_; i++ )
+   {
+      SCIP_CALL( SCIPsetSolVal(scip, startsol, startvars_[i], startvals_[i]) );
+      SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) );
+   }
+   
+   success = FALSE;
+   SCIP_CALL( SCIPtrySolFree(scip, &startsol, TRUE, TRUE, TRUE, &success) );
+   if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
+
+   SCIPfreeMemoryArray(scip_,&startvals_);
+   SCIPfreeMemoryArray(scip_,&startvars_);
+   nstartvals_ = 0;
+   startvalssize_ = 0;
 
    *result = SCIP_SUCCESS;
 

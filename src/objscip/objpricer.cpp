@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.19 2007/06/06 11:25:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.19.2.1 2009/06/19 07:53:38 bzfwolte Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -48,6 +46,8 @@ struct SCIP_PricerData
  * Callback methods of variable pricer
  */
 
+extern "C"
+{
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRICERFREE(pricerFreeObj)
@@ -152,7 +152,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostObj)
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   SCIP_CALL( pricerdata->objpricer->scip_redcost(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_redcost(scip, pricer, lowerbound, result) );
 
    return SCIP_OKAY;
 }
@@ -160,7 +160,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostObj)
 
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
-SCIP_DECL_PRICERREDCOST(pricerFarkasObj)
+SCIP_DECL_PRICERFARKAS(pricerFarkasObj)
 {  /*lint --e{715}*/
    SCIP_PRICERDATA* pricerdata;
 
@@ -173,7 +173,7 @@ SCIP_DECL_PRICERREDCOST(pricerFarkasObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

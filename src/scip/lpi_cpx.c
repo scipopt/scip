@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.114 2007/10/29 11:23:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.114.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
 
 /**@file   lpi_cpx.c
+ * @ingroup LPIS
  * @brief  LP interface for CPLEX >= 8.0
  * @author Tobias Achterberg
  */
@@ -119,8 +118,13 @@ struct SCIP_LPi
    int                   cstatsize;          /**< size of cstat array */
    int                   rstatsize;          /**< size of rstat array */
    int                   iterations;         /**< number of iterations used in the last solving call */
+   SCIP_PRICING          pricing;            /**< SCIP pricing setting  */
    SCIP_Bool             solisbasic;         /**< is current LP solution a basic solution? */
    SCIP_Bool             instabilityignored; /**< was the instability of the last LP ignored? */
+#if (CPX_VERSION <= 1100)
+   SCIP_Bool             rngfound;           /**< was ranged row found; scaling is disabled, because there is a bug 
+                                              *   in the scaling algo for ranged rows in CPLEX up to version 11.0 */
+#endif
 };
 
 /** LPi state stores basis information */
@@ -855,10 +859,20 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   sprintf(cpxname, "CPLEX %.2f", (SCIP_Real)CPX_VERSION/100.0);
+   snprintf(cpxname, SCIP_MAXSTRLEN, "CPLEX %.2f", (SCIP_Real)CPX_VERSION/100.0);
    return cpxname;
 }
 
+/** gets pointer for LP solver - use only with great care 
+ *
+ *  Here we return the pointer to the LP environment.
+ */
+void* SCIPlpiGetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->cpxlp;
+}
 /**@} */
 
 
@@ -928,9 +942,13 @@ SCIP_RETCODE SCIPlpiCreate(
    (*lpi)->cstatsize = 0;
    (*lpi)->rstatsize = 0;
    (*lpi)->iterations = 0;
+   (*lpi)->pricing = SCIP_PRICING_LPIDEFAULT;
    (*lpi)->solisbasic = TRUE;
    (*lpi)->cpxlp = CPXcreateprob(cpxenv, &restat, name);
    (*lpi)->instabilityignored = FALSE;
+#if (CPX_VERSION <= 1100)
+   (*lpi)->rngfound = FALSE;
+#endif
    CHECK_ZERO( restat );
    invalidateSolution(*lpi);
    copyParameterValues(&((*lpi)->cpxparam), &defparam);
@@ -938,6 +956,9 @@ SCIP_RETCODE SCIPlpiCreate(
 
    /* set objective sense */
    SCIP_CALL( SCIPlpiChgObjsen(*lpi, objsen) );
+
+   /* set default pricing */
+   SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (int)(*lpi)->pricing) );
 
    return SCIP_OKAY;
 }
@@ -1165,6 +1186,13 @@ SCIP_RETCODE SCIPlpiAddRows(
    }
    if( rngcount > 0 )
    {
+#if (CPX_VERSION <= 1100)
+      if( lpi->rngfound == FALSE )
+      {
+         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, FALSE) );
+         lpi->rngfound = TRUE;
+      }
+#endif
       CHECK_ZERO( CPXchgrngval(cpxenv, lpi->cpxlp, rngcount, lpi->rngindarray, lpi->rngarray) );
    }
 
@@ -1309,7 +1337,7 @@ SCIP_RETCODE SCIPlpiChgSides(
       for( i = 0; i < rngcount; ++i )
       {
          assert(0 <= lpi->rngindarray[i] && lpi->rngindarray[i] < nrows);
-         assert(lpi->senarray[i] == 'R');
+         assert(lpi->senarray[lpi->rngindarray[i]] == 'R');
          lpi->rngindarray[i] = ind[lpi->rngindarray[i]];
       }
 
@@ -3159,11 +3187,19 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (getIntParam(lpi, CPX_PARAM_FASTMIP) == CPX_ON);
       break;
    case SCIP_LPPAR_SCALING:
+#if (CPX_VERSION <= 1100)
+      if( lpi->rngfound )
+         return SCIP_PARAMETERUNKNOWN;
+#endif
       *ival = (getIntParam(lpi, CPX_PARAM_SCAIND) == 0);
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = (getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON);
       break;
+   case SCIP_LPPAR_PRICING:
+      *ival = (int)lpi->pricing; /* store pricing method in LPI struct */
+      break;
+#if 0
    case SCIP_LPPAR_PRICING:
       switch( getIntParam(lpi, CPX_PARAM_PPRIIND) )
       {
@@ -3189,6 +3225,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          break;
       }
       break;
+#endif
    case SCIP_LPPAR_LPINFO:
       *ival = (getIntParam(lpi, CPX_PARAM_SCRIND) == CPX_ON);
       break;
@@ -3229,6 +3266,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
+#if (CPX_VERSION <= 1100)
+      if( lpi->rngfound )
+         return SCIP_PARAMETERUNKNOWN;
+#endif
       setIntParam(lpi, CPX_PARAM_SCAIND, ival == TRUE ? 0 : -1);
       break;
    case SCIP_LPPAR_PRESOLVING:
@@ -3236,6 +3277,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       setIntParam(lpi, CPX_PARAM_PREIND, ival == TRUE ? CPX_ON : CPX_OFF);
       break;
    case SCIP_LPPAR_PRICING:
+      lpi->pricing = (SCIP_PRICING)ival;
       switch( (SCIP_PRICING)ival )
       {
       case SCIP_PRICING_AUTO:
@@ -3250,6 +3292,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_PARTIAL);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_AUTO);
          break;
+      case SCIP_PRICING_LPIDEFAULT:
       case SCIP_PRICING_STEEP:
 	 setIntParam(lpi, CPX_PARAM_PPRIIND, CPX_PPRIIND_STEEP);
 	 setIntParam(lpi, CPX_PARAM_DPRIIND, CPX_DPRIIND_STEEP);

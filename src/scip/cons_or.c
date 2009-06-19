@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (c) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.65 2007/10/31 09:26:30 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.65.2.1 2009/06/19 07:53:41 bzfwolte Exp $"
 
 /**@file   cons_or.c
+ * @ingroup CONSHDLRS 
  * @brief  constraint handler for or constraints
  * @author Tobias Achterberg
  */
@@ -28,6 +27,7 @@
 
 #include "scip/cons_or.h"
 #include "scip/cons_and.h"
+#include "scip/pub_misc.h"
 
 
 /* constraint handler properties */
@@ -421,7 +421,11 @@ SCIP_RETCODE consdataFreeRows(
 
    if( consdata->rows != NULL )
    {
-      for( r = 0; r < consdataGetNRows(consdata); ++r )
+      int nrows;
+      
+      nrows = consdataGetNRows(consdata);
+
+      for( r = 0; r < nrows; ++r )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
@@ -684,7 +688,7 @@ SCIP_RETCODE createRelaxation(
    /* create operator rows */
    for( i = 0; i < nvars; ++i )
    {
-      sprintf(rowname, "%s_%d", SCIPconsGetName(cons), i);
+      (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_%d", SCIPconsGetName(cons), i);
       SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[i], rowname, 0.0, SCIPinfinity(scip),
             SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[i], consdata->resvar, 1.0) );
@@ -692,7 +696,7 @@ SCIP_RETCODE createRelaxation(
    }
 
    /* create additional row */
-   sprintf(rowname, "%s_add", SCIPconsGetName(cons));
+   (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_add", SCIPconsGetName(cons));
    SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[nvars], rowname, -SCIPinfinity(scip), 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, consdata->rows[nvars], consdata->resvar, 1.0) );
@@ -710,6 +714,7 @@ SCIP_RETCODE addRelaxation(
 {
    SCIP_CONSDATA* consdata;
    int r;
+   int nrows;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -718,8 +723,11 @@ SCIP_RETCODE addRelaxation(
    {
       SCIP_CALL( createRelaxation(scip, cons) );
    }
+   assert( consdata->rows != NULL );
 
-   for( r = 0; r < consdataGetNRows(consdata); ++r )
+   nrows = consdataGetNRows(consdata);
+
+   for( r = 0; r < nrows; ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
@@ -737,6 +745,7 @@ SCIP_RETCODE checkCons(
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
    SCIP_Bool             checklprows,        /**< should LP rows be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -756,8 +765,13 @@ SCIP_RETCODE checkCons(
    mustcheck = mustcheck || (consdata->rows == NULL);
    if( !mustcheck )
    {
+      int nrows;
+
       assert(consdata->rows != NULL);
-      for( r = 0; r < consdataGetNRows(consdata); ++r )
+
+      nrows = consdataGetNRows(consdata);
+
+      for( r = 0; r < nrows; ++r )
       {
          mustcheck = !SCIProwIsInLP(consdata->rows[r]);
          if( mustcheck )
@@ -791,9 +805,25 @@ SCIP_RETCODE checkCons(
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *violated = TRUE;
+
+         if( printreason )
+         {
+            SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+            SCIPinfoMessage(scip, NULL, "violation:\n");
+            if( i == consdata->nvars )
+            {
+               SCIPinfoMessage(scip, NULL, " all operands are FALSE and resultant <%s> = TRUE\n",
+                  SCIPvarGetName(consdata->resvar)); 
+            }
+            else
+            {
+               SCIPinfoMessage(scip, NULL, " operand <%s> = TRUE and resultant <%s> = FALSE\n",
+                  SCIPvarGetName(consdata->vars[i-1]), SCIPvarGetName(consdata->resvar)); 
+            }
+         }
       }
    }
-
+   
    return SCIP_OKAY;
 }
 
@@ -809,6 +839,7 @@ SCIP_RETCODE separateCons(
    SCIP_CONSDATA* consdata;
    SCIP_Real feasibility;
    int r;
+   int nrows;
 
    assert(separated != NULL);
 
@@ -824,8 +855,10 @@ SCIP_RETCODE separateCons(
    }
    assert(consdata->rows != NULL);
 
+   nrows = consdataGetNRows(consdata);
+
    /* test all rows for feasibility and add infeasible rows */
-   for( r = 0; r < consdataGetNRows(consdata); ++r )
+   for( r = 0; r < nrows; ++r )
    {
       if( !SCIProwIsInLP(consdata->rows[r]) )
       {
@@ -1471,7 +1504,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpOr)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
       if( violated )
       {
          SCIP_Bool separated;
@@ -1498,7 +1531,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsOr)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, TRUE, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], NULL, TRUE, FALSE, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -1521,7 +1554,7 @@ SCIP_DECL_CONSCHECK(consCheckOr)
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
-      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, &violated) );
+      SCIP_CALL( checkCons(scip, conss[i], sol, checklprows, printreason, &violated) );
       if( violated )
       {
          *result = SCIP_INFEASIBLE;
@@ -1834,7 +1867,8 @@ SCIP_RETCODE SCIPcreateConsOr(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even

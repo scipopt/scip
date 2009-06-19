@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2006 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,11 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.3 2007/10/12 17:52:11 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.3.2.1 2009/06/19 07:53:31 bzfwolte Exp $"
 
 #include "probdata_lop.h"
 
 #include "cons_linearordering.h"
+#include "scip/misc.h"
 
 
 struct SCIP_ProbData
@@ -253,7 +252,7 @@ SCIP_RETCODE LOPgenerateModel(
 	 if (j != i)
 	 {
 	    char s[SCIP_MAXSTRLEN];
-	    sprintf(s, "x#%d#%d", i, j);
+	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
 	    SCIP_CALL( SCIPcreateVar(scip, &(probdata->Vars[i][j]), s, 0.0, 1.0, probdata->W[i][j], SCIP_VARTYPE_BINARY,
 				     TRUE, FALSE, NULL, NULL, NULL, NULL));
 	    SCIP_CALL( SCIPaddVar(scip, probdata->Vars[i][j]) );
@@ -310,10 +309,10 @@ SCIP_RETCODE LOPevalSolution(
 	 int deg = 0;
 	 for (j = 0; j < n; ++j)
 	 {
+	    SCIP_Real val = 0.0;
 	    if (j == i)
 	       continue;
 
-	    SCIP_Real val = 0.0;
 	    val = SCIPgetSolVal(scip, sol, Vars[i][j]);
 	    assert( SCIPisIntegral(scip, val) );
 	    if ( val < 0.5 )
@@ -324,7 +323,7 @@ SCIP_RETCODE LOPevalSolution(
       }
 
       /* sort such that degrees are non-decreasing */
-      SCIPbsortRealPtr(outDegree, (void**) indices, n);
+      SCIPsortRealPtr(outDegree, (void**) indices, n);
 
       /* output */
       printf("\nFinal order:\n");

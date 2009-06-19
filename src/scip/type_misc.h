@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.13 2007/06/06 11:25:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.13.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
 
 /**@file   type_misc.h
  * @brief  type definitions for miscellaneous datastructures
@@ -56,13 +54,13 @@ typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing
 #define SCIP_DECL_SORTPTRCOMP(x) int x (void* elem1, void* elem2)
 
 /** gets the key of the given element */
-#define SCIP_DECL_HASHGETKEY(x) void* x (void* elem)
+#define SCIP_DECL_HASHGETKEY(x) void* x (void* userptr, void* elem)
 
 /** returns TRUE iff both keys are equal */
-#define SCIP_DECL_HASHKEYEQ(x) SCIP_Bool x (void* key1, void* key2)
+#define SCIP_DECL_HASHKEYEQ(x) SCIP_Bool x (void* userptr, void* key1, void* key2)
 
 /** returns the hash value of the key */
-#define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* key)
+#define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
 
 
 

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.29 2007/11/13 17:21:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.28.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -63,6 +61,7 @@ SCIP_RETCODE SCIPreaderRead(
    SCIP_READER*          reader,             /**< reader */
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           filename,           /**< name of the input file */
+   const char*           extension,          /**< extension of the input file name */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 

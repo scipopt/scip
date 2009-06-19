@@ -1,4 +1,4 @@
-#--- $Id: make.irix.mips.sgi.dbg,v 1.2 2008/01/28 14:31:08 bzfheinz Exp $
+#--- $Id: make.irix.mips.sgi.dbg,v 1.1.2.1 2009/06/19 07:53:34 bzfwolte Exp $
 FLAGS		+=	# -DROUNDING_FE
 OFLAGS		+=	-fullwarn -g
 CFLAGS		+=	

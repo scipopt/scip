@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.c,v 1.6 2007/06/06 11:25:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.c,v 1.6.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
 
 /**@file   sepa_redcost.c
+ * @ingroup SEPARATORS
  * @brief  reduced cost strengthening separator
  * @author Tobias Achterberg
  */
@@ -117,6 +116,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
    if( SCIPisInfinity(scip, cutoffbound) )
       return SCIP_OKAY;
 
+   /* only call separator, if the current LP is a valid relaxation */
+   if( !SCIPisLPRelax(scip) )
+      return SCIP_OKAY;
+
    /* get LP columns */
    cols = SCIPgetLPCols(scip);
    ncols = SCIPgetNLPCols(scip);
@@ -146,7 +149,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
       {
       case SCIP_BASESTAT_LOWER:
          redcost = SCIPgetColRedcost(scip, cols[c]);
-         assert(!SCIPisFeasNegative(scip, redcost));
+         assert( !SCIPisFeasNegative(scip, redcost) || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
          if( SCIPisFeasPositive(scip, redcost) )
          {
             SCIP_Real oldlb;
@@ -194,7 +197,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRedcost)
 
       case SCIP_BASESTAT_UPPER:
          redcost = SCIPgetColRedcost(scip, cols[c]);
-         assert(!SCIPisFeasPositive(scip, redcost));
+         assert( !SCIPisFeasPositive(scip, redcost) || SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
          if( SCIPisFeasNegative(scip, redcost) )
          {
             SCIP_Real oldlb;

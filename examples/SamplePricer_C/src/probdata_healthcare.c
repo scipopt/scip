@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2006 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,10 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_healthcare.c,v 1.3 2006/08/30 09:46:04 bzfpfend Exp $"
+#pragma ident "@(#) $Id: probdata_healthcare.c,v 1.3.2.1 2009/06/19 07:53:32 bzfwolte Exp $"
 
 #include "probdata_healthcare.h"
 #include "scip/cons_setppc.h"
+#include "scip/misc.h"
 
 
 struct SCIP_ProbData
@@ -120,7 +119,7 @@ SCIP_RETCODE HCPgenerateModel(
    {
       char consname[SCIP_MAXSTRLEN];
 
-      sprintf(consname, "servejobs_%d", i);
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "servejobs_%d", i);
       SCIP_CALL( SCIPcreateConsSetpart(scip, &probdata->cons_servejobs[i], consname, 
             0, NULL, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->cons_servejobs[i]) );
@@ -131,7 +130,7 @@ SCIP_RETCODE HCPgenerateModel(
    {
       char consname[SCIP_MAXSTRLEN];
 
-      sprintf(consname, "workers_%d", i);
+      SCIPsnprintf(consname, SCIP_MAXSTRLEN, "workers_%d", i);
       SCIP_CALL( SCIPcreateConsSetpack(scip, &probdata->cons_workers[i], consname, 
             0, NULL, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->cons_workers[i]) );

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.c,v 1.29 2007/06/06 11:25:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: buffer.c,v 1.29.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
 
 /**@file   buffer.c
  * @brief  methods for memory buffers for temporary objects
@@ -132,7 +130,7 @@ SCIP_RETCODE SCIPbufferAllocMem(
    buffer->firstfree++;
 
    SCIPdebugMessage("allocated buffer %d/%d at %p of size %d (required size: %d) for pointer %p\n", 
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, (void*)ptr);
 
 #else
    SCIP_ALLOC( BMSallocMemorySize(ptr, size) );
@@ -210,7 +208,7 @@ SCIP_RETCODE SCIPbufferReallocMem(
    assert(*ptr == buffer->data[bufnum]);
 
    SCIPdebugMessage("reallocated buffer %d/%d at %p to size %d (required size: %d) for pointer %p\n", 
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, (void*)ptr);
 
 #else
    SCIP_ALLOC( BMSreallocMemorySize(ptr, size) );
@@ -252,7 +250,7 @@ void SCIPbufferFreeMem(
       buffer->firstfree--;
 
    SCIPdebugMessage("freed buffer %d/%d at %p of size %d for pointer %p, first free is %d\n", 
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], (void*)ptr, buffer->firstfree);
 
 #else
    BMSfreeMemory(ptr);

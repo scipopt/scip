@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2006 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2006 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic Licence.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.10 2007/08/22 13:22:36 bzfpfend Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.10.2.1 2009/06/19 07:53:31 bzfwolte Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ example project using SCIP as a callable library
@@ -66,7 +64,7 @@ SCIP_RETCODE fromCommandLine(
 
    std::cout << std::endl << "read problem <" << filename << ">" << std::endl;
    std::cout << "============" << std::endl << std::endl;
-   SCIP_CALL( SCIPreadProb(scip, filename) );
+   SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
 
    /*******************

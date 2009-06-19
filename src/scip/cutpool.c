@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.53 2007/07/27 12:22:34 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.53.2.1 2009/06/19 07:53:41 bzfwolte Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -267,7 +265,7 @@ SCIP_RETCODE SCIPcutpoolCreate(
    SCIP_CALL( SCIPclockCreate(&(*cutpool)->poolclock, SCIP_CLOCKTYPE_DEFAULT) );
 
    SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, SCIP_HASHSIZE_CUTPOOLS,
-                  hashGetKeyCut, hashKeyEqCut, hashKeyValCut) );
+         hashGetKeyCut, hashKeyEqCut, hashKeyValCut, NULL) );
 
    (*cutpool)->cuts = NULL;
    (*cutpool)->cutssize = 0;
@@ -365,7 +363,6 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    )
 {
    SCIP_CUT* cut;
-   int maxidx;
 
    assert(cutpool != NULL);
    assert(row != NULL);
@@ -383,7 +380,7 @@ SCIP_RETCODE SCIPcutpoolAddNewRow(
    }
 
    /* only called to ensure that minidx and maxidx are up-to-date */
-   maxidx = SCIProwGetMaxidx(row, set);    
+   (void) SCIProwGetMaxidx(row, set);    
    assert(row->validminmaxidx);   
 
    /* create the cut */
@@ -541,7 +538,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    found = FALSE;
 
    SCIPdebugMessage("separating cut pool %p with %d cuts, beginning with cut %d\n",
-      cutpool, cutpool->ncuts, cutpool->firstunprocessed);
+      (void*)cutpool, cutpool->ncuts, cutpool->firstunprocessed);
 
    /* start timing */
    SCIPclockStart(cutpool->poolclock, set);

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.85.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.85.2.2 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -361,6 +359,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    {
       SCIP_Real obj;
 
+      assert(SCIPsolGetOrigin(primal->sols[0]) == SCIP_SOLORIGIN_ORIGINAL);
       obj = SCIPsolGetObj(primal->sols[0], set, prob);
       upperbound = MIN(upperbound, obj);
    }
@@ -416,7 +415,7 @@ SCIP_RETCODE primalAddSol(
    assert(sol != NULL);
    assert(0 <= insertpos && insertpos < set->limit_maxsol);
 
-   SCIPdebugMessage("insert primal solution %p with obj %g at position %d:\n", sol, SCIPsolGetObj(sol, set, prob), insertpos);
+   SCIPdebugMessage("insert primal solution %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetObj(sol, set, prob), insertpos);
    SCIPdebug( SCIPsolPrint(sol, set, stat, prob, NULL, NULL, FALSE) );
 
 #if 0

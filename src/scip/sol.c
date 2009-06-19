@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.81.2.1 2009/06/10 17:47:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.81.2.2 2009/06/19 07:53:52 bzfwolte Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -217,13 +215,17 @@ static
 void solStamp(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_Bool             checktime           /**< should the time be updated? */
    )
 {
    assert(sol != NULL);
    assert(stat != NULL);
 
-   sol->time = SCIPclockGetTime(stat->solvingtime);
+   if( checktime )
+      sol->time = SCIPclockGetTime(stat->solvingtime);
+   else
+      sol->time = SCIPclockGetLastTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
    sol->runnum = stat->nruns;
    sol->depth = SCIPtreeGetCurrentDepth(tree);
@@ -253,7 +255,7 @@ SCIP_RETCODE SCIPsolCreate(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree);
+   solStamp(*sol, stat, tree,TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -284,7 +286,7 @@ SCIP_RETCODE SCIPsolCreateOriginal(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree);
+   solStamp(*sol, stat, tree,TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -418,7 +420,7 @@ SCIP_RETCODE SCIPsolCreateUnknown(
    (*sol)->primalindex = -1;
    (*sol)->index = stat->solindex;
    stat->solindex++;
-   solStamp(*sol, stat, tree);
+   solStamp(*sol, stat, tree,TRUE);
 
    SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
 
@@ -501,7 +503,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
       }
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
-   solStamp(sol, stat, tree);
+   solStamp(sol, stat, tree,TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -534,7 +536,7 @@ SCIP_RETCODE SCIPsolLinkPseudoSol(
       sol->obj = SCIPlpGetPseudoObjval(lp, set);
    
    sol->solorigin = SCIP_SOLORIGIN_PSEUDOSOL;
-   solStamp(sol, stat, tree);
+   solStamp(sol, stat, tree,TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 
@@ -579,7 +581,7 @@ SCIP_RETCODE SCIPsolClear(
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_ZERO;
    sol->obj = 0.0;
-   solStamp(sol, stat, tree);
+   solStamp(sol, stat, tree,TRUE);
 
    return SCIP_OKAY;
 }
@@ -596,7 +598,7 @@ SCIP_RETCODE SCIPsolSetUnknown(
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_UNKNOWN;
    sol->obj = 0.0;
-   solStamp(sol, stat, tree);
+   solStamp(sol, stat, tree,TRUE);
 
    return SCIP_OKAY;
 }
@@ -617,7 +619,7 @@ SCIP_RETCODE SCIPsolUnlink(
    if( sol->solorigin != SCIP_SOLORIGIN_ORIGINAL && sol->solorigin != SCIP_SOLORIGIN_ZERO
       && sol->solorigin != SCIP_SOLORIGIN_UNKNOWN )
    {
-      SCIPdebugMessage("completing solution %p\n", sol);
+      SCIPdebugMessage("completing solution %p\n", (void*)sol);
 
       for( v = 0; v < prob->nvars; ++v )
       {
@@ -650,7 +652,7 @@ SCIP_RETCODE SCIPsolSetVal(
    assert(stat != NULL);
    assert(var != NULL);
 
-   SCIPdebugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), sol, val);
+   SCIPdebugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), (void*)sol, val);
 
    /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
    switch( SCIPvarGetStatus(var) )
@@ -672,7 +674,7 @@ SCIP_RETCODE SCIPsolSetVal(
             if( val != SCIP_UNKNOWN ) /*lint !e777*/
                sol->obj += obj * val;
 
-            solStamp(sol, stat, tree);
+            solStamp(sol, stat, tree,FALSE);
          }
          return SCIP_OKAY;
       }
@@ -696,7 +698,7 @@ SCIP_RETCODE SCIPsolSetVal(
          if( val != SCIP_UNKNOWN ) /*lint !e777*/
             sol->obj += obj * val;
 
-         solStamp(sol, stat, tree);
+         solStamp(sol, stat, tree,FALSE);
       }
       return SCIP_OKAY;
 
@@ -705,7 +707,7 @@ SCIP_RETCODE SCIPsolSetVal(
       oldval = SCIPvarGetLbGlobal(var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %g to different value %g\n",
+         SCIPerrorMessage("cannot set solution value for variable <%s> fixed to %.15g to different value %.15g\n",
             SCIPvarGetName(var), oldval, val);
          return SCIP_INVALIDDATA;
       }
@@ -746,7 +748,7 @@ SCIP_RETCODE SCIPsolIncVal(
    assert(stat != NULL);
    assert(var != NULL);
 
-   SCIPdebugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), sol, incval);
+   SCIPdebugMessage("increasing value of <%s> in solution %p by %g\n", SCIPvarGetName(var), (void*)sol, incval);
 
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
@@ -759,7 +761,7 @@ SCIP_RETCODE SCIPsolIncVal(
       {
          SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
          sol->obj += SCIPvarGetObj(var) * incval;
-         solStamp(sol, stat, tree);
+         solStamp(sol, stat, tree,FALSE);
          return SCIP_OKAY;
       }
       else
@@ -770,7 +772,7 @@ SCIP_RETCODE SCIPsolIncVal(
       assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
       SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
       sol->obj += SCIPvarGetObj(var) * incval;
-      solStamp(sol, stat, tree);
+      solStamp(sol, stat, tree,FALSE);
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -987,7 +989,7 @@ SCIP_RETCODE SCIPsolCheck(
    for( h = 0; h < set->nconshdlrs && *feasible; ++h )
    {
       SCIP_CALL( SCIPconshdlrCheck(set->conshdlrs[h], blkmem, set, stat, sol, 
-            checkintegrality, checklprows, &result) );
+            checkintegrality, checklprows, FALSE, &result) );
       *feasible = *feasible && (result == SCIP_FEASIBLE);
 
 #ifdef SCIP_DEBUG
@@ -1221,8 +1223,8 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.9g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+            SCIPmessageFPrintInfo(file, " % 20.15g", solval);
+         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -1239,8 +1241,8 @@ SCIP_RETCODE SCIPsolPrint(
          else if( SCIPsetIsInfinity(set, -solval) )
             SCIPmessageFPrintInfo(file, "            -infinity");
          else
-            SCIPmessageFPrintInfo(file, " % 20.9g", solval);
-         SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(prob->vars[v]));
+            SCIPmessageFPrintInfo(file, " %20.15g", solval);
+         SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
       }
    }
 
@@ -1265,8 +1267,8 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.9g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -1286,8 +1288,8 @@ SCIP_RETCODE SCIPsolPrint(
             else if( SCIPsetIsInfinity(set, -solval) )
                SCIPmessageFPrintInfo(file, "            -infinity");
             else
-               SCIPmessageFPrintInfo(file, " % 20.9g", solval);
-            SCIPmessageFPrintInfo(file, " \t(obj:%g)\n", SCIPvarGetObj(transprob->vars[v]));
+               SCIPmessageFPrintInfo(file, " % 20.15g", solval);
+            SCIPmessageFPrintInfo(file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
          }
       }
    }
@@ -1411,7 +1413,6 @@ int SCIPsolGetIndex(
 }
 
 /** informs the solution that it now belongs to the given primal heuristic */
-extern
 void SCIPsolSetHeur(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */

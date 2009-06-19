@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.23 2007/06/06 11:25:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.23.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -30,6 +28,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
+#include "scip/type_result.h"
 #include "scip/type_set.h"
 #include "scip/type_lp.h"
 #include "scip/type_prob.h"
@@ -114,7 +113,9 @@ extern
 SCIP_RETCODE SCIPpricerRedcost(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_RESULT*          result              /**< result of the pricing process */    
    );
 
 /** calls farkas pricing method of variable pricer */
@@ -132,7 +133,9 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_PRICESTORE*      pricestore          /**< pricing storage */
+   SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_RESULT*          result              /**< result of the pricing process */
    );
 
 /** sets priority of variable pricer */

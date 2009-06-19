@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.38 2007/06/06 11:32:31 bzfpfend Exp $"
+#pragma ident "@(#) $Id: lpi_spx121.cpp,v 1.38.2.1 2009/06/19 07:53:45 bzfwolte Exp $"
 
 /**@file   lpi_spx121.cpp
+ * @ingroup LPIS
  * @brief  LP interface for SOPLEX 1.2.1
  * @author Tobias Achterberg
  */
@@ -53,7 +52,6 @@
 #endif
 
 #include <cassert>
-
 
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
@@ -444,10 +442,17 @@ const char* SCIPlpiGetSolverName(
    int version;
 
    version = spx.version();
-   sprintf(spxname, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
+   snprintf(spxname, SCIP_MAXSTRLEN, "SOPLEX %d.%d.%d", version/100, (version % 100)/10, version % 10);
    return spxname;
 }
 
+/** gets pointer for LP solver - use only with great care */
+void* SCIPlpiGetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->spx;
+}
 /**@} */
 
 

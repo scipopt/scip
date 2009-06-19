@@ -1,4 +1,4 @@
-#--- $Id: make.cygwin.x86.gnu.opt,v 1.2 2008/01/28 14:31:07 bzfheinz Exp $
+#--- $Id: make.cygwin.x86.gnu.opt,v 1.1.2.1 2009/06/19 07:53:34 bzfwolte Exp $
 FLAGS		+=	-DNDEBUG
 OFLAGS		+=	-O3 -march=pentiumpro -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes

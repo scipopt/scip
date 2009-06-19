@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.60 2007/06/06 11:25:25 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.60.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -36,6 +34,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/sepa.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_sepa.h"
 
@@ -122,24 +121,24 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "separating/%s/priority", name);
-   sprintf(paramdesc, "priority of separator <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of separator <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4,
          paramChgdSepaPriority, (SCIP_PARAMDATA*)(*sepa)) ); /*lint !e740*/
 
-   sprintf(paramname, "separating/%s/freq", name);
-   sprintf(paramdesc, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/freq", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling separator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "separating/%s/maxbounddist", name);
-   sprintf(paramdesc, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/maxbounddist", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <%s> (0.0: only on current best node, 1.0: on all nodes)",
       name);
    SCIP_CALL( SCIPsetAddRealParam(set, blkmem, paramname, paramdesc,
          &(*sepa)->maxbounddist, TRUE, maxbounddist, 0.0, 1.0, NULL, NULL) );
 
-   sprintf(paramname, "separating/%s/delay", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "separating/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should separator be delayed, if other separators found cuts?",
          &(*sepa)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/
@@ -293,9 +292,10 @@ SCIP_RETCODE SCIPsepaExecLP(
       && SCIPsetIsLE(set, bounddist, sepa->maxbounddist)
       && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->lpwasdelayed) )
    {
-      if( !sepa->delay || execdelayed )
+      if( (!sepa->delay && !sepa->lpwasdelayed) || execdelayed )
       {
 	 SCIP_Longint oldndomchgs;
+	 SCIP_Longint oldnprobdomchgs;
 	 int oldncuts;
 	 int oldnactiveconss;
          int ncutsfound;
@@ -303,6 +303,7 @@ SCIP_RETCODE SCIPsepaExecLP(
          SCIPdebugMessage("executing separator <%s> on LP solution\n", sepa->name);
 
 	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
+	 oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 	 oldncuts = SCIPsepastoreGetNCuts(sepastore);
 	 oldnactiveconss = stat->nactiveconss;
 
@@ -335,7 +336,11 @@ SCIP_RETCODE SCIPsepaExecLP(
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
 	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
 	 sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+	 sepa->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF
@@ -389,16 +394,18 @@ SCIP_RETCODE SCIPsepaExecSol(
    if( sepa->sepaexecsol != NULL
       && ((depth == 0 && sepa->freq == 0) || (sepa->freq > 0 && depth % sepa->freq == 0) || sepa->solwasdelayed) )
    {
-      if( !sepa->delay || execdelayed )
+      if( (!sepa->delay && !sepa->solwasdelayed) || execdelayed )
       {
 	 SCIP_Longint oldndomchgs;
+	 SCIP_Longint oldnprobdomchgs;
 	 int oldncuts;
 	 int oldnactiveconss;
          int ncutsfound;
 
-         SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, sol);
+         SCIPdebugMessage("executing separator <%s> on solution %p\n", sepa->name, (void*)sol);
 
 	 oldndomchgs = stat->nboundchgs + stat->nholechgs;
+	 oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 	 oldncuts = SCIPsepastoreGetNCuts(sepastore);
 	 oldnactiveconss = stat->nactiveconss;
 
@@ -431,7 +438,11 @@ SCIP_RETCODE SCIPsepaExecSol(
          sepa->ncutsfound += ncutsfound;
          sepa->ncutsfoundatnode += ncutsfound;
 	 sepa->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
 	 sepa->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+	 sepa->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
          /* evaluate result */
          if( *result != SCIP_CUTOFF

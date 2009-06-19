@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.92.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.92.2.2 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -30,11 +28,12 @@
 #include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/misc.h"
+#include "scip/pub_misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
 #include "scip/prob.h"
+#include "scip/primal.h"
 #include "scip/tree.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
@@ -146,6 +145,32 @@ SCIP_RETCODE probEnsureConssMem(
    return SCIP_OKAY;
 }
 
+/** returns whether the constraint has a name */
+static
+SCIP_Bool consHasName(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   const char* name;
+
+   name = SCIPconsGetName(cons);
+
+   return (name != NULL && name[0] != '\0');
+}
+
+/** returns whether the variable has a name */
+static
+SCIP_Bool varHasName(
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   const char* name;
+
+   name = SCIPvarGetName(var);
+
+   return (name != NULL && name[0] != '\0');
+}
+
 
 
 /*
@@ -181,7 +206,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->probinitsol = probinitsol;
    (*prob)->probexitsol = probexitsol;
    SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem, SCIP_HASHSIZE_NAMES,
-                  SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString) );
+         SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    (*prob)->vars = NULL;
    (*prob)->varssize = 0;
    (*prob)->nvars = 0;
@@ -197,7 +222,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->deletedvarssize = 0;
    (*prob)->ndeletedvars = 0;
    SCIP_CALL( SCIPhashtableCreate(&(*prob)->consnames, blkmem, SCIP_HASHSIZE_NAMES,
-                  SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString) );
+         SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
    (*prob)->conss = NULL;
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
@@ -327,7 +352,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIPdebugMessage("transform problem: original has %d variables\n", source->nvars);
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
-   sprintf(transname, "t_%s", source->name);
+   (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
    SCIP_CALL( SCIPprobCreate(target, blkmem, transname, NULL, NULL, source->probdeltrans, 
                   source->probinitsol, source->probexitsol, NULL, TRUE) );
    SCIPprobSetObjsense(*target, source->objsense);
@@ -633,7 +658,10 @@ SCIP_RETCODE SCIPprobAddVar(
    probInsertVar(prob, var);
 
    /* add variable's name to the namespace */
-   SCIP_CALL( SCIPhashtableInsert(prob->varnames, (void*)var) );
+   if( varHasName(var) )
+   {
+      SCIP_CALL( SCIPhashtableInsert(prob->varnames, (void*)var) );
+   }
 
    /* update branching candidates and pseudo and loose objective value in the LP */
    if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
@@ -720,7 +748,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
       /* don't delete the variable, if it was fixed or aggregated in the meantime */
       if( SCIPvarGetProbindex(var) >= 0 )
       {
-         SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), var);
+         SCIPdebugMessage("perform deletion of <%s> [%p]\n", SCIPvarGetName(var), (void*)var);
          
          /* convert column variable back into loose variable, free LP column */
          if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -736,8 +764,11 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          }
          
          /* remove variable's name from the namespace */
-         assert(SCIPhashtableExists(prob->varnames, (void*)var));
-         SCIP_CALL( SCIPhashtableRemove(prob->varnames, (void*)var) );
+         if( varHasName(var) )
+         {
+            assert(SCIPhashtableExists(prob->varnames, (void*)var));
+            SCIP_CALL( SCIPhashtableRemove(prob->varnames, (void*)var) );
+         }
 
          /* remove variable from vars array and mark it to be not in problem */
          SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
@@ -891,7 +922,10 @@ SCIP_RETCODE SCIPprobAddCons(
    SCIPconsCapture(cons);
 
    /* add constraint's name to the namespace */
-   SCIP_CALL( SCIPhashtableInsert(prob->consnames, (void*)cons) );
+   if( consHasName(cons) )
+   {
+      SCIP_CALL( SCIPhashtableInsert(prob->consnames, (void*)cons) );
+   }
 
    /* if the problem is the transformed problem, activate and lock constraint */
    if( prob->transformed )
@@ -952,8 +986,11 @@ SCIP_RETCODE SCIPprobDelCons(
    assert(!cons->enabled || cons->updatedeactivate);
 
    /* remove constraint's name from the namespace */
-   assert(SCIPhashtableExists(prob->consnames, (void*)cons));
-   SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
+   if( consHasName(cons) )
+   {
+      assert(SCIPhashtableExists(prob->consnames, (void*)cons));
+      SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
+   }
 
    /* remove the constraint from the problem's constraint array */
    arraypos = cons->addarraypos;
@@ -1092,7 +1129,9 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -1196,6 +1235,9 @@ SCIP_RETCODE SCIPprobScaleObj(
                   prob->objscale /= intscalar;
                   prob->objisintegral = TRUE;
                   SCIPdebugMessage("integral objective scalar: objscale=%g\n", prob->objscale);
+
+                  /* update upperbound and cutoffbound in primal data structure */
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, prob, tree, lp) );
                }
             }
          }
@@ -1226,7 +1268,10 @@ void SCIPprobStoreRootSol(
       SCIPvarStoreRootSol(prob->vars[v], stat, lp, roothaslp);
 
    if( roothaslp )
+   {
+      SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
       SCIPlpStoreRootObjval(lp, set);
+   }
 }
 
 /** informs problem, that the presolving process was finished, and updates all internal data structures */
@@ -1327,6 +1372,20 @@ const char* SCIPprobGetName(
    return prob->name;
 }
 
+/** sets problem name */
+SCIP_RETCODE SCIPprobSetName(
+   SCIP_PROB*            prob,               /**< problem data */
+   const char*           name                /**< name to be set */
+   )
+{
+   assert(prob != NULL);
+
+   BMSfreeMemoryArray(&(prob->name));
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(prob->name), name, strlen(name)+1) );
+
+   return SCIP_OKAY;
+}
+
 /** gets user problem data */
 SCIP_PROBDATA* SCIPprobGetData(
    SCIP_PROB*            prob                /**< problem */
@@ -1406,7 +1465,7 @@ SCIP_VAR* SCIPprobFindVar(
    assert(prob != NULL);
    assert(name != NULL);
 
-   return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (void*)name));
+   return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (char*)name));
 }
 
 /** returns constraint of the problem with given name */
@@ -1418,7 +1477,7 @@ SCIP_CONS* SCIPprobFindCons(
    assert(prob != NULL);
    assert(name != NULL);
 
-   return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (void*)name));
+   return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (char*)name));
 }
 
 /** returns TRUE iff all columns, i.e. every variable with non-empty column w.r.t. all ever created rows, are present
@@ -1451,7 +1510,7 @@ void SCIPprobPrintPseudoSol(
       assert(var != NULL);
       solval = SCIPvarGetPseudoSol(var);
       if( !SCIPsetIsZero(set, solval) )
-         SCIPmessagePrintInfo(" <%s>=%g", SCIPvarGetName(var), solval);
+         SCIPmessagePrintInfo(" <%s>=%.15g", SCIPvarGetName(var), solval);
    }
    SCIPmessagePrintInfo("\n");
 }

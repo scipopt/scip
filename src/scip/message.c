@@ -1,11 +1,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  This file is part of the program and library             */
+/*                  This1 file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.26 2007/06/06 11:25:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.26.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -30,6 +28,7 @@
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/message.h"
+#include "scip/misc.h"
 
 
 /** error message print method of default message handler */
@@ -346,7 +345,9 @@ void SCIPmessagePrintErrorHeader(
 {
    char msg[SCIP_MAXSTRLEN];
 
-   snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
+   /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
+   (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
+   msg[SCIP_MAXSTRLEN-1] = '\0';
    messagePrintError(msg);
 }
 
@@ -358,9 +359,31 @@ void SCIPmessagePrintError(
 {
    char msg[SCIP_MAXSTRLEN];
    va_list ap;
+   int n;
 
    va_start(ap, formatstr); /*lint !e826*/
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); /*lint !e718 !e746*/
+
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); /*lint !e718 !e746*/
+   if( n < 0 )
+      msg[SCIP_MAXSTRLEN-1] = '\0';
+   else if( n >= SCIP_MAXSTRLEN )
+   {
+      char* bigmsg;
+      int m;
+      va_list aq;
+   
+      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         return;
+      
+      va_start(aq, formatstr); /*lint !e826*/
+      m = vsnprintf(bigmsg, n+1, formatstr, aq); /*lint !e718 !e746*/
+      assert(m == n);
+      va_end(aq);
+      messagePrintError(bigmsg);
+      BMSfreeMemory(&bigmsg);
+      return;
+   }   
+
    messagePrintError(msg);
    va_end(ap);
 }
@@ -373,7 +396,9 @@ void SCIPmessagePrintWarningHeader(
 {
    char msg[SCIP_MAXSTRLEN];
 
-   snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
+   /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
+   (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] Warning: ", sourcefile, sourceline);
+   msg[SCIP_MAXSTRLEN-1] = '\0';   
    messagePrintWarning(msg);
 }
 
@@ -385,11 +410,31 @@ void SCIPmessagePrintWarning(
 {
    char msg[SCIP_MAXSTRLEN];
    va_list ap;
+   int n;
 
    va_start(ap, formatstr); /*lint !e826*/
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
-   messagePrintWarning(msg);
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    va_end(ap);
+   if( n < 0 )
+      msg[SCIP_MAXSTRLEN-1] = '\0';
+   else if( n >= SCIP_MAXSTRLEN )
+   {
+      va_list aq;
+      char* bigmsg;
+      int m;
+
+      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         return;
+
+      va_start(aq, formatstr); /*lint !e826*/
+      m = vsnprintf(bigmsg, n+1, formatstr, aq);  /*lint !e718 !e746*/
+      assert(m == n);
+      va_end(aq);
+      messagePrintWarning(bigmsg);
+      BMSfreeMemory(&bigmsg);
+      return;
+   }   
+   messagePrintWarning(msg);
 }
 
 /** prints a dialog message that requests user interaction, acting like the printf() command */
@@ -436,9 +481,31 @@ void SCIPmessageVFPrintDialog(
    )
 {
    char msg[SCIP_MAXSTRLEN];
+   int n;
+   va_list aq;
+   
+   va_copy(aq, ap);
 
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+   if( n < 0 )
+      msg[SCIP_MAXSTRLEN-1] = '\0';
+   else if( n >= SCIP_MAXSTRLEN )
+   {
+      char* bigmsg;
+      int m;
+
+      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         return;
+
+      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+      assert(m == n);
+      va_end(aq);
+      messagePrintDialog(file, bigmsg);
+      BMSfreeMemory(&bigmsg);
+      return;
+   }   
    messagePrintDialog(file, msg);
+   va_end(aq);
 }
 
 /** prints a message, acting like the printf() command */
@@ -485,9 +552,31 @@ void SCIPmessageVFPrintInfo(
    )
 {
    char msg[SCIP_MAXSTRLEN];
+   int n;
+   va_list aq;
 
-   vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+   va_copy(aq, ap);
+   
+   n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); 
+   if( n < 0 )
+      msg[SCIP_MAXSTRLEN-1] = '\0';
+   else if( n >= SCIP_MAXSTRLEN )
+   {
+      char* bigmsg;
+      int m;
+
+      if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         return;
+
+      m = vsnprintf(bigmsg, n+1, formatstr, aq);
+      assert(m == n);
+      va_end(aq);
+      messagePrintInfo(file, bigmsg);
+      BMSfreeMemory(&bigmsg);
+      return;
+   }   
    messagePrintInfo(file, msg);
+   va_end(aq);
 }
 
 /** prints a message depending on the verbosity level, acting like the printf() command */
@@ -548,8 +637,30 @@ void SCIPmessageVFPrintVerbInfo(
    if( msgverblevel <= verblevel )
    {
       char msg[SCIP_MAXSTRLEN];
+      int n;
+      va_list aq;
 
-      vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+      va_copy(aq, ap);
+
+      n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
+      if( n < 0 )
+         msg[SCIP_MAXSTRLEN-1] = '\0';
+      else if( n >= SCIP_MAXSTRLEN )
+      {
+         char* bigmsg;
+         int m;
+         
+         if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+            return;
+         
+         m = vsnprintf(bigmsg, n+1, formatstr, aq);
+         assert(m == n);
+         va_end(aq);
+         messagePrintInfo(file, bigmsg);
+         BMSfreeMemory(&bigmsg);
+         return;
+      }   
       messagePrintInfo(file, msg);
+      va_end(aq);
    }
 }

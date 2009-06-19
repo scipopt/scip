@@ -27,6 +27,11 @@ int strcoll(const char *, const char *);
 char * strcpy(char *, const char *);
 size_t strcspn(const char *, const char *);
 char * strerror(int);
+/* added: */
+char *strerror_r (int, char *, size_t);
+int strcasecmp (const char *s1, const char *s2);
+int strncasecmp (const char *s1, const char *s2, size_t n);
+/* ------ */
 size_t strlen(const char *);
 char * strncat(char *, const char *, size_t);
 int strncmp(const char *, const char *, size_t );

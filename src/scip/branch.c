@@ -3,8 +3,6 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.77 2007/06/06 11:25:12 bzfpfend Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.77.2.1 2009/06/19 07:53:38 bzfwolte Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -40,6 +38,7 @@
 #include "scip/sepastore.h"
 #include "scip/scip.h"
 #include "scip/branch.h"
+#include "scip/pub_misc.h"
 
 #include "scip/struct_branch.h"
 
@@ -786,18 +785,18 @@ SCIP_RETCODE SCIPbranchruleCreate(
    (*branchrule)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "branching/%s/priority", name);
-   sprintf(paramdesc, "priority of branching rule <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of branching rule <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdBranchrulePriority, (SCIP_PARAMDATA*)(*branchrule)) ); /*lint !e740*/
-   sprintf(paramname, "branching/%s/maxdepth", name);
-   sprintf(paramdesc, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxdepth", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->maxdepth, FALSE, maxdepth, -1, INT_MAX, 
          NULL, NULL) ); /*lint !e740*/
-   sprintf(paramname, "branching/%s/maxbounddist", name);
-   sprintf(paramdesc, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxbounddist", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");
    SCIP_CALL( SCIPsetAddRealParam(set, blkmem, paramname, paramdesc,
          &(*branchrule)->maxbounddist, FALSE, maxbounddist, 0.0, 1.0, 
          NULL, NULL) ); /*lint !e740*/
@@ -955,12 +954,14 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
       if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
       {
          SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
          int oldncuts;
          int oldnactiveconss;
 
          SCIPdebugMessage("executing LP branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          oldncuts = SCIPsepastoreGetNCuts(sepastore);
          oldnactiveconss = stat->nactiveconss;
 
@@ -1000,7 +1001,12 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            branchrule->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+
             branchrule->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             branchrule->nconssfound += stat->nactiveconss - oldnactiveconss; /*lint !e776*/
          }
@@ -1041,11 +1047,13 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
       if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
       {
          SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
          SCIP_Longint oldnactiveconss;
 
          SCIPdebugMessage("executing pseudo branching rule <%s>\n", branchrule->name);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          oldnactiveconss = stat->nactiveconss;
 
          /* start timing */
@@ -1083,7 +1091,12 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            branchrule->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+
             branchrule->nconssfound += stat->nactiveconss - oldnactiveconss;
          }
          else

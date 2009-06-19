@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.81 2008/01/28 14:31:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.76.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
 
 /**@file   dialog_default.c
+ * @ingroup DIALOGS
  * @brief  default user interface dialog
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -134,6 +133,43 @@ SCIP_Bool parseBoolValue(
 }
 
 
+/* display the reader information */
+static
+void displayReaders(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             reader,             /**< display reader which can read */
+   SCIP_Bool             writer              /**< display reader which can write */
+   )
+{
+   SCIP_READER** readers;
+   int nreaders;
+   int r;
+
+   assert( scip != NULL );
+   
+   readers = SCIPgetReaders(scip);
+   nreaders = SCIPgetNReaders(scip);
+
+   /* display list of readers */
+   SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, " file reader          extension  description\n");
+   SCIPdialogMessage(scip, NULL, " -----------          ---------  -----------\n");
+   for( r = 0; r < nreaders; ++r )
+   {
+      if( (reader && SCIPreaderCanRead(readers[r])) || (writer && SCIPreaderCanWrite(readers[r])) )
+      {
+         SCIPdialogMessage(scip, NULL, " %-20s ", SCIPreaderGetName(readers[r]));
+         if( strlen(SCIPreaderGetName(readers[r])) > 20 )
+            SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
+         SCIPdialogMessage(scip, NULL, "%9s  ", SCIPreaderGetExtension(readers[r]));
+         SCIPdialogMessage(scip, NULL, "%s", SCIPreaderGetDesc(readers[r]));
+         SCIPdialogMessage(scip, NULL, "\n");
+      }
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+}
+
+
 /* writes problem to file */
 static
 SCIP_RETCODE writeProblem(
@@ -155,39 +191,80 @@ SCIP_RETCODE writeProblem(
       *nextdialog = NULL;
       return SCIP_OKAY;
    }
+
    if( filename[0] != '\0' )
    {
+      char* tmpfilename;
+      char* extension;
+
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
-      if( transformed )
+      /* copy filename */
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+      extension = NULL;
+      
+      do
       {
-         retcode = SCIPwriteTransProblem(scip, filename, genericnames);
-      }
-      else
-      {
-         retcode = SCIPwriteOrigProblem(scip, filename, genericnames);
-      }
+         if( transformed )
+            retcode = SCIPwriteTransProblem(scip, tmpfilename, extension, genericnames);
+         else
+            retcode = SCIPwriteOrigProblem(scip, tmpfilename, extension, genericnames);
+      
+         if( retcode == SCIP_FILECREATEERROR )
+         {
+            SCIPdialogMessage(scip, NULL, "error creating the file <%s>\n", filename);
+            SCIPdialoghdlrClearBuffer(dialoghdlr);
+            break;
+         }         
+         else if(retcode == SCIP_WRITEERROR )
+         {
+            SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
+            SCIPdialoghdlrClearBuffer(dialoghdlr);
+            break;
+         }
+         else if ( retcode == SCIP_PLUGINNOTFOUND )
+         {
+            /* ask user once for a suitable reader */
+            if( extension == NULL )
+            {
+               SCIPdialogMessage(scip, NULL, "no reader for requested output format\n");
 
-      if( retcode == SCIP_FILECREATEERROR || retcode == SCIP_WRITEERROR )
-      {
-         SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
-         SCIPdialoghdlrClearBuffer(dialoghdlr);
+               SCIPdialogMessage(scip, NULL, "following readers are avaliable for writing:\n");
+               displayReaders(scip, FALSE, TRUE);
+         
+               SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+                     "select a suitable reader by extension (or return): ", &extension, &endoffile) );
+         
+               if( extension[0] == '\0' )
+                  break;
+            }
+            else
+            {
+               SCIPdialogMessage(scip, NULL, "no reader for output in <%s> format\n", extension);
+               extension = NULL;
+            }
+         }
+         else
+         {
+            /* check for unexpected errors */
+            SCIP_CALL( retcode );
+
+            /* print result message if writing was successful */
+            if ( transformed )
+               SCIPdialogMessage(scip, NULL, "written transformed problem to file <%s>\n", tmpfilename);
+            else
+               SCIPdialogMessage(scip, NULL, "written original problem to file <%s>\n", tmpfilename);
+            break;
+         }
       }
-      else if ( retcode == SCIP_OKAY )
-      {
-	 if ( transformed )
-	    SCIPdialogMessage(scip, NULL, "written transformed problem to file <%s>\n", filename);
-	 else
-	    SCIPdialogMessage(scip, NULL, "written original problem to file <%s>\n", filename);
-      }
-      else
-      {
-         SCIP_CALL( retcode );
-      }
+      while (extension != NULL );
+      
+      SCIPfreeBufferArray(scip, &tmpfilename);
    }
-
+   
    return SCIP_OKAY;
 }
+
 
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu)
@@ -217,8 +294,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenuLazy)
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
 {  /*lint --e{715}*/
    SCIP_SOL* sol;
-   SCIP_CONSHDLR* infeasconshdlr;
-   SCIP_CONS* infeascons;
    SCIP_Bool feasible;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -233,25 +308,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       SCIPdialogMessage(scip, NULL, "no feasible solution available\n");
    else
    {
-      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, &infeasconshdlr, &infeascons) );
+      SCIPmessagePrintInfo("check best solution\n");
+      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
 
       if( feasible )
-         SCIPdialogMessage(scip, NULL, "best solution is feasible in original problem\n");
-      else if( infeasconshdlr == NULL )
-      {
-         SCIPdialogMessage(scip, NULL, "best solution violates bounds\n");
-      }
-      else if( infeascons == NULL )
-      {
-         SCIPdialogMessage(scip, NULL, "best solution violates constraint handler [%s]\n",
-            SCIPconshdlrGetName(infeasconshdlr));
-      }
-      else
-      {
-         SCIPdialogMessage(scip, NULL, "best solution violates constraint <%s> [%s] of original problem:\n",
-            SCIPconsGetName(infeascons), SCIPconshdlrGetName(infeasconshdlr));
-         SCIP_CALL( SCIPprintCons(scip, infeascons, NULL) );
-      }
+         SCIPdialogMessage(scip, NULL, "solution is feasible in original problem\n");
    }
    SCIPdialogMessage(scip, NULL, "\n");
 
@@ -321,7 +382,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayBranching)
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, branchrules, nbranchrules) );
 
    /* sort the branching rules */
-   SCIPbsortPtr((void**)sorted, nbranchrules, SCIPbranchruleComp);
+   SCIPsortPtr((void**)sorted, SCIPbranchruleComp, nbranchrules);
 
    /* display sorted list of branching rules */
    SCIPdialogMessage(scip, NULL, "\n");
@@ -364,7 +425,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConflict)
    SCIP_CALL( SCIPduplicateBufferArray(scip, &sorted, conflicthdlrs, nconflicthdlrs) );
 
    /* sort the conflict handlers */
-   SCIPbsortPtr((void**)sorted, nconflicthdlrs, SCIPconflicthdlrComp);
+   SCIPsortPtr((void**)sorted, SCIPconflicthdlrComp, nconflicthdlrs);
 
    /* display sorted list of conflict handlers */
    SCIPdialogMessage(scip, NULL, "\n");
@@ -666,32 +727,13 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
 /** dialog execution method for the display readers command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayReaders)
 {  /*lint --e{715}*/
-   SCIP_READER** readers;
-   int nreaders;
-   int i;
-
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
-   readers = SCIPgetReaders(scip);
-   nreaders = SCIPgetNReaders(scip);
-
-   /* display list of readers */
-   SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " file reader          extension  description\n");
-   SCIPdialogMessage(scip, NULL, " -----------          ---------  -----------\n");
-   for( i = 0; i < nreaders; ++i )
-   {
-      SCIPdialogMessage(scip, NULL, " %-20s ", SCIPreaderGetName(readers[i]));
-      if( strlen(SCIPreaderGetName(readers[i])) > 20 )
-         SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
-      SCIPdialogMessage(scip, NULL, "%9s  ", SCIPreaderGetExtension(readers[i]));
-      SCIPdialogMessage(scip, NULL, "%s", SCIPreaderGetDesc(readers[i]));
-      SCIPdialogMessage(scip, NULL, "\n");
-   }
-   SCIPdialogMessage(scip, NULL, "\n");
-
+   /* print reader information */
+   displayReaders(scip, TRUE, TRUE);
+   
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
+   
    return SCIP_OKAY;
 }
 
@@ -823,8 +865,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayValue)
             else if( SCIPisInfinity(scip, -solval) )
                SCIPdialogMessage(scip, NULL, " -infinity");
             else
-               SCIPdialogMessage(scip, NULL, " %f", solval);
-            SCIPdialogMessage(scip, NULL, " \t(obj:%.16g)\n", SCIPvarGetObj(var));
+               SCIPdialogMessage(scip, NULL, " %20.15g", solval);
+            SCIPdialogMessage(scip, NULL, " \t(obj:%.15g)\n", SCIPvarGetObj(var));
          }
       }
    }
@@ -1024,16 +1066,60 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
 
       if( SCIPfileExists(filename) )
       {
-         retcode = SCIPreadProb(scip, filename);
-         if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+         char* tmpfilename;
+         char* extension;
+
+         /* copy filename */
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+         extension = NULL;
+         
+         do
          {
-            SCIPdialogMessage(scip, NULL, "error reading file <%s>\n", filename);
-            SCIP_CALL( SCIPfreeProb(scip) );
-         }
-         else
-         {
-            SCIP_CALL( retcode );
-         }
+            retcode = SCIPreadProb(scip, tmpfilename, extension);
+            if( retcode == SCIP_READERROR || retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+            {
+               if( extension == NULL )
+                  SCIPdialogMessage(scip, NULL, "error reading file <%s>\n", tmpfilename);
+               else
+                  SCIPdialogMessage(scip, NULL, "error reading file <%s> using <%s> file format\n", 
+                     tmpfilename, extension);
+               
+               SCIP_CALL( SCIPfreeProb(scip) );
+               break;
+            }
+            else if( retcode == SCIP_PLUGINNOTFOUND )
+            {
+               /* ask user once for a suitable reader */
+               if( extension == NULL )
+               {
+                  SCIPdialogMessage(scip, NULL, "no reader for input file <%s> available\n", tmpfilename);
+
+                  SCIPdialogMessage(scip, NULL, "following readers are avaliable for reading:\n");
+                  displayReaders(scip, TRUE, FALSE);
+               
+                  SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+                        "select a suitable reader by extension (or return): ", &extension, &endoffile) );
+               
+                  if( extension[0] == '\0' )
+                     break;
+               }
+               else
+               {
+                  SCIPdialogMessage(scip, NULL, "no reader for file extension <%s> available\n", extension);
+                  extension = NULL;
+               }
+            }
+            else
+            {
+               /* check if an unexpected error occurred during the reading process */
+               SCIP_CALL( retcode );
+               break;
+            }
+         }           
+         while (extension != NULL );
+             
+         /* free buffer array */
+         SCIPfreeBufferArray(scip, &tmpfilename);
       }
       else
       {
@@ -1170,7 +1256,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
    switch( SCIPparamGetType(param) )
    {
    case SCIP_PARAMTYPE_BOOL:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %s, new value (TRUE/FALSE): ",
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %s, new value (TRUE/FALSE): ",
          SCIPparamGetBool(param) ? "TRUE" : "FALSE");
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1193,7 +1279,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_INT:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value [%d,%d]: ",
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value [%d,%d]: ",
          SCIPparamGetInt(param), SCIPparamGetIntMin(param), SCIPparamGetIntMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1220,7 +1306,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %"SCIP_LONGINT_FORMAT", new value [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]: ",
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %"SCIP_LONGINT_FORMAT", new value [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]: ",
          SCIPparamGetLongint(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1247,7 +1333,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_REAL:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value [%.15g,%.15g]: ",
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value [%.15g,%.15g]: ",
          SCIPparamGetReal(param), SCIPparamGetRealMin(param), SCIPparamGetRealMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1274,7 +1360,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_CHAR:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: <%c>, new value: ", SCIPparamGetChar(param));
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: <%c>, new value: ", SCIPparamGetChar(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
       {
@@ -1300,7 +1386,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_STRING:
-      snprintf(prompt, SCIP_MAXSTRLEN, "current value: <%s>, new value: ", SCIPparamGetString(param));
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: <%s>, new value: ", SCIPparamGetString(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
       {
@@ -1342,31 +1428,31 @@ SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam)
    {
    case SCIP_PARAMTYPE_BOOL:
       if( SCIPparamGetBool(param) )
-         sprintf(valuestr, "TRUE");
+         (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "TRUE");
       else
-         sprintf(valuestr, "FALSE");
+         (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "FALSE");
       break;
 
    case SCIP_PARAMTYPE_INT:
-      sprintf(valuestr, "%d", SCIPparamGetInt(param));
+      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%d", SCIPparamGetInt(param));
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      sprintf(valuestr, "%"SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
+      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%"SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
       break;
 
    case SCIP_PARAMTYPE_REAL:
-      sprintf(valuestr, "%.15g", SCIPparamGetReal(param));
+      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%.15g", SCIPparamGetReal(param));
       if( strchr(valuestr, '.') == NULL && strchr(valuestr, 'e') == NULL )
-         sprintf(valuestr, "%.1f", SCIPparamGetReal(param));
+         (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%.1f", SCIPparamGetReal(param));
       break;
 
    case SCIP_PARAMTYPE_CHAR:
-      sprintf(valuestr, "%c", SCIPparamGetChar(param));
+      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%c", SCIPparamGetChar(param));
       break;
 
    case SCIP_PARAMTYPE_STRING:
-      snprintf(valuestr, SCIP_MAXSTRLEN, "%s", SCIPparamGetString(param));
+      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%s", SCIPparamGetString(param));
       break;
 
    default:
@@ -1437,7 +1523,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
          SCIPvarGetBranchDirection(var), SCIPvarGetName(var));
       return SCIP_INVALIDDATA;
    }
-   snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", direction);
+   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", direction);
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
    if( endoffile )
    {
@@ -1445,7 +1531,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingDirection)
       return SCIP_OKAY;
    }
    SCIPescapeString(prompt, SCIP_MAXSTRLEN, SCIPvarGetName(var));
-   snprintf(prompt, SCIP_MAXSTRLEN, "%s %s", prompt, valuestr);
+   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "%s %s", prompt, valuestr);
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1512,7 +1598,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
    }
 
    /* get new branching priority from user */
-   snprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchPriority(var));
+   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %d, new value: ", SCIPvarGetBranchPriority(var));
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
    if( endoffile )
    {
@@ -1520,7 +1606,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority)
       return SCIP_OKAY;
    }
    SCIPescapeString(prompt, SCIP_MAXSTRLEN, SCIPvarGetName(var));
-   snprintf(prompt, SCIP_MAXSTRLEN, "%s %s", prompt, valuestr);
+   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "%s %s", prompt, valuestr);
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
@@ -1557,7 +1643,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
    }
 
    /* get new objective limit from user */
-   snprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value: ", SCIPgetObjlimit(scip));
+   (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %.15g, new value: ", SCIPgetObjlimit(scip));
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
    if( endoffile )
    {
@@ -1607,7 +1693,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteLp)
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
       return SCIP_OKAY;
    }
-   if( SCIPgetStage(scip) > SCIP_STAGE_SOLVED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
    {
       SCIPdialogMessage(scip, NULL, "There is no node LP relaxation after problem was solved\n");
       *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
@@ -1654,7 +1740,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
       SCIPdialogMessage(scip, NULL, "There is no node MIP relaxation before solving starts\n");
       return SCIP_OKAY;
    }
-   if( SCIPgetStage(scip) > SCIP_STAGE_SOLVED )
+   if( SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
    {
       SCIPdialogMessage(scip, NULL, "There is no node MIP relaxation after problem was solved\n");
       return SCIP_OKAY;
@@ -1670,7 +1756,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
-   strncpy(filename, valuestr, SCIP_MAXSTRLEN);
+   strncpy(filename, valuestr, SCIP_MAXSTRLEN-1);
 
    /* second ask for generic variable and row names */
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
@@ -1692,7 +1778,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
 
    /* adjust command and add to the history */
    SCIPescapeString(command, SCIP_MAXSTRLEN, filename);
-   sprintf(command, "%s %s", command, generic ? "TRUE" : "FALSE");
+   (void) SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, generic ? "TRUE" : "FALSE");
 
    /* third ask if for adjusting the objective offset */
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
@@ -1712,7 +1798,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( error )
       return SCIP_OKAY;
 
-   sprintf(command, "%s %s", command, offset ? "TRUE" : "FALSE");
+   (void) SCIPsnprintf(command, SCIP_MAXSTRLEN, "%s %s", command, offset ? "TRUE" : "FALSE");
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, command, FALSE) );
 
    /* execute command */
@@ -1830,6 +1916,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
       if( file == NULL )
       {
          SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+         SCIPprintSysError(filename);
          SCIPdialoghdlrClearBuffer(dialoghdlr);
       }
       else
@@ -2319,7 +2406,7 @@ SCIP_RETCODE addParamDialog(
                /* if not yet existing, create an advanced sub menu */
                char desc[SCIP_MAXSTRLEN];
 
-               sprintf(desc, "advanced parameters");
+               (void) SCIPsnprintf(desc, SCIP_MAXSTRLEN, "advanced parameters");
                SCIP_CALL( SCIPcreateDialog(scip, &advmenu, SCIPdialogExecMenu, NULL, NULL, "advanced", desc, TRUE, NULL) );
                SCIP_CALL( SCIPaddDialogEntry(scip, menu, advmenu) );
                SCIP_CALL( SCIPreleaseDialog(scip, &advmenu) );
@@ -2366,7 +2453,7 @@ SCIP_RETCODE addParamDialog(
       {
          char desc[SCIP_MAXSTRLEN];
 
-         sprintf(desc, "parameters for <%s>", dirname);
+         (void) SCIPsnprintf(desc, SCIP_MAXSTRLEN, "parameters for <%s>", dirname);
          SCIP_CALL( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL, NULL, dirname, desc, TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, menu, submenu) );
          SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
@@ -2402,6 +2489,27 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    int nparams;
    int i;
 
+   SCIP_BRANCHRULE** branchrules; 
+   SCIP_CONFLICTHDLR** conflicthdlrs;
+   SCIP_CONSHDLR** conshdlrs;
+   SCIP_DISP** disps;
+   SCIP_HEUR** heurs;
+   SCIP_NODESEL** nodesels;
+   SCIP_PRESOL** presols;
+   SCIP_PRICER** pricers;
+   SCIP_READER** readers;
+   SCIP_SEPA** sepas;
+   int nbranchrules;
+   int nconflicthdlrs;
+   int nconshdlrs;
+   int ndisps;
+   int nheurs;
+   int nnodesels;
+   int npresols;
+   int npricers;
+   int nreaders;
+   int nsepas;
+   
    /* get root dialog */
    root = SCIPgetRootDialog(scip);
    if( root == NULL )
@@ -2474,14 +2582,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNBranchrules(scip); ++i )
-   {
-      SCIP_BRANCHRULE* branchrule = SCIPgetBranchrules(scip)[i];
+   nbranchrules = SCIPgetNBranchrules(scip);
+   branchrules = SCIPgetBranchrules(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPbranchruleGetName(branchrule)) )
+   for( i = 0; i < nbranchrules; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPbranchruleGetName(branchrules[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPbranchruleGetName(branchrule), SCIPbranchruleGetDesc(branchrule), TRUE, NULL) );
+               SCIPbranchruleGetName(branchrules[i]), SCIPbranchruleGetDesc(branchrules[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2519,15 +2628,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIPerrorMessage("conflict sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
+   
+   nconflicthdlrs = SCIPgetNConflicthdlrs(scip);
+   conflicthdlrs = SCIPgetConflicthdlrs(scip);
 
-   for( i = 0; i < SCIPgetNConflicthdlrs(scip); ++i )
+   for( i = 0; i < nconflicthdlrs; ++i )
    {
-      SCIP_CONFLICTHDLR* conflicthdlr = SCIPgetConflicthdlrs(scip)[i];
-
-      if( !SCIPdialogHasEntry(submenu, SCIPconflicthdlrGetName(conflicthdlr)) )
+      if( !SCIPdialogHasEntry(submenu, SCIPconflicthdlrGetName(conflicthdlrs[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPconflicthdlrGetName(conflicthdlr), SCIPconflicthdlrGetDesc(conflicthdlr), TRUE, NULL) );
+               SCIPconflicthdlrGetName(conflicthdlrs[i]), SCIPconflicthdlrGetDesc(conflicthdlrs[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2547,14 +2657,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
-   {
-      SCIP_CONSHDLR* conshdlr = SCIPgetConshdlrs(scip)[i];
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   conshdlrs = SCIPgetConshdlrs(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPconshdlrGetName(conshdlr)) )
+   for( i = 0; i < nconshdlrs; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPconshdlrGetName(conshdlrs[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPconshdlrGetName(conshdlr), SCIPconshdlrGetDesc(conshdlr), TRUE, NULL) );
+               SCIPconshdlrGetName(conshdlrs[i]), SCIPconshdlrGetDesc(conshdlrs[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2574,14 +2685,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNDisps(scip); ++i )
-   {
-      SCIP_DISP* disp = SCIPgetDisps(scip)[i];
+   ndisps = SCIPgetNDisps(scip);
+   disps = SCIPgetDisps(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPdispGetName(disp)) )
+   for( i = 0; i < ndisps; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPdispGetName(disps[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPdispGetName(disp), SCIPdispGetDesc(disp), TRUE, NULL) );
+               SCIPdispGetName(disps[i]), SCIPdispGetDesc(disps[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2600,15 +2712,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIPerrorMessage("heuristics sub menu not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
-
-   for( i = 0; i < SCIPgetNHeurs(scip); ++i )
+   
+   nheurs = SCIPgetNHeurs(scip);
+   heurs = SCIPgetHeurs(scip);
+   
+   for( i = 0; i < nheurs; ++i )
    {
-      SCIP_HEUR* heur = SCIPgetHeurs(scip)[i];
-
-      if( !SCIPdialogHasEntry(submenu, SCIPheurGetName(heur)) )
+      if( !SCIPdialogHasEntry(submenu, SCIPheurGetName(heurs[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPheurGetName(heur), SCIPheurGetDesc(heur), TRUE, NULL) );
+               SCIPheurGetName(heurs[i]), SCIPheurGetDesc(heurs[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2670,14 +2783,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNNodesels(scip); ++i )
-   {
-      SCIP_NODESEL* nodesel = SCIPgetNodesels(scip)[i];
+   nnodesels = SCIPgetNNodesels(scip);
+   nodesels = SCIPgetNodesels(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPnodeselGetName(nodesel)) )
+   for( i = 0; i < nnodesels; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPnodeselGetName(nodesels[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPnodeselGetName(nodesel), SCIPnodeselGetDesc(nodesel), TRUE, NULL) );
+               SCIPnodeselGetName(nodesels[i]), SCIPnodeselGetDesc(nodesels[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2706,14 +2820,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNPresols(scip); ++i )
-   {
-      SCIP_PRESOL* presol = SCIPgetPresols(scip)[i];
+   npresols = SCIPgetNPresols(scip);
+   presols = SCIPgetPresols(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPpresolGetName(presol)) )
+   for( i = 0; i < npresols; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPpresolGetName(presols[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPpresolGetName(presol), SCIPpresolGetDesc(presol), TRUE, NULL) );
+               SCIPpresolGetName(presols[i]), SCIPpresolGetDesc(presols[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2733,14 +2848,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNPricers(scip); ++i )
-   {
-      SCIP_PRICER* pricer = SCIPgetPricers(scip)[i];
+   npricers = SCIPgetNPricers(scip);
+   pricers = SCIPgetPricers(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPpricerGetName(pricer)) )
+   for( i = 0; i < npricers; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPpricerGetName(pricers[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPpricerGetName(pricer), SCIPpricerGetDesc(pricer), TRUE, NULL) );
+               SCIPpricerGetName(pricers[i]), SCIPpricerGetDesc(pricers[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2769,14 +2885,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNReaders(scip); ++i )
-   {
-      SCIP_READER* reader = SCIPgetReaders(scip)[i];
+   nreaders = SCIPgetNReaders(scip);
+   readers = SCIPgetReaders(scip);
 
-      if( !SCIPdialogHasEntry(submenu, SCIPreaderGetName(reader)) )
+   for( i = 0; i < nreaders; ++i )
+   {
+      if( !SCIPdialogHasEntry(submenu, SCIPreaderGetName(readers[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPreaderGetName(reader), SCIPreaderGetDesc(reader), TRUE, NULL) );
+               SCIPreaderGetName(readers[i]), SCIPreaderGetDesc(readers[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }
@@ -2796,14 +2913,15 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   for( i = 0; i < SCIPgetNSepas(scip); ++i )
+   nsepas = SCIPgetNSepas(scip);
+   sepas = SCIPgetSepas(scip);
+   
+   for( i = 0; i < nsepas; ++i )
    {
-      SCIP_SEPA* sepa = SCIPgetSepas(scip)[i];
-
-      if( !SCIPdialogHasEntry(submenu, SCIPsepaGetName(sepa)) )
+      if( !SCIPdialogHasEntry(submenu, SCIPsepaGetName(sepas[i])) )
       {
          SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecMenu, NULL, NULL,
-               SCIPsepaGetName(sepa), SCIPsepaGetDesc(sepa), TRUE, NULL) );
+               SCIPsepaGetName(sepas[i]), SCIPsepaGetDesc(sepas[i]), TRUE, NULL) );
          SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
          SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
       }

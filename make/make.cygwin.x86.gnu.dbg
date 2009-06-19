@@ -1,4 +1,4 @@
-#--- $Id: make.cygwin.x86.gnu.dbg,v 1.2 2008/01/28 14:31:07 bzfheinz Exp $
+#--- $Id: make.cygwin.x86.gnu.dbg,v 1.1.2.1 2009/06/19 07:53:34 bzfwolte Exp $
 FLAGS		+=
 OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)

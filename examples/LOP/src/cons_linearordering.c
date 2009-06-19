@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.3 2007/10/12 17:52:07 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.3.2.1 2009/06/19 07:53:31 bzfwolte Exp $"
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
 
@@ -92,7 +90,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	    SCIP_ROW *row;
 	    char s[SCIP_MAXSTRLEN];
 
-	    sprintf(s, "sym#%d#%d", i, j);
+	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -122,7 +120,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 	       SCIP_ROW *row;
 	       char s[SCIP_MAXSTRLEN];
 
-	       sprintf(s, "triangle#%d#%d#%d", i, j, k);
+	       SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
 	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -241,7 +239,7 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
    }
 
    /* create constraint */
-   sprintf(s, "t_%s", SCIPconsGetName(sourcecons));
+   SCIPsnprintf(s, SCIP_MAXSTRLEN, "t_%s", SCIPconsGetName(sourcecons));
 
    SCIP_CALL( SCIPcreateCons(scip, targetcons, s, conshdlr, consdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons),
@@ -289,7 +287,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 	    char s[SCIP_MAXSTRLEN];
 	    SCIP_ROW* row;
 
-	    sprintf(s, "sym#%d#%d", i, j);
+	    SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 	    SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, FALSE) );
 	    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 	    SCIP_CALL( SCIPaddVarToRow(scip, row, Vars[i][j], 1.0) );
@@ -431,7 +429,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 	       SCIP_ROW *row;
 	       char s[SCIP_MAXSTRLEN];
 
-	       sprintf(s, "sym#%d#%d", i, j);
+	       SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
 	       SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, 1.0, 1.0, FALSE, FALSE, TRUE) );
 	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -461,7 +459,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 		  SCIP_ROW *row;
 		  char s[SCIP_MAXSTRLEN];
 
-		  sprintf(s, "triangle#%d#%d#%d", i, j, k);
+		  SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
 		  SCIP_CALL( SCIPcreateEmptyRow(scip, &row, s, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
 		  SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -617,6 +615,13 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	    {
 	       SCIPdebugMessage("constraint <%s> infeasible (violated equation).\n", SCIPconsGetName(cons));
 	       *result = SCIP_INFEASIBLE;
+               if( printreason )
+               {
+                  SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+                  SCIPinfoMessage(scip, NULL, "violation: symmetry equation violated <%s> = %.15g and <%s> = %.15g\n",
+                     SCIPvarGetName(Vars[i][j]), SCIPgetSolVal(scip, sol, Vars[i][j]), 0.5,
+                     SCIPvarGetName(Vars[j][i]), SCIPgetSolVal(scip, sol, Vars[j][i]), 0.5);
+               }
 	       return SCIP_OKAY;
 	    }
 
@@ -636,6 +641,15 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 	       {
 		  SCIPdebugMessage("constraint <%s> infeasible (violated triangle ineq.).\n", SCIPconsGetName(cons));
 		  *result = SCIP_INFEASIBLE;
+                  if( printreason )
+                  {
+                     SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+                     SCIPinfoMessage(scip, NULL, 
+                        "violation: triangle inequality violated <%s> = %.15g, <%s> = %.15g, <%s> = %.15g\n",
+                        SCIPvarGetName(Vars[i][j]), SCIPgetSolVal(scip, sol, Vars[i][j]), 0.5,
+                        SCIPvarGetName(Vars[j][k]), SCIPgetSolVal(scip, sol, Vars[j][k]), 0.5,
+                        SCIPvarGetName(Vars[k][i]), SCIPgetSolVal(scip, sol, Vars[k][i]), 0.5);
+                  }
 		  return SCIP_OKAY;
 	       }
 	    }

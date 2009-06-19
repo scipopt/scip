@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.38 2007/06/06 11:25:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_objpscostdiving.c,v 1.38.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
 
 /**@file   heur_objpscostdiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that changes variable's objective value instead of bounds, using pseudo cost values as guide
  * @author Tobias Achterberg
  */
@@ -340,12 +339,16 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    bestcandmayrounddown = FALSE;
    bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
-   while( !SCIPisStopped(scip) && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
+   while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
          || (divedepth < maxdivedepth && nlpcands <= startnlpcands - divedepth/10
-            && heurdata->nlpiterations < maxnlpiterations)) )
+	     && heurdata->nlpiterations < maxnlpiterations)) && !SCIPisStopped(scip) )
    {
+#ifdef NDEBUG
+      SCIP_RETCODE retstat;
+#endif
+
       divedepth++;
 
       /* choose variable for objective change:
@@ -512,7 +515,20 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
+
+      /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       */
+#ifdef NDEBUG
+      retstat = SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving LP in Objpscostdiving heuristic; LP solve terminated with code <%d>\n",retstat);
+      }
+#else
       SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+#endif
+
       if( lperror )
          break;
 

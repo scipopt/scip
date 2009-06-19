@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.11 2007/06/06 11:25:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.11.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
 
 /**@file   heur_rens.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  RENS primal heuristic
  * @author Timo Berthold
  */
@@ -29,6 +28,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_rens.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "rens"
 #define HEUR_DESC             "LNS exploring fractional neighborhood of relaxation's optimum"
@@ -99,7 +99,7 @@ SCIP_RETCODE createSubproblem(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    /* get name of the original problem and add the string "_renssub" */
-   sprintf(consname, "%s_renssub", SCIPgetProbName(scip));
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_renssub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, consname, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -284,6 +284,10 @@ SCIP_RETCODE SCIPapplyRens(
    int nvars;                     
    int i;   
 
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
+
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* initializing the subproblem */  
@@ -310,6 +314,8 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) ); 
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
 
    /* use best estimate node selection */
    SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) ); 
@@ -325,7 +331,9 @@ SCIP_RETCODE SCIPapplyRens(
 
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
    SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
 
    /* disable conflict analysis */
@@ -369,29 +377,49 @@ SCIP_RETCODE SCIPapplyRens(
    /* if there is already a solution, add an objective cutoff */
    if( SCIPgetNSols(scip) > 0 )
    {
+      SCIP_Real upperbound;
       cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );   
-      
-      if( !SCIPisInfinity(scip,SCIPgetLowerbound(scip)) )
+
+      upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+
+      if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
       {
-         SCIP_Real upperbound;
-         cutoff = (1-minimprove)*SCIPgetUpperbound(scip) - minimprove*SCIPgetLowerbound(scip);
-         upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-         cutoff = MIN(upperbound, cutoff );
+         cutoff = (1-minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
       }
       else
-         cutoff = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+      {
+         if ( SCIPgetUpperbound ( scip ) >= 0 )
+            cutoff = ( 1 - minimprove ) * SCIPgetUpperbound ( scip );
+         else
+            cutoff = ( 1 + minimprove ) * SCIPgetUpperbound ( scip );
+      }
+      cutoff = MIN(upperbound, cutoff);
       SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
    }
 
    /* solve the subproblem */
+   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    */
+#ifdef NDEBUG
+   retstat = SCIPpresolve(subscip);
+   if( retstat != SCIP_OKAY )
+   { 
+      SCIPwarningMessage("Error while presolving subMIP in RENS heuristic; subSCIP terminated with code <%d>\n",retstat);
+   }
+#else
    SCIP_CALL( SCIPpresolve(subscip) );
+#endif
+
+
+
    SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
 
 #if 0
    {
    char fname[SCIP_MAXSTRLEN];
-   sprintf(fname, "test/%s.lp",SCIPgetProbName(scip));
+   (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "test/%s.lp",SCIPgetProbName(scip));
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1) );
    SCIP_CALL( SCIPsolve(subscip) );
    SCIP_CALL( SCIPwriteMIP(subscip,fname,TRUE,TRUE) );
@@ -409,7 +437,17 @@ SCIP_RETCODE SCIPapplyRens(
       int nsubsols;
 
       SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, maxnodes);
+
+#ifdef NDEBUG
+      retstat = SCIPsolve(subscip);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving subMIP in RENS heuristic; subSCIP terminated with code <%d>\n",retstat);
+      }
+#else
       SCIP_CALL( SCIPsolve(subscip) );
+#endif
+
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
@@ -514,7 +552,7 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
-   
+
    *result = SCIP_DIDNOTRUN;
  
    /* calculate the maximal number of branching nodes until heuristic is aborted */
@@ -544,6 +582,9 @@ SCIP_DECL_HEUREXEC(heurExecRens)
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
    if( timelimit < 10.0 || memorylimit <= 0.0 )
+      return SCIP_OKAY;
+
+   if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;

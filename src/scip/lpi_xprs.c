@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi_xprs.c
+ * @ingroup LPIS
  * @brief  LP interface for Xpress-MP 16
  * @author Tobias Achterberg
  * @author Michael Perregaard
@@ -630,11 +629,21 @@ const char* SCIPlpiGetSolverName(
    void
    )
 {
-   sprintf(xprsname, "XPRESS %i", XPVERSION);
+   snprintf(xprsname, SCIP_MAXSTRLEN, "XPRESS %i", XPVERSION);
 
    return xprsname;
 }
 
+/** gets pointer for LP solver - use only with great care 
+ *
+ *  Here we return the pointer to the LP environment.
+ */
+void* SCIPlpiGetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) lpi->xprslp;
+}
 /**@} */
 
 

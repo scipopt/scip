@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.20 2007/06/06 11:25:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.20.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
 
 /**@file   heur_localbranching.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  localbranching primal heuristic
  * @author Timo Berthold
  */
@@ -28,11 +27,12 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 #include "scip/heur_localbranching.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "localbranching"
 #define HEUR_DESC             "local branching heuristic by Fischetti and Lodi"
 #define HEUR_DISPCHAR         'L'
-#define HEUR_PRIORITY         -1010000
+#define HEUR_PRIORITY         -1102000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
@@ -101,7 +101,7 @@ SCIP_RETCODE createSubproblem(
    assert(bestsol != NULL);
 
    /* get name of the original problem and add the string "_localbranchsub" */
-   sprintf(name, "%s_localbranchsub", SCIPgetProbName(scip));
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_localbranchsub", SCIPgetProbName(scip));
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL) );
@@ -183,7 +183,7 @@ SCIP_RETCODE addLocalBranchingConstraint(
    SCIP_Real* consvals;
    char consname[SCIP_MAXSTRLEN];
 
-   sprintf(consname, "%s_localbranchcons", SCIPgetProbName(scip));
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_localbranchcons", SCIPgetProbName(scip));
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, NULL, NULL, NULL) );   
@@ -337,19 +337,26 @@ SCIP_DECL_HEURINIT(heurInitLocalbranching)
 static
 SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 {  /*lint --e{715}*/
+   SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
+   SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
+
    SCIP_HEURDATA* heurdata;
    SCIP* subscip;                            /* the subproblem created by localbranching              */
    SCIP_VAR** subvars;                       /* subproblem's variables                                */
    SCIP_SOL* bestsol;                        /* best solution so far                                  */
+
    SCIP_Real timelimit;                      /* timelimit for subscip (equals remaining time of scip) */
-   SCIP_Longint maxnnodes;                   /* maximum number of subnodes                            */
-   SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                 */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
    SCIP_Real upperbound;
    SCIP_Real memorylimit;
+
    int nvars;
    int i;
-   
+ 
+#ifdef NDEBUG
+   SCIP_RETCODE retstat;
+#endif
+  
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
@@ -422,6 +429,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( timelimit < 10.0 || memorylimit <= 0.0 )
       return SCIP_OKAY;
 
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    nvars = SCIPgetNVars(scip);
@@ -448,6 +458,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
 
    /* disable heuristics which aim to feasibility instead of optimality */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );
@@ -469,7 +480,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
 
    /* disable expensive presolving */
    SCIP_CALL( SCIPsetIntParam(subscip, "presolving/probing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/linear/maxpresolpairrounds", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/linear/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/setppc/presolpairwise", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "constraints/logicor/presolpairwise", FALSE) );
    SCIP_CALL( SCIPsetRealParam(subscip, "constraints/linear/maxaggrnormscale", 0.0) );
 
    /* disable conflict analysis */
@@ -484,17 +497,45 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( addLocalBranchingConstraint(scip, subscip, subvars, heurdata) );
 
    /* add an objective cutoff */
-   cutoff = (1.0-heurdata->minimprove)*SCIPgetUpperbound(scip) - heurdata->minimprove*SCIPgetLowerbound(scip);
+   cutoff = SCIPinfinity(scip);
+   assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );   
+
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-   cutoff = MIN(upperbound, cutoff);
+   if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
+   {
+      cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) + heurdata->minimprove*SCIPgetLowerbound(scip);
+   }
+   else
+   {
+      if ( SCIPgetUpperbound ( scip ) >= 0 )
+         cutoff = ( 1 - heurdata->minimprove ) * SCIPgetUpperbound ( scip );
+      else
+         cutoff = ( 1 + heurdata->minimprove ) * SCIPgetUpperbound ( scip );
+   }
+   cutoff = MIN(upperbound, cutoff );
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* solve the subproblem */  
    SCIPdebugMessage("solving local branching sub-MIP with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n",
       heurdata->curneighborhoodsize, nsubnodes);
-   SCIP_CALL( SCIPsolve(subscip) ); 
+
+   /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+    * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+    */
+#ifdef NDEBUG
+      retstat = SCIPsolve(subscip);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving subMIP in localbranching heuristic; subSCIP terminated with code <%d>\n",
+            retstat);
+      }
+#else
+      SCIP_CALL( SCIPsolve(subscip) );
+#endif
+
    heurdata->usednodes += SCIPgetNNodes(subscip);
-   SCIPdebugMessage("local branching used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes\n", SCIPgetNNodes(subscip), nsubnodes);
+   SCIPdebugMessage("local branching used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes\n", 
+      SCIPgetNNodes(subscip), nsubnodes);
 
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )

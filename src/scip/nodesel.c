@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.54.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.54.2.2 2009/06/19 07:53:46 bzfwolte Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -35,6 +33,7 @@
 #include "scip/paramset.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
+#include "scip/pub_misc.h"
 #include "scip/nodesel.h"
 
 #include "scip/struct_nodesel.h"
@@ -76,7 +75,7 @@ SCIP_RETCODE SCIPnodepqCreate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting the nodes in the queue */
    )
-{
+{  /*lint --e{715}*/
    assert(nodepq != NULL);
 
    SCIP_ALLOC( BMSallocMemory(nodepq) );
@@ -274,7 +273,7 @@ SCIP_RETCODE SCIPnodepqInsert(
    bfsqueue[bfspos] = pos;
    bfsposs[pos] = bfspos;
 
-   SCIPdebugMessage("inserted node %p[%g] at pos %d and bfspos %d of node queue\n", node, lowerbound, pos, bfspos);
+   SCIPdebugMessage("inserted node %p[%g] at pos %d and bfspos %d of node queue\n", (void*)node, lowerbound, pos, bfspos);
 
    return SCIP_OKAY;
 }
@@ -320,7 +319,7 @@ SCIP_Bool nodepqDelPos(
    assert(0 <= freebfspos && freebfspos < nodepq->len);
 
    SCIPdebugMessage("delete node %p[%g] at pos %d and bfspos %d of node queue\n", 
-      slots[freepos], SCIPnodeGetLowerbound(slots[freepos]), freepos, freebfspos);
+      (void*)slots[freepos], SCIPnodeGetLowerbound(slots[freepos]), freepos, freebfspos);
 
    /* remove node of the tree and get a free slot,
     * if the removed node was the last node of the queue
@@ -727,14 +726,14 @@ SCIP_RETCODE SCIPnodeselCreate(
    (*nodesel)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "nodeselection/%s/stdpriority", name);
-   sprintf(paramdesc, "priority of node selection rule <%s> in standard mode", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/stdpriority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of node selection rule <%s> in standard mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*nodesel)->stdpriority, FALSE, stdpriority, INT_MIN/4, INT_MAX/4, 
                   paramChgdNodeselStdPriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/
 
-   sprintf(paramname, "nodeselection/%s/memsavepriority", name);
-   sprintf(paramdesc, "priority of node selection rule <%s> in memory saving mode", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "nodeselection/%s/memsavepriority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of node selection rule <%s> in memory saving mode", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*nodesel)->memsavepriority, TRUE, memsavepriority, INT_MIN/4, INT_MAX/4, 
                   paramChgdNodeselMemsavePriority, (SCIP_PARAMDATA*)(*nodesel)) ); /*lint !e740*/

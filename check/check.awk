@@ -4,9 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2007 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2007 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -15,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.64 2008/01/15 11:09:57 bzfpfend Exp $
+# $Id: check.awk,v 1.63.2.1 2009/06/19 07:53:29 bzfwolte Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -48,17 +46,21 @@ BEGIN {
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
    printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
+   printf("\\usepackage{supertabular}\n")                           >TEXFILE;
    printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
    printf("\\begin{document}\n\n")                                  >TEXFILE;
-   printf("\\begin{table}[p]\n")                                    >TEXFILE;
    printf("\\begin{center}\n")                                      >TEXFILE;
    printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
    printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-   printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
-   printf("\\toprule\n")                                         >TEXFILE;
+   printf("\\tablehead{\n\\toprule\n")                              >TEXFILE;
    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\%% &     Nodes &     Time \\\\\n") > TEXFILE;
-   printf("\\midrule\n")                                         >TEXFILE;
-   
+   printf("\\midrule\n}\n")                                         >TEXFILE;
+   printf("\\tabletail{\n\\midrule\n")                              >TEXFILE;
+   printf("\\multicolumn{8}{r} \\; continue next page \\\\\n")      >TEXFILE;
+   printf("\\bottomrule\n}\n")                                      >TEXFILE;
+   printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
+   printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
+  
    printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
    printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
    printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
@@ -87,6 +89,9 @@ BEGIN {
    fail = 0;
    pass = 0;
    settings = "default";
+   lpsname = "";
+   lpsversion = "";
+   scipversion = "";
    conftottime = 0.0;
    overheadtottime = 0.0;
    timelimit = 0.0;
@@ -135,7 +140,7 @@ BEGIN {
    origvars = 0;
    origcons = 0;
    timeout = 0;
-   feasible = 1;
+   feasible = 0;
    pb = +1e20;
    db = -1e20;
    simpiters = 0;
@@ -165,6 +170,27 @@ BEGIN {
 }
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
+/^SCIP version/ {
+   # get SCIP version 
+   scipversion = $3; 
+
+   # get name of LP solver
+   if( $13 == "SoPlex")
+      lpsname = "spx";
+   else if ($13 == "CPLEX")
+      lpsname = "cpx";
+   else if ($13 == "NONE")
+      lpsname = "none";
+   else if ($13 == "Clp")
+      lpsname = "clp";
+
+   # get LP solver version 
+   if( NF >= 14 ) 
+   {
+      split($14, v, "]");
+      lpsversion = v[1];
+   }
+}
 /^SCIP> SCIP> / { $0 = substr($0, 13, length($0)-12); }
 /^SCIP> / { $0 = substr($0, 7, length($0)-6); }
 /^loaded parameter file/ { settings = $4; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
@@ -259,7 +285,10 @@ BEGIN {
       feasible = 0;
    }
    else
+   {
       pb = $4;
+      feasible = 1;
+   }
 }
 /^  Dual Bound       :/ { 
    if( $4 != "-" ) 
@@ -471,7 +500,7 @@ BEGIN {
          printf("%-19s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f \\\\\n",
                 pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
          printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f %s\n",
-                shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status);
+		shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime, status);
       }
 
       # PAVER output: see http://www.gamsworld.org/performance/paver/pprocess_submit.htm
@@ -520,14 +549,12 @@ END {
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f \n",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
-   printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
-   printf("\\end{tabular*}\n")                                           >TEXFILE;
-   printf("\\caption{%s}\n", settings)                                   >TEXFILE;
+   printf("\\end{supertabular*}\n")                                      >TEXFILE;
+   printf("{\\bfseries Settings:} %s\n", settings)                       >TEXFILE;
    printf("\\end{center}\n")                                             >TEXFILE;
-   printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
    printf("@02 timelimit: %g\n", timelimit);
-   printf("@01 SCIP:%s\n", settings);
+   printf("@01 SCIP(%s)%s(%s):%s\n", scipversion, lpsname, lpsversion, settings);
 }

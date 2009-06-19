@@ -1,0 +1,255 @@
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#*                                                                           *
+#*                  This file is part of the program and library             *
+#*         SCIP --- Solving Constraint Integer Programs                      *
+#*                                                                           *
+#*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            *
+#*                            fuer Informationstechnik Berlin                *
+#*                                                                           *
+#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*                                                                           *
+#*  You should have received a copy of the ZIB Academic License              *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*                                                                           *
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# $Id: make.project,v 1.7.2.2 2009/06/19 07:53:35 bzfwolte Exp $
+
+#@file    Makefile
+#@brief   Makefile to include in SCIP projects
+#@author  Thorsten Koch
+#@author  Tobias Achterberg
+#@author  Timo Berthold 
+
+#-----------------------------------------------------------------------------
+# detect host architecture
+#-----------------------------------------------------------------------------
+include $(SCIPDIR)/make/make.detecthost
+
+
+#-----------------------------------------------------------------------------
+# default settings
+#-----------------------------------------------------------------------------
+
+TIME     	=  	3600
+NODES           =       2100000000
+MEM		=	1536
+DISPFREQ	=	10000
+FEASTOL		=	default
+TEST		=	shortmiplib
+SETTINGS        =       default
+CONTINUE	=	false
+LOCK		=	false
+
+VERBOSE		=	false
+OPT		=	opt
+COMP		=	gnu
+LPS		=	spx
+STATICLIBEXT	=	a
+SHAREDLIBEXT	=	so
+LIBEXT		=	$(STATICLIBEXT)
+
+READLINE	=	true
+ZLIB		=	true
+GMP             =       auto
+ZIMPL		=	true
+LPSOPT		=	opt
+ZIMPLOPT	=	opt
+
+CC		=	gcc
+CC_c		=	-c # the trailing space is important
+CC_o		=	-o # the trailing space is important
+CXX		=	g++
+CXX_c		=	-c # the trailing space is important
+CXX_o		=	-o # the trailing space is important
+LINKCC		=	gcc
+LINKCC_L	=	-L
+LINKCC_l	=	-l
+LINKCC_o	=	-o # the trailing space is important
+LINKCXX		=	g++
+LINKCXX_L	=	-L
+LINKCXX_l	=	-l
+LINKCXX_o	=	-o # the trailing space is important
+LINKLIBSUFFIX	=
+DCC		=	gcc
+DCXX		=	g++
+AR		=	ar
+AR_o		=
+RANLIB		=	ranlib
+LIBBUILD	=	$(AR)
+LIBBUILD_o	=	$(AR_o)
+LIBBUILDFLAGS	=       $(ARFLAGS)
+LINT		=	flexelint
+DOXY		=	doxygen
+CPLEX		=	cplex
+CBC		=	cbc
+
+SHELL		= 	bash
+READ		=	read -e
+
+FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
+OFLAGS		=
+CFLAGS		=	
+CXXFLAGS	=	
+LDFLAGS		=	$(LINKCC_l)m$(LINKLIBSUFFIX)
+ARFLAGS		=	cr
+DFLAGS		=	-MM
+
+GCCWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
+			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wredundant-decls -Wdisabled-optimization \
+			-Wsign-compare -Wstrict-prototypes \
+			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+
+GXXWARN		=	-Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
+			-Wno-unknown-pragmas -Wno-unused-parameter \
+			-Wredundant-decls -Wdisabled-optimization \
+			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
+			-Woverloaded-virtual -Wsign-promo -Wsynth \
+			-Wcast-qual -Wno-unused-parameter # -Wold-style-cast -Wshadow -Wundef
+
+BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
+OBJDIR		=	obj/O.$(BASE)
+BINOBJDIR	=	$(OBJDIR)/bin
+LIBOBJDIR	=	$(OBJDIR)/lib
+LIBOBJSUBDIRS	=	scip objscip blockmemshell tclique
+SRCDIR		=	src
+BINDIR		=	bin
+LIBDIR		=	lib
+EXEEXTENSION	=
+ALLSRC		=
+
+#-----------------------------------------------------------------------------
+include $(SCIPDIR)/make/make.$(BASE)
+-include $(SCIPDIR)/make/local/make.$(HOSTNAME)
+-include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP)
+-include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
+#-----------------------------------------------------------------------------
+
+FLAGS		+=	$(USRFLAGS)
+OFLAGS		+=	$(USROFLAGS)
+CFLAGS		+=	$(USRCFLAGS)
+CXXFLAGS	+=	$(USRCXXFLAGS)
+LDFLAGS		+=	$(USRLDFLAGS)
+ARFLAGS		+=	$(USRARFLAGS)
+DFLAGS		+=	$(USRDFLAGS)
+
+#-----------------------------------------------------------------------------
+# Memory Management
+#-----------------------------------------------------------------------------
+
+#FLAGS		+=	-DNOSAFEMEM
+#FLAGS		+=	-DNOBLOCKMEM
+
+
+#-----------------------------------------------------------------------------
+# LP Solver Interface
+#-----------------------------------------------------------------------------
+
+LPILIBNAME	=	lpi$(LPS)
+
+ifeq ($(LPS),cpx)
+LPSLDFLAGS	=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+                        $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),cpx903)
+LPSLDFLAGS	=	$(LINKCC_l)cplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+                        $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),xprs)
+LPSLDFLAGS	=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),msk)
+LPSLDFLAGS	=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),spx)
+LPSLDFLAGS	=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),spx121)
+LPSLDFLAGS	=	$(LINKCXX_l)soplex121.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),spx132)
+LPSLDFLAGS	=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),clp)
+LPSLDFLAGS	=	$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)coinutils.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)bz2$(LINKLIBSUFFIX) $(LINKCXX_l)lapack$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),qso)
+LPSLDFLAGS	=	$(LINKCXX_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+endif
+
+ifeq ($(LPS),none)
+LPSLDFLAGS	=	
+endif
+
+LPILIB		=	$(LPILIBNAME).$(BASE)
+LPILIBFILE	=	$(SCIPDIR)/lib/lib$(LPILIB).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
+# External Libraries
+#-----------------------------------------------------------------------------
+
+ifeq ($(ZLIB_LDFLAGS),)
+ZLIB		=	false
+endif
+ifeq ($(ZLIB),true)
+FLAGS		+=	-DWITH_ZLIB $(ZLIB_FLAGS)
+LDFLAGS		+=	$(ZLIB_LDFLAGS)
+endif
+
+ifeq ($(GMP),auto)
+GMP		=	$(ZIMPL)
+endif
+ifeq ($(GMP_LDFLAGS),)
+GMP		=	false
+endif
+ifeq ($(GMP),true)
+FLAGS		+=	-DWITH_GMP $(GMP_FLAGS)
+LDFLAGS		+=	$(GMP_LDFLAGS)
+endif
+
+ifeq ($(READLINE_LDFLAGS),)
+READLINE	=	false
+endif
+ifeq ($(READLINE),true)
+FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
+LDFLAGS		+=	$(READLINE_LDFLAGS)
+endif
+
+ifeq ($(ZIMPL),true)
+ifeq ($(ZLIB),false)
+$(error ZIMPL requires the ZLIB to be linked. Use either ZIMPL=false or ZLIB=true)
+endif
+ifeq ($(GMP),false)
+$(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=auto)
+endif
+FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/zimplinc $(ZIMPL_FLAGS)
+LDFLAGS		+=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX) $(ZIMPL_LDFLAGS)
+endif
+
+#-----------------------------------------------------------------------------
+# SCIP Library
+#-----------------------------------------------------------------------------
+
+SCIPLIBNAME	=	scip
+SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
+SCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(SCIPLIB).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
+# OBJSCIP Library
+#-----------------------------------------------------------------------------
+
+OBJSCIPLIBNAME	=	objscip
+OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
+OBJSCIPLIBFILE	=	$(SCIPDIR)/lib/lib$(OBJSCIPLIB).$(LIBEXT)

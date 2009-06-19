@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.4 2007/11/19 14:45:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.3.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   presol_inttobinary.c
+ * @ingroup PRESOLVERS
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
  * @author Tobias Achterberg
  */
@@ -27,6 +26,7 @@
 #include <string.h>
 
 #include "scip/presol_inttobinary.h"
+#include "scip/pub_misc.h"
 
 
 #define PRESOL_NAME            "inttobinary"
@@ -116,7 +116,7 @@ SCIP_DECL_PRESOLEXEC(presolExecInttobinary)
          SCIPdebugMessage("converting <%s>[%g,%g] into binary variable\n", SCIPvarGetName(vars[v]), lb, ub);
 
          /* create binary variable */
-         sprintf(binvarname, "%s_bin", SCIPvarGetName(vars[v]));
+         (void) SCIPsnprintf(binvarname, SCIP_MAXSTRLEN, "%s_bin", SCIPvarGetName(vars[v]));
          SCIP_CALL( SCIPcreateVar(scip, &binvar, binvarname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
                SCIPvarIsInitial(vars[v]), SCIPvarIsRemovable(vars[v]), NULL, NULL, NULL, NULL) );
          SCIP_CALL( SCIPaddVar(scip, binvar) );

@@ -4,9 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2007 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2007 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -15,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.45.2.1 2009/06/10 17:47:12 bzfwolte Exp $
+# $Id: check.sh,v 1.45.2.2 2009/06/19 07:53:29 bzfwolte Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -28,6 +26,7 @@ DISPFREQ=$9
 CONTINUE=${10}
 LOCK=${11}
 VERSION=${12}
+LPS=${13}
 
 SETDIR=../settings
 
@@ -40,9 +39,9 @@ then
     mkdir locks
 fi
 
-LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.lock
-RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.run.$BINID
-DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.done
+LOCKFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.lock
+RUNFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.run.$BINID
+DONEFILE=locks/$TSTNAME.$SETNAME.$VERSION.$LPS.done
 
 OUTFILE=results/check.$TSTNAME.$BINID.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$SETNAME.err
@@ -53,7 +52,7 @@ SETFILE=results/check.$TSTNAME.$BINID.$SETNAME.set
 
 SETTINGS=$SETDIR/$SETNAME.set
 
-if test "$LOCK" == "true"
+if test "$LOCK" = "true"
 then
     if test -e $DONEFILE
     then
@@ -79,7 +78,7 @@ then
     CONTINUE=false
 fi
 
-if test "$CONTINUE" == "true"
+if test "$CONTINUE" = "true"
 then
     MVORCP=cp
 else
@@ -96,9 +95,9 @@ then
     $MVORCP $ERRFILE $ERRFILE.old-$DATEINT
 fi
 
-if test "$CONTINUE" == "true"
+if test "$CONTINUE" = "true"
 then
-    LASTPROB=`getlastprob.awk $OUTFILE`
+    LASTPROB=`./getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -112,30 +111,39 @@ uname -a >>$ERRFILE
 date >>$OUTFILE
 date >>$ERRFILE
 
-HARDTIMELIMIT=`echo $TIMELIMIT+60 | bc`
-HARDMEMLIMIT=`echo $MEMLIMIT*1229 | bc`
+# we add 10% to the hard time limit and additional 10 seconds in case of small time limits
+HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
+
+# we add 10% to the hard memory limit and additional 100mb to the hard memory limit
+HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
+HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024`
+
 echo "hard time limit: $HARDTIMELIMIT s" >>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT k" >>$OUTFILE
 
 for i in `cat $TSTNAME.test` DONE
 do
-    if test "$i" == "DONE"
+    if test "$i" = "DONE"
     then
 	date > $DONEFILE
 	break
     fi
 
-    if test "$LASTPROB" == ""
+    if test "$LASTPROB" = ""
     then
 	LASTPROB=""
 	if test -f $i
 	then
 	    echo @01 $i ===========
 	    echo @01 $i ===========                >> $ERRFILE
-	    echo set load $SETTINGS                >  $TMPFILE
+	    echo > $TMPFILE
+	    if test $SETNAME != "default"
+	    then
+		echo set load $SETTINGS            >>  $TMPFILE
+	    fi
 	    if test $FEASTOL != "default"
 	    then
-		echo set numerics feastol $FEASTOL    >> $TMPFILE
+		echo set numerics feastol $FEASTOL >> $TMPFILE
 	    fi
 	    echo set limits time $TIMELIMIT        >> $TMPFILE
 	    echo set limits nodes $NODELIMIT       >> $TMPFILE
@@ -144,6 +152,11 @@ do
 	    echo set display verblevel 4           >> $TMPFILE
 	    echo set display freq $DISPFREQ        >> $TMPFILE
 	    echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
+	    if test "$LPS" == "none"      
+	    then
+		echo set lp solvefreq -1           >> $TMPFILE # avoid solving LPs in case of LPS=none
+
+	    fi
 	    echo set save $SETFILE                 >> $TMPFILE
 	    echo read $i                           >> $TMPFILE
 	    echo optimize                          >> $TMPFILE
@@ -152,15 +165,18 @@ do
 	    echo checksol                          >> $TMPFILE
 	    echo quit                              >> $TMPFILE
 
-#	    waitcplex.sh # ??????????????????
+#	    if test "$LPS" == "cpx"      
+#	    then
+#		waitcplex.sh # ??????????????????
+#	    fi
 
 	    echo -----------------------------
 	    date
 	    date >>$ERRFILE
 	    echo -----------------------------
 	    date +"@03 %s"
-#	    tcsh -c "limit cputime $HARDTIMELIMIT s; limit memoryuse $HARDMEMLIMIT k; limit filesize 200 M; ../$2 < $TMPFILE" 2>>$ERRFILE
-	    bash -c "ulimit -t $HARDTIMELIMIT -v $HARDMEMLIMIT -f 200000; ../$2 < $TMPFILE" 2>>$ERRFILE
+	    bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ../$BINNAME < $TMPFILE" 2>>$ERRFILE
+#	    bash -c " ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; nice -15 ../$BINNAME < $TMPFILE" 2>>$ERRFILE
 	    date +"@04 %s"
 	    echo -----------------------------
 	    date
@@ -174,7 +190,7 @@ do
 	fi
     else
 	echo skipping $i
-	if test "$LASTPROB" == "$i"
+	if test "$LASTPROB" = "$i"
 	then
 	    LASTPROB=""
         fi
@@ -190,7 +206,7 @@ if test -e $DONEFILE
 then
     ./evalcheck.sh $OUTFILE
 
-    if test "$LOCK" == "true"
+    if test "$LOCK" = "true"
     then
 	rm -f $RUNFILE
     fi

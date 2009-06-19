@@ -4,9 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2007 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2007 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -15,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck.sh,v 1.10 2007/09/21 10:39:48 bzfpfend Exp $
+# $Id: evalcheck.sh,v 1.10.2.1 2009/06/19 07:53:29 bzfwolte Exp $
 
 export LANG=C
 
@@ -40,7 +38,7 @@ do
     TEXFILE=$DIR/$NAME.tex
     PAVFILE=$DIR/$NAME.pav
 
-    TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_]*\).*/\1/g'`
+    TSTNAME=`echo $NAME | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
     if test -f $TSTNAME.test
     then
@@ -60,5 +58,5 @@ do
     fi
     fi
 
-    gawk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
+    awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 done

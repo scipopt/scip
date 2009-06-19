@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.h,v 1.19 2007/06/06 11:25:13 bzfpfend Exp $"
+#pragma ident "@(#) $Id: clock.h,v 1.19.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
 
 /**@file   clock.h
  * @brief  internal methods for clocks and timing issues
@@ -101,6 +99,12 @@ SCIP_Bool SCIPclockIsRunning(
 /** gets the used time of this clock in seconds */
 extern
 SCIP_Real SCIPclockGetTime(
+   SCIP_CLOCK*           clck                /**< clock timer */
+   );
+
+/** gets the last validated time of this clock in seconds */
+extern
+SCIP_Real SCIPclockGetLastTime(
    SCIP_CLOCK*           clck                /**< clock timer */
    );
 

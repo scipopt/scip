@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.314 2008/01/14 12:08:24 bzfpfend Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -99,7 +97,6 @@
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
 #include "scip/set.h"
-#include "scip/misc.h"
 #include "scip/tree.h"
 #endif
 
@@ -116,6 +113,21 @@
 /** returns scip version number */
 extern
 SCIP_Real SCIPversion(
+   void
+   );
+
+/** returns SCIP major version */
+int SCIPmajorVersion(
+   void
+   );
+
+/** returns SCIP minor version */
+int SCIPminorVersion(
+   void
+   );
+
+/** returns SCIP technical version */
+int SCIPtechVersion(
    void
    );
 
@@ -639,6 +651,13 @@ SCIP_RETCODE SCIPsetPricerPriority(
  */
 extern
 SCIP_RETCODE SCIPactivatePricer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRICER*          pricer              /**< variable pricer */
+   );
+
+/** deactivates pricer */
+extern
+SCIP_RETCODE SCIPdeactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
@@ -1299,7 +1318,9 @@ SCIP_RETCODE SCIPcreateProb(
 extern
 SCIP_RETCODE SCIPreadProb(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< problem file name */
+   const char*           filename,           /**< problem file name */
+   const char*           extension           /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    );
 
 /** writes original problem to file  */
@@ -1307,7 +1328,9 @@ extern
 SCIP_RETCODE SCIPwriteOrigProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
-   SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
+   const char*           extension,          /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
+   SCIP_Bool             genericnames        /**< use generic variable and constraint names? */
    );
 
 /** writes transformed problem to file  */
@@ -1315,6 +1338,8 @@ extern
 SCIP_RETCODE SCIPwriteTransProblem(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< output file (or NULL for standard output) */
+   const char*           extension,          /**< extension of the desired file reader, 
+                                              *   or NULL if file extension should be used */
    SCIP_Bool             genericnames        /**< using generic variable and constraint names? */
    );
 
@@ -1343,9 +1368,28 @@ const char* SCIPgetProbName(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets name of the current problem instance */
+extern
+SCIP_RETCODE SCIPsetProbName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name to be set */
+   );
+
 /** gets objective sense of original problem */
 extern
 SCIP_OBJSENSE SCIPgetObjsense(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the objective offset of the tranformed problem */
+extern
+SCIP_Real SCIPgetTransObjoffset(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the objective scale of the tranformed problem */
+extern
+SCIP_Real SCIPgetTransObjscale(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -1761,6 +1805,14 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
    SCIP_Real             newbound            /**< new lower bound for the node (if it's larger than the old one) */
    );
 
+/** change the node selection priority of the given child */
+extern 
+SCIP_RETCODE SCIPchgChildPrio(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            child,              /**< child to update the node selection priority */
+   SCIP_Real             priority            /**< node selection priority value */
+   );
+
 /**@} */
 
 
@@ -1922,6 +1974,13 @@ SCIP_RETCODE SCIPgetBinvarRepresentative(
    SCIP_Bool*            negated             /**< pointer to store whether the negation of an active variable was returned */
    );
 
+/** flattens aggregation graph of multiaggregated variable in order to avoid exponential recursion lateron */
+extern
+SCIP_RETCODE SCIPflattenVarAggregationGraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** transforms given variables, scalars and constant to the corresponding active variables, scalars and constant;
  *
  * if the number of needed active variables is greater than the available slots in the variable array, nothing happens except  
@@ -1936,15 +1995,26 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
    int                   varssize,           /**< available slots in vars and scalars array */
    SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   int*                  requiredsize        /**< pointer to store the required array size for the active variables */
+   int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
+   SCIP_Bool             mergemultiples      /**< should multiple occurrences of a var be replaced by a single coeff? */
    );
    
 /** returns the reduced costs of the variable in the current node's LP relaxation, 
  *  if the variable is not in the current LP, SCIP_INVALID will be returned,
- *  the current node has to have an LP
+ *  the current node has to have a feasible LP
  */
 extern
 SCIP_Real SCIPgetVarRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
+   );
+
+/** returns the farkas coefficients of the variable in the current node's LP relaxation, 
+ *  if the variable is not in the current LP, SCIP_INVALID will be returned,
+ *  the current node has to have an infeasible LP
+ */
+extern
+SCIP_Real SCIPgetVarFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
@@ -2573,6 +2643,13 @@ SCIP_RETCODE SCIPmultiaggregateVar(
    SCIP_Bool*            aggregated          /**< pointer to store whether the aggregation was successful */
    );
 
+/** marks the variable to not to be multi-aggregated */
+extern
+SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to delete */
+   );
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of "solvaldelta" in the
  *  variable's solution value and resulting change of "objdelta" in the in the LP's objective value;
  *  the update is ignored, if the objective value difference is infinite
@@ -2653,6 +2730,40 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
    );
+
+/* begin ????????????????????? */
+
+/** returns the variable's conflict length score */
+extern
+SCIP_Real SCIPgetVarConflictlengthScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the variable's conflict length score only using conflicts of the current run */
+extern
+SCIP_Real SCIPgetVarConflictlengthScoreCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** returns the variable's average conflict length */
+extern
+SCIP_Real SCIPgetVarAvgConflictlength(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** returns the variable's average conflict length only using conflicts of the current run */
+extern
+SCIP_Real SCIPgetVarAvgConflictlengthCurrentRun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/* end ????????????????????????? */
 
 /** returns the average number of inferences found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
@@ -2904,7 +3015,8 @@ SCIP_RETCODE SCIPcreateCons(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
@@ -3156,6 +3268,7 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -3204,6 +3317,12 @@ SCIP_LPSOLSTAT SCIPgetLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+extern
+SCIP_Bool SCIPisLPRelax(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets objective value of current LP (which is the sum of column and loose objective value) */
 extern
 SCIP_Real SCIPgetLPObjval(
@@ -3225,6 +3344,12 @@ SCIP_Real SCIPgetLPLooseObjval(
 /** gets pseudo objective value of the current LP */
 extern
 SCIP_Real SCIPgetPseudoObjval(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+extern
+SCIP_Bool SCIPisRootLPRelax(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -3377,12 +3502,14 @@ SCIP_RETCODE SCIPcalcMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
                                               *   NULL for using closest bound for all variables */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
+   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
@@ -3400,8 +3527,10 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mircoef,            /**< array to store strong CG coefficients: must be of size SCIPgetNVars() */
@@ -3464,9 +3593,16 @@ SCIP_RETCODE SCIPgetLPI(
 /**@name LP Column Methods */
 /**@{ */
 
-/** returns the reduced costs of a column in the last LP */
+/** returns the reduced costs of a column in the last (feasible) LP */
 extern
 SCIP_Real SCIPgetColRedcost(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COL*             col                 /**< LP column */
+   );
+
+/** returns the farkas coefficient of a column in the last (infeasible) LP */
+extern
+SCIP_Real SCIPgetColFarkasCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
    );
@@ -3775,6 +3911,14 @@ extern
 SCIP_Bool SCIPisEfficacious(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             efficacy            /**< efficacy of the cut */
+   );
+
+/** calculates the efficacy norm of the given vector, which depends on the "separating/efficacynorm" parameter */
+extern
+SCIP_Real SCIPgetVectorEfficacyNorm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            vals,               /**< array of values */
+   int                   nvals               /**< number of values */
    );
 
 /** adds cut to separation storage */
@@ -4246,7 +4390,7 @@ SCIP_RETCODE SCIPcreateChild(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE**           node,               /**< pointer to node data structure */
    SCIP_Real             nodeselprio,        /**< node selection priority of new node */
-   SCIP_Real             estimate            /**< estimate for value of best feasible solution in subtree */
+   SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    );
 
 /** branches on a variable v; if solution value x' is fractional, two child nodes are created
@@ -4645,11 +4789,8 @@ SCIP_RETCODE SCIPcheckSolOrig(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
-   SCIP_CONSHDLR**       infeasconshdlr,     /**< pointer to store constraint handler of first infeasible constraint,
-                                              *   or NULL if not needed */
-   SCIP_CONS**           infeascons          /**< pointer to store first infeasible constraint, or NULL if not needed;
-                                              *   stores NULL, if a constraint handler that doesn't need constraints
-                                              *   rejected the solution */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             completely          /**< should all violations be checked? */
    );
 
 /**@} */
@@ -4838,6 +4979,27 @@ extern
 SCIP_RETCODE SCIPrepropagateNode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node                /**< node that should be propagated again */
+   );
+
+/** returns depth of first node in active path that is marked being cutoff */
+extern
+int SCIPgetCutoffdepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns depth of first node in active path that has to be propagated again */
+extern
+int SCIPgetRepropdepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+
+/* prints all branching decisions on variables from the root to the given node */
+extern
+SCIP_RETCODE SCIPprintNodeRootPath(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node data */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /**@} */
@@ -5293,6 +5455,18 @@ SCIP_Real SCIPgetAvgConflictScore(
 /** gets the average conflict score value over all variables, only using the pseudo cost information of the current run */
 extern
 SCIP_Real SCIPgetAvgConflictScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average inference score value over all variables */
+extern
+SCIP_Real SCIPgetAvgConflictlengthScore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the average conflictlength score value over all variables, only using the pseudo cost information of the current run */
+extern
+SCIP_Real SCIPgetAvgConflictlengthScoreCurrentRun(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

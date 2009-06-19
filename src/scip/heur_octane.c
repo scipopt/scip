@@ -3,20 +3,19 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
-/*  SCIP is distributed under the terms of the SCIP Academic License.        */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
-/*  You should have received a copy of the SCIP Academic License             */
+/*  You should have received a copy of the ZIB Academic License              */
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.18 2007/06/06 11:25:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.18.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
 
 /**@file   heur_octane.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  octane primal heuristic based on Balas, Ceria, Dawande, Margot, and Pataki
  * @author Timo Berthold
  */
@@ -61,102 +60,6 @@ struct SCIP_HeurData
  * Local methods
  */
 
-/** boring method, only swapping two elements of a SCIP_Real array */
-static 
-void swapreal(
-   SCIP_Real*            arr,                /* array in which the two elements should be swapped */
-   int                   i,                  /* position of the first element                     */
-   int                   j                   /* position of the second element                    */
-   )
-{
-   SCIP_Real tmp;
-   tmp = arr[i]; 
-   arr[i] = arr[j]; 
-   arr[j] = tmp;
-}
-
-/** boring method, only swapping two elements of a SCIP_VAR* array */
-static 
-void swapvar(
-   SCIP_VAR**            arr,                /* array in which the two elements should be swapped */
-   int                   i,                  /* position of the first element                     */
-   int                   j                   /* position of the second element                    */
-   ) 
-{
-   SCIP_VAR* tmp;
-   tmp = arr[i]; 
-   arr[i] = arr[j]; 
-   arr[j] = tmp;
-}
-
-/** boring method, only swapping two elements of a SCIP_Bool array */
-static 
-void swapbool(
-   SCIP_Bool*            arr,                /**< array in which the two elements should be swapped */
-   int                   i,                  /**< position of the first element                     */
-   int                   j                   /**< position of the second element                    */
-   )  
-   
-{
-   SCIP_Bool tmp;
-   tmp = arr[i]; 
-   arr[i] = arr[j]; 
-   arr[j] = tmp;
-}
-
-/** quicksort for array v in range l..r using v[r] as pivot and sorting a, x, sign and subspacevars the same way as v */
-static 
-void resortCoords(
-   SCIP_Real*            v,                  /**< the array which should be sorted */
-   SCIP_Real*            a,                  /**< array which is permuted          */
-   SCIP_Real*            x,                  /**< array which is permuted          */ 
-   SCIP_Bool*            sign,               /**< array which is permuted          */ 
-   SCIP_VAR**            subspacevars,       /**< array which is permuted          */
-   int                   l,                  /**< left end                         */
-   int                   r                   /**< right end                        */
-   )
-{
-   int i;
-   int j;
-
-   if( r <= l )
-      return;
-   
-   i = l;
-   j = r-1;
-  
-   /* quicksort with right most element as pivot */
-   while( i <= j )
-   {      
-      while( i <= r && v[i] > v[r] )
-         i++;
-      while( j >= l && v[j] < v[r] )
-         j--;
-      if( i >= j ) 
-         break;
-      else 
-      {
-         swapreal(v,i,j);
-         swapreal(a,i,j);
-         swapreal(x,i,j);
-         swapbool(sign,i,j);
-         swapvar(subspacevars,i,j);
-      }
-      i++;
-      j--;
-   }
-
-   /* put in the pivot */
-   swapreal(v,i,r);
-   swapreal(a,i,r);
-   swapreal(x,i,r);
-   swapbool(sign,i,r);
-   swapvar(subspacevars,i,r);
-    
-   /* recursion */
-   resortCoords(v, a, x, sign, subspacevars, l, i-1);
-   resortCoords(v, a, x, sign, subspacevars, i+1, r);
-}
 
 /** tries to insert the facet obtained from facet i flipped in component j into the list of the fmax nearest facets */
 static 
@@ -172,15 +75,20 @@ void tryToInsert(
    int*                  nfacets             /**< number of facets                           */
    )
 {
-   SCIP_Bool* lastfacet;
+   SCIP_Bool* lastfacet; 
    int k;
 
-   if( SCIPisFeasGE(scip,lam, lambda[f_max-1]) || lam < 0.0 )
+   assert(scip != NULL);
+   assert(facets != NULL);
+   assert(lambda != NULL);
+   assert(nfacets != NULL);
+
+   if( lam <= 0.0 || SCIPisFeasGE(scip, lam, lambda[f_max-1]) )
       return;
    
-   /* shifting lam through lambda, lambda keeps increasingly sorted */
    lastfacet = facets[f_max];
-   for( k = f_max; k > 0 && SCIPisFeasGT(scip, lambda[k-1],  lam); k-- )
+   /* shifting lam through lambda, lambda keeps increasingly sorted */
+   for( k = f_max; k > 0 && SCIPisFeasGT(scip, lambda[k-1], lam); --k )
    {
       lambda[k] = lambda[k-1];
       facets[k] = facets[k-1];
@@ -206,24 +114,26 @@ SCIP_RETCODE getSolFromFacet(
    int                   nsubspacevars       /**< dimension of fractional space         */   
    )
 {
-   int i;
+   int v;
 
+   assert(scip != NULL);
    assert(facet != NULL);
+   assert(sol != NULL);
    assert(sign != NULL);
+   assert(subspacevars != NULL);
 
    SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-
-   for( i = 0; i < nsubspacevars; i++ )
+   for( v = nsubspacevars - 1; v >= 0; --v )
    {
       /* after permutation, a variable should be set to 1, iff there was no reflection in this coordinate and the hit 
        * facet has coordinate + or there was a reflection and the facet has coordinate - */
-      if( facet[i] == sign[i] )
+      if( facet[v] == sign[v] )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, subspacevars[i], 1.0) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, subspacevars[v], 1.0) );
       }
       else
       {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, subspacevars[i], 0.0) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, subspacevars[v], 0.0) );
       }
    }
 
@@ -234,17 +144,19 @@ SCIP_RETCODE getSolFromFacet(
 static
 SCIP_RETCODE generateObjectiveRay(
    SCIP*                 scip,               /**< SCIP data structure                   */
-   SCIP_Real*            a,                  /**< shooting ray                          */
+   SCIP_Real*            raydirection,       /**< shooting ray                          */
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
    int                   nsubspacevars       /**< dimension of fractional space         */
    )
 {
-   int i;
-     
-   assert(a != NULL);
+   int v;
+
+   assert(scip != NULL);  
+   assert(raydirection != NULL);
    assert(subspacevars != NULL);
-   for( i = 0; i < nsubspacevars; i++ )
-      a[i] = SCIPvarGetObj(subspacevars[i]);
+
+   for( v = nsubspacevars - 1; v >= 0; --v )
+      raydirection[v] = SCIPvarGetObj(subspacevars[v]);
    return SCIP_OKAY;
 }
 
@@ -252,18 +164,19 @@ SCIP_RETCODE generateObjectiveRay(
 static
 SCIP_RETCODE generateDifferenceRay(
    SCIP*                 scip,               /**< SCIP data structure                   */
-   SCIP_Real*            a,                  /**< shooting ray                          */
+   SCIP_Real*            raydirection,       /**< shooting ray                          */
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
    int                   nsubspacevars       /**< dimension of fractional space         */
    )
 {
-   int i;
-     
-   assert(a != NULL);
+   int v;
+
+   assert(scip != NULL);  
+   assert(raydirection != NULL);
    assert(subspacevars != NULL);
    
-   for( i = 0; i < nsubspacevars; i++ )
-      a[i] = SCIPvarGetLPSol(subspacevars[i]) - SCIPvarGetRootSol(subspacevars[i]);
+   for( v = nsubspacevars - 1; v >= 0; --v )
+      raydirection[v] = SCIPvarGetLPSol(subspacevars[v]) - SCIPvarGetRootSol(subspacevars[v]);
 
    return SCIP_OKAY;
 }
@@ -273,64 +186,56 @@ SCIP_RETCODE generateDifferenceRay(
 static
 SCIP_RETCODE generateAverageRay(
    SCIP*                 scip,               /**< SCIP data structure                   */
-   SCIP_Real*            a,                  /**< shooting ray                          */
+   SCIP_Real*            raydirection,       /**< shooting ray                          */
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
    int                   nsubspacevars,      /**< dimension of fractional space         */
    SCIP_Bool             weighted            /**< should the rays be weighted?          */
    )
 {
-   SCIP_COL** cols;
    SCIP_ROW** rows;  
-   SCIP_Real* tableaucol;
    SCIP_Real** tableaurows;
    SCIP_Real* rownorm;
    SCIP_Real rowweight;
    
    int nrows;   
-   int ncols;     
    int i;
    int j;
 
-   assert(a != NULL);
+   assert(scip != NULL);
+   assert(raydirection != NULL);
+   assert(subspacevars != NULL);
     
    /* get data */  
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-   SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &tableaucol, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tableaurows, nsubspacevars) );
-   for( j = 0; j < nsubspacevars; ++j )
+   for( j = nsubspacevars - 1; j >= 0; --j )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &tableaurows[j], nrows) );
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &rownorm, nrows) );
-   for( i = 0; i < nrows; ++i )
-   {
+   for( i = nrows - 1; i >= 0; --i )
       rownorm[i] = 0;
-   }
 
    /* get the relevant columns of the simplex tableau */
-   for( j = 0; j < nsubspacevars; ++j )
+   for( j = nsubspacevars-1; j >= 0; --j )
    {
-      SCIP_CALL( SCIPgetLPBInvACol(scip,SCIPvarGetProbindex(subspacevars[j]),tableaucol) );
-      for( i = 0; i < nrows; ++i )
-      { 
-         tableaurows[j][i] = tableaucol[i];
-         rownorm[i] += tableaucol[i]*tableaucol[i];
-      }
+      SCIP_CALL( SCIPgetLPBInvACol(scip, SCIPvarGetProbindex(subspacevars[j]), tableaurows[j]) );
+      for( i = nrows - 1; i >= 0; --i )
+	 rownorm[i] += tableaurows[j][i] * tableaurows[j][i];
    }
       
    /* take average over all rows of the tableau */
-   for( i = 0; i < nrows; ++i )
+   for( i = nrows - 1; i >= 0; --i )
    {
-      if( SCIPisFeasZero(scip,rownorm[i]) )
+      if( SCIPisFeasZero(scip, rownorm[i]) )
          continue;
       else
-         rownorm[i] = SQRT( rownorm[i] );
+         rownorm[i] = SQRT(rownorm[i]);
       
       rowweight = 0.0;
-      if(weighted)
+      if( weighted )
       {
          rowweight = SCIProwGetDualsol(rows[i]);
          if( SCIPisFeasZero(scip, rowweight) )
@@ -339,22 +244,21 @@ SCIP_RETCODE generateAverageRay(
       else
          rowweight = 1.0;
       
-      for( j = 0; j < nsubspacevars; ++j )
+      for( j = nsubspacevars - 1; j >= 0; --j )
       { 
-         a[j] += tableaurows[j][i] / (rownorm[i]*rowweight); 
-         assert(SCIP_REAL_MIN <= a[j] && a[j]  <= SCIP_REAL_MAX);
+         raydirection[j] += tableaurows[j][i] / (rownorm[i] * rowweight); 
+         assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
       }
    }
 
    /* free memory */
    SCIPfreeBufferArray(scip, &rownorm);
-   for( j = 0; j < nsubspacevars; ++j )
+   for( j = nsubspacevars - 1; j >= 0; --j )
    {
       SCIPfreeBufferArray(scip, &tableaurows[j]);
    }
    SCIPfreeBufferArray(scip, &tableaurows);
-   SCIPfreeBufferArray(scip, &tableaucol);
-   
+  
    return SCIP_OKAY;
 }
 
@@ -363,7 +267,7 @@ SCIP_RETCODE generateAverageRay(
 static
 SCIP_RETCODE generateAverageNBRay(
    SCIP*                 scip,               /**< SCIP data structure                   */
-   SCIP_Real*            a,                  /**< shooting ray                          */
+   SCIP_Real*            raydirection,       /**< shooting ray                          */
    int*                  fracspace,          /**< index set of fractional variables     */ 
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
    int                   nsubspacevars       /**< dimension of fractional space         */
@@ -375,29 +279,31 @@ SCIP_RETCODE generateAverageNBRay(
    int ncols;
    int i;
 
-   assert(a != NULL);
+   assert(scip != NULL);
+   assert(raydirection != NULL);
+   assert(fracspace != NULL);
    assert(subspacevars != NULL);
   
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
 
    /* add up non-basic variables */
-   for( i = 0; i < nsubspacevars; ++i )
+   for( i = nsubspacevars - 1; i >= 0; --i )
    { 
       SCIP_Real solval;
 
       solval = SCIPvarGetLPSol(subspacevars[i]);
 
       if( SCIPisFeasEQ(scip, solval, SCIPvarGetLbLocal(subspacevars[i])) )
-         a[i] = +1.0;
+         raydirection[i] = +1.0;
       else if( SCIPisFeasEQ(scip, solval, SCIPvarGetUbLocal(subspacevars[i])) )
-         a[i] = -1.0;
+         raydirection[i] = -1.0;
       else
-         a[i] = 0.0; 
+         raydirection[i] = 0.0; 
    }
 
    /* add up non-basic rows */
-   for( i = 0; i < nrows; i++ )
+   for( i = nrows - 1; i >= 0; --i )
    {
       SCIP_Real dualsol;
       SCIP_Real factor; 
@@ -421,7 +327,7 @@ SCIP_RETCODE generateAverageNBRay(
       nnonz = SCIProwGetNNonz(rows[i]);
 
       rownorm = 0.0;
-      for( j = 0; j < nnonz; j++ )
+      for( j = nnonz - 1; j >= 0; --j )
       {
          SCIP_VAR* var;
          var = SCIPcolGetVar(cols[j]);
@@ -433,18 +339,22 @@ SCIP_RETCODE generateAverageNBRay(
          continue;
       else
       {
-         assert( rownorm > 0 );
-         rownorm = SQRT( rownorm);
+         assert(rownorm > 0);
+         rownorm = SQRT(rownorm);
       }
 
-      for( j = 0; j < nnonz; j++ )
+      for( j = nnonz - 1; j >= 0; --j )
       { 
-         SCIP_VAR* var = SCIPcolGetVar(cols[j]);
-         int f = fracspace[SCIPvarGetProbindex(var)];
+	 SCIP_VAR* var;
+         int f;
+
+	 var = SCIPcolGetVar(cols[j]);
+	 f = fracspace[SCIPvarGetProbindex(var)];
+
          if( f >= 0 )
          {
-            a[f] += factor * coeffs[j] / rownorm;
-            assert(SCIP_REAL_MIN <= a[f] && a[f]  <= SCIP_REAL_MAX);
+            raydirection[f] += factor * coeffs[j] / rownorm;
+            assert(SCIP_REAL_MIN <= raydirection[f] && raydirection[f]  <= SCIP_REAL_MAX);
          }
       }
    }
@@ -455,48 +365,51 @@ SCIP_RETCODE generateAverageNBRay(
 static
 SCIP_RETCODE generateStartingPoint(
    SCIP*                 scip,               /**< SCIP data structure                   */
-   SCIP_Real*            x,                  /**< origin of the shooting ray            */
+   SCIP_Real*            rayorigin,          /**< origin of the shooting ray            */
    SCIP_VAR**            subspacevars,       /**< pointer to fractional space variables */
    int                   nsubspacevars       /**< dimension of fractional space         */
    )
 {
-   int i;
+   int v;
 
-   assert(x != NULL);
+   assert(scip != NULL);
+   assert(rayorigin != NULL);
    assert(subspacevars != NULL);
 
-   for( i = 0; i < nsubspacevars; i++ )
-      x[i] = SCIPvarGetLPSol(subspacevars[i]);
+   for( v = nsubspacevars - 1; v >= 0; --v )
+      rayorigin[v] = SCIPvarGetLPSol(subspacevars[v]);
 
    return SCIP_OKAY;
 }
 
-/** translates the inner point of the LP to an inner point x of the unit hyper octahedron and 
- *  transforms a and x by reflections stored in sign 
+/** translates the inner point of the LP to an inner point rayorigin of the unit hyper octahedron and 
+ *  transforms raydirection and rayorigin by reflections stored in sign 
  */
 static
 void flipCoords(
-   SCIP_Real*            x,                  /**< origin of the shooting ray            */
-   SCIP_Real*            a,                  /**< direction of the shooting ray         */
+   SCIP_Real*            rayorigin,          /**< origin of the shooting ray            */
+   SCIP_Real*            raydirection,       /**< direction of the shooting ray         */
    SCIP_Bool*            sign,               /**< marker for flipped coordinates        */
    int                   nsubspacevars       /**< dimension of fractional space         */
    )
 {  
-   int i;
-   assert(x != NULL);
-   assert(a != NULL);
+   int v;
+
+   assert(rayorigin != NULL);
+   assert(raydirection != NULL);
    assert(sign != NULL);  
-   for( i = 0; i < nsubspacevars; i++ )
+
+   for( v = nsubspacevars - 1; v >= 0; --v )
    { 
-      /* if a[i] is negative, flip its sign */
-      if( a[i] < 0 )
+      /* if raydirection[v] is negative, flip its sign */
+      if( raydirection[v] < 0 )
       {
-         sign[i] = FALSE;
-         a[i] *= -1.0;
-         x[i] *= -1.0; /* flip starting point in the same way like a */
+         sign[v] = FALSE;
+         raydirection[v] *= -1.0;
+         rayorigin[v] *= -1.0; /* flip starting point in the same way like raydirection */
       }
       else
-         sign[i] = TRUE;
+         sign[v] = TRUE;
    }
 }
 
@@ -508,9 +421,9 @@ void generateNeighborFacets(
    SCIP*                 scip,               /**< SCIP data structure                   */
    SCIP_Bool**           facets,             /**< facets got so far                     */
    SCIP_Real*            lambda,             /**< distances of the facets               */
-   SCIP_Real*            x,                  /**< origin of the shooting ray            */
-   SCIP_Real*            a,                  /**< direction of the shooting ray         */
-   SCIP_Real*            v,                  /**< array by which coordinates are sorted */
+   SCIP_Real*            rayorigin,          /**< origin of the shooting ray            */
+   SCIP_Real*            raydirection,       /**< direction of the shooting ray         */
+   SCIP_Real*            negquotient,        /**< array by which coordinates are sorted */
    int                   nsubspacevars,      /**< dimension of fractional space         */
    int                   f_max,              /**< maximal number of facets to create    */
    int                   i,                  /**< current facet                         */
@@ -523,35 +436,36 @@ void generateNeighborFacets(
    int minplus;
    int j;
 
+   assert(scip != NULL);
    assert(facets != NULL);
    assert(facets[i] != NULL);
    assert(lambda != NULL);
-   assert(x != NULL);
-   assert(a != NULL);
-   assert(v != NULL);
-   assert(nfacets != 0);
+   assert(rayorigin != NULL);
+   assert(raydirection != NULL);
+   assert(negquotient != NULL);
+   assert(nfacets != NULL);
    assert(0 <= i && i < f_max);
 
    /* determine the p and q values of the next facet to fix as a closest one */
    p = 0.5 * nsubspacevars;
    q = 0.0;
-   for( j = 0; j < nsubspacevars; j++ )
+   for( j = nsubspacevars - 1; j >= 0; --j )
    {
       if( facets[i][j] )
       {
-         p -= x[j];
-         q += a[j];
+         p -= rayorigin[j];
+         q += raydirection[j];
       }
       else
       {
-         p += x[j];
-         q -= a[j];
+         p += rayorigin[j];
+         q -= raydirection[j];
       }  
    } 
 
    /* get the first + entry of the facet */
    minplus = -1;
-   for( j = 0; j < nsubspacevars; j++ )
+   for( j = 0; j < nsubspacevars; ++j )
    {
       if( facets[i][j] ) 
       {
@@ -560,31 +474,31 @@ void generateNeighborFacets(
       }
    }
 
-   /* facet (- - ... -) cannot be hit, because a >= 0 */
+   /* facet (- - ... -) cannot be hit, because raydirection >= 0 */
    assert(minplus >= 0);
 
-   assert(SCIPisFeasEQ(scip,lambda[i],p/q));
+   assert(SCIPisFeasEQ(scip, lambda[i], p/q));
    assert(lambda[i] >= 0.0);
 
    /* reverse search for facets from which the actual facet can be got by a single, decreasing + to - flip */
    /* a facet will be inserted into the queue, iff it is one of the fmax closest ones already found */
-   for( j = 0; j < nsubspacevars && !facets[i][j] && v[j] > lambda[i]; j++ )
+   for( j = 0; j < nsubspacevars && !facets[i][j] && negquotient[j] > lambda[i]; ++j )
    {
-      if( SCIPisFeasPositive(scip, q + 2*a[j]) )
+      if( SCIPisFeasPositive(scip, q + 2*raydirection[j]) )
       {
-         lam = (p - 2*x[j]) / (q + 2*a[j]);
-         tryToInsert(scip,facets, lambda, i, j, f_max, nsubspacevars, lam, nfacets);
+         lam = (p - 2*rayorigin[j]) / (q + 2*raydirection[j]);
+         tryToInsert(scip, facets, lambda, i, j, f_max, nsubspacevars, lam, nfacets);
       }
    }
 
    /* reverse search for facets from which the actual facet can be got by a single, nonincreasing - to + flip */
    /* a facet will be inserted into the queue, iff it is one of the fmax closest ones already found */
-   for( j = nsubspacevars-1; j >= 0 && facets[i][j] && v[j] <= lambda[i]; j-- )
+   for( j = nsubspacevars - 1; j >= 0 && facets[i][j] && negquotient[j] <= lambda[i]; --j )
    {
-      if( SCIPisFeasPositive(scip,q - 2*a[j])  )
+      if( SCIPisFeasPositive(scip, q - 2*raydirection[j]) )
       {
-         lam = (p + 2*x[j]) / (q - 2*a[j]);
-         if( v[minplus] <= lam )
+         lam = (p + 2*rayorigin[j]) / (q - 2*raydirection[j]);
+         if( negquotient[minplus] <= lam )
             tryToInsert(scip, facets, lambda, i, j, f_max, nsubspacevars, lam, nfacets);
       }
    }
@@ -598,13 +512,17 @@ void generateNeighborFacets(
 static
 SCIP_Bool isZero(
    SCIP*                 scip,               /**< SCIP data structure                   */
-   SCIP_Real*            a,                  /**< array to be checked                   */
+   SCIP_Real*            raydirection,       /**< array to be checked                   */
    int                   nsubspacevars       /**< size of array                         */
    )
 {
-   int i;
-   for( i = 0; i < nsubspacevars; i++)
-      if( !SCIPisFeasZero(scip,a[i]) )
+   int v;
+
+   assert(scip != NULL);
+   assert(raydirection != NULL);
+
+   for( v = nsubspacevars - 1; v >= 0; --v )
+      if( !SCIPisFeasZero(scip, raydirection[v]) )
          return FALSE;
    return TRUE;
 }
@@ -698,9 +616,9 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    SCIP_Real p;               /* n/2 - <delta,x> ( for some facet delta ) */
    SCIP_Real q;               /* <delta,a> */
 
-   SCIP_Real* x;              /* origin of the ray */
-   SCIP_Real* a;              /* direction of the ray */
-   SCIP_Real* v;              /* negated quotient of x and a */        
+   SCIP_Real* rayorigin;      /* origin of the ray, vector x in paper */
+   SCIP_Real* raydirection;   /* direction of the ray, vector a in paper */
+   SCIP_Real* negquotient;    /* negated quotient of rayorigin and raydirection, vector v in paper */        
    SCIP_Real* lambda;         /* stores the distance of the facets (s.b.) to the origin of the ray */
 
    SCIP_Bool usefracspace;    /* determines whether the search concentrates on fractional variables and fixes integer ones */
@@ -716,16 +634,13 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    int nfacets;          /* number of facets hidden by the ray that where already found */
    int i;                /* counter */
    int j;                /* counter */
-   int f_max;             /* {0,1}-points to be checked */
-   int f_first;           /* {0,1}-points to be generated at first in order to check whether a restart is neccessary */     
-   int r;             /* counter */
+   int f_max;            /* {0,1}-points to be checked */
+   int f_first;          /* {0,1}-points to be generated at first in order to check whether a restart is neccessary */     
+   int r;                /* counter */
    int firstrule;
  
    int* perm;            /* stores the way in which the coordinates were permuted */
    int* fracspace;       /* maps the variables of the subspace to the original variables */
-
-   SCIP_Longint ncalls;
-   SCIP_Longint nnodes;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -752,9 +667,8 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    assert( heurdata != NULL );
 
    /* don't call heuristic, if it was not successful enough in the past */
-   ncalls = SCIPheurGetNCalls(heur);
-   nnodes = SCIPgetNNodes(scip);
-   if( nnodes % ((ncalls/10)/(10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess + 1)+1) != 0 )
+   if( SCIPgetNNodes(scip) % (SCIPheurGetNCalls(heur) / 
+			      (100 * SCIPheurGetNBestSolsFound(heur) + 10*heurdata->nsuccess + 1) + 1) != 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, &fracvars, NULL, NULL, &nfracvars, NULL) );
@@ -778,9 +692,9 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       nsubspacevars = nfracvars; 
       SCIP_CALL( SCIPallocBufferArray(scip, &subspacevars, nsubspacevars) );
       BMScopyMemoryArray(subspacevars, fracvars, nsubspacevars);
-      for( i = 0; i < nvars; i++)
+      for( i = nvars - 1; i >= 0; --i )
          fracspace[i] = -1;
-      for( i = 0; i < nsubspacevars; i++)
+      for( i = nsubspacevars - 1; i >= 0; --i )
          fracspace[SCIPvarGetProbindex(subspacevars[i])] = i;
    }
    else
@@ -788,32 +702,34 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       nsubspacevars = nvars; 
       SCIP_CALL( SCIPallocBufferArray(scip, &subspacevars, nsubspacevars) );
       BMScopyMemoryArray(subspacevars, vars, nvars);
-      for( i = 0; i < nvars; i++)
+      for( i = nvars - 1; i >= 0; --i )
          fracspace[i] = i;
    }
 
    assert(0 <= nsubspacevars && nsubspacevars <= nvars);
+#ifndef NDEBUG
    for( i = 0; i < nsubspacevars; i++)
       assert(fracspace[SCIPvarGetProbindex(subspacevars[i])] == i);
-   
+#endif
+
    /* get sure, that you do not try to hit more facets than possible */
-   if(nsubspacevars < 30)
+   if( nsubspacevars < 30 )
    {
       /* at most 2^(n-1) facets can be hit */
-      f_max = MIN(f_max, 1 << (nsubspacevars-1) ); 
-      f_max = MAX(1,f_max);
-      f_first = MIN(f_first,f_max); 
+      f_max = MIN(f_max, 1 << (nsubspacevars - 1) );
+      f_max = MAX(1, f_max); 
+      f_first = MIN(f_first, f_max); 
    }
 
    /* memory allociation */
-   SCIP_CALL( SCIPallocBufferArray(scip, &x, nsubspacevars) ); 
-   SCIP_CALL( SCIPallocBufferArray(scip, &a, nsubspacevars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &v, nsubspacevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rayorigin, nsubspacevars) ); 
+   SCIP_CALL( SCIPallocBufferArray(scip, &raydirection, nsubspacevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &negquotient, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sign, nsubspacevars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &perm, nsubspacevars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max+1) );  
-   SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max+1) );
-   for( i = 0; i <= f_max; i++)
+   SCIP_CALL( SCIPallocBufferArray(scip, &lambda, f_max + 1) );  
+   SCIP_CALL( SCIPallocBufferArray(scip, &facets, f_max + 1) );
+   for( i = f_max; i >= 0; --i )
    {  
       SCIP_CALL( SCIPallocBufferArray(scip, &facets[i], nsubspacevars) );
    }
@@ -824,19 +740,16 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    /* starting OCTANE */
 
    /* generate starting point in original coordinates */
-   SCIP_CALL( generateStartingPoint(scip,x,subspacevars,nsubspacevars) );
-   for( i = 0; i < nsubspacevars; i++ )
-      x[i] -= 0.5;
+   SCIP_CALL( generateStartingPoint(scip, rayorigin, subspacevars, nsubspacevars) );
+   for( i = nsubspacevars - 1; i >= 0; --i )
+      rayorigin[i] -= 0.5;
    
    firstrule = heurdata->lastrule;
-   firstrule++;
-   for( r = firstrule; r <= firstrule+10; r++ )
+   ++firstrule;
+   for( r = firstrule; r <= firstrule + 10 && !SCIPisStopped(scip); r++ )
    {
       SCIP_ROW** rows;
-     
       int nrows;
-      SCIP_Bool raycreated; 
-      raycreated = FALSE;
       
       /* generate shooting ray in original coordinates by certain rules */
       switch(r % 5)
@@ -844,131 +757,113 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       case 1:
          if( heurdata->useavgnbray )
          {
-            SCIP_CALL( generateAverageNBRay(scip,a,fracspace,subspacevars,nsubspacevars) );
-            raycreated = TRUE;
-         } 
+            SCIP_CALL( generateAverageNBRay(scip, raydirection, fracspace, subspacevars, nsubspacevars) );
+         }
          break;        
       case 2:
          if( heurdata->useobjray )
          {
-            SCIP_CALL( generateObjectiveRay(scip,a,subspacevars,nsubspacevars) );
-            raycreated = TRUE;
+            SCIP_CALL( generateObjectiveRay(scip, raydirection, subspacevars, nsubspacevars) );
          }
          break;
       case 3:
          if( heurdata->usediffray )
          {
-            SCIP_CALL( generateDifferenceRay(scip,a,subspacevars,nsubspacevars) );
-            raycreated = TRUE;
+            SCIP_CALL( generateDifferenceRay(scip, raydirection, subspacevars, nsubspacevars) );
          }
          break;    
       case 4: 
          if( heurdata->useavgwgtray )
          {
-            SCIP_CALL( generateAverageRay(scip,a,subspacevars,nsubspacevars,TRUE) );
-            raycreated = TRUE;
+            SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, TRUE) );
          }
          break;
       case 0:
          if( heurdata->useavgray )
          {
-            SCIP_CALL( generateAverageRay(scip,a,subspacevars,nsubspacevars,FALSE) );
-            raycreated = TRUE;
-         }         
-         break;
-      default:
+            SCIP_CALL( generateAverageRay(scip, raydirection, subspacevars, nsubspacevars, FALSE) );
+         }
          break;
       }
 
       /* there must be a feasible direction for the shooting ray */
-      if( !raycreated || isZero(scip,a,nsubspacevars) )
+      if( isZero(scip, raydirection, nsubspacevars) )
          continue;
 
-      /* coord. transformation such that a >= 0 */
-      flipCoords(x,a,sign,nsubspacevars);
+      /* coord. transformation such that raydirection >= 0 */
+      flipCoords(rayorigin, raydirection, sign, nsubspacevars);
 
-      for( i = 0; i < f_max; i++)
-         lambda[i] = SCIP_REAL_MAX;
+      for( i = f_max - 1; i >= 0; --i)
+	lambda[i] = SCIPinfinity(scip);
 
-      /* calculate v, initialize perm, facets[0], p, and q */
+      /* calculate negquotient, initialize perm, facets[0], p, and q */
       p = 0.5 * nsubspacevars;
       q = 0.0;
-      for( i = 0; i < nsubspacevars; i++ )
+      for( i = nsubspacevars - 1; i >= 0; --i )
       { 
-         /* calculate v, the ratio of x and a, paying special attention to the case a[i] == 0 */
-         if( SCIPisFeasZero(scip, a[i]) )
+         /* calculate negquotient, the ratio of rayorigin and raydirection, paying special attention to the case raydirection[i] == 0 */
+         if( SCIPisFeasZero(scip, raydirection[i]) )
          {
-            if( x[i] < 0 )
-               v[i] = SCIP_REAL_MAX;
+            if( rayorigin[i] < 0 )
+	      negquotient[i] = SCIPinfinity(scip);
             else
-               v[i] = SCIP_REAL_MIN;
+	      negquotient[i] = -SCIPinfinity(scip);
          }
          else
-            v[i] = -1.0 * x[i] / a[i];
+	   negquotient[i] = - (rayorigin[i] / raydirection[i]);
 
          perm[i] = i; 
 
          /* initialization of facets[0] to the all-one facet with p and q its characteristic values */
          facets[0][i] = TRUE;
-         p -= x[i];
-         q += a[i];
+         p -= rayorigin[i];
+         q += raydirection[i];
       }
 
       assert(SCIPisPositive(scip, q));
 
-      /* resort the coordinates in nonincreasing order of v using a variant of quicksort */
-      resortCoords(v,a,x,sign,subspacevars,0,nsubspacevars-1);
-
+      /* resort the coordinates in nonincreasing order of negquotient using a variant of quicksort */
+      SCIPsortDownRealRealRealBoolPtr( negquotient, raydirection, rayorigin, sign, (void*) subspacevars, nsubspacevars);
+      
 #ifndef NDEBUG
       for( i = 0; i < nsubspacevars; i++ )
-         assert( a[i] >= 0 );
+         assert( raydirection[i] >= 0 );
       for( i = 1; i < nsubspacevars; i++ )
-         assert( v[i-1] >= v[i] );
+         assert( negquotient[i - 1] >= negquotient[i] );
 #endif
       /* finished initialization */
 
-      /* find the first facet of the octahedron hit by a ray shot from x into direction a */
-      for(i = 0; i < nsubspacevars && v[i] * q > p; i++ )
+      /* find the first facet of the octahedron hit by a ray shot from rayorigin into direction raydirection */
+      for(i = 0; i < nsubspacevars && negquotient[i] * q > p; ++i )
       {
          facets[0][i] = FALSE;
-         p += 2*x[i];
-         q -= 2*a[i];
+         p += 2 * rayorigin[i];
+         q -= 2 * raydirection[i];
          assert(SCIPisPositive(scip, p));
          assert(SCIPisPositive(scip, q));
       }
-
-      lambda[0] = p/q;
+      lambda[0] = p / q;
       nfacets = 1;
 
       /* find the first facets hit by the ray */
-      for( i = 0; i < f_first; i++)
-         if( i < nfacets )
-            generateNeighborFacets(scip, facets, lambda, x, a, v, nsubspacevars, f_max, i, &nfacets);
+      for( i = 0; i < nfacets && i < f_first; ++i)
+	 generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
     
-    
- 
       /* construct the first ffirst possible solutions */
-      for( i = 0; i < f_first; i++ )
+      for( i = 0; i < nfacets && i < f_first; ++i )
       { 
-         if( i < nfacets )
-         {
-            SCIP_CALL( SCIPcreateSol(scip, &first_sols[i], heur) );
-            SCIP_CALL( getSolFromFacet(scip, facets[i], first_sols[i], sign, subspacevars, nsubspacevars) );
-            assert( first_sols[i] != NULL );
-         }
-         else 
-            break;
+	 SCIP_CALL( SCIPcreateSol(scip, &first_sols[i], heur) );
+	 SCIP_CALL( getSolFromFacet(scip, facets[i], first_sols[i], sign, subspacevars, nsubspacevars) );
+	 assert( first_sols[i] != NULL );
       }
 
       /* try, whether there is a row violated by all of the first ffirst solutions */
       cons_viol = FALSE;
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-      for( i = 0; i < nrows; i++ )
+      for( i = nrows - 1; i >= 0; --i )
       {
-         if( SCIProwIsLocal(rows[i]) )
-            continue;
-         else
-         {
+         if( !SCIProwIsLocal(rows[i]) )
+	 {
             SCIP_COL** cols;
             SCIP_Real constant;
             SCIP_Real lhs;
@@ -978,8 +873,7 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             int nnonzerovars;
             int k;
             
-            
-            /* get the row's data */
+	    /* get the row's data */
             constant = SCIProwGetConstant(rows[i]);
             lhs = SCIProwGetLhs(rows[i]);
             rhs = SCIProwGetRhs(rows[i]);
@@ -988,33 +882,39 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
             cols = SCIProwGetCols(rows[i]);
             rowval = constant;
                                
-            for( j = 0; j < nnonzerovars; j++)
+            for( j = nnonzerovars - 1; j >= 0; --j )
                rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[0], SCIPcolGetVar(cols[j]));
 
             /* if the row's lhs is violated by the first sol, test, whether it is violated by the next ones, too */
             if( lhs > rowval )
             {
                cons_viol = TRUE;
-               for( k = 1; k < f_first && k < nfacets && cons_viol; k++)
+               for( k = MIN(f_first, nfacets) - 1; k > 0; --k )
                {
                   rowval = constant;
-                  for( j = 0; j < nnonzerovars; j++)
-                     rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[k], SCIPcolGetVar(cols[j]));
+		  for( j = nnonzerovars - 1; j >= 0; --j )
+		     rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[k], SCIPcolGetVar(cols[j]));
                   if( lhs <= rowval )
-                     cons_viol = FALSE;            
+		  {
+                     cons_viol = FALSE;
+		     break;
+		  }
                }
             }
             /* dito for the right hand side */
             else if( rhs < rowval )
             {
                cons_viol = TRUE;
-               for( k = 1; k < f_first && k < nfacets && cons_viol; k++)
+               for( k = MIN(f_first, nfacets) - 1; k > 0; --k )
                {
                   rowval = constant;
-                  for( j = 0; j < nnonzerovars; j++)
-                     rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[k], SCIPcolGetVar(cols[j]));
+		  for( j = nnonzerovars - 1; j >= 0; --j )
+		     rowval += coeffs[j] * SCIPgetSolVal(scip, first_sols[k], SCIPcolGetVar(cols[j]));
                   if( rhs >= rowval )
-                     cons_viol = FALSE;            
+		  {
+                     cons_viol = FALSE;
+		     break;
+		  }
                }
             }
             /* break as soon as one row is violated by all of the ffirst solutions */
@@ -1027,28 +927,28 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
       if( !cons_viol )
       {
          /* if there was no row violated by all solutions, try whether one or more of them are feasible */
-         for( i = 0; i < f_first && i < nfacets; i++)
+	 for( i = MIN(f_first, nfacets) - 1; i >= 0; --i )
          {
             assert(first_sols[i] != NULL);
             SCIP_CALL( SCIPtrySol(scip, first_sols[i], TRUE, FALSE, TRUE, &success) );
             if( success )
-               *result = SCIP_FOUNDSOL; 
+	       *result = SCIP_FOUNDSOL; 
          }
          /* search for further facets and construct and try solutions out of facets fixed as closest ones */
-         for( i = f_first; i < f_max; i++)
+         for( i = f_first; i < f_max; ++i)
          {
             if( i >= nfacets )
                break;
-            generateNeighborFacets(scip, facets, lambda, x, a, v, nsubspacevars, f_max, i, &nfacets);
+            generateNeighborFacets(scip, facets, lambda, rayorigin, raydirection, negquotient, nsubspacevars, f_max, i, &nfacets);
             SCIP_CALL( getSolFromFacet(scip, facets[i], sol, sign, subspacevars, nsubspacevars) );
             SCIP_CALL( SCIPtrySol(scip, sol, TRUE, FALSE, TRUE, &success) );
             if( success )
-               *result = SCIP_FOUNDSOL; 
+	       *result = SCIP_FOUNDSOL; 
          }
       }
 
       /* finished OCTANE */
-      for( i = 0; i < f_first  && i < nfacets; i++ )
+      for( i = MIN(f_first, nfacets) - 1; i >= 0; --i )
       {
          SCIP_CALL( SCIPfreeSol(scip, &first_sols[i]) );
       }
@@ -1056,19 +956,19 @@ SCIP_DECL_HEUREXEC(heurExecOctane)
    heurdata->lastrule = r;
 
    if( *result == SCIP_FOUNDSOL )
-      heurdata->nsuccess++;
+      ++(heurdata->nsuccess);
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &first_sols);
-   for( i = f_max; i >= 0; i-- )
+   for( i = f_max; i >= 0; --i )
       SCIPfreeBufferArray(scip, &facets[i]);
    SCIPfreeBufferArray(scip, &facets);
    SCIPfreeBufferArray(scip, &lambda);
    SCIPfreeBufferArray(scip, &perm); 
    SCIPfreeBufferArray(scip, &sign); 
-   SCIPfreeBufferArray(scip, &v);
-   SCIPfreeBufferArray(scip, &a);
-   SCIPfreeBufferArray(scip, &x);
+   SCIPfreeBufferArray(scip, &negquotient);
+   SCIPfreeBufferArray(scip, &raydirection);
+   SCIPfreeBufferArray(scip, &rayorigin);
    SCIPfreeBufferArray(scip, &subspacevars);
    SCIPfreeBufferArray(scip, &fracspace);
 

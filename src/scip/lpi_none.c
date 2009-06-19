@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2008 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_none.c,v 1.1 2007/08/07 07:41:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_none.c,v 1.1.2.1 2009/06/19 07:53:45 bzfwolte Exp $"
 
 /**@file   lpi_none.c
+ * @ingroup LPIS
  * @brief  dummy interface for the case no LP solver is needed
  * @author Stefan Heinz
  */
@@ -64,6 +63,13 @@ const char* SCIPlpiGetSolverName(
    return "NONE";
 }
 
+/** gets pointer for LP solver - use only with great care */
+void* SCIPlpiGetSolverPointer(
+   SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   )
+{
+   return (void*) NULL;
+}
 /**@} */
 
 

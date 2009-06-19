@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_reader.h,v 1.15 2007/11/13 17:21:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_reader.h,v 1.14.2.1 2009/06/19 07:53:54 bzfwolte Exp $"
 
 /**@file   type_reader.h
  * @brief  type definitions for input file readers
@@ -51,7 +49,7 @@ typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data 
  *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
  *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
  *
- *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERROR or SCIP_NOFILE.
+ *  If the reader detected an error in the input file, it should return with RETCODE SCIP_PARSEERROR or SCIP_NOFILE.
  */
 #define SCIP_DECL_READERREAD(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader, const char* filename, SCIP_RESULT* result)
 

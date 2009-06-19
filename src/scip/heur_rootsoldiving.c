@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.40 2007/06/06 11:25:17 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_rootsoldiving.c,v 1.40.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
 
 /**@file   heur_rootsoldiving.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP diving heuristic that changes variable's objective values using root LP solution as guide
  * @author Kati Wolter
  */
@@ -285,10 +284,11 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    ncycles = 0;
    lpsolchanged = TRUE;
    startnlpcands = nlpcands;
-   while( !SCIPisStopped(scip) && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0 && ncycles < 10
+   while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0 && ncycles < 10
       && (divedepth < 10
          || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) )
+         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations)) 
+	  && !SCIPisStopped(scip) )
    {
       SCIP_Bool success;
       int hardroundingidx;
@@ -296,6 +296,10 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIP_Real hardroundingoldbd;
       SCIP_Real hardroundingnewbd;
       SCIP_Bool boundschanged;
+
+#ifdef NDEBUG
+      SCIP_RETCODE retstat;
+#endif
 
       /* create solution from diving LP and try to round it */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
@@ -443,7 +447,20 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    SOLVEAGAIN:
       /* resolve the diving LP */
       nlpiterations = SCIPgetNLPIterations(scip);
+
+      /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
+       * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
+       */
+#ifdef NDEBUG
+      retstat = SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror);
+      if( retstat != SCIP_OKAY )
+      { 
+         SCIPwarningMessage("Error while solving LP in Rootsoldiving heuristic; LP solve terminated with code <%d>\n",retstat);
+      }
+#else
       SCIP_CALL( SCIPsolveDiveLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror) );
+#endif
+
       if( lperror )
          break;
 

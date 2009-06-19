@@ -1,4 +1,4 @@
-#--- $Id: make.linux.x86.insure.dbg,v 1.8 2008/01/28 14:31:08 bzfheinz Exp $
+#--- $Id: make.linux.x86.insure.dbg,v 1.7.2.1 2009/06/19 07:53:34 bzfwolte Exp $
 CC		=	insure gcc
 CXX		=	insure g++
 FLAGS		+=	# -DROUNDING_FE
@@ -6,7 +6,7 @@ OFLAGS		+=	-O0 -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)
 ARFLAGS		=	crs
-LDFLAGS		+=
+LDFLAGS		+=	-Wl,-rpath,$(SCIPDIR)/$(LIBDIR)
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=

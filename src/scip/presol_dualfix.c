@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_dualfix.c,v 1.29 2007/11/19 14:45:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_dualfix.c,v 1.27.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   presol_dualfix.c
+ * @ingroup PRESOLVERS
  * @brief  fixing roundable variables to best bound
  * @author Tobias Achterberg
  */
@@ -118,12 +117,28 @@ SCIP_DECL_PRESOLEXEC(presolExecDualfix)
 	 if( SCIPvarMayRoundDown(vars[v]) && !SCIPisNegative(scip, obj) )
 	 {
 	    bound = SCIPvarGetLbGlobal(vars[v]);
+            if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(vars[v]) == 1 && SCIPisInfinity(scip, -bound) )
+            {
+               /* variable can be set to -infinity, and it is only contained in one constraint:
+                * we hope that the corresponding constraint handler is clever enough to set/aggregate the variable
+                * to something more useful than -infinity and do nothing here
+                */
+               continue;
+            }
 	    SCIPdebugMessage("variable <%s> with objective %g fixed to lower bound %g\n",
 			     SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
 	 }
 	 else if( SCIPvarMayRoundUp(vars[v]) && !SCIPisPositive(scip, obj) )
 	 {
 	    bound = SCIPvarGetUbGlobal(vars[v]);
+            if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(vars[v]) == 1 && SCIPisInfinity(scip, bound) )
+            {
+               /* variable can be set to +infinity, and it is only contained in one constraint:
+                * we hope that the corresponding constraint handler is clever enough to set/aggregate the variable
+                * to something more useful than +infinity and do nothing here
+                */
+               continue;
+            }
 	    SCIPdebugMessage("variable <%s> with objective %g fixed to upper bound %g\n",
 			     SCIPvarGetName(vars[v]), SCIPvarGetObj(vars[v]), bound);
 	 }

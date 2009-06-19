@@ -2,12 +2,12 @@
 =opt= air03       3.4016000000e+05
 =opt= air04       5.6137000000e+04
 =opt= air05       2.6374000000e+04
-=opt= arki001     7580468.3336 Suboptimal
+=opt= arki001     7.5808130459e+06
 =opt= bell3a      8.7843031600e+05
 =opt= bell5       8.9664064915e+06
 =opt= blend2      7.5989850000e+00
 =opt= cap6000    -2.4513770000e+06 
-=opt= dano3mip    728 Suboptimal
+=best= dano3mip    728
 =opt= danoint     6.5666666666e+01
 =opt= dcmulti     1.8818200000e+05
 =opt= dsbmip     -3.0519817501e+02
@@ -29,7 +29,7 @@
 =opt= lseu        1.1200000000e+03
 =opt= markshare1  1
 =opt= markshare2  1
-=opt= mkc         -554 Suboptimal
+=best= mkc        -554
 =opt= misc03      3.3600000000e+03 
 =opt= misc06      1.2850860737e+04
 =opt= misc07      2.8100000000e+03
@@ -57,10 +57,10 @@
 =opt= rgn         8.2199999240e+01
 =opt= rout        1.0775600000e+03
 =opt= set1ch      5.4537750000e+04
-=opt= seymour     423 suboptimal
+=best= seymour    423
 =opt= stein27     1.8000000000e+01
 =opt= stein45     3.0000000000e+01
-=opt= swath       497 suboptimal
+=opt= swath       4.67407491e+02
 =opt= vpm1        2.0000000000e+01
 =opt= vpm2        1.3750000000e+01
 

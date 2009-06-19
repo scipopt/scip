@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_shifting.c,v 1.10 2007/06/06 11:25:18 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_shifting.c,v 1.10.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
 
 /**@file   heur_shifting.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  LP rounding heuristic that tries to recover from intermediate infeasibilities and shifts continuous variables
  * @author Tobias Achterberg
  */
@@ -166,8 +165,12 @@ SCIP_RETCODE updateActivities(
          /* update row activity */
          oldactivity = activities[rowpos];
          newactivity = oldactivity + delta * colvals[r];
+         if( SCIPisInfinity(scip, newactivity) )
+            newactivity = SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, -newactivity) )
+            newactivity = -SCIPinfinity(scip);
          activities[rowpos] = newactivity;
-
+         
          /* update row violation arrays */
          updateViolations(scip, row, violrows, violrowpos, nviolrows, oldactivity, newactivity);
       }            

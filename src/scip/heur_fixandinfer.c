@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.23 2007/06/06 11:25:16 bzfpfend Exp $"
+#pragma ident "@(#) $Id: heur_fixandinfer.c,v 1.23.2.1 2009/06/19 07:53:43 bzfwolte Exp $"
 
 /**@file   heur_fixandinfer.c
+ * @ingroup PRIMALHEURISTICS
  * @brief  fix-and-infer primal heuristic
  * @author Tobias Achterberg
  */
@@ -199,8 +198,9 @@ SCIP_DECL_HEUREXEC(heurExecFixandinfer)
    cutoff = FALSE;
    divedepth = 0;
    startncands = ncands;
-   while( !SCIPisStopped(scip) && !cutoff && ncands > 0
-      && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) )
+   while( !cutoff && ncands > 0
+      && (divedepth < heurdata->minfixings || (startncands - ncands) * 2 * MAXDIVEDEPTH >= startncands * divedepth) 
+	  && !SCIPisStopped(scip) )
    {
       divedepth++;
 

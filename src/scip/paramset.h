@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.24 2007/08/01 13:34:29 bzfpfend Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.24.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -33,6 +31,7 @@
 #include "scip/type_retcode.h"
 #include "scip/type_paramset.h"
 #include "scip/pub_paramset.h"
+#include "scip/pub_misc.h"
 
 
 

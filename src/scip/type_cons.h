@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.43 2007/10/31 09:26:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.43.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -346,6 +344,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - sol             : the solution to check feasibility for
  *  - checkintegrality: has integrality to be checked?
  *  - checklprows     : have current LP rows to be checked?
+ *  - printreason     : should the reason for the violation be printed?
  *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
@@ -353,7 +352,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define SCIP_DECL_CONSCHECK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_SOL* sol, \
-      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_RESULT* result)
+      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_RESULT* result)
 
 /** domain propagation method of constraint handler
  *

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.33 2007/07/27 16:21:30 bzfpfend Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.33.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
 
 /**@file   sepa_clique.c
+ * @ingroup SEPARATORS
  * @brief  clique separator
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -28,6 +27,7 @@
 
 #include "scip/sepa_clique.h"
 #include "tclique/tclique.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "clique"
@@ -824,7 +824,7 @@ SCIP_RETCODE loadTcliquegraph(
    SCIPfreeBufferArray(scip, &cliquegraphidx[1]);
    SCIPfreeBufferArray(scip, &cliquegraphidx[0]);
    if( SCIPisStopped(scip) && sepadata->tcliquegraph != NULL )
-      tcliquegraphFree(scip,&sepadata->tcliquegraph);      
+      SCIP_CALL( tcliquegraphFree(scip,&sepadata->tcliquegraph) );
    return SCIP_OKAY;
 }
 
@@ -1081,7 +1081,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          assert(vars != NULL);
 
          /* create the cut */
-         sprintf(cutname, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
+         (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
          SCIP_CALL_ABORT( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
 
          SCIP_CALL_ABORT( SCIPcacheRowExtensions(scip, cut) );

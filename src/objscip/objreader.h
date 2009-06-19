@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.19.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.19.2.2 2009/06/19 07:53:38 bzfwolte Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -60,9 +58,9 @@ public:
         scip_desc_(0),
         scip_extension_(0)
    {
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, strlen(name)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, strlen(desc)+1) );
-      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_extension_, extension, strlen(extension)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_name_, name, std::strlen(name)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_desc_, desc, std::strlen(desc)+1) );
+      SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip, &scip_extension_, extension, std::strlen(extension)+1) );
    }
 
    /** destructor */
@@ -97,13 +95,16 @@ public:
       SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
       ) = 0;
 
-   /** problem writing method of reader
+   /** problem writing method of reader; NOTE: if the parameter "genericnames" is TRUE, then
+    *  SCIP already set all variable and constraint names to generic names; therefore, this
+    *  method should always use SCIPvarGetName() and SCIPconsGetName(); 
     *
     *  possible return values for *result:
     *  - SCIP_SUCCESS    : the reader read the file correctly and created an appropritate problem
     *  - SCIP_DIDNOTRUN  : the reader is not responsible for given input file
     *
-    *  If the reader detected an error in the input file, it should return with RETCODE SCIP_READERR or SCIP_NOFILE.
+    *  If the reader detected an error in the writing to the file stream, it should return
+    *  with RETCODE SCIP_WRITEERROR.
     */
    virtual SCIP_RETCODE scip_write(
       SCIP*              scip,               /**< SCIP data structure */
@@ -131,6 +132,7 @@ public:
       int                nconss,             /**< number of constraints in the problem */
       int                maxnconss,          /**< maximum number of constraints existing at the same time */
       int                startnconss,        /**< number of constraints existing when problem solving started */
+      SCIP_Bool          genericnames,       /**< using generic variable and constraint names? */
       SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
       ) = 0;
 };

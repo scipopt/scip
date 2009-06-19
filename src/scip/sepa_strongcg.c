@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.26 2007/06/27 14:34:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.26.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
 
 /**@file   sepa_strongcg.c
+ * @ingroup SEPARATORS
  * @brief  Strong CG Cuts (Letchford & Lodi)
  * @author Kati Wolter
  * @author Tobias Achterberg
@@ -28,6 +27,7 @@
 #include <string.h>
 
 #include "scip/sepa_strongcg.h"
+#include "scip/pub_misc.h"
 
 
 #define SEPA_NAME              "strongcg"
@@ -54,6 +54,9 @@
 #define ALLOWLOCAL                 TRUE
 #define MAKECONTINTEGRAL          FALSE
 #define MINFRAC                    0.05
+#define MAXFRAC                    0.95
+
+#define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
 
 
 /** separator data */
@@ -64,6 +67,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of strong CG separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of strong CG cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of strong CG cuts separated per separation round in root node */
+   int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
@@ -289,6 +293,24 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    if( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
 
+#if 0
+   /* if too many columns, separator is usually very slow: delay it until no other cuts have been found */
+   if( ncols >= 50*nrows )
+      return SCIP_OKAY;
+   if( ncols >= 5*nrows )
+   {
+      int ncutsfound;
+
+      ncutsfound = SCIPgetNCutsFound(scip);
+      if( ncutsfound > sepadata->lastncutsfound || !SCIPsepaWasLPDelayed(sepa) )
+      {
+         sepadata->lastncutsfound = ncutsfound;
+         *result = SCIP_DELAYED;
+         return SCIP_OKAY;
+      }
+   }
+#endif
+
    /* get the type of norm to use for efficacy calculations */
    SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &normtype) );
 
@@ -393,7 +415,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
 
          /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
-         SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->maxweightrange, MINFRAC,
+         SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
@@ -438,7 +460,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                char cutname[SCIP_MAXSTRLEN];
 
                /* create the cut */
-               sprintf(cutname, "scg%d_%d", SCIPgetNLPs(scip), c);
+               if( c >= 0 )
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_x%d", SCIPgetNLPs(scip), c);
+               else
+                  (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "scg%d_s%d", SCIPgetNLPs(scip), -c-1);
                SCIP_CALL( SCIPcreateEmptyRow(scip, &cut, cutname, -SCIPinfinity(scip), cutrhs, 
                                              cutislocal, FALSE, sepadata->dynamiccuts) );
                SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutlen, cutvars, cutvals) );
@@ -523,6 +548,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
    SCIPdebugMessage("end searching strong CG cuts: found %d cuts\n", ncuts);
 
+   sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
+
    return SCIP_OKAY;
 }
 
@@ -546,6 +573,7 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   sepadata->lastncutsfound = 0;
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,

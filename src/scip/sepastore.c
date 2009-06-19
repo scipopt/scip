@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.56 2007/06/27 10:17:10 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.56.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -283,8 +281,8 @@ SCIP_RETCODE sepastoreAddCut(
       assert(!SCIPsetIsInfinity(set, cutscore));
    }
 
-   SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
-      SCIProwGetName(cut), sepastore->ncuts, forcecut, cutefficacy, cutobjparallelism, cutscore);
+   SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%d, len=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
+      SCIProwGetName(cut), sepastore->ncuts, forcecut, SCIProwGetNNonz(cut), cutefficacy, cutobjparallelism, cutscore);
    /*SCIPdebug(SCIProwPrint(cut, NULL));*/
 
    /* capture the cut */
@@ -563,14 +561,14 @@ SCIP_RETCODE sepastoreUpdateOrthogonalities(
       SCIP_Real thisortho;
       
       /* update orthogonality */
-      thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[pos]);
+      thisortho = SCIProwGetOrthogonality(cut, sepastore->cuts[pos], set->sepa_orthofunc);
       if( thisortho < sepastore->orthogonalities[pos] )
       {
          if( thisortho < mincutorthogonality )
          {
             /* cut is too parallel: release the row and delete the cut */
-            SCIPdebugMessage("    -> deleting parallel cut <%s> after adding <%s> (pos=%d, orthogonality=%g, score=%g)\n",
-               SCIProwGetName(sepastore->cuts[pos]), SCIProwGetName(cut), pos, thisortho, sepastore->scores[pos]);
+            SCIPdebugMessage("    -> deleting parallel cut <%s> after adding <%s> (pos=%d, len=%d, orthogonality=%g, score=%g)\n",
+               SCIProwGetName(sepastore->cuts[pos]), SCIProwGetName(cut), pos, SCIProwGetNNonz(cut), thisortho, sepastore->scores[pos]);
             SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, lp, pos) );
             continue;
          }
@@ -745,8 +743,8 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       assert(SCIProwIsModifiable(cut) || SCIProwGetNNonz(cut) != 1); /* bound changes are forced cuts */
       assert(!SCIPsetIsInfinity(set, sepastore->scores[bestpos]));
       
-      SCIPdebugMessage(" -> applying cut <%s> (pos=%d/%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
-         SCIProwGetName(cut), bestpos, sepastore->ncuts, sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
+      SCIPdebugMessage(" -> applying cut <%s> (pos=%d/%d, len=%d, efficacy=%g, objparallelism=%g, orthogonality=%g, score=%g)\n",
+         SCIProwGetName(cut), bestpos, sepastore->ncuts, SCIProwGetNNonz(cut), sepastore->efficacies[bestpos], sepastore->objparallelisms[bestpos],
          sepastore->orthogonalities[bestpos], sepastore->scores[bestpos]);
       /*SCIPdebug(SCIProwPrint(cut, NULL));*/
 
@@ -764,7 +762,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    }
 
    /* clear the separation storage and reset statistics for separation round */
-   SCIPsepastoreClearCuts(sepastore, blkmem, set, lp);
+   SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, lp) );
 
    return SCIP_OKAY;
 }

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.40 2007/06/06 11:25:20 bzfpfend Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.40.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -33,6 +31,7 @@
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/pub_misc.h"
 #include "scip/presol.h"
 
 #include "scip/struct_presol.h"
@@ -105,18 +104,18 @@ SCIP_RETCODE SCIPpresolCreate(
    (*presol)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "presolving/%s/priority", name);
-   sprintf(paramdesc, "priority of presolver <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of presolver <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
          &(*presol)->priority, TRUE, priority, INT_MIN/4, INT_MAX/4, 
          paramChgdPresolPriority, (SCIP_PARAMDATA*)(*presol)) ); /*lint !e740*/
 
-   sprintf(paramname, "presolving/%s/maxrounds", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/maxrounds", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname,
          "maximal number of presolving rounds the presolver participates in (-1: no limit)",
          &(*presol)->maxrounds, FALSE, maxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
-   sprintf(paramname, "presolving/%s/delay", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "presolving/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should presolver be delayed, if other presolvers found reductions?",
          &(*presol)->delay, TRUE, delay, NULL, NULL) ); /*lint !e740*/

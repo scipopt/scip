@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.126.2.1 2009/06/10 17:47:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.126.2.2 2009/06/19 07:53:44 bzfwolte Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -70,13 +68,6 @@ SCIP_RETCODE SCIPcolFree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< current LP data */
-   );
-
-/** sorts column entries such that LP rows precede non-LP rows and inside both parts lower row indices precede higher ones
- */
-extern
-void SCIPcolSort(
-   SCIP_COL*             col                 /**< column to be sorted */
    );
 
 /** adds a previously non existing coefficient to an LP column */
@@ -297,14 +288,6 @@ SCIP_RETCODE SCIProwRelease(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_LP*              lp                  /**< current LP data */
-   );
-
-/** sorts row entries such that LP columns precede non-LP columns and inside both parts lower column indices precede
- *  higher ones
- */
-extern
-void SCIProwSort(
-   SCIP_ROW*             row                 /**< row to be sorted */
    );
 
 /** enables delaying of row sorting */
@@ -768,12 +751,14 @@ SCIP_RETCODE SCIPlpCalcMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables; 
                                               *   NULL for using closest bound for all variables */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
+   SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the MIR row */
    SCIP_Real*            cutactivity,        /**< pointer to store the activity of the resulting cut */
@@ -793,8 +778,10 @@ SCIP_RETCODE SCIPlpCalcStrongCG(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   int                   maxmksetcoefs,      /**< maximal number of nonzeros allowed in aggregated base inequality */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
+   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            strongcgcoef,       /**< array to store strong CG coefficients: must be of size nvars */
@@ -870,6 +857,32 @@ SCIP_RETCODE SCIPlpSolveAndEval(
 extern
 SCIP_LPSOLSTAT SCIPlpGetSolstat(
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** sets whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+extern
+void SCIPlpSetIsRelax(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             isrelax             /**< is the current lp a relaxation? */
+   );
+
+/** returns whether the current lp is a relaxation of the current problem and its optimal objective value is a local lower bound */
+extern
+SCIP_Bool SCIPlpIsRelax(
+   SCIP_LP*              lp                  /**< LP data */
+   );
+
+/** sets whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+extern
+void SCIPlpSetRootLPIsRelax(
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_Bool             isrelax             /**< is the root lp a relaxation of the problem? */
+   );
+
+/** returns whether the root lp is a relaxation of the problem and its optimal objective value is a global lower bound */
+extern 
+SCIP_Bool SCIPlpIsRootLPRelax(
+   SCIP_LP*              lp                  /**< LP data */
    );
 
 /** gets objective value of current LP */

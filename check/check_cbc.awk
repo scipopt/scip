@@ -1,12 +1,10 @@
-#!/bin/gawk -f
+#!/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2007 Tobias Achterberg                              *
-#*                                                                           *
-#*                  2002-2007 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -15,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.2 2007/07/03 11:21:54 bzfpfend Exp $
+# $Id: check_cbc.awk,v 1.2.2.1 2009/06/19 07:53:29 bzfwolte Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator
@@ -118,6 +116,7 @@ BEGIN {
    tottime    = 0.0;
    aborted    = 1;
    timelimit  = 0.0;
+   cbcversion = "";
 }
 
 #
@@ -126,6 +125,15 @@ BEGIN {
 /^Coin:/ {
    $0 = substr($0, 6, length($0)-5);
 }
+
+#
+# Cbc version
+#
+/^Coin Cbc and Clp/ {
+   split($7, v, ",");
+   cbcversion = v[1];
+}
+
 #
 # settings
 #
@@ -351,7 +359,7 @@ END {
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
-   printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
+   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
 
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
@@ -363,5 +371,5 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
-   printf("@01 CBC:%s\n", settings);
+   printf("@01 CBC(%s):%s\n", cbcversion, settings);
 }

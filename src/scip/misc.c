@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.64 2007/08/16 10:16:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.64.2.1 2009/06/19 07:53:46 bzfwolte Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -27,6 +25,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -221,6 +220,74 @@ void** SCIPpqueueElems(
  * Hash Table
  */
 
+/** table of some prime numbers */
+static int primetable[] = {
+   2,
+   7,
+   19,
+   31,
+   59,
+   227,
+   617,
+   1523,
+   3547,
+   8011,
+   17707,
+   38723,
+   83833,
+   180317,
+   385897,
+   821411,
+   1742369,
+   3680893,
+   5693959,
+   7753849,
+   9849703,
+   11973277,
+   14121853,
+   17643961,
+   24273817,
+   32452843,
+   49979687,
+   67867967,
+   86028121,
+   104395301,
+   122949823,
+   141650939,
+   160481183,
+   179424673,
+   198491317,
+   217645177,
+   256203161,
+   314606869,
+   373587883,
+   433024223,
+   492876847,
+   553105243,
+   613651349,
+   694847533,
+   756065159,
+   817504243,
+   879190747,
+   941083981,
+   982451653,
+   INT_MAX
+};
+static const int primetablesize = sizeof(primetable)/sizeof(int);
+
+/** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
+int SCIPcalcHashtableSize(
+   int                   minsize             /**< minimal size of the hash table */
+   )
+{
+   int pos;
+
+   (void) SCIPsortedvecFindInt(primetable, minsize, primetablesize, &pos);
+   assert(pos < primetablesize);
+
+   return primetable[pos];
+}
+
 /** appends element to the hash list */
 static
 SCIP_RETCODE hashtablelistAppend(
@@ -274,6 +341,7 @@ SCIP_HASHTABLELIST* hashtablelistFind(
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr,            /**< user pointer */
    unsigned int          keyval,             /**< hash value of key */
    void*                 key                 /**< key to retrieve */
    )
@@ -286,9 +354,9 @@ SCIP_HASHTABLELIST* hashtablelistFind(
 
    while( hashtablelist != NULL )
    {
-      currentkey = hashgetkey(hashtablelist->element);
-      currentkeyval = hashkeyval(currentkey);
-      if( currentkeyval == keyval && hashkeyeq(currentkey, key) )
+      currentkey = hashgetkey(userptr, hashtablelist->element);
+      currentkeyval = hashkeyval(userptr, currentkey);
+      if( currentkeyval == keyval && hashkeyeq(userptr, currentkey, key) )
          return hashtablelist;
       hashtablelist = hashtablelist->next;
    }
@@ -303,6 +371,7 @@ void* hashtablelistRetrieve(
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr,            /**< user pointer */
    unsigned int          keyval,             /**< hash value of key */
    void*                 key                 /**< key to retrieve */
    )
@@ -310,7 +379,7 @@ void* hashtablelistRetrieve(
    SCIP_HASHTABLELIST* h;
 
    /* find hash list entry */
-   h = hashtablelistFind(hashtablelist, hashgetkey, hashkeyeq, hashkeyval, keyval, key);
+   h = hashtablelistFind(hashtablelist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
 
    /* return element */
    if( h != NULL )
@@ -355,7 +424,8 @@ SCIP_RETCODE SCIPhashtableCreate(
    int                   tablesize,          /**< size of the hash table */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
-   SCIP_DECL_HASHKEYVAL((*hashkeyval))       /**< returns the hash value of the key */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr             /**< user pointer */
    )
 {
    int i;
@@ -373,6 +443,7 @@ SCIP_RETCODE SCIPhashtableCreate(
    (*hashtable)->hashgetkey = hashgetkey;
    (*hashtable)->hashkeyeq = hashkeyeq;
    (*hashtable)->hashkeyval = hashkeyval;
+   (*hashtable)->userptr = userptr;
 
    /* initialize hash lists */
    for( i = 0; i < tablesize; ++i )
@@ -419,8 +490,8 @@ SCIP_RETCODE SCIPhashtableInsert(
    assert(element != NULL);
 
    /* get the hash key and its hash value */
-   key = hashtable->hashgetkey(element);
-   keyval = hashtable->hashkeyval(key);
+   key = hashtable->hashgetkey(hashtable->userptr, element);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* append element to the list at the hash position */
@@ -439,7 +510,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
    assert(hashtable->hashgetkey != NULL);
 
    /* check, if key is already existing */
-   if( SCIPhashtableRetrieve(hashtable, hashtable->hashgetkey(element)) != NULL )
+   if( SCIPhashtableRetrieve(hashtable, hashtable->hashgetkey(hashtable->userptr, element)) != NULL )
       return SCIP_KEYALREADYEXISTING;
 
    /* insert element in hash table */
@@ -466,11 +537,11 @@ void* SCIPhashtableRetrieve(
    assert(key != NULL);
 
    /* get the hash value of the key */
-   keyval = hashtable->hashkeyval(key);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    return hashtablelistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, 
-      hashtable->hashkeyval, keyval, key);
+      hashtable->hashkeyval, hashtable->userptr, keyval, key);
 }
 
 /** returns whether the given element exists in the table */
@@ -492,12 +563,12 @@ SCIP_Bool SCIPhashtableExists(
    assert(element != NULL);
 
    /* get the hash key and its hash value */
-   key = hashtable->hashgetkey(element);
-   keyval = hashtable->hashkeyval(key);
+   key = hashtable->hashgetkey(hashtable->userptr, element);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    return (hashtablelistFind(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq,
-         hashtable->hashkeyval, keyval, key) != NULL);
+         hashtable->hashkeyval, hashtable->userptr, keyval, key) != NULL);
 }
 
 /** removes element from the hash table, if it exists */
@@ -519,8 +590,8 @@ SCIP_RETCODE SCIPhashtableRemove(
    assert(element != NULL);
 
    /* get the hash key and its hash value */
-   key = hashtable->hashgetkey(element);
-   keyval = hashtable->hashkeyval(key);
+   key = hashtable->hashgetkey(hashtable->userptr, element);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
    hashval = keyval % hashtable->nlists; /*lint !e573*/
 
    /* remove element from the list at the hash position */
@@ -1034,7 +1105,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
    assert(minidx <= maxidx);
 
    SCIPdebugMessage("extending realarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
-      realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
+      (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
@@ -1165,7 +1236,7 @@ SCIP_RETCODE SCIPrealarrayClear(
    assert(realarray != NULL);
 
    SCIPdebugMessage("clearing realarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
-      realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
+      (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx);
 
    if( realarray->minusedidx <= realarray->maxusedidx )
    {
@@ -1223,7 +1294,7 @@ SCIP_RETCODE SCIPrealarraySetVal(
    assert(idx >= 0);
 
    SCIPdebugMessage("setting realarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %g\n", 
-      realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
+      (void*)realarray, realarray->firstidx, realarray->valssize, realarray->minusedidx, realarray->maxusedidx, idx, val);
 
    if( !SCIPsetIsZero(set, val) )
    {
@@ -1399,7 +1470,7 @@ SCIP_RETCODE SCIPintarrayExtend(
    assert(minidx <= maxidx);
 
    SCIPdebugMessage("extending intarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
-      intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, minidx, maxidx);
+      (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
@@ -1530,7 +1601,7 @@ SCIP_RETCODE SCIPintarrayClear(
    assert(intarray != NULL);
 
    SCIPdebugMessage("clearing intarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
-      intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx);
+      (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx);
 
    if( intarray->minusedidx <= intarray->maxusedidx )
    {
@@ -1588,7 +1659,7 @@ SCIP_RETCODE SCIPintarraySetVal(
    assert(idx >= 0);
 
    SCIPdebugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
-      intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, idx, val);
+      (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, idx, val);
 
    if( val != 0 )
    {
@@ -1760,7 +1831,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
    assert(minidx <= maxidx);
 
    SCIPdebugMessage("extending boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
-      boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, minidx, maxidx);
+      (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
@@ -1891,7 +1962,7 @@ SCIP_RETCODE SCIPboolarrayClear(
    assert(boolarray != NULL);
 
    SCIPdebugMessage("clearing boolarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
-      boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx);
+      (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx);
 
    if( boolarray->minusedidx <= boolarray->maxusedidx )
    {
@@ -1949,7 +2020,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    assert(idx >= 0);
 
    SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
-      boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
+      (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
 
    if( val != FALSE )
    {
@@ -2109,7 +2180,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
    assert(minidx <= maxidx);
 
    SCIPdebugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
-      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, minidx, maxidx);
+      (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
    nused = maxidx - minidx + 1;
@@ -2240,7 +2311,7 @@ SCIP_RETCODE SCIPptrarrayClear(
    assert(ptrarray != NULL);
 
    SCIPdebugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
-      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx);
+      (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx);
 
    if( ptrarray->minusedidx <= ptrarray->maxusedidx )
    {
@@ -2298,7 +2369,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
    assert(idx >= 0);
 
    SCIPdebugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n", 
-      ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
+      (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
 
    if( val != NULL )
    {
@@ -2380,643 +2451,476 @@ int SCIPptrarrayGetMaxIdx(
  * Sorting algorithms
  */
 
-/** bubble sort an indexed element set, resulting in a permutation index array */
-void SCIPbsort(
-   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
-   int                   len,                /**< number of elements to be sorted (valid index range) */
+/* first all upwards-sorting methods */
+
+/** sort an indexed element set, resulting in a permutation index array */
+void SCIPsort(
+   int*                  perm,               /**< pointer to store the resulting permutation */
    SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
-   int*                  indarray            /**< pointer to store the sorted index array */
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int                   len                 /**< number of elements to be sorted (valid index range) */
    )
 {
-   int firstpos;
-   int lastpos;
    int pos;
-   int sortpos;
-   int tmpind;
 
    assert(indcomp != NULL);
-   assert(len == 0 || indarray != NULL);
+   assert(len == 0 || perm != NULL);
 
    /* create identity permutation */
    for( pos = 0; pos < len; ++pos )
-      indarray[pos] = pos;
-
-   /* bubble sort index array */
-   firstpos = 0;
-   lastpos = len-1;
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && indcomp(dataptr, indarray[pos], indarray[pos+1]) <= 0 )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert( indcomp(dataptr, indarray[pos], indarray[pos+1]) > 0 );
-         tmpind = indarray[pos];
-         do
-         {
-            indarray[pos] = indarray[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && indcomp(dataptr, tmpind, indarray[pos+1]) > 0 );
-         indarray[pos] = tmpind;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && indcomp(dataptr, indarray[pos-1], indarray[pos]) <= 0 )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert( indcomp(dataptr, indarray[pos-1], indarray[pos]) > 0 );
-         tmpind = indarray[pos];
-         do
-         {
-            indarray[pos] = indarray[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && indcomp(dataptr, indarray[pos-1], tmpind) > 0 );
-         indarray[pos] = tmpind;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
+      perm[pos] = pos;
+   
+   SCIPsortInd(perm, indcomp, dataptr, len);
 }
 
-/** bubble sort of an array of pointers */
-void SCIPbsortPtr(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   int                   len,                /**< length of array */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
+/* SCIPsortInd(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     Ind
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_INDCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     Ptr
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtr
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrReal
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtrPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrReal
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     Real
+#define SORTTPL_KEYTYPE     SCIP_Real
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealRealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c"
+
+/* SCIPsortRealLongRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealLongRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Longint
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealRealRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealRealRealBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  void*
+#include "scip/sorttpl.c"
+
+/* SCIPsortInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     Int
+#define SORTTPL_KEYTYPE     int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntInt
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntLong
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntPtrIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntPtrIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     Long
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortLongPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortLongPtrPtrBoolInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     LongPtrPtrBoolInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  int
+#include "scip/sorttpl.c"
+
+
+
+/* now all downwards-sorting methods */
+
+
+/** sort an indexed element set, resulting in a permutation index array */
+void SCIPsortDown(
+   int*                  perm,               /**< pointer to store the resulting permutation */
+   SCIP_DECL_SORTINDCOMP((*indcomp)),        /**< data element comparator */
+   void*                 dataptr,            /**< pointer to data field that is given to the external compare method */
+   int                   len                 /**< number of elements to be sorted (valid index range) */
    )
 {
-   int firstpos;
-   int lastpos;
    int pos;
-   int sortpos;
-   void* tmpptr;
 
-   assert(len == 0 || ptrarray != NULL);
-   assert(ptrcomp != NULL);
+   assert(indcomp != NULL);
+   assert(len == 0 || perm != NULL);
 
-   firstpos = 0;
-   lastpos = len-1;
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
-         tmpptr = ptrarray[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
-         ptrarray[pos] = tmpptr;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
-         tmpptr = ptrarray[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
-         ptrarray[pos] = tmpptr;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
-}
-
-/** bubble sort of two joint arrays of pointers/Reals, sorted by first array */
-void SCIPbsortPtrReal(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
-   )
-{
-   int firstpos;
-   int lastpos;
-   int pos;
-   int sortpos;
-   void* tmpptr;
-   SCIP_Real tmpreal;
-
-   assert(len == 0 || ptrarray != NULL);
-   assert(len == 0 || realarray != NULL);
-   assert(ptrcomp != NULL);
-
-   firstpos = 0;
-   lastpos = len-1;
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpreal = realarray[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos+1];
-            realarray[pos] = realarray[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
-         ptrarray[pos] = tmpptr;
-         realarray[pos] = tmpreal;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpreal = realarray[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos-1];
-            realarray[pos] = realarray[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
-         ptrarray[pos] = tmpptr;
-         realarray[pos] = tmpreal;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
-}
-
-/** bubble sort of two joint arrays of pointers/ints, sorted by first array */
-void SCIPbsortPtrInt(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   int*                  intarray,           /**< int array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
-   )
-{
-   int firstpos;
-   int lastpos;
-   int pos;
-   int sortpos;
-   void* tmpptr;
-   int tmpint;
-
-   assert(len == 0 || ptrarray != NULL);
-   assert(len == 0 || intarray != NULL);
-   assert(ptrcomp != NULL);
-
-   firstpos = 0;
-   lastpos = len-1;
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpint = intarray[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos+1];
-            intarray[pos] = intarray[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
-         ptrarray[pos] = tmpptr;
-         intarray[pos] = tmpint;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpint = intarray[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos-1];
-            intarray[pos] = intarray[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
-         ptrarray[pos] = tmpptr;
-         intarray[pos] = tmpint;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
-}
-
-/** bubble sort of three joint arrays of pointers/ints/ints, sorted by first array */
-void SCIPbsortPtrIntInt(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   int*                  intarray1,          /**< first int array to be permuted in the same way */
-   int*                  intarray2,          /**< second int array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
-   )
-{
-   int firstpos;
-   int lastpos;
-   int pos;
-   int sortpos;
-   void* tmpptr;
-   int tmpint1;
-   int tmpint2;
-
-   assert(len == 0 || ptrarray != NULL);
-   assert(len == 0 || intarray1 != NULL);
-   assert(len == 0 || intarray2 != NULL);
-   assert(ptrcomp != NULL);
-
-   firstpos = 0;
-   lastpos = len-1;
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpint1 = intarray1[pos];
-         tmpint2 = intarray2[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos+1];
-            intarray1[pos] = intarray1[pos+1];
-            intarray2[pos] = intarray2[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
-         ptrarray[pos] = tmpptr;
-         intarray1[pos] = tmpint1;
-         intarray2[pos] = tmpint2;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpint1 = intarray1[pos];
-         tmpint2 = intarray2[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos-1];
-            intarray1[pos] = intarray1[pos-1];
-            intarray2[pos] = intarray2[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
-         ptrarray[pos] = tmpptr;
-         intarray1[pos] = tmpint1;
-         intarray2[pos] = tmpint2;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
-}
-
-/** bubble sort of three joint arrays of pointers/Reals/ints, sorted by first */
-void SCIPbsortPtrRealInt(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   int*                  intarray,           /**< int array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
-   )
-{
-   int firstpos;
-   int lastpos;
-   int pos;
-   int sortpos;
-   void* tmpptr;
-   SCIP_Real tmpreal;
-   int tmpint;
-
-   assert(len == 0 || ptrarray != NULL);
-   assert(len == 0 || realarray != NULL);
-   assert(len == 0 || intarray != NULL);
-   assert(ptrcomp != NULL);
-
-   firstpos = 0;
-   lastpos = len-1;
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpreal = realarray[pos];
-         tmpint = intarray[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos+1];
-            realarray[pos] = realarray[pos+1];
-            intarray[pos] = intarray[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
-         ptrarray[pos] = tmpptr;
-         realarray[pos] = tmpreal;
-         intarray[pos] = tmpint;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpreal = realarray[pos];
-         tmpint = intarray[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos-1];
-            realarray[pos] = realarray[pos-1];
-            intarray[pos] = intarray[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
-         ptrarray[pos] = tmpptr;
-         realarray[pos] = tmpreal;
-         intarray[pos] = tmpint;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
-}
-
-/** bubble sort of four joint arrays of pointers/Reals/ints/ints, sorted by first */
-void SCIPbsortPtrRealIntInt(
-   void**                ptrarray,           /**< pointer array to be sorted */
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   int*                  intarray1,          /**< first int array to be permuted in the same way */
-   int*                  intarray2,          /**< second int array to be permuted in the same way */
-   int                   len,                /**< length of arrays */
-   SCIP_DECL_SORTPTRCOMP((*ptrcomp))         /**< data element comparator */
-   )
-{
-   int firstpos;
-   int lastpos;
-   int pos;
-   int sortpos;
-   void* tmpptr;
-   SCIP_Real tmpreal;
-   int tmpint1;
-   int tmpint2;
-
-   assert(len == 0 || ptrarray != NULL);
-   assert(len == 0 || realarray != NULL);
-   assert(len == 0 || intarray1 != NULL);
-   assert(len == 0 || intarray2 != NULL);
-   assert(ptrcomp != NULL);
-
-   firstpos = 0;
-   lastpos = len-1;
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && ptrcomp(ptrarray[pos], ptrarray[pos+1]) <= 0 )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         assert( ptrcomp(ptrarray[pos], ptrarray[pos+1]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpreal = realarray[pos];
-         tmpint1 = intarray1[pos];
-         tmpint2 = intarray2[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos+1];
-            realarray[pos] = realarray[pos+1];
-            intarray1[pos] = intarray1[pos+1];
-            intarray2[pos] = intarray2[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && ptrcomp(tmpptr, ptrarray[pos+1]) > 0 );
-         ptrarray[pos] = tmpptr;
-         realarray[pos] = tmpreal;
-         intarray1[pos] = tmpint1;
-         intarray2[pos] = tmpint2;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], ptrarray[pos]) <= 0 )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         assert( ptrcomp(ptrarray[pos-1], ptrarray[pos]) > 0 );
-         tmpptr = ptrarray[pos];
-         tmpreal = realarray[pos];
-         tmpint1 = intarray1[pos];
-         tmpint2 = intarray2[pos];
-         do
-         {
-            ptrarray[pos] = ptrarray[pos-1];
-            realarray[pos] = realarray[pos-1];
-            intarray1[pos] = intarray1[pos-1];
-            intarray2[pos] = intarray2[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && ptrcomp(ptrarray[pos-1], tmpptr) > 0 );
-         ptrarray[pos] = tmpptr;
-         realarray[pos] = tmpreal;
-         intarray1[pos] = tmpint1;
-         intarray2[pos] = tmpint2;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
-}
-
-/** bubble sort of two joint arrays of Reals/pointers, sorted s.t. the SCIP_Real array is in non-decreasing order */
-void SCIPbsortRealPtr(
-   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
-   void**                ptrarray,           /**< pointer array to be sorted */
-   int                   len                 /**< length of arrays */
-   )
-{
-   int firstpos;
-   int lastpos;
-   int pos;
-   int sortpos;
-   SCIP_Real tmpreal;
-   void* tmpptr;
-
-   assert(len == 0 || realarray != NULL);
-   assert(len == 0 || ptrarray != NULL);
-
-   firstpos = 0;
-   lastpos = len-1;
-   while( firstpos < lastpos )
-   {
-      /* bubble from left to right */
-      pos = firstpos;
-      sortpos = firstpos;
-      while( pos < lastpos )
-      {
-         while( pos < lastpos && realarray[pos] <= realarray[pos+1] )
-            pos++;
-         if( pos >= lastpos )
-            break;
-         tmpreal = realarray[pos];
-         tmpptr = ptrarray[pos];
-         do
-         {
-            realarray[pos] = realarray[pos+1];
-            ptrarray[pos] = ptrarray[pos+1];
-            pos++;
-         }
-         while( pos < lastpos && tmpreal > realarray[pos+1] );
-         realarray[pos] = tmpreal;
-         ptrarray[pos] = tmpptr;
-         sortpos = pos;
-         pos++;
-      }
-      lastpos = sortpos-1;
-
-      /* bubble from right to left */
-      pos = lastpos;
-      sortpos = lastpos;
-      while( pos > firstpos )
-      {
-         while( pos > firstpos && realarray[pos-1] <= realarray[pos] )
-            pos--;
-         if( pos <= firstpos )
-            break;
-         tmpreal = realarray[pos];
-         tmpptr = ptrarray[pos];
-         do
-         {
-            realarray[pos] = realarray[pos-1];
-            ptrarray[pos] = ptrarray[pos-1];
-            pos--;
-         }
-         while( pos > firstpos && realarray[pos-1] > tmpreal );
-         realarray[pos] = tmpreal;
-         ptrarray[pos] = tmpptr;
-         sortpos = pos;
-         pos--;
-      }
-      firstpos = sortpos+1;
-   }
+   /* create identity permutation */
+   for( pos = 0; pos < len; ++pos )
+      perm[pos] = pos;
+   
+   SCIPsortDownInd(perm, indcomp, dataptr, len);
 }
 
 
+/* SCIPsortDownInd(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownInd
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_INDCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtr
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtr
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrReal
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrRealInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrReal
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownPtrRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrRealIntInt
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownReal
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealLongRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealLongRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Longint
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownRealRealRealBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealRealBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownInt
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntInt
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownIntIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntIntLong
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownIntIntPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntIntPtr
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownIntPtrIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownIntPtrIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLong
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownLongPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrPtrInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortDownLongPtrPtrBoolInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownLongPtrPtrBoolInt
+#define SORTTPL_KEYTYPE     SCIP_Longint
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c"
 
 
 /*
@@ -3602,6 +3506,24 @@ SCIP_Real SCIPgetRandomReal(
  * Strings
  */
 
+/** prints an error message containing of the given string followed by a string describing the current system error; 
+    prefers to use the strerror_r method, which is threadsafe; 
+    on systems where this method does not exist, NO_STRERROR_R should be defined (see INSTALL), 
+    in this case, srerror is used which is not guaranteed to be threadsafe (on SUN-systems, it actually is) */
+void SCIPprintSysError(
+   const char*                 message             /**< first part of the error message, e.g. the filename */
+   )
+{
+#ifdef NO_STRERROR_R
+   char* buf;
+   buf = strerror(errno);
+#else
+   char buf[1024];
+   (void) strerror_r(errno, buf, 1024);
+#endif
+   SCIPmessagePrintError("%s: %s\n", message, buf);
+}
+
 /** extracts tokens from strings - wrapper method for strtok_r() */
 char* SCIPstrtok(
    char*                 s,                  /**< string to parse */
@@ -3644,6 +3566,34 @@ void SCIPescapeString(
    t[bufsize-1] = '\0';
 }
 
+/* safe version of snprintf */
+int SCIPsnprintf(
+   char*            t,     /**< target string                  */
+   int              len,   /**< length of t                    */
+   const char*      s,     /**< source string or format string */
+   ...                     /**< further parameters             */
+   )
+{
+   va_list ap;
+   int n;
+   
+   assert(t != NULL);
+   assert(len > 0);
+
+   va_start(ap, s);
+   n = vsnprintf(t, (size_t) len, s, ap);
+   va_end(ap);
+   if( n < 0 || n >= len )
+   {
+#ifndef NDEBUG
+      if( n < 0 )
+         SCIPmessagePrintWarning("vsnprintf returned %d\n",n);
+#endif
+      t[len-1] = '\0';
+      n = len-1;
+   }
+   return n;
+}
 
 
 

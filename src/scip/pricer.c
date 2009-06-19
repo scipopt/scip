@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.22 2007/06/06 11:25:21 bzfpfend Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.22.2.1 2009/06/19 07:53:47 bzfwolte Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -36,6 +34,7 @@
 #include "scip/prob.h"
 #include "scip/pricestore.h"
 #include "scip/scip.h"
+#include "scip/pub_misc.h"
 #include "scip/pricer.h"
 
 #include "scip/struct_pricer.h"
@@ -116,8 +115,8 @@ SCIP_RETCODE SCIPpricerCreate(
    (*pricer)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "pricers/%s/priority", name);
-   sprintf(paramdesc, "priority of pricer <%s>", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "pricers/%s/priority", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "priority of pricer <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, paramdesc,
                   &(*pricer)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4, 
                   paramChgdPricerPriority, (SCIP_PARAMDATA*)(*pricer)) ); /*lint !e740*/
@@ -295,7 +294,9 @@ SCIP_Bool SCIPpricerIsActive(
 SCIP_RETCODE SCIPpricerRedcost(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_RESULT*          result              /**< result of the pricing process */    
    )
 {
    int oldnvars;
@@ -305,6 +306,8 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(pricer->pricerredcost != NULL);
    assert(set != NULL);
    assert(prob != NULL);
+   assert(lowerbound != NULL);
+   assert(result != NULL);
 
    SCIPdebugMessage("executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
    
@@ -314,7 +317,7 @@ SCIP_RETCODE SCIPpricerRedcost(
    SCIPclockStart(pricer->pricerclock, set);
    
    /* call external method */
-   SCIP_CALL( pricer->pricerredcost(set->scip, pricer) );
+   SCIP_CALL( pricer->pricerredcost(set->scip, pricer, lowerbound, result) );
    
    /* stop timing */
    SCIPclockStop(pricer->pricerclock, set);
@@ -370,10 +373,18 @@ SCIP_RETCODE SCIPpricerExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
-   SCIP_PRICESTORE*      pricestore          /**< pricing storage */
+   SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
+   SCIP_Real*            lowerbound,         /**< local lower bound computed by the pricer */
+   SCIP_RESULT*          result              /**< result of the pricing process */
    )
 {
    assert(pricer != NULL);
+   assert(lowerbound != NULL);
+   assert(result != NULL);
+
+   /* set lowerbound and result pointer */
+   *lowerbound = - SCIPsetInfinity(set);
+   *result = SCIP_SUCCESS;
 
    /* check if pricer should be delayed */
    if( pricer->delay && SCIPpricestoreGetNVars(pricestore) > 0 )
@@ -385,7 +396,8 @@ SCIP_RETCODE SCIPpricerExec(
    }
    else
    {
-      SCIP_CALL( SCIPpricerRedcost(pricer, set, prob) );
+      *result = SCIP_DIDNOTRUN;
+      SCIP_CALL( SCIPpricerRedcost(pricer, set, prob, lowerbound, result) );
    }
 
    return SCIP_OKAY;

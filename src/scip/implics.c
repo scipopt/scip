@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.24 2007/08/16 10:16:45 bzfpfend Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.24.2.1 2009/06/19 07:53:44 bzfwolte Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -38,7 +36,6 @@
 #ifndef NDEBUG
 #include "scip/struct_implics.h"
 #endif
-
 
 
 
@@ -402,6 +399,7 @@ SCIP_DECL_SORTPTRCOMP(compVars)
       else
       {
          SCIPABORT();
+	 /*lint --e{527}*/
          return 0;
       }
    }
@@ -766,7 +764,7 @@ SCIP_RETCODE SCIPimplicsAdd(
    assert(added != NULL);
 
    SCIPdebugMessage("adding implication to implics %p [%d]: <%s> %s %g\n",
-      *implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
+      (void*)*implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
 
    checkImplics(*implics, set);
 
@@ -950,7 +948,7 @@ SCIP_RETCODE SCIPimplicsDel(
    assert(implvar != NULL);
 
    SCIPdebugMessage("deleting implication from implics %p [%d]: <%s> %s x\n",
-      *implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=");
+      (void*)*implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=");
 
    checkImplics(*implics, set);
 
@@ -1425,7 +1423,7 @@ SCIP_RETCODE SCIPcliquelistAdd(
    assert((*cliquelist)->cliques[value] != NULL);
 
    SCIPdebugMessage("adding clique %d to cliquelist %p value %d (length: %d)\n", 
-      clique->id, *cliquelist, value, (*cliquelist)->ncliques[value]);
+      clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
    
    /* insert clique into list, sorted by clique id */
    id = clique->id;
@@ -1451,7 +1449,7 @@ SCIP_RETCODE SCIPcliquelistDel(
    assert(*cliquelist != NULL);
 
    SCIPdebugMessage("deleting clique %d from cliquelist %p value %d (length: %d)\n", 
-      clique->id, *cliquelist, value, (*cliquelist)->ncliques[value]);
+      clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
    
    pos = cliquesSearchClique((*cliquelist)->cliques[value], (*cliquelist)->ncliques[value], clique);
    assert(0 <= pos && pos < (*cliquelist)->ncliques[value]);
@@ -1687,14 +1685,14 @@ SCIP_RETCODE SCIPcliquetableAdd(
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashgetkeyClique)
-{
+{  /*lint --e{715}*/
    return elem;
 }
 
 /** returns TRUE iff both keys are equal */
 static
 SCIP_DECL_HASHKEYEQ(hashkeyeqClique)
-{
+{  /*lint --e{715}*/
    SCIP_CLIQUE* clique1;
    SCIP_CLIQUE* clique2;
    int i;
@@ -1720,7 +1718,7 @@ SCIP_DECL_HASHKEYEQ(hashkeyeqClique)
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
-{
+{  /*lint --e{715}*/
    SCIP_CLIQUE* clique;
    unsigned int hashval;
    int i;
@@ -1751,6 +1749,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    )
 {
    SCIP_HASHTABLE* hashtable;
+   int hashtablesize;
    int i;
 
    assert(cliquetable != NULL);
@@ -1769,8 +1768,10 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
    /* create hash table to test for multiple cliques */
-   SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, SCIP_HASHSIZE_CLIQUES, 
-         hashgetkeyClique, hashkeyeqClique, hashkeyvalClique) );
+   hashtablesize = SCIPcalcHashtableSize(10*cliquetable->ncliques);
+   hashtablesize = MAX(hashtablesize, SCIP_HASHSIZE_CLIQUES);
+   SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
+         hashgetkeyClique, hashkeyeqClique, hashkeyvalClique, NULL) );
 
    i = 0;
    while( i < cliquetable->ncliques && !(*infeasible) )

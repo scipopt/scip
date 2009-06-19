@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194.2.1 2009/06/10 17:47:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.2 2009/06/19 07:53:51 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -32,7 +30,6 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/misc.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/paramset.h"
@@ -146,7 +143,7 @@
                                                  *   barrier with 'c'rossover) */
 #define SCIP_DEFAULT_LP_RESOLVEALGORITHM    's' /**< LP algorithm for resolving LP relaxations if a starting basis exists
                                                  *   ('s'implex, 'b'arrier, barrier with 'c'rossover) */
-#define SCIP_DEFAULT_LP_PRICING             's' /**< LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial,
+#define SCIP_DEFAULT_LP_PRICING             'l' /**< LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial,
                                                  *   's'teepest edge pricing, 'q'uickstart steepest edge pricing,
                                                  *   'd'evex pricing) */
 #define SCIP_DEFAULT_LP_COLAGELIMIT          10 /**< maximum age a dynamic column can reach before it is deleted from SCIP_LP
@@ -228,6 +225,7 @@
 #define SCIP_DEFAULT_SEPA_MINORTHOROOT     0.50 /**< minimal orthogonality for a cut to enter the LP in the root node */
 #define SCIP_DEFAULT_SEPA_OBJPARALFAC    0.0001 /**< factor to scale objective parallelism of cut in score calculation */
 #define SCIP_DEFAULT_SEPA_ORTHOFAC         1.00 /**< factor to scale orthogonality of cut in score calculation */
+#define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
@@ -671,8 +669,8 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "lp/pricing",
-         "LP pricing strategy ('a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
-         &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "afpsqd",
+         "LP pricing strategy ('l'pi default, 'a'uto, 'f'ull pricing, 'p'artial, 's'teepest edge pricing, 'q'uickstart steepest edge pricing, 'd'evex pricing)",
+         &(*set)->lp_pricing, FALSE, SCIP_DEFAULT_LP_PRICING, "lafpsqd",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
          "lp/colagelimit",
@@ -944,6 +942,11 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/orthofac",
          "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
          &(*set)->sepa_orthofac, TRUE, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
+         "separating/orthofunc",
+         "function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete)",
+         &(*set)->sepa_orthofunc, TRUE, SCIP_DEFAULT_SEPA_ORTHOFUNC, "ed",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "separating/efficacynorm",
@@ -1596,7 +1599,7 @@ void SCIPsetSortPricers(
 
    if( !set->pricerssorted )
    {
-      SCIPbsortPtr((void**)set->pricers, set->npricers, SCIPpricerComp);
+      SCIPsortPtr((void**)set->pricers, SCIPpricerComp, set->npricers);
       set->pricerssorted = TRUE;
    }
 }
@@ -1726,7 +1729,7 @@ void SCIPsetSortConflicthdlrs(
 
    if( !set->conflicthdlrssorted )
    {
-      SCIPbsortPtr((void**)set->conflicthdlrs, set->nconflicthdlrs, SCIPconflicthdlrComp);
+      SCIPsortPtr((void**)set->conflicthdlrs, SCIPconflicthdlrComp, set->nconflicthdlrs);
       set->conflicthdlrssorted = TRUE;
    }
 }
@@ -1783,7 +1786,7 @@ void SCIPsetSortPresols(
 
    if( !set->presolssorted )
    {
-      SCIPbsortPtr((void**)set->presols, set->npresols, SCIPpresolComp);
+      SCIPsortPtr((void**)set->presols, SCIPpresolComp, set->npresols);
       set->presolssorted = TRUE;
    }
 }
@@ -1841,7 +1844,7 @@ void SCIPsetSortRelaxs(
 
    if( !set->relaxssorted )
    {
-      SCIPbsortPtr((void**)set->relaxs, set->nrelaxs, SCIPrelaxComp);
+      SCIPsortPtr((void**)set->relaxs, SCIPrelaxComp, set->nrelaxs);
       set->relaxssorted = TRUE;
    }
 }
@@ -1899,7 +1902,7 @@ void SCIPsetSortSepas(
 
    if( !set->sepassorted )
    {
-      SCIPbsortPtr((void**)set->sepas, set->nsepas, SCIPsepaComp);
+      SCIPsortPtr((void**)set->sepas, SCIPsepaComp, set->nsepas);
       set->sepassorted = TRUE;
    }
 }
@@ -1957,7 +1960,7 @@ void SCIPsetSortProps(
 
    if( !set->propssorted )
    {
-      SCIPbsortPtr((void**)set->props, set->nprops, SCIPpropComp);
+      SCIPsortPtr((void**)set->props, SCIPpropComp, set->nprops);
       set->propssorted = TRUE;
    }
 }
@@ -2015,7 +2018,7 @@ void SCIPsetSortHeurs(
 
    if( !set->heurssorted )
    {
-      SCIPbsortPtr((void**)set->heurs, set->nheurs, SCIPheurComp);
+      SCIPsortPtr((void**)set->heurs, SCIPheurComp, set->nheurs);
       set->heurssorted = TRUE;
    }
 }
@@ -2070,6 +2073,7 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
    )
 {
    int i;
+   int nodeselstdprio;
 
    assert(set != NULL);
    assert(nodesel != NULL);
@@ -2082,7 +2086,9 @@ SCIP_RETCODE SCIPsetIncludeNodesel(
    }
    assert(set->nnodesels < set->nodeselssize);
 
-   for( i = set->nnodesels; i > 0 && SCIPnodeselGetStdPriority(nodesel) > SCIPnodeselGetStdPriority(set->nodesels[i-1]);
+   nodeselstdprio = SCIPnodeselGetStdPriority(nodesel);
+
+   for( i = set->nnodesels; i > 0 && nodeselstdprio > SCIPnodeselGetStdPriority(set->nodesels[i-1]);
         --i )
    {
       set->nodesels[i] = set->nodesels[i-1];
@@ -2204,7 +2210,7 @@ void SCIPsetSortBranchrules(
 
    if( !set->branchrulessorted )
    {
-      SCIPbsortPtr((void**)set->branchrules, set->nbranchrules, SCIPbranchruleComp);
+      SCIPsortPtr((void**)set->branchrules, SCIPbranchruleComp, set->nbranchrules);
       set->branchrulessorted = TRUE;
    }
 }
@@ -2216,7 +2222,8 @@ SCIP_RETCODE SCIPsetIncludeDisp(
    )
 {
    int i;
-
+   int disppos;
+   
    assert(set != NULL);
    assert(disp != NULL);
    assert(!SCIPdispIsInitialized(disp));
@@ -2228,7 +2235,9 @@ SCIP_RETCODE SCIPsetIncludeDisp(
    }
    assert(set->ndisps < set->dispssize);
 
-   for( i = set->ndisps; i > 0 && SCIPdispGetPosition(disp) < SCIPdispGetPosition(set->disps[i-1]); --i )
+   disppos = SCIPdispGetPosition(disp);
+   
+   for( i = set->ndisps; i > 0 && disppos < SCIPdispGetPosition(set->disps[i-1]); --i )
    {
       set->disps[i] = set->disps[i-1];
    }

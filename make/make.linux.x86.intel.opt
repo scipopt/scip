@@ -1,10 +1,10 @@
-#--- $Id: make.linux.x86.intel.opt,v 1.2 2008/01/28 14:31:08 bzfheinz Exp $
+#--- $Id: make.linux.x86.intel.opt,v 1.1.2.1 2009/06/19 07:53:34 bzfwolte Exp $
 CC		=	icc
 CXX		=	icc -Kc++
 LINKCC		=	icc
 LINKCXX		=	icc -Kc++
-FLAGS		+=	# -DROUNDING_FE
-OFLAGS		+=	-O3 -tpp6 -axK -w1 -fno-rtti -par_report0 -vec_report0 -ip
+FLAGS		+=	-DNDEBUG # -DROUNDING_FE
+OFLAGS		+=	-O3 -mtune=core2 -axT -w1 -vec_report0 -ip -par_report0 -fno-rtti
 CFLAGS		+=
 CXXFLAGS	+=	
 ARFLAGS		=	crs

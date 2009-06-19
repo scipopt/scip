@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.12 2007/06/06 11:25:11 bzfpfend Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.12.2.1 2009/06/19 07:53:38 bzfwolte Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -48,6 +46,8 @@ struct SCIP_RelaxData
  * Callback methods of relaxator
  */
 
+extern "C"
+{
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_RELAXFREE(relaxFreeObj)
@@ -156,7 +156,7 @@ SCIP_DECL_RELAXEXEC(relaxExecObj)
 
    return SCIP_OKAY;
 }
-
+}
 
 
 

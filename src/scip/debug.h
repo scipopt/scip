@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.27 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.27.2.1 2009/06/19 07:53:41 bzfwolte Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -27,8 +25,10 @@
 #define __SCIP_DEBUG_H__
 
 /** uncomment this define to activate debugging on given solution */
-/*#define SCIP_DEBUG_SOLUTION "check/lseu.sol"*/
+/* #define SCIP_DEBUG_SOLUTION "check/p0033.sol" */
 
+/** uncomment this define to activate debugging the LP interface  */
+/*#define SCIP_DEBUG_LP_INTERFACE*/
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -39,6 +39,12 @@
 
 
 #ifdef SCIP_DEBUG_SOLUTION
+
+/** frees debugging data */
+extern
+SCIP_RETCODE SCIPdebugFreeDebugData(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
 
 /** checks whether given row is valid for the debugging solution */
 extern
@@ -77,6 +83,7 @@ SCIP_RETCODE SCIPdebugCheckInference(
 /** informs solution debugger, that the given node will be freed */
 extern
 SCIP_RETCODE SCIPdebugRemoveNode(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODE*            node                /**< node that will be freed */
    );
@@ -121,17 +128,37 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 
 #else
 
+#define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
 #define SCIPdebugCheckLbGlobal(set,var,lb) SCIP_OKAY
 #define SCIPdebugCheckUbGlobal(set,var,ub) SCIP_OKAY
 #define SCIPdebugCheckInference(blkmem,set,node,var,newbound,boundtype) SCIP_OKAY
-#define SCIPdebugRemoveNode(set,node) SCIP_OKAY
+#define SCIPdebugRemoveNode(blkmem,set,node) SCIP_OKAY
 #define SCIPdebugCheckVbound(set,var,vbtype,vbvar,vbcoef,vbconstant) SCIP_OKAY
 #define SCIPdebugCheckImplic(set,var,varfixing,implvar,impltype,implbound) SCIP_OKAY
 #define SCIPdebugCheckConflict(blkmem,set,node,conflictset,nliterals) SCIP_OKAY
 #define SCIPdebugIncludeProp(scip) SCIP_OKAY
-
 #endif
 
+
+/* 
+ * debug method for LP interface, to check if the LP interface works correct 
+ */
+#ifdef SCIP_DEBUG_LP_INTERFACE 
+
+/* check if the coef is the r-th line of the inverse matrix B^-1; this is
+ * the case if (coef * B) is the r-th unit vector */
+extern
+SCIP_RETCODE SCIPdebugCheckBInvRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   r,                  /**< row number */
+   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   );
+
+#else
+
+#define SCIPdebugCheckBInvRow(scip,r,coef) SCIP_OKAY
+
+#endif
 
 #endif

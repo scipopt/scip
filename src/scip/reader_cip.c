@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,16 +12,16 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.4 2007/11/15 10:53:19 bzfpfend Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.2.2.1 2009/06/19 07:53:48 bzfwolte Exp $"
 
 /**@file   reader_cip.c
+ * @ingroup FILEREADERS 
  * @brief  CIP file reader
  * @author Tobias Achterberg
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <assert.h>
 
 #include "scip/reader_cip.h"
 
@@ -42,6 +40,7 @@
 /** data for cip reader */
 struct SCIP_ReaderData
 {
+	char dummy; /* to have at least one member */
 };
 
 
@@ -93,14 +92,14 @@ SCIP_DECL_READERWRITE(readerWriteCip)
    {
       SCIPinfoMessage(scip, file, "VARIABLES\n");
       for( i = 0; i < nvars; ++i )
-         SCIPprintVar(scip, vars[i], file);
+         SCIP_CALL( SCIPprintVar(scip, vars[i], file) );
    }
 
    if( nfixedvars > 0 )
    {
       SCIPinfoMessage(scip, file, "FIXED\n");
       for( i = 0; i < nfixedvars; ++i )
-         SCIPprintVar(scip, fixedvars[i], file);
+         SCIP_CALL( SCIPprintVar(scip, fixedvars[i], file) );
    }
 
    if( nconss > 0 )

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.168 2008/01/23 11:01:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.166.2.1 2009/06/19 07:53:39 bzfwolte Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -37,6 +35,7 @@
 #include "scip/sepastore.h"
 #include "scip/cons.h"
 #include "scip/branch.h"
+#include "scip/pub_misc.h"
 
 #ifndef NDEBUG
 #include "scip/struct_cons.h"
@@ -664,7 +663,6 @@ void conshdlrDelInitcons(
    assert(cons != NULL);
    assert(cons->conshdlr == conshdlr);
    assert(!cons->original);
-   assert(cons->initial);
    assert(0 <= cons->initconsspos && cons->initconsspos < conshdlr->ninitconss);
 
    delpos = cons->initconsspos;
@@ -1484,7 +1482,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
          cons->updateenable, cons->updatedisable,
          cons->updatesepaenable, cons->updatesepadisable, 
          cons->updatepropenable, cons->updatepropdisable, 
-         cons->updateobsolete, cons->updatefree, cons->consdata);
+         cons->updateobsolete, cons->updatefree, (void*)cons->consdata);
 
       if( cons->updateinsert )
       {
@@ -1627,7 +1625,8 @@ void conshdlrDelayUpdates(
 {
    assert(conshdlr != NULL);
    
-   SCIPdebugMessage("constraint updates of constraint handler <%s> will be delayed\n", conshdlr->name);
+   SCIPdebugMessage("constraint updates of constraint handler <%s> will be delayed (count:%d)\n",
+      conshdlr->name, conshdlr->delayupdatecount+1);
 
    conshdlr->delayupdatecount++;
 }
@@ -1646,7 +1645,8 @@ SCIP_RETCODE conshdlrForceUpdates(
    assert(conshdlr != NULL);
    assert(conshdlrAreUpdatesDelayed(conshdlr));
    
-   SCIPdebugMessage("constraint updates of constraint handler <%s> will be processed immediately\n", conshdlr->name);
+   SCIPdebugMessage("constraint updates of constraint handler <%s> will be processed immediately (count:%d)\n",
+      conshdlr->name, conshdlr->delayupdatecount);
    conshdlr->delayupdatecount--;
 
    if( !conshdlrAreUpdatesDelayed(conshdlr) )
@@ -1674,7 +1674,7 @@ SCIP_RETCODE conshdlrAddUpdateCons(
    if( !cons->update )
    {
       SCIPdebugMessage("constraint <%s> of age %g has to be updated in constraint handler <%s> (consdata=%p)\n",
-         cons->name, cons->age, conshdlr->name, cons->consdata);
+         cons->name, cons->age, conshdlr->name, (void*)cons->consdata);
       
       /* add constraint to the updateconss array */
       SCIP_CALL( conshdlrEnsureUpdateconssMem(conshdlr, set, conshdlr->nupdateconss+1) );
@@ -1881,37 +1881,37 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->initialized = FALSE;
 
    /* add parameters */
-   sprintf(paramname, "constraints/%s/sepafreq", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for separating cuts (-1: never, 0: only in root node)",
          &(*conshdlr)->sepafreq, FALSE, sepafreq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "constraints/%s/propfreq", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/propfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for propagating domains (-1: never, 0: only in root node)",
          &(*conshdlr)->propfreq, FALSE, propfreq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "constraints/%s/eagerfreq", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/eagerfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)",
          &(*conshdlr)->eagerfreq, TRUE, eagerfreq, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "constraints/%s/maxprerounds", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", name);
    SCIP_CALL( SCIPsetAddIntParam(set, blkmem, paramname, 
          "maximal number of presolving rounds the constraint handler participates in (-1: no limit)",
          &(*conshdlr)->maxprerounds, TRUE, maxprerounds, -1, INT_MAX, NULL, NULL) );
 
-   sprintf(paramname, "constraints/%s/delaysepa", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaysepa", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should separation method be delayed, if other separators found cuts?",
          &(*conshdlr)->delaysepa, TRUE, delaysepa, NULL, NULL) ); /*lint !e740*/
 
-   sprintf(paramname, "constraints/%s/delayprop", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delayprop", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should propagation method be delayed, if other propagators found reductions?",
          &(*conshdlr)->delayprop, TRUE, delayprop, NULL, NULL) ); /*lint !e740*/
 
-   sprintf(paramname, "constraints/%s/delaypresol", name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/delaypresol", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, blkmem, paramname,
          "should presolving method be delayed, if other presolvers found reductions?",
          &(*conshdlr)->delaypresol, TRUE, delaypresol, NULL, NULL) ); /*lint !e740*/
@@ -2369,6 +2369,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
+            SCIP_Longint oldnprobdomchgs;
             int oldncuts;
             int oldnactiveconss;
             int lastsepalpcount;
@@ -2386,6 +2387,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
             conss = &(conshdlr->sepaconss[firstcons]);
          
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
+            oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
             oldncuts = SCIPsepastoreGetNCuts(sepastore);
             oldnactiveconss = stat->nactiveconss;
 
@@ -2424,7 +2426,11 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
                conshdlr->ncutoffs++;
             conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+            
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
             /* evaluate result */
             if( *result != SCIP_CUTOFF
@@ -2498,16 +2504,18 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
+            SCIP_Longint oldnprobdomchgs;
             int oldncuts;
             int oldnactiveconss;
 
             SCIPdebugMessage("separating %d constraints of handler <%s> (primal solution %p)\n",
-               nconss, conshdlr->name, sol);
+               nconss, conshdlr->name, (void*)sol);
 
             /* get the array of the constraints to be processed */
             conss = conshdlr->sepaconss;
          
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
+            oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
             oldncuts = SCIPsepastoreGetNCuts(sepastore);
             oldnactiveconss = stat->nactiveconss;
 
@@ -2542,7 +2550,11 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
                conshdlr->ncutoffs++;
             conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
             conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
             /* evaluate result */
             if( *result != SCIP_CUTOFF
@@ -2640,6 +2652,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
       {
          SCIP_CONS** conss;
          SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
          int oldncuts;
          int oldnactiveconss;
 
@@ -2658,6 +2671,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          oldncuts = SCIPsepastoreGetNCuts(sepastore);
          oldnactiveconss = stat->nactiveconss;
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
          /* check, if we want to use eager evaluation */
          if( (conshdlr->eagerfreq == 0 && conshdlr->nenfolpcalls == 0)
@@ -2693,7 +2707,11 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
          }
          else
             conshdlr->nchildren += tree->nchildren;
@@ -2729,6 +2747,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_Bool             objinfeasible,      /**< is the solution infeasible anyway due to violating lower objective bound? */
+   SCIP_Bool             forced,             /**< should enforcement of pseudo solution be forced? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -2762,7 +2781,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       SCIP_Bool pschanged;
 
       /* check, if this LP solution was already enforced at this node */
-      if( conshdlr->lastenfopsdomchgcount == stat->domchgcount && conshdlr->lastenfopsnode == stat->nnodes )
+      if( !forced && conshdlr->lastenfopsdomchgcount == stat->domchgcount && conshdlr->lastenfopsnode == stat->nnodes )
       {
          /* all constraints that were not yet enforced on the new LP solution must be useful constraints, which means,
           * that the new constraints are the last constraints of the useful ones
@@ -2785,11 +2804,12 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
       assert(nusefulconss <= nconss);
 
       /* constraint handlers without constraints should only be called once */
-      if( nconss > 0 || (!conshdlr->needscons && pschanged) )
+      if( nconss > 0 || (!conshdlr->needscons && pschanged) ) 
       {
          SCIP_CONS** conss;
          SCIP_Longint oldndomchgs;
-         
+         SCIP_Longint oldnprobdomchgs;
+                     
          SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution)\n",
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, pschanged ? "new" : "old");
 
@@ -2802,6 +2822,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          conss = &(conshdlr->enfoconss[firstcons]);
 
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
          /* check, if we want to use eager evaluation */
          if( (conshdlr->eagerfreq == 0 && conshdlr->nenfopscalls == 0)
@@ -2841,7 +2862,11 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          if( *result != SCIP_BRANCHED )
          {
             assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
          }
          else
             conshdlr->nchildren += tree->nchildren;
@@ -2875,6 +2900,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -2900,7 +2926,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
 
       /* call external method */
       SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss, 
-                     sol, checkintegrality, checklprows, result) );
+            sol, checkintegrality, checklprows, printreason, result) );
       SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
       
       /* perform the cached constraint updates */
@@ -2985,6 +3011,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          {
             SCIP_CONS** conss;
             SCIP_Longint oldndomchgs;
+            SCIP_Longint oldnprobdomchgs;
             SCIP_Longint lastpropdomchgcount;
             int lastnusefulpropconss;
          
@@ -3000,6 +3027,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             conss = &(conshdlr->propconss[firstcons]);
 
             oldndomchgs = stat->nboundchgs + stat->nholechgs;
+            oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
             /* check, if we want to use eager evaluation */
             if( (conshdlr->eagerfreq == 0 && conshdlr->npropcalls == 0)
@@ -3039,7 +3067,11 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             }
             if( *result == SCIP_CUTOFF )
                conshdlr->ncutoffs++;
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
             conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
             /* check result code of callback method */
             if( *result != SCIP_CUTOFF
@@ -4027,7 +4059,7 @@ SCIP_RETCODE SCIPconssetchgApply(
       return SCIP_OKAY;
 
    SCIPdebugMessage("applying constraint set changes at %p: %d constraint additions, %d constraint disablings\n", 
-      conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
+      (void*)conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* apply constraint additions */
    for( i = 0; i < conssetchg->naddedconss; ++i )
@@ -4103,7 +4135,7 @@ SCIP_RETCODE SCIPconssetchgUndo(
       return SCIP_OKAY;
 
    SCIPdebugMessage("undoing constraint set changes at %p: %d constraint additions, %d constraint disablings\n", 
-      conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
+      (void*)conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* undo constraint disablings */
    for( i = conssetchg->ndisabledconss-1; i >= 0; --i )
@@ -4193,7 +4225,7 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
       return SCIP_OKAY;
 
    SCIPdebugMessage("moving constraint set changes at %p to global problem: %d constraint additions, %d constraint disablings\n", 
-      *conssetchg, (*conssetchg)->naddedconss, (*conssetchg)->ndisabledconss);
+      (void*)*conssetchg, (*conssetchg)->naddedconss, (*conssetchg)->ndisabledconss);
 
    /* apply constraint additions to the global problem (loop backwards, because then conssetchgDelAddedCons() is
     * more efficient)
@@ -4292,7 +4324,8 @@ SCIP_RETCODE SCIPconsCreate(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to TRUE. */
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
@@ -4623,14 +4656,28 @@ SCIP_RETCODE SCIPconsTransform(
 }
 
 /** sets the initial flag of the given constraint */
-void SCIPconsSetInitial(
+SCIP_RETCODE SCIPconsSetInitial(
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             initial             /**< new value */
    )
 {
    assert(cons != NULL);
 
-   cons->initial = initial;
+   if( cons->initial != initial )
+   {
+      cons->initial = initial;
+      if( cons->initial )
+      {
+         SCIP_CALL( conshdlrAddInitcons(SCIPconsGetHdlr(cons), set, cons) );
+      }
+      else
+      {
+         conshdlrDelInitcons(SCIPconsGetHdlr(cons), cons);
+      }
+   }
+
+   return SCIP_OKAY;
 }
 
 /** sets the separate flag of the given constraint */
@@ -5296,6 +5343,7 @@ SCIP_RETCODE SCIPconsCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -5308,7 +5356,7 @@ SCIP_RETCODE SCIPconsCheck(
    assert(conshdlr != NULL);
    
    /* call external method */
-   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, result) );
+   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason, result) );
    SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
    
    if( *result != SCIP_INFEASIBLE

@@ -3,9 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2007 Tobias Achterberg                              */
-/*                                                                           */
-/*                  2002-2007 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.59 2007/06/06 11:25:15 bzfpfend Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.59.2.1 2009/06/19 07:53:42 bzfwolte Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -199,7 +197,7 @@ SCIP_RETCODE SCIPeventhdlrExec(
    assert(set != NULL);
    assert(event != NULL);
 
-   SCIPdebugMessage("execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, event, event->eventtype);
+   SCIPdebugMessage("execute event of handler <%s> with event %p of type 0x%x\n", eventhdlr->name, (void*)event, event->eventtype);
 
    SCIP_CALL( eventhdlr->eventexec(set->scip, eventhdlr, event, eventdata) );
 
@@ -1264,7 +1262,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
    assert(event != NULL);
 
    SCIPdebugMessage("processing event filter %p (len %d, mask 0x%x) with event type 0x%x\n",
-      eventfilter, eventfilter->len, eventfilter->eventmask, event->eventtype);
+      (void*)eventfilter, eventfilter->len, eventfilter->eventmask, event->eventtype);
 
    eventtype = event->eventtype;
 
@@ -1297,7 +1295,7 @@ SCIP_RETCODE SCIPeventfilterProcess(
    {
       eventfilter->eventmask &= ~event->eventtype;
       SCIPdebugMessage(" -> event type 0x%x not processed. new mask of event filter %p: 0x%x\n",
-         event->eventtype, eventfilter, eventfilter->eventmask);
+         event->eventtype, (void*)eventfilter, eventfilter->eventmask);
    }
 
    /* process delayed events on this eventfilter */
@@ -1381,7 +1379,7 @@ SCIP_RETCODE eventqueueAppend(
    assert(*event != NULL);
 
    SCIPdebugMessage("appending event %p of type 0x%x to event queue %p at position %d\n",
-      *event, (*event)->eventtype, eventqueue, eventqueue->nevents);
+      (void*)*event, (*event)->eventtype, (void*)eventqueue, eventqueue->nevents);
 
    SCIP_CALL( eventqueueEnsureEventsMem(eventqueue, set, eventqueue->nevents+1) );
    eventqueue->events[eventqueue->nevents] = *event;
@@ -1421,7 +1419,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
    else
    {
       /* delay processing of event by appending it to the event queue */
-      SCIPdebugMessage("adding event %p of type 0x%x to event queue %p\n", *event, (*event)->eventtype, eventqueue);
+      SCIPdebugMessage("adding event %p of type 0x%x to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
 
       switch( (*event)->eventtype )
       {
