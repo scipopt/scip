@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.111 2009/06/12 12:19:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.112 2009/06/22 09:30:14 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -1816,54 +1816,11 @@ void freeMatrix(
    SPARSEMATRIX*      matrix              /**< sparse matrix to free */
    )
 {
-   SCIPfreeBufferArray(scip, &matrix->columns);
    SCIPfreeBufferArray(scip, &matrix->rows);
+   SCIPfreeBufferArray(scip, &matrix->columns);
    SCIPfreeBufferArray(scip, &matrix->values);
    
    SCIPfreeBuffer(scip, &matrix);
-}
-
-
-
-/** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
-static
-SCIP_RETCODE getActiveVariables(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< vars array to get active variables for */
-   SCIP_Real*            scalars,            /**< scalars a_1, ..., a_n in linear sum a_1*x_1 + ... + a_n*x_n + c */
-   int*                  nvars,              /**< pointer to number of variables and values in vars and vals array */
-   SCIP_Real*            constant,           /**< pointer to constant c in linear sum a_1*x_1 + ... + a_n*x_n + c  */
-   SCIP_Bool             transformed         /**< transformed constraint? */
-   )
-{
-   int requiredsize;
-   int v;
-
-   assert( scip != NULL );
-   assert( vars != NULL );
-   assert( scalars != NULL );
-   assert( nvars != NULL );
-   assert( constant != NULL );
-
-   if( transformed )
-   {
-      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, *nvars, constant, &requiredsize, TRUE) );
-
-      if( requiredsize > *nvars )
-      {
-         SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
-         SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
-         
-         SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
-         assert( requiredsize <= *nvars );
-      }
-   }
-   else
-   {
-      for( v = 0; v < *nvars; ++v )
-         SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
-   }
-   return SCIP_OKAY;
 }
 
 
@@ -1880,11 +1837,13 @@ SCIP_RETCODE getLinearCoeffs(
    SCIP_Real*            rhs                 /**< pointer to right hand side */
    )
 {
-   int v;
    SCIP_VAR** activevars;
    SCIP_Real* activevals;
-   int nactivevars;
    SCIP_Real activeconstant = 0.0;
+
+   int nactivevars;
+   int requiredsize;
+   int v;
 
    assert( scip != NULL );
    assert( nvars == 0 || vars != NULL );
@@ -1901,7 +1860,7 @@ SCIP_RETCODE getLinearCoeffs(
    /* duplicate variable and value array */
    nactivevars = nvars;
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
-
+   
    if( vals != NULL )
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
    else
@@ -1913,7 +1872,24 @@ SCIP_RETCODE getLinearCoeffs(
    }
 
    /* retransform given variables to active variables */
-   SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
+   if( transformed )
+   {
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, nactivevars, &activeconstant, &requiredsize, TRUE) );
+         
+      if( requiredsize > nactivevars )
+      {
+         SCIP_CALL( SCIPreallocBufferArray(scip, &activevars, requiredsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &activevals, requiredsize) );
+            
+         SCIP_CALL( SCIPgetProbvarLinearSum(scip, activevars, activevals, &nactivevars, requiredsize, &activeconstant, &requiredsize, TRUE) );
+         assert( requiredsize <= nactivevars );
+      }
+   }
+   else
+   {
+      for( v = 0; v < nactivevars; ++v )
+         SCIP_CALL( SCIPvarGetOrigvarSum(&activevars[v], &activevals[v], &activeconstant) );
+   }
 
    /* copy the (matrix) row into the sparse matrix */
    SCIP_CALL( checkSparseMatrixCapacity(scip, matrix, nactivevars) );
@@ -1931,8 +1907,8 @@ SCIP_RETCODE getLinearCoeffs(
    (*rhs) -= activeconstant;
 
    /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &activevars);
    SCIPfreeBufferArray(scip, &activevals);
+   SCIPfreeBufferArray(scip, &activevars);
 
    return SCIP_OKAY;
 }
@@ -2759,7 +2735,6 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
-         
          /* print row entry */
          switch ( SCIPgetTypeSetppc(scip, cons) )
          {
@@ -2846,8 +2821,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             /* compute column entries */
             SCIP_CALL( getLinearCoeffs(scip, consname, consvars, vals, 2, transformed, matrix, &rhss[c]) );
             
-            SCIPfreeBufferArray(scip, &consvars);
             SCIPfreeBufferArray(scip, &vals);
+            SCIPfreeBufferArray(scip, &consvars);
          }
       }
       else if ( strcmp(conshdlrname, "SOS1") == 0 )
