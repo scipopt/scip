@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.506 2009/06/15 09:57:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.507 2009/06/23 15:51:38 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3730,7 +3730,7 @@ SCIP_RETCODE SCIPaddCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -3738,6 +3738,7 @@ SCIP_RETCODE SCIPaddCons(
       SCIP_CALL( SCIPprobAddCons(scip->origprob, scip->set, scip->stat, cons) );
       return SCIP_OKAY;
 
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -9029,7 +9030,7 @@ SCIP_RETCODE SCIPcreateCons(
    assert(name != NULL);
    assert(conshdlr != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -9039,6 +9040,7 @@ SCIP_RETCODE SCIPcreateCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:

@@ -43,6 +43,8 @@ interface:
 - added function SCIPparseVars() in scip.h; parses variable information (in cip format) out of a string
 - added function SCIPparseCons() in scip.h; parses constrint information (in cip format) out of a string
 - added function SCIPcopyCons() in scip.h; parses constrint information (in cip format) out of a string
+- allow to create constraint in SCIP_STAGE_TRANSFORMED (SCIPcreateCons() in scip.c)
+- allow to add constraint in SCIP_STAGE_TRANSFORMED (SCIPaddCons() in scip.c)
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
