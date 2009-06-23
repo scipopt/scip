@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.39 2009/04/06 13:06:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.40 2009/06/23 12:51:32 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -35,13 +35,22 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#ifdef WITH_QUAD
+#include "cons_quad_C.h"
+#endif
 #include "scip/pub_misc.h"
 
-/* include the ZIMPL headers necessary to define the LP construction interface */
+/* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
 #include "zimpl/bool.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
 #include "zimpl/xlpglue.h"
+
+/** the ZIMPL_VERSION is defind by ZIMPL version 2.10 and higher. ZIMPL 2.10 made same changes in the interface to
+ *  SCIP. Therefore we us this define to disdinguish betwenn all version up to 2.09 and all version from 2.10 */
+#ifdef ZIMPL_VERSION
+#include "zimpl/mono.h"
+#endif
 
 extern
 Bool zpl_read(const char* filename);
@@ -116,7 +125,22 @@ Bool xlp_conname_exists(const char* conname)
    return (SCIPfindCons(scip_, conname) != NULL);
 }
 
-Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs, unsigned int flags)
+
+/** the ZIMPL_VERSION is defind by ZIMPL version 2.10 and higher. ZIMPL 2.10 made same changes in the interface to
+ *  SCIP. Therefore we us this define to disdinguish betwenn all version up to 2.09 and all version from 2.10 */
+#ifndef ZIMPL_VERSION 
+
+/** method creates a linear constraint and is called directly from ZIMPL
+ *
+ *  @note this method is used by ZIMPL up to version 2.09; 
+ */
+Con* xlp_addcon(
+   const char*           name,               /**< constraint name */
+   ConType               type,               /**< constraint type */
+   const Numb*           lhs,                /**< left hand side */
+   const Numb*           rhs,                /**< right hand side */
+   unsigned int          flags               /**< special constraint flags */
+   )
 {
    SCIP_CONS* cons;
    SCIP_Real sciplhs;
@@ -175,15 +199,200 @@ Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs
 
    SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-   zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
-                           destroyed by SCIPreleaseCons() */
+   zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the
+                         * CONS will not be destroyed by SCIPreleaseCons() */
    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
    SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
 
    return zplcon;
 }
 
-Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, const Bound* upper, const Numb* priority, const Numb* startval)
+/** adds coefficient/variable to linear constraint 
+ *
+ *  @note this method is used by ZIMPL up to version 2.09; 
+ */
+void xlp_addtonzo(
+   Var*            var,                /**< variable to add */
+   Con*            con,                /**< constraint */
+   const Numb*     numb                /**< variable coefficient */
+   )
+{
+   SCIP_CONS* scipcons;
+   SCIP_VAR* scipvar;
+   SCIP_Real scipval;
+
+   scipcons = (SCIP_CONS*)con;
+   scipvar = (SCIP_VAR*)var;
+   scipval = numb_todbl(numb);
+
+   SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, scipcons, scipvar, scipval) );
+}
+
+#else
+
+/** method creates a linear constraint and is called directly from ZIMPL 
+ *
+ *  @note this method is used by ZIMPL from version 2.10; 
+ */
+Bool xlp_addcon_term(
+   const char*           name,               /**< constraint name */
+   ConType               type,               /**< constraint type */
+   const Numb*           lhs,                /**< left hand side */
+   const Numb*           rhs,                /**< right hand side */
+   unsigned int          flags,              /**< special constraint flags */
+   const Term*           term      
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_Real sciplhs;
+   SCIP_Real sciprhs;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
+   /* Con* zplcon; */
+   int  i;
+   int  maxdegree;
+   
+   switch( type )
+   {
+   case CON_FREE:
+      sciplhs = -SCIPinfinity(scip_);
+      sciprhs = SCIPinfinity(scip_);
+      break;
+   case CON_LHS:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = SCIPinfinity(scip_);
+      break;
+   case CON_RHS:
+      sciplhs = -SCIPinfinity(scip_);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      break;
+   case CON_RANGE:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      break;
+   case CON_EQUAL:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      assert(sciplhs == sciprhs);
+      break;
+   default:
+      SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      readerror_ = TRUE;
+      break;
+   }
+
+   initial = !((flags & LP_FLAG_CON_SEPAR) != 0);
+   separate = TRUE;
+   enforce = TRUE;
+   check = enforce;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
+   removable = dynamic;
+   maxdegree = term_get_degree(term);
+
+   if (maxdegree <= 1)
+   {
+      SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+
+      for(i = 0; i < term_get_elements(term); i++)
+      {
+         SCIP_VAR* scipvar;
+         SCIP_Real scipval;
+
+         assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+         assert(mono_is_linear(term_get_element(term, i)));
+      
+         scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+         scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+
+         SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
+      }
+   }
+#ifdef WITH_QUAD
+   else if (maxdegree == 2)
+   {
+      int        n_linvar   = 0;
+      int        n_quadterm = 0;
+      SCIP_VAR** linvar;
+      SCIP_VAR** quadvar1;
+      SCIP_VAR** quadvar2;
+      SCIP_Real* lincoeff;
+      SCIP_Real* quadcoeff;
+      Mono*      monom;
+  	  
+      SCIP_CALL( SCIPallocBufferArray(scip_, &linvar,    term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar1,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar2,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
+  	  
+      for (i = 0; i < term_get_elements(term); ++i)
+      {
+         monom = term_get_element(term, i);
+         assert(!numb_equal(mono_get_coeff(monom), numb_zero()));
+         assert(mono_get_degree(monom) <= 2);
+         assert(mono_get_degree(monom) > 0);
+         if (mono_get_degree(monom) == 1)
+         {
+            linvar  [n_linvar] = (SCIP_VAR*)mono_get_var(monom, 0);
+            lincoeff[n_linvar] = numb_todbl(mono_get_coeff(monom));
+            ++n_linvar;
+         }
+         else
+         {
+            assert(mono_get_degree(monom) == 2);
+            quadvar1 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 0);
+            quadvar2 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 1);
+            quadcoeff[n_quadterm] = numb_todbl(mono_get_coeff(monom));
+            ++n_quadterm;
+         }
+      }
+
+      SCIP_CALL_ABORT( SCIPcreateConsQuadratic1(scip_, &cons, name, n_linvar, linvar, lincoeff, n_quadterm, quadvar1, quadvar2, quadcoeff, sciplhs, sciprhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+      
+      SCIPfreeBufferArray(scip_, &linvar);
+      SCIPfreeBufferArray(scip_, &quadvar1);
+      SCIPfreeBufferArray(scip_, &quadvar2);
+      SCIPfreeBufferArray(scip_, &lincoeff);
+      SCIPfreeBufferArray(scip_, &quadcoeff);
+   }
+#endif
+   else
+   {
+      SCIPerrorMessage("xpl_addcon_term for degree > 2 not implemented\n");
+      return TRUE;
+   }
+
+   SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
+   
+   return FALSE;
+}
+#endif /* end of #ifndef ZIMPL_VERSION */
+
+/** method adds an variable; is called directly by ZIMPL */
+Var* xlp_addvar(
+   const char*           name,               /**< variable name */
+   VarClass              usevarclass,        /**< variable type */
+   const Bound*          lower,              /**< lower bound */
+   const Bound*          upper,              /**< upper bound */
+   const Numb*           priority,           /**< branching priority */
+   const Numb*           startval            /**< */
+   )
 {  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_Real lb;
@@ -286,7 +495,12 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
    return zplvar;
 }
 
-Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
+/** method adds SOS constraints */
+Sos* xlp_addsos(
+   const char*           name,               /**< constraint name */
+   SosType               type,               /**< SOS type */
+   const Numb*           priority            /**< */
+   )
 {  /*lint --e{715}*/
    SCIP_CONS* cons;
    SCIP_Bool initial;
@@ -311,8 +525,8 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
       dynamic = FALSE;
       removable = dynamic;
 
-      SCIP_CALL_ABORT( SCIPcreateConsSOS1(scip_, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-					  local, dynamic, removable, FALSE) );
+      SCIP_CALL_ABORT( SCIPcreateConsSOS1(scip_, &cons, name, 0, NULL, NULL,
+            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
 			      destroyed by SCIPreleaseCons() */
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
@@ -328,8 +542,8 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
       dynamic = FALSE;
       removable = dynamic;
 
-      SCIP_CALL_ABORT( SCIPcreateConsSOS2(scip_, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-					  local, dynamic, removable, FALSE) );
+      SCIP_CALL_ABORT( SCIPcreateConsSOS2(scip_, &cons, name, 0, NULL, NULL, 
+            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
 			      destroyed by SCIPreleaseCons() */
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
@@ -345,23 +559,46 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
    return zplsos;
 }
 
-/* this function should maybe get the type of the sos constraint, this
-   would simplify the code below. */
-void xlp_addtosos(Sos* sos, Var* var, const Numb* weight)
+/** adds a variable to a SOS constraint */
+void xlp_addtosos(
+   Sos*                  sos,                /**< SOS constraint */ 
+   Var*                  var,                /**< variable to add */
+   const Numb*           weight              /**< weight of the variable */
+   )
 {
+   /* this function should maybe get the type of the sos constraint, this
+      would simplify the code below. */
+   
    SCIP_CONS* scipcons;
    SCIP_VAR* scipvar;
-
+   
    scipcons = (SCIP_CONS*)sos;
    scipvar = (SCIP_VAR*)var;
-
+   
    if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(scipcons)), "SOS1") == 0 )
       SCIP_CALL_ABORT( SCIPaddVarSOS1(scip_, scipcons, scipvar, numb_todbl(weight)) );
    else
       SCIP_CALL_ABORT( SCIPaddVarSOS2(scip_, scipcons, scipvar, numb_todbl(weight)) );
 }
 
-VarClass xlp_getclass(const Var* var)
+Bool xlp_addsos_term(const char* name, SosType type, const Numb* priority, const Term* term)
+{
+   SCIPerrorMessage("xlp_addsos_term not implemented\n");
+   return TRUE;
+}
+
+/** retuns the variable name */
+const char* xlp_getvarname(
+   const Var*            var                 /**< variable */
+   )
+{
+   return SCIPvarGetName((SCIP_VAR*)var);
+}
+
+/** return variable type */
+VarClass xlp_getclass(
+   const Var*            var                 /**< variable */
+   )
 {
    SCIP_VAR* scipvar;
 
@@ -384,7 +621,10 @@ VarClass xlp_getclass(const Var* var)
    return VAR_CON;
 }
 
-Bound* xlp_getlower(const Var* var)
+/** returns lower bound */
+Bound* xlp_getlower(
+   const Var*            var                 /**< variable */
+   )
 {
    SCIP_VAR* scipvar;
    SCIP_Real lb;
@@ -409,7 +649,10 @@ Bound* xlp_getlower(const Var* var)
    return bound;
 }
 
-Bound* xlp_getupper(const Var* var)
+/** returns upper bound */
+Bound* xlp_getupper(
+   const Var*            var                 /**< variable */
+   )
 {
    SCIP_VAR* scipvar;
    SCIP_Real ub;
@@ -451,20 +694,11 @@ void xlp_setdir(Bool minimize)
    SCIP_CALL_ABORT( SCIPsetObjsense(scip_, objsense) );
 }
 
-void xlp_addtonzo(Var* var, Con* con, const Numb* numb)
-{
-   SCIP_CONS* scipcons;
-   SCIP_VAR* scipvar;
-   SCIP_Real scipval;
-
-   scipcons = (SCIP_CONS*)con;
-   scipvar = (SCIP_VAR*)var;
-   scipval = numb_todbl(numb);
-
-   SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, scipcons, scipvar, scipval) );
-}
-
-void xlp_addtocost(Var* var, const Numb* cost)
+/** changes objective coefficient of a variable */
+void xlp_addtocost(
+   Var*            var,                /**< variable */
+   const Numb*     cost                /**< objective coefficient */
+   )
 {
    SCIP_VAR* scipvar;
    SCIP_Real scipval;

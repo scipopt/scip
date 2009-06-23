@@ -131,7 +131,7 @@ plugins:
 - added interface to QSopt due to Daniel Espinoza
 - added reader for FlatZinc models (reader_fzn.{c,h})
 - added multi-commodity-flow cut separator
-
+- adjusted interface to ZIMPL (reader_zpl.{c,h} for ZIMPL version 2.10; this interface should also work with older ZIMPL versions
 
 SCIP version 1.1.0
 ===============
