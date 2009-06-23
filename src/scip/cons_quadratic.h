@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.1 2009/06/23 17:28:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.2 2009/06/23 22:37:59 bzfheinz Exp $"
 
 /**@file   cons_quadratic.h
  * @brief  constraint handler for quadratic constraints
@@ -26,16 +26,22 @@
 
 #include "scip/scip.h"
 
-/** creates and captures a knapsack constraint */
+/** creates the handler for quadratic constraints and includes it in SCIP */
+extern
+SCIP_RETCODE SCIPincludeConshdlrQuadratic(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** creates and captures a quadratic constraint */
 extern
 SCIP_RETCODE SCIPcreateConsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   n_linvars,          /**< number of linear terms */
+   int                   nlinvars,           /**< number of linear terms */
    SCIP_VAR**            linvars,            /**< variables in linear part */
    SCIP_Real*            lincoeff,           /**< coefficients of variables in linear part */
-   int                   n_quadterm,         /**< number of quadratic terms */
+   int                   nquadterm,          /**< number of quadratic terms */
    SCIP_VAR**            quadvars1,          /**< index of first variable in quadratic terms */
    SCIP_VAR**            quadvars2,          /**< index of second variable in quadratic terms */
    SCIP_Real*            quadcoeff,          /**< coefficients of quadratic terms */
