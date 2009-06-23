@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.40 2009/06/23 12:51:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.41 2009/06/23 17:28:01 bzfviger Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -36,7 +36,7 @@
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
 #ifdef WITH_QUAD
-#include "cons_quad_C.h"
+#include "scip/cons_quadratic.h"
 #endif
 #include "scip/pub_misc.h"
 
@@ -361,8 +361,8 @@ Bool xlp_addcon_term(
          }
       }
 
-      SCIP_CALL_ABORT( SCIPcreateConsQuadratic1(scip_, &cons, name, n_linvar, linvar, lincoeff, n_quadterm, quadvar1, quadvar2, quadcoeff, sciplhs, sciprhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+      SCIP_CALL_ABORT( SCIPcreateConsQuadratic(scip_, &cons, name, n_linvar, linvar, lincoeff, n_quadterm, quadvar1, quadvar2, quadcoeff, sciplhs, sciprhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
       
       SCIPfreeBufferArray(scip_, &linvar);
