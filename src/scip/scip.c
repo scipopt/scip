@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.507 2009/06/23 15:51:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.508 2009/06/24 12:06:13 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3730,7 +3730,7 @@ SCIP_RETCODE SCIPaddCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -3738,7 +3738,6 @@ SCIP_RETCODE SCIPaddCons(
       SCIP_CALL( SCIPprobAddCons(scip->origprob, scip->set, scip->stat, cons) );
       return SCIP_OKAY;
 
-   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
@@ -6508,7 +6507,7 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarLbGlobal", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgVarLbGlobal", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIPvarAdjustLb(var, scip->set, &newbound);
 
@@ -6524,7 +6523,6 @@ SCIP_RETCODE SCIPchgVarLbGlobal(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
       SCIP_CALL( SCIPvarChgLbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       return SCIP_OKAY;
@@ -6550,8 +6548,8 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
    SCIP_Real             newbound            /**< new value for bound */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPchgVarUbGlobal", FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
+   SCIP_CALL( checkStage(scip, "SCIPchgVarUbGlobal", FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
    SCIPvarAdjustUb(var, scip->set, &newbound);
 
    switch( scip->set->stage )
@@ -6566,7 +6564,6 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
       SCIP_CALL( SCIPvarChgUbGlobal(var, scip->mem->solvemem, scip->set, scip->stat, scip->lp,
             scip->branchcand, scip->eventqueue, newbound) );
       return SCIP_OKAY;
@@ -9030,7 +9027,7 @@ SCIP_RETCODE SCIPcreateCons(
    assert(name != NULL);
    assert(conshdlr != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcreateCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -9040,7 +9037,6 @@ SCIP_RETCODE SCIPcreateCons(
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
