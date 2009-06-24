@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.270 2009/04/29 14:16:54 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.271 2009/06/24 10:05:15 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2317,13 +2317,23 @@ void updateLoopStatus(
    /* check, if the path was cutoff */
    *cutoff = *cutoff || (tree->cutoffdepth <= depth);
 
-   /* check, if the focus node should be repropagated */
-   focusnode = SCIPtreeGetFocusNode(tree);
-   *propagateagain = *propagateagain || SCIPnodeIsPropagatedAgain(focusnode);
+   /* check if branching was already performed */
+   if( tree->nchildren == 0 )
+   {
+      /* check, if the focus node should be repropagated */
+      focusnode = SCIPtreeGetFocusNode(tree);
+      *propagateagain = *propagateagain || SCIPnodeIsPropagatedAgain(focusnode);
 
-   /* check, if one of the external relaxations should be solved again */
-   for( r = 0; r < set->nrelaxs && !(*solverelaxagain); ++r )
-      *solverelaxagain = !SCIPrelaxIsSolved(set->relaxs[r], stat);
+      /* check, if one of the external relaxations should be solved again */
+      for( r = 0; r < set->nrelaxs && !(*solverelaxagain); ++r )
+         *solverelaxagain = !SCIPrelaxIsSolved(set->relaxs[r], stat);
+   }
+   else
+   {
+      /* if branching was performed, avoid another node loop iteration */
+      *propagateagain = FALSE;
+      *solverelaxagain = FALSE;
+   }
 }
 
 /** solves the focus node */
