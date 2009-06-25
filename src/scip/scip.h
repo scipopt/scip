@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.343 2009/06/15 09:57:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.344 2009/06/25 11:23:41 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3091,6 +3091,7 @@ extern
 SCIP_RETCODE SCIPcopyCons(
    SCIP*                 scip,               /**< target SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
+   const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */

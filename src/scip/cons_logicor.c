@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.129 2009/06/15 09:57:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.130 2009/06/25 11:23:41 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2272,14 +2272,20 @@ static
 SCIP_DECL_CONSCOPY(consCopyLogicor)
 {  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
+   const char* consname;
    int nvars;
 
    /* get variables and coefficients of the source constraint */
    sourcevars = SCIPgetVarsLogicor(sourcescip, sourcecons);
    nvars = SCIPgetNVarsLogicor(sourcescip, sourcecons);
    
+   if( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+
    /* copy the logic using the linear constraint copy method */
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), nvars, sourcevars, NULL,
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
          1.0, SCIPinfinity(scip), varmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
 

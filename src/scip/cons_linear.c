@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.324 2009/06/15 13:13:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.325 2009/06/25 11:23:41 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9048,6 +9048,7 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
 {  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
    SCIP_Real* sourcecoefs;
+   const char* consname;
    int nvars;
 
    /* get variables and coefficients of the source constraint */
@@ -9055,7 +9056,12 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
    sourcecoefs = SCIPgetValsLinear(sourcescip, sourcecons); 
    nvars = SCIPgetNVarsLinear(sourcescip, sourcecons);
    
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), nvars, sourcevars, sourcecoefs,
+   if( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
          SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
 

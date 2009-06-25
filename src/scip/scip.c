@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.508 2009/06/24 12:06:13 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.509 2009/06/25 11:23:41 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9062,6 +9062,7 @@ SCIP_RETCODE SCIPcreateCons(
 SCIP_RETCODE SCIPcopyCons(
    SCIP*                 scip,               /**< target SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to store the created target constraint */
+   const char*           name,               /**< name of constraint, or NULL if the name of the source constraint should be used */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for this constraint */
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP_CONS*            sourcecons,         /**< source constraint of the source SCIP */
@@ -9086,7 +9087,7 @@ SCIP_RETCODE SCIPcopyCons(
    
    SCIP_CALL( checkStage(scip, "SCIPcopyCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
    
-   SCIP_CALL( SCIPconsCopy(cons, scip->set, conshdlr, sourcescip, sourcecons, varmap, 
+   SCIP_CALL( SCIPconsCopy(cons, scip->set, name, conshdlr, sourcescip, sourcecons, varmap, 
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
 
    return SCIP_OKAY;

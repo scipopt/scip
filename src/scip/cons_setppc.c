@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.137 2009/06/15 09:57:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.138 2009/06/25 11:23:41 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -3340,6 +3340,7 @@ static
 SCIP_DECL_CONSCOPY(consCopySetppc)
 {  /*lint --e{715}*/
    SCIP_VAR** sourcevars;
+   const char* consname;
    SCIP_Real lhs;
    SCIP_Real rhs;
    int nvars;
@@ -3371,8 +3372,13 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
       return SCIP_INVALIDDATA;
    }
 
+   if( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+   
    /* copy the logic using the linear constraint copy method */
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), nvars, sourcevars, NULL,
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
          lhs, rhs, varmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
 

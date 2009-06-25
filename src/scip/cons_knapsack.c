@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.171 2009/06/15 09:57:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.172 2009/06/25 11:23:41 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -4395,6 +4395,7 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
    SCIP_VAR** sourcevars;
    SCIP_Longint* weights;
    SCIP_Real* coefs;
+   const char* consname;
    int nvars;
    int v;
    
@@ -4407,8 +4408,13 @@ SCIP_DECL_CONSCOPY(consCopyKnapsack)
    for( v = 0; v < nvars; ++v )
       coefs[v] = (SCIP_Real) weights[v];
    
+   if( name != NULL )
+      consname = name;
+   else
+      consname = SCIPconsGetName(sourcecons);
+
    /* copy the logic using the linear constraint copy method */
-   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, SCIPconsGetName(sourcecons), nvars, sourcevars, coefs,
+   SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, coefs,
          -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(sourcescip, sourcecons), varmap,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
 
