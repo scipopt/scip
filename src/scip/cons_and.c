@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.109 2009/06/24 12:13:54 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.110 2009/06/26 07:51:21 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -444,6 +444,8 @@ SCIP_RETCODE consdataFreeRows(
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rows[r]) );
       }
       SCIPfreeBlockMemoryArray(scip, &consdata->rows, consdata->nrows);
+      
+      consdata->nrows = 0;
    }
 
    return SCIP_OKAY;
@@ -896,27 +898,39 @@ SCIP_RETCODE addRelaxation(
 
    char rowname[SCIP_MAXSTRLEN];
    
+   /* in the root LP we only add the weaker relaxation which contains of two rows:
+    *   - one additional row:             resvar - v1 - ... - vn >= 1-n
+    *   - aggregated row:               n*resvar - v1 - ... - vn <= 0.0
+    *
+    * during separation we separate the stronger relaxation whcih contains of n+1 row:
+    *   - one additional row:             resvar - v1 - ... - vn >= 1-n
+    *   - for each operator variable vi:  resvar - vi            <= 0
+    */
+   
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
    if( consdata->rows == NULL )
    {
+      /* create the n+1 row relaxation */
       SCIP_CALL( createRelaxation(scip, cons) );
    }
    
-   
+   /* create/add/releas the row aggregated row */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_operators", SCIPconsGetName(cons));
    SCIP_CALL( SCIPcreateEmptyRow(scip, &aggrrow, rowname, -SCIPinfinity(scip), 0.0,
          SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
    SCIP_CALL( SCIPaddVarToRow(scip, aggrrow, consdata->resvar, (SCIP_Real) consdata->nvars) );
    SCIP_CALL( SCIPaddVarsToRowSameCoef(scip, aggrrow, consdata->nvars, consdata->vars, -1.0) );
    SCIP_CALL( SCIPaddCut(scip, NULL, aggrrow, FALSE) );
-   
+   SCIP_CALL( SCIPreleaseRow(scip, &aggrrow) );
+
+   /* add additional row */
    if( !SCIProwIsInLP(consdata->rows[0]) )
    {
       SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE) );
    }
-
+   
    return SCIP_OKAY;
 }
 
