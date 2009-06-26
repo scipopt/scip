@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.16 2009/04/06 13:06:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.17 2009/06/26 18:42:37 bzfwinkm Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -327,6 +327,8 @@ void* BMSreallocMemory_call(
       addMemlistEntry(newptr, size, filename, line);
 #endif
 
+   //   fprintf(stderr, "mem: %p %d\n", newptr, (int)size);
+
    return newptr;
 }
 
@@ -392,7 +394,6 @@ void BMSfreeMemory_call(
       removeMemlistEntry(*ptr, filename, line);
 #endif
       free(*ptr);
-      *ptr = NULL;
    }
    else
    {

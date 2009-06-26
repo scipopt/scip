@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.6 2009/04/06 13:06:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.7 2009/06/26 18:42:37 bzfwinkm Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -38,14 +38,15 @@
  * detection.
  *************************************************************************************/
 
-#define BMSallocMemory(ptr)                   (*(void**)(ptr) = BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSallocMemoryArray(ptr,num)          (*(void**)(ptr) = BMSallocMemory_call( (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSallocMemorySize(ptr,size)          (*(void**)(ptr) = BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
+#define BMSallocMemory(ptr)                   (*(ptr) = (typeof(*(ptr))) BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocMemoryArray(ptr,num)          (*(ptr) = (typeof(*(ptr))) BMSallocMemory_call( (num)*sizeof(**(ptr)), \
+                                                __FILE__, __LINE__ ))
+#define BMSallocMemorySize(ptr,size)          (*(ptr) = (typeof(*(ptr))) BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
 #define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ )
 #define BMSallocMemoryArrayCPP(num,size)      BMSallocMemory_call( (size_t)((num)*(size)), __FILE__, __LINE__ )
-#define BMSreallocMemoryArray(ptr,num)        (*(void**)(ptr) = BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
+#define BMSreallocMemoryArray(ptr,num)        (*(ptr) = (typeof(*(ptr))) BMSreallocMemory_call( *(ptr), (num)*sizeof(**(ptr)), \
                                                 __FILE__, __LINE__ ))
-#define BMSreallocMemorySize(ptr,size)        (*(void**)(ptr) = BMSreallocMemory_call( *(ptr), (size_t)(size), \
+#define BMSreallocMemorySize(ptr,size)        (*(ptr) = (typeof(*(ptr))) BMSreallocMemory_call( *(ptr), (size_t)(size), \
                                                 __FILE__, __LINE__ ))
 #define BMSclearMemory(ptr)                   BMSclearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
 #define BMSclearMemoryArray(ptr, num)         BMSclearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
@@ -53,19 +54,19 @@
 #define BMScopyMemory(ptr, source)            BMScopyMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
 #define BMScopyMemoryArray(ptr, source, num)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
 #define BMScopyMemorySize(ptr, source, size)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
-#define BMSduplicateMemory(ptr, source)       (*(void**)(ptr) = BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), \
-                                                __FILE__, __LINE__ ))
+#define BMSduplicateMemory(ptr, source)       (*(ptr) = (typeof(*(ptr))) BMSduplicateMemory_call( (const void*)(source), \
+                                                sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemoryArray(ptr, source, num) \
-                                                (*(void**)(ptr) = BMSduplicateMemory_call( (const void*)(source), \
+                                                (*(ptr) = (typeof(*(ptr))) BMSduplicateMemory_call( (const void*)(source), \
                                                 (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemorySize(ptr, source, size) \
-                                                (*(void**)(ptr) = BMSduplicateMemory_call( (const void*)(source), (size_t)(size), \
-                                                __FILE__, __LINE__ ))
+                                                (*(ptr) = (typeof(*(ptr))) BMSduplicateMemory_call( (const void*)(source), \
+                                                (size_t)(size), __FILE__, __LINE__ ))
 #define BMSfreeMemory(ptr)                    { BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
-                                                  assert(*(ptr) == NULL); }
+                                                  *(ptr) = NULL; }
 #define BMSfreeMemoryNull(ptr)                { if( *(ptr) != NULL ) BMSfreeMemory( (ptr) ); }
 #define BMSfreeMemoryArray(ptr)               { BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ ); \
-                                                  assert(*(ptr) == NULL); }
+                                                  *(ptr) = NULL; }
 #define BMSfreeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) BMSfreeMemoryArray( (ptr) ); }
 
 #ifndef NDEBUG
@@ -174,10 +175,10 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 #define BMSdestroyChunkMemory(mem)            BMSdestroyChunkMemory_call( (mem), __FILE__, __LINE__ )
 #define BMSdestroyChunkMemoryNull(mem)        { if( *(mem) != NULL ) BMSdestroyChunkMemory( (mem) ); }
 
-#define BMSallocChunkMemory(mem,ptr)          (*(void**)(ptr) = BMSallocChunkMemory_call((mem), sizeof(**(ptr)), \
+#define BMSallocChunkMemory(mem,ptr)          (*(ptr) = (typeof(*(ptr))) BMSallocChunkMemory_call((mem), sizeof(**(ptr)), \
                                                 __FILE__, __LINE__))
 #define BMSduplicateChunkMemory(mem, ptr, source) \
-                                                (*(void**)(ptr) = BMSduplicateChunkMemory_call((mem), (const void*)(source), \
+                                                (*(ptr) = (typeof(*(ptr))) BMSduplicateChunkMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSfreeChunkMemory(mem,ptr)           { BMSfreeChunkMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
                                                   __FILE__, __LINE__ ); \
@@ -307,23 +308,23 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSdestroyBlockMemory(mem)            BMSdestroyBlockMemory_call( (mem), __FILE__, __LINE__ )
 #define BMSdestroyBlockMemoryNull(mem)        { if( *(mem) != NULL ) BMSdestroyBlockMemory( (mem) ); }
 
-#define BMSallocBlockMemory(mem,ptr)          (*(void**)(ptr) = BMSallocBlockMemory_call((mem), sizeof(**(ptr)), \
+#define BMSallocBlockMemory(mem,ptr)          (*(ptr) = (typeof(*(ptr))) BMSallocBlockMemory_call((mem), sizeof(**(ptr)), \
                                                 __FILE__, __LINE__))
-#define BMSallocBlockMemoryArray(mem,ptr,num) (*(void**)(ptr) = BMSallocBlockMemory_call((mem), (num)*sizeof(**(ptr)), \
+#define BMSallocBlockMemoryArray(mem,ptr,num) (*(ptr) = (typeof(*(ptr))) BMSallocBlockMemory_call((mem), (num)*sizeof(**(ptr)), \
                                                 __FILE__, __LINE__))
-#define BMSallocBlockMemorySize(mem,ptr,size) (*(void**)(ptr) = BMSallocBlockMemory_call((mem), (size_t)(size), \
+#define BMSallocBlockMemorySize(mem,ptr,size) (*(ptr) = (typeof(*(ptr))) BMSallocBlockMemory_call((mem), (size_t)(size), \
                                                 __FILE__, __LINE__))
 #define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) \
-                                                (*(void**)(ptr) = BMSreallocBlockMemory_call((mem), *(void**)(ptr), \
+                                                (*(ptr) = (typeof(*(ptr))) BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
                                                 (oldnum)*sizeof(**(ptr)), (newnum)*sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize) \
-                                                (*(void**)(ptr) = BMSreallocBlockMemory_call((mem), *(void**)(ptr), \
+                                                (*(ptr) = (typeof(*(ptr))) BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
                                                 (size_t)(oldsize), (size_t)(newsize), __FILE__, __LINE__))
 #define BMSduplicateBlockMemory(mem, ptr, source) \
-                                                (*(void**)(ptr) = BMSduplicateBlockMemory_call((mem), (const void*)(source), \
+                                                (*(ptr) = (typeof(*(ptr))) BMSduplicateBlockMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateBlockMemoryArray(mem, ptr, source, num) \
-                                                (*(void**)(ptr) = BMSduplicateBlockMemory_call( (mem), (const void*)(source), \
+                                                (*(ptr) = (typeof(*(ptr))) BMSduplicateBlockMemory_call( (mem), (const void*)(source), \
                                                 (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSfreeBlockMemory(mem,ptr)           { BMSfreeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), \
                                                   __FILE__, __LINE__ ); \
