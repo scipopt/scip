@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.32 2009/06/15 09:57:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.33 2009/06/26 11:02:48 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -312,7 +312,7 @@ SCIP_RETCODE checkParameters(
       if( value != 0 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-            "The presolver <dualfix> is not turned off! This might cause a wrong counting process.");
+            "The presolver <dualfix> is not turned off! This might cause a wrong counting process.\n");
       }
    }
 
@@ -336,13 +336,13 @@ SCIP_RETCODE checkParameters(
    if( value != 0 )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, 
-         "The parameter <presolving/maxrestarts> is not 0 (currently %d)! This might cause a wrong counting process.",
+         "The parameter <presolving/maxrestarts> is not 0 (currently %d)! This might cause a wrong counting process.\n",
          value);
    }
    
    if( !valid && SCIPgetVerbLevel(scip) == SCIP_VERBLEVEL_FULL )
    {
-      SCIPwarningMessage("The current parameter setting might cause a wrong counting process. Please use <emphasis/counter.set> settings.");
+      SCIPwarningMessage("The current parameter setting might cause a wrong counting process. Please use <emphasis/counter.set> settings.\n");
    }
 
    return SCIP_OKAY;

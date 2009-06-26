@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.325 2009/06/25 11:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.326 2009/06/26 11:02:48 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -8172,7 +8172,10 @@ SCIP_DECL_CONSEXITSOL(consExitsolLinear)
       if( ncutsadded > 0 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-            "(restart) converted %d cuts from the global cut pool into linear constraints\n\n", ncutsadded);
+            "(restart) converted %d cuts from the global cut pool into linear constraints\n", ncutsadded);
+         /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
+          *  correctly */
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
       }
    }
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.41 2009/06/23 17:28:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.42 2009/06/26 11:02:48 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -796,7 +796,13 @@ SCIP_DECL_READERREAD(readerReadZpl)
          SCIPerrorMessage("error getting the current path\n");
          return SCIP_PARSEERROR;
       }
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\nbase directory for ZIMPL parsing: <%s>\n\n", currentpath);
+      /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
+       *  correctly */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "base directory for ZIMPL parsing: <%s>\n", currentpath);
+      /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
+       *  correctly */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
    }
 
    /* set static variables (ZIMPL callbacks do not support user data) */
