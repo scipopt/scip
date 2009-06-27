@@ -127,6 +127,7 @@ fixed bugs:
 - fixed bug in all readers w.r.t. SCIPgetProbvarLinearSum()
 - fixed bug in reader_mps.c with respect to writing transformed problems
 - fixed bug in solve.c with nodes which are marked to be repropagated while enforcement
+- fixed compiler warning 'warning: dereferencing type-punned pointer will break strict-aliasing rules' which resuts in scip-crashes with gcc version 4.4.0
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
