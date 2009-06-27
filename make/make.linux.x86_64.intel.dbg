@@ -1,14 +1,14 @@
-#--- $Id: make.linux.x86_64.intel.dbg,v 1.1 2008/09/29 08:37:01 bzfviger Exp $
+#--- $Id: make.linux.x86_64.intel.dbg,v 1.2 2009/06/27 23:34:47 bzfwinkm Exp $
 CC		=	icc
-CXX		=	icc -Kc++
+CXX		=	icpc
 LINKCC		=	icc
-LINKCXX		=	icc -Kc++
+LINKCXX		=	icpc
 FLAGS		+=	# -DROUNDING_FE
-OFLAGS		+=	-O0 -g -mp -w1 -wd279,383,444,810,981  -fno-rtti #-Xc
+OFLAGS		+=	-O0 -g -fp-model extended -w1 -wd279,383,444,810,981  #-fno-rtti #-Xc
 CFLAGS		+=
 CXXFLAGS	+=	
 ARFLAGS		=	crs
-LDFLAGS		+=	-lm -lstdc++
+LDFLAGS		+=	-lm -lstdc++ -static-intel
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz
 GMP_FLAGS	=
