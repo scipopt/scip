@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.19 2009/06/15 16:07:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.20 2009/06/29 13:29:08 bzfgamra Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1492,12 +1492,14 @@ SCIP_RETCODE parseArray(
    assert(fzninput != NULL);
 
    isvararray = FALSE;
+   nelements = -1;
 
    SCIPdebugMessage("parse array expression\n");
    
    /* parse array dimension */
    parseArrayDimension(scip, fzninput, &nelements);
-   
+   assert(hasError(fzninput) || nelements > 0);   
+
    if( hasError(fzninput) )
       return SCIP_OKAY;
 
