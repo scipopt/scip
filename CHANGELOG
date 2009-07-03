@@ -128,6 +128,7 @@ fixed bugs:
 - fixed bug in reader_mps.c with respect to writing transformed problems
 - fixed bug in solve.c with nodes which are marked to be repropagated while enforcement
 - fixed compiler warning 'warning: dereferencing type-punned pointer will break strict-aliasing rules' which resuts in scip-crashes with gcc version 4.4.0
+- fixed bug in cons.c caused by not resetting conshdlr data after restart
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

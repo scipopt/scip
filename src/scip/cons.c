@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.184 2009/06/25 11:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.185 2009/07/03 15:35:57 bzfgamra Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -2097,6 +2097,29 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
+
+   /* reset conshdlr last presolved data in case of a restart */
+   conshdlr->lastpropdomchgcount = -1;
+   conshdlr->lastenfolpdomchgcount = -1;
+   conshdlr->lastenfopsdomchgcount = -1;
+   conshdlr->lastenfolpnode = -1;
+   conshdlr->lastenfopsnode = -1;
+   conshdlr->maxnactiveconss = conshdlr->nactiveconss;
+   conshdlr->startnactiveconss = 0;
+   conshdlr->lastsepalpcount = -1;
+   conshdlr->lastenfolplpcount = -1;
+   conshdlr->lastnusefulpropconss = 0;
+   conshdlr->lastnusefulsepaconss = 0;
+   conshdlr->lastnusefulenfoconss = 0;
+   conshdlr->lastnfixedvars = 0;
+   conshdlr->lastnaggrvars = 0;
+   conshdlr->lastnchgvartypes = 0;
+   conshdlr->lastnchgbds = 0;
+   conshdlr->lastnaddholes = 0;
+   conshdlr->lastndelconss = 0;
+   conshdlr->lastnupgdconss = 0;
+   conshdlr->lastnchgcoefs = 0;
+   conshdlr->lastnchgsides = 0;
 
    /* call presolving initialization method of constraint handler */
    if( conshdlr->consinitpre != NULL )
