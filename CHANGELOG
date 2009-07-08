@@ -43,6 +43,9 @@ interface:
 - added function SCIPparseVars() in scip.h; parses variable information (in cip format) out of a string
 - added function SCIPparseCons() in scip.h; parses constrint information (in cip format) out of a string
 - added function SCIPcopyCons() in scip.h; parses constrint information (in cip format) out of a string
+- new parameter "sol" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR(), and sepa_cmir.c: tryDelta() to separate a sol different from the LP solution
+- new parameter "sol" in scip.c: SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() and var.c: SCIPvarGetClosestVlb() and SCIPvarGetClosestVub()
+  to get closest variable bound w.r.t. sol different from LP solution
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -130,6 +133,7 @@ fixed bugs:
 - fixed compiler warning 'warning: dereferencing type-punned pointer will break strict-aliasing rules' which resuts in scip-crashes with gcc version 4.4.0
 - fixed bug in cons.c caused by not resetting conshdlr data after restart
 - fixed bug in case of reading an objective function in opb format with multiple occurrences of the same variable
+- fixed bug in sepa_cmir.c, sepa_mcf.c and sepa_flowcover.c: sol different to LP solution is now separated
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

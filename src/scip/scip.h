@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.344 2009/06/25 11:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.345 2009/07/08 15:36:29 bzfgamra Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2447,24 +2447,26 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
-/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable lower bound is available
+/** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution
+ *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available
  */
 extern
 SCIP_RETCODE SCIPgetVarClosestVlb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
    SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
    int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
    );
 
-/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable upper bound is available
+/** returns solution value and index of variable upper bound that is closest to the variable's value in the given primal solution;
+ *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available
  */
 extern
 SCIP_RETCODE SCIPgetVarClosestVub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
    SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable lower bound */
    int*                  closestvubidx       /**< pointer to store the index of the closest variable lower bound */
    );
@@ -3436,6 +3438,12 @@ SCIP_RETCODE SCIPconstructLP(
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
+/** makes sure that the LP of the current node is flushed */
+extern
+SCIP_RETCODE SCIPflushLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets solution status of current LP */
 extern
 SCIP_LPSOLSTAT SCIPgetLPSolstat(
@@ -3618,6 +3626,7 @@ SCIP_RETCODE SCIPsumLPRows(
 extern
 SCIP_RETCODE SCIPcalcMIR(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */

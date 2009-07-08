@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.250 2009/06/19 14:54:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.251 2009/07/08 15:36:29 bzfgamra Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/message.h"
 #include "scip/set.h"
+#include "scip/sol.h"
 #include "scip/stat.h"
 #include "scip/history.h"
 #include "scip/event.h"
@@ -8945,11 +8946,13 @@ SCIP_Real SCIPvarGetAvgSol(
    }
 }
 
-/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable lower bound is available
+/** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution
+ *  or current LP solution if no primal solution is given; returns an index of -1 if no variable lower bound is available
  */
 void SCIPvarGetClosestVlb(
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
    int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
@@ -8978,7 +8981,7 @@ void SCIPvarGetClosestVlb(
       vlbconsts = SCIPvarGetVlbConstants(var);
       
       /* check for cached values */
-      if( var->closestvblpcount == stat->lpcount && var->closestvlbidx != -1 )
+      if( var->closestvblpcount == stat->lpcount && var->closestvlbidx != -1 && sol == NULL)
       {
          i = var->closestvlbidx;
          assert(0 <= i && i < nvlbs);
@@ -8995,7 +8998,7 @@ void SCIPvarGetClosestVlb(
             {
                SCIP_Real vlbsol;
                
-               vlbsol = vlbcoefs[i] * SCIPvarGetLPSol(vlbvars[i]) + vlbconsts[i];
+               vlbsol = vlbcoefs[i] * (sol == NULL ? SCIPvarGetLPSol(vlbvars[i]) : SCIPsolGetVal(sol, set, stat, vlbvars[i])) + vlbconsts[i];
                if( vlbsol > *closestvlb )
                {
                   *closestvlb = vlbsol;
@@ -9004,20 +9007,25 @@ void SCIPvarGetClosestVlb(
             }
          }
 
-         /* update cached value */
-         if( var->closestvblpcount != stat->lpcount )
-            var->closestvubidx = -1;
-         var->closestvlbidx = *closestvlbidx;
-         var->closestvblpcount = stat->lpcount;
+         if ( sol == NULL )
+         {
+            /* update cached value */
+            if( var->closestvblpcount != stat->lpcount )
+               var->closestvubidx = -1;
+            var->closestvlbidx = *closestvlbidx;
+            var->closestvblpcount = stat->lpcount;
+         }
       }
    }
 }
 
-/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable upper bound is available
+/** returns solution value and index of variable upper bound that is closest to the variable's value in the given primal solution;
+ *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available
  */
 void SCIPvarGetClosestVub(
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable upper bound */
    int*                  closestvubidx       /**< pointer to store the index of the closest variable upper bound */
@@ -9044,7 +9052,7 @@ void SCIPvarGetClosestVub(
       vubconsts = SCIPvarGetVubConstants(var);
       
       /* check for cached values */
-      if( var->closestvblpcount == stat->lpcount && var->closestvubidx != -1 )
+      if( var->closestvblpcount == stat->lpcount && var->closestvubidx != -1 && sol == NULL)
       {
          i = var->closestvubidx;
          assert(0 <= i && i < nvubs);
@@ -9061,7 +9069,7 @@ void SCIPvarGetClosestVub(
             {
                SCIP_Real vubsol;
                
-               vubsol = vubcoefs[i] * SCIPvarGetLPSol(vubvars[i]) + vubconsts[i];
+               vubsol = vubcoefs[i] * (sol == NULL ? SCIPvarGetLPSol(vubvars[i]) : SCIPsolGetVal(sol, set, stat, vubvars[i])) + vubconsts[i];
                if( vubsol < *closestvub )
                {
                   *closestvub = vubsol;
@@ -9070,11 +9078,14 @@ void SCIPvarGetClosestVub(
             }
          }
 
-         /* update cached value */
-         if( var->closestvblpcount != stat->lpcount )
-            var->closestvlbidx = -1;
-         var->closestvubidx = *closestvubidx;
-         var->closestvblpcount = stat->lpcount;
+         if ( sol == NULL )
+         {
+            /* update cached value */
+            if( var->closestvblpcount != stat->lpcount )
+               var->closestvlbidx = -1;
+            var->closestvubidx = *closestvubidx;
+            var->closestvblpcount = stat->lpcount;
+         }
       }
    }
 }

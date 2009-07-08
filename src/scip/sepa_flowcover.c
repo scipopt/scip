@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.22 2009/04/06 13:07:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.23 2009/07/08 15:36:29 bzfgamra Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -1140,7 +1140,7 @@ void buildFlowCover(
    /* get flowcover status for each item */
    for( j = 0; j < nsolitems; j++ )
    {
-      /* j in N1 with z°_j = 1 => j in N1\C1 */
+      /* j in N1 with zÂ°_j = 1 => j in N1\C1 */
       if( coefs[solitems[j]] == 1 )
       {
          flowcoverstatus[solitems[j]] = -1;
@@ -1157,7 +1157,7 @@ void buildFlowCover(
    }
    for( j = 0; j < nnonsolitems; j++ )
    {
-      /* j in N1 with z°_j = 0 => j in C1 */
+      /* j in N1 with zÂ°_j = 0 => j in C1 */
       if( coefs[nonsolitems[j]] == 1 )
       {
          flowcoverstatus[nonsolitems[j]] = 1;
@@ -1338,9 +1338,9 @@ SCIP_RETCODE getFlowCover(
     * 1. to a knapsack problem in maximization form, such that all variables in the knapsack constraint have 
     *    positive weights and the constraint is an "<" constraint, by complementing all variables in N1
     *     
-    *    (KP^SNF_rat)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
-    *                      sum_{j in N1}          u_j z°_j + sum_{j in N2} u_j  z_j < - b + sum_{j in N1} u_j  
-    *                                                 z°_j in {0,1} for all j in N1 
+    *    (KP^SNF_rat)  max sum_{j in N1} ( 1 - x*_j ) zÂ°_j + sum_{j in N2} x*_j z_j
+    *                      sum_{j in N1}          u_j zÂ°_j + sum_{j in N2} u_j  z_j < - b + sum_{j in N1} u_j  
+    *                                                 zÂ°_j in {0,1} for all j in N1 
     *                                                  z_j in {0,1} for all j in N2, 
     *    and solve it approximately under consideration of the fixing, 
     * or 
@@ -1348,9 +1348,9 @@ SCIP_RETCODE getFlowCover(
     *    positive integer weights and the constraint is an "<=" constraint, by complementing all variables in N1
     *    and multilying the constraint by a suitable scalar C
     *
-    *    (KP^SNF_int)  max sum_{j in N1} ( 1 - x*_j ) z°_j + sum_{j in N2} x*_j z_j
-    *                      sum_{j in N1}        C u_j z°_j + sum_{j in N2} C u_j  z_j <= c 
-    *                                                   z°_j in {0,1} for all j in N1 
+    *    (KP^SNF_int)  max sum_{j in N1} ( 1 - x*_j ) zÂ°_j + sum_{j in N2} x*_j z_j
+    *                      sum_{j in N1}        C u_j zÂ°_j + sum_{j in N2} C u_j  z_j <= c 
+    *                                                   zÂ°_j in {0,1} for all j in N1 
     *                                                    z_j in {0,1} for all j in N2, 
     *    where 
     *      c = floor[ C (- b + sum_{j in N1} u_j ) ]      if frac[ C (- b + sum_{j in N1} u_j ) ] > 0
@@ -2182,7 +2182,7 @@ SCIP_RETCODE cutGenerationHeuristic(
             transvarcoefs, transvarflowcoverstatustmp, ntransvars, boundsforsubst, boundtypesforsubst ) );
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and delta */
-      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
+      SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivdelta, NULL, NULL, cutcoefs, 
             &cutrhs, &cutact, &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
@@ -2227,7 +2227,7 @@ SCIP_RETCODE cutGenerationHeuristic(
             transvarcoefs, transvarflowcoverstatus, ntransvars, boundsforsubst, boundtypesforsubst ) );
       
       /* generate c-MIRFCI for flow cover (C1,C2), L1 subset N1\C1 and L2 subset N2\C2 and bestdelta */
-      SCIP_CALL( SCIPcalcMIR(scip, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
+      SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, TRUE, ALLOWLOCAL, FIXINTEGRALRHS, boundsforsubst, boundtypesforsubst,
             (int) MAXAGGRLEN(nvars), 1.0, MINFRAC, MAXFRAC, rowweights, scalar * onedivbestdelta, NULL, NULL, cutcoefs, 
             &cutrhs, &cutact, &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);

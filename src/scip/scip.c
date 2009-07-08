@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.510 2009/06/26 11:02:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.511 2009/07/08 15:36:28 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7381,36 +7381,38 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    return SCIP_OKAY;
 }
 
-/** returns LP solution value and index of variable lower bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable lower bound is available
+/** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution
+ *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available
  */
 SCIP_RETCODE SCIPgetVarClosestVlb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
    SCIP_Real*            closestvlb,         /**< pointer to store the value of the closest variable lower bound */
    int*                  closestvlbidx       /**< pointer to store the index of the closest variable lower bound */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetVarClosestVlb", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPvarGetClosestVlb(var, scip->stat, closestvlb, closestvlbidx);
+   SCIPvarGetClosestVlb(var, sol, scip->set, scip->stat, closestvlb, closestvlbidx);
 
    return SCIP_OKAY;
 }
 
-/** returns LP solution value and index of variable upper bound that is closest to variable's current LP solution value;
- *  returns an index of -1 if no variable upper bound is available
+/** returns solution value and index of variable upper bound that is closest to the variable's value in the given primal solution;
+ *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available
  */
 SCIP_RETCODE SCIPgetVarClosestVub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< active problem variable */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for LP solution */
    SCIP_Real*            closestvub,         /**< pointer to store the value of the closest variable lower bound */
    int*                  closestvubidx       /**< pointer to store the index of the closest variable lower bound */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPgetVarClosestVub", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPvarGetClosestVub(var, scip->stat, closestvub, closestvubidx);
+   SCIPvarGetClosestVub(var, sol, scip->set, scip->stat, closestvub, closestvubidx);
 
    return SCIP_OKAY;
 }
@@ -9668,6 +9670,18 @@ SCIP_RETCODE SCIPconstructLP(
    return SCIP_OKAY;
 }
 
+/** makes sure that the LP of the current node is flushed */
+SCIP_RETCODE SCIPflushLP(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPflushLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPlpFlush(scip->lp, scip->mem->solvemem, scip->set) );
+
+   return SCIP_OKAY;
+}
+
 /** gets solution status of current LP */
 SCIP_LPSOLSTAT SCIPgetLPSolstat(
    SCIP*                 scip                /**< SCIP data structure */
@@ -10036,6 +10050,7 @@ SCIP_RETCODE SCIPsumLPRows(
  */
 SCIP_RETCODE SCIPcalcMIR(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
@@ -10062,7 +10077,7 @@ SCIP_RETCODE SCIPcalcMIR(
 {
    SCIP_CALL( checkStage(scip, "SCIPcalcMIR", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob,
+   SCIP_CALL( SCIPlpCalcMIR(scip->lp, scip->set, scip->stat, scip->transprob, sol,
          boundswitch, usevbds, allowlocal, fixintegralrhs, boundsfortrans, boundtypesfortrans, maxmksetcoefs, 
          maxweightrange, minfrac, maxfrac, weights, scale, mksetcoefs, mksetcoefsvalid, mircoef, mirrhs, cutactivity, 
          success, cutislocal) );
