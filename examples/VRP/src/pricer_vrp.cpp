@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.4 2009/03/26 19:20:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: pricer_vrp.cpp,v 1.5 2009/07/09 16:33:45 bzfpfets Exp $"
 
 #include "pricer_vrp.h"
 #include "pqueue.h"
@@ -244,13 +244,14 @@ add_tour_variable
 {
    SCIP_VAR* var;
    char      var_name[255];
+   char      tmp_name[255];
    
    // create meaningful variable name
    SCIPsnprintf(var_name, 255, "T" );
-   for ( list<int>::const_iterator it = tour.begin(); 
-         it != tour.end(); 
-         ++it ) {
-      SCIPsnprintf(var_name, 255, "%s_%d", var_name, *it );
+   for ( list<int>::const_iterator it = tour.begin(); it != tour.end(); ++it ) 
+   {
+      strncpy(tmp_name, var_name, 255);
+      SCIPsnprintf(var_name, 255, "%s_%d", tmp_name, *it );
    }
    
 #if ( SCIP_DEBUG >= 1 )
