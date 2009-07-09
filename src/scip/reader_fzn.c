@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.20 2009/06/29 13:29:08 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.21 2009/07/09 12:34:22 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1731,7 +1731,7 @@ SCIP_RETCODE parseVariableArrayAssignment(
 
          if( constant != NULL )
          {
-            assert(constant->type = FZN_FLOAT);
+            assert(constant->type == FZN_FLOAT);
             value = constant->value;
          } 
          else if(!isValue(elements[v], &value) )
