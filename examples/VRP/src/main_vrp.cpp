@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: main_vrp.cpp,v 1.4 2008/09/29 19:49:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: main_vrp.cpp,v 1.5 2009/07/10 14:17:55 bzfpfets Exp $"
 
 /**@file   
  * @brief  main file for VRP pricer example
@@ -434,8 +434,10 @@ int main( int argc, char** argv )
    SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, VRP_PRICER_NAME)) );
 
 
-   //SCIP_CALL( SCIPprintOrigProblem(scip, 0) );
+   // SCIP_CALL( SCIPprintOrigProblem(scip, NULL, NULL, FALSE) );
    
+   /* turn on LP output */
+   // SCIP_CALL( SCIPsetBoolParam(scip, "display/lpinfo", TRUE) );
 
    /*************
        Solve:
