@@ -134,6 +134,7 @@ fixed bugs:
 - fixed bug in cons.c caused by not resetting conshdlr data after restart
 - fixed bug in case of reading an objective function in opb format with multiple occurrences of the same variable
 - fixed bug in sepa_cmir.c, sepa_mcf.c and sepa_flowcover.c: sol different to LP solution is now separated
+- fixed bug in case of reading an objective function in lp format with multiple occurrences of the same variable
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

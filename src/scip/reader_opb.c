@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.34 2009/07/06 10:13:08 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.35 2009/07/10 12:59:40 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -732,9 +732,6 @@ SCIP_RETCODE getVariable(
    char* name;
 
    CONSANDDATA* newdata;
-   /*   SCIP_VAR** vars;
-   int nvars;
-   */
    int svars;
 
    assert(var != NULL);
@@ -779,7 +776,7 @@ SCIP_RETCODE getVariable(
       if( newdata->nvars == svars )
       {
          svars *= 2;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &(newdata->vars), svars) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(newdata->vars), svars) );
       }
       
       newdata->vars[newdata->nvars] = *var;
@@ -1311,7 +1308,7 @@ SCIP_RETCODE readOPBFile(
 
    for( i = opbinput->nconsanddata - 1; i >= 0; --i )
    {
-     SCIPfreeMemoryArray(scip, &((opbinput->consanddata)[i]->vars) );
+      SCIPfreeMemoryArray(scip, &((opbinput->consanddata)[i]->vars) );
       SCIPfreeBlockMemory(scip, &(opbinput->consanddata)[i] );
    }
    /* free dynamically allocated memory */

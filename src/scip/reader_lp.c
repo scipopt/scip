@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.76 2009/06/12 12:19:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.77 2009/07/10 12:59:40 bzfwinkm Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -938,7 +938,7 @@ SCIP_RETCODE readObjective(
       /* set the objective values */
       for( i = 0; i < ncoefs; ++i )
       {
-         SCIP_CALL( SCIPchgVarObj(scip, vars[i], coefs[i]) );
+         SCIP_CALL( SCIPchgVarObj(scip, vars[i], SCIPvarGetObj(vars[i]) + coefs[i]) );
       }
    }
 
