@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlfeaspump.c,v 1.2 2009/07/10 08:33:10 bzfbelot Exp $"
+#pragma ident "@(#) $Id: heur_nlfeaspump.c,v 1.3 2009/07/10 08:37:57 bzfbelot Exp $"
 
 /**@file   heur_nlfeaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -36,9 +36,9 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 
-#include "nlFeasPump/solution_pool.h"
-#include "nlFeasPump/minlp_problem.h"
-#include "nlFeasPump/minlp_cutgenerator.h"
+//#include "nlFeasPump/solution_pool.h"
+//#include "nlFeasPump/minlp_problem.h"
+//#include "nlFeasPump/minlp_cutgenerator.h"
 
 
 /*
