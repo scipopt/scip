@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlfeaspump.c,v 1.1 2009/07/06 10:32:00 bzfbelot Exp $"
+#pragma ident "@(#) $Id: heur_nlfeaspump.c,v 1.2 2009/07/10 08:33:10 bzfbelot Exp $"
 
 /**@file   heur_nlfeaspump.c
  * @ingroup PRIMALHEURISTICS
@@ -36,7 +36,9 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 
-
+#include "nlFeasPump/solution_pool.h"
+#include "nlFeasPump/minlp_problem.h"
+#include "nlFeasPump/minlp_cutgenerator.h"
 
 
 /*
@@ -48,6 +50,9 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+  /*solution_pool *pool_;
+  CouenneProblem *problem_;
+  CouenneCutGenerator *cutgen_;  */
 };
 
 
@@ -69,88 +74,99 @@ struct SCIP_HeurData
 /* TODO: Implement all necessary primal heuristic methods. The methods with an #if 0 ... #else #define ... are optional */
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
-#if 0
+#if 1
 static
-SCIP_DECL_HEURFREE(heurFreeXxx)
+SCIP_DECL_HEURFREE(heurFreeNlFeasPump)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+  /*SCIPerrorMessage("method of the MINLP feasibility pump not implemented yet\n");
+    SCIPABORT();*/ /*lint --e{527}*/
 
-   return SCIP_OKAY;
+  printf ("Destroy pools, CouenneProblem, NL problem, LP problem\n");
+
+  return SCIP_OKAY;
 }
 #else
-#define heurFreeXxx NULL
+#define heurFreeNlFeasPump NULL
 #endif
 
 
 /** initialization method of primal heuristic (called after problem was transformed) */
-#if 0
+#if 1
 static
-SCIP_DECL_HEURINIT(heurInitXxx)
+SCIP_DECL_HEURINIT(heurInitNlFeasPump)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+  /*SCIPerrorMessage("method of the MINLP feasibility pump not implemented yet\n");*/
+  /*SCIPABORT();*/ /*lint --e{527}*/
 
-   return SCIP_OKAY;
+  printf ("preprocess problem (FBBT)\n");
+  printf ("generate initial convexification Ax <= b\n");
+
+  return SCIP_OKAY;
 }
 #else
-#define heurInitXxx NULL
+#define heurInitNlFeasPump NULL
 #endif
 
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 #if 0
 static
-SCIP_DECL_HEUREXIT(heurExitXxx)
+SCIP_DECL_HEUREXIT(heurExitNlFeasPump)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+  /*SCIPerrorMessage("method of the MINLP feasibility pump not implemented yet\n");*/
+  /*SCIPABORT();*/ /*lint --e{527}*/
 
-   return SCIP_OKAY;
+  return SCIP_OKAY;
 }
 #else
-#define heurExitXxx NULL
+#define heurExitNlFeasPump NULL
 #endif
 
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#if 0
+#if 1
 static
-SCIP_DECL_HEURINITSOL(heurInitsolXxx)
+SCIP_DECL_HEURINITSOL(heurInitsolNlFeasPump)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+  /*SCIPerrorMessage("method of the MINLP feasibility pump not implemented yet\n");*/
+  /*SCIPABORT();*/ /*lint --e{527}*/
 
-   return SCIP_OKAY;
+  printf ("Generate nl_x [0]\n");
+
+  return SCIP_OKAY;
 }
 #else
-#define heurInitsolXxx NULL
+#define heurInitsolNlFeasPump NULL
 #endif
 
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 #if 0
 static
-SCIP_DECL_HEUREXITSOL(heurExitsolXxx)
+SCIP_DECL_HEUREXITSOL(heurExitsolNlFeasPump)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+  /*SCIPerrorMessage("method of the MINLP feasibility pump not implemented yet\n");
+    SCIPABORT();*/ /*lint --e{527}*/
 
-   return SCIP_OKAY;
+  return SCIP_OKAY;
 }
 #else
-#define heurExitsolXxx NULL
+#define heurExitsolNlFeasPump NULL
 #endif
 
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecXxx)
+SCIP_DECL_HEUREXEC(heurExecNlFeasPump)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+  /*SCIPerrorMessage("method of the MINLP feasibility pump not implemented yet\n");
+    SCIPABORT();*/ /*lint --e{527}*/
 
-   return SCIP_OKAY;
+  printf ("Call heuristic\n");
+
+  /*NlFeasPumpWrapper (data);*/
+
+  return SCIP_OKAY;
 }
 
 
@@ -161,25 +177,29 @@ SCIP_DECL_HEUREXEC(heurExecXxx)
  * primal heuristic specific interface methods
  */
 
-/** creates the xxx primal heuristic and includes it in SCIP */
-SCIP_RETCODE SCIPincludeHeurXxx(
+/** creates the MINLP feasibility pump and includes it in SCIP */
+SCIP_RETCODE SCIPincludeHeurNlFeasPump(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_HEURDATA* heurdata;
 
-   /* create xxx primal heuristic data */
+   /* create MINLP feasibility pump data */
    heurdata = NULL;
    /* TODO: (optional) create primal heuristic specific data here */
 
-   /* include primal heuristic */
-   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING,
-         heurFreeXxx, heurInitXxx, heurExitXxx, 
-         heurInitsolXxx, heurExitsolXxx, heurExecXxx,
-         heurdata) );
+   SCIP_HEURDATA *data = (SCIP_HEURDATA *) malloc (sizeof (SCIP_HEURDATA));
+   /*fillNlFeasPumpData (data);*/
 
-   /* add xxx primal heuristic parameters */
+   /* include primal heuristic */
+   SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, 
+			      HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
+			      HEUR_MAXDEPTH, HEUR_TIMING,
+			      heurFreeNlFeasPump, heurInitNlFeasPump, heurExitNlFeasPump, 
+			      heurInitsolNlFeasPump, heurExitsolNlFeasPump, heurExecNlFeasPump,
+			      heurdata) );
+
+   /* add MINLP feasibility pump parameters */
    /* TODO: (optional) add primal heuristic specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
