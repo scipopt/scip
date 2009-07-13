@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.2 2009/06/19 07:53:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.3 2009/07/13 12:48:49 bzfwolte Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -39,6 +39,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 #endif
       SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
       SCIP_CALL( SCIPincludeConshdlrIntegral(scip) );
+      SCIP_CALL( SCIPincludeConshdlrExactlp(scip) ); 
 
       SCIP_CALL( SCIPincludeReaderCip(scip) );
       SCIP_CALL( SCIPincludeReaderCnf(scip) );

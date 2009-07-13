@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.2 2009/06/19 07:53:40 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.3 2009/07/13 12:48:48 bzfwolte Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -38,14 +38,15 @@
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
-
+#define UNSAFECHECK               TRUE  /**< should feasibility test be performed unsafe eventhough we want to solve the problem exactly? 
+                                         *   todo: should be coded in a better way ??????????? */
 
 
 /*
@@ -153,7 +154,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-         if( !SCIPisExactSolve(scip) )
+         if( !SCIPisExactSolve(scip) || UNSAFECHECK )
          {
             if( !SCIPisFeasIntegral(scip, solval) )
             {

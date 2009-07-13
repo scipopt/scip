@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.85.2.2 2009/06/19 07:53:47 bzfwolte Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.85.2.3 2009/07/13 12:48:48 bzfwolte Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -225,6 +225,7 @@ SCIP_RETCODE primalSetUpperbound(
 
    primal->upperbound = upperbound;
    
+   /* todo: use something similar for exact case */
    /* if objective value is always integral, the cutoff bound can be reduced to nearly the previous integer number */
    if( !set->misc_exactsolve && SCIPprobIsObjIntegral(prob) && !SCIPsetIsInfinity(set, upperbound) )
    {

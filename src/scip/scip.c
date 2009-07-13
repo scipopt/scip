@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.2 2009/06/19 07:53:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.3 2009/07/13 12:48:48 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -716,6 +716,19 @@ SCIP_Bool SCIPisExactSolve(
    assert(scip->set != NULL);
 
    return (scip->set->misc_exactsolve);
+}
+
+/** returns whether the floating point problem should be a relaxation of the original problem (instead of an approximation);
+ *  only relevant for solving the problem provably correct 
+ */
+SCIP_Bool SCIPuseFPRelaxation(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return (scip->set->misc_usefprelax);
 }
 
 /** returns whether the user pressed CTRL-C to interrupt the solving process */
@@ -4920,45 +4933,48 @@ SCIP_RETCODE initSolve(
    {
       if( scip->set->misc_exactsolve )
       {
-         SCIP_VAR* var;
-         SCIP_Real obj;
-         SCIP_Real bd;
-         SCIP_Real objbound;
-         SCIP_INTERVAL objint;
-         SCIP_INTERVAL bdint;
-         SCIP_INTERVAL objboundint;
-         SCIP_INTERVAL prod;
-         int v;
-
-         objbound = 0.0;
-         SCIPintervalSet(&objboundint, objbound);
-         assert(objbound == SCIPintervalGetSup(objboundint));
-         for( v = 0; v < scip->transprob->nvars && !SCIPsetIsInfinity(scip->set, objbound); ++v )
+         if( scip->set->misc_usefprelax )
          {
-            var = scip->transprob->vars[v];
-            obj = SCIPvarGetObj(var);
+            SCIP_VAR* var;
+            SCIP_Real obj;
+            SCIP_Real bd;
+            SCIP_Real objbound;
+            SCIP_INTERVAL objint;
+            SCIP_INTERVAL bdint;
+            SCIP_INTERVAL objboundint;
+            SCIP_INTERVAL prod;
+            int v;
             
-            if( obj != 0.0 )
+            objbound = 0.0;
+            SCIPintervalSet(&objboundint, objbound);
+            assert(objbound == SCIPintervalGetSup(objboundint));
+            for( v = 0; v < scip->transprob->nvars && !SCIPsetIsInfinity(scip->set, objbound); ++v )
             {
-               bd = SCIPvarGetWorstBound(var);
-               if( SCIPsetIsInfinity(scip->set, REALABS(bd)) )
-                  objbound = SCIPsetInfinity(scip->set);
-               else
+               var = scip->transprob->vars[v];
+               obj = SCIPvarGetObj(var);
+               
+               if( obj != 0.0 )
                {
-                  SCIPintervalSet(&bdint, bd);
-                  SCIPintervalSet(&objint, obj);
-                  SCIPintervalMul(&prod, bdint, objint); 
-                  SCIPintervalAdd(&objboundint, objboundint, prod);
-                  objbound = SCIPintervalGetSup(objboundint);
-               }
-            }            
-         }
-
-         /* update primal bound (add 1.0 to primal bound, such that solution with worst bound may be found) */
-         if( !SCIPsetIsInfinity(scip->set, objbound) && objbound + 1.0 < scip->primal->cutoffbound )
-         {
-            SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
-                  scip->lp, objbound + 1.0) );
+                  bd = SCIPvarGetWorstBound(var);
+                  if( SCIPsetIsInfinity(scip->set, REALABS(bd)) )
+                     objbound = SCIPsetInfinity(scip->set);
+                  else
+                  {
+                     SCIPintervalSet(&bdint, bd);
+                     SCIPintervalSet(&objint, obj);
+                     SCIPintervalMul(&prod, bdint, objint); 
+                     SCIPintervalAdd(&objboundint, objboundint, prod);
+                     objbound = SCIPintervalGetSup(objboundint);
+                  }
+               }            
+            }
+            
+            /* update primal bound (add 1.0 to primal bound, such that solution with worst bound may be found) */
+            if( !SCIPsetIsInfinity(scip->set, objbound) && objbound + 1.0 < scip->primal->cutoffbound )
+            {
+               SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->tree,
+                     scip->lp, objbound + 1.0) );
+            }
          }
       }
       else
@@ -11104,7 +11120,17 @@ SCIP_RETCODE SCIPendDive(
    /* the lower bound may have changed slightly due to LP resolve in SCIPlpEndDive() */
    if( !scip->lp->resolvelperror && scip->tree->focusnode != NULL )
    {
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, scip->set, scip->stat, scip->lp) );
+      char lowerboundtype;
+
+      if( scip->set->misc_exactsolve )
+         if( scip->set->misc_usefprelax )
+            lowerboundtype = 's';
+         else 
+            lowerboundtype = 'i';
+      else
+         lowerboundtype = 'u';
+      
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(scip->tree->focusnode, lowerboundtype, scip->set, scip->stat, scip->lp) );
    }
    /* reset the probably changed LP's cutoff bound */
    SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->primal->cutoffbound) );

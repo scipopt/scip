@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.95.2.1 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.95.2.2 2009/07/13 12:48:49 bzfwolte Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -225,6 +225,8 @@ void SCIPnodeUpdateLowerbound(
 extern
 SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
+   char                  lowerboundtype,     /**< type of lower bound to be generated from LP 
+                                              *   ('i'gnore bound, 's'afe bound, 'u'nsafe bound) */ 
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< LP data */

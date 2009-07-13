@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.201.2.2 2009/06/19 07:53:53 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.201.2.3 2009/07/13 12:48:49 bzfwolte Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1689,7 +1689,12 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       
       /* update the child's lower bound */
       if( set->misc_exactsolve )
-         newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
+      {
+         if( set->misc_usefprelax )
+            newpseudoobjval = SCIPlpGetModifiedProvedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
+         else
+            newpseudoobjval = -SCIPsetInfinity(set);
+      }
       else
          newpseudoobjval = SCIPlpGetModifiedPseudoObjval(lp, set, var, oldbound, newbound, boundtype);
       SCIPnodeUpdateLowerbound(node, stat, newpseudoobjval);
@@ -1876,6 +1881,8 @@ void SCIPnodeUpdateLowerbound(
 /** updates lower bound of node using lower bound of LP */
 SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
    SCIP_NODE*            node,               /**< node to set lower bound for */
+   char                  lowerboundtype,     /**< type of lower bound to be generated from LP 
+                                              *   ('i'gnore bound, 's'afe bound, 'u'nsafe bound) */ 
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp                  /**< LP data */
@@ -1885,8 +1892,15 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
 
    assert(set != NULL);
 
-   if( set->misc_exactsolve )
+   if ( !(lp->isrelax) )
+      return SCIP_OKAY;
+
+   switch( lowerboundtype )
    {
+   case 'i':
+      lpobjval = -SCIPsetInfinity(set); /* lower bound of node does not change */
+      break;
+   case 's':
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
       {
          SCIP_Bool proved;
@@ -1903,17 +1917,20 @@ SCIP_RETCODE SCIPnodeUpdateLowerboundLP(
       {
          SCIP_CALL( SCIPlpGetProvedLowerbound(lp, set, &lpobjval) );
       }
-   }
-   else if ( !(lp->isrelax) )
-      return SCIP_OKAY;
-   else
+      break;
+   case 'u':
       lpobjval = SCIPlpGetObjval(lp, set);
+      break;
+   default:
+      SCIPerrorMessage("invalid type of lower bound to be generated from LP '%c'\n", lowerboundtype);
+      SCIPABORT();
+      lpobjval = -SCIPsetInfinity(set);
+   }
 
    SCIPnodeUpdateLowerbound(node, stat, lpobjval);
 
    return SCIP_OKAY;
 }
-
 
 /** change the node selection priority of the given child */
 void SCIPchildChgNodeselPrio(
@@ -4979,7 +4996,17 @@ SCIP_RETCODE SCIPtreeEndProbing(
          }
          else
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, set, stat, lp) );
+            char lowerboundtype;
+            
+            if( set->misc_exactsolve )
+               if( set->misc_usefprelax )
+                  lowerboundtype = 's';
+               else 
+                  lowerboundtype = 'i';
+            else
+               lowerboundtype = 'u';
+            
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(tree->focusnode, lowerboundtype, set, stat, lp) );
          }
       }
    }

@@ -12,13 +12,14 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.230.2.2 2009/06/19 07:53:28 bzfwolte Exp $
+# $Id: Makefile,v 1.230.2.3 2009/07/13 12:48:47 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #@author  Marc Pfetsch
+#@author  Kati Wolter
 
 #-----------------------------------------------------------------------------
 # detect host architecture
@@ -49,6 +50,7 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx
+LPSEX		=	none
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -61,6 +63,7 @@ ZLIB		=	true
 GMP             =       auto
 ZIMPL		=	true
 LPSOPT		=	opt
+LPSEXOPT	=	opt
 ZIMPLOPT	=	opt
 
 CC		=	gcc
@@ -152,6 +155,8 @@ DFLAGS		+=	$(USRDFLAGS)
 ifeq ($(EXACTSOLVE),true)
 FLAGS		+=	-DROUNDING_FE
 FLAGS		+=	-DEXACTSOLVE_OUT		# general info 
+FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact version of code
+LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
 LDFLAGS		+=	$(LINKCC_l)gmp$(LINKLIBSUFFIX)
 endif
 
@@ -330,6 +335,50 @@ LPILIBDEP	=	$(SRCDIR)/depend.lpilib.$(LPS).$(OPT)
 LPILIBLINK	=	$(LIBDIR)/lib$(LPILIBSHORTNAME).$(BASE).$(LIBEXT)
 ALLSRC		+=	$(LPILIBSRC)
 
+
+#-----------------------------------------------------------------------------
+# Exact LP Solver Interface
+#-----------------------------------------------------------------------------
+
+LPIEXLIBSHORTNAME =	lpiex$(LPSEX)
+LPIEXLIBNAME	=	$(LPIEXLIBSHORTNAME)-$(VERSION)
+LPIEXLIBOBJ	=
+LPIEXLIBSRC	=
+LPIEXUSED	=
+LPSEXOPTIONS	=
+
+
+LPSEXOPTIONS	+=	qsoex
+ifeq ($(LPSEX),qsoex)
+FLAGS         	+=      -I$(LIBDIR)/qsexinc
+FLAGS         	+=      -I$(LIBDIR)/EGlibinc
+LPSEXLDFLAGS   	=       $(LINKCC_l)qsoptex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) \
+			$(LINKCC_l)eglib.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LPIEXLIBOBJ    	= 	scip/lpiex_qsoex.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPIEXLIBSRC    	=       $(addprefix $(SRCDIR)/,$(LPIEXLIBOBJ:.o=.c))
+SOFTLINKS     	+=      $(LIBDIR)/qsexinc
+SOFTLINKS     	+=      $(LIBDIR)/libqsoptex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+SOFTLINKS     	+=      $(LIBDIR)/EGlibinc
+SOFTLINKS     	+=      $(LIBDIR)/libeglib.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
+LPIINSTMSG	+=	"\n  -> \"qsexinc\" is the path to the QSopt_ex \"include\" directory, e.g., \"<QSopt_ex-path>\".\n"
+LPIINSTMSG	+=	" -> \"libqsoptex.*\" is the path to the QSopt_ex library, e.g., \"<QSopt_ex-path>/lib/qsoptex.a\".\n"
+LPIINSTMSG	+=	" -> \"EGlibinc\" is the path to the EGlib \"include\" directory, e.g., \"<QSopt_ex-path/EGlib>\".\n"
+LPIINSTMSG	+=	" -> \"libeglib.*\" is the path to the QSopt_ex library, e.g., \"<QSopt_ex-path>/EGlib/lib/EGlib.a\".\n"
+LPIEXUSED	=	qsoex
+endif
+
+LPSEXOPTIONS	+=	none
+ifeq ($(LPSEX),none)
+LPSEXLDFLAGS   	=
+LPIEXUSED	=	none
+endif
+
+LPIEXLIB	=	$(LPIEXLIBNAME).$(BASE)
+LPIEXLIBFILE	=	$(LIBDIR)/lib$(LPIEXLIB).$(LIBEXT)
+LPIEXLIBOBJFILES =	$(addprefix $(LIBOBJDIR)/,$(LPIEXLIBOBJ))
+LPIEXLIBDEP	=	$(SRCDIR)/depend.lpiexlib.$(LPSEX).$(OPT)
+LPIEXLIBLINK	=	$(LIBDIR)/lib$(LPIEXLIBSHORTNAME).$(BASE).$(LIBEXT)
+ALLSRC		+=	$(LPIEXLIBSRC)
 
 #-----------------------------------------------------------------------------
 # External Libraries
@@ -529,6 +578,10 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o
 
+ifeq ($(EXACTSOLVE),true)
+SCIPLIBOBJ	+=	scip/cons_exactlp.o
+endif
+
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
@@ -596,7 +649,7 @@ ALLSRC		+=	$(MAINSRC)
 
 
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT)
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(LPSEX)-$(LPSEXOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -604,15 +657,15 @@ LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK) \
-		$(LPILIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
+.SILENT:	$(MAINFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(LPILIBLINK) $(LPIEXLIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK) \
+		$(LPILIBOBJFILES) $(LPIEXLIBOBJFILES) $(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(MAINOBJFILES)
 endif
 
 .PHONY: all
-all:            checklpsdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) $(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+all:            checklpsdefine checklpsexdefine $(LINKSMARKERFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(MAINFILE) $(LPILIBLINK) $(LPIEXLIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: lint
-lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(MAINSRC)
+lint:		$(SCIPLIBSRC) $(OBJSCIPLIBSRC) $(LPILIBSRC) $(LPIEXLIBSRC) $(MAINSRC)
 		-rm -f lint.out
 		$(SHELL) -ec 'for i in $^; \
 			do \
@@ -666,6 +719,10 @@ $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(LPILIBFILE)) $(notdir $@)
 
+$(LPIEXLIBLINK): $(LPIEXLIBFILE)
+		@rm -f $@
+		cd $(dir $@) && ln -s $(notdir $(LPIEXLIBFILE)) $(notdir $@)
+
 $(SCIPLIBLINK):	$(SCIPLIBFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(SCIPLIBFILE)) $(notdir $@)
@@ -701,8 +758,8 @@ clean:
 ifneq ($(OBJDIR),)
 		-rm -rf $(OBJDIR)/*
 endif
-		-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) \
-		$(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+		-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(MAINFILE) \
+		$(LPILIBLINK) $(LPIEXLIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
 
 .PHONY: lpidepend
 lpidepend:
@@ -715,6 +772,21 @@ ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(LPILIBDEP)'
+endif
+
+.PHONY: lpiexdepend
+lpiexdepend:
+ifneq ($(LPS),none)
+ifeq ($(LINKER),C)
+		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(LPIEXLIBSRC) \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		>$(LPIEXLIBDEP)'
+endif
+ifeq ($(LINKER),CPP)
+		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(LPIEXLIBSRC) \
+		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		>$(LPIEXLIBDEP)'
+endif
 endif
 
 .PHONY: maindepend
@@ -731,7 +803,7 @@ ifeq ($(LINKER),CPP)
 endif
 
 .PHONY: depend
-depend:		lpidepend maindepend
+depend:		lpidepend lpiexdepend maindepend
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(SCIPLIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
 		>$(SCIPLIBDEP)'
@@ -747,21 +819,22 @@ depend:		lpidepend maindepend
 -include	$(SCIPLIBDEP)
 -include	$(OBJSCIPLIBDEP)
 -include 	$(LPILIBDEP)
+-include 	$(LPIEXLIBDEP)
 
-$(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(MAINOBJFILES)
+$(MAINFILE):	$(BINDIR) $(BINOBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(LPIEXLIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
 		$(LINKCC) $(MAINOBJFILES) \
-		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) \
-		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@
+		$(LINKCC_L)$(LIBDIR) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPIEXLIB)$(LINKLIBSUFFIX) \
+		$(OFLAGS) $(LPSLDFLAGS) $(LPSEXLDFLAGS) $(LDFLAGS) $(LINKCC_o)$@
 endif
 ifeq ($(LINKER),CPP)
 		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) \
-		$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPIEXLIB)$(LINKLIBSUFFIX) \
+		$(OFLAGS) $(LPSLDFLAGS) $(LPSEXLDFLAGS) $(LDFLAGS) $(LINKCXX_o)$@
 endif
 
-$(SCIPLIBFILE):	checklpsdefine $(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES) 
+$(SCIPLIBFILE):	checklpsdefine checklpsexdefine $(LIBOBJSUBDIRS) $(LIBDIR) touchexternal $(SCIPLIBOBJFILES) 
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(SCIPLIBOBJFILES) 
@@ -781,6 +854,14 @@ $(LPILIBFILE):	$(LIBOBJSUBDIRS) $(LIBDIR) $(LPILIBOBJFILES)
 		@echo "-> generating library $@"
 		-rm -f $@
 		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPILIBOBJFILES)
+ifneq ($(RANLIB),)
+		$(RANLIB) $@
+endif
+
+$(LPIEXLIBFILE): $(LIBOBJSUBDIRS) $(LIBDIR) $(LPIEXLIBOBJFILES)
+		@echo "-> generating library $@"
+		-rm -f $@
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(LPIEXLIBOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
@@ -835,7 +916,7 @@ links:		echosoftlinks $(LIBDIR) $(DIRECTORIES) $(SOFTLINKS)
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT)"
+		@echo "- Current settings: LPS=$(LPS) LPSEX=$(LPSEX) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT)"
 		@echo
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."
@@ -890,6 +971,12 @@ endif
 checklpsdefine:
 ifeq ($(LPILIBOBJ),)
 		$(error invalid LP solver selected: LPS=$(LPS). Possible options are: $(LPSOPTIONS))
+endif
+
+.PHONY: checklpsexdefine
+checklpsexdefine:
+ifeq ($(LPIEXUSED),)
+		$(error invalid exact LP solver selected: LPSEX=$(LPSEX). Possible options are: $(LPSEXOPTIONS))
 endif
 
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.1 2009/06/19 07:53:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.2 2009/07/13 12:48:48 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -31,17 +31,34 @@
 #include <string.h>
 #include <assert.h>
 
+#ifdef EXACTSOLVE
+#include <gmp.h> /* gmp.h has to be included before mme.h */
+#include "scip/intervalarith.h"
+#include "scip/cons_exactlp.h"
+// #define READER_OUT /* only for debugging ???????????????? */
+#endif
+
 #include "scip/cons_linear.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#ifdef WITH_QUAD
+#include "cons_quad_C.h"
+#endif
 #include "scip/pub_misc.h"
 
-/* include the ZIMPL headers necessary to define the LP construction interface */
+/* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
 #include "zimpl/bool.h"
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
 #include "zimpl/xlpglue.h"
+
+/** the ZIMPL_VERSION is defind by ZIMPL version 2.10 and higher. ZIMPL 2.10 made same changes in the interface to
+ *  SCIP. Therefore we us this define to disdinguish betwenn all version up to 2.09 and all version from 2.10 */
+#ifdef ZIMPL_VERSION
+#include "zimpl/mono.h"
+#endif
+
 
 extern
 Bool zpl_read(const char* filename);
@@ -63,12 +80,35 @@ Bool zpl_read_with_args(int argc, char** argv);
 
 /* ZIMPL does not support user data in callbacks - we have to use a static variables */
 static SCIP* scip_ = NULL;
+static SCIP_CONSHDLRDATA* conshdlrdata_ = NULL;
 static SCIP_Real* startvals_ = NULL;
 static SCIP_VAR** startvars_ = NULL;
 static int startvalssize_ = 0;
 static int nstartvals_ = 0;
 static SCIP_Bool issuedbranchpriowarning_ = FALSE;
 static SCIP_Bool readerror_ = FALSE;
+
+#ifdef EXACTSOLVE
+static SCIP_VAR** vars_ = NULL;  
+static SCIP_OBJSENSE objsense_;
+static mpq_t* lb_ = NULL;
+static mpq_t* ub_ = NULL;
+static mpq_t* obj_ = NULL;
+static int nvars_ = 0;
+static int varssize_ = 0;
+
+static int* beg_ = NULL;
+static mpq_t* lhs_ = NULL;
+static mpq_t* rhs_ = NULL;
+static int nconss_ = 0;
+static int consssize_ = 0;
+
+static mpq_t* val_ = NULL;
+static int* ind_ = NULL;
+static int nnonz_ = 0;
+static int nonzsize_ = 0;
+#endif
+
 
 void xlp_alloc(const char* name, Bool need_startval)
 {  /*lint --e{715}*/
@@ -116,7 +156,23 @@ Bool xlp_conname_exists(const char* conname)
    return (SCIPfindCons(scip_, conname) != NULL);
 }
 
-Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs, unsigned int flags)
+
+/** the ZIMPL_VERSION is defind by ZIMPL version 2.10 and higher. ZIMPL 2.10 made same changes in the interface to
+ *  SCIP. Therefore we us this define to disdinguish betwenn all version up to 2.09 and all version from 2.10 */
+#ifndef ZIMPL_VERSION 
+
+/** method creates a linear constraint and is called directly from ZIMPL
+ *
+ *  @note this method is used by ZIMPL up to version 2.09; 
+ */
+#ifndef EXACTSOLVE
+Con* xlp_addcon(
+   const char*           name,               /**< constraint name */
+   ConType               type,               /**< constraint type */
+   const Numb*           lhs,                /**< left hand side */
+   const Numb*           rhs,                /**< right hand side */
+   unsigned int          flags               /**< special constraint flags */
+   )
 {
    SCIP_CONS* cons;
    SCIP_Real sciplhs;
@@ -175,15 +231,359 @@ Con* xlp_addcon(const char* name, ConType type, const Numb* lhs, const Numb* rhs
 
    SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
          initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-   zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
-                           destroyed by SCIPreleaseCons() */
+   zplcon = (Con*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the
+                         * CONS will not be destroyed by SCIPreleaseCons() */
    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
    SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
 
    return zplcon;
 }
+#else
+Con* xlp_addcon(
+   const char*           name,               /**< constraint name */
+   ConType               type,               /**< constraint type */
+   const Numb*           lhs,                /**< left hand side */
+   const Numb*           rhs,                /**< right hand side */
+   unsigned int          flags               /**< special constraint flags */
+   )
+{
+   SCIPerrorMessage("xlp_addcon: exact version not supported.\n");
+   return NULL;
+}
+#endif
 
-Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, const Bound* upper, const Numb* priority, const Numb* startval)
+/** adds coefficient/variable to linear constraint 
+ *
+ *  @note this method is used by ZIMPL up to version 2.09; 
+ */
+#ifndef EXACTSOLVE
+void xlp_addtonzo(
+   Var*            var,                /**< variable to add */
+   Con*            con,                /**< constraint */
+   const Numb*     numb                /**< variable coefficient */
+   )
+{
+   SCIP_CONS* scipcons;
+   SCIP_VAR* scipvar;
+   SCIP_Real scipval;
+
+   scipcons = (SCIP_CONS*)con;
+   scipvar = (SCIP_VAR*)var;
+   scipval = numb_todbl(numb);
+
+   SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, scipcons, scipvar, scipval) );
+}
+#else
+void xlp_addtonzo(
+   Var*            var,                /**< variable to add */
+   Con*            con,                /**< constraint */
+   const Numb*     numb                /**< variable coefficient */
+   )
+{
+   SCIPerrorMessage("xlp_addtonzo: exact version not supported.\n");
+}
+#endif
+
+#else
+
+/** method creates a linear constraint and is called directly from ZIMPL 
+ *
+ *  @note this method is used by ZIMPL from version 2.10; 
+ */
+#ifndef EXACTSOLVE
+Bool xlp_addcon_term(
+   const char*           name,               /**< constraint name */
+   ConType               type,               /**< constraint type */
+   const Numb*           lhs,                /**< left hand side */
+   const Numb*           rhs,                /**< right hand side */
+   unsigned int          flags,              /**< special constraint flags */
+   const Term*           term      
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_Real sciplhs;
+   SCIP_Real sciprhs;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
+   /* Con* zplcon; */
+   int  i;
+   int  maxdegree;
+   
+   switch( type )
+   {
+   case CON_FREE:
+      sciplhs = -SCIPinfinity(scip_);
+      sciprhs = SCIPinfinity(scip_);
+      break;
+   case CON_LHS:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = SCIPinfinity(scip_);
+      break;
+   case CON_RHS:
+      sciplhs = -SCIPinfinity(scip_);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      break;
+   case CON_RANGE:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      break;
+   case CON_EQUAL:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      assert(sciplhs == sciprhs);
+      break;
+   default:
+      SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      readerror_ = TRUE;
+      break;
+   }
+
+   initial = !((flags & LP_FLAG_CON_SEPAR) != 0);
+   separate = TRUE;
+   enforce = TRUE;
+   check = enforce;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
+   removable = dynamic;
+   maxdegree = term_get_degree(term);
+
+   if (maxdegree <= 1)
+   {
+      SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+
+      for(i = 0; i < term_get_elements(term); i++)
+      {
+         SCIP_VAR* scipvar;
+         SCIP_Real scipval;
+
+         assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+         assert(mono_is_linear(term_get_element(term, i)));
+      
+         scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+         scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+
+         SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
+      }
+   }
+#ifdef WITH_QUAD
+   else if (maxdegree == 2)
+   {
+      int        n_linvar   = 0;
+      int        n_quadterm = 0;
+      SCIP_VAR** linvar;
+      SCIP_VAR** quadvar1;
+      SCIP_VAR** quadvar2;
+      SCIP_Real* lincoeff;
+      SCIP_Real* quadcoeff;
+      Mono*      monom;
+  	  
+      SCIP_CALL( SCIPallocBufferArray(scip_, &linvar,    term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar1,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar2,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
+  	  
+      for (i = 0; i < term_get_elements(term); ++i)
+      {
+         monom = term_get_element(term, i);
+         assert(!numb_equal(mono_get_coeff(monom), numb_zero()));
+         assert(mono_get_degree(monom) <= 2);
+         assert(mono_get_degree(monom) > 0);
+         if (mono_get_degree(monom) == 1)
+         {
+            linvar  [n_linvar] = (SCIP_VAR*)mono_get_var(monom, 0);
+            lincoeff[n_linvar] = numb_todbl(mono_get_coeff(monom));
+            ++n_linvar;
+         }
+         else
+         {
+            assert(mono_get_degree(monom) == 2);
+            quadvar1 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 0);
+            quadvar2 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 1);
+            quadcoeff[n_quadterm] = numb_todbl(mono_get_coeff(monom));
+            ++n_quadterm;
+         }
+      }
+
+      SCIP_CALL_ABORT( SCIPcreateConsQuadratic1(scip_, &cons, name, n_linvar, linvar, lincoeff, n_quadterm, quadvar1, quadvar2, quadcoeff, sciplhs, sciprhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+      
+      SCIPfreeBufferArray(scip_, &linvar);
+      SCIPfreeBufferArray(scip_, &quadvar1);
+      SCIPfreeBufferArray(scip_, &quadvar2);
+      SCIPfreeBufferArray(scip_, &lincoeff);
+      SCIPfreeBufferArray(scip_, &quadcoeff);
+   }
+#endif
+   else
+   {
+      SCIPerrorMessage("xpl_addcon_term for degree > 2 not implemented\n");
+      return TRUE;
+   }
+
+   SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
+   
+   return FALSE;
+}
+#else 
+Bool xlp_addcon_term(
+   const char*           name,               /**< constraint name */
+   ConType               type,               /**< constraint type */
+   const Numb*           lhs,                /**< left hand side */
+   const Numb*           rhs,                /**< right hand side */
+   unsigned int          flags,              /**< special constraint flags */
+   const Term*           term      
+   )
+{
+   int  maxdegree;
+   int  i;
+
+   /* reallocate and initialize constraint specific information */ 
+   assert(nconss_+1 <= consssize_);
+   if( nconss_+1 == consssize_ )
+   {
+      consssize_ *= 2;
+
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &beg_, consssize_) );
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &lhs_, consssize_) );
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &rhs_, consssize_) );
+      for( i = nconss_+1; i < consssize_; ++i)
+      {
+         mpq_init(lhs_[i]);
+         mpq_init(rhs_[i]);
+      }
+   }
+   /* reallocate and initialize matrix specific information */ 
+   assert(nnonz_ <= nonzsize_);
+   if( nnonz_ == nonzsize_ )
+   {
+      nonzsize_ *= 2;
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &val_, nonzsize_) );
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &ind_, nonzsize_) );
+      for( i = nnonz_; i < nonzsize_; ++i)
+      {
+         mpq_init(val_[i]);
+      }
+   }   
+
+   /* get exact lhs and rhs for exactlp constraint handler */
+   switch( type )
+   {
+   case CON_FREE:
+      mpq_set(lhs_[nconss_], *negInfinity(conshdlrdata_));
+      mpq_set(rhs_[nconss_], *posInfinity(conshdlrdata_));
+      break;
+   case CON_LHS:
+      numb_get_mpq(lhs, lhs_[nconss_]);
+      mpq_set(rhs_[nconss_], *posInfinity(conshdlrdata_));
+      break;
+   case CON_RHS:
+      mpq_set(lhs_[nconss_], *negInfinity(conshdlrdata_));
+      numb_get_mpq(rhs, rhs_[nconss_]);
+      break;
+   case CON_RANGE:
+      numb_get_mpq(lhs, lhs_[nconss_]);
+      numb_get_mpq(rhs, rhs_[nconss_]);
+      break;
+   case CON_EQUAL:
+      numb_get_mpq(lhs, lhs_[nconss_]);
+      numb_get_mpq(rhs, rhs_[nconss_]);
+      assert(mpq_equal(lhs_[nconss_], rhs_[nconss_]) != 0);
+      break;
+   default:
+      SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+      numb_get_mpq(lhs, lhs_[nconss_]);
+      numb_get_mpq(rhs, rhs_[nconss_]);
+      readerror_ = TRUE;
+      break;
+   }
+
+   if( (flags & LP_FLAG_CON_SEPAR) != 0 )
+   {
+      SCIPwarningMessage("xlp_addcon_term(): given nondefault CON_SEPAR flag ignored for exact solving process\n");
+   }
+
+   maxdegree = term_get_degree(term);
+   if (maxdegree <= 1)
+   {
+      /* get exact (nonzero) coefficients for exactlp constraint handler */
+      for(i = 0; i < term_get_elements(term); i++)
+      {
+         SCIP_VAR* scipvar;
+         int varidx;
+
+         /* index of variable */
+         assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+         assert(mono_is_linear(term_get_element(term, i)));
+         numb_get_mpq(mono_get_coeff(term_get_element(term, i)), val_[nnonz_]);
+
+         /* coefficient of variable */
+         scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+         varidx = SCIPvarGetIndex(scipvar);
+         assert(SCIPvarGetIndex(vars_[varidx]) == varidx);
+         assert(vars_[varidx] == scipvar);
+         ind_[nnonz_] = varidx;
+#ifdef READER_OUT  /*???????????????*/
+         gmp_printf("nnonz=%d, i=%d, nelem=%d, var=%s given=%g stored=%Qd\n", nnonz_, i, term_get_elements(term), 
+            SCIPvarGetName(scipvar), numb_todbl(mono_get_coeff(term_get_element(term, i))), val_[nnonz_]);
+#endif
+         /* update number of nonzero coefficients */
+         nnonz_++;
+      }
+
+      /* update number of constraints */
+      nconss_++;
+      
+      /* set dummy entry, i.e., correct entry for the constraint created next */
+      beg_[nconss_] = nnonz_;  
+      assert(beg_[nconss_-1] <= beg_[nconss_]);
+#ifdef READER_OUT  /*???????????????*/
+      gmp_printf("new: beg[%d]=%d\n", nconss_, beg_[nconss_]);
+#endif
+   }
+#ifdef WITH_QUAD
+   else if (maxdegree == 2)
+   {
+      SCIPerrorMessage("xpl_addcon_term for degree == 2 not implemented\n");
+      return TRUE;
+   }
+#endif
+   else
+   {
+      SCIPerrorMessage("xpl_addcon_term for degree > 2 not implemented\n");
+      return TRUE;
+   }
+   
+   return FALSE;
+}
+#endif
+
+#endif /* end of #ifndef ZIMPL_VERSION */
+
+/** method adds an variable; is called directly by ZIMPL */
+#ifndef EXACTSOLVE
+Var* xlp_addvar(
+   const char*           name,               /**< variable name */
+   VarClass              usevarclass,        /**< variable type */
+   const Bound*          lower,              /**< lower bound */
+   const Bound*          upper,              /**< upper bound */
+   const Numb*           priority,           /**< branching priority */
+   const Numb*           startval            /**< */
+   )
 {  /*lint --e{715}*/
    SCIP_VAR* var;
    SCIP_Real lb;
@@ -267,6 +667,7 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
    }
 
    SCIP_CALL_ABORT( SCIPcreateVar(scip_, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL) );
+
    zplvar = (Var*)var; /* this is ugly, because our VAR-pointer will be released; but in this case we know that the VAR will not be
                           destroyed by SCIPreleaseVar() */
    SCIP_CALL_ABORT( SCIPaddVar(scip_, var) );
@@ -285,8 +686,158 @@ Var* xlp_addvar(const char* name, VarClass usevarclass, const Bound* lower, cons
 
    return zplvar;
 }
+#else
+Var* xlp_addvar(
+   const char*           name,               /**< variable name */
+   VarClass              usevarclass,        /**< variable type */
+   const Bound*          lower,              /**< lower bound */
+   const Bound*          upper,              /**< upper bound */
+   const Numb*           priority,           /**< branching priority */
+   const Numb*           startval            /**< */
+   )
+{  /*lint --e{715}*/
+   SCIP_VAR* var;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_VARTYPE vartype;
+   SCIP_Bool initial;
+   SCIP_Bool removable;
+   SCIP_Bool dynamiccols;
+   Var* zplvar;
+   int branchpriority;
+   int i;
 
-Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
+   SCIP_CALL_ABORT( SCIPgetBoolParam(scip_, "reading/zplreader/dynamiccols", &dynamiccols) );
+
+   /* reallocate and initialize variable specific information */ 
+   assert(nvars_ <= varssize_);
+   if( nvars_ == varssize_ )
+   {
+      varssize_ *= 2;
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &vars_, varssize_) );
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &lb_, varssize_) );
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &ub_, varssize_) );
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &obj_, varssize_) );
+      for( i = nvars_; i < varssize_; ++i)
+      {
+         mpq_init(lb_[i]);
+         mpq_init(ub_[i]);
+         mpq_init(obj_[i]);
+         mpq_set_si(obj_[i], 0, 1); 
+      }
+   }
+   assert(nvars_ < varssize_);
+
+   /* get exact bounds for exactlp constraint handler and safe FP values for FP problem */
+   SCIPdebugMessage("zimpl reader: store lower bound of variable\n");
+   switch( bound_get_type(lower) )
+   {
+   case BOUND_VALUE:
+      numb_get_mpq(bound_get_value(lower), lb_[nvars_]);
+      lb = mpqGetRealRelax(scip_, lb_[nvars_], GMP_RNDD);
+      break;
+   case BOUND_INFTY:
+      mpq_set(lb_[nvars_], *posInfinity(conshdlrdata_));
+      lb = SCIPinfinity(scip_);
+      break;
+   case BOUND_MINUS_INFTY:
+      mpq_set(lb_[nvars_], *negInfinity(conshdlrdata_));
+      lb = -SCIPinfinity(scip_);
+      break;
+   case BOUND_ERROR:
+   default:
+      SCIPerrorMessage("invalid lower bound type <%d> in ZIMPL reader\n", bound_get_type(lower));
+      mpq_set_si(lb_[nvars_], 0, 1);
+      lb = 0.0;
+      break;
+   }
+
+   SCIPdebugMessage("zimpl reader: store upper bound of variable\n");
+   switch( bound_get_type(upper) )
+   {
+   case BOUND_VALUE:
+      numb_get_mpq(bound_get_value(upper), ub_[nvars_]);
+      ub = mpqGetRealRelax(scip_, ub_[nvars_], GMP_RNDU);
+      break;
+   case BOUND_INFTY:
+      mpq_set(ub_[nvars_], *posInfinity(conshdlrdata_));
+      ub = SCIPinfinity(scip_);
+      break;
+   case BOUND_MINUS_INFTY:
+      mpq_set(ub_[nvars_], *negInfinity(conshdlrdata_));
+      ub = -SCIPinfinity(scip_);
+      break;
+   case BOUND_ERROR:
+   default:
+      SCIPerrorMessage("invalid upper bound type <%d> in ZIMPL reader\n", bound_get_type(upper));
+      mpq_set_si(ub_[nvars_], 0, 1);
+      ub = 0.0;
+      break;
+   }
+
+   /* get variable type */
+   switch( usevarclass )
+   {
+   case VAR_CON:
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      break;
+   case VAR_INT:
+      vartype = SCIP_VARTYPE_INTEGER;
+      break;
+   case VAR_IMP:
+      vartype = SCIP_VARTYPE_IMPLINT;
+      break;
+   default:
+      SCIPwarningMessage("invalid variable class <%d> in ZIMPL callback xlp_addvar()\n", usevarclass);
+      vartype = SCIP_VARTYPE_CONTINUOUS;
+      readerror_ = TRUE;
+      break;
+   }
+
+   /* get branching priority of variable and additional information */
+   initial = !dynamiccols;
+   removable = dynamiccols;
+   if( numb_is_int(priority) )
+      branchpriority = numb_toint(priority);
+   else
+   {
+      if( !issuedbranchpriowarning_ )
+      {
+         SCIPverbMessage(scip_, SCIP_VERBLEVEL_MINIMAL, NULL,
+            "ZIMPL reader: fractional branching priorities in input - rounding down to integer values\n");
+         issuedbranchpriowarning_ = TRUE;
+      }
+      branchpriority = (int)numb_todbl(priority);
+   }
+
+   /* add variable to FP problem */
+   SCIP_CALL_ABORT( SCIPcreateVar(scip_, &var, name, lb, ub, 0.0, vartype, initial, removable, NULL, NULL, NULL, NULL) );
+   assert(SCIPvarGetIndex(var) == nvars_);
+   zplvar = (Var*)var; /* this is ugly, because our VAR-pointer will be released; but in this case we know that the VAR will not be
+                          destroyed by SCIPreleaseVar() */
+   SCIP_CALL_ABORT( SCIPaddVar(scip_, var) );
+   SCIP_CALL_ABORT( SCIPchgVarBranchPriority(scip_, var, branchpriority) );
+
+#ifdef READER_OUT /* only for debugging ???????????????? */
+   printf("reader_zpl: added new variable:\n");
+   SCIPprintVar(scip_, var, NULL);
+#endif
+
+   /* store variable for exactlp constraint handler */
+   vars_[nvars_] = var;
+   nvars_++;
+
+   return zplvar;
+}
+#endif
+
+/** method adds SOS constraints */
+#ifndef EXACTSOLVE
+Sos* xlp_addsos(
+   const char*           name,               /**< constraint name */
+   SosType               type,               /**< SOS type */
+   const Numb*           priority            /**< */
+   )
 {  /*lint --e{715}*/
    SCIP_CONS* cons;
    SCIP_Bool initial;
@@ -311,8 +862,8 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
       dynamic = FALSE;
       removable = dynamic;
 
-      SCIP_CALL_ABORT( SCIPcreateConsSOS1(scip_, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-					  local, dynamic, removable, FALSE) );
+      SCIP_CALL_ABORT( SCIPcreateConsSOS1(scip_, &cons, name, 0, NULL, NULL,
+            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
 			      destroyed by SCIPreleaseCons() */
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
@@ -328,8 +879,8 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
       dynamic = FALSE;
       removable = dynamic;
 
-      SCIP_CALL_ABORT( SCIPcreateConsSOS2(scip_, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
-					  local, dynamic, removable, FALSE) );
+      SCIP_CALL_ABORT( SCIPcreateConsSOS2(scip_, &cons, name, 0, NULL, NULL, 
+            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
       zplsos = (Sos*)cons; /* this is ugly, because our CONS-pointer will be released; but in this case we know that the CONS will not be
 			      destroyed by SCIPreleaseCons() */
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
@@ -344,24 +895,69 @@ Sos* xlp_addsos(const char* name, SosType type, const Numb* priority)
 
    return zplsos;
 }
+#else
+Sos* xlp_addsos(
+   const char*           name,               /**< constraint name */
+   SosType               type,               /**< SOS type */
+   const Numb*           priority            /**< */
+   )
+{  /*lint --e{715}*/
+   SCIPerrorMessage("xlp_addsos: exact version not supported.\n");
+   return NULL;
+}
+#endif
 
-/* this function should maybe get the type of the sos constraint, this
-   would simplify the code below. */
-void xlp_addtosos(Sos* sos, Var* var, const Numb* weight)
+/** adds a variable to a SOS constraint */
+#ifndef EXACTSOLVE
+void xlp_addtosos(
+   Sos*                  sos,                /**< SOS constraint */ 
+   Var*                  var,                /**< variable to add */
+   const Numb*           weight              /**< weight of the variable */
+   )
 {
+   /* this function should maybe get the type of the sos constraint, this
+      would simplify the code below. */
+   
    SCIP_CONS* scipcons;
    SCIP_VAR* scipvar;
-
+   
    scipcons = (SCIP_CONS*)sos;
    scipvar = (SCIP_VAR*)var;
-
+   
    if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(scipcons)), "SOS1") == 0 )
       SCIP_CALL_ABORT( SCIPaddVarSOS1(scip_, scipcons, scipvar, numb_todbl(weight)) );
    else
       SCIP_CALL_ABORT( SCIPaddVarSOS2(scip_, scipcons, scipvar, numb_todbl(weight)) );
 }
+#else
+void xlp_addtosos(
+   Sos*                  sos,                /**< SOS constraint */ 
+   Var*                  var,                /**< variable to add */
+   const Numb*           weight              /**< weight of the variable */
+   )
+{
+   SCIPerrorMessage("xlp_addtosos: exact version not supported.\n");
+}
+#endif
 
-VarClass xlp_getclass(const Var* var)
+Bool xlp_addsos_term(const char* name, SosType type, const Numb* priority, const Term* term)
+{
+   SCIPerrorMessage("xlp_addsos_term not implemented\n");
+   return TRUE;
+}
+
+/** retuns the variable name */
+const char* xlp_getvarname(
+   const Var*            var                 /**< variable */
+   )
+{
+   return SCIPvarGetName((SCIP_VAR*)var);
+}
+
+/** return variable type */
+VarClass xlp_getclass(
+   const Var*            var                 /**< variable */
+   )
 {
    SCIP_VAR* scipvar;
 
@@ -384,7 +980,11 @@ VarClass xlp_getclass(const Var* var)
    return VAR_CON;
 }
 
-Bound* xlp_getlower(const Var* var)
+/** returns lower bound */
+#ifndef EXACTSOLVE
+Bound* xlp_getlower(
+   const Var*            var                 /**< variable */
+   )
 {
    SCIP_VAR* scipvar;
    SCIP_Real lb;
@@ -408,8 +1008,21 @@ Bound* xlp_getlower(const Var* var)
 
    return bound;
 }
+#else 
+Bound* xlp_getlower(
+   const Var*            var                 /**< variable */
+   )
+{
+   SCIPerrorMessage("xlp_getlower: exact version not supported yet.\n");
+   return NULL;
+}
+#endif
 
-Bound* xlp_getupper(const Var* var)
+/** returns upper bound */
+#ifndef EXACTSOLVE
+Bound* xlp_getupper(
+   const Var*            var                 /**< variable */
+   )
 {
    SCIP_VAR* scipvar;
    SCIP_Real ub;
@@ -437,6 +1050,15 @@ Bound* xlp_getupper(const Var* var)
 
    return bound;
 }
+#else 
+Bound* xlp_getupper(
+   const Var*            var                 /**< variable */
+   )
+{
+   SCIPerrorMessage("xlp_getupper: exact version not supported yet.\n");
+   return NULL;
+}
+#endif
 
 void xlp_objname(const char* name)
 {  /*lint --e{715}*/
@@ -451,20 +1073,12 @@ void xlp_setdir(Bool minimize)
    SCIP_CALL_ABORT( SCIPsetObjsense(scip_, objsense) );
 }
 
-void xlp_addtonzo(Var* var, Con* con, const Numb* numb)
-{
-   SCIP_CONS* scipcons;
-   SCIP_VAR* scipvar;
-   SCIP_Real scipval;
-
-   scipcons = (SCIP_CONS*)con;
-   scipvar = (SCIP_VAR*)var;
-   scipval = numb_todbl(numb);
-
-   SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, scipcons, scipvar, scipval) );
-}
-
-void xlp_addtocost(Var* var, const Numb* cost)
+/** changes objective coefficient of a variable */
+#ifndef EXACTSOLVE
+void xlp_addtocost(
+   Var*            var,                /**< variable */
+   const Numb*     cost                /**< objective coefficient */
+   )
 {
    SCIP_VAR* scipvar;
    SCIP_Real scipval;
@@ -474,6 +1088,65 @@ void xlp_addtocost(Var* var, const Numb* cost)
 
    SCIP_CALL_ABORT( SCIPchgVarObj(scip_, scipvar, SCIPvarGetObj(scipvar) + scipval) );
 }
+#else 
+void xlp_addtocost(
+   Var*            var,                /**< variable */
+   const Numb*     cost                /**< objective coefficient */
+   )
+{
+   SCIP_VAR* scipvar;
+   SCIP_Real scipval;
+   mpq_t scipvalmpq;
+   int varidx;
+   
+   scipvar = (SCIP_VAR*)var;
+   varidx = SCIPvarGetIndex(scipvar);
+   assert(SCIPvarGetIndex(vars_[varidx]) == varidx);
+   assert(vars_[varidx] == scipvar);
+
+   mpq_init(scipvalmpq);
+
+   /* get exact objective coefficient used in exactlp constraint handler and approximate FP value used in FP problem */
+   numb_get_mpq(cost, scipvalmpq);
+   scipval = mpqGetRealApprox(scip_, scipvalmpq);
+
+#ifdef READER_OUT
+   printf("reader_zpl: change obj of var: old %g, add %g as approx", SCIPvarGetObj(scipvar), scipval);
+   gmp_printf(" (%Qd as orig mpq_t)\n", scipvalmpq);
+#endif
+
+   /* if we want to work on an FP relaxation we have to ensure that obj coefficient stored in scip for the variable 
+    * is identical to the one in the exactlp constraint handler, otherwise the dual bounding methods are not reliable
+    */
+   if( SCIPuseFPRelaxation(scip_) )
+   {
+      mpq_t tmp;
+
+      mpq_init(tmp);
+      mpq_set_d(tmp, scipval);
+
+      if( !mpq_equal(scipvalmpq, tmp) )
+      {
+         /* todo: scaling obj function to integral values in order to meet this requirements ??? */
+         mpq_clear(tmp);
+         SCIPerrorMessage("given obj coefficient of var is not FP representable which is required for working with an FP relaxation\n");
+         SCIPABORT();
+      }
+      mpq_clear(tmp);
+   }
+
+   /* change objective coefficient of variable in exactlp constraint handler and in FP problem */
+   mpq_add(obj_[varidx], obj_[varidx], scipvalmpq);
+   SCIP_CALL_ABORT( SCIPchgVarObj(scip_, scipvar, SCIPvarGetObj(scipvar) + scipval) );
+
+#ifdef READER_OUT
+   SCIPprintVar(scip_, scipvar, NULL);
+#endif
+
+   mpq_clear(scipvalmpq);
+   
+}
+#endif
 
 Bool xlp_presolve(void)
 {
@@ -520,6 +1193,27 @@ SCIP_DECL_READERREAD(readerReadZpl)
    SCIP_Bool changedir;
    SCIP_Bool success;
    
+#ifdef EXACTSOLVE
+   SCIP_CONS* cons;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
+   SCIP_Bool stickingatnode;
+   char consname[SCIP_MAXSTRLEN];
+
+   SCIP_VAR* vartmp;
+   mpq_t lbtmp;
+   mpq_t ubtmp;
+   mpq_t objtmp;
+   int idx;
+#endif
+
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
 
    path = NULL;
@@ -572,6 +1266,45 @@ SCIP_DECL_READERREAD(readerReadZpl)
    startvalssize_ = 1024;
    SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvals_,startvalssize_) );
    SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvars_,startvalssize_) );
+#ifdef EXACTSOLVE
+   conshdlrdata_ = SCIPconshdlrGetData(SCIPfindConshdlr(scip, "exactlp"));
+   assert(conshdlrdata_ != NULL);
+
+   /* allocate and initialize variable specific information */ 
+   varssize_ = 1024;
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &vars_, varssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &lb_, varssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &ub_, varssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &obj_, varssize_) );
+   for( i = 0; i < varssize_; ++i)
+   {
+      mpq_init(lb_[i]);
+      mpq_init(ub_[i]);
+      mpq_init(obj_[i]);
+      mpq_set_si(obj_[i], 0, 1); 
+   }
+
+   /* allocate and initialize constraint specific information */ 
+   consssize_ = 1024;
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &beg_, consssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &lhs_, consssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &rhs_, consssize_) );
+   for( i = 0; i < consssize_; ++i)
+   {
+      mpq_init(lhs_[i]);
+      mpq_init(rhs_[i]);
+   }
+   beg_[0] = 0; /* dummy entry, i.e., correct entry for the constraint created next */
+
+   /* allocate and initialize matrix specific information */ 
+   nonzsize_ = 1024;
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &val_, nonzsize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &ind_, nonzsize_) );
+   for( i = 0; i < nonzsize_; ++i)
+   {
+      mpq_init(val_[i]);
+   }
+#endif
 
    /* get the parameter string */
    SCIP_CALL( SCIPgetStringParam(scip, "reading/zplreader/parameters", &paramstr) );
@@ -685,6 +1418,96 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
    }
 
+#ifdef EXACTSOLVE
+   /* create exactlp constraint from variable, constraint and matrix information stored */
+   
+   /* sort variable specific information by variable's probindex instead of index */
+   for( i = 0; i < nnonz_; ++i )
+   {
+      assert(ind_[i] == SCIPvarGetIndex(vars_[ind_[i]]));
+      ind_[i] = SCIPvarGetProbindex(vars_[ind_[i]]);
+   }
+
+   mpq_init(lbtmp);
+   mpq_init(ubtmp);
+   mpq_init(objtmp);
+   idx = 0;
+
+   for( i = 0; i < nvars_; ++i )
+   {
+      int probindex;
+
+      assert(idx <= i);
+
+      probindex = SCIPvarGetProbindex(vars_[idx]);
+      assert(probindex >= idx);
+
+      /* position of current variable is incorrect */      
+      if( idx != probindex )
+      {
+         /* swap current variable with the one that is located at the current variable's correct position */  
+         mpq_set(lbtmp, lb_[probindex]);
+         mpq_set(ubtmp, ub_[probindex]);
+         mpq_set(objtmp, obj_[probindex]);
+         vartmp = vars_[probindex];
+
+         mpq_set(lb_[probindex], lb_[idx]);
+         mpq_set(ub_[probindex], ub_[idx]);
+         mpq_set(obj_[probindex], obj_[idx]);
+         vars_[probindex] = vars_[idx];
+
+         mpq_set(lb_[idx], lbtmp);
+         mpq_set(ub_[idx], ubtmp);
+         mpq_set(obj_[idx], objtmp);
+         vars_[idx] = vartmp;
+      }
+      /* position of current variable is correct */      
+      else
+      {
+         /* move to variable on next position */
+         idx++;
+      }
+   }
+   mpq_clear(objtmp);
+   mpq_clear(ubtmp);
+   mpq_clear(lbtmp);
+
+#ifndef NDEBUG
+   for( i = 0; i < nvars_; ++i )
+   {
+      assert(SCIPvarGetProbindex(vars_[i]) == i);
+ 
+      assert(SCIPisInfinity(scip_, SCIPvarGetLbLocal(vars_[i])) || SCIPisInfinity(scip_, -SCIPvarGetLbLocal(vars_[i]))
+         || mpqGetRealRelax(scip_, lb_[i], GMP_RNDD) == SCIPvarGetLbLocal(vars_[i]));
+
+      assert(SCIPisInfinity(scip_, SCIPvarGetUbLocal(vars_[i])) || SCIPisInfinity(scip_, -SCIPvarGetUbLocal(vars_[i]))
+         || mpqGetRealRelax(scip_, ub_[i], GMP_RNDU) == SCIPvarGetUbLocal(vars_[i]));
+
+      assert(SCIPisInfinity(scip_, SCIPvarGetObj(vars_[i])) || SCIPisInfinity(scip_, -SCIPvarGetObj(vars_[i]))
+         || mpqGetRealApprox(scip_, obj_[i]) == SCIPvarGetObj(vars_[i]));
+   }
+#endif
+
+   /* create exactlp constraint */
+   initial = TRUE;
+   separate = TRUE;
+   enforce = TRUE;
+   check = enforce;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   dynamic = FALSE;
+   removable = dynamic;
+   stickingatnode = FALSE;
+   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "exactlp");
+   
+   SCIP_CALL_ABORT( SCIPcreateConsExactlp(scip, &cons, consname, objsense_, nvars_, obj_, lb_, ub_, nconss_, lhs_, rhs_, 
+         nnonz_, beg_, ind_, val_, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, 
+         stickingatnode) );
+   SCIP_CALL_ABORT( SCIPaddCons(scip, cons) );
+   SCIP_CALL_ABORT( SCIPreleaseCons(scip, &cons) );
+#endif   
+
    /* transform the problem such that adding primal solutions is possible */
    SCIP_CALL( SCIPtransformProb(scip) );
    SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
@@ -695,7 +1518,15 @@ SCIP_DECL_READERREAD(readerReadZpl)
    }
    
    success = FALSE;
-   SCIP_CALL( SCIPtrySolFree(scip, &startsol, TRUE, TRUE, TRUE, &success) );
+   /* current exact version of SCIP only supports primal solutions found within the exactlp constraint handler */
+   if( !SCIPisExactSolve(scip) )
+   {
+      SCIP_CALL( SCIPtrySolFree(scip, &startsol, TRUE, TRUE, TRUE, &success) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &startsol) );
+   }
    if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
 
@@ -703,6 +1534,47 @@ SCIP_DECL_READERREAD(readerReadZpl)
    SCIPfreeMemoryArray(scip_,&startvars_);
    nstartvals_ = 0;
    startvalssize_ = 0;
+
+#ifdef EXACTSOLVE
+   /* free matrix specific information */ 
+   assert(nnonz_ <= nonzsize_);
+   for( i = 0; i < nonzsize_; ++i)
+   {
+      mpq_clear(val_[i]);
+   }
+   SCIPfreeMemoryArray(scip, &ind_);
+   SCIPfreeMemoryArray(scip, &val_);
+   nnonz_ = 0;
+   nonzsize_ = 0;
+
+   /* free constraint specific information */ 
+   assert(nconss_ <= consssize_);
+   for( i = 0; i < consssize_; ++i)
+   {
+      mpq_clear(rhs_[i]);
+      mpq_clear(lhs_[i]);
+   }
+   SCIPfreeMemoryArray(scip, &rhs_);
+   SCIPfreeMemoryArray(scip, &lhs_);
+   nconss_ = 0;
+   consssize_ = 0;
+
+   /* free variable specific information */ 
+   assert(nvars_ <= varssize_);
+   for( i = 0; i < varssize_; ++i)
+   {
+      mpq_clear(obj_[i]);
+      mpq_clear(ub_[i]);
+      mpq_clear(lb_[i]);
+   }
+   SCIPfreeMemoryArray(scip, &beg_);
+   SCIPfreeMemoryArray(scip, &obj_);
+   SCIPfreeMemoryArray(scip, &ub_);
+   SCIPfreeMemoryArray(scip, &lb_);
+   SCIPfreeMemoryArray(scip, &vars_);
+   nvars_ = 0;
+   varssize_ = 0;
+#endif
 
    *result = SCIP_SUCCESS;
 

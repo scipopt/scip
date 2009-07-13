@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.2 2009/06/19 07:53:44 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.3 2009/07/13 12:48:48 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -35,6 +35,7 @@
 #include <math.h>
 #include <limits.h>
 #include <string.h>
+#include <gmp.h> /* only for debugging: for exactlp in order to print exact values stored ?????????? */
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -5045,6 +5046,7 @@ SCIP_Real SCIProwGetObjParallelism(
    return parallelism;
 }
 
+#if 0 /* correct scip version ??????????? */
 /** output row to file stream */
 void SCIProwPrint(
    SCIP_ROW*             row,                /**< LP row */
@@ -5083,7 +5085,66 @@ void SCIProwPrint(
    /* print right hand side */
    SCIPmessageFPrintInfo(file, "<= %.15g\n", row->rhs);
 }
+#else /* only for debugging: version for exactlp in order to print exact values stored ?????????? */
+/** output row to file stream */
+void SCIProwPrint(
+   SCIP_ROW*             row,                /**< LP row */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   char s[SCIP_MAXSTRLEN];
+   mpq_t tmp;
+   int i;
 
+   assert(row != NULL);
+
+   mpq_init(tmp);
+
+   /* print row name */
+   if( row->name != NULL && row->name[0] != '\0' )
+   {
+      SCIPmessageFPrintInfo(file, "%s: ", row->name);
+   }
+
+   /* print left hand side */
+   //   SCIPmessageFPrintInfo(file, "%.15g <= ", row->lhs);
+   mpq_set_d(tmp, row->lhs);
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "%Qd <= ", tmp);
+   SCIPmessageFPrintInfo(file, s);
+
+
+   /* print coefficients */
+   if( row->len == 0 )
+      SCIPmessageFPrintInfo(file, "0 ");
+   for( i = 0; i < row->len; ++i )
+   {
+      assert(row->cols[i] != NULL);
+      assert(row->cols[i]->var != NULL);
+      assert(SCIPvarGetName(row->cols[i]->var) != NULL);
+      assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
+      //      SCIPmessageFPrintInfo(file, "%+.15g<%s> ", row->vals[i]
+      mpq_set_d(tmp, row->vals[i]);
+      gmp_snprintf(s, SCIP_MAXSTRLEN, "%+Qd<%s> ", tmp, SCIPvarGetName(row->cols[i]->var));
+      SCIPmessageFPrintInfo(file, s);
+   }
+
+   /* print constant */
+   if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
+   {
+      //      SCIPmessageFPrintInfo(file, "%+.15g ", row->constant);
+      mpq_set_d(tmp, row->constant);
+      gmp_snprintf(s, SCIP_MAXSTRLEN, "%+Qd ", tmp);
+      SCIPmessageFPrintInfo(file, s);
+   }
+   /* print right hand side */
+   //   SCIPmessageFPrintInfo(file, "<= %.15g\n", row->rhs);
+   mpq_set_d(tmp, row->rhs);
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "<= %Qd\n", tmp);
+   SCIPmessageFPrintInfo(file, s);
+
+   mpq_clear(tmp);
+}
+#endif
 
 
 
@@ -6154,6 +6215,14 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
+
+   /*  if we want to solve the problem exactly and work with an FP approxination we cannot generated proved lower bounds 
+    *  via LP plus loose objval nor via the pseudo objval; therefore they are ignored
+    */
+   if( set->misc_exactsolve && !set->misc_usefprelax )
+   {
+      (*lp)->pseudoobjvalinf = 1;
+   }
 
    /* set default parameters in LP solver */
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_UOBJLIM, (*lp)->lpiuobjlim, &success) );
@@ -11365,6 +11434,49 @@ SCIP_RETCODE lpUpdateVarProved(
    return SCIP_OKAY;
 }
 
+/** updates current pseudo and loose objective values for a change in a variable's objective value or bounds;
+ *  actually, this method does not update loose and pseudo objval (it should be called if we want to solve the problem 
+ *  exactly but cannot generated proved lower bounds via LP plus loose objval nor via the pseudo objval
+ */ 
+static
+SCIP_RETCODE lpUpdateVarIgnore(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< problem variable that changed */
+   SCIP_Real             oldobj,             /**< old objective value of variable */
+   SCIP_Real             oldlb,              /**< old objective value of variable */
+   SCIP_Real             oldub,              /**< old objective value of variable */
+   SCIP_Real             newobj,             /**< new objective value of variable */
+   SCIP_Real             newlb,              /**< new objective value of variable */
+   SCIP_Real             newub               /**< new objective value of variable */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->pseudoobjvalinf >= 0);
+   assert(lp->looseobjvalinf >= 0);
+   assert(!SCIPsetIsInfinity(set, REALABS(oldobj)));
+   assert(!SCIPsetIsInfinity(set, oldlb));
+   assert(!SCIPsetIsInfinity(set, -oldub));
+   assert(!SCIPsetIsInfinity(set, REALABS(newobj)));
+   assert(!SCIPsetIsInfinity(set, newlb));
+   assert(!SCIPsetIsInfinity(set, -newub));
+   assert(var != NULL);
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE && SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+   {
+      SCIPerrorMessage("LP was informed of an objective change of a non-mutable variable\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   /* update squared euclidean norm and sum norm of objective function vector */
+   lp->objsqrnorm += SQR(newobj) - SQR(oldobj);
+   lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
+   lp->objsumnorm += REALABS(newobj) - REALABS(oldobj);
+   lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
+
+   return SCIP_OKAY;
+}
+
 /** updates current pseudo and loose objective value for a change in a variable's objective value */
 SCIP_RETCODE SCIPlpUpdateVarObj(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -11381,8 +11493,16 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
    {
       if( oldobj != newobj ) /*lint !e777*/
       {
-         SCIP_CALL( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+         if( set->misc_usefprelax )
+         {
+            SCIP_CALL( lpUpdateVarProved(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                  newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+         }
+         else
+         {
+            SCIP_CALL( lpUpdateVarIgnore(lp, set, var, oldobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
+                  newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) );
+         }
       }
    }
    else
@@ -11413,8 +11533,16 @@ SCIP_RETCODE SCIPlpUpdateVarLb(
    {
       if( oldlb != newlb && SCIPvarGetObj(var) > 0.0 ) /*lint !e777*/
       {
-         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
-               SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+         if( set->misc_usefprelax )
+         {
+            SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
+                  SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+         }
+         else
+         {
+            SCIP_CALL( lpUpdateVarIgnore(lp, set, var, SCIPvarGetObj(var), oldlb, SCIPvarGetUbLocal(var), 
+                 SCIPvarGetObj(var), newlb, SCIPvarGetUbLocal(var)) );
+         }
       }
    }
    else
@@ -11445,8 +11573,16 @@ SCIP_RETCODE SCIPlpUpdateVarUb(
    {
       if( oldub != newub && SCIPvarGetObj(var) < 0.0 ) /*lint !e777*/
       {
-         SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
-               SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+         if( set->misc_usefprelax )
+         {
+            SCIP_CALL( lpUpdateVarProved(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
+                  SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+         }
+         else
+         {
+            SCIP_CALL( lpUpdateVarIgnore(lp, set, var, SCIPvarGetObj(var), SCIPvarGetLbLocal(var), oldub, 
+                  SCIPvarGetObj(var), SCIPvarGetLbLocal(var), newub) );
+         }
       }
    }
    else
@@ -11619,6 +11755,34 @@ SCIP_RETCODE lpUpdateVarColumnProved(
    return SCIP_OKAY;
 }
 
+/** informs LP, that given formerly loose problem variable is now a column variable; 
+ *  actually, this method does not update loose objval (it should be called if we want to solve the problem 
+ *  exactly but cannot generated proved lower bounds via LP plus loose objval nor via the pseudo objval
+ */ 
+static
+SCIP_RETCODE lpUpdateVarColumnIgnore(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< problem variable that changed from LOOSE to COLUMN */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->nloosevars > 0);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+   assert(SCIPvarGetProbindex(var) >= 0);
+
+   lp->nloosevars--;
+
+   /* get rid of numerical problems: set loose objective value explicitly to zero, if no loose variables remain */
+   if( lp->nloosevars == 0 )
+   {
+      assert(lp->looseobjvalinf == 0 || lp->looseobjvalinf == 1); /* set to 1 in order to indicate unreliability */ 
+      lp->looseobjval = 0.0;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** informs LP, that given formerly loose problem variable is now a column variable */
 SCIP_RETCODE SCIPlpUpdateVarColumn(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -11630,7 +11794,14 @@ SCIP_RETCODE SCIPlpUpdateVarColumn(
 
    if( set->misc_exactsolve )
    {
-      SCIP_CALL( lpUpdateVarColumnProved(lp, set, var) );
+      if( set->misc_usefprelax )
+      {
+         SCIP_CALL( lpUpdateVarColumnProved(lp, set, var) );
+      }
+      else
+      {
+         SCIP_CALL( lpUpdateVarColumnIgnore(lp, set, var) );
+      }
    }
    else
    {
@@ -11740,6 +11911,26 @@ SCIP_RETCODE lpUpdateVarLooseProved(
    return SCIP_OKAY;
 }
 
+/** informs LP, that given formerly column problem variable is now again a loose variable 
+ *  actually, this method does not update loose objval (it should be called if we want to solve the problem 
+ *  exactly but cannot generated proved lower bounds via LP plus loose objval nor via the pseudo objval
+ */
+static
+SCIP_RETCODE lpUpdateVarLooseIgnore(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var                 /**< problem variable that changed from COLUMN to LOOSE */
+   )
+{
+   assert(lp != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarGetProbindex(var) >= 0);
+
+   lp->nloosevars++;
+
+   return SCIP_OKAY;
+}
+
 /** informs LP, that given formerly column problem variable is now again a loose variable */
 SCIP_RETCODE SCIPlpUpdateVarLoose(
    SCIP_LP*              lp,                 /**< current LP data */
@@ -11751,7 +11942,14 @@ SCIP_RETCODE SCIPlpUpdateVarLoose(
 
    if( set->misc_exactsolve )
    {
-      SCIP_CALL( lpUpdateVarLooseProved(lp, set, var) );
+      if( set->misc_usefprelax )
+      {
+         SCIP_CALL( lpUpdateVarLooseProved(lp, set, var) );
+      }
+      else
+      {
+         SCIP_CALL( lpUpdateVarLooseIgnore(lp, set, var) );
+      }
    }
    else
    {

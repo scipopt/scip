@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.2 2009/07/13 12:48:48 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -208,6 +208,13 @@ SCIP_Bool SCIPisTransformed(
 /** returns whether the solution process should be provably correct */
 extern
 SCIP_Bool SCIPisExactSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether the floating point problem should be a relaxation of the original problem (instead of an approximation);
+ *  only relevant for solving the problem provably correct 
+ */
+SCIP_Bool SCIPuseFPRelaxation(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

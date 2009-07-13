@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.2 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.3 2009/07/13 12:48:49 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1517,7 +1517,17 @@ SCIP_RETCODE priceAndCutLoop(
          /* update lower bound w.r.t. the the LP solution */
          if( !(*lperror) && !(*pricingaborted))
          {
-            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+            char lowerboundtype;
+            
+            if( set->misc_exactsolve )
+               if( set->misc_usefprelax )
+                  lowerboundtype = 's';
+               else 
+                  lowerboundtype = 'i';
+            else
+               lowerboundtype = 'u';
+
+            SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, lowerboundtype, set, stat, lp) );
             SCIPdebugMessage(" -> new lower bound: %g (LP status: %d, LP obj: %g)\n",
                              SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp), SCIPlpGetObjval(lp, set));
 
@@ -1761,10 +1771,19 @@ SCIP_RETCODE priceAndCutLoop(
    }
    else if( !(*lperror) )
    {
+      char lowerboundtype;
+
       assert(lp->flushed);
       assert(lp->solved);
 
-      SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, set, stat, lp) );
+      if( set->misc_exactsolve )
+         if( set->misc_usefprelax )
+            lowerboundtype = 's';
+         else 
+            lowerboundtype = 'i';
+      else
+         lowerboundtype = 'u';
+      SCIP_CALL( SCIPnodeUpdateLowerboundLP(focusnode, lowerboundtype, set, stat, lp) );
 
       /* update node estimate */
       SCIP_CALL( updateEstimate(set, stat, tree, lp, branchcand) );

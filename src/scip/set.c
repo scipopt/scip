@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194.2.2 2009/06/19 07:53:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.3 2009/07/13 12:48:49 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -176,6 +176,8 @@
 
 #define SCIP_DEFAULT_MISC_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be caught by SCIP? */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE       TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
+#define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< if problem is solved exactly, should floating point problem be 
+                                                 *   a relaxation of the original problem (instead of an approximation)? */
 
 
 /* Node Selection */
@@ -778,8 +780,14 @@ SCIP_RETCODE SCIPsetCreate(
          "should the problem be solved exactly (with proven dual bounds)?",
          &(*set)->misc_exactsolve, FALSE, SCIP_DEFAULT_MISC_EXACTSOLVE,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/usefprelax",
+         "if problem is solved exactly, should floating point problem be a relaxation of the original problem (instead of an approximation)?",
+         &(*set)->misc_usefprelax, FALSE, SCIP_DEFAULT_MISC_USEFPRELAX,
+         NULL, NULL) );
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
+   (*set)->misc_usefprelax = SCIP_DEFAULT_MISC_USEFPRELAX;
 #endif
 
    /* node selection */
