@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.26 2009/04/06 13:06:47 bzfberth Exp $
+# $Id: check_cluster.sh,v 1.27 2009/07/13 08:12:36 bzfheinz Exp $
 #
 # Call with "make testcluster"
 
@@ -106,7 +106,7 @@ HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + \`expr $TIMELIMIT / 10\``
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
 HARDMEMLIMIT=`expr $HARDMEMLIMIT \* 1024000`
 
-EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$SETNAME.eval
+EVALFILE=$SCIPPATH/results/check.$QUEUE.$TSTNAME.$BINID.$SETNAME.eval
 echo > $EVALFILE
 
 # counter to define file names for a test set uniquely 
@@ -124,7 +124,7 @@ do
   SHORTFILENAME=`basename $SHORTFILENAME .lp`
   SHORTFILENAME=`basename $SHORTFILENAME .opb`
 
-  FILENAME=$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
+  FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
   BASENAME=$SCIPPATH/results/$FILENAME
 
   TMPFILE=$BASENAME.tmp
@@ -149,7 +149,7 @@ do
   echo set display freq $DISPFREQ        >> $TMPFILE
   echo set memory savefac 1.0            >> $TMPFILE # avoid switching to dfs - better abort with memory error
   echo set save $SETFILE                 >> $TMPFILE
-  echo read /workbig/$i                  >> $TMPFILE
+  echo read /work/$i                  >> $TMPFILE
 #  echo presolve                          >> $TMPFILE
   echo optimize                          >> $TMPFILE
   echo display statistics                >> $TMPFILE
