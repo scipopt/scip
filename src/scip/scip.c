@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.511 2009/07/08 15:36:28 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.512 2009/07/13 13:06:49 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8395,7 +8395,7 @@ SCIP_RETCODE SCIPmarkDoNotMultaggrVar(
    SCIP_VAR*             var                 /**< variable to delete */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPmarkDoNotMultiaggrVar", TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPmarkDoNotMultiaggrVar", TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPvarMarkDoNotMultaggr(var);
 
