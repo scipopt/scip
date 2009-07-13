@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.326 2009/06/26 11:02:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.327 2009/07/13 13:20:57 bzfviger Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5258,7 +5258,7 @@ SCIP_RETCODE convertLongEquality(
       varsintegral = varsintegral && (slacktype != SCIP_VARTYPE_CONTINUOUS);
       iscont = (slacktype == SCIP_VARTYPE_CONTINUOUS || slacktype == SCIP_VARTYPE_IMPLINT);
       if ( slacktype == SCIP_VARTYPE_IMPLINT )
-	 ++nimplvars;
+         ++nimplvars;
 
       /* update candidates for continuous -> implint and integer -> implint conversion */
       if( iscont )
@@ -5282,19 +5282,20 @@ SCIP_RETCODE convertLongEquality(
          continue;
 
       /* check, if variable can be used as a slack variable */
-      if( iscont || (coefsintegral && varsintegral && SCIPisEQ(scip, absval, 1.0)) )
+      if( (iscont || (coefsintegral && varsintegral && SCIPisEQ(scip, absval, 1.0))) &&
+          !SCIPvarDoNotMultaggr(var) )
       {
          SCIP_Bool better;
          SCIP_Bool equal;
          SCIP_Real slackdomrng;
 
-	 if( SCIPisInfinity(scip, varub) || SCIPisInfinity(scip, -varlb) )
-	   slackdomrng = SCIPinfinity(scip);
-	 else
-	   {
-	     slackdomrng = (varub - varlb)*absval;
-	     assert(!SCIPisInfinity(scip, slackdomrng));
-	   }
+         if( SCIPisInfinity(scip, varub) || SCIPisInfinity(scip, -varlb) )
+            slackdomrng = SCIPinfinity(scip);
+         else
+         {
+            slackdomrng = (varub - varlb)*absval;
+            assert(!SCIPisInfinity(scip, slackdomrng));
+         }
          equal = FALSE;
          better = (slacktype > bestslacktype) || (bestslackpos == -1);
          if( !better && slacktype == bestslacktype )
@@ -5339,7 +5340,7 @@ SCIP_RETCODE convertLongEquality(
             if( bestremovescons && !removescons )
                continue;
 
-            /* if the constraint does not become redundant, only accept the variable it if it does not appear in
+            /* if the constraint does not become redundant, only accept the variable if it does not appear in
              * other constraints
              */
             if( !removescons && nlocks > maxnlocksstay )
