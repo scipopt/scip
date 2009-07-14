@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.47 2009/06/15 09:57:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.48 2009/07/14 11:12:50 bzfheinz Exp $"
 
 /**@file   cons_xxx.c
  * @ingroup CONSHDLRS 
@@ -442,7 +442,7 @@ SCIP_DECL_CONSCOPY(consCopyXxx)
    return SCIP_OKAY;
 }
 #else
-#define consParseXxx NULL
+#define consCopyXxx NULL
 #endif
 
 
