@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.12 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.13 2009/07/17 15:31:23 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -61,6 +61,7 @@ void SCIPintervalSetBounds(
 /** adds operand1 and operand2 and stores result in resultant */
 extern
 void SCIPintervalAdd(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
@@ -69,6 +70,7 @@ void SCIPintervalAdd(
 /** substracts operand2 from operand1 and stores result in resultant */
 extern
 void SCIPintervalSub(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
@@ -77,6 +79,7 @@ void SCIPintervalSub(
 /** multiplies operand1 with operand2 and stores result in resultant */
 extern
 void SCIPintervalMul(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */

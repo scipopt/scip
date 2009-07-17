@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.315 2009/07/08 15:36:28 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.316 2009/07/17 15:31:23 bzfviger Exp $"
  
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -11111,8 +11111,8 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
       else
       {
          SCIPintervalSet(&bd, oldbound);
-         SCIPintervalMul(&prod, bd, objint);
-         SCIPintervalSub(&psval, psval, prod);
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, objint);
+         SCIPintervalSub(SCIPsetInfinity(set), &psval, psval, prod);
       }
       assert(pseudoobjvalinf >= 0);
       if( SCIPsetIsInfinity(set, REALABS(newbound)) )
@@ -11120,8 +11120,8 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
       else
       {
          SCIPintervalSet(&bd, newbound);
-         SCIPintervalMul(&prod, bd, objint);
-         SCIPintervalAdd(&psval, psval, prod);
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, objint);
+         SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, prod);
       }
 
       pseudoobjval = SCIPintervalGetInf(psval);
@@ -11280,8 +11280,8 @@ SCIP_RETCODE lpUpdateVarProved(
       {
          SCIPintervalSet(&bd, oldlb);
          SCIPintervalSet(&obj, oldobj);
-         SCIPintervalMul(&prod, bd, obj);
-         SCIPintervalSub(&deltaval, deltaval, prod);  /* deltaval -= oldlb * oldobj; */
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, obj);
+         SCIPintervalSub(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval -= oldlb * oldobj; */
       }
    }
    else if( oldobj < 0.0 )
@@ -11292,8 +11292,8 @@ SCIP_RETCODE lpUpdateVarProved(
       {
          SCIPintervalSet(&bd, oldub);
          SCIPintervalSet(&obj, oldobj);
-         SCIPintervalMul(&prod, bd, obj);
-         SCIPintervalSub(&deltaval, deltaval, prod);  /* deltaval -= oldub * oldobj; */
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, obj);
+         SCIPintervalSub(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval -= oldub * oldobj; */
       }
    }
 
@@ -11306,8 +11306,8 @@ SCIP_RETCODE lpUpdateVarProved(
       {
          SCIPintervalSet(&bd, newlb);
          SCIPintervalSet(&obj, newobj);
-         SCIPintervalMul(&prod, bd, obj);
-         SCIPintervalAdd(&deltaval, deltaval, prod);  /* deltaval += newlb * newobj; */
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, obj);
+         SCIPintervalAdd(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval += newlb * newobj; */
       }
    }
    else if( newobj < 0.0 )
@@ -11318,20 +11318,20 @@ SCIP_RETCODE lpUpdateVarProved(
       {
          SCIPintervalSet(&bd, newub);
          SCIPintervalSet(&obj, newobj);
-         SCIPintervalMul(&prod, bd, obj);
-         SCIPintervalAdd(&deltaval, deltaval, prod);  /* deltaval += newub * newobj; */
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, obj);
+         SCIPintervalAdd(SCIPsetInfinity(set), &deltaval, deltaval, prod);  /* deltaval += newub * newobj; */
       }
    }
 
    /* update the pseudo and loose objective values */
    SCIPintervalSet(&psval, lp->pseudoobjval);
-   SCIPintervalAdd(&psval, psval, deltaval);
+   SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
    lp->pseudoobjval = SCIPintervalGetInf(psval);
    lp->pseudoobjvalinf += deltainf;
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
    {
       SCIPintervalSet(&psval, lp->looseobjval);
-      SCIPintervalAdd(&psval, psval, deltaval);
+      SCIPintervalAdd(SCIPsetInfinity(set), &psval, psval, deltaval);
       lp->looseobjval = SCIPintervalGetInf(psval);
       lp->looseobjvalinf += deltainf;
    }
@@ -11565,8 +11565,8 @@ SCIP_RETCODE lpUpdateVarColumnProved(
       {
          SCIPintervalSet(&bd, lb);
          SCIPintervalSet(&ob, obj);
-         SCIPintervalMul(&prod, bd, ob);
-         SCIPintervalSub(&loose, loose, prod);  /* lp->looseobjval -= lb * obj; */
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, ob);
+         SCIPintervalSub(SCIPsetInfinity(set), &loose, loose, prod);  /* lp->looseobjval -= lb * obj; */
       }
    }
    else if( SCIPsetIsNegative(set, obj) )
@@ -11578,8 +11578,8 @@ SCIP_RETCODE lpUpdateVarColumnProved(
       {
          SCIPintervalSet(&bd, ub);
          SCIPintervalSet(&ob, obj);
-         SCIPintervalMul(&prod, bd, ob);
-         SCIPintervalSub(&loose, loose, prod);  /* lp->looseobjval -= ub * obj; */
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, ob);
+         SCIPintervalSub(SCIPsetInfinity(set), &loose, loose, prod);  /* lp->looseobjval -= ub * obj; */
       }
    }
    lp->nloosevars--;
@@ -11693,8 +11693,8 @@ SCIP_RETCODE lpUpdateVarLooseProved(
       {
          SCIPintervalSet(&bd, lb);
          SCIPintervalSet(&ob, obj);
-         SCIPintervalMul(&prod, bd, ob);
-         SCIPintervalAdd(&loose, loose, prod);  /* lp->looseobjval += lb * obj; */
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, ob);
+         SCIPintervalAdd(SCIPsetInfinity(set), &loose, loose, prod);  /* lp->looseobjval += lb * obj; */
       }
    }
    else if( SCIPsetIsNegative(set, obj) )
@@ -11706,8 +11706,8 @@ SCIP_RETCODE lpUpdateVarLooseProved(
       {
          SCIPintervalSet(&bd, ub);
          SCIPintervalSet(&ob, obj);
-         SCIPintervalMul(&prod, bd, ob);
-         SCIPintervalAdd(&loose, loose, prod);  /* lp->looseobjval += ub * obj; */
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, bd, ob);
+         SCIPintervalAdd(SCIPsetInfinity(set), &loose, loose, prod);  /* lp->looseobjval += ub * obj; */
       }
    }
    lp->nloosevars++;
@@ -12967,8 +12967,8 @@ SCIP_RETCODE provedBound(
          SCIPintervalSet(&b, 0.0);
       }
       
-      SCIPintervalMul(&prod, yinter[j], b);
-      SCIPintervalAdd(&ytb, ytb, prod);
+      SCIPintervalMul(SCIPsetInfinity(set), &prod, yinter[j], b);
+      SCIPintervalAdd(SCIPsetInfinity(set), &ytb, ytb, prod);
    }
 
    /* calculate min{(c^T - y^TA)x} */
@@ -12990,8 +12990,8 @@ SCIP_RETCODE provedBound(
          assert(col->rows[i]->lppos >= 0);
          assert(col->linkpos[i] >= 0);
          SCIPintervalSet(&a, col->vals[i]);
-         SCIPintervalMul(&prod, yinter[col->rows[i]->lppos], a);
-         SCIPintervalSub(&diff, diff, prod);
+         SCIPintervalMul(SCIPsetInfinity(set), &prod, yinter[col->rows[i]->lppos], a);
+         SCIPintervalSub(SCIPsetInfinity(set), &diff, diff, prod);
       }
 
 #ifndef NDEBUG
@@ -13006,12 +13006,12 @@ SCIP_RETCODE provedBound(
 #endif
 
       SCIPintervalSetBounds(&x, col->lb, col->ub);
-      SCIPintervalMul(&diff, diff, x);
-      SCIPintervalAdd(&minprod, minprod, diff);
+      SCIPintervalMul(SCIPsetInfinity(set), &diff, diff, x);
+      SCIPintervalAdd(SCIPsetInfinity(set), &minprod, minprod, diff);
    }
 
    /* add y^Tb */
-   SCIPintervalAdd(&minprod, minprod, ytb);
+   SCIPintervalAdd(SCIPsetInfinity(set), &minprod, minprod, ytb);
 
    /* free buffer for storing y in interval arithmetic */
    SCIPsetFreeBufferArray(set, &yinter);

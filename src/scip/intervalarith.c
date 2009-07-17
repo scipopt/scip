@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.18 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.19 2009/07/17 15:31:23 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -179,6 +179,7 @@ void SCIPintervalSetBounds(
 
 /** adds operand1 and operand2 and stores result in resultant */
 void SCIPintervalAdd(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
@@ -192,16 +193,32 @@ void SCIPintervalAdd(
 
    roundmode = getRoundingMode();
 
-   setRoundingMode(SCIP_ROUND_DOWNWARDS);
-   resultant->inf = operand1.inf + operand2.inf;
-   setRoundingMode(SCIP_ROUND_UPWARDS);
-   resultant->sup = operand1.sup + operand2.sup;
-
+   if( operand1.inf <= -infinity || operand2.inf <= -infinity )
+   {
+      resultant->inf = -infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_DOWNWARDS);
+      resultant->inf = operand1.inf + operand2.inf;
+   }
+   
+   if( operand1.sup >=  infinity || operand2.sup >=  infinity )
+   {
+      resultant->sup =  infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_UPWARDS);
+      resultant->sup = operand1.sup + operand2.sup;
+   }
+   
    setRoundingMode(roundmode);
 }
 
 /** substracts operand2 from operand1 and stores result in resultant */
 void SCIPintervalSub(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
@@ -215,22 +232,42 @@ void SCIPintervalSub(
 
    roundmode = getRoundingMode();
 
-   setRoundingMode(SCIP_ROUND_DOWNWARDS);
-   resultant->inf = operand1.inf - operand2.sup;
-   setRoundingMode(SCIP_ROUND_UPWARDS);
-   resultant->sup = operand1.sup - operand2.inf;
+   if( operand1.inf <= -infinity || operand2.sup >=  infinity )
+   {
+      resultant->inf = -infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_DOWNWARDS);
+      resultant->inf = operand1.inf - operand2.sup;
+   }
+   
+   if( operand1.sup >=  infinity || operand2.inf <= -infinity )
+   {
+      resultant->sup =  infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_UPWARDS);
+      resultant->sup = operand1.sup - operand2.inf;
+   }
 
    setRoundingMode(roundmode);
 }
 
 /** multiplies operand1 with operand2 and stores result in resultant */
 void SCIPintervalMul(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    )
 {
    ROUNDMODE roundmode;
+   SCIP_Real cand1;
+   SCIP_Real cand2;
+   SCIP_Real cand3;
+   SCIP_Real cand4;
 
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
@@ -238,6 +275,41 @@ void SCIPintervalMul(
 
    roundmode = getRoundingMode();
 
+   if( (operand1.inf <= -infinity && operand2.sup > 0         ) ||
+       (operand1.sup >   0        && operand2.inf <= -infinity) ||
+       (operand1.inf <   0        && operand2.sup >=  infinity) ||
+       (operand1.sup >=  infinity && operand2.inf <   0       ) )
+   {
+      resultant->inf = -infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_DOWNWARDS);
+      cand1 = operand1.inf * operand2.inf;
+      cand2 = operand1.inf * operand2.sup;
+      cand3 = operand1.sup * operand2.inf;
+      cand4 = operand1.sup * operand2.sup;
+      resultant->inf = MIN(MIN(cand1, cand2), MIN(cand3, cand4));
+   }
+   
+   if( (operand1.inf <= -infinity && operand2.inf <   0       ) ||
+       (operand1.inf <   0        && operand2.inf <= -infinity) ||
+       (operand1.sup >   0        && operand2.sup >=  infinity) ||
+       (operand1.sup >=  infinity && operand2.sup >   0       ) )
+   {
+      resultant->sup =  infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_UPWARDS);
+      cand1 = operand1.inf * operand2.inf;
+      cand2 = operand1.inf * operand2.sup;
+      cand3 = operand1.sup * operand2.inf;
+      cand4 = operand1.sup * operand2.sup;
+      resultant->sup = MAX(MAX(cand1, cand2), MAX(cand3, cand4));
+   }
+   
+#if 0   
    if( operand1.inf >= 0.0 )
    {
       if( operand2.inf >= 0.0 )
@@ -326,7 +398,8 @@ void SCIPintervalMul(
          resultant->sup = operand1.inf * operand2.inf;
       }
    }
-
+#endif
+   
    setRoundingMode(roundmode);
 }
 
