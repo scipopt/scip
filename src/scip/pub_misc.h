@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.53 2009/04/16 07:49:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.54 2009/07/17 18:45:00 bzfviger Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -235,7 +235,60 @@ void SCIPhashmapPrintStatistics(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    );
 
+/** indicates whether an hash map has no entries */
+extern
+SCIP_Bool SCIPhashmapIsEmpty(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+);
 
+/** gives the number of entries in an hash map */ 
+extern
+int SCIPhashmapGetNEntries(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+);
+
+/** gives the number of lists (buckets) in an hash map */ 
+extern
+int SCIPhashmapGetNLists(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+);
+
+/** gives a specific list (bucket) in an hash map */
+extern
+SCIP_HASHMAPLIST* SCIPhashmapGetList(
+   SCIP_HASHMAP*     hashmap,          /**< hash map */
+   int               listindex         /**< index of hash map list */
+);
+
+/** gives the number of entries in a list of a hash map */ 
+extern
+int SCIPhashmapListGetNEntries(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
+);
+
+/** retrieves origin of given entry in an hash map */ 
+extern
+void* SCIPhashmapListGetOrigin(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+);
+
+/** Retrieves image of given entry in an hash map */ 
+extern
+void* SCIPhashmapListGetImage(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+);
+
+/** retrieves next entry from given entry in an hash map list, or NULL if at end of list. */ 
+extern
+SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+);
+
+/** removes all entries in an hash map. */ 
+extern
+SCIP_RETCODE SCIPhashmapRemoveAll(
+   SCIP_HASHMAP*     hashmap           /**< hash map */
+);
 
 
 /*

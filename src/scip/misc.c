@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.93 2009/04/16 07:49:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.94 2009/07/17 18:45:00 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1013,6 +1013,110 @@ void SCIPhashmapPrintStatistics(
    SCIPmessagePrintInfo("\n");
 }
 
+
+SCIP_Bool SCIPhashmapIsEmpty(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+)
+{
+   int i;
+   assert(hashmap != NULL);
+   
+   for( i = 0; i < hashmap->nlists; ++i )
+      if( hashmap->lists[i] )
+         return FALSE;
+   
+   return TRUE;
+}
+
+int SCIPhashmapGetNEntries(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+)
+{
+   int count = 0;
+   int i;
+   assert(hashmap != NULL);
+   
+   for( i = 0; i < hashmap->nlists; ++i )
+      count += SCIPhashmapListGetNEntries(hashmap->lists[i]);
+
+   return count;
+}
+
+
+int SCIPhashmapGetNLists(
+   SCIP_HASHMAP*      hashmap          /**< hash map */
+)
+{
+   assert(hashmap != NULL);
+   
+   return hashmap->nlists;
+}
+
+SCIP_HASHMAPLIST* SCIPhashmapGetList(
+   SCIP_HASHMAP*     hashmap,          /**< hash map */
+   int               listindex         /**< index of hash map list */
+)
+{
+   assert(hashmap != NULL);
+   assert(listindex >= 0);
+   assert(listindex < hashmap->nlists);
+   
+   return hashmap->lists[listindex];
+}
+
+int SCIPhashmapListGetNEntries(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
+)
+{
+   int count = 0;
+   
+   for( ; hashmaplist; hashmaplist = hashmaplist->next )
+      ++count;
+   
+   return count;
+}
+
+void* SCIPhashmapListGetOrigin(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+)
+{
+   assert(hashmaplist != NULL);
+   
+   return hashmaplist->origin;
+}
+
+void* SCIPhashmapListGetImage(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+)
+{
+   assert(hashmaplist != NULL);
+   
+   return hashmaplist->image;
+}
+
+SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
+   SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
+)
+{
+   assert(hashmaplist != NULL);
+   
+   return hashmaplist->next;
+}
+
+SCIP_RETCODE SCIPhashmapRemoveAll(
+   SCIP_HASHMAP*     hashmap           /**< hash map */
+)
+{
+   int listidx;
+
+   assert(hashmap != NULL);
+   
+   /* free hash lists */
+   for( listidx = 0; listidx < hashmap->nlists; ++listidx )
+      hashmaplistFree(&hashmap->lists[listidx], hashmap->blkmem);
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -2975,12 +3079,12 @@ SCIP_Longint SCIPcalcGreComDiv(
    do
    {
       while( !(t & 1) )
-	 t /= 2;
+         t /= 2;
 
       if( t > 0 )
-	 val1 = t;
+         val1 = t;
       else
-	 val2 = -t;
+         val2 = -t;
 
       t = val1 - val2;
    }
