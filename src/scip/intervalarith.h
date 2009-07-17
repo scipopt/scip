@@ -12,11 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.13 2009/07/17 15:31:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.14 2009/07/17 18:25:44 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
  * @author Tobias Achterberg
+ * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -58,6 +59,58 @@ void SCIPintervalSetBounds(
    SCIP_Real             sup                 /**< value to store as supremum */
    );
 
+/** sets interval to empty interval, which will be [infinity, -infinity] */
+extern
+void SCIPintervalSetEmpty(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
+   );
+
+/** indicates whether interval is empty, i.e., whether if inf > sup */
+extern
+SCIP_Bool SCIPintervalIsEmpty(
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
+/** sets interval to entire [-infty, +infty] */
+extern
+void SCIPintervalSetEntire(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
+   );
+
+/** indicates whether interval is entire, i.e., whether inf <= -infinity and sup >= infinity */
+extern
+SCIP_Bool SCIPintervalIsEntire(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
+/** indicates whether operand1 is contained in operand2 */
+extern
+SCIP_Bool SCIPintervalIsSubsetEQ(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** intersection of two intervals */
+extern
+void SCIPintervalIntersect(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** interval enclosure of the union of two intervals */
+extern
+void SCIPintervalUnify(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+
 /** adds operand1 and operand2 and stores result in resultant */
 extern
 void SCIPintervalAdd(
@@ -76,6 +129,18 @@ void SCIPintervalSub(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
+/** undoes a substraction operation.
+ * In number arithmetic, this would be addition.
+ * Substractions of unbounded intervals cannot be undone, but resultant gives still a valid (but probably larger) interval.
+ */
+extern
+void SCIPintervalUndoSub(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
 /** multiplies operand1 with operand2 and stores result in resultant */
 extern
 void SCIPintervalMul(
@@ -84,6 +149,157 @@ void SCIPintervalMul(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
+
+/** multiplies operand1 with scalar operand2 and stores result in resultant */
+extern
+void SCIPintervalMulScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** divides operand1 by operand2 and stores result in resultant */
+extern
+void SCIPintervalDiv(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** divides operand1 by scalar operand2 and stores result in resultant 
+ * if operand2 is 0.0, it gives an empty interval as result */
+extern
+void SCIPintervalDivScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** squares operand and stores result in resultant */
+extern
+void SCIPintervalSquare(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
+/** stores (positive part of) square root of operand in resultant */
+extern
+void SCIPintervalSquareRoot(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
+/** stores operand1 to the power of operand2 in resultant
+ * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1)) */
+extern
+void SCIPintervalPower(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** stores operand1 to the power of the scalar operand2 in resultant */
+extern
+void SCIPintervalPowerScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** stores exponential of operand in resultant */
+extern
+void SCIPintervalExp(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
+/** stores natural logarithm of operand in resultant */
+extern
+void SCIPintervalLog(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
+/** stores minimum of operands in resultant */
+extern
+void SCIPintervalMin(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** stores maximum of operands in resultant */
+extern
+void SCIPintervalMax(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** computes exact upper bound on a*x^2 + b*x for x in [xlb, xub], b an interval
+ * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008) */
+extern
+SCIP_Real SCIPintervalQuadUpperBound(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_Real             a,                  /**< coefficient of x^2 */
+   SCIP_INTERVAL         b,                  /**< coefficient of x */
+   SCIP_INTERVAL         xrng                /**< range of x */
+   );
+
+/** stores range of quadratic term in resultant
+ * given number a and intervals b and x, computes interval for a*x^2+b*x */
+extern
+void SCIPintervalQuad(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
+   SCIP_INTERVAL         xrng                /**< range of x */
+   );
+
+
+/** solves a quadratic equation with interval linear and constant coefficients
+ * Given a number a and intervals b and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x \in c */
+extern
+void SCIPintervalSolveUnivariateQuadExpressionPositive(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
+   SCIP_INTERVAL         rhs                 /**< right hand side of equation */
+);
+
+/** solves a quadratic equation with linear and constant coefficients
+ * Given numbers a, b, and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x >= c
+ * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008). */
+extern
+void SCIPintervalSolveUnivariateQuadExpressionPositive2(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_Real             lincoeff,           /**< coefficient of x */
+   SCIP_Real             rhs                 /**< right hand side of equation */
+);
+
+/** solves a quadratic equation with interval linear and constant coefficients
+ * Given a number a and intervals b and c, this function computes an interval that contains all solutions of a*x^2 + b*x \in c */
+extern
+void SCIPintervalSolveUnivariateQuadExpression(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
+   SCIP_INTERVAL         lincoeff,           /**< coefficient of x */
+   SCIP_INTERVAL         rhs                 /**< right hand side of equation */
+);
 
 /** returns infimum of interval */
 extern
