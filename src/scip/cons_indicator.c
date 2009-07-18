@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.34 2009/06/15 09:57:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.35 2009/07/18 10:58:46 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -208,6 +208,12 @@
 #define EVENTHDLR_NAME         "indicator"
 #define EVENTHDLR_DESC         "bound change event handler for indicator constraints"
 
+/* default values for parameters */
+#define BRANCHINDICATORS   TRUE
+#define GENLOGICOR         FALSE
+#define SEPAALTERNATIVELP  FALSE
+#define ADDCOUPLING        FALSE
+#define UPDATEBOUNDS       FALSE
 
 /* maximal value for coupling inequalities */
 #define maxCouplingValue  1e3
@@ -3000,27 +3006,27 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/branchIndicators",
          "Branch on indicator constraints in enforcing?",
-         &conshdlrdata->branchIndicators, TRUE, TRUE, NULL, NULL) );
+         &conshdlrdata->branchIndicators, TRUE, BRANCHINDICATORS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/genLogicor",
          "Generate logicor constraints instead of cuts?",
-         &conshdlrdata->genLogicor, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->genLogicor, TRUE, GENLOGICOR, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/sepaAlternativeLP",
          "Separate using the alternative LP?",
-         &conshdlrdata->sepaAlternativeLP, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->sepaAlternativeLP, TRUE, SEPAALTERNATIVELP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/addCoupling",
          "add initial coupling inequalities",
-         &conshdlrdata->addCoupling, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->addCoupling, TRUE, ADDCOUPLING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/updateBounds",
          "Update bounds of original variables for separation?",
-         &conshdlrdata->updateBounds, TRUE, FALSE, NULL, NULL) );
+         &conshdlrdata->updateBounds, TRUE, UPDATEBOUNDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
