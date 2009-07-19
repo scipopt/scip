@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.32 2009/04/06 13:07:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.33 2009/07/19 12:40:37 bzfgamra Exp $"
 
 /**@file   sepa_intobj.c
  * @ingroup SEPARATORS
@@ -230,7 +230,7 @@ SCIP_RETCODE separateCuts(
    {
       if( !SCIProwIsInLP(sepadata->objrow) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, sepadata->objrow, FALSE) );
+         SCIP_CALL( SCIPaddCut(scip, sol, sepadata->objrow, FALSE) );
       }
       if( tightened )
          *result = SCIP_REDUCEDDOM;

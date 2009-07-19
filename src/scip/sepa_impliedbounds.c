@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.24 2009/05/02 13:18:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.25 2009/07/19 12:40:37 bzfgamra Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS
@@ -47,6 +47,7 @@
 static 
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             val1,               /**< given coefficient of first variable */
    SCIP_VAR*             var1,               /**< given first variable */
    SCIP_Real             solval1,            /**< current LP solution value of first variable */
@@ -86,7 +87,7 @@ SCIP_RETCODE addCut(
 #endif
 
       /* add cut */
-      SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE) );
+      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE) );
       SCIP_CALL( SCIPaddPoolCut(scip, cut) );
       (*ncuts)++;
       
@@ -101,6 +102,7 @@ SCIP_RETCODE addCut(
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            solvals,            /**< array with solution values of all problem variables */
    SCIP_VAR**            fracvars,           /**< array of fractional variables */
    SCIP_Real*            fracvals,           /**< solution values of fractional variables */
@@ -167,7 +169,7 @@ SCIP_RETCODE separateCuts(
             if (SCIPisLE(scip, implbounds[j], ub))
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (ub - implbounds[j]), fracvars[i], fracvals[i],
                      ub, ncuts) );
             }
          }
@@ -182,7 +184,7 @@ SCIP_RETCODE separateCuts(
             if (SCIPisGE(scip, implbounds[j], lb))
             {
                /* add cut if violated */
-               SCIP_CALL( addCut(scip, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
+               SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (implbounds[j] - lb), fracvars[i], fracvals[i],
                      -lb, ncuts) );
             }
          }
@@ -215,7 +217,7 @@ SCIP_RETCODE separateCuts(
             assert(SCIPisLE(scip, implbounds[j], ub));
  
             /* add cut if violated */
-            SCIP_CALL( addCut(scip, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
+            SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
                   implbounds[j], ncuts) );
          }
          else
@@ -227,7 +229,7 @@ SCIP_RETCODE separateCuts(
             assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, implbounds[j], lb));
  
             /* add cut if violated */
-            SCIP_CALL( addCut(scip, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
+            SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
                   -implbounds[j], ncuts) );
          }
       }
@@ -298,7 +300,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
    SCIP_CALL( SCIPgetVarSols(scip, nvars, vars, solvals) );
 
    /* call the cut separation */
-   SCIP_CALL( separateCuts(scip, solvals, fracvars, fracvals, nfracs, &ncuts) );
+   SCIP_CALL( separateCuts(scip, NULL, solvals, fracvars, fracvals, nfracs, &ncuts) );
 
    /* adjust result code */
    if( ncuts > 0 )
@@ -359,7 +361,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
    ncuts = 0;
    if( nfracs > 0 )
    {
-      SCIP_CALL( separateCuts(scip, solvals, fracvars, fracvals, nfracs, &ncuts) );
+      SCIP_CALL( separateCuts(scip, sol, solvals, fracvars, fracvals, nfracs, &ncuts) );
    }
 
    /* adjust result code */
