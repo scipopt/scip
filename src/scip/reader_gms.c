@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.1 2009/07/20 08:07:27 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.2 2009/07/20 09:03:48 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -53,7 +53,7 @@
 /*
  * Data structures
  */
-#define GMS_MAX_LINELEN      65536
+#define GMS_MAX_LINELEN      256
 #define GMS_MAX_PUSHEDTOKENS 2
 #define GMS_INIT_COEFSSIZE   8192
 #define GMS_MAX_PRINTLEN     256       /**< the maximum length of any line is 255 + '\\0' = 256*/
@@ -261,7 +261,7 @@ void printRow(
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g %s", vals[v], varname);
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g*%s", vals[v], varname);
       
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -702,6 +702,7 @@ SCIP_RETCODE SCIPwriteGms(
    {
       var = vars[v];
       assert( var != NULL );
+      (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
 
       if( transformed )
       {
@@ -720,7 +721,7 @@ SCIP_RETCODE SCIPwriteGms(
       if( SCIPisEQ(scip, lb, ub) )
       {
 	 if( v < nintvars )
-	    SCIPinfoMessage(scip, file, " %s.fx = %d;\n", varname, SCIPfloor(scip, lb + 0.5));
+	    SCIPinfoMessage(scip, file, " %s.fx = %g;\n", varname, SCIPfloor(scip, lb + 0.5));
 	 else
 	    SCIPinfoMessage(scip, file, " %s.fx = %.15g;\n", varname, lb);
 	 nondefbounds = TRUE;
@@ -733,16 +734,16 @@ SCIP_RETCODE SCIPwriteGms(
 	 if( !SCIPisZero(scip, lb) )
 	 {
 	    if( !SCIPisInfinity(scip, -lb) )
-	       SCIPinfoMessage(scip, file, " %s.lo = %d;\n", varname, SCIPceil(scip, lb));
+	       SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
 	    else
-	       SCIPinfoMessage(scip, file, " %s.lo = -inf;\n", varname);
+	       SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, -SCIPinfinity(scip)); /* sorry, -inf not allowed in gams file here */
 	    nondefbounds = TRUE;
 	 }
       }
       else if( v < nintvars && !SCIPisInfinity(scip, -lb) )
       {
 	 /* freeints == TRUE: integer variables are free by default */
-	 SCIPinfoMessage(scip, file, " %s.lo = %d;\n", varname, SCIPceil(scip, lb));
+	 SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
 	 nondefbounds = TRUE;
       }
       else if( v >= nintvars && !SCIPisInfinity(scip, -lb) )
@@ -757,7 +758,7 @@ SCIP_RETCODE SCIPwriteGms(
       {
 	 if( !SCIPisEQ(scip, ub, 1.0) )
 	 {
-	    SCIPinfoMessage(scip, file, " %s.up = %d;\n", varname, SCIPfloor(scip, ub));
+	    SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
 	    nondefbounds = TRUE;
 	 }
       }
@@ -767,16 +768,16 @@ SCIP_RETCODE SCIPwriteGms(
 	 if( !SCIPisEQ(scip, ub, 100.0) )
 	 {
 	    if( !SCIPisInfinity(scip, ub) )
-	       SCIPinfoMessage(scip, file, " %s.up = %d;\n", varname, SCIPfloor(scip, ub));
+	       SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
 	    else
-	       SCIPinfoMessage(scip, file, " %s.up = +inf;\n", varname);
+	       SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPinfinity(scip)); /* sorry, +inf not allowed in gams file here */
 	    nondefbounds = TRUE;
 	 }
       }
       else if( v < nintvars && !SCIPisInfinity(scip, ub) )
       {
 	 /* freeints == TRUE: integer variables are free by default */
-	 SCIPinfoMessage(scip, file, " %s.up = %d;\n", varname, SCIPfloor(scip, ub));
+	 SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
 	 nondefbounds = TRUE;
       }
       else if( v >= nintvars && !SCIPisInfinity(scip, ub) )
@@ -837,7 +838,7 @@ SCIP_RETCODE SCIPwriteGms(
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
       (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g %s%s", SCIPvarGetObj(var), varname, v == nvars - 1 ? ";" : "");
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g*%s%s", SCIPvarGetObj(var), varname, v == nvars - 1 ? ";" : "");
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -946,6 +947,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "Model m / all /;\n\n");
 
    /* print solve command */
+   SCIPinfoMessage(scip, file, "$if not set MIP $set MIP MIP\n");
    SCIPinfoMessage(scip, file, "Solve m using %%MIP%% %simizing objvar;\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "min" : "max");
 
    *result = SCIP_SUCCESS;
