@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.80 2009/04/06 13:07:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.81 2009/07/20 08:07:27 bzfgleix Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -53,11 +53,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrBinpack(scip) );
 #endif
 
+   SCIP_CALL( SCIPincludeReaderCcg(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
    SCIP_CALL( SCIPincludeReaderCnf(scip) );
    SCIP_CALL( SCIPincludeReaderFix(scip) );
    SCIP_CALL( SCIPincludeReaderFzn(scip) );
-   SCIP_CALL( SCIPincludeReaderCcg(scip) );
+   SCIP_CALL( SCIPincludeReaderGms(scip) );
    SCIP_CALL( SCIPincludeReaderLp(scip) );
    SCIP_CALL( SCIPincludeReaderMps(scip) );
    SCIP_CALL( SCIPincludeReaderOpb(scip) );

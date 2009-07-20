@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.295 2009/07/17 18:29:06 bzfviger Exp $
+# $Id: Makefile,v 1.296 2009/07/20 08:07:27 bzfgleix Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -487,11 +487,12 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/presol_trivial.o \
 			scip/prop_pseudoobj.o \
 			scip/prop_rootredcost.o \
+			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
-			scip/reader_ccg.o \
+			scip/reader_gms.o \
 			scip/reader_lp.o \
 			scip/reader_mps.o \
 			scip/reader_opb.o \

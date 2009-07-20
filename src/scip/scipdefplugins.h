@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.27 2009/04/06 13:07:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.28 2009/07/20 08:07:27 bzfgleix Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -92,11 +92,12 @@
 #include "scip/presol_trivial.h"
 #include "scip/prop_pseudoobj.h"
 #include "scip/prop_rootredcost.h"
+#include "scip/reader_ccg.h"
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"
-#include "scip/reader_ccg.h"
+#include "scip/reader_gms.h"
 #include "scip/reader_lp.h"
 #include "scip/reader_mps.h"
 #include "scip/reader_opb.h"

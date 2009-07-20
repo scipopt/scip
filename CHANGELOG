@@ -143,6 +143,7 @@ plugins:
 - added reader for FlatZinc models (reader_fzn.{c,h})
 - added multi-commodity-flow cut separator
 - adjusted interface to ZIMPL (reader_zpl.{c,h} for ZIMPL version 2.10; this interface should also work with older ZIMPL versions
+- added writer for GAMS models (reader_gms.{c,h})
 
 SCIP version 1.1.0
 ===============
