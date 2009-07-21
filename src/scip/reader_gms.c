@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.4 2009/07/21 06:06:19 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.5 2009/07/21 06:15:45 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -219,9 +219,9 @@ void printRow(
    const char*           rowname,            /**< row name */
    const char*           rownameextension,   /**< row name extension */
    const char*           type,               /**< row type ("=e=", "=l=", or "=g=") */
+   int                   nvars,              /**< number of variables */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            vals,               /**< array of values */
-   int                   nvars,              /**< number of variables */
    SCIP_Real             rhs                 /**< right hand side */
    )
 {
@@ -339,7 +339,7 @@ SCIP_RETCODE printLinearCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* print equality constraint */
-      printRow(scip, file, rowname, "", "=e=", activevars, activevals, nactivevars, rhs - activeconstant);
+      printRow(scip, file, rowname, "", "=e=", nactivevars, activevars, activevals, rhs - activeconstant);
    }
    else
    {
@@ -347,13 +347,13 @@ SCIP_RETCODE printLinearCons(
       {
          /* print inequality ">=" */
          printRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
-            activevars, activevals, nactivevars, lhs - activeconstant);
+            nactivevars, activevars, activevals, lhs - activeconstant);
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
          printRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
-            activevars, activevals, nactivevars, rhs - activeconstant);
+            nactivevars, activevars, activevals, rhs - activeconstant);
       }
    }
 
