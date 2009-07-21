@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.2 2009/07/20 09:03:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.3 2009/07/21 06:04:15 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -288,9 +288,9 @@ SCIP_RETCODE printLinearCons(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    const char*           rowname,            /**< name of the row */
+   int                   nvars,              /**< number of variables */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            vals,               /**< array of coefficients values (or NULL if all coefficient values are 1) */
-   int                   nvars,              /**< number of variables */
    SCIP_Real             lhs,                /**< left hand side */
    SCIP_Real             rhs,                /**< right hand side */
    SCIP_Bool             transformed         /**< transformed constraint? */
@@ -866,7 +866,7 @@ SCIP_RETCODE SCIPwriteGms(
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_CALL( printLinearCons(scip, file, consname,
-               SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons), SCIPgetNVarsLinear(scip, cons),
+               SCIPgetNVarsLinear(scip, cons), SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
                SCIPgetLhsLinear(scip, cons),  SCIPgetRhsLinear(scip, cons), transformed) );
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -878,22 +878,22 @@ SCIP_RETCODE SCIPwriteGms(
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printLinearCons(scip, file, consname,
-                  consvars, NULL, nconsvars, 1.0, 1.0, transformed) );
+                  nconsvar, consvars, NULL, 1.0, 1.0, transformed) );
             break;
          case SCIP_SETPPCTYPE_PACKING :
             SCIP_CALL( printLinearCons(scip, file, consname,
-                  consvars, NULL, nconsvars, -SCIPinfinity(scip), 1.0, transformed) );
+                  nconsvars, consvars, NULL, -SCIPinfinity(scip), 1.0, transformed) );
             break;
          case SCIP_SETPPCTYPE_COVERING :
             SCIP_CALL( printLinearCons(scip, file, consname,
-                  consvars, NULL, nconsvars, 1.0, SCIPinfinity(scip), transformed) );
+                  nconsvars, consvars, NULL, 1.0, SCIPinfinity(scip), transformed) );
             break;
          }
       }
       else if ( strcmp(conshdlrname, "logicor") == 0 )
       {
          SCIP_CALL( printLinearCons(scip, file, consname,
-               SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons),
+               SCIPgetNVarsLogicor(scip, cons), SCIPgetVarsLogicor(scip, cons), NULL,
                1.0, SCIPinfinity(scip), transformed) );
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
@@ -909,8 +909,8 @@ SCIP_RETCODE SCIPwriteGms(
          for( v = 0; v < nconsvars; ++v )
             consvals[v] = weights[v];
 
-         SCIP_CALL( printLinearCons(scip, file, consname, consvars, consvals, nconsvars,
-				    -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
+         SCIP_CALL( printLinearCons(scip, file, consname, nconsvars, consvars, consvals,
+	       -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }
@@ -926,7 +926,7 @@ SCIP_RETCODE SCIPwriteGms(
          consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
          SCIP_CALL( printLinearCons(scip, file, consname,
-               consvars, consvals, 2,
+               2, consvars, consvals,
                SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvars);
