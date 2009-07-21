@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.77 2009/07/10 12:59:40 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.78 2009/07/21 12:41:08 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -2049,7 +2049,7 @@ void printRow(
    char buffer[LP_MAX_PRINTLEN];
 
    assert( scip != NULL );
-   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") || strcmp(type, ">=") );
+   assert( strcmp(type, "=") == 0 || strcmp(type, "<=") == 0 || strcmp(type, ">=") == 0 );
    assert( nvars == 0 || (vars != NULL && vals != NULL) );
 
    clearLine(linebuffer, &linecnt);
