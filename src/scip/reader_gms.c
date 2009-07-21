@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.3 2009/07/21 06:04:15 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.4 2009/07/21 06:06:19 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -878,7 +878,7 @@ SCIP_RETCODE SCIPwriteGms(
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             SCIP_CALL( printLinearCons(scip, file, consname,
-                  nconsvar, consvars, NULL, 1.0, 1.0, transformed) );
+                  nconsvars, consvars, NULL, 1.0, 1.0, transformed) );
             break;
          case SCIP_SETPPCTYPE_PACKING :
             SCIP_CALL( printLinearCons(scip, file, consname,
