@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.327 2009/07/13 13:20:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.328 2009/07/22 19:50:33 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9080,6 +9080,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    SCIP_TOKENIZER tokenizer;
    SCIP_VAR** vars;
    SCIP_Real* coefs;
+   SCIP_VAR* var;
 
    SCIP_Real lhs;
    SCIP_Real rhs;
@@ -9118,11 +9119,10 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    havevalue = FALSE;
    sense = CIP_SENSE_NOTHING;
    ncoefs = 0;
+   var = NULL;
 
    while( getNextToken(&tokenizer) )
    {
-      SCIP_VAR* var;
-
       /* if the variable type is given ignore it */
       if( strncmp(tokenizer.token, "[B]", 3) == 0 && strlen(tokenizer.token) == 3 )
       {
