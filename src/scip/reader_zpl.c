@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.42 2009/06/26 11:02:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.43 2009/07/22 20:04:48 bzfviger Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -362,7 +362,7 @@ Bool xlp_addcon_term(
       }
 
       SCIP_CALL_ABORT( SCIPcreateConsQuadratic(scip_, &cons, name, n_linvar, linvar, lincoeff, n_quadterm, quadvar1, quadvar2, quadcoeff, sciplhs, sciprhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
       SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
       
       SCIPfreeBufferArray(scip_, &linvar);
