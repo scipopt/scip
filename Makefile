@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.296 2009/07/20 08:07:27 bzfgleix Exp $
+# $Id: Makefile,v 1.297 2009/07/23 14:17:44 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -431,6 +431,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/cons_and.o \
+			scip/cons_branchnonlinear.o \
 			scip/cons_binpack.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_conjunction.o \
@@ -443,6 +444,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/cons_linear.o \
 			scip/cons_logicor.o \
 			scip/cons_or.o \
+			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \

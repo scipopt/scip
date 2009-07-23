@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.2 2009/07/22 20:04:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.3 2009/07/23 14:17:44 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -25,14 +25,16 @@
 /** TODO list:
  * - SCIP coding style guidelines
  * - SCIP might fix variables on +/- infty; remove them in presolve and take care later
- * - constraints that are always feasible w.r.t. local/global bounds should be deactivated/deleted
+ * - constraints that are always feasible w.r.t. local/global bounds should be enabled/disabled (see logicor, setppc)
  * - round constraint bounds to integers if all coefficients and variables are (impl.) integer
  * - constraints in one variable should be replaced by linear variable or similar
  * - recognize and reformulate complementarity constraints (x*y = 0)
  * - what is a good sepalp freq? is it 1?
- * - reset aging of constraints if cut is found or when?
+ * - reset aging of constraints if something happened
  * - check if some quadratic terms appear in several constraints and try to simplify (e.g., nous1)
  * - skip separation in enfolp if for current LP (check LP id) was already separated
+ * - don't iterate over hash map, use array additionally
+ * - watch unbounded variables to enable/disable propagation
  */
 
 #include <assert.h>
@@ -59,7 +61,7 @@
 #define CONSHDLR_SEPAFREQ             2 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            10 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */

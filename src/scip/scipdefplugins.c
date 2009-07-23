@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.81 2009/07/20 08:07:27 bzfgleix Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.82 2009/07/23 14:17:44 bzfviger Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -34,6 +34,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
+   SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
    SCIP_CALL( SCIPincludeConshdlrIndicator(scip) );
@@ -41,6 +42,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
    SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
    SCIP_CALL( SCIPincludeConshdlrOr(scip) );
+   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS2(scip) );

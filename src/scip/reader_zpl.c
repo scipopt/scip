@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.43 2009/07/22 20:04:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.44 2009/07/23 14:17:44 bzfviger Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -35,9 +35,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
-#ifdef WITH_QUAD
 #include "scip/cons_quadratic.h"
-#endif
 #include "scip/pub_misc.h"
 
 /* include the ZIMPL headers necessary to define the LP and MINLP construction interface */
@@ -321,7 +319,6 @@ Bool xlp_addcon_term(
          SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
       }
    }
-#ifdef WITH_QUAD
    else if (maxdegree == 2)
    {
       int        n_linvar   = 0;
@@ -371,7 +368,6 @@ Bool xlp_addcon_term(
       SCIPfreeBufferArray(scip_, &lincoeff);
       SCIPfreeBufferArray(scip_, &quadcoeff);
    }
-#endif
    else
    {
       SCIPerrorMessage("xpl_addcon_term for degree > 2 not implemented\n");
