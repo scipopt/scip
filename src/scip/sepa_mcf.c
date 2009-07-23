@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.117 2009/07/08 15:36:29 bzfgamra Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.118 2009/07/23 17:35:48 bzfviger Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -2226,6 +2226,12 @@ SCIP_RETCODE extractCapacities(
    int c;
    int i;
 
+#ifndef NDEBUG
+   SCIP_Real* capacityrowscores  = mcfdata->capacityrowscores;
+#endif
+   int        *capacitycands     = mcfdata->capacitycands;
+   int        ncapacitycands     = mcfdata->ncapacitycands;
+
    assert(mcfdata->narcs == 0);
 
    /* get LP data */
@@ -2243,12 +2249,6 @@ SCIP_RETCODE extractCapacities(
       colarcid[c] = -1;
    for ( r = 0; r < nrows; r++ )
       rowarcid[r] = -1;
-
-#ifndef NDEBUG
-   SCIP_Real* capacityrowscores  = mcfdata->capacityrowscores;
-#endif
-   int        *capacitycands     = mcfdata->capacitycands;
-   int        ncapacitycands     = mcfdata->ncapacitycands;
 
    /**  ->  loop through the list of capacity cands in non-increasing score order
    */
@@ -2611,6 +2611,10 @@ SCIP_RETCODE getNodeSimilarityScore(
 /* calculate the score: maximize overlap and use minimal number of non-overlapping entries as tie breaker */
    if ( !incompatible && overlap > 0.0 )
    {
+      /* flow variables with arc-id */
+      int rowarcs = rowlen - nposuncap - nneguncap;
+      int baserowarcs = baserowlen - basenposuncap - basenneguncap;
+
       assert(overlap <= rowlen);
       assert(overlap <= baserowlen);
       assert(noverlappingarcs >= 1);
@@ -2621,10 +2625,6 @@ SCIP_RETCODE getNodeSimilarityScore(
       since this can also be the other end node of the arc */
       if ( noverlappingarcs >= 2 )
          *score += 1000.0;
-
-      /* flow variables with arc-id */
-      int rowarcs = rowlen - nposuncap - nneguncap;
-      int baserowarcs = baserowlen - basenposuncap - basenneguncap;
 
       assert(rowarcs >= 0 && baserowarcs >= 0 );
       /* in the ideal undirected case there are two flow variables with the same arc-id */

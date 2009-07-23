@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.21 2009/07/09 12:34:22 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.22 2009/07/23 17:35:48 bzfviger Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -586,11 +586,11 @@ SCIP_Bool isValue(
    SCIP_Real*            value               /**< pointer to store the value (unchanged, if token is no value) */
    )
 {
-   assert(value != NULL);
-
    double val;
    char* endptr;
    
+   assert(value != NULL);
+
    val = strtod(token, &endptr);
    if( endptr != token && *endptr == '\0' )
    {
