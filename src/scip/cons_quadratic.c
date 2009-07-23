@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.4 2009/07/23 14:46:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.5 2009/07/23 17:56:10 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2096,7 +2096,7 @@ SCIP_RETCODE computeViolation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
-   /* TODO take care of variables at +/- infinity */
+   /* TODO take care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s) */
    for (i = 0; i < consdata->n_linvar; ++i)
       val += consdata->lincoeff[i] * SCIPgetSolVal(scip, sol, consdata->linvar[i]);
 
@@ -4294,7 +4294,8 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       SCIPdebugMessage("con %s violation: %g %g\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol);
       
       for (i = 0; i < consdata->n_quadvar; ++i)
-         SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvar[i], consdata->lhsviol + consdata->rhsviol) );
+         if (!SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvar[i]), SCIPvarGetUbLocal(consdata->quadvar[i])))
+            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvar[i], consdata->lhsviol + consdata->rhsviol) );
    }   
    
    return SCIP_OKAY;
