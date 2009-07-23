@@ -1,9 +1,9 @@
-#--- $Id: make.darwin.x86.intel.dbg,v 1.1 2008/09/29 09:12:39 bzfviger Exp $
+#--- $Id: make.darwin.x86.intel.dbg,v 1.2 2009/07/23 12:52:51 bzfviger Exp $
 CC		=	icc
 CXX		=	icc -Kc++
 LINKCC		=	icc
 LINKCXX		=	icc -Kc++
-FLAGS		+=	# -DROUNDING_FE
+FLAGS		+=	-DROUNDING_FE
 OFLAGS		+=	-O0 -g -mp -w1 -fp-stack-check -wd279,383,444,810,981 -fno-rtti #-Xc
 CFLAGS		+=
 CXXFLAGS	+=	

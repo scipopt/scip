@@ -1,5 +1,5 @@
-#--- $Id: make.osf1.alpha.gnu.dbg,v 1.10 2008/01/28 14:31:09 bzfheinz Exp $
-FLAGS		+=	
+#--- $Id: make.osf1.alpha.gnu.dbg,v 1.11 2009/07/23 12:52:51 bzfviger Exp $
+FLAGS		+=	-DROUNDING_FP  # if ROUNDING_FP does not work, try ROUNDING_FE or without
 OFLAGS		+=	-O -g
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)

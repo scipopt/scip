@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86_64.gnu.opt-shared,v 1.5 2009/05/04 18:59:49 bzfpfets Exp $
-FLAGS		+=	-DNDEBUG -fPIC # -DROUNDING_FE
+#--- $Id: make.linux.x86_64.gnu.opt-shared,v 1.6 2009/07/23 12:52:51 bzfviger Exp $
+FLAGS		+=	-DNDEBUG -fPIC -DROUNDING_FE
 OFLAGS		+=	-O3 -m64 -march=nocona -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
 CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
 CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)

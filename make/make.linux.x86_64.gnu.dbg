@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86_64.gnu.dbg,v 1.9 2009/05/04 18:59:49 bzfpfets Exp $
-FLAGS		+=	-funit-at-a-time # -DROUNDING_FE
+#--- $Id: make.linux.x86_64.gnu.dbg,v 1.10 2009/07/23 12:52:51 bzfviger Exp $
+FLAGS		+=	-funit-at-a-time -DROUNDING_FE
 OFLAGS		+=	-O0 -g -m64
 CFLAGS		+=	$(GCCWARN) 
 CXXFLAGS	+=	$(GXXWARN)

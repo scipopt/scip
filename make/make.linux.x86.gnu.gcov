@@ -1,5 +1,5 @@
-#--- $Id: make.linux.x86.gnu.gcov,v 1.10 2009/05/04 18:59:49 bzfpfets Exp $
-FLAGS		+=	# -DROUNDING_FE
+#--- $Id: make.linux.x86.gnu.gcov,v 1.11 2009/07/23 12:52:51 bzfviger Exp $
+FLAGS		+=	-DROUNDING_FE
 OFLAGS		+=	-O0 -fprofile-arcs -ftest-coverage
 CFLAGS		+=	$(GCCWARN)
 CXXFLAGS	+=	$(GXXWARN)

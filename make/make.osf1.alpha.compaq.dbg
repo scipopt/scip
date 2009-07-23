@@ -1,7 +1,7 @@
-#--- $Id: make.osf1.alpha.compaq.dbg,v 1.9 2008/01/28 14:31:09 bzfheinz Exp $
+#--- $Id: make.osf1.alpha.compaq.dbg,v 1.10 2009/07/23 12:52:51 bzfviger Exp $
 CC		=	cc
 CXX		=	cxx
-FLAGS		+=	# -DROUNDING_FP
+FLAGS		+=	-DROUNDING_FP
 OFLAGS		+=	-w0 -gall -verbose -check -O0
 CFLAGS		+=	-msg_disable strctpadding,nestincl,ignorecallval,unusedincl,unnecincl,hexoctunsign,questcompare2,newc99,embedcomment,foundcr,unreachcode,falloffend,unusedtop
 CXXFLAGS	+=	-msg_disable basclsnondto,boolexprconst,constrlitnondep -D__USE_STD_IOSTREAM
