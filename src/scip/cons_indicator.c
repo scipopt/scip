@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.35 2009/07/18 10:58:46 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.36 2009/07/24 19:22:41 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -234,6 +234,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR* eventhdlr;       /**< event handler for bound change events */
    SCIP_Bool   removable;           /**< whether the separated cuts should be removable */
+   SCIP_Bool   scaled;              /**< if first row of alt. LP has been scaled */
    SCIP_LPI*   altLP;               /**< alternative LP for cut separation */
    int         nRows;               /**< # rows in the alt. LP corr. to original variables in linear constraints and slacks */
    int         nLbBounds;           /**< # lower bounds of original variables */
@@ -876,6 +877,61 @@ SCIP_RETCODE updateFirstRow(
    }
 #endif
 
+   /* possible force a rescaling */
+   /* conshdlrdata->scaled = FALSE; */
+
+   return SCIP_OKAY;
+}
+
+
+/** compute scaling for first row 
+ *
+ *  If the coefficients in the first row are large, a right hand side of -1 might not be
+ *  adequate. Here, we replace the right hand side by the sum of the coefficients divided by the
+ *  number of nonzeros. 
+ */
+static
+SCIP_RETCODE scaleFirstRow(
+   SCIP* scip,                       /**< SCIP pointer */
+   SCIP_CONSHDLRDATA* conshdlrdata   /**< constraint handler */
+   )
+{
+   int j;
+   int nCols;
+   int cnt;
+   SCIP_LPI* altLP;
+   int beg;
+   int* ind;
+   SCIP_Real* val;
+   SCIP_Real sum = 0.0;
+
+   assert( scip != NULL );
+   assert( conshdlrdata != NULL );
+
+   if ( ! conshdlrdata->scaled )
+   {
+      altLP = conshdlrdata->altLP;
+      SCIP_CALL( SCIPlpiGetNCols(altLP, &nCols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ind, nCols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &val, nCols) );
+      
+      SCIP_CALL( SCIPlpiGetRows(altLP, 0, 0, NULL, NULL, &cnt, &beg, ind, val) );
+      
+      /* compute sum */
+      for (j = 0; j < cnt; ++j)
+	 sum += val[j];
+      
+      /* set rhs */
+      sum = - REALABS(sum) / ((double) cnt);
+      j = 0;
+      SCIP_CALL( SCIPlpiChgSides(altLP, 1, &j, &sum, &sum) );
+      
+      SCIPfreeBufferArray(scip, &val);
+      SCIPfreeBufferArray(scip, &ind);
+      
+      conshdlrdata->scaled = TRUE;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -1197,6 +1253,7 @@ SCIP_RETCODE addAltLPConstraint(
       SCIPfreeBufferArray(scip, &linvals);
       SCIPfreeBufferArray(scip, &linvars);
    }
+   conshdlrdata->scaled = FALSE;
 
    /* SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altLP, "alt.lp") ); */
 
@@ -1239,6 +1296,7 @@ SCIP_RETCODE deleteAltLPConstraint(
 	 SCIP_CALL( fixAltLPVariable(conshdlrdata->altLP, consdata->colIndex) );
       consdata->colIndex = -1;
    }
+   conshdlrdata->scaled = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1463,6 +1521,13 @@ SCIP_RETCODE extendToCover(
 	       }
 	    }
 	 }
+      }
+      /* check for error */
+      if ( candidate < 0 )
+      {
+	 /* Because of numerical problem it might happen that the solution primsol above is zero
+	    within the tolerances. In this case we quit. */
+	 break;
       }
       assert( candidate >= 0 );
       assert( ! S[candidate] );
@@ -1873,6 +1938,9 @@ SCIP_RETCODE separateIISRounding(
       SCIP_CALL( updateFirstRow(scip, conshdlrdata) );
    }
 
+   /* scale first row if necessary */
+   SCIP_CALL( scaleFirstRow(scip, conshdlrdata) );
+
    /* set obj. func. to current solution */
    SCIP_CALL( setAltLPObj(scip, lp, sol, nconss, conss) );
 
@@ -2051,6 +2119,7 @@ static
 SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -2061,29 +2130,51 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
    if ( conshdlrdata->sepaAlternativeLP )
    {
-      assert( conshdlrdata->altLP != NULL );
-      assert( conshdlrdata->varHash != NULL );
-      assert( conshdlrdata->lbHash != NULL );
-      assert( conshdlrdata->ubHash != NULL );
+      assert( conshdlrdata->altLP != NULL || nconss == 0 );
       assert( conshdlrdata->slackHash != NULL );
 
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
-      SCIPhashmapPrintStatistics(conshdlrdata->varHash);
       SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
       SCIPhashmapPrintStatistics(conshdlrdata->slackHash);
-      SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
-      SCIPhashmapPrintStatistics(conshdlrdata->lbHash);
-      SCIPinfoMessage(scip, NULL, "\nStatistics for upper bound hash:\n");
-      SCIPhashmapPrintStatistics(conshdlrdata->ubHash);
 #endif
 
-      SCIPhashmapFree(&conshdlrdata->varHash);
-      SCIPhashmapFree(&conshdlrdata->lbHash);
-      SCIPhashmapFree(&conshdlrdata->ubHash);
-      SCIPhashmapFree(&conshdlrdata->slackHash);
+      if ( conshdlrdata->altLP != NULL )
+      {
+	 assert( conshdlrdata->varHash != NULL );
+	 assert( conshdlrdata->lbHash != NULL );
+	 assert( conshdlrdata->ubHash != NULL );
 
-      SCIP_CALL( SCIPlpiFree(&conshdlrdata->altLP) );
+#ifdef SCIP_DEBUG
+	 SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
+	 SCIPhashmapPrintStatistics(conshdlrdata->varHash);
+	 SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
+	 SCIPhashmapPrintStatistics(conshdlrdata->slackHash);
+	 SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
+	 SCIPhashmapPrintStatistics(conshdlrdata->lbHash);
+	 SCIPinfoMessage(scip, NULL, "\nStatistics for upper bound hash:\n");
+	 SCIPhashmapPrintStatistics(conshdlrdata->ubHash);
+#endif
+
+	 SCIPhashmapFree(&conshdlrdata->varHash);
+	 SCIPhashmapFree(&conshdlrdata->lbHash);
+	 SCIPhashmapFree(&conshdlrdata->ubHash);
+
+	 SCIP_CALL( SCIPlpiFree(&conshdlrdata->altLP) );
+
+	 /* save the information that the columns have been deleted */
+	 for (c = 0; c < nconss; ++c)
+	 {
+	    SCIP_CONSDATA* consdata;
+	    
+	    assert( conss != NULL );
+	    assert( conss[c] != NULL );
+
+	    consdata = SCIPconsGetData(conss[c]);
+	    assert( consdata != NULL );
+	    consdata->colIndex = -1;
+	 }
+      }
+      SCIPhashmapFree(&conshdlrdata->slackHash);
    }
 
    return SCIP_OKAY;
@@ -2972,6 +3063,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
       return SCIP_PLUGINNOTFOUND;
    }
    conshdlrdata->removable = TRUE;
+   conshdlrdata->scaled = FALSE;
    conshdlrdata->altLP = NULL;
    conshdlrdata->nRows = 0;
    conshdlrdata->varHash = NULL;
