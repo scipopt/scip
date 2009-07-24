@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.56.2.1 2009/06/19 07:53:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.56.2.2 2009/07/24 12:52:51 bzfwolte Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -701,7 +701,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       assert(SCIPsetIsInfinity(set, sepastore->scores[pos]));
 
       /* if the cut is a bound change (i.e. a row with only one variable), add it as bound change instead of LP row */
-      if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
+      if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 && !set->misc_exactsolve )
       {
          SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, tree, lp, branchcand, eventqueue, cut, cutoff) );
       }

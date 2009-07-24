@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.3 2009/07/13 12:48:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.4 2009/07/24 12:52:52 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2068,7 +2068,7 @@ SCIP_RETCODE enforceConstraints(
    {
       /* only a safe lower bound on the pseudo solution's objectiv value has been computed yet */
       /**@todo test whether it's worse calculating a safe upper bound manually at this point */
-      if( set-> misc_exactsolve)
+      if( set->misc_exactsolve )
          objinfeasible = FALSE;
       else
       {

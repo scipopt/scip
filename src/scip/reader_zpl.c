@@ -12,13 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.2 2009/07/13 12:48:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.3 2009/07/24 12:52:51 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
  * @brief  ZIMPL model file reader
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -469,9 +470,9 @@ Bool xlp_addcon_term(
    }
    /* reallocate and initialize matrix specific information */ 
    assert(nnonz_ <= nonzsize_);
-   if( nnonz_ == nonzsize_ )
+   if( nnonz_ + term_get_elements(term) > nonzsize_ )
    {
-      nonzsize_ *= 2;
+      nonzsize_ = MAX(2 * nonzsize_, nonzsize_ + term_get_elements(term));
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &val_, nonzsize_) );
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &ind_, nonzsize_) );
       for( i = nnonz_; i < nonzsize_; ++i)
@@ -567,7 +568,7 @@ Bool xlp_addcon_term(
       SCIPerrorMessage("xpl_addcon_term for degree > 2 not implemented\n");
       return TRUE;
    }
-   
+
    return FALSE;
 }
 #endif
@@ -1065,6 +1066,7 @@ void xlp_objname(const char* name)
    /* nothing to be done */
 }
 
+#ifndef EXACTSOLVE
 void xlp_setdir(Bool minimize)
 {
    SCIP_OBJSENSE objsense;
@@ -1072,6 +1074,14 @@ void xlp_setdir(Bool minimize)
    objsense = (minimize ? SCIP_OBJSENSE_MINIMIZE : SCIP_OBJSENSE_MAXIMIZE);
    SCIP_CALL_ABORT( SCIPsetObjsense(scip_, objsense) );
 }
+#else
+void xlp_setdir(Bool minimize)
+{
+   objsense_ = (minimize ? SCIP_OBJSENSE_MINIMIZE : SCIP_OBJSENSE_MAXIMIZE);
+   SCIP_CALL_ABORT( SCIPsetObjsense(scip_, objsense_) );
+}
+
+#endif
 
 /** changes objective coefficient of a variable */
 #ifndef EXACTSOLVE

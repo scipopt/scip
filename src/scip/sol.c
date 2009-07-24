@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.81.2.2 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.81.2.3 2009/07/24 12:52:52 bzfwolte Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -27,6 +27,7 @@
 #include "scip/message.h"
 #include "scip/set.h"
 #include "scip/stat.h"
+#include "scip/intervalarith.h"
 #include "scip/clock.h"
 #include "scip/misc.h"
 #include "scip/lp.h"
@@ -663,17 +664,50 @@ SCIP_RETCODE SCIPsolSetVal(
          oldval = solGetArrayVal(sol, var);
          if( !SCIPsetIsEQ(set, val, oldval) )
          {
-            SCIP_Real obj;
-
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-            /* update objective: an unknown solution value does not count towards the objective */
-            obj = SCIPvarGetObj(var);
-            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-               sol->obj -= obj * oldval;
-            if( val != SCIP_UNKNOWN ) /*lint !e777*/
-               sol->obj += obj * val;
+            if( set->misc_exactsolve )
+            {
+               SCIP_INTERVAL deltaval;
+               SCIP_INTERVAL obj;
+               SCIP_INTERVAL solval;
+               SCIP_INTERVAL prod;
+               SCIP_INTERVAL objval;
 
+               /* update objective: an unknown solution value does not count towards the objective;
+                * objective value is calculated with interval arithmetics to get a proved upper bound 
+                */
+               SCIPintervalSet(&deltaval, 0.0);
+
+               if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+               {               
+                  SCIPintervalSet(&obj, SCIPvarGetObj(var));
+                  SCIPintervalSet(&solval, oldval);
+                  SCIPintervalMul(&prod, solval, obj);
+                  SCIPintervalSub(&deltaval, deltaval, prod);  /* deltaval -= oldval * obj; */
+               }
+               if( val != SCIP_UNKNOWN ) /*lint !e777*/
+               {
+                  SCIPintervalSet(&obj, SCIPvarGetObj(var));
+                  SCIPintervalSet(&solval, val);
+                  SCIPintervalMul(&prod, solval, obj);
+                  SCIPintervalAdd(&deltaval, deltaval, prod);  /* deltaval += newval * obj; */
+               }
+               SCIPintervalSet(&objval, sol->obj);
+               SCIPintervalAdd(&objval, objval, deltaval);
+               sol->obj = SCIPintervalGetSup(objval);
+            }
+            else
+            {
+               SCIP_Real obj;
+               
+               /* update objective: an unknown solution value does not count towards the objective */
+               obj = SCIPvarGetObj(var);
+               if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+                  sol->obj -= obj * oldval;
+               if( val != SCIP_UNKNOWN ) /*lint !e777*/
+                  sol->obj += obj * val;
+            }
             solStamp(sol, stat, tree,FALSE);
          }
          return SCIP_OKAY;
@@ -687,17 +721,51 @@ SCIP_RETCODE SCIPsolSetVal(
       oldval = solGetArrayVal(sol, var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
-         SCIP_Real obj;
-
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
-
-         /* update objective: an unknown solution value does not count towards the objective */
-         obj = SCIPvarGetObj(var);
-         if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-            sol->obj -= obj * oldval;
-         if( val != SCIP_UNKNOWN ) /*lint !e777*/
-            sol->obj += obj * val;
-
+         
+         if( set->misc_exactsolve )
+         {
+            SCIP_INTERVAL deltaval;
+            SCIP_INTERVAL obj;
+            SCIP_INTERVAL solval;
+            SCIP_INTERVAL prod;
+            SCIP_INTERVAL objval;
+            
+            /* update objective: an unknown solution value does not count towards the objective;
+             * objective value is calculated with interval arithmetics to get a proved upper bound 
+             */
+            SCIPintervalSet(&deltaval, 0.0);
+            
+            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+            {               
+               SCIPintervalSet(&obj, SCIPvarGetObj(var));
+               SCIPintervalSet(&solval, oldval);
+               SCIPintervalMul(&prod, solval, obj);
+               SCIPintervalSub(&deltaval, deltaval, prod);  /* deltaval -= oldval * obj; */
+            }
+            if( val != SCIP_UNKNOWN ) /*lint !e777*/
+            {
+               SCIPintervalSet(&obj, SCIPvarGetObj(var));
+               SCIPintervalSet(&solval, val);
+               SCIPintervalMul(&prod, solval, obj);
+               SCIPintervalAdd(&deltaval, deltaval, prod);  /* deltaval += newval * obj; */
+            }
+            SCIPintervalSet(&objval, sol->obj);
+            SCIPintervalAdd(&objval, objval, deltaval);
+            sol->obj = SCIPintervalGetSup(objval);
+         }
+         else
+         {
+            SCIP_Real obj;
+               
+            /* update objective: an unknown solution value does not count towards the objective */
+            obj = SCIPvarGetObj(var);
+            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+               sol->obj -= obj * oldval;
+            if( val != SCIP_UNKNOWN ) /*lint !e777*/
+               sol->obj += obj * val;
+         }
+            
          solStamp(sol, stat, tree,FALSE);
       }
       return SCIP_OKAY;

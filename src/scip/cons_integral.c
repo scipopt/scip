@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.3 2009/07/13 12:48:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_integral.c,v 1.47.2.4 2009/07/24 12:52:51 bzfwolte Exp $"
 
 /**@file   cons_integral.c
  * @ingroup CONSHDLRS 
@@ -45,8 +45,6 @@
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define UNSAFECHECK               TRUE  /**< should feasibility test be performed unsafe eventhough we want to solve the problem exactly? 
-                                         *   todo: should be coded in a better way ??????????? */
 
 
 /*
@@ -154,7 +152,7 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < nbin + nint && *result == SCIP_FEASIBLE; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
-         if( !SCIPisExactSolve(scip) || UNSAFECHECK )
+         if( !SCIPisExactSolve(scip) )
          {
             if( !SCIPisFeasIntegral(scip, solval) )
             {
@@ -172,19 +170,23 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
             mpq_t solvalexact;
          
             mpq_init(solvalexact);
-            mpq_set_d(solvalexact, solval);
 
-            /**@todo: This only works if presolving is disabled (solval may already be an approximation since 
-             * solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
+            /**@todo: ?????????
+             * - This only works if presolving is disabled (solval may already be an approximation since 
+             *   solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
              */ 
+            mpq_set_d(solvalexact, solval);
             if( mpz_get_si(mpq_denref(solvalexact)) != 1 ) 
             {
                *result = SCIP_INFEASIBLE;
 
                if( printreason )
                {
-                  SCIPinfoMessage(scip, NULL, "violation: integrality condition of variable <%s> = %.15g\n", 
-                     SCIPvarGetName(vars[v]), solval);
+                  char s[SCIP_MAXSTRLEN];
+
+                  gmp_snprintf(s, SCIP_MAXSTRLEN, "violation: integrality condition of variable <%s> = %Qd\n", 
+                     SCIPvarGetName(vars[v]), solvalexact);
+                  SCIPinfoMessage(scip, NULL, s);
                }
             }
 

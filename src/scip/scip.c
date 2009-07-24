@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.3 2009/07/13 12:48:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.4 2009/07/24 12:52:51 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -9907,6 +9907,32 @@ SCIP_RETCODE SCIPgetLPBInvACol(
    }
 
    SCIP_CALL( SCIPlpGetBInvACol(scip->lp, c, coef) );
+
+   return SCIP_OKAY;
+}
+
+/** stores LP state (like basis information) into LP state object */
+SCIP_RETCODE SCIPgetLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetLPState", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPlpGetState(scip->lp, scip->mem->solvemem, lpistate) );
+
+   return SCIP_OKAY;
+}
+
+/** loads LP state (like basis information) into solver */
+SCIP_RETCODE SCIPsetLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetLPState", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPlpSetState(scip->lp, scip->mem->solvemem, scip->set, lpistate) );
 
    return SCIP_OKAY;
 }

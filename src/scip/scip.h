@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310.2.2 2009/07/13 12:48:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.3 2009/07/24 12:52:51 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3480,6 +3480,20 @@ SCIP_RETCODE SCIPgetLPBInvACol(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
    SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   );
+
+/** stores LP state (like basis information) into LP state object */
+extern
+SCIP_RETCODE SCIPgetLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   );
+
+/** loads LP state (like basis information) into solver */
+extern
+SCIP_RETCODE SCIPsetLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    );
 
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding

@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.1 2009/07/13 12:48:48 bzfwolte Exp $"
-
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.2 2009/07/24 12:52:51 bzfwolte Exp $"
+//#define SCIP_DEBUG
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
  * @author Daniel Espinoza
@@ -863,8 +863,8 @@ SCIP_RETCODE SCIPlpiexChgBounds(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change bounds for */
    const int*            ind,                /**< column indices */
-   const mpq_t*          lb,                 /**< values for the new lower bounds */
-   const mpq_t*          ub                  /**< values for the new upper bounds */
+   const mpq_t*          lb,                 /**< values for the new lower bounds, or NULL */
+   const mpq_t*          ub                  /**< values for the new upper bounds, or NULL */
    )
 {
    register int i;
@@ -872,6 +872,7 @@ SCIP_RETCODE SCIPlpiexChgBounds(
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
+   assert(lb != NULL || ub != NULL);
 
    lpi->solstat = 0;
 
@@ -879,23 +880,39 @@ SCIP_RETCODE SCIPlpiexChgBounds(
 #ifdef SCIP_DEBUG
    {
       int j;
+      char s[SCIP_MAXSTRLEN];
+   
       for (j = 0; j < ncols; ++j)
-	 SCIPdebugPrintf("  col %d: [%lg,%lg]\n", ind[j], mpq_get_d(lb[j]), mpq_get_d(ub[j]));
+      {
+         if( lb == NULL) 
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [--,%Qd]\n", ind[j], ub[j]);
+         else if( ub == NULL )
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,--]\n", ind[j], lb[j]);
+         else
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "  col %d: [%Qd,%Qd]\n", ind[j], lb[j], ub[j]);
+         SCIPdebugPrintf(s);
+      }
    }
 #endif
 
    SCIP_CALL(ensureColMem(lpi, ncols));
-   for (i = 0; i < ncols; ++i)
-      lpi->iccha[i] = 'L';
 
-   rval = mpq_QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, lb);
-   QS_CONDRET(rval);
+   if( lb != NULL )
+   {
+      for (i = 0; i < ncols; ++i)
+         lpi->iccha[i] = 'L';
+      
+      rval = mpq_QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, lb);
+      QS_CONDRET(rval);
+   }
 
-   for (i = 0; i < ncols; ++i)
-      lpi->iccha[i] = 'U';
-
-   rval = mpq_QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, ub);
-
+   if( ub != NULL )
+   {
+      for (i = 0; i < ncols; ++i)
+         lpi->iccha[i] = 'U';
+      
+      rval = mpq_QSchange_bounds(lpi->prob, ncols, ind, lpi->iccha, ub);
+   }
    QS_RETURN(rval);
 }
 
@@ -2631,7 +2648,7 @@ SCIP_RETCODE SCIPlpiexGetIntpar(
    case SCIP_LPPAR_PRESOLVING:
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      rval = mpq_QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING,ival);
+      rval = mpq_QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, ival);
       if (*ival)
 	 *ival = TRUE;
       else
