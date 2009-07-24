@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.8 2009/07/24 13:48:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.9 2009/07/24 15:52:18 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -160,6 +160,10 @@ struct SCIP_ConshdlrData
  */
 
 /* put your local methods here, and declare them static */
+
+/** translate from one value of infinity to another
+ * if val is >= infty1, then give infty2, else give val */
+#define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
 
 /* TODO this is compiler and machine dependent, we just assume here a Linux/gcc system */
 #define F77_FUNC(name,NAME) name ## _
@@ -2176,10 +2180,11 @@ SCIP_RETCODE computeViolations(
  */
 static
 SCIP_RETCODE addQuadRange(
-   SCIP*            scip,        /**< SCIP data structure */
-   SCIP_CONS*       cons,        /**< constraint */
-   SCIP_INTERVAL*   resultant,   /**< interval where to add to */
-   SCIP_VAR*        except       /**< a variable to skip in evaluation, NULL if nothing should be skipped */
+   SCIP*            scip,          /**< SCIP data structure */
+   SCIP_CONS*       cons,          /**< constraint */
+   SCIP_Real        intervalinfty, /**< value of infinity to use for interval operations */
+   SCIP_INTERVAL*   resultant,     /**< interval where to add to */
+   SCIP_VAR*        except         /**< a variable to skip in evaluation, NULL if nothing should be skipped */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -2200,10 +2205,10 @@ SCIP_RETCODE addQuadRange(
       if (consdata->quadvar[i] == except)
          continue;
       
-      if (SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvar[i]), SCIPvarGetUbLocal(consdata->quadvar[i])))
-         SCIPintervalSet(&xrng, SCIPvarGetLbLocal(consdata->quadvar[i]));
-      else
-         SCIPintervalSetBounds(&xrng, SCIPvarGetLbLocal(consdata->quadvar[i]), SCIPvarGetUbLocal(consdata->quadvar[i]));
+      SCIPintervalSetBounds(&xrng, 
+         -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->quadvar[i]), SCIPvarGetUbLocal(consdata->quadvar[i]))),
+          infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->quadvar[i]), SCIPvarGetUbLocal(consdata->quadvar[i])))
+         );
       SCIPintervalSet(&lincoeff, consdata->quadlincoeff[i]);
 
       for (j = 0; j < consdata->n_adjbilin[i]; ++j)
@@ -2214,27 +2219,18 @@ SCIP_RETCODE addQuadRange(
          if (consdata->bilinvar2[k] == except)
             continue; /* variable is skipped */
          
-         if (SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->bilinvar2[k]), SCIPvarGetUbLocal(consdata->bilinvar2[k])))
-            SCIPintervalSet(&tmp, SCIPvarGetLbLocal(consdata->bilinvar2[k]));
-         else
-            SCIPintervalSetBounds(&tmp, SCIPvarGetLbLocal(consdata->bilinvar2[k]), SCIPvarGetUbLocal(consdata->bilinvar2[k]));
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->bilincoeff[k]);
-         SCIPintervalAdd(SCIPinfinity(scip), &lincoeff, lincoeff, tmp);
+         SCIPintervalSetBounds(&tmp, 
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar2[k]), SCIPvarGetUbLocal(consdata->bilinvar2[k]))),
+             infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar2[k]), SCIPvarGetUbLocal(consdata->bilinvar2[k])))
+            );
+         SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilincoeff[k]);
+         SCIPintervalAdd(intervalinfty, &lincoeff, lincoeff, tmp);
       }
       
-      SCIPintervalQuad(SCIPinfinity(scip), &tmp, consdata->quadsqrcoeff[i], lincoeff, xrng);
-      assert(!SCIPisInfinity(scip, -SCIPintervalGetSup(tmp)));
-      assert(!SCIPisInfinity(scip,  SCIPintervalGetInf(tmp)));
-      if (SCIPisInfinity(scip, -SCIPintervalGetSup(tmp)))
-      { /* variable fixed to -infty */
-         SCIPintervalSetBounds(resultant, -SCIPinfinity(scip), SCIPintervalGetSup(*resultant));
-      }
-      else if (SCIPisInfinity(scip, SCIPintervalGetInf(tmp)))
-      { /* variable fixed to +infty */
-         SCIPintervalSetBounds(resultant, SCIPintervalGetInf(*resultant), SCIPinfinity(scip));
-      }
-      else
-         SCIPintervalAdd(SCIPinfinity(scip), resultant, *resultant, tmp);
+      SCIPintervalQuad(intervalinfty, &tmp, consdata->quadsqrcoeff[i], lincoeff, xrng);
+      assert(SCIPintervalGetSup(tmp) > -intervalinfty);
+      assert(SCIPintervalGetInf(tmp) <  intervalinfty);
+      SCIPintervalAdd(intervalinfty, resultant, *resultant, tmp);
    }
    
    return SCIP_OKAY;
@@ -2254,6 +2250,7 @@ SCIP_RETCODE isIntervalFeasible(
 {
    SCIP_CONSDATA* consdata;
    SCIP_INTERVAL  val;
+   SCIP_Real      intervalinfty;
    int            i;
    
    assert(scip != NULL);
@@ -2265,6 +2262,7 @@ SCIP_RETCODE isIntervalFeasible(
    assert(consdata != NULL);
    
    *isfeasible = TRUE;
+   intervalinfty = 1000 * SCIPinfinity(scip) * SCIPinfinity(scip);
    
    if (!SCIPisPositive(scip, consdata->lhsviol) && !SCIPisPositive(scip, consdata->rhsviol))
       return SCIP_OKAY; /* obviously we have a feasible point */
@@ -2272,7 +2270,7 @@ SCIP_RETCODE isIntervalFeasible(
    if (SCIPintervalIsEmpty(consdata->quadrange))
    { /* need to update quadrange */
       SCIPintervalSet(&consdata->quadrange, 0.0);
-      SCIP_CALL( addQuadRange(scip, cons, &consdata->quadrange, NULL) );
+      SCIP_CALL( addQuadRange(scip, cons, intervalinfty, &consdata->quadrange, NULL) );
    }
 
    val = consdata->quadrange;
@@ -2281,10 +2279,13 @@ SCIP_RETCODE isIntervalFeasible(
    {
       if (SCIPintervalIsEmpty(consdata->linrange[i]))
       { /* need to update linrange for var. i */
-         SCIPintervalSetBounds(&consdata->linrange[i], SCIPvarGetLbLocal(consdata->linvar[i]), SCIPvarGetUbLocal(consdata->linvar[i]));
-         SCIPintervalMulScalar(SCIPinfinity(scip), &consdata->linrange[i], consdata->linrange[i], consdata->lincoeff[i]);
+         SCIPintervalSetBounds(&consdata->linrange[i], 
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -SCIPvarGetLbLocal(consdata->linvar[i])), 
+             infty2infty(SCIPinfinity(scip), intervalinfty,  SCIPvarGetUbLocal(consdata->linvar[i]))
+            );
+         SCIPintervalMulScalar(intervalinfty, &consdata->linrange[i], consdata->linrange[i], consdata->lincoeff[i]);
       }
-      SCIPintervalAdd(SCIPinfinity(scip), &val, val, consdata->linrange[i]);
+      SCIPintervalAdd(intervalinfty, &val, val, consdata->linrange[i]);
    }
    
    if (SCIPisFeasGT(scip, consdata->lhs, SCIPintervalGetSup(val)) || SCIPisFeasLT(scip, consdata->rhs, SCIPintervalGetInf(val)))
@@ -2826,18 +2827,18 @@ SCIP_RETCODE registerVariableInfeasibilities(
    return SCIP_OKAY;
 }
 
-
 /** Solves a linear equation b*x \in rhs and reduces bounds on x or deduces infeasibility if possible.
  */
 static
 SCIP_RETCODE propagateBoundsLinearVar(
-   SCIP*          scip,       /**< SCIP data structure */ 
-   SCIP_CONS*     cons,       /**< constraint where we currently propagate */
-   SCIP_VAR*      var,        /**< variable which domain we might reduce */
-   SCIP_Real      b,          /**< linear coefficient of variable */
-   SCIP_INTERVAL  rhs,        /**< right hand side */
-   SCIP_RESULT*   result,     /**< result of propagation */
-   int*           nchgbds     /**< buffer where to add number of tightened bounds */
+   SCIP*          scip,          /**< SCIP data structure */ 
+   SCIP_CONS*     cons,          /**< constraint where we currently propagate */
+   SCIP_Real      intervalinfty, /**< infinity value used in interval operations */
+   SCIP_VAR*      var,           /**< variable which domain we might reduce */
+   SCIP_Real      b,             /**< linear coefficient of variable */
+   SCIP_INTERVAL  rhs,           /**< right hand side */
+   SCIP_RESULT*   result,        /**< result of propagation */
+   int*           nchgbds        /**< buffer where to add number of tightened bounds */
    )
 {
    SCIP_Bool infeas;
@@ -2849,7 +2850,14 @@ SCIP_RETCODE propagateBoundsLinearVar(
    assert(result != NULL);
    assert(nchgbds != NULL);
 
-   SCIPintervalDivScalar(SCIPinfinity(scip), &rhs, rhs, b);
+   SCIPintervalDivScalar(intervalinfty, &rhs, rhs, b);
+   
+   if (SCIPisInfinity(scip, SCIPintervalGetInf(rhs)) || SCIPisInfinity(scip, -SCIPintervalGetSup(rhs)))
+   { /* domain outside [-infty, +infty] -> declare node infeasible */
+      *result = SCIP_CUTOFF;
+      SCIPresetConsAge(scip, cons);
+      return SCIP_OKAY;
+   }
 
    if (!SCIPisInfinity(scip, -SCIPintervalGetInf(rhs)))
    {
@@ -2858,6 +2866,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for linear variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
+         SCIPresetConsAge(scip, cons);
          return SCIP_OKAY;
       }
       if (tightened)
@@ -2876,6 +2885,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for linear variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
+         SCIPresetConsAge(scip, cons);
          return SCIP_OKAY;
       }
       if (tightened)
@@ -2894,14 +2904,15 @@ SCIP_RETCODE propagateBoundsLinearVar(
  */
 static
 SCIP_RETCODE propagateBoundsQuadVar(
-   SCIP*          scip,     /**< SCIP data structure */ 
-   SCIP_CONS*     cons,     /**< constraint where we currently propagate */
-   SCIP_VAR*      var,      /**< variable which bounds with might tighten */
-   SCIP_Real      a,        /**< coefficient in square term */
-   SCIP_INTERVAL  b,        /**< coefficient in linear term */
-   SCIP_INTERVAL  rhs,      /**< right hand side of quadratic equation */
-   SCIP_RESULT*   result,   /**< result of propagation */
-   int*           nchgbds   /**< buffer where to add number of tightened bounds */
+   SCIP*          scip,          /**< SCIP data structure */ 
+   SCIP_CONS*     cons,          /**< constraint where we currently propagate */
+   SCIP_Real      intervalinfty, /**< infinity value used in interval operations */
+   SCIP_VAR*      var,           /**< variable which bounds with might tighten */
+   SCIP_Real      a,             /**< coefficient in square term */
+   SCIP_INTERVAL  b,             /**< coefficient in linear term */
+   SCIP_INTERVAL  rhs,           /**< right hand side of quadratic equation */
+   SCIP_RESULT*   result,        /**< result of propagation */
+   int*           nchgbds        /**< buffer where to add number of tightened bounds */
    )
 {
    SCIP_INTERVAL newrange;
@@ -2916,24 +2927,33 @@ SCIP_RETCODE propagateBoundsQuadVar(
 
    if (SCIPvarGetLbLocal(var) >= 0.0)
    { /* need only positive solutions */
-      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIPinfinity(scip), &newrange, a, b, rhs);
+      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &newrange, a, b, rhs);
    }
    else if (SCIPvarGetUbLocal(var) <= 0.)
    { /* need only negative solutions */
       SCIP_INTERVAL tmp;
       SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
-      SCIPintervalSolveUnivariateQuadExpressionPositive(SCIPinfinity(scip), &tmp, a, tmp, rhs);
+      SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &tmp, a, tmp, rhs);
       if (SCIPintervalIsEmpty(tmp))
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for quadratic variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
+         SCIPresetConsAge(scip, cons);
          return SCIP_OKAY;
       }
       SCIPintervalSetBounds(&newrange, -SCIPintervalGetSup(tmp), -SCIPintervalGetInf(tmp));
    }
    else
    {
-      SCIPintervalSolveUnivariateQuadExpression(SCIPinfinity(scip), &newrange, a, b, rhs);
+      SCIPintervalSolveUnivariateQuadExpression(intervalinfty, &newrange, a, b, rhs);
+   }
+
+   if (SCIPisInfinity(scip, SCIPintervalGetInf(newrange)) || SCIPisInfinity(scip, -SCIPintervalGetSup(newrange)))
+   { /* domain outside [-infty, +infty] -> declare node infeasible */
+      SCIPdebugMessage("found %s infeasible because propagated domain of quadratic variable %s is outside of (-infty, +infty)\n", SCIPconsGetName(cons), SCIPvarGetName(var));
+      *result = SCIP_CUTOFF;
+      SCIPresetConsAge(scip, cons);
+      return SCIP_OKAY;
    }
 
    if (SCIPintervalIsEmpty(newrange))
@@ -2942,8 +2962,6 @@ SCIP_RETCODE propagateBoundsQuadVar(
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
-   assert(!SCIPisInfinity(scip,  SCIPintervalGetInf(newrange)));
-   assert(!SCIPisInfinity(scip, -SCIPintervalGetSup(newrange)));
 
    if (!SCIPisInfinity(scip, -SCIPintervalGetInf(newrange)))
    {
@@ -2952,6 +2970,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for quadratic variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
+         SCIPresetConsAge(scip, cons);
          return SCIP_OKAY;
       }
       if (tightened)
@@ -2970,6 +2989,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for quadratic variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
+         SCIPresetConsAge(scip, cons);
          return SCIP_OKAY;
       }
       if (tightened)
@@ -2990,8 +3010,9 @@ SCIP_RETCODE propagateBoundsQuadVar(
  */
 static
 void propagateBoundsUpdateLinRange(
-   SCIP*             scip,              /**< SCIP data structure */ 
+   SCIP*             scip,              /**< SCIP data structure */
    SCIP_CONSDATA*    consdata,          /**< constraint data */
+   SCIP_Real         intervalinfty,     /**< infinity value used in interval operations */
    SCIP_INTERVAL*    linrangesum,       /**< for summing up ranges of linear terms */
    int*              entire_var_index   /**< buffer to store index of single variable which domain is entire, or -1 if there is none, or -2 if there are at least two */ 
    )
@@ -3011,20 +3032,26 @@ void propagateBoundsUpdateLinRange(
       if (SCIPintervalIsEmpty(consdata->linrange[i]))
       {
          var = consdata->linvar[i];
-         SCIPintervalSetBounds(&consdata->linrange[i], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         SCIPintervalMulScalar(SCIPinfinity(scip), &consdata->linrange[i], consdata->linrange[i], consdata->lincoeff[i]);
+         SCIPintervalSetBounds(&consdata->linrange[i],
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -SCIPvarGetLbLocal(var)),
+             infty2infty(SCIPinfinity(scip), intervalinfty,  SCIPvarGetUbLocal(var))
+            );
+         SCIPintervalMulScalar(intervalinfty, &consdata->linrange[i], consdata->linrange[i], consdata->lincoeff[i]);
       }
 #ifndef NDEBUG
       else {
          SCIP_INTERVAL tmp;
          var = consdata->linvar[i];
-         SCIPintervalSetBounds(&tmp, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->lincoeff[i]);
-         assert(SCIPintervalIsSubsetEQ(SCIPinfinity(scip), tmp, consdata->linrange[i]));
+         SCIPintervalSetBounds(&tmp,
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -SCIPvarGetLbLocal(var)),
+             infty2infty(SCIPinfinity(scip), intervalinfty,  SCIPvarGetUbLocal(var))
+            );
+         SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->lincoeff[i]);
+         assert(SCIPintervalIsSubsetEQ(intervalinfty, tmp, consdata->linrange[i]));
       }
 #endif
 
-      if (SCIPintervalIsEntire(SCIPinfinity(scip), consdata->linrange[i]))
+      if (SCIPintervalIsEntire(intervalinfty, consdata->linrange[i]))
       {
          if (*entire_var_index >= 0)
          {
@@ -3034,7 +3061,7 @@ void propagateBoundsUpdateLinRange(
          *entire_var_index = i;
       }
       
-      SCIPintervalAdd(SCIPinfinity(scip), linrangesum, *linrangesum, consdata->linrange[i]);
+      SCIPintervalAdd(intervalinfty, linrangesum, *linrangesum, consdata->linrange[i]);
    }
 }
 
@@ -3046,6 +3073,7 @@ static
 void propagateBoundsUpdateQuadRangeVar(
    SCIP*             scip,              /**< SCIP data structure */ 
    SCIP_CONSDATA*    consdata,          /**< constraint data */
+   SCIP_Real         intervalinfty,     /**< infinity value used in interval operations */
    SCIP_INTERVAL*    quadrangesum,      /**< for summing up ranges of quadratic terms */
    int*              entire_var_index   /**< buffer to store index of single variable which domain is entire, or -1 if there is none, or -2 if there are at least two */ 
    )
@@ -3066,44 +3094,48 @@ void propagateBoundsUpdateQuadRangeVar(
       if (SCIPintervalIsEmpty(consdata->quadrangevar[i]))
       {
          var = consdata->quadvar[i];
-         SCIPintervalSetBounds(&consdata->quadrangevar[i], MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)), MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+         SCIPintervalSetBounds(&consdata->quadrangevar[i], 
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))), 
+             infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)))
+             );
 
          if (consdata->quadlincoeff[i])
          {
             SCIPintervalSet(&tmp, consdata->quadlincoeff[i]);
-            SCIPintervalQuad(SCIPinfinity(scip), &consdata->quadrangevar[i], consdata->quadsqrcoeff[i], tmp, consdata->quadrangevar[i]);
+            SCIPintervalQuad(intervalinfty, &consdata->quadrangevar[i], consdata->quadsqrcoeff[i], tmp, consdata->quadrangevar[i]);
          }
          else
          {
-            SCIPintervalSquare(SCIPinfinity(scip), &consdata->quadrangevar[i], consdata->quadrangevar[i]);
-            SCIPintervalMulScalar(SCIPinfinity(scip), &consdata->quadrangevar[i], consdata->quadrangevar[i], consdata->quadsqrcoeff[i]);
+            SCIPintervalSquare(intervalinfty, &consdata->quadrangevar[i], consdata->quadrangevar[i]);
+            assert(SCIPintervalGetInf(consdata->quadrangevar[i]) < intervalinfty);
+            SCIPintervalMulScalar(intervalinfty, &consdata->quadrangevar[i], consdata->quadrangevar[i], consdata->quadsqrcoeff[i]);
          }
       }
 #ifndef NDEBUG
       else
       {
          var = consdata->quadvar[i];
-         if (SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)))
-            SCIPintervalSet(&tmp, SCIPvarGetLbLocal(var));
-         else
-            SCIPintervalSetBounds(&tmp, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPintervalSetBounds(&tmp, 
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))), 
+             infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)))
+             );
 
          if (consdata->quadlincoeff[i])
          {
             SCIP_INTERVAL tmp2;
             SCIPintervalSet(&tmp2, consdata->quadlincoeff[i]);
-            SCIPintervalQuad(SCIPinfinity(scip), &tmp, consdata->quadsqrcoeff[i], tmp2, tmp);
+            SCIPintervalQuad(intervalinfty, &tmp, consdata->quadsqrcoeff[i], tmp2, tmp);
          }
          else
          {
-            SCIPintervalSquare(SCIPinfinity(scip), &tmp, tmp);
-            SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->quadsqrcoeff[i]);
+            SCIPintervalSquare(intervalinfty, &tmp, tmp);
+            SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->quadsqrcoeff[i]);
          }
-         assert(SCIPintervalIsSubsetEQ(SCIPinfinity(scip), tmp, consdata->quadrangevar[i]));
+         assert(SCIPintervalIsSubsetEQ(intervalinfty, tmp, consdata->quadrangevar[i]));
       }
 #endif
 
-      if (SCIPintervalIsEntire(SCIPinfinity(scip), consdata->quadrangevar[i]))
+      if (SCIPintervalIsEntire(intervalinfty, consdata->quadrangevar[i]))
       {
          if (*entire_var_index >= 0)
          {
@@ -3113,7 +3145,7 @@ void propagateBoundsUpdateQuadRangeVar(
          *entire_var_index = i;
       }
       
-      SCIPintervalAdd(SCIPinfinity(scip), quadrangesum, *quadrangesum, consdata->quadrangevar[i]);
+      SCIPintervalAdd(intervalinfty, quadrangesum, *quadrangesum, consdata->quadrangevar[i]);
    }
 }
 
@@ -3124,6 +3156,7 @@ static
 void propagateBoundsUpdateBilinRange(
    SCIP*             scip,              /**< SCIP data structure */ 
    SCIP_CONSDATA*    consdata,          /**< constraint data */
+   SCIP_Real         intervalinfty,     /**< infinity value used in interval operations */
    SCIP_INTERVAL*    bilinrangesum      /**< for summing up ranges of bilinear terms */
    )
 {
@@ -3137,26 +3170,40 @@ void propagateBoundsUpdateBilinRange(
       if (SCIPintervalIsEmpty(consdata->bilinrange[i]))
       {
          var = consdata->bilinvar1[i];
-         SCIPintervalSetBounds(&consdata->bilinrange[i], MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)), MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+         SCIPintervalSetBounds(&consdata->bilinrange[i],
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var))), 
+             infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)))
+            );
          var = consdata->bilinvar2[i];
-         SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)), MAX(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)));
-         SCIPintervalMul(SCIPinfinity(scip), &consdata->bilinrange[i], consdata->bilinrange[i], tmp);
-         SCIPintervalMulScalar(SCIPinfinity(scip), &consdata->bilinrange[i], consdata->bilinrange[i], consdata->bilincoeff[i]);
+         SCIPintervalSetBounds(&tmp,
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var))),
+             infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)))
+            );
+         SCIPintervalMul(intervalinfty, &consdata->bilinrange[i], consdata->bilinrange[i], tmp);
+         assert(SCIPintervalGetInf(consdata->bilinrange[i]) <  intervalinfty);
+         assert(SCIPintervalGetSup(consdata->bilinrange[i]) > -intervalinfty);
+         SCIPintervalMulScalar(intervalinfty, &consdata->bilinrange[i], consdata->bilinrange[i], consdata->bilincoeff[i]);
       }
 #ifndef NDEBUG
       else 
       {
          SCIP_INTERVAL tmp2;
          var = consdata->bilinvar1[i];
-         SCIPintervalSetBounds(&tmp2, MIN(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)), MAX(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)));
+         SCIPintervalSetBounds(&tmp2, 
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var))),
+             infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)))
+            );
          var = consdata->bilinvar2[i];
-         SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)), MAX(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)));
-         SCIPintervalMul(SCIPinfinity(scip), &tmp, tmp2, tmp);
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->bilincoeff[i]);
-         assert(SCIPintervalIsSubsetEQ(SCIPinfinity(scip), tmp, consdata->bilinrange[i]));
+         SCIPintervalSetBounds(&tmp,
+            -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var))),
+             infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)))
+            );
+         SCIPintervalMul(intervalinfty, &tmp, tmp2, tmp);
+         SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilincoeff[i]);
+         assert(SCIPintervalIsSubsetEQ(intervalinfty, tmp, consdata->bilinrange[i]));
       }
 #endif
-      SCIPintervalAdd(SCIPinfinity(scip), bilinrangesum, *bilinrangesum, consdata->bilinrange[i]);
+      SCIPintervalAdd(intervalinfty, bilinrangesum, *bilinrangesum, consdata->bilinrange[i]);
    }
 }
 
@@ -3173,6 +3220,7 @@ SCIP_RETCODE propagateBounds(
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_INTERVAL      consbounds;    /* lower and upper bounds of constraint */
+   SCIP_Real          intervalinfty; /* infinity used for interval computation */  
    int                i, j, k, l;
    int                entire_var_index;  /* index of a variable which domain is entire */
    SCIP_INTERVAL      linrangesum;   /* range of linear part */
@@ -3222,23 +3270,27 @@ SCIP_RETCODE propagateBounds(
    consdata->is_propagated = TRUE;
 
    *result = SCIP_DIDNOTFIND;
+   intervalinfty = 1000 * SCIPinfinity(scip) * SCIPinfinity(scip);
 
-   SCIPintervalSetBounds(&consbounds, consdata->lhs, consdata->rhs);
-
-   propagateBoundsUpdateLinRange(scip, consdata, &linrangesum, &entire_var_index);
+   SCIPintervalSetBounds(&consbounds,
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -consdata->lhs),
+       infty2infty(SCIPinfinity(scip), intervalinfty,  consdata->rhs)
+      );
+   
+   propagateBoundsUpdateLinRange(scip, consdata, intervalinfty, &linrangesum, &entire_var_index);
    if (entire_var_index == -2)
       return SCIP_OKAY; /* at least two variables that are completely unbounded; cannot propagate anything */
 
    if (SCIPintervalIsEmpty(consdata->quadrange))
    { /* quadrange needs update */
       SCIPintervalSet(&consdata->quadrange, 0.0);
-      SCIP_CALL( addQuadRange(scip, cons, &consdata->quadrange, NULL) );
+      SCIP_CALL( addQuadRange(scip, cons, intervalinfty, &consdata->quadrange, NULL) );
    }
 
    if (entire_var_index >= 0)
    {
       assert(entire_var_index < consdata->n_linvar);
-      if (SCIPintervalIsEntire(SCIPinfinity(scip), consdata->quadrange))
+      if (SCIPintervalIsEntire(intervalinfty, consdata->quadrange))
          return SCIP_OKAY; /* nothing we can do */
 
       var = consdata->linvar[entire_var_index];
@@ -3247,25 +3299,25 @@ SCIP_RETCODE propagateBounds(
       rhs = consbounds;
       for (i = 0; i < consdata->n_linvar; ++i)
          if (i != entire_var_index)
-            SCIPintervalSub(SCIPinfinity(scip), &rhs, rhs, consdata->linrange[i]);
-      SCIPintervalSub(SCIPinfinity(scip), &rhs, rhs, consdata->quadrange);
+            SCIPintervalSub(intervalinfty, &rhs, rhs, consdata->linrange[i]);
+      SCIPintervalSub(intervalinfty, &rhs, rhs, consdata->quadrange);
 
-      SCIP_CALL( propagateBoundsLinearVar(scip, cons, var, consdata->lincoeff[entire_var_index], rhs, result, nchgbds) );
+      SCIP_CALL( propagateBoundsLinearVar(scip, cons, intervalinfty, var, consdata->lincoeff[entire_var_index], rhs, result, nchgbds) );
 
       return SCIP_OKAY;
    }
-   if (SCIPintervalIsEntire(SCIPinfinity(scip), linrangesum)) /* can still happen if two half-unbounded were added -> bad luck */
+   if (SCIPintervalIsEntire(intervalinfty, linrangesum)) /* can still happen if two half-unbounded were added -> bad luck */
       return SCIP_OKAY;
 
    /* intersects linrangesum+quadrange with consbounds */
-   SCIPintervalAdd(SCIPinfinity(scip), &tmp, linrangesum, consdata->quadrange);
+   SCIPintervalAdd(intervalinfty, &tmp, linrangesum, consdata->quadrange);
    SCIPintervalIntersect(&tmp, consbounds, tmp);
    if (SCIPintervalIsEmpty(tmp))
    { /* check again with slightly larger bounds: workaround for instance product */
       SCIP_INTERVAL tmp2;
       SCIPintervalSetBounds(&tmp2, -SCIPfeastol(scip)/2, SCIPfeastol(scip)/2);
-      SCIPintervalAdd(SCIPinfinity(scip), &tmp, linrangesum, consdata->quadrange);
-      SCIPintervalAdd(SCIPinfinity(scip), &tmp, tmp, tmp2);
+      SCIPintervalAdd(intervalinfty, &tmp, linrangesum, consdata->quadrange);
+      SCIPintervalAdd(intervalinfty, &tmp, tmp, tmp2);
       SCIPintervalIntersect(&consbounds, consbounds, tmp);
       if (SCIPintervalIsEmpty(consbounds))
       {
@@ -3289,11 +3341,11 @@ SCIP_RETCODE propagateBounds(
       assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
       assert(!SCIPisZero(scip, consdata->lincoeff[i]));
 
-      SCIPintervalSub(SCIPinfinity(scip), &rhs, consbounds, linrangesum);
-      SCIPintervalUndoSub(SCIPinfinity(scip), &rhs, rhs, consdata->linrange[i]);
-      SCIPintervalSub(SCIPinfinity(scip), &rhs, rhs, consdata->quadrange);
+      SCIPintervalSub(intervalinfty, &rhs, consbounds, linrangesum);
+      SCIPintervalUndoSub(intervalinfty, &rhs, rhs, consdata->linrange[i]);
+      SCIPintervalSub(intervalinfty, &rhs, rhs, consdata->quadrange);
 
-      SCIP_CALL( propagateBoundsLinearVar(scip, cons, var, consdata->lincoeff[i], rhs, result, nchgbds) );
+      SCIP_CALL( propagateBoundsLinearVar(scip, cons, intervalinfty, var, consdata->lincoeff[i], rhs, result, nchgbds) );
       if (*result == SCIP_CUTOFF)
          return SCIP_OKAY;
    }
@@ -3301,7 +3353,7 @@ SCIP_RETCODE propagateBounds(
    if (!consdata->n_quadvar)
       return SCIP_OKAY;
 
-   propagateBoundsUpdateQuadRangeVar(scip, consdata, &quadrangesum, &entire_var_index);
+   propagateBoundsUpdateQuadRangeVar(scip, consdata, intervalinfty, &quadrangesum, &entire_var_index);
    if (entire_var_index == -2)
       return SCIP_OKAY; /* cannot reduce bounds on any variable if there are more than one variable which domain is entire */
 
@@ -3310,11 +3362,11 @@ SCIP_RETCODE propagateBounds(
       var = consdata->quadvar[entire_var_index];
       assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR);
 
-      SCIPintervalSub(SCIPinfinity(scip), &rhs, consbounds, linrangesum);
+      SCIPintervalSub(intervalinfty, &rhs, consbounds, linrangesum);
       
       SCIPintervalSet(&tmp, 0.0);
-      SCIP_CALL( addQuadRange(scip, cons, &tmp, var) );
-      SCIPintervalSub(SCIPinfinity(scip), &rhs, rhs, tmp);
+      SCIP_CALL( addQuadRange(scip, cons, intervalinfty, &tmp, var) );
+      SCIPintervalSub(intervalinfty, &rhs, rhs, tmp);
 
       /* add up coefficient interval in linear term of expression */
       SCIPintervalSet(&b, consdata->quadlincoeff[entire_var_index]);
@@ -3324,38 +3376,44 @@ SCIP_RETCODE propagateBounds(
          if (consdata->bilinvar1[l] == var)
          {
             assert(consdata->bilinvar2[l] != var);
-            SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])), MAX(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])));
+            SCIPintervalSetBounds(&tmp, 
+               -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l]))),
+                infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])))
+               );
          }
          else
          {
             assert(consdata->bilinvar2[l] == var);
-            SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])), MAX(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])));
+            SCIPintervalSetBounds(&tmp, 
+               -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l]))),
+                infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])))
+               );
          }
-         SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->bilincoeff[l]);
-         SCIPintervalAdd(SCIPinfinity(scip), &b, b, tmp);
+         SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilincoeff[l]);
+         SCIPintervalAdd(intervalinfty, &b, b, tmp);
       }
       if (SCIPintervalIsEntire(SCIPinfinity(scip), b))
          return SCIP_OKAY; /* no hope to reduce a bound */
 
       a = consdata->quadsqrcoeff[entire_var_index];
 
-      SCIP_CALL( propagateBoundsQuadVar(scip, cons, var, a, b, rhs, result, nchgbds) );    
+      SCIP_CALL( propagateBoundsQuadVar(scip, cons, intervalinfty, var, a, b, rhs, result, nchgbds) );    
       return SCIP_OKAY;
    }
 
-   propagateBoundsUpdateBilinRange(scip, consdata, &bilinrangesum);
-   if (SCIPintervalIsEntire(SCIPinfinity(scip), bilinrangesum)) /* propagation on quad. vars makes no sense */
+   propagateBoundsUpdateBilinRange(scip, consdata, intervalinfty, &bilinrangesum);
+   if (SCIPintervalIsEntire(intervalinfty, bilinrangesum)) /* propagation on quad. vars makes no sense */
       return SCIP_OKAY;
 
    /* move everything into consbounds */
-   SCIPintervalSub(SCIPinfinity(scip), &consbounds, consbounds, linrangesum);
+   SCIPintervalSub(intervalinfty, &consbounds, consbounds, linrangesum);
    if (conshdlrdata->fast_propagate && consdata->n_quadvar > 2)
    {
-      SCIPintervalSub(SCIPinfinity(scip), &consbounds, consbounds, bilinrangesum);
-      SCIPintervalSub(SCIPinfinity(scip), &consbounds, consbounds, quadrangesum);
+      SCIPintervalSub(intervalinfty, &consbounds, consbounds, bilinrangesum);
+      SCIPintervalSub(intervalinfty, &consbounds, consbounds, quadrangesum);
    }
 
-   if (SCIPintervalIsEntire(SCIPinfinity(scip), consbounds))
+   if (SCIPintervalIsEntire(intervalinfty, consbounds))
       return SCIP_OKAY;
 
    for (j = 0; j < consdata->n_quadvar; ++j)
@@ -3374,28 +3432,32 @@ SCIP_RETCODE propagateBounds(
       if (conshdlrdata->fast_propagate)
       {
          if (consdata->n_quadvar > 2)
-            SCIPintervalUndoSub(SCIPinfinity(scip), &rhs, consbounds, consdata->quadrangevar[j]);
+            SCIPintervalUndoSub(intervalinfty, &rhs, consbounds, consdata->quadrangevar[j]);
          else if (consdata->n_quadvar == 2)
          {
             if (SCIPintervalIsEmpty(consdata->quadrangevar[1-j]))
             { /* this can happen if j==1 and we just improved the bound for j==0 */
-               SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetLbLocal(consdata->quadvar[1-j]), SCIPvarGetUbLocal(consdata->quadvar[1-j])), MAX(SCIPvarGetLbLocal(consdata->quadvar[1-j]), SCIPvarGetUbLocal(consdata->quadvar[1-j])));
+               SCIPintervalSetBounds(&tmp,
+                  -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->quadvar[1-j]), SCIPvarGetUbLocal(consdata->quadvar[1-j]))),
+                   infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->quadvar[1-j]), SCIPvarGetUbLocal(consdata->quadvar[1-j])))
+                  );
                if (consdata->quadlincoeff[1-j])
                {
                   SCIP_INTERVAL tmp2;
                   SCIPintervalSet(&tmp2, consdata->quadlincoeff[1-j]);
-                  SCIPintervalQuad(SCIPinfinity(scip), &tmp, consdata->quadsqrcoeff[1-j], tmp2, tmp);
+                  SCIPintervalQuad(intervalinfty, &tmp, consdata->quadsqrcoeff[1-j], tmp2, tmp);
                }
                else
                {
-                  SCIPintervalSquare(SCIPinfinity(scip), &tmp, tmp);
-                  SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->quadsqrcoeff[1-j]);
+                  SCIPintervalSquare(intervalinfty, &tmp, tmp);
+                  assert(SCIPintervalGetInf(tmp) < intervalinfty);
+                  SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->quadsqrcoeff[1-j]);
                }
-               SCIPintervalSub(SCIPinfinity(scip), &rhs, consbounds, tmp);
+               SCIPintervalSub(intervalinfty, &rhs, consbounds, tmp);
             }
             else
             {
-               SCIPintervalSub(SCIPinfinity(scip), &rhs, consbounds, consdata->quadrangevar[1-j]);
+               SCIPintervalSub(intervalinfty, &rhs, consbounds, consdata->quadrangevar[1-j]);
             }
          }
          else
@@ -3417,62 +3479,82 @@ SCIP_RETCODE propagateBounds(
                      * however, we should not update bilinrange[l] here since it is not invalidated in future bound changes as long as the corresponding quadrangevar's are invalid
                      */
                      SCIP_INTERVAL tmp2;
-                     SCIPintervalSetBounds(&tmp2, MIN(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])), MAX(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])));
-                     SCIPintervalSetBounds(&tmp,  MIN(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])), MAX(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])));
-                     SCIPintervalMul(SCIPinfinity(scip), &tmp, tmp, tmp2);
-                     SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->bilincoeff[l]);
-                     SCIPintervalUndoSub(SCIPinfinity(scip), &rhs, rhs, tmp);
+                     SCIPintervalSetBounds(&tmp2,
+                        -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l]))),
+                         infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])))
+                        );
+                     SCIPintervalSetBounds(&tmp,
+                        -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l]))),
+                         infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])))
+                        );
+                     SCIPintervalMul(intervalinfty, &tmp, tmp, tmp2);
+                     assert(SCIPintervalGetInf(tmp) <  intervalinfty);
+                     assert(SCIPintervalGetSup(tmp) > -intervalinfty);
+                     SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilincoeff[l]);
+                     SCIPintervalUndoSub(intervalinfty, &rhs, rhs, tmp);
                   }
                   else
-                     SCIPintervalUndoSub(SCIPinfinity(scip), &rhs, rhs, consdata->bilinrange[l]);
+                     SCIPintervalUndoSub(intervalinfty, &rhs, rhs, consdata->bilinrange[l]);
                }
 
                if (consdata->bilinvar1[l] == var)
                {
                   assert(consdata->bilinvar2[l] != var);
-                  SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])), MAX(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])));
+                  SCIPintervalSetBounds(&tmp, 
+                     -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l]))),
+                      infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])))
+                     );
                }
                else
                {
                   assert(consdata->bilinvar2[l] == var);
-                  SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])), MAX(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])));
+                  SCIPintervalSetBounds(&tmp, 
+                     -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l]))),
+                      infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])))
+                     );
                }
-               SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->bilincoeff[l]);
-               SCIPintervalAdd(SCIPinfinity(scip), &b, b, tmp);
+               SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilincoeff[l]);
+               SCIPintervalAdd(intervalinfty, &b, b, tmp);
             }
-            if (SCIPintervalIsEntire(SCIPinfinity(scip), b))
+            if (SCIPintervalIsEntire(intervalinfty, b))
                continue; /* no hope to reduce a bound */
          }
       }
       else
       {
          SCIPintervalSet(&tmp, 0.);
-         SCIP_CALL( addQuadRange(scip, cons, &tmp, var) ); /* add up everything in quad.part not belonging to var */
-         SCIPintervalSub(SCIPinfinity(scip), &rhs, consbounds, tmp);   /* put bounds - linrangesum - quadratic_except_var into rhs */
+         SCIP_CALL( addQuadRange(scip, cons, intervalinfty, &tmp, var) ); /* add up everything in quad.part not belonging to var */
+         SCIPintervalSub(intervalinfty, &rhs, consbounds, tmp);   /* put bounds - linrangesum - quadratic_except_var into rhs */
          for (k = 0; k < consdata->n_adjbilin[j]; ++k)
          {
             l = consdata->adjbilin[j][k];
             if (consdata->bilinvar1[l] == var)
             {
                assert(consdata->bilinvar2[l] != var);
-               SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])), MAX(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])));
+               SCIPintervalSetBounds(&tmp,
+                  -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l]))),
+                   infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar2[l]), SCIPvarGetUbLocal(consdata->bilinvar2[l])))
+                  );
             }
             else
             {
                assert(consdata->bilinvar2[l] == var);
-               SCIPintervalSetBounds(&tmp, MIN(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])), MAX(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])));
+               SCIPintervalSetBounds(&tmp, 
+                  -infty2infty(SCIPinfinity(scip), intervalinfty, -MIN(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l]))),
+                   infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinvar1[l]), SCIPvarGetUbLocal(consdata->bilinvar1[l])))
+                  );
             }
-            SCIPintervalMulScalar(SCIPinfinity(scip), &tmp, tmp, consdata->bilincoeff[l]);
-            SCIPintervalAdd(SCIPinfinity(scip), &b, b, tmp);
+            SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilincoeff[l]);
+            SCIPintervalAdd(intervalinfty, &b, b, tmp);
          }
-         if (SCIPintervalIsEntire(SCIPinfinity(scip), b))
+         if (SCIPintervalIsEntire(intervalinfty, b))
             continue; /* no hope to reduce a bound */
       }
 
-      if (SCIPintervalIsEntire(SCIPinfinity(scip), rhs))
+      if (SCIPintervalIsEntire(intervalinfty, rhs))
          continue;
 
-      SCIP_CALL( propagateBoundsQuadVar(scip, cons, var, a, b, rhs, result, nchgbds) );
+      SCIP_CALL( propagateBoundsQuadVar(scip, cons, intervalinfty, var, a, b, rhs, result, nchgbds) );
       if (*result == SCIP_CUTOFF)
          break;
    }
