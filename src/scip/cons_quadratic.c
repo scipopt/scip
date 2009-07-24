@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.5 2009/07/23 17:56:10 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.6 2009/07/24 12:02:02 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -30,7 +30,6 @@
  * - constraints in one variable should be replaced by linear variable or similar
  * - recognize and reformulate complementarity constraints (x*y = 0)
  * - what is a good sepalp freq? is it 1?
- * - reset aging of constraints if something happened
  * - check if some quadratic terms appear in several constraints and try to simplify (e.g., nous1)
  * - skip separation in enfolp if for current LP (check LP id) was already separated
  * - don't iterate over hash map, use array additionally
@@ -2291,6 +2290,7 @@ SCIP_RETCODE isIntervalFeasible(
    if (SCIPisFeasGT(scip, consdata->lhs, SCIPintervalGetSup(val)) || SCIPisFeasLT(scip, consdata->rhs, SCIPintervalGetInf(val)))
    {
       SCIPdebugMessage("interval arithmetic found constraint %s infeasible: bounds = [%g, %g], interval = [%g, %g]\n", SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(val), SCIPintervalGetSup(val));
+      SCIPresetConsAge(scip, cons);
       *isfeasible = FALSE;
    }
    
@@ -2642,8 +2642,6 @@ SCIP_RETCODE separatePoint(
 
       if (SCIPisFeasPositive(scip, consdata->lhsviol) || SCIPisFeasPositive(scip, consdata->rhsviol))
       {
-         SCIPresetConsAge(scip, conss[c]);
-
          /* we are not feasible anymore */
          if (*result == SCIP_FEASIBLE)
             *result = SCIP_DIDNOTFIND;
@@ -2666,6 +2664,7 @@ SCIP_RETCODE separatePoint(
          { /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
+            SCIPresetConsAge(scip, conss[c]);
          }
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -2866,6 +2865,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
          SCIPdebugMessage("tightened lower bound of linear variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetLbLocal(var));
          ++nchgbds;
          *result = SCIP_REDUCEDDOM;
+         SCIPresetConsAge(scip, cons);
       }
    }
 
@@ -2883,6 +2883,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
          SCIPdebugMessage("tightened upper bound of linear variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetUbLocal(var));
          ++nchgbds;
          *result = SCIP_REDUCEDDOM;
+         SCIPresetConsAge(scip, cons);
       }
    }
 
@@ -2958,6 +2959,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
          SCIPdebugMessage("tightened lower bound of quadratic variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetLbLocal(var));
          ++nchgbds;
          *result = SCIP_REDUCEDDOM;
+         SCIPresetConsAge(scip, cons);
       }
    }
 
@@ -2975,6 +2977,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
          SCIPdebugMessage("tightened upper bound of quadratic variable %s in constraint %s to %g -> %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPintervalGetSup(newrange), SCIPvarGetUbLocal(var));
          ++nchgbds;
          *result = SCIP_REDUCEDDOM;
+         SCIPresetConsAge(scip, cons);
       }
    }
 
@@ -3268,6 +3271,7 @@ SCIP_RETCODE propagateBounds(
       {
          SCIPdebugMessage("found %s infeasible due to forward propagation\n", SCIPconsGetName(cons));
          *result = SCIP_CUTOFF;
+         SCIPresetConsAge(scip, cons);
          return SCIP_OKAY;
       }
       else
@@ -4209,7 +4213,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    }
    
    *result = SCIP_INFEASIBLE;
-      
+
    SCIP_CALL( areIntervalFeasible(scip, conss, nconss, maxviolcon, &intervalfeas) );
    if (!intervalfeas)
    {
