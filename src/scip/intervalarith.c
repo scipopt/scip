@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.20 2009/07/17 18:25:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.21 2009/07/24 15:51:58 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1388,6 +1388,11 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
       SCIPintervalIntersect(resultant, *resultant, res2);
    }
    /* else res2 = [0, infty] */
+   
+   if (resultant->inf >= infinity || resultant->sup <= -infinity)
+   {
+      SCIPintervalSetEmpty(infinity, resultant);
+   }
 }
 
 /** solves a quadratic equation with linear and constant coefficients
@@ -1501,7 +1506,12 @@ void SCIPintervalSolveUnivariateQuadExpression(
    if( sqrcoeff == 0. )
    { /* relatively easy case: x \in rhs / lincoeff */
       if (lincoeff.inf == 0 && lincoeff.sup == 0)
-         SCIPintervalSetEntire(infinity, resultant);
+      { /* equation became 0 \in rhs */
+         if (rhs.inf <= 0 && rhs.sup >= 0)
+            SCIPintervalSetEntire(infinity, resultant);
+         else
+            SCIPintervalSetEmpty(infinity, resultant);
+      }
       else
          SCIPintervalDiv(infinity, resultant, rhs, lincoeff);
       SCIPdebugMessage("  solving [%g,%g]*x in [%g,%g] gives [%g,%g]\n", SCIPintervalGetInf(lincoeff), SCIPintervalGetSup(lincoeff), SCIPintervalGetInf(rhs), SCIPintervalGetSup(rhs), SCIPintervalGetInf(*resultant), SCIPintervalGetSup(*resultant));
