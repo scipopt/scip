@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.36 2009/07/24 19:22:41 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.37 2009/07/26 20:39:06 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -256,6 +256,17 @@ struct SCIP_ConshdlrData
 };
 
 
+/* Macro for parameters */
+#define SCIP_CALL_PARAM(x) do                                                                                          \
+                       {                                                                                               \
+			  SCIP_RETCODE _restat_;                                                                       \
+                          if ( (_restat_ = (x)) != SCIP_OKAY && (_restat_ != SCIP_PARAMETERUNKNOWN) )                  \
+                          {                                                                                            \
+                             SCIPerrorMessage("[%s:%d] Error <%d> in function call\n", __FILE__, __LINE__, _restat_);  \
+                             SCIPABORT();                                                                              \
+                          }                                                                                            \
+                       }                                                                                               \
+                       while( FALSE )
 
 
 /* ------------------------ debugging routines ---------------------------------*/
@@ -498,7 +509,6 @@ SCIP_RETCODE initAlternativeLP(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_RETCODE retcode;
    SCIP_Real lhs;
    SCIP_Real rhs;
 
@@ -530,32 +540,15 @@ SCIP_RETCODE initAlternativeLP(
    conshdlrdata->nRows = 1;
 
    /* set parameters */
-   retcode = SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_FROMSCRATCH, FALSE);
-   if ( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
-   {
-      SCIPerrorMessage("Error <%d> in function call\n", retcode);
-      return retcode;
-   }
-
-   retcode = SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_PRESOLVING, TRUE);
-   if ( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
-   {
-      SCIPerrorMessage("Error <%d> in function call\n", retcode);
-      return retcode;
-   }
-
-   retcode = SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_SCALING, TRUE);
-   if ( retcode != SCIP_OKAY && retcode != SCIP_PARAMETERUNKNOWN )
-   {
-      SCIPerrorMessage("Error <%d> in function call\n", retcode);
-      return retcode;
-   }
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_PRESOLVING, TRUE) );
+   SCIP_CALL_PARAM( SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_SCALING, TRUE) );
 
    /* set constraint handler data */
    SCIPconshdlrSetData(conshdlr, conshdlrdata);
 
    /* uncomment the following for debugging */
-   /* SCIP_CALL( SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_LPINFO, TRUE) ); */
+   /* SCIP_CALL_PARAM( SCIPlpiSetIntpar(conshdlrdata->altLP, SCIP_LPPAR_LPINFO, TRUE) ); */
 
    return SCIP_OKAY;
 }
@@ -1344,8 +1337,8 @@ SCIP_RETCODE checkAltLPInfeasible(
    /* resolve if LP is not stable */
    if ( ! SCIPlpiIsStable(lp) )
    {
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, FALSE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, FALSE) );
       SCIPwarningMessage("Numerical problems, retrying ...\n");
 
       /* re-solve LP */
@@ -1355,8 +1348,8 @@ SCIP_RETCODE checkAltLPInfeasible(
 	 SCIP_CALL( SCIPlpiSolveDual(lp) );    /* use dual simplex */
 
       /* reset parameters */
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
    }
 
    /* check whether we are in the paradoxical situtation that
@@ -1372,16 +1365,16 @@ SCIP_RETCODE checkAltLPInfeasible(
    {
       SCIPwarningMessage("The dual simplex produced a primal ray. Retrying with primal ...\n");
       /* the following settings might be changed: */
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_SCALING, TRUE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_SCALING, TRUE) );
 
       SCIP_CALL( SCIPlpiSolvePrimal(lp) );   /* use primal simplex */
 
       /* reset parameters */
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
-      SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_SCALING, TRUE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_SCALING, TRUE) );
    }
 
    /* examine LP solution status */
@@ -1476,9 +1469,9 @@ SCIP_RETCODE extendToCover(
       if ( step == 0 )
       {
 	 /* the first LP is solved without warm start, after that we use a warmstart. */
-	 SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
+	 SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
 	 SCIP_CALL( checkAltLPInfeasible(scip, lp, TRUE, &infeasible, &error) );
-	 SCIP_CALL( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+	 SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
       }
       else
 	 SCIP_CALL( checkAltLPInfeasible(scip, lp, FALSE, &infeasible, &error) );
