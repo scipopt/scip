@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.300 2009/07/27 20:19:30 bzfviger Exp $
+# $Id: Makefile,v 1.301 2009/07/27 20:29:31 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -365,7 +365,7 @@ IPOPTDEP	:=	$(SRCDIR)/depend.ipopt
 IPOPTSRC	:=	$(shell cat $(IPOPTDEP))
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
-FLAGS		+=	-DWITH_IPOPT -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
+FLAGS		+=	-DWITH_IPOPT -DWITH_LAPACK -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
 LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
 ifeq ($(LIBEXT),$(STATICLIBEXT))
 LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
@@ -760,6 +760,7 @@ depend:		lpidepend maindepend
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 		@echo `grep -l "WITH_IPOPT" $(ALLSRC)` >$(IPOPTDEP)
+		@echo `grep -l "WITH_LAPACK" $(ALLSRC)` >$(IPOPTDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
