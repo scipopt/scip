@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.1 2009/07/27 19:02:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.2 2009/07/27 20:04:13 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -649,7 +649,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
       return SCIP_OKAY;
    
 #ifndef WITH_IPOPT
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
    return SCIP_OKAY;
 #endif
    
@@ -658,7 +658,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    if (SCIPgetNContVars(scip) || SCIPgetNImplVars(scip))
    {  /* check if we have nonlinear continuous variables */
       SCIP_CONSHDLR* quadconshdlr = SCIPfindConshdlr(scip, "quadratic");
-      if (quadconshdlr)
+      if (quadconshdlr && SCIPconshdlrGetNConss(quadconshdlr))
       {
          SCIP_CONS* cons;
          int        i, j;
@@ -670,12 +670,16 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
                   havenlp = TRUE;
          }
       }
+      else
+         return SCIP_OKAY;
    }
+   else
+      return SCIP_OKAY;
    
    if (havenlp)
       setupNLP(scip, heur);
    else
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "No nonlinear continuous variables. NLP local search heuristic will not run.\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "No nonlinear continuous variables. NLP local search heuristic will not run.\n");
    
    return SCIP_OKAY;
 }

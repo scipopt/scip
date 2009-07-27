@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.298 2009/07/27 19:02:07 bzfviger Exp $
+# $Id: Makefile,v 1.299 2009/07/27 20:04:13 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -58,8 +58,10 @@ READLINE	=	true
 ZLIB		=	true
 GMP             =       auto
 ZIMPL		=	true
+IPOPT		=	false
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
+IPOPTOPT	=	opt
 
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
@@ -359,6 +361,26 @@ LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIM
 LPIINSTMSG	+=	" -> \"libzimpl.*\" is the path to the ZIMPL library, e.g., \"../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a\""
 endif
 
+IPOPTDEP	:=	$(SRCDIR)/depend.ipopt
+IPOPTSRC	:=	$(shell cat $(IPOPTDEP))
+ifeq ($(IPOPT),true)
+FLAGS		+=	-DWITH_IPOPT -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
+LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
+ifeq ($(LIBEXT),$(STATICLIBEXT))
+LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
+else
+LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)`
+endif
+SOFTLINKS	+=	$(LIBDIR)/ipoptinc
+SOFTLINKS	+=	$(LIBDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/libipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)
+SOFTLINKS	+=	$(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(SHAREDLIBEXT)
+LPIINSTMSG	+=	"\n  -> \"ipoptinc\" is a directory containing the ipopt header files, i.e., \"ipoptinc/IpIpoptApplication.hpp\" should exist.\n"
+LPIINSTMSG	+=	" -> \"libipopt.*\" is the Ipopt library, e.g., \"/client/lib/ipopt-3.7.0/libipopt.a\"\n"
+LPIINSTMSG	+=	" -> \"ipopt_addlibs.*\" is the Ipopt addlibs_cpp file, e.g., \"/client/lib/ipopt-3.7.0/ipopt_addlibs_cpp.txt\"\n"
+endif
+
 ifeq ($(READLINE),true)
 FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
@@ -519,6 +541,10 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o
 
+ifeq ($(IPOPT),true)
+SCIPLIBOBJ += scip/nlpi_ipopt.o
+endif
+
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
@@ -586,7 +612,7 @@ ALLSRC		+=	$(MAINSRC)
 
 
 
-LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT)
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
@@ -732,6 +758,7 @@ depend:		lpidepend maindepend
 		@echo `grep -l "WITH_GMP" $(ALLSRC)` >$(GMPDEP)
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
+		@echo `grep -l "WITH_IPOPT" $(ALLSRC)` >$(IPOPTDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
@@ -795,7 +822,7 @@ $(LIBOBJDIR)/%.o:	$(SRCDIR)/%.cpp $(LIBOBJDIR)
 -include $(LASTSETTINGS)
 
 .PHONY: touchexternal
-touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP)
+touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(IPOPTDEP)
 ifneq ($(ZLIB),$(LAST_ZLIB))
 		@-touch $(ZLIBSRC)
 endif
@@ -808,11 +835,15 @@ endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
 		@-touch $(ZIMPLSRC)
 endif
+ifneq ($(IPOPT),$(LAST_IPOPT))
+		@-touch $(IPOPTSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_ZLIB=$(ZLIB)" >> $(LASTSETTINGS)
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
+		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -825,7 +856,7 @@ links:		echosoftlinks $(LIBDIR) $(DIRECTORIES) $(SOFTLINKS)
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT)"
+		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT)"
 		@echo
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."
