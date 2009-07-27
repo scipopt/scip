@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.9 2009/07/27 12:08:49 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.10 2009/07/27 13:37:28 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -207,7 +207,7 @@ SCIP_RETCODE printActiveVariables(
    SCIP_Real activeconstant = 0.0;
 
    assert( scip != NULL );
-   assert( nvars == 0 || (vars != NULL && vals != NULL) );
+   assert( nvars == 0 || vars != NULL );
    assert( nvars > 0 || (vars == NULL && vals == NULL) );
 
    if( *linecnt == 0 )
