@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.299 2009/07/27 20:04:13 bzfviger Exp $
+# $Id: Makefile,v 1.300 2009/07/27 20:19:30 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -364,6 +364,7 @@ endif
 IPOPTDEP	:=	$(SRCDIR)/depend.ipopt
 IPOPTSRC	:=	$(shell cat $(IPOPTDEP))
 ifeq ($(IPOPT),true)
+LINKER		=	CPP
 FLAGS		+=	-DWITH_IPOPT -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
 LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
 ifeq ($(LIBEXT),$(STATICLIBEXT))
