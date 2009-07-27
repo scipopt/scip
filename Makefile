@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.297 2009/07/23 14:17:44 bzfviger Exp $
+# $Id: Makefile,v 1.298 2009/07/27 19:02:07 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -399,6 +399,8 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/lp.o \
 			scip/mem.o \
 			scip/misc.o \
+			scip/nlpi.o \
+			scip/nlpi_oracle.o \
 			scip/nodesel.o \
 			scip/paramset.o \
 			scip/presol.o \
@@ -455,7 +457,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
-                        scip/heur_dins.o \
+			scip/heur_dins.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
@@ -465,6 +467,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_mutation.o \
+			scip/heur_nlp.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \
 			scip/heur_oneopt.o \

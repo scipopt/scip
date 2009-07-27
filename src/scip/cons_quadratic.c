@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.13 2009/07/27 17:31:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.14 2009/07/27 19:02:07 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -44,15 +44,12 @@
 #include "scip/cons_and.h"
 #include "scip/cons_varbound.h"
 #include "scip/intervalarith.h"
-#include "cons_branchnonlinear.h"
+#include "scip/cons_branchnonlinear.h"
 #ifdef WITH_SOC3
 #include "cons_soc3.h"
 #endif
-
-#ifdef WITH_NLPI
-#include "heur_nlp.h"
-#include "nlpi.h"
-#endif
+#include "scip/heur_nlp.h"
+#include "scip/nlpi.h"
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
@@ -3873,7 +3870,6 @@ SCIP_RETCODE propagateBounds(
    return SCIP_OKAY;
 }
 
-#ifdef WITH_NLPI
 /** NLPI initialization method of constraint handler
  * 
  * The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
@@ -4031,11 +4027,7 @@ SCIP_RETCODE SCIPconsInitnlpiQuadratic(
       lhs, rhs,
       linoffset, linindex, lincoeff,
       nquadrows, quadrowidx, quadoffset, quadindex, quadcoeff,
-      NULL, NULL
-#ifdef WITH_DSL
-      , NULL
-#endif
-      ) );
+      NULL, NULL) );
 
    for (i = 0; i < nconss; ++i)
    {
@@ -4060,7 +4052,6 @@ SCIP_RETCODE SCIPconsInitnlpiQuadratic(
 
    return SCIP_OKAY;
 }
-#endif
 
 /*
  * Callback methods of constraint handler
@@ -5241,13 +5232,8 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
       }
    }
    
-   if (*result == SCIP_INFEASIBLE)
-   {
-#ifdef WITH_NLPI
-      if (conshdlrdata->nlpheur)
-         SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
-#endif
-   }
+   if (*result == SCIP_INFEASIBLE && conshdlrdata->nlpheur)
+      SCIP_CALL( SCIPheurNlpUpdateStartpoint(scip, conshdlrdata->nlpheur, sol, maxviol) );
 
    return SCIP_OKAY;
 }
