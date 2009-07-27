@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.8 2009/07/27 11:26:33 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.9 2009/07/27 12:08:49 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -668,7 +668,7 @@ SCIP_RETCODE printQuadraticCons(
          printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
             nlinvars, linvars, lincoeffs,
             nquadvars, quadvars, quadlincoeffs, quadsqrcoeffs,
-            nbilinterms, bilinvars1, bilinvars2, bilincoeffs, rhs, transformed);
+            nbilinterms, bilinvars1, bilinvars2, bilincoeffs, lhs, transformed);
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
@@ -676,7 +676,7 @@ SCIP_RETCODE printQuadraticCons(
          printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
             nlinvars, linvars, lincoeffs,
             nquadvars, quadvars, quadlincoeffs, quadsqrcoeffs,
-            nbilinterms, bilinvars1, bilinvars2, bilincoeffs, lhs, transformed);
+            nbilinterms, bilinvars1, bilinvars2, bilincoeffs, rhs, transformed);
       }
    }
    
