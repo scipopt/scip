@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.9 2009/07/24 15:52:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.10 2009/07/27 12:37:54 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -608,18 +608,24 @@ SCIP_RETCODE presolveQuadTermAdd(
          SCIP_CALL( SCIPhashmapCreate(&term->bilin, SCIPblkmem(scip), 10) ); /* TODO 10 a good value? */
          SCIP_CALL( SCIPallocBlockMemory(scip, &bitem) );
          SCIP_CALL( SCIPhashmapInsert(term->bilin, bilinvar, bitem) );
+         bitem->coeff    = bilincoeff;
+         bitem->bilinidx = -1;
       }
       else
       {
-        bitem = (PresolveBilinItem*) SCIPhashmapGetImage(term->bilin, bilinvar);
-        if( !bitem )
-        {
+         bitem = (PresolveBilinItem*) SCIPhashmapGetImage(term->bilin, bilinvar);
+         if( !bitem )
+         {
             SCIP_CALL( SCIPallocBlockMemory(scip, &bitem) );
             SCIP_CALL( SCIPhashmapInsert(term->bilin, bilinvar, bitem) );
-        }
+            bitem->coeff    = bilincoeff;
+            bitem->bilinidx = -1;
+         }
+         else
+         {
+            bitem->coeff   += bilincoeff;
+         }
       }
-      bitem->coeff    = bilincoeff;
-      bitem->bilinidx = -1;
    }
 
    return SCIP_OKAY;
