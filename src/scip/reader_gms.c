@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.7 2009/07/27 11:01:38 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.8 2009/07/27 11:26:33 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -280,11 +280,14 @@ SCIP_RETCODE printActiveVariables(
                (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
 
                if( SCIPisEQ(scip, activevals[v], 1.0) )
-                  (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s%s%s%s", ext, strcmp(ext, " ") == 0 ? "+" : "",
+                  (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s%s%s%s", ext, strchr(ext, '(') == NULL ? "+" : "",
                         varname, (v == closingbracket) ? ")" : "", (v == closingbracket) ? suffix : "");
                else if( SCIPisEQ(scip, activevals[v], -1.0) )
                   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s-%s%s%s", ext,
                         varname, (v == closingbracket) ? ")" : "", (v == closingbracket) ? suffix : "");
+               else if( strchr(ext, '(') != NULL )
+                  (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%.15g*%s%s%s", ext,
+                        activevals[v], varname, (v == closingbracket) ? ")" : "", (v == closingbracket) ? suffix : "");
                else
                   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%+.15g*%s%s%s", ext,
                         activevals[v], varname, (v == closingbracket) ? ")" : "", (v == closingbracket) ? suffix : "");
