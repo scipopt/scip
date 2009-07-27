@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.11 2009/07/27 13:57:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.12 2009/07/27 14:36:51 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -168,30 +168,45 @@ struct SCIP_ConshdlrData
  * if val is >= infty1, then give infty2, else give val */
 #define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
 
+#ifdef WITH_LAPACK
 /* TODO this is compiler and machine dependent, we just assume here a Linux/gcc system */
 #define F77_FUNC(name,NAME) name ## _
 #define F77_FUNC_(name,NAME) name ## _
 
-#ifdef WITH_LAPACK
 /** LAPACK Fortran subroutine DSYEV */
-void F77_FUNC(dsyev,DSYEV)(char *jobz, char *uplo, int *n,
-                           double *A, int *ldA, double *W,
-                           double *WORK, int *LWORK, int *info,
-                           int jobz_len, int uplo_len);
+void F77_FUNC(dsyev,DSYEV)(
+   char*   jobz,    /**< 'N' to compute eigenvalues only, 'V' to compute eigenvalues and eigenvectors */
+   char*   uplo,    /**< 'U' if upper triangle of A is stored, 'L' if lower triangle of A is stored */
+   int*    n,       /**< dimension */
+   double* A,       /**< matrix A on entry; orthonormal eigenvectors on exit, if jobz == 'V' and info == 0; if jobz == 'N', then the matrix data is destroyed */
+   int*    ldA,     /**< leading dimension, probably equal to n */ 
+   double* W,       /**< buffer for the eigenvalues in ascending order */
+   double* WORK,    /**< workspace array */
+   int*    LWORK,   /**< length of WORK; if LWORK = -1, then the optimal workspace size is calculated and returned in WORK(1) */
+   int*    info     /**< == 0: successful exit; < 0: illegal argument at given position; > 0: failed to converge */
+);
 
 static
-SCIP_RETCODE LapackDsyev(SCIP* scip, SCIP_Bool compute_eigenvectors, int N, SCIP_Real *a, int LDA, SCIP_Real *w)
+SCIP_RETCODE LapackDsyev(
+   SCIP*      scip,                    /**< SCIP data structure */
+   SCIP_Bool  compute_eigenvectors,    /**< whether also eigenvectors should be computed */
+   int        N,                       /**< dimension */
+   SCIP_Real* a,                       /**< matrix data on input (size N*N); eigenvectors on output if compute_eigenvectors == TRUE */
+   SCIP_Real* w                        /**< buffer to store eigenvalues (size N) */
+   )
 {
-   int INFO;
-   char JOBZ = compute_eigenvectors ? 'V' : 'N';
-   char UPLO = 'L';
+   int     INFO;
+   char    JOBZ = compute_eigenvectors ? 'V' : 'N';
+   char    UPLO = 'L';
+   int     LDA  = N;
    double* WORK = NULL;
-   int i;
+   int     LWORK;
+   double  WORK_PROBE;
+   int     i;
 
    /* First we find out how large LWORK should be */
-   int LWORK = -1;
-   double WORK_PROBE;
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, &WORK_PROBE, &LWORK, &INFO, 1, 1);
+   LWORK = -1;
+   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, &WORK_PROBE, &LWORK, &INFO);
    if (INFO)
    {
       SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", INFO);
@@ -204,7 +219,7 @@ SCIP_RETCODE LapackDsyev(SCIP* scip, SCIP_Bool compute_eigenvectors, int N, SCIP
    SCIP_CALL( SCIPallocBufferArray(scip, &WORK, LWORK) );
    for (i = 0; i < LWORK; ++i)
       WORK[i] = i;
-   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, WORK, &LWORK, &INFO, 1, 1);
+   F77_FUNC(dsyev,DSYEV)(&JOBZ, &UPLO, &N, a, &LDA, w, WORK, &LWORK, &INFO);
    SCIPfreeBufferArray(scip, &WORK);
    if (INFO)
    {
@@ -2203,7 +2218,7 @@ SCIP_RETCODE checkCurvature(
    SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
    /* TODO can we compute only min and max eigval?
       TODO can we estimate the numerical error? */
-   if (LapackDsyev(scip, FALSE, n, matrix, n, alleigval) != SCIP_OKAY)
+   if (LapackDsyev(scip, FALSE, n, matrix, alleigval) != SCIP_OKAY)
    {
       SCIPwarningMessage("Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
       consdata->is_convex  = FALSE;
