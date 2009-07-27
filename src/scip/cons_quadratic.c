@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.10 2009/07/27 12:37:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.11 2009/07/27 13:57:00 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -45,6 +45,9 @@
 #include "scip/cons_varbound.h"
 #include "scip/intervalarith.h"
 #include "cons_branchnonlinear.h"
+#ifdef WITH_SOC3
+#include "cons_soc3.h"
+#endif
 
 #ifdef WITH_NLPI
 #include "heur_nlp.h"
@@ -1801,6 +1804,294 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
    return SCIP_OKAY;
 }
+
+#ifdef WITH_SOC3
+/** creates SOC constraints for input sum_{i=1}^n alpha_i x_i^2 <= beta y.
+ * if n>2, calls same function recursively
+ */
+static
+SCIP_RETCODE presolveCreateSOC(
+   SCIP*        scip,       /**< SCIP data structure */
+   SCIP_VAR**   lhsvar,     /**< variables on left hand side (x_i) */
+   SCIP_Real*   lhscoeff,   /**< coefficients of variables on left hand side (alpha_i) */
+   int          nlhs,       /**< number of variables on left hand side (n) */
+   SCIP_VAR*    rhsvar,     /**< variable on right hand side (y) */
+   SCIP_Real    rhscoeff,   /**< coefficient of variable on right hand side (beta) */
+   const char*  basename,   /**< prefix for variable and constraint name */
+   SCIP_CONS*   origcons,   /**< original constraint for which this SOC3 set is added */
+   int          soc3_nr_auxvars /**< number of auxiliary variables to use for a SOC3 constraint, or 0 if automatic */
+   )
+{
+   char       name[255];
+   SCIP_CONS* newcons;
+   SCIP_VAR*  auxvar1;
+   SCIP_VAR*  auxvar2;
+
+   assert(scip     != NULL);
+   assert(lhsvar   != NULL);
+   assert(lhscoeff != NULL);
+   assert(nlhs     >= 2);
+   assert(rhsvar   != NULL);
+   assert(basename != NULL);
+   
+   if (nlhs == 2)
+   { /* end of recursion */
+      assert(lhscoeff[0] > 0);
+      assert(lhscoeff[1] > 0);
+      assert(rhscoeff    > 0);
+      assert(lhsvar[0] != NULL);
+      assert(lhsvar[1] != NULL);
+      SCIPsnprintf(name, 255, "%s_soc3", basename); /* TODO think of better name */
+      if (soc3_nr_auxvars)
+      {
+         SCIP_CALL( SCIPcreateConsSOC3(scip, &newcons, name, soc3_nr_auxvars,
+            sqrt(lhscoeff[0]), lhsvar[0], sqrt(lhscoeff[1]), lhsvar[1], sqrt(rhscoeff), rhsvar,
+            SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
+            SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
+            SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPcreateConsSOC3byTol(scip, &newcons, name, SCIPfeastol(scip),
+            sqrt(lhscoeff[0]), lhsvar[0], sqrt(lhscoeff[1]), lhsvar[1], sqrt(rhscoeff), rhsvar,
+            SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
+            SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
+            SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
+      }
+      SCIP_CALL( SCIPaddCons(scip, newcons) );
+      SCIPdebugMessage("added SOC3 constraint %s: ", name);
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
+#endif
+      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+      
+      return SCIP_OKAY;
+   }
+
+   if (nlhs == 3)
+   { /* a bit special case too */
+      /* for first two variables on lhs, create a new aux.var and a new SOC3 */
+      SCIPsnprintf(name, 255, "%s#z1", basename);
+      SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, auxvar1) );
+
+      /* constraint alpha_0 x_0^2 + alpha_1 x_1^2 <= auxvar^2 */
+      SCIP_CALL( presolveCreateSOC(scip, lhsvar, lhscoeff, 2, auxvar1, 1., name, origcons, soc3_nr_auxvars) );
+
+      /* create new constraint alpha_2 x_2^2 + auxvar^2 <= rhscoeff * rhsvar^2 */
+      SCIPsnprintf(name, 255, "%s_soc3", basename); /* TODO think of better name */
+      if (soc3_nr_auxvars)
+      {
+         SCIP_CALL( SCIPcreateConsSOC3(scip, &newcons, name, soc3_nr_auxvars,
+            sqrt(lhscoeff[2]), lhsvar[2], 1., auxvar1, sqrt(rhscoeff), rhsvar,
+            SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
+            SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
+            SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPcreateConsSOC3byTol(scip, &newcons, name, SCIPfeastol(scip),
+            sqrt(lhscoeff[2]), lhsvar[2], 1., auxvar1, sqrt(rhscoeff), rhsvar,
+            SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
+            SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
+            SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
+      }
+      SCIP_CALL( SCIPaddCons(scip, newcons) );
+      SCIPdebugMessage("added SOC3 constraint %s: ", name);
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
+#endif
+      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+            
+      SCIP_CALL( SCIPreleaseVar(scip, &auxvar1) );
+      
+      return SCIP_OKAY;
+   }
+   
+   /* nlhs >= 4 */
+   
+   SCIPsnprintf(name, 255, "%s#z1", basename);
+   SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPaddVar(scip, auxvar1) );
+
+   /* constraints for left half of lhs */
+   SCIP_CALL( presolveCreateSOC(scip, lhsvar, lhscoeff, nlhs/2, auxvar1, 1., name, origcons, soc3_nr_auxvars) );
+
+   SCIPsnprintf(name, 255, "%s#z2", basename);
+   SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPaddVar(scip, auxvar2) );
+
+   SCIP_CALL( presolveCreateSOC(scip, &lhsvar[nlhs/2], &lhscoeff[nlhs/2], nlhs-nlhs/2, auxvar2, 1., name, origcons, soc3_nr_auxvars) );
+   
+   /* SOC constraint binding both auxvar's */
+   SCIPsnprintf(name, 255, "%s_soc3", basename); /* TODO think of better name */
+   if (soc3_nr_auxvars)
+   {
+      SCIP_CALL( SCIPcreateConsSOC3(scip, &newcons, name, soc3_nr_auxvars,
+         1., auxvar1, 1., auxvar2, sqrt(rhscoeff), rhsvar,
+         SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
+         SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
+         SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPcreateConsSOC3byTol(scip, &newcons, name, SCIPfeastol(scip),
+         1., auxvar1, 1., auxvar2, sqrt(rhscoeff), rhsvar,
+         SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
+         SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
+         SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
+   }
+   SCIP_CALL( SCIPaddCons(scip, newcons) );
+   SCIPdebugMessage("added SOC3 constraint %s: ", name);
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
+#endif
+   SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+
+   SCIP_CALL( SCIPreleaseVar(scip, &auxvar1) );
+   SCIP_CALL( SCIPreleaseVar(scip, &auxvar2) );
+   
+   return SCIP_OKAY;
+}
+
+/** adds for a constraint sum_i alpha_i x_i^2 <= beta * y a set of SOC3 constraints */
+static
+SCIP_RETCODE presolveTryAddSOC(
+   SCIP*           scip,        /**< SCIP data structure */
+   SCIP_CONS*      cons,        /**< constraint */
+   SCIP_HASHMAP*   terms,       /**< constraint function in form of PresolveQuadTerm's */
+   SCIP_Real       constant,    /**< constant part of constraint function */
+   int             soc3_nr_auxvars /**< number of auxiliary variables to use for a SOC3 constraint, or 0 if automatic */
+)
+{
+   SCIP_CONSDATA* consdata;
+   int            nterms;
+   SCIP_VAR**     lhsvar;
+   SCIP_Real*     lhscoeff;
+   int            lhscount = 0;
+   SCIP_VAR*      rhsvar = NULL; 
+   SCIP_Real      rhscoeff;
+   SCIP_HASHMAPLIST* list;
+   SCIP_VAR*         var;
+   PresolveQuadTerm* term;
+   int            i;
+   
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(terms != NULL);
+   assert(!SCIPisInfinity(scip, ABS(constant)));
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if (!SCIPisZero(scip, consdata->rhs - constant) && !SCIPisZero(scip, consdata->lhs - constant))
+      return SCIP_OKAY; /* do not even need to try */
+
+   nterms = SCIPhashmapGetNEntries(terms);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhsvar,   nterms-1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhscoeff, nterms-1) );
+
+   if (SCIPisZero(scip, consdata->rhs - constant))
+   { /* try whether constraint on upper bound is SOC */
+      for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
+         for (list = SCIPhashmapGetList(terms, i); list; list = SCIPhashmapListGetNext(list))
+         {
+            var  = (SCIP_VAR*)         SCIPhashmapListGetOrigin(list);
+            term = (PresolveQuadTerm*) SCIPhashmapListGetImage(list);
+            if (term->lincoeff || term->bilin)
+            { /* variable with linear part or variable in bilinear term -> both sides cannot be SOC */
+               SCIPfreeBufferArray(scip, &lhsvar);
+               SCIPfreeBufferArray(scip, &lhscoeff);
+               return SCIP_OKAY;
+            }
+            if (!term->sqrcoeff) /* loose variable */
+               continue;
+
+            if (term->sqrcoeff > 0)
+            {
+               if (lhscount >= nterms-1)
+               { /* too many variables on lhs, i.e., all variables seem to have positive coefficient */
+                  rhsvar = NULL;
+                  break;
+               }
+               lhsvar  [lhscount] = var;
+               lhscoeff[lhscount] = term->sqrcoeff;
+               ++lhscount;
+            }
+            else if (rhsvar || SCIPisNegative(scip, SCIPvarGetLbGlobal(var)))
+            { /* second variable with negative coefficient or neg. coefficient but var not >= 0 -> cannot be SOC */
+               rhsvar = NULL;
+               break;
+            }
+            else
+            {
+               rhsvar   = var;
+               rhscoeff = -term->sqrcoeff;
+            }
+         }
+   }
+
+   if ((!rhsvar || lhscount<2) && SCIPisZero(scip, consdata->lhs - constant))
+   { /* if the first failed, try if constraint on lower bound is SOC (using negated coefficients) */
+      rhsvar = NULL;
+      lhscount = 0;
+      for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
+         for (list = SCIPhashmapGetList(terms, i); list; list = SCIPhashmapListGetNext(list))
+         {
+            var  = (SCIP_VAR*)         SCIPhashmapListGetOrigin(list);
+            term = (PresolveQuadTerm*) SCIPhashmapListGetImage(list);
+
+            if (term->lincoeff || term->bilin)
+            { /* variable with linear part or variable in bilinear term -> both sides cannot be SOC */
+               SCIPfreeBufferArray(scip, &lhsvar);
+               SCIPfreeBufferArray(scip, &lhscoeff);
+               return SCIP_OKAY;
+            }
+
+            if (!term->sqrcoeff) /* loose variable */
+               continue;
+
+            if (term->sqrcoeff < 0)
+            {
+               if (lhscount >= nterms-1)
+               { /* too many variables on lhs, i.e., all variables seem to have positive coefficient */
+                  rhsvar = NULL;
+                  break;
+               }
+               lhsvar  [lhscount] =  var;
+               lhscoeff[lhscount] = -term->sqrcoeff;
+               ++lhscount;
+            }
+            else if (rhsvar || SCIPisNegative(scip, SCIPvarGetLbGlobal(var)))
+            { /* second variable with negative coefficient or neg. coefficient but var not >= 0 -> cannot be SOC */
+               rhsvar = NULL;
+               break;
+            }
+            else
+            {
+               rhsvar   = var;
+               rhscoeff = term->sqrcoeff;
+            }
+         }
+   }
+
+   if (rhsvar && lhscount >= 2)
+   { /* have SOC constraint */
+      SCIPdebugMessage("found constraint %s to be SOC\n", SCIPconsGetName(cons));
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+#endif
+      SCIP_CALL( presolveCreateSOC(scip, lhsvar, lhscoeff, lhscount, rhsvar, rhscoeff, SCIPconsGetName(cons), cons, soc3_nr_auxvars) );
+      consdata->soc_added = TRUE;
+   }
+
+   SCIPfreeBufferArray(scip, &lhsvar);
+   SCIPfreeBufferArray(scip, &lhscoeff);
+
+   return SCIP_OKAY; 
+}
+#endif
 
 static
 SCIP_RETCODE checkCurvature(
@@ -4514,10 +4805,10 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                   continue;
                }
             }
-#if 0
-            if (soc3_nr_auxvars >= 0 && !consdata->soc_added)
+#ifdef WITH_SOC3
+            if (conshdlrdata->soc3_nr_auxvars >= 0 && !consdata->soc_added)
             { /* try to add outer-approximation by SOC constraint */
-               SCIP_CALL( presolveTryAddSOC(scip, conss[c], terms, constant) );
+               SCIP_CALL( presolveTryAddSOC(scip, conss[c], terms, constant, conshdlrdata->soc3_nr_auxvars) );
                if (consdata->soc_added)
                {
                   ++*nupgdconss;
