@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.12 2009/07/27 14:36:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.13 2009/07/27 17:31:44 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2213,7 +2213,6 @@ SCIP_RETCODE checkCurvature(
       else
          matrix[col * n + row] = consdata->bilincoeff[i]/2;
    }
-   SCIPhashmapFree(&var2index);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &alleigval, n) );
    /* TODO can we compute only min and max eigval?
@@ -2223,20 +2222,20 @@ SCIP_RETCODE checkCurvature(
       SCIPwarningMessage("Failed to compute eigenvalues of quadratic coefficient matrix of constraint %s. Assuming matrix is indefinite.\n", SCIPconsGetName(cons));
       consdata->is_convex  = FALSE;
       consdata->is_concave = FALSE;
-      return SCIP_OKAY;
    }
-
-   consdata->is_convex  &= !SCIPisNegative(scip, alleigval[0]);
-   consdata->is_concave &= !SCIPisPositive(scip, alleigval[n-1]);
-
+   else
+   {
+      consdata->is_convex  &= !SCIPisNegative(scip, alleigval[0]);
+      consdata->is_concave &= !SCIPisPositive(scip, alleigval[n-1]);
+   }
    SCIPfreeBufferArray(scip, &alleigval);
+   
 #else
-
-   SCIPwarningMessage("Do not have LAPACK for eigenvalue computation. Assuming matrix is indefinite.\n");
    consdata->is_convex  = FALSE;
    consdata->is_concave = FALSE;
 #endif
-
+   
+   SCIPhashmapFree(&var2index);
    SCIPfreeBufferArray(scip, &matrix);
 
    return SCIP_OKAY;
@@ -4032,7 +4031,11 @@ SCIP_RETCODE SCIPconsInitnlpiQuadratic(
       lhs, rhs,
       linoffset, linindex, lincoeff,
       nquadrows, quadrowidx, quadoffset, quadindex, quadcoeff,
-      NULL, NULL, NULL) );
+      NULL, NULL
+#ifdef WITH_DSL
+      , NULL
+#endif
+      ) );
 
    for (i = 0; i < nconss; ++i)
    {
@@ -4105,6 +4108,13 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
       return SCIP_PLUGINNOTFOUND;
    }
 
+#ifndef WITH_LAPACK
+   if (nconss)
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Quadratic constraint handler does not have LAPACK for eigenvalue computation. Will assume that matrices (with size > 2x2) are indefinite.\n");
+   }
+#endif
+   
    return SCIP_OKAY;
 }
 #else
