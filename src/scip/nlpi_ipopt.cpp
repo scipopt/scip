@@ -1,22 +1,36 @@
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.1 2009/07/27 20:04:13 bzfviger Exp $"
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.2 2009/07/27 20:12:28 bzfviger Exp $"
+
 /**@file    nlpi_ipopt.cpp
  * @brief   Ipopt NLP interface
  * @ingroup NLPINTERFACES
  * @author  Stefan Vigerske
  */
 
-/** TODO:
- * - warm starts
- * - ScipJournal to redirect Ipopt output 
+/* @TODO warm starts
+ * @TODO ScipJournal to redirect Ipopt output 
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 extern "C"
 {
-#include "nlpi_ipopt.h"
-#include "nlpi.h"
-#include "nlpi_oracle.h"
+#include "scip/nlpi_ipopt.h"
+#include "scip/nlpi.h"
+#include "scip/nlpi_oracle.h"
 }
 
 #include <new>      /* for std::bad_alloc */
@@ -37,7 +51,6 @@ using namespace Ipopt;
 #define NLPI_DESC              "Ipopt interface" /**< description of solver */
 #define NLPI_TYPE              "IP"              /**< solver type */
 #define NLPI_PRIORITY          0                 /**< priority */
-#define NLPI_NRESCLASSES       2                 /**< number of restriction classes, i.e. linear and nonlinear TODO what is this ???*/
 
 #ifdef SCIP_DEBUG
 #define DEFAULT_PRINTLEVEL     J_WARNING         /**< default print level of Ipopt */
@@ -283,10 +296,6 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsIpopt )
 
    data->firstrun = TRUE;
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
-#ifdef WITH_DSL   
-   if (cls)
-      *cls = 1;
-#endif
 
    return SCIP_OKAY;
 }
@@ -345,11 +354,7 @@ SCIP_DECL_NLPICHGCONSBOUNDS( nlpiChgConsBoundsIpopt )
    int* realindices;
    SCIP_CALL( SCIPallocBufferArray(scip, &realindices, ncons) );
    for (int i = 0; i < ncons; ++i)
-#ifdef WITH_DSL
-      realindices[i] = indices[i].idx;
-#else
       realindices[i] = indices[i];
-#endif
    
    SCIP_CALL( SCIPnlpiOracleChgConsBounds(scip, data->oracle, ncons, realindices, lb, ub) );
    
@@ -374,7 +379,7 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetIpopt )
    SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, data->oracle, dstat) );
 
    data->firstrun = TRUE;
-   SCIPfreeMemoryArrayNull(scip, &data->initguess); // TODO keep initguess for remaining variables 
+   SCIPfreeMemoryArrayNull(scip, &data->initguess); // @TODO keep initguess for remaining variables 
 
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
 
@@ -412,11 +417,7 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsIpopt )
    assert(data != NULL);
    assert(data->oracle != NULL);
    
-#ifdef WITH_DSL
-   SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, data->oracle, cons.idx, nvals, varidx, value) );
-#else
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, data->oracle, cons, nvals, varidx, value) );
-#endif
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
 
    return SCIP_OKAY;
@@ -432,11 +433,7 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsIpopt )
    SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
-#ifdef WITH_DSL   
-   SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(scip, data->oracle, cons.idx, nentries, row, col, value) );
-#else
    SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(scip, data->oracle, cons, nentries, row, col, value) );
-#endif
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
 
    return SCIP_OKAY;
@@ -663,7 +660,7 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntparIpopt )
    assert(data != NULL);
    assert(IsValid(data->ipopt));
 
-   //TODO try-catch block for Ipopt exceptions
+   //@TODO try-catch block for Ipopt exceptions
    switch (type)
    {
       case SCIP_NLPPAR_FROMSCRATCH:
@@ -1029,9 +1026,6 @@ SCIPcreateNlpSolverIpopt(
   
    SCIP_CALL( SCIPnlpiCreate( scip, nlpi,
       NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
-#ifdef WITH_DSL
-      NLPI_NRESCLASSES,
-#endif
       nlpiInitIpopt, nlpiAddVarsIpopt, nlpiAddConstraintsIpopt, nlpiSetObjectiveIpopt, 
       nlpiChgVarBoundsIpopt, nlpiChgConsBoundsIpopt, nlpiDelVarSetIpopt, nlpiDelConstraintSetIpopt,
       nlpiChgLinearCoefsIpopt, nlpiChgQuadraticCoefsIpopt,
@@ -1114,7 +1108,7 @@ bool ScipNLP::get_starting_point(Index n, bool init_x, Number* x, bool init_z, N
       else
       {
          SCIPwarningMessage("Ipopt started without intial primal values.\n");
-         return false; // do not have initial guess, this will make Ipopt fail; TODO: should we make up some point?
+         return false; // do not have initial guess, this will make Ipopt fail; @TODO: should we make up some point?
       }
    }
    if (init_z || init_lambda)
