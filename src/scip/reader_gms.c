@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.5 2009/07/21 06:15:45 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.6 2009/07/27 10:52:52 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -469,7 +469,7 @@ static
 SCIP_DECL_READERWRITE(readerWriteGms)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPwriteGms(scip, file, name, transformed, objsense, objscale, objoffset, vars,
-			  nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
+         nvars, nbinvars, nintvars, nimplvars, ncontvars, conss, nconss, result) );
 
    return SCIP_OKAY;
 }
@@ -482,7 +482,7 @@ SCIP_DECL_READERWRITE(readerWriteGms)
 
 /** includes the gms file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderGms(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*              scip                /**< SCIP data structure */
    )
 {
    SCIP_READERDATA* readerdata;
@@ -512,7 +512,8 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE      objsense,           /**< objective sense */
    SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-   					       extobj = objsense * objscale * (intobj + objoffset) */
+                                           *   extobj = objsense * objscale * (intobj + objoffset)
+                                           */
    SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                nvars,              /**< number of mutable variables in the problem */
@@ -572,12 +573,12 @@ SCIP_RETCODE SCIPwriteGms(
 
       for( c = 0; c < nConsInd; ++c )
       {
-	 assert( consInd[c] != NULL );
-	 cons = SCIPgetLinearConsIndicator(consInd[c]);
-	 
-	 assert( !SCIPhashmapExists(consHidden, (void*) cons) );
-	 SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) cons, (void*) TRUE) );
-	 SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(cons));
+         assert( consInd[c] != NULL );
+         cons = SCIPgetLinearConsIndicator(consInd[c]);
+
+         assert( !SCIPhashmapExists(consHidden, (void*) cons) );
+         SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) cons, (void*) TRUE) );
+         SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(cons));
       }
    }
    else
@@ -585,24 +586,24 @@ SCIP_RETCODE SCIPwriteGms(
       /* otherwise we have to pass through all constraints */
       for (c = 0; c < nconss; ++c)
       {
-	 cons = conss[c];
-	 assert( cons != NULL);
+         cons = conss[c];
+         assert( cons != NULL);
 
-	 conshdlr = SCIPconsGetHdlr(cons);
-	 assert( conshdlr != NULL );
-	 conshdlrname = SCIPconshdlrGetName(conshdlr);
+         conshdlr = SCIPconsGetHdlr(cons);
+         assert( conshdlr != NULL );
+         conshdlrname = SCIPconshdlrGetName(conshdlr);
 
-	 if( strcmp(conshdlrname, "indicator") == 0 )
-	 {
-	    SCIP_CONS* lincons;
+         if( strcmp(conshdlrname, "indicator") == 0 )
+         {
+            SCIP_CONS* lincons;
 
-	    lincons = SCIPgetLinearConsIndicator(cons);
-	    assert( lincons != NULL );
+            lincons = SCIPgetLinearConsIndicator(cons);
+            assert( lincons != NULL );
 
-	    assert( !SCIPhashmapExists(consHidden, (void*) lincons) );
-	    SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) lincons, (void*) TRUE) );
-	    SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(lincons));
-	 }
+            assert( !SCIPhashmapExists(consHidden, (void*) lincons) );
+            SCIP_CALL( SCIPhashmapSetImage(consHidden, (void*) lincons, (void*) TRUE) );
+            SCIPdebugMessage("Marked linear constraint <%s> as hidden.\n", SCIPconsGetName(lincons));
+         }
       }
    }
 #endif
@@ -644,10 +645,10 @@ SCIP_RETCODE SCIPwriteGms(
       appendLine(scip, file, linebuffer, &linecnt, buffer);
 
       if( (linecnt > 0 && (v == nbinvars - 1 || v == nbinvars + nintvars - 1 ||
-	       v == nbinvars + nintvars + nimplvars - 1)) || v == nvars - 1 )
+            v == nbinvars + nintvars + nimplvars - 1)) || v == nvars - 1 )
       {
-	 endLine(scip, file, linebuffer, &linecnt);
-	 clearLine(linebuffer, &linecnt);
+         endLine(scip, file, linebuffer, &linecnt);
+         clearLine(linebuffer, &linecnt);
       }
    }
 
@@ -661,12 +662,12 @@ SCIP_RETCODE SCIPwriteGms(
    
       for( v = 0; v < nbinvars; ++v )
       {
-	 var = vars[v];
+         var = vars[v];
 
-	 (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-	 (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nbinvars - 1) ? "," : ";");
+         (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nbinvars - 1) ? "," : ";");
 
-	 appendLine(scip, file, linebuffer, &linecnt, buffer);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       endLine(scip, file, linebuffer, &linecnt);
@@ -681,12 +682,12 @@ SCIP_RETCODE SCIPwriteGms(
    
       for( v = 0; v < nintvars; ++v )
       {
-	 var = vars[nbinvars + v];
+         var = vars[nbinvars + v];
 
-	 (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
-	 (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nintvars - 1) ? "," : ";");
+         (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nintvars - 1) ? "," : ";");
 
-	 appendLine(scip, file, linebuffer, &linecnt, buffer);
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
 
       endLine(scip, file, linebuffer, &linecnt);
@@ -720,71 +721,71 @@ SCIP_RETCODE SCIPwriteGms(
       /* fixed */
       if( SCIPisEQ(scip, lb, ub) )
       {
-	 if( v < nintvars )
-	    SCIPinfoMessage(scip, file, " %s.fx = %g;\n", varname, SCIPfloor(scip, lb + 0.5));
-	 else
-	    SCIPinfoMessage(scip, file, " %s.fx = %.15g;\n", varname, lb);
-	 nondefbounds = TRUE;
+         if( v < nintvars )
+            SCIPinfoMessage(scip, file, " %s.fx = %g;\n", varname, SCIPfloor(scip, lb + 0.5));
+         else
+            SCIPinfoMessage(scip, file, " %s.fx = %.15g;\n", varname, lb);
+         nondefbounds = TRUE;
       }
 
       /* lower bound */
       if( v < nbinvars || (v < nintvars && !freeints) )
       {
-	 /* default lower bound is 0 */
-	 if( !SCIPisZero(scip, lb) )
-	 {
-	    if( !SCIPisInfinity(scip, -lb) )
-	       SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
-	    else
-	       SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, -SCIPinfinity(scip)); /* sorry, -inf not allowed in gams file here */
-	    nondefbounds = TRUE;
-	 }
+         /* default lower bound is 0 */
+         if( !SCIPisZero(scip, lb) )
+         {
+            if( !SCIPisInfinity(scip, -lb) )
+               SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
+            else
+               SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, -SCIPinfinity(scip)); /* sorry, -inf not allowed in gams file here */
+            nondefbounds = TRUE;
+         }
       }
       else if( v < nintvars && !SCIPisInfinity(scip, -lb) )
       {
-	 /* freeints == TRUE: integer variables are free by default */
-	 SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
-	 nondefbounds = TRUE;
+         /* freeints == TRUE: integer variables are free by default */
+         SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
+         nondefbounds = TRUE;
       }
       else if( v >= nintvars && !SCIPisInfinity(scip, -lb) )
       {
-	 /* continuous variables are free by default */
-	 SCIPinfoMessage(scip, file, " %s.lo = %.15g;\n", varname, lb);
-	 nondefbounds = TRUE;
+         /* continuous variables are free by default */
+         SCIPinfoMessage(scip, file, " %s.lo = %.15g;\n", varname, lb);
+         nondefbounds = TRUE;
       }
 
       /* upper bound */
       if( v < nbinvars )
       {
-	 if( !SCIPisEQ(scip, ub, 1.0) )
-	 {
-	    SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
-	    nondefbounds = TRUE;
-	 }
+         if( !SCIPisEQ(scip, ub, 1.0) )
+         {
+            SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
+            nondefbounds = TRUE;
+         }
       }
       else if( v < nintvars && !freeints )
       {
-	 /* freeints == FALSE: integer variables have upper bound 100 by default */
-	 if( !SCIPisEQ(scip, ub, 100.0) )
-	 {
-	    if( !SCIPisInfinity(scip, ub) )
-	       SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
-	    else
-	       SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPinfinity(scip)); /* sorry, +inf not allowed in gams file here */
-	    nondefbounds = TRUE;
-	 }
+         /* freeints == FALSE: integer variables have upper bound 100 by default */
+         if( !SCIPisEQ(scip, ub, 100.0) )
+         {
+            if( !SCIPisInfinity(scip, ub) )
+               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
+            else
+               SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPinfinity(scip)); /* sorry, +inf not allowed in gams file here */
+            nondefbounds = TRUE;
+         }
       }
       else if( v < nintvars && !SCIPisInfinity(scip, ub) )
       {
-	 /* freeints == TRUE: integer variables are free by default */
-	 SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
-	 nondefbounds = TRUE;
+         /* freeints == TRUE: integer variables are free by default */
+         SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
+         nondefbounds = TRUE;
       }
       else if( v >= nintvars && !SCIPisInfinity(scip, ub) )
       {
-	 /* continuous variables are free by default */
-	 SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
-	 nondefbounds = TRUE;
+         /* continuous variables are free by default */
+         SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
+         nondefbounds = TRUE;
       }
    }
 
@@ -898,7 +899,7 @@ SCIP_RETCODE SCIPwriteGms(
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
       {
-	 SCIP_Longint* weights;
+         SCIP_Longint* weights;
 
          consvars = SCIPgetVarsKnapsack(scip, cons);
          nconsvars = SCIPgetNVarsKnapsack(scip, cons);
@@ -910,7 +911,7 @@ SCIP_RETCODE SCIPwriteGms(
             consvals[v] = weights[v];
 
          SCIP_CALL( printLinearCons(scip, file, consname, nconsvars, consvars, consvals,
-	       -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
+               -SCIPinfinity(scip), (SCIP_Real) SCIPgetCapacityKnapsack(scip, cons), transformed) );
 
          SCIPfreeBufferArray(scip, &consvals);
       }

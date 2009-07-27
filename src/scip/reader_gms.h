@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.h,v 1.1 2009/07/20 08:07:27 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.h,v 1.2 2009/07/27 10:52:52 bzfgleix Exp $"
 
 /**@file   reader_gms.h
  * @brief  GAMS file reader
@@ -31,7 +31,7 @@
 /** includes the gms file reader into SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderGms(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*              scip                /**< SCIP data structure */
    );
 
 
@@ -44,7 +44,8 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool          transformed,        /**< TRUE iff problem is the transformed problem */
    SCIP_OBJSENSE      objsense,           /**< objective sense */
    SCIP_Real          objscale,           /**< scalar applied to objective function; external objective value is
-					     extobj = objsense * objscale * (intobj + objoffset) */
+                                           *   extobj = objsense * objscale * (intobj + objoffset)
+                                           */
    SCIP_Real          objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**         vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                nvars,              /**< number of mutable variables in the problem */
