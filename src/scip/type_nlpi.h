@@ -11,12 +11,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.1 2009/07/27 19:02:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.2 2009/07/28 13:10:15 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @brief  type definitions for specific NLP solvers interface
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
+ *
+ * @note This is a non-final version of the NLPI specification. It is likely to change soon. Use with care!
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
