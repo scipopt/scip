@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.16 2009/07/28 17:39:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.17 2009/07/28 17:48:07 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -45,7 +45,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/intervalarith.h"
 #ifdef WITH_CONSBRANCHNL
-#include "scip/cons_branchnonlinear.h"
+#include "cons_branchnonlinear.h"
 #endif
 #ifdef WITH_SOC3
 #include "cons_soc3.h"
