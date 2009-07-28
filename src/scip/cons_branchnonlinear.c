@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_branchnonlinear.c,v 1.2 2009/07/28 10:05:26 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_branchnonlinear.c,v 1.3 2009/07/28 13:05:05 bzfviger Exp $"
 
 /**@file    cons_branchnonlinear.c
  * @ingroup CONSHDLRS
@@ -26,7 +26,7 @@
 #include <string.h>  /* for strcmp */
 
 #include "scip/cons_linear.h"
-#include "cons_branchnonlinear.h"
+#include "scip/cons_branchnonlinear.h"
 
 
 /* constraint handler properties */
@@ -49,6 +49,7 @@
  * Data structures
  */
 
+/** Stores information about the infeasibility assigned to a variable */
 struct VarInfeasibility
 {
    SCIP_Real                 min;
@@ -56,17 +57,18 @@ struct VarInfeasibility
    SCIP_Real                 sum;
    struct VarInfeasibility*  next;
 };
+/** Infeasibility of a variable. */
 typedef struct VarInfeasibility VARINFEASIBILITY;
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_HASHMAP*      branchcand;   /* branching candidates */
-   VARINFEASIBILITY*  varinfeas;    /* list of variable infeasibilities */
-   int                eventhdlrpos; /* filter position of event handler */
+   SCIP_HASHMAP*      branchcand;             /**< branching candidates */
+   VARINFEASIBILITY*  varinfeas;              /**< list of variable infeasibilities */
+   int                eventhdlrpos;           /**< filter position of event handler */
    
-   char               strategy;     /* branching strategy */
-   SCIP_Real          mindistbrpointtobound;  /* minimal (fractional) distance of branching point to bound */
+   char               strategy;               /**< branching strategy */
+   SCIP_Real          mindistbrpointtobound;  /**< minimal (fractional) distance of branching point to bound */
 };
 
 
@@ -76,8 +78,12 @@ struct SCIP_ConshdlrData
 
 /* put your local methods here, and declare them static */
 
+/** clears list of branching candidates */
 static
-SCIP_RETCODE clearBranchingCandidates(SCIP* scip, SCIP_CONSHDLR* conshdlr)
+SCIP_RETCODE clearBranchingCandidates(
+   SCIP*            scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*   conshdlr      /**< constraint handler for branching on nonlinear variables */
+   )
 {
    SCIP_CONSHDLRDATA* data;
    VARINFEASIBILITY* v;
@@ -104,8 +110,15 @@ SCIP_RETCODE clearBranchingCandidates(SCIP* scip, SCIP_CONSHDLR* conshdlr)
    return SCIP_OKAY;
 }
 
+/** determines branching point for a variable */
 static
-SCIP_RETCODE selectBranchingPoint(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_VAR* var, SCIP_Real* leftub, SCIP_Real* rightlb)
+SCIP_RETCODE selectBranchingPoint(
+   SCIP*             scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*    conshdlr,       /**< constraint handler for branching on nonlinear variables */
+   SCIP_VAR*         var,            /**< branching variables */
+   SCIP_Real*        leftub,         /**< buffer to store new upper bound of variable in left  branch */
+   SCIP_Real*        rightlb         /**< buffer to store new lower bound of variable in right branch */
+   )
 {
    SCIP_CONSHDLRDATA*   data;
    SCIP_Real            branchpoint;
@@ -131,14 +144,14 @@ SCIP_RETCODE selectBranchingPoint(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_VAR*
       if (SCIPisPositive(scip, lb))
          branchpoint = lb + 1000;
       else
-         branchpoint = 0.;
+         branchpoint = 0.0;
    }
    else if (SCIPisInfinity(scip, -branchpoint))
    {
       if (SCIPisNegative(scip, ub))
          branchpoint = ub - 1000;
       else
-         branchpoint = 0.;
+         branchpoint = 0.0;
    }
 
    if (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS)
@@ -189,8 +202,15 @@ SCIP_RETCODE selectBranchingPoint(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_VAR*
    return SCIP_OKAY;
 }
 
+/** selects a branching variable and decides about branching point */
 static
-SCIP_RETCODE selectBranchingVariable(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_VAR** var, SCIP_Real* leftub, SCIP_Real* rightlb)
+SCIP_RETCODE selectBranchingVariable(
+   SCIP*            scip,           /**< SCIP data structure */
+   SCIP_CONSHDLR*   conshdlr,       /**< constraint handler for branching on nonlinear variables */
+   SCIP_VAR**       var,            /**< buffer to store branching variable */
+   SCIP_Real*       leftub,         /**< buffer to store new upper bound of branching variable in  left branch */
+   SCIP_Real*       rightlb         /**< buffer to store new lower bound of branching varialbe in right branch */
+   )
 {
    SCIP_CONSHDLRDATA*   data;
    int                  listidx;
@@ -317,6 +337,7 @@ SCIP_RETCODE selectBranchingVariable(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_V
    return SCIP_OKAY;
 }
 
+/** initiates reset of list of branching candidates when a node is focussed */
 static
 SCIP_DECL_EVENTEXEC(processNodeFocusedEvent)
 {
