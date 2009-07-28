@@ -46,6 +46,9 @@ interface:
 - new parameter "sol" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR(), and sepa_cmir.c: tryDelta() to separate a sol different from the LP solution
 - new parameter "sol" in scip.c: SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() and var.c: SCIPvarGetClosestVlb() and SCIPvarGetClosestVub()
   to get closest variable bound w.r.t. sol different from LP solution
+- new methods in pub_misc.h/misc.c to access hash map lists and elements of a hash map list and to clear all entries in a hash map
+- some interval arithmetic method take an additional argument to denote which value stands for infinity in an interval
+- extend Makefile to link against Ipopt if IPOPT=true is set
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -70,6 +73,8 @@ features:
 - the infrastructure for copying constraints is set; each constraint handler has now an callback method SCIP_DECL_CONSCOPYE() (see type_cons.h)
 - all linear type constraint handlers are able to copy constraints using the function SCIPcopyCons() in scip.h
 - the linear constraint handler is able to parse a string in CIP format and create a corresponding linear constraint
+- interval arithmetic functions can work with unbounded intervals
+  added new functions to allow more operations on intervals, including solving quadratic interval equations
 
 performance improvements:
 - replaced some function calls in loop conditions
@@ -137,6 +142,7 @@ fixed bugs:
 - fixed bug in case of reading an objective function in lp format with multiple occurrences of the same variable
 - fixed bug in sepa_impliedbounds.c and sepa_intobj.c: if separating a sol, this sol is now also given to
   SCIPaddCut() so that the efficacy of the cut is now computed correctly
+- fixed bug in cons_linear.c: do not select variable as slack variable for multiaggregation in convertLongEquality if it has been marked as not-multiaggregable
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
@@ -144,6 +150,10 @@ plugins:
 - added multi-commodity-flow cut separator
 - adjusted interface to ZIMPL (reader_zpl.{c,h} for ZIMPL version 2.10; this interface should also work with older ZIMPL versions
 - added writer for GAMS models (reader_gms.{c,h})
+- added constraint handler for quadratic constraints
+- added first version of an interface to NLP solvers (type_nlpi.h, struct_nlpi.h, nlpi.h, nlpi.c, nlpi_oracle.h, nlpi_oracle.c)
+- added first version of an interface to Ipopt (only QCP, no deletion of vars/cons allowed; nlpi_ipopt.(h|c))
+- added heuristic that performs a local search in an NLP (takes only linear and quadratic constraints into account so far)
 
 SCIP version 1.1.0
 ===============
