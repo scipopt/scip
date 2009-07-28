@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.14 2009/07/27 19:02:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.15 2009/07/28 16:29:26 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -165,10 +165,27 @@ struct SCIP_ConshdlrData
  * if val is >= infty1, then give infty2, else give val */
 #define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
 
-#ifdef WITH_LAPACK
-/* TODO this is compiler and machine dependent, we just assume here a Linux/gcc system */
+#ifndef WITH_LAPACK
+
+/** if WITH_LAPACK not set, but WITH_IPOPT, then we can use Lapack from Ipopt and also get the Fortran naming convention from it */
+#ifdef WITH_IPOPT
+#define WITH_LAPACK
+#include "IpoptConfig.h"
+#endif
+
+#else
+
+/** if WITH_LAPACK is set, then also F77_FUNC should be set, otherwise we try a default that works on common systems */
+#ifndef F77_FUNC
+#warning "do not know about fortran naming convention for using Lapack; please consider defining F77_FUNC"
+/* this is compiler and machine dependent; the following just assumes a Linux/gcc system */
 #define F77_FUNC(name,NAME) name ## _
-#define F77_FUNC_(name,NAME) name ## _
+/* #define F77_FUNC_(name,NAME) name ## _ */
+#endif
+
+#endif /* ifndef/else WITH_LAPACK */
+
+#ifdef WITH_LAPACK
 
 /** LAPACK Fortran subroutine DSYEV */
 void F77_FUNC(dsyev,DSYEV)(
