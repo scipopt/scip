@@ -1,4 +1,18 @@
-#pragma ident "@(#) $Id: cons_branchnonlinear.h,v 1.1 2009/07/22 20:04:48 bzfviger Exp $"
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: cons_branchnonlinear.h,v 1.2 2009/07/28 10:05:26 bzfviger Exp $"
 
 /**@file   cons_branchnonlinear.h
  * @brief  constraint handler for branching on variables in nonlinear (nonconvex) constraints

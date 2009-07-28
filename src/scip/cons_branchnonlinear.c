@@ -1,8 +1,21 @@
-//#define SCIP_DEBUG
-#pragma ident "@(#) $Id: cons_branchnonlinear.c,v 1.1 2009/07/22 20:04:48 bzfviger Exp $"
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: cons_branchnonlinear.c,v 1.2 2009/07/28 10:05:26 bzfviger Exp $"
 
 /**@file    cons_branchnonlinear.c
- * @ingroup BRANCHINGRULES
+ * @ingroup CONSHDLRS
  * @brief   constraint handler for branching on variables in nonlinear (nonconvex) constraints
  * @author  Stefan Vigerske
  */
@@ -25,7 +38,7 @@
 #define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS         0 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -270,7 +283,7 @@ SCIP_RETCODE selectBranchingVariable(SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_V
             *rightlb  = candrightlb;
          }
          else if ( SCIPisSumEQ(scip, score, bestscore) && !(SCIPisInfinity(scip, -SCIPvarGetLbLocal(*var)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(*var))))
-         { // if best candidate so far is bounded or unbounded at atmost one side, maybe take new candidate
+         { /* if best candidate so far is bounded or unbounded at atmost one side, maybe take new candidate */
             if ( (SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(cand))) &&
                  (SCIPisInfinity(scip, -SCIPvarGetLbLocal(*var)) || SCIPisInfinity(scip, SCIPvarGetUbLocal(*var))) )
             { /* if both variables are unbounded but one of them is bounded on one side, take the one with the larger bound on this side (hope that this avoids branching on always the same variable) */
