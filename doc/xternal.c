@@ -3814,54 +3814,54 @@
 
 
 /**@defgroup BRANCHINGRULES Branching Rules 
- * @brief In the following you find a list of all branching rule which are currently available.
+ * @brief This page contains a list of all branching rule which are currently available.
  */
 
 /**@defgroup CONSHDLRS  Constraint Handler 
- * @brief In the following you find a list of all constraint handlers which are currently available.
+ * @brief This page contains a list of all constraint handlers which are currently available.
  */
 
 /**@defgroup DIALOGS Dialogs 
- * @brief In the following you find a list of all dialogs which are currently available.
+ * @brief This page contains a list of all dialogs which are currently available.
  */
 
 /**@defgroup DISPLAYS Displays 
- * @brief In the following you find a list of all displays (output columns)  which are currently available.
+ * @brief This page contains a list of all displays (output columns)  which are currently available.
  */
 
 /**@defgroup FILEREADERS File Readers 
- * @brief In the following you find a list of all file readers which are currently available.
+ * @brief This page contains a list of all file readers which are currently available.
  */
  
 /**@defgroup LPIS LP Interfaces
- * @brief In the following you find a list of all LP instances which are currently available.
+ * @brief This page contains a list of all LP instances which are currently available.
  */
 
 /**@defgroup NODESELECTORS Node Selectors
- * @brief In the following you find a list of all node selectors which are currently available.
+ * @brief This page contains a list of all node selectors which are currently available.
  */
 
 /**@defgroup PRESOLVERS Presolvers
- * @brief In the following you find a list of all presolvers which are currently available.
+ * @brief This page contains a list of all presolvers which are currently available.
  */
 
 /**@defgroup PRICERS Pricers
- * @brief In the following you find a list of all pricers which are currently available.
+ * @brief This page contains a list of all pricers which are currently available.
  */
 
 /**@defgroup PRIMALHEURISTICS Primal Heuristics
- * @brief In the following you find a list of all primal heuristics which are currently available.
+ * @brief This page contains a list of all primal heuristics which are currently available.
  */
 
 /**@defgroup PROPAGATORS Propagators
- * @brief In the following you find a list of all propagators which are currently available.
+ * @brief This page contains a list of all propagators which are currently available.
  */
 
 /**@defgroup RELAXATORS Relaxators
- * @brief In the following you find a list of all relaxators which are currently available.
+ * @brief This page contains a list of all relaxators which are currently available.
  */
 
 /**@defgroup SEPARATORS Separators
- * @brief In the following you find a list of all separators  which are currently available.
+ * @brief This page contains a list of all separators  which are currently available.
  */
 
