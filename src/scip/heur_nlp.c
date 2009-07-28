@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.2 2009/07/27 20:04:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.3 2009/07/28 18:15:46 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -647,12 +647,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    
    if (SCIPheurGetFreq(heur) < 0)
       return SCIP_OKAY;
-   
-#ifndef WITH_IPOPT
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
-   return SCIP_OKAY;
-#endif
-   
+      
    /* do not build NLP if there are no nonlinear continuous or impl. integer variables
     */
    if (SCIPgetNContVars(scip) || SCIPgetNImplVars(scip))
@@ -675,9 +670,16 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    }
    else
       return SCIP_OKAY;
-   
+
+
    if (havenlp)
+   {
+#ifndef WITH_IPOPT
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
+      return SCIP_OKAY;
+#endif
       setupNLP(scip, heur);
+   }
    else
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "No nonlinear continuous variables. NLP local search heuristic will not run.\n");
    
