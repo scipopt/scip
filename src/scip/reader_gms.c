@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.10 2009/07/27 13:37:28 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.11 2009/07/28 18:21:21 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -536,11 +536,8 @@ SCIP_RETCODE printQuadraticRow(
    assert( strlen(rowname) > 0 || strlen(rownameextension) > 0 );
    assert( strcmp(type, "=e=") == 0 || strcmp(type, "=l=") == 0 || strcmp(type, "=g=") == 0 );
    assert( nlinvars == 0 || (linvars != NULL && lincoeffs != NULL) );
-   assert( nlinvars > 0 || (linvars == NULL && lincoeffs == NULL) );
    assert( nquadvars == 0 || (quadvars != NULL && quadlincoeffs != NULL && quadsqrcoeffs != NULL) );
-   assert( nquadvars > 0 || (quadvars == NULL && quadlincoeffs == NULL && quadsqrcoeffs == NULL) );
    assert( nbilinterms == 0 || (bilinvars1 != NULL && bilinvars2 != NULL && bilincoeffs != NULL) );
-   assert( nbilinterms > 0 || (bilinvars1 == NULL && bilinvars2 == NULL && bilincoeffs == NULL) );
    assert( nquadvars > 0 || nbilinterms == 0 );
 
    clearLine(linebuffer, &linecnt);
@@ -638,11 +635,8 @@ SCIP_RETCODE printQuadraticCons(
    assert( scip != NULL );
    assert( rowname != NULL );
    assert( nlinvars == 0 || (linvars != NULL && lincoeffs != NULL) );
-   assert( nlinvars > 0 || (linvars == NULL && lincoeffs == NULL) );
    assert( nquadvars == 0 || (quadvars != NULL && quadlincoeffs != NULL && quadsqrcoeffs != NULL) );
-   assert( nquadvars > 0 || (quadvars == NULL && quadlincoeffs == NULL && quadsqrcoeffs == NULL) );
    assert( nbilinterms == 0 || (bilinvars1 != NULL && bilinvars2 != NULL && bilincoeffs != NULL) );
-   assert( nbilinterms > 0 || (bilinvars1 == NULL && bilinvars2 == NULL && bilincoeffs == NULL) );
    assert( nquadvars > 0 || nbilinterms == 0 );
    assert( lhs <= rhs );
    
