@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.252 2009/07/28 17:00:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.253 2009/07/28 21:00:38 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1904,10 +1904,19 @@ SCIP_RETCODE varParse(
 
    /* get lazy bound */
    token = SCIPstrtok(NULL, "[", &saveptr);
-   token = SCIPstrtok(NULL, ",", &saveptr);
-   parseValue(set, token, lazylb);
-   token = SCIPstrtok(NULL, "]", &saveptr);
-   parseValue(set, token, lazyub);
+   if( token == NULL )
+   {
+      /* the lazy bounds are not present; hence the have the default values */
+      *lazylb = -SCIPsetInfinity(set);
+      *lazyub = SCIPsetInfinity(set);
+   }
+   else
+   {
+      token = SCIPstrtok(NULL, ",", &saveptr);
+      parseValue(set, token, lazylb);
+      token = SCIPstrtok(NULL, "]", &saveptr);
+      parseValue(set, token, lazyub);
+   }
    
  TERMINATE:
    BMSfreeMemoryArray(&copystr);
@@ -2385,7 +2394,10 @@ void SCIPvarPrint(
    /* output lazy bound */
    lb = SCIPvarGetLbLazy(var);
    ub = SCIPvarGetUbLazy(var);
-   printBounds(set, file, lb, ub, "lazy bounds");
+   
+   /* only display the lazy bounds if they are different from [-infinity,infinity] */
+   if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
+      printBounds(set, file, lb, ub, "lazy bounds");
 
    /* holes */
    /**@todo print holes */
