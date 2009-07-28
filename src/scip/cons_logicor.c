@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.130 2009/06/25 11:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.131 2009/07/28 16:57:14 bzfpfets Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -2064,7 +2064,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       }
       
       /* check constraints for redundancy */
-      if( conshdlrdata->presolpairwise ) /* //&& oldndelconss == *ndelconss ) */
+      if( conshdlrdata->presolpairwise ) /* && oldndelconss == *ndelconss ) */
       {
 	SCIP_Longint npaircomparisons;
 	npaircomparisons = 0;
