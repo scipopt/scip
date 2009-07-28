@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.21 2009/07/24 15:51:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.22 2009/07/28 17:00:17 bzfpfets Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1342,12 +1342,12 @@ void SCIPintervalQuad(
    assert(resultant->sup >= resultant->inf);
 #if 0
    if( resultant->sup < resultant->inf )
-   { // in case upper bound is below -infinity
+   { /* in case upper bound is below -infinity */
       assert(resultant->inf <= -infinity);
       resultant->sup = resultant->inf;
    }
    else if( resultant->inf > resultant->sup )
-   { // in case lower bound is above  infinity
+   { /* in case lower bound is above  infinity */
       assert(resultant->sup >= infinity);
       resultant->inf = resultant->sup;
    }

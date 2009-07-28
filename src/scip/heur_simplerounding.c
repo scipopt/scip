@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.33 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.34 2009/07/28 17:00:17 bzfpfets Exp $"
 
 /**@file   heur_simplerounding.c
  * @ingroup PRIMALHEURISTICS
@@ -133,10 +133,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    assert(SCIPhasCurrentNodeLP(scip));
 
    *result = SCIP_DIDNOTRUN;
-   
-//    if( !strncmp(SCIPgetProbName(scip), "111Orders", 9)&& heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP  )
-//       printf("call heuristics --- \n");
-   
+
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;

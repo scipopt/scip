@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.118 2009/07/23 17:35:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.119 2009/07/28 17:00:17 bzfpfets Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -5778,7 +5778,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_Bool inverted;
    int maxtestdelta;
 
-   int oldncuts = 0; // to check success of separation for one nodeset
+   int oldncuts = 0; /* to check success of separation for one nodeset */
 
    assert( effortlevel == MCFEFFORTLEVEL_AGGRESSIVE || effortlevel == MCFEFFORTLEVEL_DEFAULT );
    nrows = SCIPgetNLPRows(scip);
@@ -6229,7 +6229,7 @@ SCIP_RETCODE generateClusterCuts(
                bestdelta = deltas[ndeltas-1];  /* if nothing else is found, use maxdelta */
          }
 
-         oldncuts = *ncuts; // save number of cuts
+         oldncuts = *ncuts; /* save number of cuts */
 
          SCIPdebugMessage(" -> found %d different deltas to try\n", ndeltas);
          for ( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
@@ -6295,7 +6295,7 @@ SCIP_RETCODE generateClusterCuts(
             }
          }
 
-         // only separate flowcutset inequalities if no cutset inequalities have been found
+         /* only separate flowcutset inequalities if no cutset inequalities have been found */
          if ( sepadata->separateflowcutset && oldncuts == *ncuts )
          {
             /* try to separate flow cuts for the best delta */

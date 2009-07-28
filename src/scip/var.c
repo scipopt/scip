@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.251 2009/07/08 15:36:29 bzfgamra Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.252 2009/07/28 17:00:17 bzfpfets Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3135,7 +3135,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
    for( v = ntmpvars - 1; v > 0; --v )
    {
-      // combine same variables
+      /* combine same variables */
       if( SCIPvarCompare(tmpvars[v], tmpvars[v - 1]) == 0 )
       {
          tmpscalars[v - 1] += tmpscalars[v];
