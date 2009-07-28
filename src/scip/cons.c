@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.185 2009/07/03 15:35:57 bzfgamra Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.186 2009/07/28 20:27:10 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4716,9 +4716,10 @@ SCIP_RETCODE SCIPconsPrint(
    if( conshdlr->consprint != NULL )
    {
       SCIP_CALL( conshdlr->consprint(set->scip, conshdlr, cons, file) );
+      SCIPmessageFPrintInfo(file, ";\n");
    }
    else 
-      SCIPmessageFPrintInfo(file, "constraint handler <%s> doesn't support printing constraint\n", conshdlr->name);
+      SCIPmessageFPrintInfo(file, "constraint handler <%s> doesn't support printing constraint;\n", conshdlr->name);
    
    return SCIP_OKAY;
 }
