@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.301 2009/07/27 20:29:31 bzfviger Exp $
+# $Id: Makefile,v 1.302 2009/07/28 16:27:51 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -365,7 +365,7 @@ IPOPTDEP	:=	$(SRCDIR)/depend.ipopt
 IPOPTSRC	:=	$(shell cat $(IPOPTDEP))
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
-FLAGS		+=	-DWITH_IPOPT -DWITH_LAPACK -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
+FLAGS		+=	-DWITH_IPOPT -I$(LIBDIR)/ipoptinc $(IPOPT_FLAGS)
 LDFLAGS		+=	$(LINKCXX_l)ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)$(LINKLIBSUFFIX) $(IPOPT_LDFLAGS)
 ifeq ($(LIBEXT),$(STATICLIBEXT))
 LDFLAGS		+=	`cat $(LIBDIR)/ipopt_addlibs.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT).$(STATICLIBEXT)`
@@ -542,18 +542,20 @@ SCIPLIBOBJ	=	scip/branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o
 
-ifeq ($(IPOPT),true)
-SCIPLIBOBJ += scip/nlpi_ipopt.o
-endif
-
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
 SCIPLIBFILE	=	$(LIBDIR)/lib$(SCIPLIB).$(LIBEXT)
 SCIPLIBOBJFILES	=	$(addprefix $(LIBOBJDIR)/,$(SCIPLIBOBJ))
 SCIPLIBSRC	=	$(addprefix $(SRCDIR)/,$(SCIPLIBOBJ:.o=.c))
 SCIPLIBDEP	=	$(SRCDIR)/depend.sciplib.$(OPT)
 SCIPLIBLINK	=	$(LIBDIR)/lib$(SCIPLIBSHORTNAME).$(BASE).$(LIBEXT)
-ALLSRC		+=	$(SCIPLIBSRC)
 
+ifeq ($(IPOPT),true)
+SCIPLIBOBJ += scip/nlpi_ipopt.o
+SCIPLIBOBJFILES += $(LIBOBJDIR)/scip/nlpi_ipopt.o
+SCIPLIBSRC += $(SRCDIR)/scip/nlpi_ipopt.cpp
+endif
+
+ALLSRC		+=	$(SCIPLIBSRC)
 
 #-----------------------------------------------------------------------------
 # Objective SCIP Library
@@ -760,7 +762,6 @@ depend:		lpidepend maindepend
 		@echo `grep -l "WITH_READLINE" $(ALLSRC)` >$(READLINEDEP)
 		@echo `grep -l "WITH_ZIMPL" $(ALLSRC)` >$(ZIMPLDEP)
 		@echo `grep -l "WITH_IPOPT" $(ALLSRC)` >$(IPOPTDEP)
-		@echo `grep -l "WITH_LAPACK" $(ALLSRC)` >$(IPOPTDEP)
 
 -include	$(MAINDEP)
 -include	$(SCIPLIBDEP)
