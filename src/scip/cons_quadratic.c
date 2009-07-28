@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.18 2009/07/28 19:07:34 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.19 2009/07/28 19:20:51 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2841,13 +2841,25 @@ SCIP_RETCODE computeViolation(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
-   /* TODO take care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s) */
+   /* TODO take better care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s) */
    for (i = 0; i < consdata->n_linvar; ++i)
+   {
+      if (SCIPisInfinity(scip, ABS(SCIPgetSolVal(scip, sol, consdata->linvar[i]))))
+      {
+         consdata->lhsviol = consdata->rhsviol = SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
       val += consdata->lincoeff[i] * SCIPgetSolVal(scip, sol, consdata->linvar[i]);
+   }
 
    for (j = 0; j < consdata->n_quadvar; ++j)
    {
       varval = SCIPgetSolVal(scip, sol, consdata->quadvar[j]);
+      if (SCIPisInfinity(scip, ABS(varval)))
+      {
+         consdata->lhsviol = consdata->rhsviol = SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
       val   += (consdata->quadlincoeff[j] + consdata->quadsqrcoeff[j] * varval) * varval;
    }
    
