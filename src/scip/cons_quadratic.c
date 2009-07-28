@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.17 2009/07/28 17:48:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.18 2009/07/28 19:07:34 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4550,7 +4550,7 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
 
 #ifdef WITH_CONSBRANCHNL
    conshdlrdata->branchnl = SCIPfindConshdlr(scip, "branchnonlinear");
-   if (conshdlrdata->branchnl == NULL)
+   if (conshdlrdata->branchnl == NULL && nconss > 0)
    {
       SCIPerrorMessage("cannot find constraint handler for branching on nonlinear variables");
       return SCIP_PLUGINNOTFOUND;
