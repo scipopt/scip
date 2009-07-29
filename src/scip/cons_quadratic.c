@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.19 2009/07/28 19:20:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.20 2009/07/29 10:01:03 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3603,7 +3603,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
    return SCIP_OKAY;
 }
 
-/** Solves a linear equation b*x \in rhs and reduces bounds on x or deduces infeasibility if possible.
+/** Solves a linear equation b*x in rhs and reduces bounds on x or deduces infeasibility if possible.
  */
 static
 SCIP_RETCODE propagateBoundsLinearVar(
@@ -3676,7 +3676,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
    return SCIP_OKAY;
 }
 
-/** Solves a quadratic equation a*x^2 + b*x \in rhs (with b an interval) and reduces bounds on x or deduces infeasibility if possible.
+/** Solves a quadratic equation a*x^2 + b*x in rhs (with b an interval) and reduces bounds on x or deduces infeasibility if possible.
  */
 static
 SCIP_RETCODE propagateBoundsQuadVar(
@@ -5691,7 +5691,6 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
    int                c;
 
    assert(scip != NULL);
-   assert(conshdlrdata != NULL);
    assert(nconss == 0 || conss != NULL);
    assert(sol != NULL);
    assert(result != NULL);
@@ -5730,13 +5729,99 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
 }
 
 /** constraint copying method of constraint handler */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSCOPY(consCopyQuadratic)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of quadratic constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{  
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR**     linvars   = NULL;
+   SCIP_VAR**     quadvars  = NULL;
+   SCIP_VAR**     bilinvar1 = NULL;
+   SCIP_VAR**     bilinvar2 = NULL;
+   int            i, j;
+   
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+   assert(varmap != NULL);
+   assert(succeed != NULL);
+   
+   consdata = SCIPconsGetData(sourcecons);
+   assert(consdata != NULL);
+   
+   *succeed = TRUE; /* think positive */
+   
+   if (consdata->n_linvar)
+   {
+      SCIP_CALL( SCIPallocBufferArray(sourcescip, &linvars, consdata->n_linvar) );
+      for (i = 0; i < consdata->n_linvar; ++i)
+      {
+         linvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, consdata->linvar[i]);
+         if (linvars[i] == NULL)
+         {
+            *succeed = FALSE;
+            break;
+         }
+      }
+   }
+   
+   if (consdata->n_bilin && *succeed)
+   {
+      SCIP_CALL( SCIPallocBufferArray(sourcescip, &bilinvar1, consdata->n_bilin) );
+      SCIP_CALL( SCIPallocBufferArray(sourcescip, &bilinvar2, consdata->n_bilin) );
+   }
 
+   if (consdata->n_quadvar && *succeed)
+   {
+      SCIP_CALL( SCIPallocBufferArray(sourcescip, &quadvars, consdata->n_quadvar) );
+      for (i = 0; i < consdata->n_quadvar; ++i)
+      {
+         quadvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, consdata->quadvar[i]);
+         if (quadvars[i] == NULL)
+         {
+            *succeed = FALSE;
+            break;
+         }
+         
+         assert(consdata->n_bilin || consdata->n_adjbilin[i] == 0);
+         
+         for (j = 0; j < consdata->n_adjbilin[i]; ++j)
+         {
+            if (consdata->bilinvar1[consdata->adjbilin[i][j]] == consdata->quadvar[i])
+            {
+               assert(consdata->bilinvar2[consdata->adjbilin[i][j]] != consdata->quadvar[i]);
+               bilinvar1[consdata->adjbilin[i][j]] = quadvars[i];
+            }
+            else
+            {
+               assert(consdata->bilinvar2[consdata->adjbilin[i][j]] == consdata->quadvar[i]);
+               bilinvar2[consdata->adjbilin[i][j]] = quadvars[i];
+            }
+         }
+      }
+   }
+
+   if (*succeed)
+   {
+      assert(stickingatnode == FALSE);
+      SCIP_CALL( SCIPcreateConsQuadratic2(scip, cons, name ? name : SCIPconsGetName(sourcecons),
+         consdata->n_linvar, linvars, consdata->lincoeff,
+         consdata->n_quadvar, quadvars, consdata->quadlincoeff, consdata->quadsqrcoeff,
+         consdata->n_adjbilin, consdata->adjbilin,
+         consdata->n_bilin, bilinvar1, bilinvar2, consdata->bilincoeff,
+         consdata->lhs, consdata->rhs,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+   }
+   else
+      *cons = NULL;
+   
+   SCIPfreeBufferArrayNull(sourcescip, &linvars);
+   SCIPfreeBufferArrayNull(sourcescip, &quadvars);
+   SCIPfreeBufferArrayNull(sourcescip, &bilinvar1);
+   SCIPfreeBufferArrayNull(sourcescip, &bilinvar2);
+   
    return SCIP_OKAY;
 }
 #else
