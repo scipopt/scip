@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.331 2009/07/28 16:56:39 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.332 2009/07/29 19:11:45 bzfpfets Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -3290,7 +3290,7 @@ SCIP_RETCODE normalizeCons(
     * additionally, we don't want to scale the constraint if this would lead to too
     * large coefficients
     */
-   epsilon = SCIPepsilon(scip);
+   epsilon = SCIPepsilon(scip) * 0.9;  /* slightly decrease epsilon to be safe in rational conversion below */
    feastol = SCIPfeastol(scip);
    maxmult = (SCIP_Longint)(feastol/epsilon + feastol);
    maxabsval = consdataGetMaxAbsval(consdata);
@@ -3367,7 +3367,8 @@ SCIP_RETCODE normalizeCons(
    {
       if( !SCIPisIntegral(scip, vals[i]) )
       {
-         success = SCIPrealToRational(vals[i], -epsilon, epsilon, maxmult, &nominator, &denominator);
+	 /* epsilon has been slightly decreased above - to be on the safe side */
+         success = SCIPrealToRational(vals[i], -epsilon, epsilon , maxmult, &nominator, &denominator);
          if( success )
             scm = SCIPcalcSmaComMul(scm, denominator);
       }
@@ -5696,6 +5697,9 @@ SCIP_RETCODE dualPresolve(
        */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY && consdata->nvars > 2 )
          continue;
+
+      if ( SCIPvarDoNotMultaggr(var) )
+	 continue;
 
       val = consdata->vals[i];
       obj = SCIPvarGetObj(var);
@@ -8503,10 +8507,10 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
 
          SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
          if( SCIPisFeasLT(scip, activity, consdata->lhs) )
-            SCIPinfoMessage(scip, NULL, "\nviolation: left hand side is violated by %.15g\n", consdata->lhs - activity);
+            SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhs - activity);
 
          if( SCIPisFeasGT(scip, activity, consdata->rhs) )
-            SCIPinfoMessage(scip, NULL, "\nviolation: right hand side is violated by %.15g\n", activity - consdata->rhs);
+            SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", activity - consdata->rhs);
       }
    }
    else
