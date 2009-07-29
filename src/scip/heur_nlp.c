@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.4 2009/07/29 10:04:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.5 2009/07/29 19:20:19 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -90,6 +90,9 @@ struct SCIP_HeurData
 static SCIP_RETCODE addLinearConstraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSHDLR* linconshdlr);
 static SCIP_RETCODE collectVarBoundConstraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSHDLR* varbndconshdlr);
 static SCIP_RETCODE addQuadraticConstraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSHDLR* quadconshdlr);
+#ifdef WITH_SOC3
+static SCIP_RETCODE addSOC3Constraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSHDLR* soc3conshdlr);
+#endif
 
 /** sets up NLP from constraints in SCIP */
 static
@@ -196,8 +199,10 @@ SCIP_RETCODE setupNLP(
          { SCIPdebugMessage("skip adding setppc constraints to NLP\n"); }   /* skip because combinatorial part is fixed in NLP */ 
       else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "knapsack") == 0)
          { SCIPdebugMessage("skip adding knapsack constraints to NLP\n"); } /* skip because combinatorial part is fixed in NLP */ 
+#ifdef WITH_SOC3
       else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "SOC3") == 0)
-         { SCIPdebugMessage("skip adding SOC3 constraints to NLP\n"); } /* skip because cons_soc3 does not check for feasibility */ 
+         SCIP_CALL( addSOC3Constraints(scip, heur, conshdlrs[i]) );
+#endif
       else if (SCIPconshdlrGetNConss(conshdlrs[i]))
          { SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "skip addition of %d constraints of type %s to NLP\n", SCIPconshdlrGetNConss(conshdlrs[i]), SCIPconshdlrGetName(conshdlrs[i])); }
       /* @TODO any other constraints to consider here? */
@@ -545,6 +550,32 @@ SCIP_RETCODE addQuadraticConstraints(
    
    return SCIP_OKAY;
 }
+
+#ifdef WITH_SOC3
+static
+SCIP_RETCODE addSOC3Constraints(
+   SCIP*          scip,          /**< SCIP data structure */
+   SCIP_HEUR*     heur,          /**< NLP heuristic */
+   SCIP_CONSHDLR* soc3conshdlr   /**< constraint handler for SOC3 constraints */
+   )
+{
+   SCIP_HEURDATA*   heurdata;
+   
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(soc3conshdlr != NULL);
+   
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   
+   if (!SCIPconshdlrGetNConss(soc3conshdlr))
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPconsInitnlpiSOC3(scip, soc3conshdlr, heurdata->nlpi, SCIPconshdlrGetNConss(soc3conshdlr), SCIPconshdlrGetConss(soc3conshdlr), heurdata->var_scip2nlp) );
+   
+   return SCIP_OKAY; 
+}
+#endif
 
 /** frees NLP */
 static

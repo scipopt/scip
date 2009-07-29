@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.20 2009/07/29 10:01:03 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.21 2009/07/29 19:20:19 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2416,7 +2416,7 @@ SCIP_RETCODE presolveTryAddSOC(
    SCIP_Real*     lhscoeff;
    int            lhscount = 0;
    SCIP_VAR*      rhsvar = NULL; 
-   SCIP_Real      rhscoeff;
+   SCIP_Real      rhscoeff = 0.0;
    SCIP_HASHMAPLIST* list;
    SCIP_VAR*         var;
    PresolveQuadTerm* term;
@@ -2477,8 +2477,12 @@ SCIP_RETCODE presolveTryAddSOC(
             }
          }
    }
-
-   if ((!rhsvar || lhscount<2) && SCIPisZero(scip, consdata->lhs - constant))
+   
+   if (rhsvar && lhscount >= 2)
+   { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
+      consdata->rhs = SCIPinfinity(scip);
+   }
+   else if (SCIPisZero(scip, consdata->lhs - constant))
    { /* if the first failed, try if constraint on lower bound is SOC (using negated coefficients) */
       rhsvar = NULL;
       lhscount = 0;
@@ -2520,6 +2524,11 @@ SCIP_RETCODE presolveTryAddSOC(
                rhscoeff = term->sqrcoeff;
             }
          }
+      
+      if (rhsvar && lhscount >= 2)
+      { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
+         consdata->lhs = -SCIPinfinity(scip);         
+      }
    }
 
    if (rhsvar && lhscount >= 2)
@@ -3045,7 +3054,7 @@ SCIP_RETCODE isIntervalFeasible(
    if (SCIPisFeasGT(scip, consdata->lhs, SCIPintervalGetSup(val)) || SCIPisFeasLT(scip, consdata->rhs, SCIPintervalGetInf(val)))
    {
       SCIPdebugMessage("interval arithmetic found constraint %s infeasible: bounds = [%g, %g], interval = [%g, %g]\n", SCIPconsGetName(cons), consdata->lhs, consdata->rhs, SCIPintervalGetInf(val), SCIPintervalGetSup(val));
-      SCIPresetConsAge(scip, cons);
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *isfeasible = FALSE;
    }
    
@@ -3419,7 +3428,7 @@ SCIP_RETCODE separatePoint(
          { /* cut cuts off solution */
             SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */) );
             *result = SCIP_SEPARATED;
-            SCIPresetConsAge(scip, conss[c]);
+            SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          }
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
@@ -3631,7 +3640,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
    if (SCIPisInfinity(scip, SCIPintervalGetInf(rhs)) || SCIPisInfinity(scip, -SCIPintervalGetSup(rhs)))
    { /* domain outside [-infty, +infty] -> declare node infeasible */
       *result = SCIP_CUTOFF;
-      SCIPresetConsAge(scip, cons);
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
       return SCIP_OKAY;
    }
 
@@ -3642,7 +3651,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for linear variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          return SCIP_OKAY;
       }
       if (tightened)
@@ -3650,7 +3659,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
          SCIPdebugMessage("tightened lower bound of linear variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetLbLocal(var));
          ++nchgbds;
          *result = SCIP_REDUCEDDOM;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
    }
 
@@ -3661,7 +3670,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for linear variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          return SCIP_OKAY;
       }
       if (tightened)
@@ -3669,7 +3678,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
          SCIPdebugMessage("tightened upper bound of linear variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetUbLocal(var));
          ++nchgbds;
          *result = SCIP_REDUCEDDOM;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
    }
 
@@ -3714,7 +3723,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for quadratic variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          return SCIP_OKAY;
       }
       SCIPintervalSetBounds(&newrange, -SCIPintervalGetSup(tmp), -SCIPintervalGetInf(tmp));
@@ -3728,7 +3737,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
    { /* domain outside [-infty, +infty] -> declare node infeasible */
       SCIPdebugMessage("found %s infeasible because propagated domain of quadratic variable %s is outside of (-infty, +infty)\n", SCIPconsGetName(cons), SCIPvarGetName(var));
       *result = SCIP_CUTOFF;
-      SCIPresetConsAge(scip, cons);
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
       return SCIP_OKAY;
    }
 
@@ -3746,7 +3755,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for quadratic variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          return SCIP_OKAY;
       }
       if (tightened)
@@ -3754,7 +3763,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
          SCIPdebugMessage("tightened lower bound of quadratic variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetLbLocal(var));
          ++nchgbds;
          *result = SCIP_REDUCEDDOM;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
    }
 
@@ -3765,7 +3774,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       {
          SCIPdebugMessage("found %s infeasible due to domain propagation for quadratic variable %s\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          return SCIP_OKAY;
       }
       if (tightened)
@@ -3773,7 +3782,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
          SCIPdebugMessage("tightened upper bound of quadratic variable %s in constraint %s to %g -> %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPintervalGetSup(newrange), SCIPvarGetUbLocal(var));
          ++nchgbds;
          *result = SCIP_REDUCEDDOM;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
    }
 
@@ -4099,7 +4108,7 @@ SCIP_RETCODE propagateBounds(
       {
          SCIPdebugMessage("found %s infeasible due to forward propagation\n", SCIPconsGetName(cons));
          *result = SCIP_CUTOFF;
-         SCIPresetConsAge(scip, cons);
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
          return SCIP_OKAY;
       }
       else
@@ -5320,6 +5329,14 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                {
                   ++*nupgdconss;
                   *result = SCIP_SUCCESS;
+                  
+                  if (SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs))
+                  { /* can delete constraint here since it was upgraded to SOC3 */
+                     SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+                     SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+                     presolveQuadTermFree(scip, &terms);
+                     continue;
+                  }
                }
             }
 #endif
