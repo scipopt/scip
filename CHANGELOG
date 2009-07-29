@@ -143,6 +143,8 @@ fixed bugs:
 - fixed bug in sepa_impliedbounds.c and sepa_intobj.c: if separating a sol, this sol is now also given to
   SCIPaddCut() so that the efficacy of the cut is now computed correctly
 - fixed bug in cons_linear.c: do not select variable as slack variable for multiaggregation in convertLongEquality if it has been marked as not-multiaggregable
+- fixed bug in cons_linear.c: also do not multiaggregate variables in dual preproccessing if it has been marked as not-multiaggregable
+- fixed bug in cons_linear.c: slight decrease of epsilon in order to make sure that scaled coefficients are really integral
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
