@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.5 2009/07/29 19:20:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.6 2009/07/29 19:33:26 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -37,6 +37,9 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
+#ifdef WITH_SOC3
+#include "cons_soc3.h"
+#endif
 
 #define HEUR_NAME             "NLP"
 #define HEUR_DESC             "primal heuristic that performs a local search in an NLP after fixing integer variables"
