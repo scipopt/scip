@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.8 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.9 2009/07/29 19:15:40 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -112,6 +112,14 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
 /** checks whether indicator constraint is violated w.r.t. sol */
 extern
 SCIP_Bool SCIPisViolatedIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   );
+
+/** Based on values of other variables, computes slack and binary variable to turn constraint feasible */
+extern
+SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
