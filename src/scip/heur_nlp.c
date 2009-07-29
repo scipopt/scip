@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.3 2009/07/28 18:15:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.4 2009/07/29 10:04:25 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -812,7 +812,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    
    if (SCIPnlpiGetTermstat(scip, heurdata->nlpi) >= SCIP_NLPITERMSTAT_MEMERR)
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  SCIPnlpiGetTermstat(scip, heurdata->nlpi));
       SCIP_CALL( destroyNLP(scip, heur) );
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;

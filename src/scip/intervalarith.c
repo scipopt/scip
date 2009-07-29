@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.22 2009/07/28 17:00:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.23 2009/07/29 10:04:25 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1355,7 +1355,7 @@ void SCIPintervalQuad(
 }
 
 /** solves a quadratic equation with interval linear and constant coefficients
- * Given a number a and intervals b and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x \in c */
+ * Given a number a and intervals b and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x in c */
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1490,7 +1490,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive2(
 }
 
 /** solves a quadratic equation with interval linear and constant coefficients
- * Given a number a and intervals b and c, this function computes an interval that contains all solutions of a*x^2 + b*x \in c */
+ * Given a number a and intervals b and c, this function computes an interval that contains all solutions of a*x^2 + b*x in c */
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */

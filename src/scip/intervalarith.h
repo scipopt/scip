@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.14 2009/07/17 18:25:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.15 2009/07/29 10:04:25 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -268,7 +268,7 @@ void SCIPintervalQuad(
 
 
 /** solves a quadratic equation with interval linear and constant coefficients
- * Given a number a and intervals b and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x \in c */
+ * Given a number a and intervals b and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x in c */
 extern
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -291,7 +291,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive2(
 );
 
 /** solves a quadratic equation with interval linear and constant coefficients
- * Given a number a and intervals b and c, this function computes an interval that contains all solutions of a*x^2 + b*x \in c */
+ * Given a number a and intervals b and c, this function computes an interval that contains all solutions of a*x^2 + b*x in c */
 extern
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
