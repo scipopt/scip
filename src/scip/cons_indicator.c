@@ -12,13 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.37 2009/07/26 20:39:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.38 2009/07/29 19:18:57 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
 
 /**@file   cons_indicator.c
- * @ingroup CONSHDLRS 
+ * @ingroup CONSHDLRS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
  *
@@ -253,6 +253,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool sepaAlternativeLP;     /**< Separate using the alternative LP? */
    SCIP_Bool addCoupling;           /**< whether the coupling inequalities should be added */
    SCIP_Bool updateBounds;          /**< whether the bounds of the original variables should be changed for separation */
+   SCIP_Bool implicationsAdded;     /**< whether implications have been added */
 };
 
 
@@ -326,7 +327,7 @@ SCIP_RETCODE checkIIS(
 	 int cnt = 0;
 
 	 lincons = consdata->lincons;
-	 assert( lincons != NULL );
+	 assert( lincons != NULL );	 
 	 assert( SCIPconsIsActive(lincons) );
 	 slackvar = consdata->slackvar;
 	 assert( slackvar != NULL );
@@ -870,18 +871,18 @@ SCIP_RETCODE updateFirstRow(
    }
 #endif
 
-   /* possible force a rescaling */
+   /* possible force a rescaling: */
    /* conshdlrdata->scaled = FALSE; */
 
    return SCIP_OKAY;
 }
 
 
-/** compute scaling for first row 
+/** compute scaling for first row
  *
  *  If the coefficients in the first row are large, a right hand side of -1 might not be
  *  adequate. Here, we replace the right hand side by the sum of the coefficients divided by the
- *  number of nonzeros. 
+ *  number of nonzeros.
  */
 static
 SCIP_RETCODE scaleFirstRow(
@@ -907,21 +908,21 @@ SCIP_RETCODE scaleFirstRow(
       SCIP_CALL( SCIPlpiGetNCols(altLP, &nCols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &ind, nCols) );
       SCIP_CALL( SCIPallocBufferArray(scip, &val, nCols) );
-      
+
       SCIP_CALL( SCIPlpiGetRows(altLP, 0, 0, NULL, NULL, &cnt, &beg, ind, val) );
-      
+
       /* compute sum */
       for (j = 0; j < cnt; ++j)
 	 sum += val[j];
-      
+
       /* set rhs */
       sum = - REALABS(sum) / ((double) cnt);
       j = 0;
       SCIP_CALL( SCIPlpiChgSides(altLP, 1, &j, &sum, &sum) );
-      
+
       SCIPfreeBufferArray(scip, &val);
       SCIPfreeBufferArray(scip, &ind);
-      
+
       conshdlrdata->scaled = TRUE;
    }
 
@@ -1544,11 +1545,11 @@ SCIP_RETCODE extendToCover(
 
 	 if ( genLogicor )
 	 {
-	    SCIP_Bool isLocal = FALSE;
+	    SCIP_Bool isLocal = TRUE;    /* currently all cuts are only locally valid */
 	    SCIP_CONS* cons;
 	    SCIP_VAR** vars;
 	    int cnt =0;
-
+   
 	    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nconss) );
 
 	    /* collect variables corresponding to support to cut */
@@ -1570,12 +1571,6 @@ SCIP_RETCODE extendToCover(
 		     SCIP_VAR* var;
 		     SCIP_CALL( SCIPgetNegatedVar(scip, consdata->binvar, &var) );
 		     vars[cnt++] = var;
-
-		     var = consdata->binvar;
-		     if ( ! SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var)) )
-			isLocal = TRUE;
-		     if ( ! SCIPisEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var)) )
-			isLocal = TRUE;
 		  }
 	       }
 	    }
@@ -2086,6 +2081,8 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
 
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
+      assert( consdata->lincons != NULL );
+      assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
 
       /* SCIPdebugMessage("Initializing indicator constraint <%s>.\n", SCIPconsGetName(conss[c]) ); */
 
@@ -2158,7 +2155,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 	 for (c = 0; c < nconss; ++c)
 	 {
 	    SCIP_CONSDATA* consdata;
-	    
+
 	    assert( conss != NULL );
 	    assert( conss[c] != NULL );
 
@@ -2204,6 +2201,8 @@ SCIP_DECL_CONSDELETE(consDeleteIndicator)
 
       if ( conshdlrdata->sepaAlternativeLP )
 	 SCIP_CALL( deleteAltLPConstraint(scip, conshdlr, cons) );
+
+      SCIP_CALL( SCIPreleaseCons(scip, &(*consdata)->lincons) );
    }
    else
    {
@@ -2349,12 +2348,15 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
       assert( consdata->binvar != NULL );
       assert( consdata->slackvar != NULL );
       assert( ! SCIPconsIsModifiable(cons) );
+      assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
 
       /* get check for transformed linear constraint */
       if ( ! SCIPconsIsTransformed(consdata->lincons) )
       {
 	 SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &consdata->lincons) );
 	 assert( consdata->lincons != NULL );
+	 assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(consdata->lincons)), "linear") == 0 );
+	 SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
       }
 
       /* SCIPdebugMessage("Presolving indicator constraint <%s>.\n", SCIPconsGetName(cons) ); */
@@ -2454,6 +2456,27 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 	    continue;
 	 }
       }
+   }
+
+   /* add implications only if the above methods have been run */
+   if ( *result != SCIP_SUCCESS && ! SCIPconshdlrGetData(conshdlr)->implicationsAdded )
+   {
+      /* check each constraint */
+      for (c = 0; c < nconss; ++c)
+      {
+	 SCIP_CONSDATA* consdata;
+	 SCIP_Bool infeasible;
+	 int nbdchgs;
+
+	 consdata = SCIPconsGetData(conss[c]);
+	 assert( consdata != NULL );
+
+	 /* add implications */
+	 SCIP_CALL( SCIPaddVarImplication(scip, consdata->binvar, TRUE, consdata->slackvar, SCIP_BOUNDTYPE_UPPER, 0.0, &infeasible, &nbdchgs) );
+	 assert( ! infeasible );
+	 assert( nbdchgs == 0 );
+      }
+      SCIPconshdlrGetData(conshdlr)->implicationsAdded = TRUE;
    }
 
    SCIPdebugMessage("Presolved %d constraints (fixed %d variables, removed %d variables, and deleted %d constraints).\n",
@@ -2561,13 +2584,13 @@ SCIP_DECL_CONSSEPALP(consSepalpIndicator)
       int nGen = 0;
 
       SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
-      
+
       *result = SCIP_DIDNOTFIND;
-      
+
       /* start separation */
       SCIP_CALL( separateIISRounding(scip, conshdlr, NULL, nconss, conss, &nGen) );
       SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
-      
+
       if ( nGen > 0 )
       {
 	 if ( conshdlrdata->genLogicor )
@@ -2599,14 +2622,14 @@ SCIP_DECL_CONSSEPASOL(consSepasolIndicator)
    if ( conshdlrdata->sepaAlternativeLP && nconss > 0 )
    {
       int nGen = 0;
-      
+
       SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
-      
+
       *result = SCIP_DIDNOTFIND;
       /* start separation */
       SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, &nGen) );
       SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", nGen);
-      
+
       if ( nGen > 0 )
       {
 	 if ( conshdlrdata->genLogicor )
@@ -3073,6 +3096,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->branchIndicators = TRUE;
    conshdlrdata->genLogicor = TRUE;
    conshdlrdata->sepaAlternativeLP = TRUE;
+   conshdlrdata->implicationsAdded = FALSE;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -3198,6 +3222,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    SCIP_CALL( SCIPaddCoefLinear(scip, lincons, slackvar, -1.0) );
 
    SCIP_CALL( SCIPaddCons(scip, lincons) );
+   SCIP_CALL( SCIPcaptureCons(scip, lincons) );
    consdata->lincons = lincons;
 
    /* create constraint */
@@ -3219,7 +3244,7 @@ SCIP_RETCODE SCIPaddVarIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -3238,7 +3263,7 @@ SCIP_CONS* SCIPgetLinearConsIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -3255,7 +3280,7 @@ SCIP_VAR* SCIPgetBinaryVarIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -3272,7 +3297,7 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
    SCIP_CONSDATA* consdata;
 
    assert( cons != NULL );
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -3297,4 +3322,88 @@ SCIP_Bool SCIPisViolatedIndicator(
    return(
       SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, consdata->slackvar)) &&
       SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, consdata->binvar)) );
+}
+
+
+/** Based on values of other variables, computes slack and binary variable to turn constraint feasible */
+extern
+SCIP_RETCODE SCIPmakeIndicatorFeasible(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONS* lincons;
+   SCIP_VAR** linvars;
+   SCIP_Real* linvals;
+   SCIP_VAR* slackvar;
+   SCIP_VAR* binvar;
+   int nlinvars;
+   SCIP_Real sum;
+   SCIP_Real val;
+   int v;
+
+   assert( cons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+   assert( sol != NULL );
+
+   if ( ! SCIPconsIsActive(cons) )
+      return SCIP_OKAY;
+
+   assert( cons != NULL );
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   slackvar = consdata->slackvar;
+   binvar = consdata->binvar;
+   lincons = consdata->lincons;
+
+   sum = 0.0;
+
+   /* if linear constraint is not active, e.g., due to preprocessing */
+   if ( SCIPconsIsActive(lincons) )
+   {
+      nlinvars = SCIPgetNVarsLinear(scip, lincons);
+      linvars = SCIPgetVarsLinear(scip, lincons);
+      linvals = SCIPgetValsLinear(scip, lincons);
+
+      /* compute value of regular variables */
+      for (v = 0; v < nlinvars; ++v)
+      {
+	 SCIP_VAR* var = linvars[v];
+	 if ( var != slackvar )
+	    sum += linvals[v] * SCIPgetSolVal(scip, sol, var);
+      }
+
+      assert( SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) ||
+	 SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) );
+
+      val = SCIPgetRhsLinear(scip, lincons);
+      if ( ! SCIPisInfinity(scip, val) )
+	 sum -= val;
+
+      val = SCIPgetLhsLinear(scip, lincons);
+      if ( ! SCIPisInfinity(scip, -val) )
+	 sum = val - sum;
+   }
+
+   /* set slack variable */
+   if ( SCIPisFeasPositive(scip, sum) )
+   {
+      /* the original constraint is violated */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, sum) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+   }
+   else
+   {
+      /* the original constraint is satisfied */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, 0.0) );
+      if ( SCIPvarGetObj(binvar) <= 0 )
+	 SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 1.0) );
+      else
+	 SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+   }
+
+   return SCIP_OKAY;
 }
