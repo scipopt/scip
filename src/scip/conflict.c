@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.145 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.146 2009/07/30 17:29:15 bzfpfets Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -2166,7 +2166,7 @@ SCIP_RETCODE conflictResolveBound(
             SCIPbdchginfoGetNewbound(conflict->conflictset->bdchginfos[i]));
       SCIPdebugPrintf("\n");
       SCIPdebugMessage(" - forced candidates  :");
-      nforcedbdchgqueue = SCIPpqueueNElems(conflict->forcedbdchgqueue)
+      nforcedbdchgqueue = SCIPpqueueNElems(conflict->forcedbdchgqueue);
       for( i = 0; i < nforcedbdchgqueue; ++i )
       {
          SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->forcedbdchgqueue)[i]);
