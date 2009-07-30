@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.54 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.55 2009/07/30 17:31:54 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -78,6 +78,10 @@ extern "C"
 #define NULL 0
 
 
+/* for debugging: alternatingly write files "debug_[p|d]_[0|1].mps" after each run - use with care! */
+#ifdef LPI_CLP_WRITE_FILES
+static int fileNr = 0;
+#endif
 
 
 /** LP interface for Clp */
@@ -1507,6 +1511,13 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
+#ifdef LPI_CLP_WRITE_FILES
+   char filename[255];
+   snprintf(filename, 255, "debug_p_%d.mps", fileNr++);
+   fileNr = fileNr % 2;
+   SCIPlpiWriteLP(lpi, filename);
+#endif
+
    invalidateSolution(lpi);
 
    // intialize factorization freq. depending on model size - applied only once
@@ -1560,6 +1571,13 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    assert(lpi != 0);
    assert(lpi->clp != 0);
+
+#ifdef LPI_CLP_WRITE_FILES
+   char filename[255];
+   snprintf(filename, 255, "debug_d_%d.mps", fileNr++);
+   fileNr = fileNr % 2;
+   SCIPlpiWriteLP(lpi, filename);
+#endif
 
    invalidateSolution(lpi);
 
