@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.21 2009/07/29 19:20:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.22 2009/07/30 19:55:53 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -722,6 +722,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 }
 
 /* TODO store index of event ? */
+/** catch variable events */
 static
 SCIP_RETCODE catchVarEvents(
    SCIP*           scip,        /**< SCIP data structure */
@@ -763,6 +764,7 @@ SCIP_RETCODE catchVarEvents(
    return SCIP_OKAY;
 }
 
+/** drop variable events */
 static
 SCIP_RETCODE dropVarEvents(
    SCIP*           scip,        /**< SCIP data structure */
