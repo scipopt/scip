@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.11 2009/07/28 18:21:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.12 2009/07/30 09:58:31 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1087,7 +1087,11 @@ SCIP_RETCODE SCIPwriteGms(
 #endif
       
       if( SCIPisZero(scip, SCIPvarGetObj(var)) )
+      {
+         if (v == nvars - 1)
+            appendLine(scip, file, linebuffer, &linecnt, ";");
          continue;
+      }
 
       if( linecnt == 0 )
          /* we start a new line; therefore we tab this line */
