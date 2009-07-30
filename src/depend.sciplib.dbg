@@ -311,6 +311,52 @@ $(LIBOBJDIR)/scip/misc.o: src/scip/misc.c src/scip/def.h src/scip/type_retcode.h
   src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
   src/scip/struct_set.h src/scip/misc.h src/scip/type_misc.h \
   src/scip/pub_misc.h src/scip/struct_misc.h src/scip/sorttpl.c
+$(LIBOBJDIR)/scip/nlpi.o: src/scip/nlpi.c src/scip/scip.h src/scip/def.h \
+  src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
+  src/scip/struct_message.h src/scip/pub_message.h \
+  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
+  src/scip/type_misc.h src/scip/type_paramset.h src/scip/type_scip.h \
+  src/scip/type_event.h src/scip/type_lp.h src/scip/type_var.h \
+  src/scip/type_prob.h src/scip/type_tree.h src/scip/type_branch.h \
+  src/scip/type_conflict.h src/scip/type_cons.h src/scip/type_sol.h \
+  src/scip/type_dialog.h src/scip/type_disp.h src/scip/type_heur.h \
+  src/scip/type_nodesel.h src/scip/type_presol.h src/scip/type_pricer.h \
+  src/scip/type_reader.h src/scip/type_relax.h src/scip/type_sepa.h \
+  src/scip/type_prop.h src/scip/pub_branch.h src/scip/pub_conflict.h \
+  src/scip/pub_cons.h src/scip/pub_cutpool.h src/scip/type_cutpool.h \
+  src/scip/pub_dialog.h src/scip/pub_disp.h src/scip/pub_event.h \
+  src/scip/pub_fileio.h src/scip/pub_heur.h src/scip/pub_implics.h \
+  src/scip/type_implics.h src/scip/pub_lp.h src/scip/type_set.h \
+  src/scip/type_stat.h src/scip/type_lpi.h src/scip/pub_misc.h \
+  src/scip/pub_nodesel.h src/scip/pub_paramset.h src/scip/pub_presol.h \
+  src/scip/pub_pricer.h src/scip/pub_reader.h src/scip/pub_relax.h \
+  src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
+  src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
+  src/scip/lpi.h src/scip/nlpi.h src/scip/type_nlpi.h \
+  src/scip/struct_nlpi.h
+$(LIBOBJDIR)/scip/nlpi_oracle.o: src/scip/nlpi_oracle.c src/scip/nlpi_oracle.h \
+  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
+  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/blockmemshell/memory.h \
+  src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \
+  src/scip/type_paramset.h src/scip/type_scip.h src/scip/type_event.h \
+  src/scip/type_lp.h src/scip/type_var.h src/scip/type_prob.h \
+  src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+  src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+  src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+  src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+  src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+  src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+  src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+  src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
+  src/scip/type_lpi.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
+  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
+  src/scip/type_nlpi.h
 $(LIBOBJDIR)/scip/nodesel.o: src/scip/nodesel.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/scip/set.h src/blockmemshell/memory.h \
@@ -607,29 +653,31 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
   src/scip/cons_conjunction.h src/scip/cons_countsols.h \
   src/scip/cons_indicator.h src/scip/cons_integral.h \
   src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
-  src/scip/cons_or.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
-  src/scip/cons_sos2.h src/scip/cons_varbound.h src/scip/cons_xor.h \
-  src/scip/dialog_default.h src/scip/disp_default.h \
-  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
-  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_or.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
+  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
+  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
+  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
+  src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
@@ -666,29 +714,31 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
   src/scip/cons_conjunction.h src/scip/cons_countsols.h \
   src/scip/cons_indicator.h src/scip/cons_integral.h \
   src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
-  src/scip/cons_or.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
-  src/scip/cons_sos2.h src/scip/cons_varbound.h src/scip/cons_xor.h \
-  src/scip/dialog_default.h src/scip/disp_default.h \
-  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
-  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_or.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
+  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
+  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
+  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
+  src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
@@ -882,18 +932,19 @@ $(LIBOBJDIR)/scip/var.o: src/scip/var.c src/scip/def.h src/scip/type_retcode.h \
   src/scip/type_heur.h src/scip/type_nodesel.h src/scip/type_tree.h \
   src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
   src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
-  src/scip/struct_set.h src/scip/stat.h src/scip/type_mem.h \
-  src/scip/struct_stat.h src/scip/type_vbc.h src/scip/type_history.h \
-  src/scip/history.h src/scip/event.h src/scip/type_lp.h \
-  src/scip/type_primal.h src/scip/pub_event.h src/scip/struct_event.h \
-  src/scip/lp.h src/scip/type_misc.h src/scip/type_prob.h \
-  src/scip/pub_lp.h src/scip/type_lpi.h src/scip/struct_lp.h \
-  src/scip/var.h src/scip/pub_var.h src/scip/type_implics.h \
-  src/scip/pub_misc.h src/scip/struct_var.h src/scip/implics.h \
-  src/scip/pub_implics.h src/scip/prob.h src/scip/struct_prob.h \
-  src/scip/primal.h src/scip/struct_primal.h src/scip/cons.h \
-  src/scip/type_sepastore.h src/scip/pub_cons.h src/scip/struct_cons.h \
-  src/scip/prop.h src/scip/pub_prop.h src/scip/debug.h
+  src/scip/struct_set.h src/scip/sol.h src/scip/type_lp.h \
+  src/scip/type_prob.h src/scip/type_primal.h src/scip/pub_sol.h \
+  src/scip/stat.h src/scip/type_mem.h src/scip/struct_stat.h \
+  src/scip/type_vbc.h src/scip/type_history.h src/scip/history.h \
+  src/scip/event.h src/scip/pub_event.h src/scip/struct_event.h \
+  src/scip/lp.h src/scip/type_misc.h src/scip/pub_lp.h \
+  src/scip/type_lpi.h src/scip/struct_lp.h src/scip/var.h \
+  src/scip/pub_var.h src/scip/type_implics.h src/scip/pub_misc.h \
+  src/scip/struct_var.h src/scip/implics.h src/scip/pub_implics.h \
+  src/scip/prob.h src/scip/struct_prob.h src/scip/primal.h \
+  src/scip/struct_primal.h src/scip/cons.h src/scip/type_sepastore.h \
+  src/scip/pub_cons.h src/scip/struct_cons.h src/scip/prop.h \
+  src/scip/pub_prop.h src/scip/debug.h
 $(LIBOBJDIR)/scip/vbc.o: src/scip/vbc.c src/blockmemshell/memory.h src/scip/set.h \
   src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
   src/scip/type_message.h src/scip/struct_message.h \
@@ -1393,6 +1444,31 @@ $(LIBOBJDIR)/scip/cons_or.o: src/scip/cons_or.c src/scip/cons_or.h src/scip/scip
   src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
   src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
   src/scip/cons_and.h
+$(LIBOBJDIR)/scip/cons_quadratic.o: src/scip/cons_quadratic.c src/scip/cons_quadratic.h \
+  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
+  src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/blockmemshell/memory.h \
+  src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \
+  src/scip/type_paramset.h src/scip/type_scip.h src/scip/type_event.h \
+  src/scip/type_lp.h src/scip/type_var.h src/scip/type_prob.h \
+  src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+  src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+  src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+  src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+  src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+  src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+  src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+  src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
+  src/scip/type_lpi.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
+  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
+  src/scip/type_nlpi.h src/scip/cons_linear.h src/scip/cons_and.h \
+  src/scip/cons_varbound.h src/scip/intervalarith.h src/scip/heur_nlp.h \
+  src/scip/nlpi.h
 $(LIBOBJDIR)/scip/cons_setppc.o: src/scip/cons_setppc.c src/scip/cons_setppc.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -1627,29 +1703,30 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
   src/scip/cons_countsols.h src/scip/cons_indicator.h \
   src/scip/cons_integral.h src/scip/cons_knapsack.h \
   src/scip/cons_linear.h src/scip/cons_logicor.h src/scip/cons_or.h \
-  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
-  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
-  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
-  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
-  src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_quadratic.h src/scip/type_nlpi.h src/scip/cons_setppc.h \
+  src/scip/cons_sos1.h src/scip/cons_sos2.h src/scip/cons_varbound.h \
+  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
+  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
@@ -1686,29 +1763,31 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
   src/scip/cons_conjunction.h src/scip/cons_countsols.h \
   src/scip/cons_indicator.h src/scip/cons_integral.h \
   src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
-  src/scip/cons_or.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
-  src/scip/cons_sos2.h src/scip/cons_varbound.h src/scip/cons_xor.h \
-  src/scip/dialog_default.h src/scip/disp_default.h \
-  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
-  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_or.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
+  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
+  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
+  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
+  src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
@@ -1904,29 +1983,30 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
   src/scip/cons_conjunction.h src/scip/cons_countsols.h \
   src/scip/cons_indicator.h src/scip/cons_integral.h \
   src/scip/cons_knapsack.h src/scip/cons_logicor.h src/scip/cons_or.h \
-  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
-  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
-  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
-  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
-  src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_quadratic.h src/scip/type_nlpi.h src/scip/cons_setppc.h \
+  src/scip/cons_sos1.h src/scip/cons_sos2.h src/scip/cons_varbound.h \
+  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
+  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
@@ -1963,35 +2043,61 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
   src/scip/cons_conjunction.h src/scip/cons_countsols.h \
   src/scip/cons_indicator.h src/scip/cons_integral.h \
   src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
-  src/scip/cons_or.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
-  src/scip/cons_sos2.h src/scip/cons_varbound.h src/scip/cons_xor.h \
-  src/scip/dialog_default.h src/scip/disp_default.h \
-  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
-  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_or.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
+  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
+  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
+  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
+  src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
   src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h \
   src/scip/sepa_mcf.h src/scip/sepa_redcost.h src/scip/sepa_strongcg.h \
   src/scip/sepa_zerohalf.h src/scip/scipshell.h
+$(LIBOBJDIR)/scip/heur_nlp.o: src/scip/heur_nlp.c src/scip/heur_nlp.h src/scip/scip.h \
+  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
+  src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/blockmemshell/memory.h \
+  src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \
+  src/scip/type_paramset.h src/scip/type_scip.h src/scip/type_event.h \
+  src/scip/type_lp.h src/scip/type_var.h src/scip/type_prob.h \
+  src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+  src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+  src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+  src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+  src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+  src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+  src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+  src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
+  src/scip/type_lpi.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
+  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
+  src/scip/nlpi.h src/scip/type_nlpi.h src/scip/cons_linear.h \
+  src/scip/cons_varbound.h src/scip/cons_quadratic.h
 $(LIBOBJDIR)/scip/heur_objpscostdiving.o: src/scip/heur_objpscostdiving.c \
   src/scip/heur_objpscostdiving.h src/scip/scip.h src/scip/def.h \
   src/scip/type_retcode.h src/scip/message.h src/scip/type_message.h \
@@ -2112,29 +2218,31 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
   src/scip/cons_conjunction.h src/scip/cons_countsols.h \
   src/scip/cons_indicator.h src/scip/cons_integral.h \
   src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
-  src/scip/cons_or.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
-  src/scip/cons_sos2.h src/scip/cons_varbound.h src/scip/cons_xor.h \
-  src/scip/dialog_default.h src/scip/disp_default.h \
-  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
-  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_or.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
+  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
+  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
+  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
+  src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
@@ -2171,29 +2279,31 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
   src/scip/cons_conjunction.h src/scip/cons_countsols.h \
   src/scip/cons_indicator.h src/scip/cons_integral.h \
   src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
-  src/scip/cons_or.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
-  src/scip/cons_sos2.h src/scip/cons_varbound.h src/scip/cons_xor.h \
-  src/scip/dialog_default.h src/scip/disp_default.h \
-  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
-  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_or.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
+  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
+  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
+  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
+  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
+  src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
@@ -2605,6 +2715,30 @@ $(LIBOBJDIR)/scip/prop_rootredcost.o: src/scip/prop_rootredcost.c \
   src/scip/pub_sepa.h src/scip/pub_prop.h src/scip/pub_sol.h \
   src/scip/pub_tree.h src/scip/pub_var.h src/scip/type_history.h \
   src/scip/lpi.h
+$(LIBOBJDIR)/scip/reader_ccg.o: src/scip/reader_ccg.c src/scip/reader_ccg.h src/scip/scip.h \
+  src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
+  src/scip/type_message.h src/scip/struct_message.h \
+  src/scip/pub_message.h src/blockmemshell/memory.h \
+  src/scip/type_result.h src/scip/type_clock.h src/scip/type_misc.h \
+  src/scip/type_paramset.h src/scip/type_scip.h src/scip/type_event.h \
+  src/scip/type_lp.h src/scip/type_var.h src/scip/type_prob.h \
+  src/scip/type_tree.h src/scip/type_branch.h src/scip/type_conflict.h \
+  src/scip/type_cons.h src/scip/type_sol.h src/scip/type_dialog.h \
+  src/scip/type_disp.h src/scip/type_heur.h src/scip/type_nodesel.h \
+  src/scip/type_presol.h src/scip/type_pricer.h src/scip/type_reader.h \
+  src/scip/type_relax.h src/scip/type_sepa.h src/scip/type_prop.h \
+  src/scip/pub_branch.h src/scip/pub_conflict.h src/scip/pub_cons.h \
+  src/scip/pub_cutpool.h src/scip/type_cutpool.h src/scip/pub_dialog.h \
+  src/scip/pub_disp.h src/scip/pub_event.h src/scip/pub_fileio.h \
+  src/scip/pub_heur.h src/scip/pub_implics.h src/scip/type_implics.h \
+  src/scip/pub_lp.h src/scip/type_set.h src/scip/type_stat.h \
+  src/scip/type_lpi.h src/scip/pub_misc.h src/scip/pub_nodesel.h \
+  src/scip/pub_paramset.h src/scip/pub_presol.h src/scip/pub_pricer.h \
+  src/scip/pub_reader.h src/scip/pub_relax.h src/scip/pub_sepa.h \
+  src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
+  src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
+  src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
+  src/scip/cons_setppc.h src/scip/cons_varbound.h
 $(LIBOBJDIR)/scip/reader_cip.o: src/scip/reader_cip.c src/scip/reader_cip.h src/scip/scip.h \
   src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
   src/scip/type_message.h src/scip/struct_message.h \
@@ -2697,7 +2831,7 @@ $(LIBOBJDIR)/scip/reader_fzn.o: src/scip/reader_fzn.c src/scip/cons_and.h src/sc
   src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
   src/scip/cons_or.h src/scip/cons_setppc.h src/scip/cons_varbound.h \
   src/scip/cons_xor.h src/scip/reader_fzn.h src/scip/def.h
-$(LIBOBJDIR)/scip/reader_ccg.o: src/scip/reader_ccg.c src/scip/reader_ccg.h src/scip/scip.h \
+$(LIBOBJDIR)/scip/reader_gms.o: src/scip/reader_gms.c src/scip/reader_gms.h src/scip/scip.h \
   src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
   src/scip/type_message.h src/scip/struct_message.h \
   src/scip/pub_message.h src/blockmemshell/memory.h \
@@ -2720,7 +2854,8 @@ $(LIBOBJDIR)/scip/reader_ccg.o: src/scip/reader_ccg.c src/scip/reader_ccg.h src/
   src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
   src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
   src/scip/cons_knapsack.h src/scip/cons_linear.h src/scip/cons_logicor.h \
-  src/scip/cons_setppc.h src/scip/cons_varbound.h
+  src/scip/cons_quadratic.h src/scip/type_nlpi.h src/scip/cons_setppc.h \
+  src/scip/cons_varbound.h
 $(LIBOBJDIR)/scip/reader_lp.o: src/scip/reader_lp.c src/scip/reader_lp.h src/scip/scip.h \
   src/scip/def.h src/scip/type_retcode.h src/scip/message.h \
   src/scip/type_message.h src/scip/struct_message.h \
@@ -2887,9 +3022,9 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
   src/scip/pub_prop.h src/scip/pub_sol.h src/scip/pub_tree.h \
   src/scip/pub_var.h src/scip/type_history.h src/scip/lpi.h \
   src/scip/cons_linear.h src/scip/cons_setppc.h src/scip/cons_sos1.h \
-  src/scip/cons_sos2.h lib/zimplinc/zimpl/bool.h \
-  lib/zimplinc/zimpl/ratlptypes.h lib/zimplinc/zimpl/mme.h \
-  lib/zimplinc/zimpl/xlpglue.h
+  src/scip/cons_sos2.h src/scip/cons_quadratic.h src/scip/type_nlpi.h \
+  lib/zimplinc/zimpl/bool.h lib/zimplinc/zimpl/ratlptypes.h \
+  lib/zimplinc/zimpl/mme.h lib/zimplinc/zimpl/xlpglue.h
 $(LIBOBJDIR)/scip/sepa_clique.o: src/scip/sepa_clique.c src/scip/sepa_clique.h \
   src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
   src/scip/message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -3124,29 +3259,30 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
   src/scip/cons_conjunction.h src/scip/cons_countsols.h \
   src/scip/cons_indicator.h src/scip/cons_integral.h \
   src/scip/cons_knapsack.h src/scip/cons_logicor.h src/scip/cons_or.h \
-  src/scip/cons_setppc.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
-  src/scip/cons_varbound.h src/scip/cons_xor.h src/scip/dialog_default.h \
-  src/scip/disp_default.h src/scip/heur_actconsdiving.h \
-  src/scip/heur_coefdiving.h src/scip/heur_crossover.h \
-  src/scip/heur_dins.h src/scip/heur_feaspump.h \
+  src/scip/cons_quadratic.h src/scip/type_nlpi.h src/scip/cons_setppc.h \
+  src/scip/cons_sos1.h src/scip/cons_sos2.h src/scip/cons_varbound.h \
+  src/scip/cons_xor.h src/scip/dialog_default.h src/scip/disp_default.h \
+  src/scip/heur_actconsdiving.h src/scip/heur_coefdiving.h \
+  src/scip/heur_crossover.h src/scip/heur_dins.h src/scip/heur_feaspump.h \
   src/scip/heur_fixandinfer.h src/scip/heur_fracdiving.h \
   src/scip/heur_guideddiving.h src/scip/heur_intdiving.h \
   src/scip/heur_intshifting.h src/scip/heur_linesearchdiving.h \
   src/scip/heur_localbranching.h src/scip/heur_mutation.h \
-  src/scip/heur_objpscostdiving.h src/scip/heur_octane.h \
-  src/scip/heur_oneopt.h src/scip/heur_pscostdiving.h \
-  src/scip/heur_rens.h src/scip/heur_rins.h src/scip/heur_rootsoldiving.h \
-  src/scip/heur_rounding.h src/scip/heur_shifting.h \
-  src/scip/heur_simplerounding.h src/scip/heur_veclendiving.h \
-  src/scip/nodesel_bfs.h src/scip/nodesel_dfs.h \
-  src/scip/nodesel_estimate.h src/scip/nodesel_hybridestim.h \
-  src/scip/nodesel_restartdfs.h src/scip/presol_boundshift.h \
-  src/scip/presol_dualfix.h src/scip/presol_implics.h \
-  src/scip/presol_inttobinary.h src/scip/presol_probing.h \
-  src/scip/presol_trivial.h src/scip/prop_pseudoobj.h \
-  src/scip/prop_rootredcost.h src/scip/reader_cip.h src/scip/reader_cnf.h \
+  src/scip/heur_nlp.h src/scip/heur_objpscostdiving.h \
+  src/scip/heur_octane.h src/scip/heur_oneopt.h \
+  src/scip/heur_pscostdiving.h src/scip/heur_rens.h src/scip/heur_rins.h \
+  src/scip/heur_rootsoldiving.h src/scip/heur_rounding.h \
+  src/scip/heur_shifting.h src/scip/heur_simplerounding.h \
+  src/scip/heur_veclendiving.h src/scip/nodesel_bfs.h \
+  src/scip/nodesel_dfs.h src/scip/nodesel_estimate.h \
+  src/scip/nodesel_hybridestim.h src/scip/nodesel_restartdfs.h \
+  src/scip/presol_boundshift.h src/scip/presol_dualfix.h \
+  src/scip/presol_implics.h src/scip/presol_inttobinary.h \
+  src/scip/presol_probing.h src/scip/presol_trivial.h \
+  src/scip/prop_pseudoobj.h src/scip/prop_rootredcost.h \
+  src/scip/reader_ccg.h src/scip/reader_cip.h src/scip/reader_cnf.h \
   src/scip/reader_fix.h src/scip/reader_fzn.h src/scip/def.h \
-  src/scip/reader_ccg.h src/scip/reader_lp.h src/scip/reader_mps.h \
+  src/scip/reader_gms.h src/scip/reader_lp.h src/scip/reader_mps.h \
   src/scip/reader_opb.h src/scip/reader_ppm.h src/scip/reader_rlp.h \
   src/scip/reader_sol.h src/scip/reader_zpl.h src/scip/sepa_clique.h \
   src/scip/sepa_cmir.h src/scip/sepa_flowcover.h src/scip/sepa_gomory.h \
