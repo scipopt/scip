@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.2 2009/07/28 13:10:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.3 2009/07/30 11:06:50 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @brief  type definitions for specific NLP solvers interface
@@ -26,11 +26,7 @@
 #ifndef __SCIP_TYPE_NLPI_H__
 #define __SCIP_TYPE_NLPI_H__
 
-#ifdef WITH_NL
-#include "type_expression.h"
-#else
 typedef struct SCIP_ExprTree      SCIP_EXPRTREE;      /**< expression tree for general nonlinear functions (maybe in SCIP 1.3) */
-#endif
 
 typedef struct SCIP_Nlpi          SCIP_NLPI;          /**< NLP solver interface */
 typedef struct SCIP_NlpiData      SCIP_NLPIDATA;      /**< locally defined NLP solver interface data */
