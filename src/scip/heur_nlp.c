@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.7 2009/07/31 10:26:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.8 2009/07/31 16:01:21 bzfheinz Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -478,15 +478,12 @@ SCIP_RETCODE applyVarBoundConstraints(
             varub[varcnt] = SCIPvarGetUbGlobal(var);
          
          SCIP_CALL( SCIPhashmapInsert(varmap, var, (void*)(size_t)(varcnt+1)) );
-/*         
+         
          SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g\n",
-            SCIPconsGetName(cons),
-            SCIPvarGetName(var), varidx[varcnt],
-            varlb[varcnt], varub[varcnt],
-            SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
-            SCIPgetSolVal(scip, heurdata->startcandidate, SCIPgetVbdvarVarbound(scip, cons))
-         );
-*/         
+            SCIPconsGetName(cons), SCIPvarGetName(var), varidx[varcnt],
+            varlb[varcnt], varub[varcnt], SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
+            SCIPgetSolVal(scip, heurdata->startcandidate, SCIPgetVbdvarVarbound(scip, cons)) );
+         
          ++varcnt;
       }
       else
@@ -507,18 +504,14 @@ SCIP_RETCODE applyVarBoundConstraints(
             varlb[idx_] = lhs;
          if (rhs < varub[idx_])
             varub[idx_] = rhs;
-/*
+   
          SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g  [updated]\n",
-            SCIPconsGetName(cons),
-            SCIPvarGetName(var), varidx[idx_],
-            varlb[idx_], varub[idx_],
-            SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
-            SCIPgetSolVal(scip, heurdata->startcandidate, SCIPgetVbdvarVarbound(scip, cons))
-         );
-*/
+            SCIPconsGetName(cons), SCIPvarGetName(var), varidx[idx_],
+            varlb[idx_], varub[idx_], SCIPvarGetName(SCIPgetVbdvarVarbound(scip, cons)),
+            SCIPgetSolVal(scip, heurdata->startcandidate, SCIPgetVbdvarVarbound(scip, cons)) );
       }      
    }
-
+   
    SCIP_CALL( SCIPnlpiChgVarBounds(scip, heurdata->nlpi, varcnt, varidx, varlb, varub) );
    
    SCIPfreeBufferArray(scip, &varlb);
