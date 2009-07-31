@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.9 2009/07/31 16:59:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.10 2009/07/31 18:29:15 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -39,9 +39,10 @@
 #include "scip/cons_quadratic.h"
 #ifdef WITH_SOC3
 #include "cons_soc3.h"
+#include "cons_soc.h"
 #endif
 
-#define HEUR_NAME             "NLP"
+#define HEUR_NAME             "nlp"
 #define HEUR_DESC             "primal heuristic that performs a local search in an NLP after fixing integer variables"
 #define HEUR_DISPCHAR         'X'  /* @TODO: need a nice letter */
 #define HEUR_PRIORITY         -2000000
@@ -94,6 +95,7 @@ static SCIP_RETCODE addLinearConstraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSH
 static SCIP_RETCODE collectVarBoundConstraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSHDLR* varbndconshdlr);
 static SCIP_RETCODE addQuadraticConstraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSHDLR* quadconshdlr);
 #ifdef WITH_SOC3
+static SCIP_RETCODE addSOCConstraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSHDLR* socconshdlr);
 static SCIP_RETCODE addSOC3Constraints(SCIP* scip, SCIP_HEUR* heur, SCIP_CONSHDLR* soc3conshdlr);
 #endif
 
@@ -203,6 +205,8 @@ SCIP_RETCODE setupNLP(
       else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "knapsack") == 0)
          { SCIPdebugMessage("skip adding knapsack constraints to NLP\n"); } /* skip because combinatorial part is fixed in NLP */ 
 #ifdef WITH_SOC3
+      else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "soc" ) == 0)
+         SCIP_CALL( addSOCConstraints (scip, heur, conshdlrs[i]) );
       else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "SOC3") == 0)
          SCIP_CALL( addSOC3Constraints(scip, heur, conshdlrs[i]) );
 #endif
@@ -549,6 +553,30 @@ SCIP_RETCODE addQuadraticConstraints(
 
 #ifdef WITH_SOC3
 static
+SCIP_RETCODE addSOCConstraints(
+   SCIP*          scip,          /**< SCIP data structure */
+   SCIP_HEUR*     heur,          /**< NLP heuristic */
+   SCIP_CONSHDLR* socconshdlr    /**< constraint handler for SOC constraints */
+   )
+{
+   SCIP_HEURDATA*   heurdata;
+   
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(socconshdlr != NULL);
+   
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   
+   if (!SCIPconshdlrGetNConss(socconshdlr))
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPconsInitnlpiSOC(scip, socconshdlr, heurdata->nlpi, SCIPconshdlrGetNConss(socconshdlr), SCIPconshdlrGetConss(socconshdlr), heurdata->var_scip2nlp) );
+   
+   return SCIP_OKAY; 
+}
+
+static
 SCIP_RETCODE addSOC3Constraints(
    SCIP*          scip,          /**< SCIP data structure */
    SCIP_HEUR*     heur,          /**< NLP heuristic */
@@ -679,25 +707,31 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
     */
    if (SCIPgetNContVars(scip) || SCIPgetNImplVars(scip))
    {  /* check if we have nonlinear continuous variables */
-      SCIP_CONSHDLR* quadconshdlr = SCIPfindConshdlr(scip, "quadratic");
-      if (quadconshdlr && SCIPconshdlrGetNConss(quadconshdlr))
+      SCIP_CONSHDLR* conshdlr;
+      
+      conshdlr = SCIPfindConshdlr(scip, "quadratic");
+      if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
       {
          SCIP_CONS* cons;
          int        i, j;
-         for (i = 0; !havenlp && i < SCIPconshdlrGetNConss(quadconshdlr); ++i)
+         for (i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i)
          {
-            cons = SCIPconshdlrGetConss(quadconshdlr)[i];
+            cons = SCIPconshdlrGetConss(conshdlr)[i];
             for (j = 0; !havenlp && j < SCIPgetNQuadVarsQuadratic(cons); ++j)
                if (SCIPvarGetType(SCIPgetQuadVarsQuadratic(cons)[j]) > SCIP_VARTYPE_INTEGER)
                   havenlp = TRUE;
          }
       }
-      else
-         return SCIP_OKAY;
+      
+#ifdef WITH_SOC3
+      if (!havenlp)
+      {
+         conshdlr = SCIPfindConshdlr(scip, "soc");
+         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
+            havenlp = TRUE;  /* @TODO check if some SOC constraint has a continuous variable */
+      }
+#endif
    }
-   else
-      return SCIP_OKAY;
-
 
    if (havenlp)
    {
@@ -708,7 +742,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
       setupNLP(scip, heur);
    }
    else
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "No nonlinear continuous variables. NLP local search heuristic will not run.\n");
+   {
+      SCIPdebugMessage("No nonlinear continuous variables. NLP local search heuristic will not run.\n");
+   }
    
    return SCIP_OKAY;
 }

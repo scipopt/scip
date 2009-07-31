@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.23 2009/07/31 17:15:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.24 2009/07/31 18:29:15 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5028,7 +5028,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "There are nonconvex quadratic constraints.\n");
    }
        
-   conshdlrdata->nlpheur = SCIPfindHeur(scip, "NLP");
+   conshdlrdata->nlpheur = SCIPfindHeur(scip, "nlp");
    
    return SCIP_OKAY;
 }
