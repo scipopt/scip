@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.37 2009/04/06 13:06:47 bzfberth Exp $
+# $Id: check_cplex.awk,v 1.38 2009/07/31 10:38:00 bzfheinz Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -157,7 +157,7 @@ BEGIN {
 #
 # problem size
 #
-/^Reduced MIP has/ { cons = $4; vars = $6; }
+/nonzeros.$/ { cons = $4; vars = $6; }
 #
 # solution
 #

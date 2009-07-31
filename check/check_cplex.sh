@@ -127,7 +127,7 @@ do
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; ./$CPLEXBIN < $TMPFILE" 2>>$ERRFILE
+	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $CPLEXBIN < $TMPFILE" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
