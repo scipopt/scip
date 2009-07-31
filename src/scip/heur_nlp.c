@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.8 2009/07/31 16:01:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.9 2009/07/31 16:59:01 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -901,7 +901,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
             }
             else
             {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "NLP solver said feasible after tigthening tolerances, but SCIP still did not store solution\n");
+               SCIPdebugMessage("NLP solver said feasible after tigthening tolerances, but SCIP still did not store solution\n");
             }
          }
          else
