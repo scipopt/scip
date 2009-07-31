@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.2 2009/07/27 20:12:28 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.3 2009/07/31 16:58:43 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @brief   Ipopt NLP interface
@@ -26,12 +26,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-extern "C"
-{
 #include "scip/nlpi_ipopt.h"
 #include "scip/nlpi.h"
 #include "scip/nlpi_oracle.h"
-}
 
 #include <new>      /* for std::bad_alloc */
 #include <cstring>  /* for memcpy */
