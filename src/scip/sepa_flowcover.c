@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.23 2009/07/08 15:36:29 bzfgamra Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.24 2009/07/31 10:16:41 bzfheinz Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -956,13 +956,13 @@ SCIP_RETCODE constructSNFRelaxation(
    /* construction was successfull */
    *success = TRUE;
 
-   SCIPdebugMessage("constraint in constructed 0-1 single node flow relaxation: ");
 #ifdef SCIP_DEBUG
+   SCIPdebugMessage("constraint in constructed 0-1 single node flow relaxation: ");
    for( c = 0; c < *ntransvars; c++ )
    {   
-      printf("%s y'_%d ", transvarcoefs[c] == 1 ? "+" : "-", c);
+      SCIPdebugPrintf("%s y'_%d ", transvarcoefs[c] == 1 ? "+" : "-", c);
    }
-   printf("<= %g\n", *transrhs);
+   SCIPdebugPrintf("<= %g\n", *transrhs);
 #endif
 
  TERMINATE:

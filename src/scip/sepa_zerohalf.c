@@ -1312,17 +1312,17 @@ void debugPrintSubLpData(
    assert(sublpdata != NULL);
 
   
-   printf("\n debugPrintSubLpData:\n\n");
+   SCIPdebugMessage("\n debugPrintSubLpData:\n\n");
   
-   printf(" rrows:   (nrrows=%d)\n", sublpdata->nrrows);
+   SCIPdebugMessage(" rrows:   (nrrows=%d)\n", sublpdata->nrrows);
    for( i = 0 ; i < sublpdata->nrrows ; ++i)
-      printf(" %6d:  rrows: %6d  rhs: %6lf  slack: %6lf  name: %s\n",
+      SCIPdebugMessage(" %6d:  rrows: %6d  rhs: %6lf  slack: %6lf  name: %s\n",
          i, sublpdata->rrows[i], sublpdata->rrowsrhs[i], sublpdata->rrowsslack[i],
          SCIProwGetName(lpdata->rows[sublpdata->rrows[i]]));
 
-   printf("\n rcols:   (nrcols=%d)\n", sublpdata->nrcols);
+   SCIPdebugMessage("\n rcols:   (nrcols=%d)\n", sublpdata->nrcols);
    for( j = 0 ; j < sublpdata->nrcols ; ++j)
-      printf(" %6d:  rcols: %6d  lbslack: %6lf  ubslack: %6lf\n",
+      SCIPdebugMessage(" %6d:  rcols: %6d  lbslack: %6lf  ubslack: %6lf\n",
          i, sublpdata->rcols[i], sublpdata->rcolslbslack[i], sublpdata->rcolsubslack[i]);        
 }
 #endif
@@ -1347,75 +1347,75 @@ void debugPrintMod2Data(
    assert(mod2data != NULL);
 
 
-   printf("\n debugPrintMod2Data:\n\n");
+   SCIPdebugMessage("\n debugPrintMod2Data:\n\n");
 
-   printf(" nrows = %d, nvarbounds = %d, nrcols = %d, nrowsind = %d, ncolsind = %d\n",
+   SCIPdebugMessage(" nrows = %d, nvarbounds = %d, nrcols = %d, nrowsind = %d, ncolsind = %d\n",
       mod2data->nrows, mod2data->nvarbounds, mod2data->relatedsubproblem->nrcols,
       mod2data->nrowsind, mod2data->ncolsind);
-   printf(" rowsbitarraysize = %d, rowaggregationsbitarraysize = %d\n",
+   SCIPdebugMessage(" rowsbitarraysize = %d, rowaggregationsbitarraysize = %d\n",
       mod2data->rowsbitarraysize, mod2data->rowaggregationsbitarraysize);
  
   
-   printf("\n fracsol:\n");
+   SCIPdebugMessage("\n fracsol:\n");
    for( j = 0 ; j < mod2data->relatedsubproblem->nrcols ; ++j )
    {
       k = mod2data->ncolsind;
       for( k = 0 ; k < mod2data->ncolsind ; ++k )
          if( mod2data->colsind[k] == j )
             break;
-      printf(" rcols[%6d]:  fracsol: %6lf  colsind: %6d  name: %s\n", j, mod2data->fracsol[j],
+      SCIPdebugMessage(" rcols[%6d]:  fracsol: %6lf  colsind: %6d  name: %s\n", j, mod2data->fracsol[j],
          k < mod2data->ncolsind ? k : -1,
          SCIPvarGetName(SCIPcolGetVar(lpdata->cols[mod2data->relatedsubproblem->rcols[j]])));
    }
 
-   printf("\n (A mod 2, b mod 2, [#nonz] (slacks), R, name(rrows), left(-)/right(+):\n");
+   SCIPdebugMessage("\n (A mod 2, b mod 2, [#nonz] (slacks), R, name(rrows), left(-)/right(+):\n");
    if( mod2data->nrowsind == 0 )
-      printf(" empty\n");
+      SCIPdebugMessage(" empty\n");
    for( i = 0 ; i < mod2data->nrowsind ; ++i )
    {
       int nnonz = 0;
-      printf(" ");
+      SCIPdebugMessage(" ");
       for( j = 0 ; j < mod2data->ncolsind; ++j )
          if( BITARRAYBITISSET(mod2data->rows[mod2data->rowsind[i]],          
                mod2data->colsind[j]) )
          {
             nnonz++;
-            printf("1");        
+            SCIPdebugPrintf("1");        
          }
          else
-            printf(".");
+            SCIPdebugPrintf(".");
       
       if( mod2data->rhs[mod2data->rowsind[i]] )
-         printf("  1");
+         SCIPdebugPrintf("  1");
       else
-         printf("  0");
+         SCIPdebugPrintf("  0");
 
-      printf("  [%4d] ", nnonz);    
-      printf("(%6lf)  ", mod2data->slacks[mod2data->rowsind[i]]);
+      SCIPdebugPrintf("  [%4d] ", nnonz);    
+      SCIPdebugPrintf("(%6lf)  ", mod2data->slacks[mod2data->rowsind[i]]);
 
       if( printaggregations )
       {
          for( j = 0 ; j < mod2data->relatedsubproblem->nrrows; ++j )
             if( BITARRAYBITISSET(mod2data->rowaggregations[mod2data->rowsind[i]], j) )
-               printf("1");
+               SCIPdebugPrintf("1");
             else
-               printf(".");
+               SCIPdebugPrintf(".");
       }
     
       if( mod2data->rowsind[i] < mod2data->nrows - mod2data->nvarbounds )
       {      
-         printf("  %s ", SCIProwGetName(lpdata->rows[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]]));
+         SCIPdebugPrintf("  %s ", SCIProwGetName(lpdata->rows[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]]));
          if( lpdata->rrowsindexofleftrow[mod2data->relatedsubproblem->rrows[mod2data->rowsind[i]]] == mod2data->rowsind[i] )
-            printf(" -\n");
+            SCIPdebugPrintf(" -\n");
          else
-            printf(" +\n");
+            SCIPdebubPrintf(" +\n");
       }
       else
       {
-         printf("    varbound(rows[%d])\n", mod2data->rowsind[i]);
+         SCIPdebubPrintf("    varbound(rows[%d])\n", mod2data->rowsind[i]);
       }
    }
-   printf("\n");
+   SCIPdebubPrintf("\n");
 }
 #endif
 
@@ -1435,15 +1435,15 @@ SCIP_RETCODE debugPrintLPRowsAndCols(
    int                   j;
    char                  temp[SCIP_MAXSTRLEN];
   
-   printf("\n\nLP rows:\n");
+   SCIPdebugMessage("\n\nLP rows:\n");
    for( i = 0 ; i < lpdata->nrows ; ++i)
    {
-      printf("\nrow %d (left): %s[%d,%d] %s:\n", i,
+      SCIPdebugMessage("\nrow %d (left): %s[%d,%d] %s:\n", i,
          (lpdata->subproblemsindexofrow[i] == IRRELEVANT)
          || (lpdata->rrowsindexofleftrow[i] < 0) ? "IRRELEVANT" : "RELEVANT",
          lpdata->subproblemsindexofrow[i], lpdata->rrowsindexofleftrow[i],
          lpdata->rrowsindexofleftrow[i] < 0 ? getconstantname(temp, lpdata->rrowsindexofleftrow[i]) : "");
-      printf("row %d (right): %s[%d,%d] %s:\n", i,
+      SCIPdebugMessage("row %d (right): %s[%d,%d] %s:\n", i,
          (lpdata->subproblemsindexofrow[i] == IRRELEVANT)
          || (lpdata->rrowsindexofrightrow[i] < 0) ? "IRRELEVANT" : "RELEVANT",
          lpdata->subproblemsindexofrow[i], lpdata->rrowsindexofrightrow[i],
@@ -1451,15 +1451,15 @@ SCIP_RETCODE debugPrintLPRowsAndCols(
       SCIPprintRow(scip, lpdata->rows[i], NULL);
    }
   
-   printf("\n\nLP cols:\n");
+   SCIPdebugMessage("\n\nLP cols:\n");
    for( j = 0 ; j < lpdata->ncols ; ++j)
    {
-      printf("\ncol %d: %s[%d,%d] %s:\n", j,
+      SCIPdebugMessage("\ncol %d: %s[%d,%d] %s:\n", j,
          (lpdata->subproblemsindexofcol[j] == IRRELEVANT)
          || (lpdata->rcolsindexofcol[j] < 0) ? "IRRELEVANT" : "RELEVANT",
          lpdata->subproblemsindexofcol[j], lpdata->rcolsindexofcol[j],
          lpdata->rcolsindexofcol[j] < 0 ? getconstantname(temp, lpdata->rcolsindexofcol[j]) : ""); 
-      printf("%s = %f\n", 
+      SCIPdebugMessage("%s = %f\n", 
          SCIPvarGetName(SCIPcolGetVar(lpdata->cols[j])),
          SCIPcolGetPrimsol(lpdata->cols[j]));    
    }
@@ -4907,12 +4907,12 @@ SCIP_RETCODE separateBySolvingAuxIP(
 
 #ifdef SCIP_DEBUG
       debugPrintLPRowsAndCols(scip, lpdata);
-      printf("\n");
+      SCIPdebugMessage("\n");
       debugPrintSubLpData(scip, lpdata, mod2data->relatedsubproblem);
       debugPrintMod2Data(scip, lpdata, mod2data, TRUE);
-      printf("\n");
+      SCIPdebugMessage("\n");
       SCIPprintOrigProblem(auxipdata->subscip, NULL, NULL, TRUE);
-      printf("\n");
+      SCIPdebugMessage("\n");
       SCIPprintBestSol(auxipdata->subscip, NULL , FALSE);
 #endif
 
@@ -5237,13 +5237,13 @@ void debugPrintAuxGraphNode(
    assert(node != NULL);
 
 
-   printf("\nnode: %p\n", node);
+   SCIPdebugMessage("\nnode: %p\n", node);
    for( i = 0 ; i < node->nneighbors ; ++i)
    {
-      printf("  neighbor %4d: %p  weight: %6f  rrow: %4d\n",
+      SCIPdebugMessage("  neighbor %4d: %p  weight: %6f  rrow: %4d\n",
          i, node->neighbors[i], node->edgeweights[i], node->relatedrows[i]);
    }
-   printf("  nneighbors: %d  distance: %6f  previous: %p\n",
+   SCIPdebugMessage("  nneighbors: %d  distance: %6f  previous: %p\n",
       node->nneighbors, node->distance, node->previous);  
 }
 #endif  
@@ -6379,9 +6379,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       {        
 #ifdef SCIP_DEBUG
          debugPrintLPRowsAndCols(scip, lpdata);
-         printf("\n");
+         SCIPdebugMessage("\n");
          debugPrintSubLpData(scip, lpdata, lpdata->subproblems[subproblemindex]);
-         printf("\n");
+         SCIPdebugMessage("\n");
 #endif
          /* create weightvector */
          SCIP_Real* weights;
