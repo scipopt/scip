@@ -21,17 +21,11 @@
 #include <vector>
 #include <iostream>
 
-// since SCIP is written in C we need to wrap all header files except the ones of objscip into the extern "C" statement
-extern "C"
-{
 #include <scip/scip.h>
 #include <scip/scipdefplugins.h>
-}
 
 namespace scipexamples
 {
-
-
    /**@class QueensSolver
     * @brief solver class for the n-queens problem
     *

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.h,v 1.17 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: implics.h,v 1.18 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   implics.h
  * @brief  methods for implications, variable bounds, and cliques
@@ -41,6 +41,9 @@
 #include "scip/struct_implics.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Methods for Variable Bounds
@@ -422,5 +425,8 @@ SCIP_CLIQUE** SCIPcliquetableGetCliques(
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

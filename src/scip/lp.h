@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.h,v 1.137 2009/07/08 15:36:28 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.h,v 1.138 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   lp.h
  * @brief  internal methods for LP management
@@ -41,7 +41,9 @@
 
 #include "scip/struct_lp.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Column methods
@@ -1316,5 +1318,8 @@ void SCIPlpMarkDivingObjChanged(
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

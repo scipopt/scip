@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rins.h,v 1.6 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rins.h,v 1.7 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   heur_rins.h
  * @brief  RINS primal heuristic
@@ -26,10 +26,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** creates RINS primal heuristic and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeHeurRins(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

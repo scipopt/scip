@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_message.h,v 1.7 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_message.h,v 1.8 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_message.h
  * @brief  datastructures for problem statistics
@@ -28,6 +28,9 @@
 #include "scip/def.h"
 #include "scip/type_message.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** message handler to redirect output */
 struct SCIP_Messagehdlr
@@ -47,5 +50,8 @@ struct SCIP_Messagehdlr
    int                   infobufferlen;      /**< currently used space in the info buffer */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

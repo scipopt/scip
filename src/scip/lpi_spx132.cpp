@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx132.cpp,v 1.5 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_spx132.cpp,v 1.6 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   lpi_spx132.cpp
  * @ingroup LPIS
@@ -60,10 +60,8 @@
 
 #include <cassert>
 
-extern "C"
-{
 #include "scip/message.h"
-}
+
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
 /********************************************************************/
@@ -262,12 +260,8 @@ public:
 /*-----------------------------  C  --------------------------------*/
 /********************************************************************/
 
-extern "C"
-{
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
-}
-
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE

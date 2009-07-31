@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.h,v 1.2 2009/07/27 10:52:52 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.h,v 1.3 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   reader_gms.h
  * @brief  GAMS file reader
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the gms file reader into SCIP */
 extern
@@ -57,5 +60,9 @@ SCIP_RETCODE SCIPwriteGms(
    int                nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

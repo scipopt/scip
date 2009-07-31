@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_vbc.h,v 1.14 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_vbc.h,v 1.15 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   struct_vbc.h
  * @brief  datastructures for VBC Tool output
@@ -30,6 +30,9 @@
 #include "scip/type_vbc.h"
 #include "scip/type_misc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** VBC Tool data structure */
 struct SCIP_Vbc
@@ -42,5 +45,8 @@ struct SCIP_Vbc
    SCIP_Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

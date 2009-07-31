@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.h,v 1.2 2008/04/17 19:07:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_xxx.h,v 1.3 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   cons_xxx.h
  * @brief  constraint handler for xxx constraints
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for xxx constraints and includes it in SCIP */
 extern
@@ -65,5 +68,9 @@ SCIP_RETCODE SCIPcreateConsXxx(
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

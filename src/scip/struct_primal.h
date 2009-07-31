@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_primal.h,v 1.18 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_primal.h,v 1.19 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_primal.h
  * @brief  datastructures for collecting primal CIP solutions and primal informations
@@ -29,7 +29,9 @@
 #include "scip/type_sol.h"
 #include "scip/type_primal.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** primal data and solution storage */
 struct SCIP_Primal
@@ -48,5 +50,8 @@ struct SCIP_Primal
    int                   nexistingsols;      /**< number of primal CIP solutions stored in existingsols array */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

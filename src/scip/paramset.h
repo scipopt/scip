@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.h,v 1.27 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: paramset.h,v 1.28 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   paramset.h
  * @brief  internal methods for handling parameter settings
@@ -33,7 +33,9 @@
 #include "scip/pub_paramset.h"
 #include "scip/pub_misc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates parameter set */
 extern
@@ -275,5 +277,9 @@ extern
 int SCIPparamsetGetNParams(
    SCIP_PARAMSET*        paramset            /**< parameter set */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

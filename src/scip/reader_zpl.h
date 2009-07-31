@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.h,v 1.5 2009/04/06 13:06:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_zpl.h,v 1.6 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   reader_zpl.h
  * @brief  ZIMPL model file reader
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the zpl file reader into SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderZpl(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

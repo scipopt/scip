@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_result.h,v 1.15 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_result.h,v 1.16 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_result.h
  * @brief  result codes for SCIP callback methods
@@ -23,6 +23,10 @@
 
 #ifndef __SCIP_TYPE_RESULT_H__
 #define __SCIP_TYPE_RESULT_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** result codes for SCIP callback methods */
 enum SCIP_Result
@@ -46,6 +50,8 @@ enum SCIP_Result
 };
 typedef enum SCIP_Result SCIP_RESULT;           /**< result codes for SCIP callback methods */
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

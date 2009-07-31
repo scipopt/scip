@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.24 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.25 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -26,11 +26,7 @@
 
 #include <cstring>
 
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {

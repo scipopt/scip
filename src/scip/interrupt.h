@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: interrupt.h,v 1.15 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: interrupt.h,v 1.16 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   interrupt.h
  * @brief  methods for catching the user CTRL-C interrupt
@@ -29,7 +29,9 @@
 #include "scip/type_retcode.h"
 #include "scip/type_interrupt.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a CTRL-C interrupt data */
 extern
@@ -61,5 +63,8 @@ SCIP_Bool SCIPinterrupted(
    void
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

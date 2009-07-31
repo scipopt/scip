@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.52 2009/04/06 13:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.53 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -42,7 +42,9 @@
 #include "scip/type_cutpool.h"
 #include "scip/type_conflict.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** returns whether the solving process will be / was stopped before proving optimality;
  *  if the solving process was stopped, stores the reason as status in stat
@@ -146,5 +148,8 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_Bool*            restart             /**< should solving process be started again with presolving? */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

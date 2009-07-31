@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.h,v 1.34 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_setppc.h,v 1.35 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_setppc.h
  * @brief  constraint handler for the set partitioning / packing / covering constraints
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** type of setppc constraint: set partitioning, set packing, or set covering */
 enum SCIP_SetppcType
@@ -207,5 +210,9 @@ int SCIPgetNFixedzerosSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

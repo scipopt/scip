@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.22 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.23 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_var.h
  * @brief  type definitions for problem variables
@@ -24,7 +24,9 @@
 #ifndef __SCIP_TYPE_VAR_H__
 #define __SCIP_TYPE_VAR_H__
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** status of problem variables */
 enum SCIP_Varstatus
@@ -131,5 +133,9 @@ typedef struct SCIP_VarData SCIP_VARDATA;         /**< user variable data */
  *    vardata         : pointer to the user variable data to free
  */
 #define SCIP_DECL_VARDELTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* var, SCIP_VARDATA** vardata)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

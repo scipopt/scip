@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.h,v 1.2 2009/04/06 13:06:57 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_ccg.h,v 1.3 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   reader_ccg.h
  * @brief  Column connectivity graph file reader (actually, only a writer)
@@ -29,6 +29,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the ccg file reader into SCIP */
 extern
@@ -50,5 +53,9 @@ SCIP_RETCODE SCIPwriteCcg(
    int                nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

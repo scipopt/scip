@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_tree.h,v 1.21 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_tree.h,v 1.22 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_tree.h
  * @brief  type definitions for branch and bound tree
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_TREE_H__
 #define __SCIP_TYPE_TREE_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum SCIP_NodeType
 {
@@ -53,5 +56,8 @@ typedef struct SCIP_Node SCIP_NODE;               /**< node data structure */
 typedef struct SCIP_PendingBdchg SCIP_PENDINGBDCHG; /**< bound change information for pending bound changes */
 typedef struct SCIP_Tree SCIP_TREE;               /**< branch and bound tree */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

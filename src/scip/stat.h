@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.h,v 1.46 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: stat.h,v 1.47 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   stat.h
  * @brief  internal methods for problem statistics
@@ -34,7 +34,9 @@
 
 #include "scip/struct_stat.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates problem statistics data */
 extern
@@ -100,5 +102,9 @@ void SCIPstatUpdateMemsaveMode(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MEM*             mem                 /**< block memory pools */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

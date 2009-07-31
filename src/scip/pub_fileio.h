@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_fileio.h,v 1.6 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_fileio.h,v 1.7 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_fileio.h
  * @brief  wrapper functions to map file i/o to standard or zlib file i/o
@@ -25,6 +25,10 @@
 #define __SCIP_PUB_FILEIO_H__
 
 #include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_File SCIP_FILE;          /**< file data structure */
 
@@ -44,5 +48,8 @@ extern long SCIPftell(SCIP_FILE *stream);
 extern int SCIPfeof(SCIP_FILE *stream);
 extern int SCIPfclose(SCIP_FILE *fp);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

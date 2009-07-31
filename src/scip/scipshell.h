@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.h,v 1.4 2009/04/06 13:07:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: scipshell.h,v 1.5 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   scipshell.h
  * @brief  SCIP command line interface
@@ -26,6 +26,9 @@
 
 #include "scip/type_retcode.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** evaluates command line parameters and runs SCIP appropriately in the given SCIP instance */
 extern
@@ -46,5 +49,8 @@ SCIP_RETCODE SCIPrunShell(
    const char*                defaultsetname      /**< name of default settings file */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

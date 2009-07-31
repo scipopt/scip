@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.32 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.33 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -26,11 +26,7 @@
 
 #include <cstring>
 
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {

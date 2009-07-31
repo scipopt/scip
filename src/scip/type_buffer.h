@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_buffer.h,v 1.12 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_buffer.h,v 1.13 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_buffer.h
  * @brief  type definitions for memory buffers for temporary objects
@@ -24,8 +24,14 @@
 #ifndef __SCIP_TYPE_BUFFER_H__
 #define __SCIP_TYPE_BUFFER_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Buffer SCIP_BUFFER;
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

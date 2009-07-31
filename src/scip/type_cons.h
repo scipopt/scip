@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.48 2009/06/25 11:23:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.49 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -24,6 +24,16 @@
 #ifndef __SCIP_TYPE_CONS_H__
 #define __SCIP_TYPE_CONS_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_var.h"
+#include "scip/type_sol.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Conshdlr SCIP_CONSHDLR;       /**< constraint handler for a specific constraint type */
 typedef struct SCIP_Cons SCIP_CONS;               /**< constraint data structure */
@@ -664,12 +674,8 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
       SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
       SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* succeed)
 
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_var.h"
-#include "scip/type_sol.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

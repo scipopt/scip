@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.80 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.81 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -46,6 +46,9 @@
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** global SCIP settings */
 struct SCIP_Set
@@ -287,5 +290,8 @@ struct SCIP_Set
    SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

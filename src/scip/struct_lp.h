@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.53 2009/06/05 20:28:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.54 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -55,7 +55,9 @@
 #include "scip/type_lp.h"
 #include "scip/type_var.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** LP column;
  *  The row vector of the LP column is partitioned into two parts: The first col->nlprows rows in the rows array
@@ -268,5 +270,8 @@ struct SCIP_Lp
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

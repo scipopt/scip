@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.h,v 1.33 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: misc.h,v 1.34 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   misc.h
  * @brief  internal miscellaneous methods
@@ -32,7 +32,9 @@
 #include "scip/type_misc.h"
 #include "scip/pub_misc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Dynamic Arrays
@@ -316,5 +318,8 @@ int SCIPptrarrayGetMaxIdx(
   local methods
 */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

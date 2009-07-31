@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.h,v 1.13 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.h,v 1.14 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   pricer_xxx.h
  * @brief  xxx variable pricer
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the xxx variable pricer and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludePricerXxx(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

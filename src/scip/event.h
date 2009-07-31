@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.47 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.48 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -39,7 +39,9 @@
 
 #include "scip/struct_event.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Event handler methods
@@ -355,5 +357,9 @@ extern
 SCIP_Bool SCIPeventqueueIsDelayed(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

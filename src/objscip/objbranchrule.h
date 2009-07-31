@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.30 2009/04/06 13:06:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.31 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -28,11 +28,7 @@
 #include <cassert>
 #include <cstring>
 
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.55 2009/07/30 17:31:54 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.56 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -65,12 +65,9 @@
 #include <vector>
 #include <string>
 
-extern "C" 
-{
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
 #include "scip/message.h"
-}
 
 
 /* in C++ we have to use "0" instead of "(void*)0" */

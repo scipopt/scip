@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prop.h,v 1.14 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_prop.h,v 1.15 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_prop.h
  * @brief  datastructures for propagators
@@ -29,6 +29,9 @@
 #include "scip/type_clock.h"
 #include "scip/type_prop.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** propagators data */
 struct SCIP_Prop
@@ -54,5 +57,8 @@ struct SCIP_Prop
    SCIP_Bool             initialized;        /**< is propagator initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

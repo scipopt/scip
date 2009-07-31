@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: buffer.h,v 1.23 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: buffer.h,v 1.24 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   buffer.h
  * @brief  internal methods for memory buffers for temporary objects
@@ -30,6 +30,9 @@
 #include "scip/type_set.h"
 #include "scip/type_buffer.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates memory buffer storage */
 extern
@@ -90,5 +93,9 @@ extern
 void SCIPbufferPrint(
    SCIP_BUFFER*          buffer              /**< memory buffer storage */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

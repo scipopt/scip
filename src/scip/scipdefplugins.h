@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.31 2009/07/28 17:39:24 bzfviger Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.32 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -125,6 +125,9 @@
 #include "scip/cons_invarknapsack.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes default SCIP plugins into SCIP */
 extern
@@ -132,5 +135,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

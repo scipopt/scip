@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.20 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.21 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -29,7 +29,9 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_misc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** priority queue data structure
  *  Elements are stored in an array, which grows dynamically in size as new elements are added to the queue.
@@ -128,5 +130,8 @@ struct SCIP_PtrArray
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

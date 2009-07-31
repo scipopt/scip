@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.49 2009/06/15 09:57:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.50 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -29,7 +29,9 @@
 #include "scip/type_clock.h"
 #include "scip/type_cons.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** constraint data structure */
 struct SCIP_Cons
@@ -222,5 +224,8 @@ struct SCIP_Conshdlr
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

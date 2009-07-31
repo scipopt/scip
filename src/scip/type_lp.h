@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lp.h,v 1.15 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_lp.h,v 1.16 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_lp.h
  * @brief  type definitions for LP management
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_LP_H__
 #define __SCIP_TYPE_LP_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** solution status after solving LP */
 enum SCIP_LPSolStat
@@ -69,5 +72,8 @@ typedef struct SCIP_Col SCIP_COL;                 /**< column of an LP */
 typedef struct SCIP_Row SCIP_ROW;                 /**< row of an LP */
 typedef struct SCIP_Lp SCIP_LP;                   /**< current LP data */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.h,v 1.22 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_varbound.h,v 1.23 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_varbound.h
  * @brief  constraint handler for variable bound constraints
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for variable bound constraints and includes it in SCIP */
 extern
@@ -127,5 +130,9 @@ SCIP_ROW* SCIPgetRowVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

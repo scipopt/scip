@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.h,v 1.32 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: debug.h,v 1.33 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   debug.h
  * @brief  methods for debugging
@@ -37,6 +37,9 @@
 #include "scip/type_prob.h"
 #include "scip/type_tree.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifdef SCIP_DEBUG_SOLUTION
 
@@ -159,6 +162,10 @@ SCIP_RETCODE SCIPdebugCheckBInvRow(
 
 #define SCIPdebugCheckBInvRow(scip,r,coef) SCIP_OKAY
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

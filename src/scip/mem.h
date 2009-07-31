@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: mem.h,v 1.25 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: mem.h,v 1.26 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   mem.h
  * @brief  methods for block memory pools and memory buffers
@@ -30,6 +30,9 @@
 #include "scip/type_mem.h"
 #include "scip/struct_mem.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates block memory structures */
 extern
@@ -49,5 +52,8 @@ SCIP_Longint SCIPmemGetUsed(
    SCIP_MEM*             mem                 /**< pointer to block memory structure */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

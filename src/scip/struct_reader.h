@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_reader.h,v 1.14 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_reader.h,v 1.15 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_reader.h
  * @brief  datastructures for input file readers
@@ -28,6 +28,9 @@
 #include "scip/def.h"
 #include "scip/type_reader.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** input file reader */
 struct SCIP_Reader
@@ -41,5 +44,8 @@ struct SCIP_Reader
    SCIP_READERDATA*      readerdata;         /**< reader data */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

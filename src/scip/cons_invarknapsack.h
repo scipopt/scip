@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_invarknapsack.h,v 1.25 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_invarknapsack.h,v 1.26 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_invarknapsack.h
  * @brief  constraint handler for invarknapsack constraints
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for invarknapsack constraints and includes it in SCIP */
 extern
@@ -68,5 +71,9 @@ SCIP_RETCODE SCIPcreateConsInvarknapsack(
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

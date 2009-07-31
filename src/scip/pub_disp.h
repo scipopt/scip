@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_disp.h,v 1.14 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_disp.h,v 1.15 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_disp.h
  * @brief  public methods for displaying runtime statistics
@@ -31,7 +31,9 @@
 #include "scip/type_retcode.h"
 #include "scip/type_disp.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** gets user data of display column */
 extern
@@ -118,5 +120,8 @@ void SCIPdispTime(
    int                   width               /**< width to fit into */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

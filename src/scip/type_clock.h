@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_clock.h,v 1.13 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_clock.h,v 1.14 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_clock.h
  * @brief  type definitions for clocks and timing issues
@@ -23,6 +23,12 @@
 
 #ifndef __SCIP_TYPE_CLOCK_H__
 #define __SCIP_TYPE_CLOCK_H__
+
+#include "scip/def.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum SCIP_ClockType
 {
@@ -36,8 +42,8 @@ typedef struct SCIP_Clock SCIP_CLOCK;             /**< clock timer */
 typedef struct SCIP_CPUClock SCIP_CPUCLOCK;       /**< CPU clock counter */
 typedef struct SCIP_WallClock SCIP_WALLCLOCK;     /**< wall clock counter */
 
-
-#include "scip/def.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

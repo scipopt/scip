@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.h,v 1.15 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.h,v 1.16 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_conjunction.h
  * @brief  constraint handler for conjunction constraints
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for conjunction constraints and includes it in SCIP */
 extern
@@ -63,5 +66,9 @@ SCIP_RETCODE SCIPaddConsElemConjunction(
    SCIP_CONS*            cons,               /**< conjunction constraint */
    SCIP_CONS*            addcons             /**< additional constraint in conjunction */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

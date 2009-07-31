@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.h,v 1.2 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_col.h,v 1.3 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   reader_col.h
  * @brief  COL file reader
@@ -24,13 +24,16 @@
 #ifndef __SCIP_READER_COL_H__
 #define __SCIP_READER_COL_H__
 
-
 #include "scip/scip.h"
 #include "tclique/tclique.h"
 #include "probdata_coloring.h"
 #include "scip/cons_linear.h"
 #include "scip/type_cons.h"
 #include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** bubble sort of two joint arrays of int, sorted s.t. the second array is in non-increasing order */
 extern
@@ -62,5 +65,9 @@ extern
 SCIP_RETCODE SCIPincludeReaderCol(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

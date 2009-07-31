@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.h,v 1.21 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: pricestore.h,v 1.22 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   pricestore.h
  * @brief  internal methods for storing priced variables
@@ -38,7 +38,9 @@
 #include "scip/type_pricestore.h"
 #include "scip/type_branch.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates pricing storage */
 extern
@@ -169,5 +171,8 @@ int SCIPpricestoreGetNVarsApplied(
    SCIP_PRICESTORE*      pricestore          /**< pricing storage */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

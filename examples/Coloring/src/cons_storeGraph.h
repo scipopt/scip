@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_storeGraph.h,v 1.2 2008/09/29 19:49:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_storeGraph.h,v 1.3 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   cons_storeGraph.h
  * @brief  constraint handler for storing the graph at each node of the tree
@@ -22,6 +22,12 @@
 #ifndef CONSSTOREGRAPH_H
 #define CONSSTOREGRAPH_H
 
+#include "scip/scip.h"
+#include "tclique/tclique.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* type of storeGraph constraint: differ, same or root */
 enum COLOR_ConsType
@@ -31,9 +37,6 @@ enum COLOR_ConsType
    COLOR_CONSTYPE_ROOT   = 2   /* constraint created for the root, is created automatically */
 };
 typedef enum COLOR_ConsType COLOR_CONSTYPE;
-
-#include "scip/scip.h"
-#include "tclique/tclique.h"
 
 /** returns the store graph constraint of the current node, needs the pointer to the constraint handler */
 extern
@@ -124,5 +127,8 @@ void COLORconsGetStack(
    int*                  nstackelements      /**< return value: pointer to int, for number of elements on the stack */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

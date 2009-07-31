@@ -145,6 +145,7 @@ fixed bugs:
 - fixed bug in cons_linear.c: do not select variable as slack variable for multiaggregation in convertLongEquality if it has been marked as not-multiaggregable
 - fixed bug in cons_linear.c: also do not multiaggregate variables in dual preproccessing if it has been marked as not-multiaggregable
 - fixed bug in cons_linear.c: slight decrease of epsilon in order to make sure that scaled coefficients are really integral
+- fixed casting of void* pointers in memory.h for C++, adjusted the same for C in memory.h, and due to that adjusted all header files(set whole files in extern "C") and cpp-files(removed unnecessary extern "C" lines) 
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

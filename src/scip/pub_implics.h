@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_implics.h,v 1.10 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_implics.h,v 1.11 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_implics.h
  * @brief  public methods for implications, variable bounds, and cliques
@@ -33,8 +33,9 @@
 #include "scip/struct_implics.h"
 #endif
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * methods for cliques
@@ -103,5 +104,8 @@ int SCIPcliqueGetId(
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

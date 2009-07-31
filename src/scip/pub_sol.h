@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sol.h,v 1.19 2009/04/06 13:06:57 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_sol.h,v 1.20 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_sol.h
  * @brief  public methods for primal CIP solutions
@@ -34,6 +34,9 @@
 #include "scip/struct_sol.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifndef NDEBUG
 
@@ -105,6 +108,10 @@ int SCIPsolGetIndex(
 #define SCIPsolGetHeur(sol)             (sol)->heur
 #define SCIPsolGetIndex(sol)            (sol)->index
 #define SCIPsolSetHeur(sol,heur)        { (sol)->heur = heur; }
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

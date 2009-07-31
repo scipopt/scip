@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_lp.h,v 1.42 2009/04/17 09:24:58 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_lp.h,v 1.43 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_lp.h
  * @brief  public methods for LP management
@@ -40,7 +40,9 @@
 #include "scip/struct_lp.h"
 #endif
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Column methods
@@ -478,5 +480,8 @@ SCIP_Bool SCIProwIsInLP(
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

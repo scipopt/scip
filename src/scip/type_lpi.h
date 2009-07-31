@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_lpi.h,v 1.24 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_lpi.h,v 1.25 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_lpi.h
  * @brief  type definitions for specific LP solvers interface
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_LPI_H__
 #define __SCIP_TYPE_LPI_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** objective sense */
 enum SCIP_ObjSen
@@ -78,5 +81,9 @@ typedef enum SCIP_BaseStat SCIP_BASESTAT;
 
 typedef struct SCIP_LPi SCIP_LPI;                 /**< solver dependent LP interface */
 typedef struct SCIP_LPiState SCIP_LPISTATE;       /**< complete LP state (i.e. basis information, dual norms) */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

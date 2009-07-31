@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.12 2008/09/29 19:49:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ReaderTSP.cpp,v 1.13 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   ReaderTSP.cpp
  * @brief  C++ file reader for TSP data files
@@ -27,10 +27,9 @@
 #include <sstream>
 
 #include "objscip/objscip.h"
-extern "C" {
+
 #include "scip/cons_linear.h"
 #include <math.h>
-}
 
 #include "ReaderTSP.h"
 #include "ProbDataTSP.h"

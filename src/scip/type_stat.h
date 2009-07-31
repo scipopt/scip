@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_stat.h,v 1.15 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_stat.h,v 1.16 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_stat.h
  * @brief  type definitions for problem statistics
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_STAT_H__
 #define __SCIP_TYPE_STAT_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** SCIP solving status */
 enum SCIP_Status
@@ -47,5 +50,8 @@ typedef enum SCIP_Status SCIP_STATUS;
 
 typedef struct SCIP_Stat SCIP_STAT;               /**< problem and runtime specific statistics */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.22 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.23 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -29,6 +29,9 @@
 #include "scip/type_clock.h"
 #include "scip/type_sepa.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** separators data */
 struct SCIP_Sepa
@@ -62,5 +65,8 @@ struct SCIP_Sepa
    SCIP_Bool             initialized;        /**< is separator initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

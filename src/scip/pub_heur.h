@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_heur.h,v 1.19 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_heur.h,v 1.20 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_heur.h
  * @brief  public methods for primal heuristics
@@ -29,7 +29,9 @@
 #include "scip/type_misc.h"
 #include "scip/type_heur.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** compares two heuristics w. r. to their priority */
 extern
@@ -132,5 +134,9 @@ extern
 SCIP_Real SCIPheurGetTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

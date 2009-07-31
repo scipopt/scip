@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.26 2009/04/06 13:06:57 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.27 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_tree.h
  * @brief  public methods for branch and bound tree
@@ -33,7 +33,9 @@
 #include "scip/struct_tree.h"
 #endif
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Node methods
@@ -163,6 +165,8 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
 
 #endif
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

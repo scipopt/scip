@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.h,v 1.3 2008/04/17 19:07:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.h,v 1.4 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   cons_linearordering.h
  * @brief  constraint handler for linear ordering constraints
@@ -39,6 +39,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
 extern
@@ -66,5 +69,9 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.14 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.15 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_prop.h
  * @brief  type definitions for propagators
@@ -24,6 +24,14 @@
 #ifndef __SCIP_TYPE_PROP_H__
 #define __SCIP_TYPE_PROP_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Prop SCIP_PROP;               /**< propagator */
 typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagator data */
@@ -127,11 +135,8 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
 #define SCIP_DECL_PROPRESPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, SCIP_VAR* infervar, int inferinfo, \
       SCIP_BOUNDTYPE boundtype, SCIP_BDCHGIDX* bdchgidx, SCIP_RESULT* result)
 
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

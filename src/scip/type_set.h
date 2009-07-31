@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_set.h,v 1.13 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_set.h,v 1.14 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_set.h
  * @brief  type definitions for global SCIP settings
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_SET_H__
 #define __SCIP_TYPE_SET_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** SCIP operation stage */
 enum SCIP_Stage
@@ -54,5 +57,8 @@ typedef enum SCIP_Setting SCIP_SETTING;
 
 typedef struct SCIP_Set SCIP_SET;                 /**< global SCIP settings */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

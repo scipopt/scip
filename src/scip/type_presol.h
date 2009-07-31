@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.17 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.18 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_presol.h
  * @brief  type definitions for presolvers
@@ -24,6 +24,14 @@
 #ifndef __SCIP_TYPE_PRESOL_H__
 #define __SCIP_TYPE_PRESOL_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Presol SCIP_PRESOL;           /**< presolver data structure */
 typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data */
@@ -132,12 +140,8 @@ typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data *
    int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes,        \
    int* ndelconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
 
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

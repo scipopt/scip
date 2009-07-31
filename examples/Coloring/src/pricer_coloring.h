@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.h,v 1.2 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.h,v 1.3 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   pricer_coloring.h
  * @brief  coloring variable pricer
@@ -26,6 +26,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the healthcare variable pricer and includes it in SCIP */
 extern
@@ -68,5 +71,8 @@ void COLORpricerSetNVarsCreatedPerRound(
    int                   nvars               /**< maximal number of variables that should be created in one round */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

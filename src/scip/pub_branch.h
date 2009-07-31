@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_branch.h,v 1.19 2009/04/06 13:06:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_branch.h,v 1.20 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   pub_branch.h
  * @brief  public methods for branching rules
@@ -29,7 +29,9 @@
 #include "scip/type_misc.h"
 #include "scip/type_branch.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** compares two branching rules w. r. to their priority */
 extern
@@ -134,5 +136,8 @@ SCIP_Bool SCIPbranchruleIsInitialized(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

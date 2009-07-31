@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.19 2009/04/06 13:06:57 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.20 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_sepa.h
  * @brief  public methods for separators
@@ -29,7 +29,9 @@
 #include "scip/type_misc.h"
 #include "scip/type_sepa.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** compares two separators w. r. to their priority */
 extern
@@ -150,5 +152,8 @@ SCIP_Bool SCIPsepaIsInitialized(
    SCIP_SEPA*            sepa                /**< separator */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

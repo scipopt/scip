@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.26 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.27 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -36,7 +36,9 @@
 #include "scip/type_pricer.h"
 #include "scip/pub_pricer.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a variable pricer */
 extern
@@ -146,5 +148,8 @@ void SCIPpricerSetPriority(
    int                   priority            /**< new priority of the variable pricer */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

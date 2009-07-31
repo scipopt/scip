@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prob.h,v 1.23 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_prob.h,v 1.24 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_prob.h
  * @brief  datastructures for storing and manipulating the main problem
@@ -31,6 +31,9 @@
 #include "scip/type_prob.h"
 #include "scip/type_cons.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** main problem to solve */
 struct SCIP_Prob
@@ -73,5 +76,8 @@ struct SCIP_Prob
    SCIP_Bool             transformed;        /**< TRUE iff problem is the transformed problem */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

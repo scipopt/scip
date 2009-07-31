@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_implics.h,v 1.12 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_implics.h,v 1.13 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_implics.h
  * @brief  datastructures for implications, variable bounds, and cliques
@@ -30,6 +30,9 @@
 #include "scip/type_var.h"
 #include "scip/type_implics.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** variable bounds of a variable x in the form x <= b*z + d  or  x >= b*z + d */
 struct SCIP_VBounds
@@ -90,5 +93,8 @@ struct SCIP_CliqueTable
    int                   ncleanupcliques;    /**< number of cliques stored when the last cleanup was performed */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

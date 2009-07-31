@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_history.h,v 1.19 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_history.h,v 1.20 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_history.h
  * @brief  datastructures for branching and inference history
@@ -28,6 +28,9 @@
 #include "scip/def.h"
 #include "scip/type_history.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** branching and inference history information for single variable */
 struct SCIP_History
@@ -43,5 +46,8 @@ struct SCIP_History
    SCIP_Longint          branchdepthsum[2];  /**< sum of depth levels, at which the branching bound changes took place */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.h,v 1.5 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_implics.h,v 1.6 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   presol_implics.h
  * @brief  implics presolver
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the implics presolver and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludePresolImplics(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

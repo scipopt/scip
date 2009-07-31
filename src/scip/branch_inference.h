@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.h,v 1.13 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_inference.h,v 1.14 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   branch_inference.h
  * @brief  inference history branching rule
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the inference history braching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleInference(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepastore.h,v 1.24 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_sepastore.h,v 1.25 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   struct_sepastore.h
  * @brief  datastructures for storing separated cuts
@@ -30,6 +30,9 @@
 #include "scip/type_var.h"
 #include "scip/type_sepastore.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** storage for separated cuts */
 struct SCIP_SepaStore
@@ -49,5 +52,8 @@ struct SCIP_SepaStore
    SCIP_Bool             forcecuts;          /**< should the cuts be used despite the number of cuts parameter limit? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

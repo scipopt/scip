@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricestore.h,v 1.16 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_pricestore.h,v 1.17 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_pricestore.h
  * @brief  datastructures for storing priced variables
@@ -30,6 +30,9 @@
 #include "scip/type_var.h"
 #include "scip/type_pricestore.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** storage for priced variables */
 struct SCIP_Pricestore
@@ -52,5 +55,8 @@ struct SCIP_Pricestore
    SCIP_Bool             initiallp;          /**< is the pricing storage currently being filled with the initial LP columns? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

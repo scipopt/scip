@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.h,v 1.34 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog_default.h,v 1.35 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   dialog_default.h
  * @brief  default user interface dialog
@@ -27,7 +27,9 @@
 
 #include "scip/scip.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 extern
@@ -203,5 +205,9 @@ extern
 SCIP_RETCODE SCIPincludeDialogDefaultSet(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

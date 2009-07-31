@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_dialog.h,v 1.17 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_dialog.h,v 1.18 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_dialog.h
  * @brief  datastructures for user interface dialog
@@ -28,7 +28,9 @@
 #include "scip/def.h"
 #include "scip/type_dialog.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** user interface dialog */
 struct SCIP_Dialog
@@ -66,5 +68,8 @@ struct SCIP_Dialoghdlr
    int                   nprotectedhistelems;/**< number of history entries protected from cleaning up */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

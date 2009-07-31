@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_relax.h,v 1.14 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_relax.h,v 1.15 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_relax.h
  * @brief  datastructures for relaxators
@@ -29,6 +29,9 @@
 #include "scip/type_clock.h"
 #include "scip/type_relax.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** relaxators data */
 struct SCIP_Relax
@@ -50,5 +53,8 @@ struct SCIP_Relax
    SCIP_Bool             initialized;        /**< is relaxator initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

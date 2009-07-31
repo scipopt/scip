@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.54 2009/07/17 18:45:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.55 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_misc.h
  * @brief  public miscellaneous methods
@@ -31,7 +31,9 @@
 #include "scip/type_retcode.h"
 #include "scip/type_misc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Priority Queue
@@ -2217,5 +2219,9 @@ void SCIPsplitFilename(
    char**                extension,          /**< pointer to store extension, or NULL if not needed */
    char**                compression         /**< pointer to store compression extension, or NULL if not needed */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

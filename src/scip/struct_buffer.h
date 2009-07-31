@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_buffer.h,v 1.13 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_buffer.h,v 1.14 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_buffer.h
  * @brief  datastructures for memory buffers for temporary objects
@@ -29,7 +29,9 @@
 
 #include "scip/def.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** memory buffer storage for temporary objects */
 struct SCIP_Buffer
@@ -41,5 +43,8 @@ struct SCIP_Buffer
    int                   firstfree;          /**< first unused memory chunk */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

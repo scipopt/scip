@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_misc.h,v 1.16 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_misc.h,v 1.17 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_misc.h
  * @brief  type definitions for miscellaneous datastructures
@@ -24,6 +24,11 @@
 #ifndef __SCIP_TYPE_MISC_H__
 #define __SCIP_TYPE_MISC_H__
 
+#include "scip/def.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_PQueue SCIP_PQUEUE;           /**< priority queue */
 typedef struct SCIP_HashTable SCIP_HASHTABLE;     /**< hash table */
@@ -62,9 +67,8 @@ typedef struct SCIP_PtrArray SCIP_PTRARRAY;       /**< dynamic array for storing
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
 
-
-
-#include "scip/def.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

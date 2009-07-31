@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: retcode.h,v 1.28 2009/04/06 13:06:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: retcode.h,v 1.29 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   retcode.h
  * @brief  internal methods for return codes for SCIP methods
@@ -28,7 +28,9 @@
 
 #include "scip/type_retcode.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** prints error message for return code */
 extern
@@ -37,5 +39,8 @@ void SCIPretcodePrint(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_vbc.h,v 1.15 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_vbc.h,v 1.16 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_vbc.h
  * @brief  type definitions for VBC Tool output
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_VBC_H__
 #define __SCIP_TYPE_VBC_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** node colors in VBC output:
  *   1: indian red
@@ -63,5 +66,8 @@ typedef enum SCIP_VBCColor SCIP_VBCCOLOR;
 
 typedef struct SCIP_Vbc SCIP_VBC;                 /**< VBC Tool data structure */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

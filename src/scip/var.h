@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.124 2009/07/08 15:36:30 bzfgamra Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.125 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -49,8 +49,9 @@
 #include "scip/event.h"
 #endif
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * domain change methods
@@ -1209,6 +1210,8 @@ SCIP_RETCODE SCIPvarDropEvent(
 extern
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar);
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

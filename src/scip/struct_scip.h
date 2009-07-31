@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_scip.h,v 1.23 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_scip.h,v 1.24 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_scip.h
  * @brief  SCIP main data structure
@@ -44,6 +44,9 @@
 #include "scip/type_conflict.h"
 #include "scip/type_dialog.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** SCIP main data structure */
 struct Scip
@@ -76,5 +79,8 @@ struct Scip
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

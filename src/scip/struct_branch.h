@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.23 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.24 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -29,6 +29,9 @@
 #include "scip/type_var.h"
 #include "scip/type_branch.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** branching candidate storage */
 struct SCIP_BranchCand
@@ -81,5 +84,8 @@ struct SCIP_Branchrule
    SCIP_Bool             initialized;        /**< is branching rule initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

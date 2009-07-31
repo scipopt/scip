@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_nodesel.h,v 1.13 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_nodesel.h,v 1.14 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_nodesel.h
  * @brief  public methods for node selectors
@@ -28,7 +28,9 @@
 #include "scip/def.h"
 #include "scip/type_nodesel.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** gets name of node selector */
 extern
@@ -73,5 +75,8 @@ SCIP_Bool SCIPnodeselIsInitialized(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_clock.h,v 1.16 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_clock.h,v 1.17 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_clock.h
  * @brief  datastructures for clocks and timing issues
@@ -34,7 +34,9 @@
 #include "scip/def.h"
 #include "scip/type_clock.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** CPU clock counter */
 struct SCIP_CPUClock
@@ -64,5 +66,8 @@ struct SCIP_Clock
    SCIP_Bool             enabled;            /**< should the clock be used? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

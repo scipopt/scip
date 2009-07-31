@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_mostinf.h,v 1.17 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_mostinf.h,v 1.18 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   branch_mostinf.h
  * @brief  most infeasible LP branching rule
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the most infeasible LP braching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleMostinf(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

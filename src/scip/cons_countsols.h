@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.h,v 1.7 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_countsols.h,v 1.8 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_countsols.h
  * @brief  constraint handler for counting feasible solutions
@@ -26,6 +26,10 @@
 #define __SCIP_CONS_COUNTSOLS_H__
 
 #include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct SparseSolution
 {
@@ -92,5 +96,9 @@ void SCIPgetCountedSparseSolutions(
    SPARSESOLUTION***     sols,               /**< pointer to the solutions */
    int*                  nsols               /**< pointer to number of solutions */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

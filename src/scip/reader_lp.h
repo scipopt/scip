@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.h,v 1.8 2009/04/06 13:06:58 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_lp.h,v 1.9 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   reader_lp.h
  * @brief  LP file reader
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the lp file reader into SCIP */
 extern
@@ -66,5 +69,9 @@ SCIP_RETCODE SCIPwriteLp(
    int                nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

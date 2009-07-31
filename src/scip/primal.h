@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.h,v 1.40 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: primal.h,v 1.41 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   primal.h
  * @brief  internal methods for collecting primal CIP solutions and primal informations
@@ -40,7 +40,9 @@
 
 #include "scip/struct_primal.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates primal data */
 extern
@@ -245,5 +247,8 @@ SCIP_RETCODE SCIPprimalRetransformSolutions(
    SCIP_PROB*            origprob            /**< original problem */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

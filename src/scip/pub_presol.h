@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_presol.h,v 1.17 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_presol.h,v 1.18 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_presol.h
  * @brief  public methods for presolvers
@@ -29,7 +29,9 @@
 #include "scip/type_misc.h"
 #include "scip/type_presol.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** compares two presolvers w. r. to their priority */
 extern
@@ -144,5 +146,8 @@ int SCIPpresolGetNChgSides(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

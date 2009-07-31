@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.22 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.23 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -26,11 +26,7 @@
 
 #include <cstring>
 
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {

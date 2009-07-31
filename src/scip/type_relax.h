@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.15 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.16 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_relax.h
  * @brief  type definitions for relaxators
@@ -24,11 +24,17 @@
 #ifndef __SCIP_TYPE_RELAX_H__
 #define __SCIP_TYPE_RELAX_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Relax SCIP_RELAX;             /**< relaxator */
 typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator data */
-
-
 
 /** destructor of relaxator to free user data (called when SCIP is exiting)
  *
@@ -100,11 +106,8 @@ typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator
  */
 #define SCIP_DECL_RELAXEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax, SCIP_RESULT* result)
 
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

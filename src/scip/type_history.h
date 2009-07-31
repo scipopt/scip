@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_history.h,v 1.15 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_history.h,v 1.16 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_history.h
  * @brief  type definitions for branching and inference history
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_HISTORY_H__
 #define __SCIP_TYPE_HISTORY_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** branching direction for branching on variables */
 enum SCIP_BranchDir
@@ -36,5 +39,8 @@ typedef enum SCIP_BranchDir SCIP_BRANCHDIR;       /**< branching direction for b
 
 typedef struct SCIP_History SCIP_HISTORY;         /**< branching and inference history information for single variable */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

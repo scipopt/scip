@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: clock.h,v 1.22 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: clock.h,v 1.23 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   clock.h
  * @brief  internal methods for clocks and timing issues
@@ -30,6 +30,9 @@
 #include "scip/type_set.h"
 #include "scip/type_clock.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a clock and initializes it */
 extern
@@ -121,5 +124,8 @@ SCIP_Real SCIPclockGetTimeOfDay(
    void
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: vbc.h,v 1.17 2009/04/06 13:07:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: vbc.h,v 1.18 2009/07/31 11:37:20 bzfwinkm Exp $"
 
 /**@file   vbc.h
  * @brief  methods for VBC Tool output
@@ -31,7 +31,9 @@
 #include "scip/type_tree.h"
 #include "scip/type_vbc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates VBCTool data structure */
 extern
@@ -132,5 +134,8 @@ void SCIPvbcUpperbound(
    SCIP_Real             upperbound          /**< new upper bound */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

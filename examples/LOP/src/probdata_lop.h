@@ -12,13 +12,16 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.h,v 1.2 2008/04/17 19:07:58 bzfpfets Exp $"
+#pragma ident "@(#) $Id: probdata_lop.h,v 1.3 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 #ifndef __HCP_PROBDATA_LOP__
 #define __HCP_PROBDATA_LOP__
 
 #include <scip/scip.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern
 SCIP_RETCODE LOPcreateProb(
@@ -40,5 +43,9 @@ extern
 int LOPgetNElements(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

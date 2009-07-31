@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nlpi.h,v 1.1 2009/07/27 19:02:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: struct_nlpi.h,v 1.2 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_nlpi.h
  * @brief  data definitions for an NLP solver interface
@@ -26,6 +26,10 @@
 
 #include "scip/scip.h"
 #include "scip/type_nlpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** NLP interface data */
 struct SCIP_Nlpi
@@ -68,5 +72,9 @@ struct SCIP_NlpStatistics
    int       niterations;   /**< number of iterations the NLP solver spend in the last solve command */
    SCIP_Real totaltime;     /**< total time in CPU sections the NLP solver spend in the last solve command */ 
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __SCIP_STRUCT_NLPI_H__ */

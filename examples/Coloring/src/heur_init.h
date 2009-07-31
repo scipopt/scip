@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_init.h,v 1.1 2008/09/19 14:19:49 bzfgamra Exp $"
+#pragma ident "@(#) $Id: heur_init.h,v 1.2 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   heur_init.h
  * @brief  initial primal heuristic for coloring
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the initial primal heuristic for coloring and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeHeurInit(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

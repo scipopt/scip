@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.57 2009/06/15 09:57:31 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.58 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -24,6 +24,11 @@
 #ifndef __SCIP_CONS_LINEAR_H__
 #define __SCIP_CONS_LINEAR_H__
 
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint update method */
 
@@ -67,10 +72,6 @@ typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint u
             int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
             int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
             SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
-
-
-#include "scip/scip.h"
-
 
 
 /*
@@ -262,5 +263,9 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

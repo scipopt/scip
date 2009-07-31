@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.345 2009/07/08 15:36:29 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.346 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -100,8 +100,9 @@
 #include "scip/tree.h"
 #endif
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * miscellaneous methods
@@ -6799,5 +6800,8 @@ int SCIPgetPtrarrayMaxIdx(
 #endif
 
 /**@} */
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.1 2009/07/27 19:02:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.2 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -26,6 +26,10 @@
 
 #include "scip/scip.h"
 #include "scip/type_nlpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates an NLP solver interface */
 extern
@@ -367,5 +371,9 @@ void SCIPnlpStatisticsSetTotalTime(
    SCIP_NLPSTATISTICS* statistics,   /**< NLP statistics structure */
    SCIP_Real           totaltime     /**< solution time to store */
 );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __SCIP_NLPI_H__ */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.27 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.28 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -32,7 +32,9 @@
 #include "scip/type_var.h"
 #include "scip/type_conflict.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** conflict handler */
 struct SCIP_Conflicthdlr
@@ -130,5 +132,8 @@ struct SCIP_Conflict
    int                   count;              /**< conflict set counter to label binary conflict variables with */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

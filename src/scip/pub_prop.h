@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_prop.h,v 1.13 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_prop.h,v 1.14 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_prop.h
  * @brief  public methods for propagators
@@ -29,7 +29,9 @@
 #include "scip/type_misc.h"
 #include "scip/type_prop.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** compares two propagators w. r. to their priority */
 extern
@@ -114,5 +116,8 @@ SCIP_Bool SCIPpropIsInitialized(
    SCIP_PROP*            prop                /**< propagator */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.91 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.92 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -21,7 +21,6 @@
  * @author Timo Berthold
  * @author Marc Pfetsch
  */
-//#define SCIP_DEBUG
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #define AUTOPRICING_ITERSWITCH          1000 /**< start with devex and switch to steepest edge after this many iterations */
@@ -36,8 +35,6 @@
 #define ___DEBUG
 #undef SCIP_DEBUG
 #endif
-
-#include <fstream>
 
 #include "spxsolver.h"
 #include "slufactor.h"
@@ -59,11 +56,7 @@
 #undef ___DEBUG
 #endif
 
-
-extern "C"
-{
 #include "scip/message.h"
-}
 
 /********************************************************************/
 /*----------------------------- C++ --------------------------------*/
@@ -74,7 +67,6 @@ extern "C"
 #define NULL 0
 
 #include <cassert>
-#include <iostream>
 using namespace soplex;
 
 
@@ -354,12 +346,8 @@ public:
 /*-----------------------------  C  --------------------------------*/
 /********************************************************************/
 
-extern "C" 
-{
 #include "scip/lpi.h"
 #include "scip/bitencode.h"
-}
-
 
 typedef SCIP_DUALPACKET COLPACKET;           /* each column needs two bits of information (basic/on_lower/on_upper) */
 #define COLS_PER_PACKET SCIP_DUALPACKETSIZE

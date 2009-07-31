@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.17 2009/04/06 13:06:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: relax.h,v 1.18 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators
@@ -34,7 +34,9 @@
 #include "scip/type_relax.h"
 #include "scip/pub_relax.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a relaxator */
 extern
@@ -114,5 +116,9 @@ SCIP_Bool SCIPrelaxIsSolved(
    SCIP_RELAX*           relax,              /**< relaxator */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_message.h,v 1.7 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_message.h,v 1.8 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_message.h
  * @brief  type definitions for message output methods
@@ -25,6 +25,9 @@
 
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** verbosity levels of output */
 enum SCIP_VerbLevel
@@ -85,6 +88,8 @@ typedef struct SCIP_MessagehdlrData SCIP_MESSAGEHDLRDATA; /**< message handler d
  */
 #define SCIP_DECL_MESSAGEINFO(x) void x (SCIP_MESSAGEHDLR* messagehdlr, FILE* file, const char* msg)
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

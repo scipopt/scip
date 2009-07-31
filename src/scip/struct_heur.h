@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.23 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.24 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -29,6 +29,9 @@
 #include "scip/type_clock.h"
 #include "scip/type_heur.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** primal heuristics data */
 struct SCIP_Heur
@@ -56,5 +59,8 @@ struct SCIP_Heur
    char                  dispchar;           /**< display character of primal heuristic */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

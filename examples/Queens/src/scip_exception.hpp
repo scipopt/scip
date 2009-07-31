@@ -21,11 +21,8 @@
 #include<exception>
 #include<string>
 
-extern "C"
-{
 #include <scip/scip.h>
 #include <scip/misc.h>
-}
 
 // unfortunately SCIP has no method to get the string of an error code, you can just print it to a file
 // so we add such a method here, this has to be updated when SCIP Messages changes

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_pricer.h,v 1.22 2009/05/06 10:13:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_pricer.h,v 1.23 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_pricer.h
  * @brief  type definitions for variable pricers
@@ -24,6 +24,13 @@
 #ifndef __SCIP_TYPE_PRICER_H__
 #define __SCIP_TYPE_PRICER_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Pricer SCIP_PRICER;           /**< variable pricer data */
 typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable pricer data */
@@ -140,11 +147,8 @@ typedef struct SCIP_PricerData SCIP_PRICERDATA;   /**< locally defined variable 
  */
 #define SCIP_DECL_PRICERFARKAS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRICER* pricer)
 
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

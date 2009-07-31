@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_reader.h,v 1.14 2009/04/06 13:06:57 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_reader.h,v 1.15 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_reader.h
  * @brief  public methods for input file readers
@@ -28,7 +28,9 @@
 #include "scip/def.h"
 #include "scip/type_reader.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** gets user data of reader */
 extern
@@ -72,5 +74,9 @@ extern
 SCIP_Bool SCIPreaderCanWrite(
    SCIP_READER*          reader              /**< reader */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

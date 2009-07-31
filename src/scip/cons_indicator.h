@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.9 2009/07/29 19:15:40 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.10 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -42,6 +42,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for indicator constraints and includes it in SCIP */
 extern
@@ -124,5 +127,9 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

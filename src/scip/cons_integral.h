@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_integral.h,v 1.19 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_integral.h,v 1.20 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_integral.h
  * @brief  constraint handler for the integrality constraint
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for the integrality constraint and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeConshdlrIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

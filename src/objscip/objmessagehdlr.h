@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objmessagehdlr.h,v 1.8 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: objmessagehdlr.h,v 1.9 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   objmessagehdlr.h
  * @brief  C++ wrapper for message handlers
@@ -24,12 +24,7 @@
 #ifndef __SCIP_OBJMESSAGEHDLR_H__
 #define __SCIP_OBJMESSAGEHDLR_H__
 
-
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {

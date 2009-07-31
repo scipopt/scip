@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.24 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.25 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -31,7 +31,9 @@
 #include "scip/type_sol.h"
 #include "scip/type_tree.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** data for variable addition events */
 struct SCIP_EventVarAdded
@@ -137,5 +139,9 @@ struct SCIP_EventQueue
    int                   nevents;            /**< number of events in queue (used slots if events array) */
    SCIP_Bool             delayevents;        /**< should the events be delayed and processed later? */
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

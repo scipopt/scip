@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.h,v 1.21 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog.h,v 1.22 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   dialog.h
  * @brief  internal methods for user interface dialog
@@ -31,8 +31,9 @@
 #include "scip/type_dialog.h"
 #include "scip/pub_dialog.h"
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * dialog handler
@@ -116,5 +117,8 @@ SCIP_RETCODE SCIPdialogAddEntry(
    SCIP_DIALOG*          subdialog           /**< subdialog to add as menu entry in dialog */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

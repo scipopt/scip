@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.h,v 1.5 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.h,v 1.6 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   heur_rens.h
  * @brief  RENS primal heuristic
@@ -25,6 +25,10 @@
 #define __SCIP_HEUR_RENS_H__
 
 #include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates RENS primal heuristic and includes it in SCIP */
 extern
@@ -45,4 +49,9 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                    */
    SCIP_Bool             binarybounds        /**< should general integers get binary bounds [floor(.),ceil(.)]?  */
    );
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

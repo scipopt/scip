@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax_xxx.h,v 1.10 2009/04/06 13:06:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: relax_xxx.h,v 1.11 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   relax_xxx.h
  * @brief  xxx relaxator
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the xxx relaxator and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeRelaxXxx(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

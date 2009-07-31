@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.h,v 1.32 2009/04/06 13:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepastore.h,v 1.33 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   sepastore.h
  * @brief  internal methods for storing separated cuts
@@ -36,7 +36,9 @@
 #include "scip/type_sepastore.h"
 #include "scip/type_branch.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates separation storage */
 extern
@@ -144,5 +146,8 @@ int SCIPsepastoreGetNCutsApplied(
    SCIP_SEPASTORE*            sepastore                /**< separation storage */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

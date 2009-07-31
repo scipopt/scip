@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_paramset.h,v 1.13 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_paramset.h,v 1.14 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_paramset.h
  * @brief  type definitions for handling parameter settings
@@ -24,6 +24,13 @@
 #ifndef __SCIP_TYPE_PARAMSET_H__
 #define __SCIP_TYPE_PARAMSET_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** possible parameter types */
 enum SCIP_ParamType
@@ -55,11 +62,8 @@ typedef struct SCIP_ParamSet SCIP_PARAMSET;       /**< set of parameters */
  */
 #define SCIP_DECL_PARAMCHGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_PARAM* param)
 
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

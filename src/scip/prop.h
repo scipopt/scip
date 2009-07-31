@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.h,v 1.18 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: prop.h,v 1.19 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   prop.h
  * @brief  internal methods for propagators
@@ -36,7 +36,9 @@
 #include "scip/type_prop.h"
 #include "scip/pub_prop.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a propagator */
 extern
@@ -126,5 +128,9 @@ void SCIPpropSetPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   priority            /**< new priority of the propagator */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

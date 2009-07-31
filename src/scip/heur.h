@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.50 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.51 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -34,7 +34,9 @@
 #include "scip/type_heur.h"
 #include "scip/pub_heur.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a primal heuristic */
 extern
@@ -115,5 +117,8 @@ void SCIPheurSetPriority(
    int                   priority            /**< new priority of the primal heuristic */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

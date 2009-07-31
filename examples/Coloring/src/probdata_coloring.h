@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_coloring.h,v 1.5 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_coloring.h,v 1.6 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   probdata_coloring.h
  * @brief  problem data for coloring algorithm
@@ -27,6 +27,9 @@
 #include "scip/scip.h"
 #include "tclique/tclique.h"   /* def. of clique data structures */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* stable set / variable functions */
 
@@ -232,5 +235,9 @@ SCIP_RETCODE SCIPcreateProbColoring(
    int                   nedges,             /**< number of edges */
    int**                 edges               /**< array with start- and endpoints of the edges */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

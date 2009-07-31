@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.100 2009/04/06 13:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.101 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -54,8 +54,9 @@
 #include "scip/pub_misc.h"
 #endif
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates global SCIP settings */
 extern
@@ -1189,5 +1190,8 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

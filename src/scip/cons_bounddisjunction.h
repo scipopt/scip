@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.h,v 1.8 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.h,v 1.9 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_bounddisjunction.h
  * @brief  constraint handler for bound disjunction constraints
@@ -27,6 +27,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for bound disjunction constraints and includes it in SCIP */
 extern
@@ -97,5 +100,8 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

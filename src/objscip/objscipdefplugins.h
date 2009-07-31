@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objscipdefplugins.h,v 1.3 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: objscipdefplugins.h,v 1.4 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   objscipdefplugins.h
  * @brief  C++ wrapper for default SCIP plugins
@@ -26,10 +26,6 @@
 
 
 #include "objscip/objscip.h"
-
-extern "C" {
 #include "scip/scipdefplugins.h"
-}
-
 
 #endif

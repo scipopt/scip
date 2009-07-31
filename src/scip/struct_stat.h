@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.51 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.52 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -31,6 +31,9 @@
 #include "scip/type_vbc.h"
 #include "scip/type_history.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** problem and runtime specific statistics */
 struct SCIP_Stat
@@ -138,5 +141,8 @@ struct SCIP_Stat
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

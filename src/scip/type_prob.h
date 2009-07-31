@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.15 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.16 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_prob.h
  * @brief  type definitions for storing and manipulating the main problem
@@ -24,6 +24,13 @@
 #ifndef __SCIP_TYPE_PROB_H__
 #define __SCIP_TYPE_PROB_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** objective sense: minimization or maximization */
 enum SCIP_Objsense
@@ -101,12 +108,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  */
 #define SCIP_DECL_PROBEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata)
 
-
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

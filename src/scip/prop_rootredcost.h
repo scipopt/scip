@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.h,v 1.4 2009/04/06 13:06:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.h,v 1.5 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   prop_rootredcost.h
  * @brief  reduced cost strengthening at the root node
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the root node reduced cost strengthening propagator and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludePropRootredcost(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

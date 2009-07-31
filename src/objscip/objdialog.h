@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.h,v 1.5 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: objdialog.h,v 1.6 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   objdialog.h
  * @brief  C++ wrapper for dialogs
@@ -26,11 +26,7 @@
 
 #include <cstring>
 
-extern "C" 
-{
 #include "scip/scip.h"
-}
-
 
 namespace scip
 {

@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: bitencode.h,v 1.16 2008/04/17 17:49:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: bitencode.h,v 1.17 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   bitencode.h
  * @brief  packing single and dual bit values
@@ -23,6 +23,10 @@
 
 #ifndef __SCIP_BITENCODE_H__
 #define __SCIP_BITENCODE_H__
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef unsigned int SCIP_SINGLEPACKET;                /**< storing single bits in packed format */
 #define SCIP_SINGLEPACKETSIZE (sizeof(SCIP_SINGLEPACKET)*8) /**< each entry needs one bit of information */
@@ -62,5 +66,8 @@ void SCIPdecodeDualBit(
    int                   count               /**< number of elements */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

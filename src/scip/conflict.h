@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.41 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.42 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -37,7 +37,9 @@
 #include "scip/type_conflict.h"
 #include "scip/pub_conflict.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Conflict Handler
@@ -533,5 +535,8 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

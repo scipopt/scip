@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.15 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.16 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_paramset.h
  * @brief  public methods for handling parameter settings
@@ -29,7 +29,9 @@
 #include "scip/type_paramset.h"
 #include "scip/type_scip.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** returns type of parameter */
 extern
@@ -229,5 +231,8 @@ SCIP_RETCODE SCIPparamSetToDefault(
    SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

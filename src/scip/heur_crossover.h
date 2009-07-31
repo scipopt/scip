@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_crossover.h,v 1.6 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_crossover.h,v 1.7 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   heur_crossover.h
  * @brief  crossover primal heuristic
@@ -27,10 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** creates the crossover primal heuristic and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

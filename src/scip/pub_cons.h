@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.37 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.38 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_cons.h
  * @brief  public methods for managing constraints
@@ -33,7 +33,9 @@
 #include "scip/struct_cons.h"
 #endif
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Constraint handler methods
@@ -606,6 +608,8 @@ int SCIPconsGetNLocksNeg(
 
 #endif
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

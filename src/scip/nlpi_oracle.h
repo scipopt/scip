@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.1 2009/07/27 19:02:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.2 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   nlpi_oracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -21,8 +21,15 @@
  * Can be used to complete NLPIs for solvers that need only function, gradient, and hessian evaluation methods.
  */
 
+#ifndef __SCIP_NLPI_ORACLE_H__
+#define __SCIP_NLPI_ORACLE_H__
+
 #include "scip/scip.h"
 #include "scip/type_nlpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_NlpiOracle SCIP_NLPIORACLE;
 
@@ -368,3 +375,9 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_Real*            initval,    /**< starting point values for variables or NULL */
    FILE*                 file        /**< file to print to, or NULL for standard output */
 );
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepastore.h,v 1.12 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_sepastore.h,v 1.13 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_sepastore.h
  * @brief  type definitions for storing separated cuts
@@ -24,8 +24,14 @@
 #ifndef __SCIP_TYPE_SEPASTORE_H__
 #define __SCIP_TYPE_SEPASTORE_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_SepaStore SCIP_SEPASTORE;     /**< storage for separated variables */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

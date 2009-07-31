@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.63 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.64 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -42,7 +42,9 @@
 
 #include "scip/struct_prob.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * problem creation
@@ -383,5 +385,8 @@ SCIP_RETCODE SCIPprobPrint(
    const char*           comment             /**< string which starts a comment line in requested format (or NULL) */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.123 2009/06/25 11:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.124 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -46,7 +46,9 @@
 #include "scip/struct_cons.h"
 #endif
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Constraint handler methods
@@ -773,5 +775,8 @@ SCIP_RETCODE SCIPconsCheck(
 extern
 SCIP_DECL_HASHGETKEY(SCIPhashGetKeyCons);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

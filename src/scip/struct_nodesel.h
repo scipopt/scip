@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.17 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_nodesel.h,v 1.18 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues
@@ -29,7 +29,9 @@
 #include "scip/type_tree.h"
 #include "scip/type_nodesel.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** node priority queue data structure;
  *  the fields lowerboundnode, lowerbound, nlowerbounds and validlowerbound are only used for node selection rules,
@@ -64,5 +66,8 @@ struct SCIP_Nodesel
    SCIP_Bool             initialized;        /**< is node selector initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

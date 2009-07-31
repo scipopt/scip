@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.34 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.35 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -33,7 +33,9 @@
 #include "scip/type_presol.h"
 #include "scip/pub_presol.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a presolver */
 extern
@@ -119,5 +121,8 @@ void SCIPpresolSetPriority(
    int                   priority            /**< new priority of the presolver */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

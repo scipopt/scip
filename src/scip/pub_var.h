@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.73 2009/06/05 20:28:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.74 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -39,7 +39,9 @@
 #include "scip/history.h"
 #endif
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * methods for variables 
@@ -1086,6 +1088,10 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
 #define SCIPdomchgGetNBoundchgs(domchg)        ((domchg) != NULL ? (domchg)->domchgbound.nboundchgs : 0)
 #define SCIPdomchgGetBoundchg(domchg, pos)     (&(domchg)->domchgbound.boundchgs[pos])
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

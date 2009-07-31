@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.h,v 1.28 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: message.h,v 1.29 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   message.h
  * @brief  message output methods
@@ -47,7 +47,9 @@
 #include "scip/struct_message.h"
 #include "scip/pub_message.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define infoMessage                     SCIPmessagePrintInfo
 
@@ -190,6 +192,9 @@ void SCIPmessageVFPrintVerbInfo(
    va_list               ap                  /**< variable argument list */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

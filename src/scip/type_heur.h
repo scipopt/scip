@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.21 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.22 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_heur.h
  * @brief  type definitions for primal heuristics
@@ -24,6 +24,13 @@
 #ifndef __SCIP_TYPE_HEUR_H__
 #define __SCIP_TYPE_HEUR_H__
 
+#include "scip/def.h"
+#include "scip/type_scip.h"
+#include "scip/type_result.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** heurstics execution timing flags */
 #define SCIP_HEURTIMING_BEFORENODE        0x01 /**< call heuristic before the processing of the node starts */
@@ -118,12 +125,8 @@ typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal he
 #define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_HEURTIMING heurtiming, \
       SCIP_RESULT* result)
 
-
-
-
-#include "scip/def.h"
-#include "scip/type_scip.h"
-#include "scip/type_result.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

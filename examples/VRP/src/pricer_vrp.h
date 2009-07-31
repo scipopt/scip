@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_vrp.h,v 1.3 2009/03/26 19:20:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: pricer_vrp.h,v 1.4 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   
  * @brief  VRP pricer plugin
@@ -23,15 +23,11 @@
 #ifndef __SCIP_PRICER_VRP_H__
 #define __SCIP_PRICER_VRP_H__
 
-
 #include "objscip/objscip.h"
 
-extern "C" {
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/var.h"
-}
-
 
 #include <vector>
 #include <list>

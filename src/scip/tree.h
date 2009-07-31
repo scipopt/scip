@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.101 2009/04/17 12:13:33 bzfgamra Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.102 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -44,6 +44,9 @@
 #include "scip/struct_tree.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 /*
@@ -707,5 +710,9 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_Real             cutoffbound         /**< global cutoff bound */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

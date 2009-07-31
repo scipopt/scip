@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_mem.h,v 1.11 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_mem.h,v 1.12 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_mem.h
  * @brief  datastructures for block memory pools and memory buffers
@@ -29,6 +29,9 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_mem.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** various block memory buffers */
 struct SCIP_Mem
@@ -38,5 +41,8 @@ struct SCIP_Mem
    BMS_BLKMEM*           solvemem;           /**< memory blocks for solution process: preprocessing, bab-tree, ... */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

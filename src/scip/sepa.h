@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.48 2009/04/06 13:07:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.49 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -35,7 +35,9 @@
 #include "scip/type_sepa.h"
 #include "scip/pub_sepa.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates a separator */
 extern
@@ -128,5 +130,9 @@ void SCIPsepaSetPriority(
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   priority            /**< new priority of the separator */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

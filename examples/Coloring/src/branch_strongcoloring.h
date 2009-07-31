@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.h,v 1.2 2008/09/29 19:49:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.h,v 1.3 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   branch_strongcoloring.h
  * @brief  coloring branching rule
@@ -30,11 +30,18 @@
 #include "cons_storeGraph.h"
 #include "scip/cons_linear.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the coloring branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleStrongcoloring(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

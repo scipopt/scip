@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.22 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.23 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_conflict.h
  * @brief  type definitions for conflict analysis
@@ -24,6 +24,14 @@
 #ifndef __SCIP_TYPE_CONFLICT_H__
 #define __SCIP_TYPE_CONFLICT_H__
 
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_result.h"
+#include "scip/type_var.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_Conflicthdlr SCIP_CONFLICTHDLR; /**< conflict handler to process conflict sets */
 typedef struct SCIP_ConflicthdlrData SCIP_CONFLICTHDLRDATA; /**< conflict handler data */
@@ -117,13 +125,8 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
       SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, int nbdchginfos, \
       SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
 
-
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_result.h"
-#include "scip/type_var.h"
-
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

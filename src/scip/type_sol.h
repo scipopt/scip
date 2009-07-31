@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sol.h,v 1.16 2009/04/06 13:07:07 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_sol.h,v 1.17 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_sol.h
  * @brief  type definitions for storing primal CIP solutions
@@ -24,6 +24,9 @@
 #ifndef __SCIP_TYPE_SOL_H__
 #define __SCIP_TYPE_SOL_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** origin of solution: where to retrieve uncached elements */
 enum SCIP_SolOrigin
@@ -40,5 +43,8 @@ typedef enum SCIP_SolOrigin SCIP_SOLORIGIN;
 
 typedef struct SCIP_Sol SCIP_SOL;                 /**< primal CIP solution */
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

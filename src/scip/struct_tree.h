@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_tree.h,v 1.41 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_tree.h,v 1.42 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   struct_tree.h
  * @brief  datastructures for branch and bound tree
@@ -34,6 +34,9 @@
 #include "scip/type_nodesel.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** probing node, possibly with solved LP, where bounds and constraints have been changed,
  *  and rows and columns might have been added
@@ -195,5 +198,9 @@ struct SCIP_Tree
    SCIP_Bool             probingloadlpistate;/**< must the LP state be reloaded because of a backtrack in probing? */
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.50 2009/06/05 20:28:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.51 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -33,6 +33,9 @@
 #include "scip/type_cons.h"
 #include "scip/type_prop.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** hole in a domain */
 struct SCIP_Hole
@@ -259,5 +262,8 @@ struct SCIP_Var
    unsigned int          eventqueueimpl:1;   /**< is an IMPLADDED event on this variable currently in the event queue? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

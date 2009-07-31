@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_redcost.h,v 1.4 2009/04/06 13:07:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_redcost.h,v 1.5 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   sepa_redcost.h
  * @brief  reduced cost strengthening separator
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the reduced cost strengthening separator and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeSepaRedcost(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cppmain.cpp,v 1.17 2009/04/06 13:06:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: cppmain.cpp,v 1.18 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   cppmain.cpp
  * @brief  main file for C++ compilation
@@ -23,11 +23,8 @@
 
 #include <stdio.h>
 
-extern "C"
-{
 #include "scip/scip.h"
 #include "scip/scipshell.h"
-}
 
 int
 main(

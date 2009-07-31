@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.49 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.50 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -34,7 +34,9 @@
 #include "scip/type_tree.h"
 #include "scip/pub_nodesel.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* 
  * node priority queue methods
@@ -258,5 +260,8 @@ void SCIPnodeselSetMemsavePriority(
    int                   priority            /**< new priority of the node selector */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.h,v 1.15 2009/04/06 13:07:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.h,v 1.16 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   sepa_cmir.h
  * @brief  complemented mixed integer rounding cuts separator (Marchand's version)
@@ -28,6 +28,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** Performs the cut generation heuristic of the c-MIR separation algorithm, i.e., tries to generate a c-MIR cut which is
  *  valid for the mixed knapsack set corresponding to the current aggregated constraint.
@@ -57,5 +60,9 @@ extern
 SCIP_RETCODE SCIPincludeSepaCmir(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

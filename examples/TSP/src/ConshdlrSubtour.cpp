@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.17 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.18 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -28,9 +28,8 @@
 #include "GomoryHuTree.h"
 
 #include "objscip/objscip.h"
-extern "C" {
+
 #include "scip/cons_linear.h"
-}
 
 using namespace tsp;
 using namespace scip;

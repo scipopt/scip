@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.41 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.42 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -24,10 +24,11 @@
 #ifndef __SCIP_CONS_KNAPSACK_H__
 #define __SCIP_CONS_KNAPSACK_H__
 
-
-
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for knapsack constraints and includes it in SCIP */
 extern
@@ -216,5 +217,9 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

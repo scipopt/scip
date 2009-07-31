@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.h,v 1.4 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.h,v 1.5 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   presol_inttobinary.h
  * @brief  presolver that converts integer variables with domain [a,a+1] to binaries
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the inttobinary presolver and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludePresolInttobinary(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

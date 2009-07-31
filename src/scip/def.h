@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.160 2009/06/25 21:52:02 bzfheinz Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.161 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -31,23 +31,29 @@
 #include <float.h>
 #include <assert.h>
 
-
-#define SCIP_VERSION                110 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION              11 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2009 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
-
-
-
 /*
  * Boolean values
  */
 
-#undef SCIP_Bool
+#ifndef SCIP_Bool
 #define SCIP_Bool unsigned int                    /**< type used for boolean values */
 #ifndef TRUE
 #define TRUE  1                         /**< boolean value TRUE */
 #define FALSE 0                         /**< boolean value FALSE */
 #endif
+#endif
+
+#include "scip/type_retcode.h"
+#include "scip/message.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define SCIP_VERSION                110 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION              11 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2009 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+
 
 
 /*
@@ -174,11 +180,6 @@
 /*#define DEBUG*/
 
 
-
-
-#include "scip/type_retcode.h"
-#include "scip/message.h"
-
 /*
  * Defines for handling SCIP return codes
  */
@@ -232,5 +233,8 @@
                        }                                                                                      \
                        while( FALSE )
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

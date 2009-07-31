@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.15 2009/07/29 10:04:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.16 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -28,7 +28,9 @@
 
 #include "scip/def.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** interval given by infimum and supremum */
 struct SCIP_Interval
@@ -313,5 +315,8 @@ SCIP_Real SCIPintervalGetSup(
    SCIP_INTERVAL         interval            /**< interval */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

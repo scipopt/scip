@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos2.h,v 1.7 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_sos2.h,v 1.8 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cons_sos2.h
  * @brief  constraint handler for SOS type 2 constraints
@@ -69,6 +69,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the handler for SOS2 constraints and includes it in SCIP */
 extern
@@ -142,5 +145,9 @@ SCIP_Real* SCIPgetWeightsSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

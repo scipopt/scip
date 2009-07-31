@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_csol.h,v 1.2 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_csol.h,v 1.3 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   reader_csol.h
  * @brief  CSOL file reader
@@ -24,14 +24,20 @@
 #ifndef __SCIP_READER_CSOL_H__
 #define __SCIP_READER_CSOL_H__
 
-
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the csol file reader into SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderCsol(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

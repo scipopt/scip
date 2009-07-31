@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sol.h,v 1.22 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_sol.h,v 1.23 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   struct_sol.h
  * @brief  datastructures for storing primal CIP solutions
@@ -32,6 +32,9 @@
 #include "scip/type_heur.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** primal CIP solution
  *
@@ -61,5 +64,8 @@ struct SCIP_Sol
    SCIP_SOLORIGIN        solorigin;          /**< origin of solution: where to retrieve uncached elements */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

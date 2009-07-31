@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.h,v 1.4 2009/04/06 13:06:58 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_ppm.h,v 1.5 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   reader_ppm.h
  * @brief  PPM file reader
@@ -28,6 +28,9 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes the ppm file reader into SCIP */
 extern
@@ -50,5 +53,9 @@ SCIP_RETCODE SCIPwritePpm(
    int                nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*       result              /**< pointer to store the result of the file writing call */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

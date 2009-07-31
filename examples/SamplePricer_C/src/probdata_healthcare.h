@@ -12,13 +12,16 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_healthcare.h,v 1.3 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_healthcare.h,v 1.4 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 #ifndef __HCP_PROBDATA_HEALTHCARE__
 #define __HCP_PROBDATA_HEALTHCARE__
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern
 SCIP_RETCODE HCPcreateProbHealthcare(
@@ -51,5 +54,8 @@ int HCPgetNWorkers(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

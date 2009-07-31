@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: coloringplugins.h,v 1.3 2009/03/26 19:20:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: coloringplugins.h,v 1.4 2009/07/31 11:37:13 bzfwinkm Exp $"
 
 /**@file   coloringplugins.h
  * @brief  SCIP plugins for coloring
@@ -111,7 +111,9 @@
 #include "heur_init.h"
 #include "pricer_coloring.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** includes default SCIP plugins into SCIP */
 extern
@@ -119,5 +121,8 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

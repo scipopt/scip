@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.7 2008/09/23 16:11:22 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.8 2009/07/31 11:37:13 bzfwinkm Exp $"
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
 
@@ -943,6 +943,11 @@ SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+#define consCopyLinearOrdering NULL
+
+/** constraint parsing method of constraint handler */
+#define consParseLinearOrdering NULL
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
@@ -961,7 +966,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
 	 consCheckLinearOrdering, consPropLinearOrdering, consPresolLinearOrdering, consRespropLinearOrdering,
          consLockLinearOrdering, consActiveLinearOrdering, consDeactiveLinearOrdering,
          consEnableLinearOrdering, consDisableLinearOrdering,
-         consPrintLinearOrdering,
+         consPrintLinearOrdering, consCopyLinearOrdering, consParseLinearOrdering,
          NULL) );
 
    return SCIP_OKAY;

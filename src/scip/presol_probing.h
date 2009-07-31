@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.h,v 1.10 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_probing.h,v 1.11 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   presol_probing.h
  * @brief  probing presolver
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the probing presolver and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludePresolProbing(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cutpool.h,v 1.18 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_cutpool.h,v 1.19 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_cutpool.h
  * @brief  datastructures for storing cuts in a cut pool
@@ -31,7 +31,9 @@
 #include "scip/type_lp.h"
 #include "scip/type_cutpool.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** datastructure for cuts in a cut pool */
 struct SCIP_Cut
@@ -60,5 +62,8 @@ struct SCIP_Cutpool
    SCIP_Bool             globalcutpool;      /**< is this the global cut pool of SCIP? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

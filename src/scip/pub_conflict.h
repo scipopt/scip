@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_conflict.h,v 1.14 2009/04/06 13:06:55 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_conflict.h,v 1.15 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_conflict.h
  * @brief  public methods for conflict analysis handlers
@@ -30,7 +30,9 @@
 #include "scip/type_misc.h"
 #include "scip/type_conflict.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** compares two conflict handlers w. r. to their priority */
 extern
@@ -73,5 +75,8 @@ SCIP_Bool SCIPconflicthdlrIsInitialized(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_disp.h,v 1.15 2009/04/06 13:07:06 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_disp.h,v 1.16 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_disp.h
  * @brief  type definitions for displaying runtime statistics
@@ -23,6 +23,16 @@
 
 #ifndef __SCIP_TYPE_DISP_H__
 #define __SCIP_TYPE_DISP_H__
+
+#include <stdio.h>
+
+#include "scip/def.h"
+#include "scip/type_retcode.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** display activation status of display column */
 enum SCIP_DispStatus
@@ -92,12 +102,8 @@ typedef struct SCIP_DispData SCIP_DISPDATA;       /**< display column specific d
  */
 #define SCIP_DECL_DISPOUTPUT(x) SCIP_RETCODE x (SCIP* scip, SCIP_DISP* disp, FILE* file)
 
-
-#include <stdio.h>
-
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_scip.h"
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

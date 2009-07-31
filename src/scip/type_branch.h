@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.20 2009/04/06 13:07:05 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.21 2009/07/31 11:37:19 bzfwinkm Exp $"
 
 /**@file   type_branch.h
  * @brief  type definitions for branching rules
@@ -24,6 +24,13 @@
 #ifndef __SCIP_TYPE_BRANCH_H__
 #define __SCIP_TYPE_BRANCH_H__
 
+#include "scip/def.h"
+#include "scip/type_result.h"
+#include "scip/type_scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct SCIP_BranchCand SCIP_BRANCHCAND;   /**< branching candidate storage */
 typedef struct SCIP_Branchrule SCIP_BRANCHRULE;   /**< branching method data structure */
@@ -115,12 +122,8 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  */
 #define SCIP_DECL_BRANCHEXECPS(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
 
-
-
-#include "scip/def.h"
-#include "scip/type_result.h"
-#include "scip/type_scip.h"
-
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

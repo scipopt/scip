@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_veclendiving.h,v 1.4 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_veclendiving.h,v 1.5 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   heur_veclendiving.h
  * @brief  LP diving heuristic that rounds variables with long column vectors
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the veclendiving heuristic and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeHeurVeclendiving(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

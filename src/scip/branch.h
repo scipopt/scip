@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.47 2008/04/17 17:49:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.48 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -40,8 +40,9 @@
 #include "scip/type_branch.h"
 #include "scip/pub_branch.h"
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * branching candidate storage methods
@@ -299,5 +300,8 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

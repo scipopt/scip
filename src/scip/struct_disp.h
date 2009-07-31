@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_disp.h,v 1.14 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_disp.h,v 1.15 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_disp.h
  * @brief  datastructures for displaying runtime statistics
@@ -28,7 +28,9 @@
 #include "scip/def.h"
 #include "scip/type_disp.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** display column */
 struct SCIP_Disp
@@ -52,5 +54,8 @@ struct SCIP_Disp
    SCIP_Bool             active;             /**< should column be displayed to the screen? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

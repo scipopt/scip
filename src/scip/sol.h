@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.56 2009/04/06 13:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.57 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -41,8 +41,9 @@
 #include "scip/type_heur.h"
 #include "scip/pub_sol.h"
 
-
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates primal CIP solution, initialized to zero */
 extern
@@ -337,5 +338,8 @@ void SCIPsolSetPrimalIndex(
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

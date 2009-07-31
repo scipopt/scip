@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.h,v 1.3 2009/04/06 13:07:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.h,v 1.4 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   sepa_flowcover.h
  * @brief  flowcover separator
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the flowcover separator and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeSepaFlowcover(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

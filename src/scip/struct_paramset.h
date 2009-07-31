@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_paramset.h,v 1.16 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_paramset.h,v 1.17 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_paramset.h
  * @brief  datastructures for handling parameter settings
@@ -29,7 +29,9 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** data for SCIP_Bool parameters */
 struct SCIP_BoolParam
@@ -121,5 +123,8 @@ struct SCIP_ParamSet
    int                   paramssize;         /**< size of params array */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

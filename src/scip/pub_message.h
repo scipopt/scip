@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_message.h,v 1.7 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_message.h,v 1.8 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_message.h
  * @brief  public methods for message output
@@ -24,6 +24,9 @@
 #ifndef __SCIP_PUB_MESSAGE_H__
 #define __SCIP_PUB_MESSAGE_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** prints an error message */
 #define SCIPerrorMessage                SCIPmessagePrintErrorHeader(__FILE__, __LINE__); \
@@ -99,6 +102,9 @@ void SCIPmessagePrintWarning(
    ...                                       /**< format arguments line in printf() function */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

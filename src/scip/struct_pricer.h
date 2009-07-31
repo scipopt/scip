@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricer.h,v 1.18 2009/04/06 13:07:04 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_pricer.h,v 1.19 2009/07/31 11:37:18 bzfwinkm Exp $"
 
 /**@file   struct_pricer.h
  * @brief  datastructures for variable pricers
@@ -29,6 +29,9 @@
 #include "scip/type_clock.h"
 #include "scip/type_pricer.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** variable pricers data */
 struct SCIP_Pricer
@@ -53,5 +56,8 @@ struct SCIP_Pricer
    SCIP_Bool             initialized;        /**< is variable pricer initialized? */
 };
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

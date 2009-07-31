@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.h,v 1.29 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cutpool.h,v 1.30 2009/07/31 11:37:14 bzfwinkm Exp $"
 
 /**@file   cutpool.h
  * @brief  internal methods for storing cuts in a cut pool
@@ -36,7 +36,9 @@
 #include "scip/type_cutpool.h"
 #include "scip/pub_cutpool.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates cut pool */
 extern
@@ -107,5 +109,8 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

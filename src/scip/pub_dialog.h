@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_dialog.h,v 1.17 2009/04/06 13:06:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_dialog.h,v 1.18 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_dialog.h
  * @brief  public methods for user interface dialog
@@ -30,7 +30,9 @@
 #include "scip/type_scip.h"
 #include "scip/type_dialog.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * dialog handler
@@ -191,5 +193,9 @@ void SCIPdialogSetData(
    SCIP_DIALOG*          dialog,             /**< dialog */
    SCIP_DIALOGDATA*      dialogdata          /**< new dialog user data */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

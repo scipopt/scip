@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_relax.h,v 1.13 2009/04/06 13:06:57 bzfberth Exp $"
+#pragma ident "@(#) $Id: pub_relax.h,v 1.14 2009/07/31 11:37:17 bzfwinkm Exp $"
 
 /**@file   pub_relax.h
  * @brief  public methods for relaxators
@@ -29,7 +29,9 @@
 #include "scip/type_misc.h"
 #include "scip/type_relax.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** compares two relaxators w. r. to their priority */
 extern
@@ -96,5 +98,8 @@ void SCIPrelaxMarkUnsolved(
    SCIP_RELAX*           relax               /**< relaxator */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

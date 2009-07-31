@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.28 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.29 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -35,7 +35,9 @@
 #include "scip/struct_history.h"
 #endif
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates an empty history entry */
 extern
@@ -268,5 +270,8 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 
 #endif
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

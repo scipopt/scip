@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.67 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.68 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   lpi.h
  * @brief  interface methods for specific LP solvers
@@ -30,7 +30,9 @@
 #include "scip/type_retcode.h"
 #include "scip/type_lpi.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Miscellaneous Methods
@@ -802,6 +804,8 @@ SCIP_RETCODE SCIPlpiWriteLP(
 
 /**@} */
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif

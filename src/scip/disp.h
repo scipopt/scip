@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.35 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: disp.h,v 1.36 2009/07/31 11:37:15 bzfwinkm Exp $"
 
 /**@file   disp.h
  * @brief  internal methods for displaying runtime statistics
@@ -35,7 +35,9 @@
 #include "scip/type_disp.h"
 #include "scip/pub_disp.h"
 
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** parameter change information method to autoselect display columns again */
 extern
@@ -122,5 +124,8 @@ SCIP_RETCODE SCIPdispAutoActivate(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

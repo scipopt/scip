@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_estimate.h,v 1.4 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: nodesel_estimate.h,v 1.5 2009/07/31 11:37:16 bzfwinkm Exp $"
 
 /**@file   nodesel_estimate.h
  * @brief  node selector for best estimate search
@@ -27,11 +27,18 @@
 
 #include "scip/scip.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /** creates the node selector for best estimate search and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeNodeselEstimate(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
