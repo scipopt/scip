@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.6 2009/07/29 19:33:26 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.7 2009/07/31 10:26:22 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -479,7 +479,7 @@ SCIP_RETCODE applyVarBoundConstraints(
          
          SCIP_CALL( SCIPhashmapInsert(varmap, var, (void*)(size_t)(varcnt+1)) );
 /*         
-         printf("%s: var %s at %d now bounded in [%g, %g] due to %s = %g\n",
+         SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g\n",
             SCIPconsGetName(cons),
             SCIPvarGetName(var), varidx[varcnt],
             varlb[varcnt], varub[varcnt],
@@ -508,7 +508,7 @@ SCIP_RETCODE applyVarBoundConstraints(
          if (rhs < varub[idx_])
             varub[idx_] = rhs;
 /*
-         printf("%s: var %s at %d now bounded in [%g, %g] due to %s = %g  [updated]\n",
+         SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g  [updated]\n",
             SCIPconsGetName(cons),
             SCIPvarGetName(var), varidx[idx_],
             varlb[idx_], varub[idx_],
