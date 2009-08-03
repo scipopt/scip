@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.73 2009/08/03 16:05:52 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.74 2009/08/03 16:13:54 bzfwinkm Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -1496,10 +1496,8 @@ SCIP_RETCODE preprocessConstraintPairs(
       consdata1 = SCIPconsGetData(cons1);
       assert(consdata1 != NULL);
 
-#if 1
       SCIPdebugMessage("preprocess xor constraint pair <%s>[chg:%d] and <%s>[chg:%d]\n",
          SCIPconsGetName(cons0), cons0changed, SCIPconsGetName(cons1), consdata1->changed);
-#endif
 
       /* if both constraints were not changed since last round, we can ignore the pair */
       if( !cons0changed && !consdata1->changed )
