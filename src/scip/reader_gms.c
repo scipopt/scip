@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.12 2009/07/30 09:58:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.13 2009/08/03 16:22:49 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1220,16 +1220,12 @@ SCIP_RETCODE SCIPwriteGms(
    SCIPinfoMessage(scip, file, "Model m / all /;\n\n");
 
    /* print solve command */
-   if( !nlcons )
-   {
-      SCIPinfoMessage(scip, file, "$if not set MIP $set MIP MIP\n");
-      SCIPinfoMessage(scip, file, "Solve m using %%MIP%% %simizing objvar;\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "min" : "max");
-   }
-   else
-   {
-      SCIPinfoMessage(scip, file, "$if not set MINLP $set MINLP MINLP\n");
-      SCIPinfoMessage(scip, file, "Solve m using %%MINLP%% %simizing objvar;\n", objsense == SCIP_OBJSENSE_MINIMIZE ? "min" : "max");
-   }
+   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s",
+         nbinvars + nintvars > 0 ? "MI" : "", nlcons ? "QCP" : (nbinvars + nintvars > 0 ? "P" : "LP"));
+
+   SCIPinfoMessage(scip, file, "$if not set %s $set %s %s\n", buffer, buffer, buffer);
+   SCIPinfoMessage(scip, file, "Solve m using %%%s%% %simizing objvar;\n",
+         buffer, objsense == SCIP_OBJSENSE_MINIMIZE ? "min" : "max");
 
    *result = SCIP_SUCCESS;
 
