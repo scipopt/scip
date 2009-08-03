@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.14 2009/08/03 20:58:48 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.15 2009/08/03 21:00:37 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -318,7 +318,7 @@ SCIP_RETCODE printActiveVariables(
                   /* we start a new line; therefore we tab this line */
                   appendLine(scip, file, linebuffer, linecnt, "     ");
 
-	       printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
+               printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
 
                if( SCIPisEQ(scip, activevals[v], 1.0) )
                   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s%s%s%s", ext, strchr(ext, '(') == NULL ? "+" : "",
