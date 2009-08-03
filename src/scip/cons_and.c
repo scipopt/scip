@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.110 2009/06/26 07:51:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.111 2009/08/03 20:03:56 bzfwinkm Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -1887,9 +1887,15 @@ SCIP_RETCODE mapVariable(
 {
    SCIP_Bool negated;
    
+   assert(scip != NULL);
+   assert(repvar != NULL);
+   assert(sourcescip != NULL);
+   assert(var != NULL);
+   assert(varmap != NULL);
    assert(succeed != NULL);
    assert(*succeed == TRUE);
 
+   *repvar = NULL;
 
    SCIP_CALL( SCIPgetBinvarRepresentative(sourcescip, var, &var, &negated) );
    
@@ -1899,6 +1905,7 @@ SCIP_RETCODE mapVariable(
       /* returnsform a negated variable to an active variable */
       SCIP_CALL( SCIPgetNegatedVar(sourcescip, var, &var) );
       negated = !negated;
+      /*lint -fallthrough*/
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_FIXED:
@@ -1918,6 +1925,7 @@ SCIP_RETCODE mapVariable(
       break;
    case SCIP_VARSTATUS_MULTAGGR:
       /* it is not clear how to handle muliaggr variables; therefore, stop copying */
+      (*succeed) = FALSE;
       break;
    default:
       SCIPerrorMessage("invalid variable status\n");
@@ -2090,8 +2098,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 #define consExitpreAnd NULL
 
 
-#define MAX_INITIALSIZE 10000
-
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolAnd NULL
 
@@ -2243,6 +2249,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
    SCIP_Bool separated;
    SCIP_Bool violated;
    int i;
+
+   separated = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);

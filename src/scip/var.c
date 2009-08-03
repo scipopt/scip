@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.255 2009/08/03 15:53:47 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.256 2009/08/03 20:03:57 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3103,9 +3103,9 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    int ntmpvars2;
 
    assert( set != NULL );
-   assert( vars != NULL );
+   assert( nvars != NULL );
+   assert( vars != NULL || *nvars == 0);
    assert( scalars != NULL );
-   assert( nvars != NULL  || *nvars == 0 );
    assert( constant != NULL );
    assert( requiredsize != NULL );
    assert( *nvars <= varssize );
@@ -7519,8 +7519,8 @@ SCIP_RETCODE SCIPvarAddImplic(
       assert(var->data.aggregate.var != NULL);
       if( SCIPvarGetType(var->data.aggregate.var) == SCIP_VARTYPE_BINARY )
       {   
-         assert( (SCIPsetIsEQ(set, var->data.aggregate.scalar, 1) && SCIPsetIsZero(set, var->data.aggregate.constant))
-            || (SCIPsetIsEQ(set, var->data.aggregate.scalar, -1) && SCIPsetIsEQ(set, var->data.aggregate.constant, 1)) );
+         assert( (SCIPsetIsEQ(set, var->data.aggregate.scalar, 1.0) && SCIPsetIsZero(set, var->data.aggregate.constant))
+            || (SCIPsetIsEQ(set, var->data.aggregate.scalar, -1.0) && SCIPsetIsEQ(set, var->data.aggregate.constant, 1.0)) );
        
          if( var->data.aggregate.scalar > 0 )
          {

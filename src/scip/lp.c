@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.318 2009/08/03 14:43:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.319 2009/08/03 20:03:56 bzfwinkm Exp $"
  
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10504,8 +10504,6 @@ SCIP_RETCODE checkLazyBounds(
    )
 {
    SCIP_COL* col;
-   SCIP_Real lb;
-   SCIP_Real ub;
    int c;
    
    assert(lp->flushed);
@@ -10513,8 +10511,6 @@ SCIP_RETCODE checkLazyBounds(
    for( c = 0; c < lp->nlazycols; ++c )
    {
       col = lp->lazycols[c];
-      lb = col->lb;
-      ub = col->ub;
 
       /* check lower bound */
       if( !SCIPsetIsInfinity(set, -col->lazylb) && SCIPsetIsFeasNegative(set, col->primsol - col->lazylb) )
@@ -10616,6 +10612,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       fastmip = set->lp_fastmip && lp->lpihasfastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1;
       tightfeastol = FALSE;
       fromscratch = FALSE;
+      primalfeasible = FALSE;
+      dualfeasible = FALSE;
 
    SOLVEAGAIN:
       /* solve the LP */
@@ -12103,7 +12101,6 @@ SCIP_RETCODE lpDelColset(
 {
    SCIP_COL* col;
    int ncols;
-   int nlazycols;
    int c;
 
    assert(lp != NULL);
@@ -12114,7 +12111,6 @@ SCIP_RETCODE lpDelColset(
    assert(lp->nlazycols <= lp->ncols); 
 
    ncols = lp->ncols;
-   nlazycols = lp->nlazycols;
 
    /* delete columns in LP solver */
    SCIP_CALL( SCIPlpiDelColset(lp->lpi, coldstat) );

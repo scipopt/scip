@@ -797,7 +797,7 @@ SCIP_RETCODE SCIPincludeHeurDins(
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL ) );
    SCIP_CALL( SCIPaddLongintParam( scip, "heuristics/dins/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
-         &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0, SCIP_LONGINT_MAX, NULL, NULL ) );
+         &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL ) );
 
    return SCIP_OKAY;
 }

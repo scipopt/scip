@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.332 2009/07/29 19:11:45 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.333 2009/08/03 20:03:56 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -3709,6 +3709,9 @@ SCIP_RETCODE addConflictBounds(
       SCIP_Real maxresactivity;
       SCIP_Bool isminsettoinfinity;
       SCIP_Bool ismaxsettoinfinity;
+
+      minresactivity = -SCIPinfinity(scip);
+      maxresactivity = SCIPinfinity(scip);
 
       /* calculate the minimal and maximal global activity of all other variables involved in the constraint */
       if( infervar != NULL )
@@ -9091,7 +9094,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
 
    SCIP_Bool havesign;
    SCIP_Bool havevalue;
-   SCIP_Bool sense;
+   CIPSENSE sense;
    SCIP_Real coef;
    int coefsign;
    int coefssize;

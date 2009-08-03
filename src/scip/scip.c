@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.513 2009/08/03 15:30:47 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.514 2009/08/03 20:03:56 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5833,9 +5833,9 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    )
 {
    assert( scip != NULL );
-   assert( vars != NULL );
+   assert( nvars != NULL );
+   assert( vars != NULL || *nvars == 0 );
    assert( scalars != NULL );
-   assert( nvars != NULL || *nvars == 0 );
    assert( constant != NULL );
    assert( requiredsize != NULL );
    assert( *nvars <= varssize );
@@ -11731,7 +11731,7 @@ SCIP_RETCODE solveProbingLP(
          SCIP_Bool mustsepa;
          int npricedcolvars;
          SCIP_Real lowerbound;
-         SCIP_RESULT result;
+         SCIP_Bool result;
 
          mustsepa = FALSE;
          SCIP_CALL( SCIPpriceLoop(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->primal, scip->tree, scip->lp,

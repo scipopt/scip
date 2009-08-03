@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.23 2009/08/03 15:30:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.24 2009/08/03 20:03:56 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2414,7 +2414,7 @@ SCIP_RETCODE readFZNFile(
             parseRange(scip, fzninput, &type, &lb, &ub);
             
             /* parse the remaining constant statement */
-            parseConstant(scip, fzninput, type);
+            SCIP_CALL( parseConstant(scip, fzninput, type) );
 
             if( hasError(fzninput) )
             {

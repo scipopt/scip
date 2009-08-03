@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.35 2009/07/10 12:59:40 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.36 2009/08/03 20:03:56 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -1263,21 +1263,26 @@ SCIP_RETCODE readOPBFile(
 
                pos = strtok(nproducts, delimchars);
                
-               opbinput->sconsanddata = atoi(pos);
-               SCIPdebugMessage("%d of and constraints supposed to be in file.\n", opbinput->sconsanddata);
-
+               if( pos != NULL )
+               { 
+                  opbinput->sconsanddata = atoi(pos);
+                  SCIPdebugMessage("%d of and constraints supposed to be in file.\n", opbinput->sconsanddata);
+               }
                if( opbinput->sconsanddata < 0 )
                   opbinput->sconsanddata = 10;
-
-	       pos = strtok (NULL, delimchars);
-
-	       if( strcmp(pos, "sizeproduct=") == 0 )
-	       {
-		  pos = strtok (NULL, delimchars);
-		  opbinput->maxvarsperand = atoi(pos) / opbinput->sconsanddata + 1;
-		  SCIPdebugMessage("%d max length of and constraints in file.\n", opbinput->maxvarsperand);
-	       }
-	       
+               
+               pos = strtok (NULL, delimchars);
+               
+               if( pos != NULL && strcmp(pos, "sizeproduct=") == 0 )
+               {
+                  pos = strtok (NULL, delimchars);
+                  if( pos != NULL )
+                  {
+                     opbinput->maxvarsperand = atoi(pos) / opbinput->sconsanddata + 1;
+                     SCIPdebugMessage("%d max length of and constraints in file.\n", opbinput->maxvarsperand);
+                  }
+               }
+                  
 	       if( opbinput->maxvarsperand < 0 )
                   opbinput->maxvarsperand = 10;
 

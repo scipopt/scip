@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_boundshift.c,v 1.8 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_boundshift.c,v 1.9 2009/08/03 20:03:56 bzfwinkm Exp $"
 
 /**@file   presol_boundshift.c
  * @ingroup PRESOLVERS
@@ -255,7 +255,7 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
    SCIP_CALL( SCIPaddLongintParam(scip,
          "presolving/boundshift/maxshift", 
          "absolute value of maximum shift",
-         &presoldata->maxshift, TRUE, DEFAULT_MAXSHIFT, 0, SCIP_LONGINT_MAX, NULL, NULL) );
+         &presoldata->maxshift, TRUE, DEFAULT_MAXSHIFT, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/boundshift/flipping", 
          "is flipping allowed (multiplying with -1)?",

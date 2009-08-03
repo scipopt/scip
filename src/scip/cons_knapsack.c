@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.173 2009/08/03 15:30:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.174 2009/08/03 20:03:56 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -2199,8 +2199,11 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       {
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
-         tmpindices[tmp] = SCIPvarGetProbindex(var);
-         ++tmp;
+         if( !noknapsackconshdlr )
+         {
+            tmpindices[tmp] = SCIPvarGetProbindex(var);
+            ++tmp;
+         }
          SCIPdebugMessage(" -> binary variable %+.15g<%s>(%.15g)\n", 
             valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var));
       }
@@ -2255,8 +2258,11 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
             rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
             binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
-            tmpindices[tmp] = SCIPvarGetProbindex(zvlb[bestlbtype]);
-            ++tmp;
+            if( !noknapsackconshdlr )
+            {
+               tmpindices[tmp] = SCIPvarGetProbindex(zvlb[bestlbtype]);
+               ++tmp;
+            }
             SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with variable lower bound %+.15g<%s>(%.15g) %+.15g (rhs=%.15g)\n",
                valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
                bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]),
@@ -2316,8 +2322,11 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
             rhs -= valscale * knapvals[i] * dvub[bestubtype];
             binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
-            tmpindices[tmp] = SCIPvarGetProbindex(zvub[bestubtype]);
-            ++tmp;
+            if( !noknapsackconshdlr )
+            {
+               tmpindices[tmp] = SCIPvarGetProbindex(zvub[bestubtype]);
+               ++tmp;
+            }
             SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with variable upper bound %+.15g<%s>(%.15g) %+.15g (rhs=%.15g)\n",
                valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
                bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]),
@@ -2947,7 +2956,6 @@ SCIP_RETCODE simplifyInequalities(
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
-   assert( !SCIPisInfinity(scip, consdata->capacity) );
 
    *cutoff = FALSE;
 
@@ -3009,7 +3017,7 @@ SCIP_RETCODE simplifyInequalities(
 
          --(consdata->capacity);
 
-         if( SCIPisZero(scip, oddbinval) )
+         if( oddbinval == 0 )
          {
             SCIP_CALL( delCoefPos( scip, cons, pos ) );
 	    /* if the last variable was erased delete the constraint too */

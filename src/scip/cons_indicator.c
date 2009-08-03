@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.38 2009/07/29 19:18:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.39 2009/08/03 20:03:56 bzfwinkm Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3233,7 +3233,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
 }
 
 /** adds variable to the inequality of the indicator constraint */
-extern
 SCIP_RETCODE SCIPaddVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -3326,7 +3325,6 @@ SCIP_Bool SCIPisViolatedIndicator(
 
 
 /** Based on values of other variables, computes slack and binary variable to turn constraint feasible */
-extern
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
