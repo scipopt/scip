@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.54 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.55 2009/08/03 14:39:56 bzfpfets Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -684,9 +684,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
                pscostscore, conflictscore, conflengthscore, inferencescore, cutoffscore,  score);
          }
       }
-      SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
-         SCIPvarGetName(lpcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore, 
-         lookahead, maxlookahead);
+#ifdef SCIP_DEBUG
+      if ( bestsbcand >= 0 )
+      {
+	 SCIPdebugMessage(" -> best: <%s> (%g / %g / %g), lookahead=%g/%g\n",
+	    SCIPvarGetName(lpcands[bestsbcand]), bestsbscore, bestsbfracscore, bestsbdomainscore, 
+	    lookahead, maxlookahead);
+      }
+#endif
       
       /* get the score of the best uninitialized strong branching candidate */
       if( i < ninitcands )
