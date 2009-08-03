@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.13 2009/08/03 16:22:49 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.14 2009/08/03 20:58:48 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -176,6 +176,47 @@ void appendLine(
       endLine(scip, file, linebuffer, linecnt);
 }
 
+/** checks string for occurences of '#' and replaces those by '_'; returns TRUE iff name has been changed */
+static
+void conformName(
+   char*                      name                /**< string to adjust */
+   )
+{
+   assert( name != NULL );
+
+   char* c = strchr(name, '#');
+
+   while( c != NULL )
+   {
+      assert( *c == '#' );
+
+      *c = '_';
+      c = strchr(name, '#');
+   }
+}
+
+/* print first len-1 characters of name to string s and replace '#' by '_' if necessary */
+static
+void printConformName(
+   SCIP*                 scip,               /**< SCIP data structure */
+   char*                 t,                  /**< target string */
+   int                   len,                /**< length of t */
+   const char*           name                /**< source string or format string */
+   )
+{
+   SCIP_Bool replacesharps;
+
+   assert( t != NULL );
+   assert( len > 0 );
+
+   SCIP_CALL_ABORT( SCIPgetBoolParam(scip, "reading/gmsreader/replacesharps", &replacesharps) );
+
+   (void) SCIPsnprintf(t, len, "%s", name);
+
+   if( strchr(t, '#') != NULL && replacesharps )
+      conformName(t);
+}
+
 
 
 /* retransform to active variables and print in GAMS format to file stream with surrounding bracket, pre- and suffix */
@@ -277,7 +318,7 @@ SCIP_RETCODE printActiveVariables(
                   /* we start a new line; therefore we tab this line */
                   appendLine(scip, file, linebuffer, linecnt, "     ");
 
-               (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+	       printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
 
                if( SCIPisEQ(scip, activevals[v], 1.0) )
                   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s%s%s%s", ext, strchr(ext, '(') == NULL ? "+" : "",
@@ -367,7 +408,8 @@ void printLinearRow(
    /* print row name */
    if ( strlen(rowname) > 0 || strlen(rownameextension) > 0 )
    {
-      (void) SCIPsnprintf(consname, GMS_MAX_NAMELEN + 3, "%s%s ..", rowname, rownameextension);
+      (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s%s ..", rowname, rownameextension);
+      printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer);
       appendLine(scip, file, linebuffer, &linecnt, consname);
    }
 
@@ -392,7 +434,7 @@ void printLinearRow(
       if (linecnt == 0 )
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
-      (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g*%s", vals[v], varname);
       
       appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -546,7 +588,8 @@ SCIP_RETCODE printQuadraticRow(
    appendLine(scip, file, linebuffer, &linecnt, " ");
 
    /* print row name */
-   (void) SCIPsnprintf(consname, GMS_MAX_NAMELEN + 3, "%s%s .. ", rowname, rownameextension);
+   (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s%s ..", rowname, rownameextension);
+   printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer);
 
    appendLine(scip, file, linebuffer, &linecnt, consname);
 
@@ -689,11 +732,35 @@ void checkVarnames(
 {
    int v;
    SCIP_VAR* var;
+   SCIP_Bool replacesharps;
 
    assert( scip != NULL );
    assert( vars != NULL );
 
-   /* check if the variable names are not to long */
+   SCIP_CALL_ABORT( SCIPgetBoolParam(scip, "reading/gmsreader/replacesharps", &replacesharps) );
+
+   /* check if the variable names contain the symbol '#' */
+   for( v = 0; v < nvars; ++v )
+   {
+      var = vars[v];
+      assert( var != NULL );
+
+      if( strchr(SCIPvarGetName(var), '#') != NULL )
+      {
+         if( replacesharps )
+         {
+            SCIPwarningMessage("there is a variable name with symbol '#', not allowed in GAMS format; all '#' replaced by '_' (consider using 'write genproblem'/'write gentransproblem').\n");
+         }
+         else
+         {
+            SCIPwarningMessage("there is a variable name with symbol '#', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replacesharps' to TRUE and risk duplicate variable names.\n");
+         }
+
+         return;
+      }
+   }
+
+   /* check if the variable names are too long */
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -721,10 +788,35 @@ void checkConsnames(
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
+   SCIP_Bool replacesharps;
 
    assert( scip != NULL );
    assert( conss != NULL );
 
+   SCIP_CALL_ABORT( SCIPgetBoolParam(scip, "reading/gmsreader/replacesharps", &replacesharps) );
+
+   /* check if the constraint names contain the symbol '#' */
+   for( c = 0; c < nconss; ++c )
+   {
+      cons = conss[c];
+      assert( cons != NULL );
+
+      if( strchr(SCIPconsGetName(cons), '#') != NULL )
+      {
+         if( replacesharps )
+         {
+            SCIPwarningMessage("there is a constraint name with symbol '#', not allowed in GAMS format; all '#' replaced by '_' (consider using 'write genproblem'/'write gentransproblem').\n");
+         }
+         else
+         {
+            SCIPwarningMessage("there is a constraint name with symbol '#', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replacesharps' to TRUE and risk duplicate variable names.\n");
+         }
+
+         return;
+      }
+   }
+
+   /* check if the constraint names are too long */
    for( c = 0; c < nconss; ++c )
    {
       cons = conss[c];
@@ -740,16 +832,21 @@ void checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
-      if( strcmp(conshdlrname, "linear") == 0 ) /* ambros: or quadratic */
+      if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 )
       {
-         SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
-         SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
+         SCIP_Real lhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetLhsQuadratic(cons);
+         SCIP_Real rhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetRhsQuadratic(cons);
 
-         if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN)
-            || ( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN - 4) )
+         if( SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN )
          {
             SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
                GMS_MAX_NAMELEN - 1);
+            return;
+         }
+         else if( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN - 4 )
+         {
+            SCIPwarningMessage("there is a constraint name which has to be cut down to %d characters;\n",
+               GMS_MAX_NAMELEN - 5);
             return;
          }
       }
@@ -804,9 +901,13 @@ SCIP_RETCODE SCIPincludeReaderGms(
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
          readerFreeGms, readerReadGms, readerWriteGms, readerdata) );
 
-   /* add gms reader parameters */
+   /* add gms reader parameters for writing routines*/
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/gmsreader/freeints", "are integer variables free by default (depending on GAMS version)?",
+         NULL, FALSE, FALSE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/gmsreader/replacesharps", "shall '#' characters in variable and constraint names be replaced by '_'?",
          NULL, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
@@ -895,7 +996,7 @@ SCIP_RETCODE SCIPwriteGms(
       var = vars[v];
       assert( var != NULL );
 
-      (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nvars - 1) ? "," : ";");
       appendLine(scip, file, linebuffer, &linecnt, buffer);
 
@@ -919,7 +1020,7 @@ SCIP_RETCODE SCIPwriteGms(
       {
          var = vars[v];
 
-         (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nbinvars - 1) ? "," : ";");
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -939,7 +1040,7 @@ SCIP_RETCODE SCIPwriteGms(
       {
          var = vars[nbinvars + v];
 
-         (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+         printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", varname, (v < nintvars - 1) ? "," : ";");
 
          appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -958,7 +1059,8 @@ SCIP_RETCODE SCIPwriteGms(
    {
       var = vars[v];
       assert( var != NULL );
-      (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+
+      printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
 
       if( transformed )
       {
@@ -1061,7 +1163,7 @@ SCIP_RETCODE SCIPwriteGms(
       assert( cons != NULL );
 
       /* we declare all constraints, although we might not define each of them later */
-      (void) SCIPsnprintf(consname, GMS_MAX_NAMELEN, "%s", SCIPconsGetName(cons));
+      printConformName(scip, consname, GMS_MAX_NAMELEN, SCIPconsGetName(cons));
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -1097,7 +1199,7 @@ SCIP_RETCODE SCIPwriteGms(
          /* we start a new line; therefore we tab this line */
          appendLine(scip, file, linebuffer, &linecnt, "     ");
 
-      (void) SCIPsnprintf(varname, GMS_MAX_NAMELEN, "%s", SCIPvarGetName(var));
+      printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
       (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g*%s%s", SCIPvarGetObj(var), varname, v == nvars - 1 ? ";" : "");
 
       appendLine(scip, file, linebuffer, &linecnt, buffer);
@@ -1120,7 +1222,7 @@ SCIP_RETCODE SCIPwriteGms(
       conshdlr = SCIPconsGetHdlr(cons);
       assert( conshdlr != NULL );
 
-      (void) SCIPsnprintf(consname, GMS_MAX_NAMELEN, "%s", SCIPconsGetName(cons));
+      printConformName(scip, consname, GMS_MAX_NAMELEN, SCIPconsGetName(cons));
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
