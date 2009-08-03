@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.317 2009/07/31 10:16:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.318 2009/08/03 14:43:12 bzfpfets Exp $"
  
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -1831,6 +1831,10 @@ SCIP_RETCODE lpSetUobjlim(
    /* if we want so solve exactly, we cannot rely on the LP solver's objective limit handling */
    if( set->misc_exactsolve )
       return SCIP_OKAY;
+
+   /* convert SCIP infinity value to lp-solver infinity value if necessary */
+   if ( SCIPsetIsInfinity(set, uobjlim) )
+      uobjlim = SCIPlpiInfinity(lp->lpi);
 
    SCIP_CALL( lpCheckRealpar(lp, SCIP_LPPAR_UOBJLIM, lp->lpiuobjlim) );
 
@@ -6129,7 +6133,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->divingobjchg = FALSE;
    (*lp)->divelpistate = NULL;
    (*lp)->resolvelperror = FALSE;
-   (*lp)->lpiuobjlim = SCIPsetInfinity(set);
+   (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
    (*lp)->lpifeastol = SCIPsetFeastol(set);
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
    (*lp)->lpibarrierconvtol = SCIPsetBarrierconvtol(set);
@@ -9943,7 +9947,10 @@ SCIP_RETCODE lpSolveStable(
    simplex = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX || lpalgo == SCIP_LPALGO_DUALSIMPLEX);
 
    /* solve with given settings (usually fast but unprecise) */
-   SCIP_CALL( lpSetUobjlim(lp, set, lp->cutoffbound - lp->looseobjval) );
+   if ( SCIPsetIsInfinity(set, lp->cutoffbound) )
+      SCIP_CALL( lpSetUobjlim(lp, set, lp->cutoffbound) );
+   else
+      SCIP_CALL( lpSetUobjlim(lp, set, lp->cutoffbound - lp->looseobjval) );
    SCIP_CALL( lpSetFeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetFeastol(set) : SCIPsetFeastol(set), &success) );
    SCIP_CALL( lpSetDualfeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetDualfeastol(set) : SCIPsetDualfeastol(set), 
          &success) );
@@ -10306,6 +10313,10 @@ SCIP_RETCODE lpSolve(
       lp->lpobjval = -SCIPsetInfinity(set);
       return SCIP_OKAY;
    }
+
+   /* only one should return true */
+   assert( !(SCIPlpiIsOptimal(lp->lpi) && SCIPlpiIsObjlimExc(lp->lpi) && SCIPlpiIsPrimalInfeasible(lp->lpi) && 
+	 SCIPlpiExistsPrimalRay(lp->lpi) && SCIPlpiIsIterlimExc(lp->lpi) && SCIPlpiIsTimelimExc(lp->lpi) ) );
 
    /* evaluate solution status */
    if( SCIPlpiIsOptimal(lp->lpi) )
