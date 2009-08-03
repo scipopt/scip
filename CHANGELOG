@@ -41,14 +41,16 @@ interface:
 - added function SCIPgetOrigObjoffset() in scip.h; returns the objective offset of the original problem
 - added function SCIPgetOrigObjscale() in scip.h; returns the objective scale of the original problem 
 - added function SCIPparseVars() in scip.h; parses variable information (in cip format) out of a string
-- added function SCIPparseCons() in scip.h; parses constrint information (in cip format) out of a string
-- added function SCIPcopyCons() in scip.h; parses constrint information (in cip format) out of a string
+- added function SCIPparseCons() in scip.h; parses constraint information (in cip format) out of a string
+- added function SCIPcopyCons() in scip.h; parses constraint information (in cip format) out of a string
 - new parameter "sol" in lp.c: SCIPlpCalcMIR(), scip.c: SCIPcalcMIR(), and sepa_cmir.c: tryDelta() to separate a sol different from the LP solution
 - new parameter "sol" in scip.c: SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() and var.c: SCIPvarGetClosestVlb() and SCIPvarGetClosestVub()
   to get closest variable bound w.r.t. sol different from LP solution
 - new methods in pub_misc.h/misc.c to access hash map lists and elements of a hash map list and to clear all entries in a hash map
 - some interval arithmetic method take an additional argument to denote which value stands for infinity in an interval
 - extend Makefile to link against Ipopt if IPOPT=true is set
+- added function SCIPvarsGetProbvarBinary() in pub_var.h; gets active, fixed, or multi-aggregated problem variables of binary variables and corresponding negated status
+- added SCIPsortPtrPtrLongInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -84,6 +86,10 @@ performance improvements:
 - improved memory usage in heur_octane.c
 - improved reading time of opb-files, due to using a hashtable for all "and"-constraints
 - improved pairwise presolving in cons_and.c due to using a hashtable 
+- improved performance of merging variables in mergeMultiples() in cons_knapsack.c 
+- improved performance in tightenWeightsLift() and SCIPseparateRelaxedKnapsack() in cons_knapsack.c, due to now sparse-cleaning "global" arrays instead of using BMSclearMemory... functions for cleaning local arrays each time 
+- improved performance in SCIPcliquelistRemoveFromCliques()
+- improved performance in SCIPcalcCliquePartition()
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 
@@ -146,6 +152,12 @@ fixed bugs:
 - fixed bug in cons_linear.c: also do not multiaggregate variables in dual preproccessing if it has been marked as not-multiaggregable
 - fixed bug in cons_linear.c: slight decrease of epsilon in order to make sure that scaled coefficients are really integral
 - fixed casting of void* pointers in memory.h for C++, adjusted the same for C in memory.h, and due to that adjusted all header files(set whole files in extern "C") and cpp-files(removed unnecessary extern "C" lines) 
+- fixed some bugs in simplifyInequalities() in cons_knapsack.c
+- fixed bug in mergeMultiples() in cons_knapsack.c
+- adjusted ConsData and ConsHdlrData in cons_knapsack.c
+- fixed compiler warning caused by no initialization of two integer in cons_knapsack.c
+- adjusted assert in var.c
+- fixed bug in SCIPvarGetActiveRepresentatives() in var.c
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

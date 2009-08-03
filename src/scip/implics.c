@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.32 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.33 2009/08/03 15:30:46 bzfwinkm Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include "string.h"
 
 #include "scip/def.h"
 #include "scip/message.h"
@@ -1555,10 +1556,10 @@ void SCIPcliquelistRemoveFromCliques(
             assert(clique->values[pos] == (SCIP_Bool)value);
 
             /* remove the entry from the clique */
-            for( ; pos < clique->nvars-1; ++pos )
+            if( clique->nvars - pos - 1 > 0 )
             {
-               clique->vars[pos] = clique->vars[pos+1];
-               clique->values[pos] = clique->values[pos+1];
+               memmove(&clique->vars[pos], &clique->vars[pos+1], sizeof(clique->vars[0]) * (clique->nvars - pos - 1));
+               memmove(&clique->values[pos], &clique->values[pos+1], sizeof(clique->values[0]) * (clique->nvars - pos - 1));
             }
             clique->nvars--;
 

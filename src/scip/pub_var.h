@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.74 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.75 2009/08/03 15:30:46 bzfwinkm Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -90,7 +90,21 @@ SCIP_VAR* SCIPvarGetProbvar(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
+/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *  SCIPvarFlattenAggregationGraph()
+ *  gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and updates the given
+ *  negation status of each variable
+ */
+extern
+SCIP_RETCODE SCIPvarsGetProbvarBinary(
+   SCIP_VAR***           vars,               /**< pointer to binary problem variables */
+   SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
+   int                   nvars               /**< number of variables and values in vars and negated array */
+   );
+
+/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *  SCIPvarFlattenAggregationGraph()
+ *  gets corresponding active, fixed, or multi-aggregated problem variable of a binary variable and updates the given
  *  negation status
  */
 extern

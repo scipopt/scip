@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.512 2009/07/13 13:06:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.513 2009/08/03 15:30:47 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5835,7 +5835,7 @@ SCIP_RETCODE SCIPgetProbvarLinearSum(
    assert( scip != NULL );
    assert( vars != NULL );
    assert( scalars != NULL );
-   assert( nvars != NULL );
+   assert( nvars != NULL || *nvars == 0 );
    assert( constant != NULL );
    assert( requiredsize != NULL );
    assert( *nvars <= varssize );
@@ -7557,11 +7557,15 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    int*                  cliquepartition     /**< array of length nvars to store the clique partition */
    )
 {
+   SCIP_VAR** tmpvars;
    SCIP_VAR** cliquevars;
    SCIP_Bool* cliquevalues;
+   SCIP_Bool* tmpvalues;
    int ncliquevars;
    int ncliques;
    int i;
+   int j;
+   int k;
 
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || cliquepartition != NULL);
@@ -7571,11 +7575,19 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    /* allocate temporary memory for storing the variables of the current clique */
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevalues, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &tmpvalues, nvars) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(scip->set, &tmpvars, vars, nvars) );
    ncliquevars = 0;
 
-   /* initialize the cliquepartition array */
-   for( i = 0; i < nvars; ++i )
+   /* initialize the cliquepartition and tmpvalues array */
+   for( i = nvars - 1; i >= 0; --i )
+   {
       cliquepartition[i] = -1;
+      tmpvalues[i] = TRUE;
+   }
+
+   /* get corresponding active problem variables */
+   SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
 
    /* calculate the clique partition */
    ncliques = 0;
@@ -7583,51 +7595,37 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    {
       if( cliquepartition[i] == -1 )
       {
-         SCIP_VAR* ivar;
-         SCIP_Bool ivalue;
-         int j;
-
-         /* get the corresponding active problem variable */
-         ivar = vars[i];
-         ivalue = TRUE;
-         SCIP_CALL( SCIPvarGetProbvarBinary(&ivar, &ivalue) );
-
          /* variable starts a new clique */
          cliquepartition[i] = ncliques;
-         cliquevars[0] = ivar;
-         cliquevalues[0] = ivalue;
+         cliquevars[0] = tmpvars[i];
+         cliquevalues[0] = tmpvalues[i];
          ncliquevars = 1;
 
          /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-         if( SCIPvarIsActive(ivar) )
+         if( SCIPvarIsActive(tmpvars[i]) )
          {
             /* greedily fill up the clique */
             for( j = i+1; j < nvars; ++j )
             {
                if( cliquepartition[j] == -1 )
                {
-                  SCIP_VAR* jvar;
-                  SCIP_Bool jvalue;
-                  int k;
-
-                  /* get the corresponding active problem variable */
-                  jvar = vars[j];
-                  jvalue = TRUE;
-                  SCIP_CALL( SCIPvarGetProbvarBinary(&jvar, &jvalue) );
-
-                  /* check if the variable has an edge in the implication graph to all other variables in this clique */
-                  for( k = 0; k < ncliquevars; ++k )
+                  /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+                  if( SCIPvarIsActive(tmpvars[j]) )
                   {
-                     if( !SCIPvarsHaveCommonClique(jvar, jvalue, cliquevars[k], cliquevalues[k], TRUE) )
-                        break;
-                  }
-                  if( k == ncliquevars )
-                  {
-                     /* put the variable into the same clique */
-                     cliquepartition[j] = ncliques;
-                     cliquevars[ncliquevars] = jvar;
-                     cliquevalues[ncliquevars] = jvalue;
-                     ncliquevars++;
+                     /* check if the variable has an edge in the implication graph to all other variables in this clique */
+                     for( k = ncliquevars - 1; k >= 0; --k )
+                     {
+                        if( !SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[k], cliquevalues[k], TRUE) )
+                           break;
+                     }
+                     if( k == -1 )
+                     {
+                        /* put the variable into the same clique */
+                        cliquepartition[j] = ncliques;
+                        cliquevars[ncliquevars] = tmpvars[j];
+                        cliquevalues[ncliquevars] = tmpvalues[j];
+                        ncliquevars++;
+                     }
                   }
                }
             }
@@ -7640,6 +7638,8 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    }
 
    /* free temporary memory */
+   SCIPsetFreeBufferArray(scip->set, &tmpvars);
+   SCIPsetFreeBufferArray(scip->set, &tmpvalues);
    SCIPsetFreeBufferArray(scip->set, &cliquevalues);
    SCIPsetFreeBufferArray(scip->set, &cliquevars);
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.253 2009/07/28 21:00:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.254 2009/08/03 15:30:47 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3098,10 +3098,15 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    assert( set != NULL );
    assert( vars != NULL );
    assert( scalars != NULL );
-   assert( nvars != NULL );
+   assert( nvars != NULL  || *nvars == 0 );
    assert( constant != NULL );
    assert( requiredsize != NULL );
    assert( *nvars <= varssize );
+
+   *requiredsize = 0;
+
+   if( *nvars == 0 )
+      return SCIP_OKAY;
 
    nactivevars = 0;
    activeconstant = 0.0;
@@ -3139,9 +3144,10 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR
          || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED );
-
+      
       tmpvars[v] = var;
       tmpscalars[v] = scalar;
+      
    }
    /* sort all variables to combine equal variables easily */
    SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
@@ -3262,10 +3268,24 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          /* combine both variable since they are the same */
          if( SCIPvarCompare(activevars[v - 1], activevars[v]) == 0 )
          {
-            activescalars[v - 1] += activescalars[v];
-            --nactivevars;
-            activevars[v] = activevars[nactivevars];
-            activescalars[v] = activescalars[nactivevars];
+            if( activescalars[v - 1] + activescalars[v] != 0.0 )
+            {
+               activescalars[v - 1] += activescalars[v];
+               --nactivevars;
+               activevars[v] = activevars[nactivevars];
+               activescalars[v] = activescalars[nactivevars];
+            }
+            else
+            {
+               --nactivevars;
+               activevars[v] = activevars[nactivevars];
+               activescalars[v] = activescalars[nactivevars];
+               --nactivevars;
+               --v;
+               activevars[v] = activevars[nactivevars];
+               activescalars[v] = activescalars[nactivevars];
+            }
+
          }
       }
       *requiredsize = nactivevars;
@@ -7444,8 +7464,8 @@ SCIP_RETCODE SCIPvarAddImplic(
       assert(var->data.aggregate.var != NULL);
       if( SCIPvarGetType(var->data.aggregate.var) == SCIP_VARTYPE_BINARY )
       {   
-         assert((var->data.aggregate.scalar == 1 && var->data.aggregate.constant == 0)
-            || (var->data.aggregate.scalar == -1 && var->data.aggregate.constant == 1));
+         assert( (SCIPsetIsEQ(set, var->data.aggregate.scalar, 1) && SCIPsetIsZero(set, var->data.aggregate.constant))
+            || (SCIPsetIsEQ(set, var->data.aggregate.scalar, -1) && SCIPsetIsEQ(set, var->data.aggregate.constant, 1)) );
        
          if( var->data.aggregate.scalar > 0 )
          {
@@ -8157,6 +8177,83 @@ SCIP_VAR* SCIPvarGetProbvar(
       return NULL; /*lint !e527*/
    }
 }
+
+/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
+ *  SCIPvarFlattenAggregationGraph()
+ *  gets corresponding active, fixed, or multi-aggregated problem variables of binary variables and updates the given
+ *  negation status of each variable
+ */
+SCIP_RETCODE SCIPvarsGetProbvarBinary(
+   SCIP_VAR***           vars,               /**< pointer to binary problem variables */
+   SCIP_Bool**           negatedarr,         /**< pointer to corresponding array to update the negation status */
+   int                   nvars               /**< number of variables and values in vars and negated array */
+   )
+{
+   SCIP_VAR** var;
+   SCIP_Bool* negated;
+   SCIP_Bool resolved;
+   int v;
+
+   assert(vars != NULL);
+   assert(*vars != NULL || nvars == 0);
+   assert(negatedarr != NULL);
+   assert(*negatedarr != NULL || nvars == 0);
+
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      var = &((*vars)[v]);
+      negated = &((*negatedarr)[v]);
+      resolved = FALSE;
+
+      while( !resolved && *var != NULL )
+      {
+         assert(SCIPvarGetType(*var) == SCIP_VARTYPE_BINARY);
+         
+         switch( SCIPvarGetStatus(*var) )
+         {
+         case SCIP_VARSTATUS_ORIGINAL:
+            if( (*var)->data.original.transvar == NULL )
+               return SCIP_OKAY;
+            *var = (*var)->data.original.transvar;
+            break;
+            
+         case SCIP_VARSTATUS_LOOSE:
+         case SCIP_VARSTATUS_COLUMN:
+         case SCIP_VARSTATUS_FIXED:
+         case SCIP_VARSTATUS_MULTAGGR:
+            resolved = TRUE;
+            break;
+            
+         case SCIP_VARSTATUS_AGGREGATED:  /* x = a'*x' + c'  =>  a*x + c == (a*a')*x' + (a*c' + c) */
+            assert((*var)->data.aggregate.var != NULL);
+            assert(SCIPvarGetType((*var)->data.aggregate.var) == SCIP_VARTYPE_BINARY);
+            assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) || EPSEQ((*var)->data.aggregate.constant, 1.0, 1e-06));
+            assert(EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06) || EPSEQ((*var)->data.aggregate.scalar, -1.0, 1e-06));
+            assert(EPSEQ((*var)->data.aggregate.constant, 0.0, 1e-06) == EPSEQ((*var)->data.aggregate.scalar, 1.0, 1e-06));
+            *negated = (*negated != ((*var)->data.aggregate.scalar < 0.0));
+            *var = (*var)->data.aggregate.var;
+            break;
+            
+         case SCIP_VARSTATUS_NEGATED:     /* x =  - x' + c'  =>  a*x + c ==   (-a)*x' + (a*c' + c) */
+            assert((*var)->negatedvar != NULL);
+            *negated = !(*negated);
+            *var = (*var)->negatedvar;
+            break;
+            
+         default:
+            SCIPerrorMessage("unknown variable status at position %d in variable array\n", v);
+            return SCIP_INVALIDDATA;
+         }
+      }
+      if( *var == NULL )
+      {
+         SCIPerrorMessage("active variable path at pos %d in variable array leads to NULL pointer\n", v);
+         return SCIP_INVALIDDATA;
+      }
+   }
+   return SCIP_OKAY;
+}
+
 
 /**  @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
  *    SCIPvarFlattenAggregationGraph()

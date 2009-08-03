@@ -12,13 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.172 2009/06/25 11:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.173 2009/08/03 15:30:46 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
  * @brief  constraint handler for knapsack constraints
  * @author Tobias Achterberg
  * @author Kati Wolter
+ * @author Michael Winkler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -82,6 +83,33 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   int*                  ints1;              /**< cleared memory array, all entries are set to zero in initpre, if you use this
+                                              *   you have to clear it at the end, exists only in presolving stage */
+   int*                  ints2;              /**< cleared memory array, all entries are set to zero in initpre, if you use this
+                                              *   you have to clear it at the end, exists only in presolving stage */
+   SCIP_Longint*         longints1;          /**< cleared memory array, all entries are set to zero in initpre, if you use this
+                                              *   you have to clear it at the end, exists only in presolving stage */
+   SCIP_Longint*         longints2;          /**< cleared memory array, all entries are set to zero in initpre, if you use this
+                                              *   you have to clear it at the end, exists only in presolving stage */
+   SCIP_Bool*            bools1;             /**< cleared memory array, all entries are set to zero in initpre, if you use this
+                                              *   you have to clear it at the end, exists only in presolving stage */
+   SCIP_Bool*            bools2;             /**< cleared memory array, all entries are set to zero in initpre, if you use this
+                                              *   you have to clear it at the end, exists only in presolving stage */
+   SCIP_Bool*            bools3;             /**< cleared memory array, all entries are set to zero in initpre, if you use this
+                                              *   you have to clear it at the end, exists only in presolving stage */
+   SCIP_Bool*            bools4;             /**< cleared memory array, all entries are set to zero in initpre, if you use this
+                                              *   you have to clear it at the end, exists only in presolving stage */
+   SCIP_Real*            reals1;             /**< cleared memory array, all entries are set to zero in consinit, if you use this
+                                              *   you have to clear it at the end */
+   int                   ints1size;          /**< size of ints1 array */
+   int                   ints2size;          /**< size of ints2 array */
+   int                   longints1size;      /**< size of longints1 array */
+   int                   longints2size;      /**< size of longints2 array */
+   int                   bools1size;         /**< size of bools1 array */
+   int                   bools2size;         /**< size of bools2 array */
+   int                   bools3size;         /**< size of bools3 array */
+   int                   bools4size;         /**< size of bools4 array */
+   int                   reals1size;         /**< size of reals1 array */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for separating knapsack cardinality cuts */
@@ -112,7 +140,7 @@ struct SCIP_ConsData
    unsigned int          propagated:1;       /**< is the knapsack constraint already propagated? */
    unsigned int          presolved:1;        /**< is the knapsack constraint already presolved? */
    unsigned int          sorted:1;           /**< are the knapsack items sorted by weight? */
-   unsigned int          cliquepartitioned;  /**< is the clique partition valid? */
+   unsigned int          cliquepartitioned:1;/**< is the clique partition valid? */
    unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
    unsigned int          cliquesadded:1;     /**< were the cliques of the knapsack already added to clique table? */
 };
@@ -902,6 +930,8 @@ SCIP_RETCODE getCover(
    *nnoncovervars = 0;
    *coverweight = 0;
    *covervarsc1activity = 0.0;
+   nsetvars = 0;
+   nnonsetvars = 0;
       
    /* solve the following knapsack problem with dynamic programming or greedy heuristic:
     * max SUM (1 - x_i^*) z_i
@@ -2081,13 +2111,19 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    int nconsvars;
    int i;
 
+   int* tmpindices;
+   int tmp;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool noknapsackconshdlr;
+
    assert(nknapvars > 0);
    assert(knapvars != NULL);
 
    SCIPdebugMessage("separate linear constraint <%s> relaxed to knapsack\n", cons != NULL ? SCIPconsGetName(cons) : "-");
    if( cons != NULL )
    {
-      SCIPdebug(SCIPprintCons(scip, cons, NULL));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
    }
 
    SCIP_CALL( SCIPgetVarsData(scip, &binvars, NULL, &nbinvars, NULL, NULL, NULL) );
@@ -2098,8 +2134,49 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    /* set up data structures */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &binvals, nbinvars) );
-   BMSclearMemoryArray(binvals, nbinvars);
+
+   /* get conshdlrdata to use cleared memory */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      noknapsackconshdlr = TRUE;
+      SCIP_CALL( SCIPallocBufferArray(scip, &binvals, nbinvars) );
+      BMSclearMemoryArray(binvals, nbinvars);
+   }
+   else
+   {
+      noknapsackconshdlr = FALSE;
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices, nknapvars) );
+
+      assert(conshdlrdata->reals1size > 0);
+
+      /* next if condition should normally not be true, because it means that presolving has created more binary 
+       * variables than binary + integer variables existed at the constraint initialization method, but for example if you would
+       * transform all integers into their binary representation then it maybe happens
+       */ 
+      if( conshdlrdata->reals1size < nbinvars )
+      {
+	 int oldsize;
+	 oldsize = conshdlrdata->reals1size;
+	 
+	 while( conshdlrdata->reals1size < nbinvars )
+            conshdlrdata->reals1size *= 2;
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, conshdlrdata->reals1size) );
+         BMSclearMemoryArray(&conshdlrdata->reals1[oldsize], conshdlrdata->reals1size - oldsize);
+	}
+      binvals = conshdlrdata->reals1;
+
+      /* check for cleared array, all entries have to be zero */
+#ifndef NDEBUG
+      for( tmp = nbinvars - 1; tmp >= 0; --tmp )
+      {
+         assert(binvals[tmp] == 0);
+      }
+#endif
+      tmp = 0;
+   }
 
    /* relax continuous knapsack constraint:
     * 1. make all variables binary:
@@ -2122,6 +2199,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       {
          assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < nbinvars);
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
+         tmpindices[tmp] = SCIPvarGetProbindex(var);
+         ++tmp;
          SCIPdebugMessage(" -> binary variable %+.15g<%s>(%.15g)\n", 
             valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var));
       }
@@ -2176,6 +2255,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
             rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
             binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
+            tmpindices[tmp] = SCIPvarGetProbindex(zvlb[bestlbtype]);
+            ++tmp;
             SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with variable lower bound %+.15g<%s>(%.15g) %+.15g (rhs=%.15g)\n",
                valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
                bvlb[bestlbtype], SCIPvarGetName(zvlb[bestlbtype]),
@@ -2235,6 +2316,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
             rhs -= valscale * knapvals[i] * dvub[bestubtype];
             binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
+            tmpindices[tmp] = SCIPvarGetProbindex(zvub[bestubtype]);
+            ++tmp;
             SCIPdebugMessage(" -> non-binary variable %+.15g<%s>(%.15g) replaced with variable upper bound %+.15g<%s>(%.15g) %+.15g (rhs=%.15g)\n",
                valscale * knapvals[i], SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
                bvub[bestubtype], SCIPvarGetName(zvub[bestubtype]),
@@ -2329,7 +2412,17 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
  TERMINATE:
    /* free data structures */
-   SCIPfreeBufferArray(scip, &binvals);
+   if( noknapsackconshdlr)
+   {
+      SCIPfreeBufferArray(scip, &binvals);
+   }
+   else
+   {
+      /* clear binvals */
+      for( --tmp; tmp >= 0; --tmp)
+         binvals[tmpindices[tmp]] = 0;
+      SCIPfreeBufferArray(scip, &tmpindices);
+   }
    SCIPfreeBufferArray(scip, &consvals);
    SCIPfreeBufferArray(scip, &consvars);
 
@@ -2654,6 +2747,45 @@ SCIP_RETCODE removeZeroWeights(
    return SCIP_OKAY;
 }
 
+/** compares the index of two variables, only active or negated variables are allowed, if a variable
+ *  is negated then the index of the corresponding active variable is taken, returns -1 if first is
+ *  smaller than, and +1 if first is greater than second variable index; returns 0 if both indices
+ *  are equal, which means both variables are equal
+ */
+static
+int activeandnegVarCompare(
+   SCIP_VAR*             var1,               /**< first problem variable */
+   SCIP_VAR*             var2                /**< second problem variable */
+   )
+{
+  assert(var1 != NULL);
+  assert(var2 != NULL);
+  assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
+  assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
+
+  if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
+    var1 = SCIPvarGetNegatedVar(var1);
+  if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
+    var2 = SCIPvarGetNegatedVar(var2);
+
+  if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
+    return -1;
+  else if( SCIPvarGetIndex(var1) > SCIPvarGetIndex(var2) )
+    return +1;
+  else
+    {
+      assert(var1 == var2);
+      return 0;
+    }
+}
+
+/** comparison method for sorting variables by non-decreasing index */
+static
+SCIP_DECL_SORTPTRCOMP(activeandnegVarComp)
+{
+  return activeandnegVarCompare((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
+}
+
 /** replaces multiple occurrences of a variable or its negation by a single coefficient */
 static
 SCIP_RETCODE mergeMultiples(
@@ -2663,69 +2795,112 @@ SCIP_RETCODE mergeMultiples(
 {
    SCIP_CONSDATA* consdata;
    int v;
+   int prev;
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->merged )
+   if( consdata->merged ) 
       return SCIP_OKAY;
 
-   /* loop backwards through the items: deletion only affects rear items */
-   for( v = consdata->nvars-1; v >= 0; --v )
+   if( consdata->nvars <= 1 )
    {
-      SCIP_VAR* var;
-      SCIP_VAR* negvar;
-      int w;
-
-      var = consdata->vars[v];
-      assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-      assert(SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
-      negvar = SCIPvarGetNegatedVar(var);
-      assert(negvar == NULL || SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED);
-
-      for( w = v-1; w >= 0; --w )
-      {
-         if( consdata->vars[w] == var )
-         {
-            /* variables v and w are equal: add weight of v to w, and delete v */
-            consdataChgWeight(consdata, w, consdata->weights[v] + consdata->weights[w]);
-            SCIP_CALL( delCoefPos(scip, cons, v) );
-            consdata->cliquesadded = FALSE; /* new coefficient might lead to larger cliques */
-            break;
-         }
-         else if( consdata->vars[w] == negvar )
-         {
-            /* variables v and w are opposite: subtract smaller weight from larger weight, reduce capacity,
-             * and delete item of smaller weight
-             */
-            if( consdata->weights[v] == consdata->weights[w] )
-            {
-               /* both variables eliminate themselves: w*x + w*(1-x) == w */
-               consdata->capacity -= consdata->weights[v];
-               SCIP_CALL( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
-               assert(consdata->vars[w] == negvar);
-               SCIP_CALL( delCoefPos(scip, cons, w) );
-               v = MIN(v, consdata->nvars); /* we could have removed the last two coefficients */
-            }
-            else if( consdata->weights[v] < consdata->weights[w] )
-            {
-               consdata->capacity -= consdata->weights[v];
-               consdataChgWeight(consdata, w, consdata->weights[w] - consdata->weights[v]);
-               SCIP_CALL( delCoefPos(scip, cons, v) ); /* this does not affect w, because w < v */
-               assert(consdata->vars[w] == negvar);
-               assert(consdata->weights[w] > 0);
-            }
-            else
-            {
-               consdata->capacity -= consdata->weights[w];
-               consdataChgWeight(consdata, v, consdata->weights[v] - consdata->weights[w]);
-               SCIP_CALL( delCoefPos(scip, cons, w) ); /* this may move v, but does no harm */
-            }
-            consdata->cliquesadded = FALSE; /* reduced capacity might lead to larger cliques */
-            break;
-         }
-      }
+      consdata->merged = TRUE;
+      return SCIP_OKAY;
    }
+
+   assert(consdata->vars != NULL);
+
+   /* sorting array after indices of variables, that's only for faster merging */ 
+   SCIPsortPtrPtrLongInt((void**)consdata->vars, (void**)consdata->eventdatas, consdata->weights, consdata->cliquepartition,
+			 activeandnegVarComp, consdata->nvars);
+   /* knapsack-sorting (descreasing weights) now lost */ 
+   consdata->sorted = FALSE;
+
+   v = consdata->nvars - 1;
+   /* loop backwards through the items: deletion only affects rear items */
+   for( prev = v - 1; prev >= 0; --prev )
+   {
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
+      SCIP_Bool negated1;
+      SCIP_Bool negated2;
+      
+      negated1 = FALSE;
+      negated2 = FALSE;
+      
+      var1 = consdata->vars[v];
+      assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
+      if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
+      {
+         var1 = SCIPvarGetNegatedVar(var1);
+         negated1 = TRUE;
+      }
+      assert(var1 != NULL);
+      
+      var2 = consdata->vars[prev];
+      assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
+      if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
+      {
+         var2 = SCIPvarGetNegatedVar(var2);
+         negated2 = TRUE;
+      }
+      assert(var2 != NULL);
+      
+      if( var1 == var2 )
+      {
+         /* both variables are either active or negated */
+         if( negated1 == negated2 )
+         {
+            /* variables var1 and var2 are equal: add weight of var1 to var2, and delete var1 */
+            consdataChgWeight(consdata, prev, consdata->weights[v] + consdata->weights[prev]);
+            SCIP_CALL( delCoefPos(scip, cons, v) );
+         }
+         /* variables var1 and var2 are opposite: subtract smaller weight from larger weight, reduce capacity,
+          * and delete item of smaller weight
+          */
+         else if( consdata->weights[v] == consdata->weights[prev] )
+         {
+            /* both variables eliminate themselves: w*x + w*(1-x) == w */
+            consdata->capacity -= consdata->weights[v];
+            SCIP_CALL( delCoefPos(scip, cons, v) ); /* this does not affect var2, because var2 stands before var1 */
+            SCIP_CALL( delCoefPos(scip, cons, prev) );
+
+            --prev;
+         }
+         else if( consdata->weights[v] < consdata->weights[prev] )
+         {
+            consdata->capacity -= consdata->weights[v];
+            consdataChgWeight(consdata, prev, consdata->weights[prev] - consdata->weights[v]);
+            assert(consdata->weights[prev] > 0);
+            SCIP_CALL( delCoefPos(scip, cons, v) ); /* this does not affect var2, because var2 stands before var1 */
+         }
+         else
+         {
+            consdata->capacity -= consdata->weights[prev];
+            consdataChgWeight(consdata, v, consdata->weights[v] - consdata->weights[prev]);
+            assert(consdata->weights[v] > 0);
+            SCIP_CALL( delCoefPos(scip, cons, prev) ); /* attention: normally we lose our order */
+            /* restore order iff necessary */
+            if( consdata->nvars != v ) /* otherwise the order still stands */
+            {
+               /* either that was the last pair or both, the negated and "normal" variable in front doesn't match var1, so the order is irrelevant */
+               if( prev == 0 || (var1 != consdata->vars[prev - 1] && var1 != SCIPvarGetNegatedVar(consdata->vars[prev - 1])) )
+                  --prev;
+               else /* we need to let v at the same position*/
+               {
+                  consdata->cliquesadded = FALSE; /* new coefficient might lead to larger cliques */
+                  /* don't decrease v, the same variable exist in front */
+                  continue;
+               }
+            }
+         }
+         consdata->cliquesadded = FALSE; /* new coefficient might lead to larger cliques */
+      }
+      v = prev;
+     }
 
    consdata->merged = TRUE;
 
@@ -2743,6 +2918,7 @@ static
 SCIP_RETCODE simplifyInequalities(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  ndelconss,          /**< pointer to store the amount of deleted constraints */
    int*                  nchgcoefs,          /**< pointer to store the amount of changed coefficients */
    int*                  nchgsides,          /**< pointer to store the amount of changed sides */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
@@ -2764,6 +2940,7 @@ SCIP_RETCODE simplifyInequalities(
 
    assert( scip != NULL );
    assert( cons != NULL );
+   assert( ndelconss != NULL );
    assert( nchgcoefs != NULL );
    assert( nchgsides != NULL );
    assert( cutoff != NULL );
@@ -2802,7 +2979,7 @@ SCIP_RETCODE simplifyInequalities(
       for( v = 0; v < nvars; ++v )
       {
          /* check if the coefficient is odd */
-         if( !SCIPisIntegral(scip, weights[v] % 2) )
+	if( weights[v] % 2 )
          {
             oddbinvar = vars[v];
             oddbinval = weights[v];
@@ -2821,7 +2998,7 @@ SCIP_RETCODE simplifyInequalities(
          assert(oddbinvar != NULL);
          
          oddbinval--;
-         SCIPdebugMessage("linear constraint <%s>: decreasing coefficient for variable <%s> to <%lld> and rhs to <%lld>\n", 
+         SCIPdebugMessage("knapsack constraint <%s>: decreasing coefficient for variable <%s> to <%lld> and rhs to <%lld>\n", 
             SCIPconsGetName(cons), SCIPvarGetName(oddbinvar), oddbinval , capacity - 1);
 
 	 if( consdata->capacity == 0 )
@@ -2839,7 +3016,9 @@ SCIP_RETCODE simplifyInequalities(
 	    if( nvars == 1 )
 	    {
 	       assert(consdata->capacity >= 0);
-	       SCIP_CALL( SCIPdelCons(scip, cons) );
+	       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+	       ++(*ndelconss);
+	       return SCIP_OKAY;
 	    }
          }
          else
@@ -2847,8 +3026,8 @@ SCIP_RETCODE simplifyInequalities(
             consdataChgWeight(consdata, pos, oddbinval);
          }
 
-         (*nchgcoefs)++;
-         (*nchgsides)++;
+         ++(*nchgcoefs);
+         ++(*nchgsides);
 
          capacity = consdata->capacity;
          vars = consdata->vars;
@@ -2875,7 +3054,9 @@ SCIP_RETCODE simplifyInequalities(
          consdata->capacity /= gcd;
          (*nchgsides)++;
          
-         success = TRUE;
+	 /* capacity still odd, try to simplify again */
+	 if( consdata->capacity % 2 )
+	   success = TRUE;
       }
    }
    while( success );
@@ -3114,6 +3295,18 @@ SCIP_RETCODE tightenWeightsLift(
    int val;
    int i;
 
+   int* tmpindices;
+   SCIP_Bool* tmpboolindices;
+   int* tmpindices2;
+   SCIP_Bool* tmpboolindices2;
+   int* tmpindices3;
+   SCIP_Bool* tmpboolindices3;
+   int tmp;
+   int tmp2;
+   int tmp3;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
    assert(nchgcoefs != NULL);
    assert(!SCIPconsIsModifiable(cons));
 
@@ -3135,29 +3328,141 @@ SCIP_RETCODE tightenWeightsLift(
    nbinvars = SCIPgetNBinVars(scip);
    assert(nbinvars > 0);
 
+   /* get conshdlrdata to use cleared memory */
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* allocate temporary memory for the list of implied to zero variables */
    zeroitemssize = MIN(nbinvars, MAX_ZEROITEMS_SIZE); /* initial size of zeroitems buffer */
    SCIP_CALL( SCIPallocBufferArray(scip, &liftcands[0], nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &liftcands[1], nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &firstidxs[0], nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &firstidxs[1], nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &zeroweightsums[0], nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &zeroweightsums[1], nbinvars) );
+
+   assert(conshdlrdata->ints1size > 0);
+   assert(conshdlrdata->ints2size > 0);
+   assert(conshdlrdata->longints1size > 0);
+   assert(conshdlrdata->longints2size > 0);
+
+   /* next if conditions should normally not be true, because it means that presolving has created more binary variables
+    * than binary + integer variables existed at the presolving initialization method, but for example if you would transform all 
+    * integers into their binary representation then it maybe happens
+    */ 
+   if( conshdlrdata->ints1size < nbinvars )
+   {
+      int oldsize;
+      oldsize = conshdlrdata->ints1size;
+
+      while( conshdlrdata->ints1size < nbinvars )
+         conshdlrdata->ints1size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->ints1, conshdlrdata->ints1size) );
+      BMSclearMemoryArray(&conshdlrdata->ints1[oldsize], conshdlrdata->ints1size - oldsize);
+   }
+   if( conshdlrdata->ints2size < nbinvars )
+   {
+      int oldsize;
+      oldsize = conshdlrdata->ints2size;
+
+      while( conshdlrdata->ints2size < nbinvars )
+         conshdlrdata->ints2size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->ints2, conshdlrdata->ints2size) );
+      BMSclearMemoryArray(&conshdlrdata->ints2[oldsize], conshdlrdata->ints2size - oldsize);
+   }
+   if( conshdlrdata->longints1size < nbinvars )
+   {
+      int oldsize;
+      oldsize = conshdlrdata->longints1size;
+
+      while( conshdlrdata->longints1size < nbinvars )
+         conshdlrdata->longints1size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->longints1, conshdlrdata->longints1size) );
+      BMSclearMemoryArray(&conshdlrdata->longints1[oldsize], conshdlrdata->longints1size - oldsize);
+   }
+   if( conshdlrdata->longints2size < nbinvars )
+   {
+      int oldsize;
+      oldsize = conshdlrdata->longints2size;
+
+      while( conshdlrdata->longints2size < nbinvars )
+         conshdlrdata->longints2size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->longints2, conshdlrdata->longints2size) );
+      BMSclearMemoryArray(&conshdlrdata->longints2[oldsize], conshdlrdata->longints2size - oldsize);
+   }
+
+   firstidxs[0] = conshdlrdata->ints1;
+   firstidxs[1] = conshdlrdata->ints2;
+   zeroweightsums[0] = conshdlrdata->longints1;
+   zeroweightsums[1] = conshdlrdata->longints2;
+
+   /* check for cleared arrays, all entries are zero */
+#ifndef NDEBUG
+   for( tmp = nbinvars - 1; tmp >= 0; --tmp )
+   {
+      assert(firstidxs[0][tmp] == 0);
+      assert(firstidxs[1][tmp] == 0);
+      assert(zeroweightsums[0][tmp] == 0);
+      assert(zeroweightsums[1][tmp] == 0);
+   }
+#endif
+
    SCIP_CALL( SCIPallocBufferArray(scip, &zeroitems, zeroitemssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nextidxs, zeroitemssize) );
-   BMSclearMemoryArray(firstidxs[0], nbinvars);
-   BMSclearMemoryArray(firstidxs[1], nbinvars);
-   BMSclearMemoryArray(zeroweightsums[0], nbinvars);
-   BMSclearMemoryArray(zeroweightsums[1], nbinvars);
+
    zeroitems[0] = -1; /* dummy element */
    nextidxs[0] = -1;
    nzeroitems = 1;
    nliftcands[0] = 0;
    nliftcands[1] = 0;
 
-   /* identify all binary variable/value pairs that would fix a knapsack item to zero */
-   SCIP_CALL( SCIPallocBufferArray(scip, &zeroiteminserted[0], nbinvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &zeroiteminserted[1], nbinvars) );
+   assert(conshdlrdata->bools1size > 0);
+   assert(conshdlrdata->bools2size > 0);
+
+   /* next if conditions should normally not be true, because it means that presolving has created more binary variables
+    * than binary + integer variables existed at the presolving initialization method, but for example if you would transform all 
+    * integers into their binary representation then it maybe happens
+    */ 
+   if( conshdlrdata->bools1size < nbinvars )
+   {
+      int oldsize;
+      oldsize = conshdlrdata->bools1size;
+
+      while( conshdlrdata->bools1size < nbinvars )
+         conshdlrdata->bools1size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools1, conshdlrdata->bools1size) );
+      BMSclearMemoryArray(&conshdlrdata->bools1[oldsize], conshdlrdata->bools1size - oldsize);
+   }
+   if( conshdlrdata->bools2size < nbinvars )
+   {
+      int oldsize;
+      oldsize = conshdlrdata->bools2size;
+
+      while( conshdlrdata->bools2size < nbinvars )
+         conshdlrdata->bools2size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools2, conshdlrdata->bools2size) );
+      BMSclearMemoryArray(&conshdlrdata->bools2[oldsize], conshdlrdata->bools2size - oldsize);
+   }
+
+   zeroiteminserted[0] = conshdlrdata->bools1;
+   zeroiteminserted[1] = conshdlrdata->bools2;
+
+   /* check for cleared arrays, all entries are zero */
+#ifndef NDEBUG
+   for( tmp = nbinvars - 1; tmp >= 0; --tmp )
+   {
+      assert(zeroiteminserted[0][tmp] == 0);
+      assert(zeroiteminserted[1][tmp] == 0);
+   }
+#endif
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices, 2 * nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboolindices, 2 * nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices2, 2 * nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboolindices2, 2 * nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices3, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboolindices3, consdata->nvars) );
+   tmp2 = 0;
+   tmp3 = 0;
+
    memlimitreached = FALSE;
    for( i = 0; i < consdata->nvars && !memlimitreached; ++i )
    {
@@ -3172,6 +3477,8 @@ SCIP_RETCODE tightenWeightsLift(
       int ncliques;
       int j;
 
+      tmp = 0;
+
       /* get corresponding active problem variable */
       var = consdata->vars[i];
       weight = consdata->weights[i];
@@ -3182,11 +3489,11 @@ SCIP_RETCODE tightenWeightsLift(
 
       /* update the zeroweightsum */
       zeroweightsums[!value][varprobindex] += weight; /*lint !e514*/
+      tmpboolindices3[tmp3] = !value;
+      tmpindices3[tmp3] = varprobindex;
+      ++tmp3;
 
       /* initialize the arrays of inserted zero items */
-      BMSclearMemoryArray(zeroiteminserted[0], nbinvars);
-      BMSclearMemoryArray(zeroiteminserted[1], nbinvars);
-
       /* get implications of the knapsack item fixed to one: x == 1 -> y == (1-v);
        * the negation of these implications (y == v -> x == 0) are the ones that we are interested in
        */
@@ -3206,10 +3513,19 @@ SCIP_RETCODE tightenWeightsLift(
          /* insert the item into the list of the implied variable/value */
          if( !zeroiteminserted[implvalue][probindex] )
          {
+            if( firstidxs[implvalue][probindex] == 0 )
+            {
+               tmpboolindices2[tmp2] = implvalue;
+               tmpindices2[tmp2] = probindex;
+               ++tmp2;
+            }
             SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
                   &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
                   &memlimitreached) );
             zeroiteminserted[implvalue][probindex] = TRUE;
+	    tmpboolindices[tmp] = implvalue;
+	    tmpindices[tmp] = probindex;
+            ++tmp;
          }
       }
 
@@ -3240,24 +3556,63 @@ SCIP_RETCODE tightenWeightsLift(
                /* insert the item into the list of the clique variable/value */
                if( !zeroiteminserted[implvalue][probindex] )
                {
+                  if( firstidxs[implvalue][probindex] == 0 )
+                  {
+                     tmpboolindices2[tmp2] = implvalue;
+                     tmpindices2[tmp2] = probindex;
+                     ++tmp2;
+                  }
+
                   SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
                         &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
                         &memlimitreached) );
                   zeroiteminserted[implvalue][probindex] = TRUE;
+		  tmpboolindices[tmp] = implvalue;
+		  tmpindices[tmp] = probindex;
+                  ++tmp;
                }
             }
          }
       }
+      /* clear zeroiteminserted */
+      for( --tmp; tmp >= 0; --tmp)
+	zeroiteminserted[tmpboolindices[tmp]][tmpindices[tmp]] = FALSE;
    }
-   SCIPfreeBufferArray(scip, &zeroiteminserted[1]);
-   SCIPfreeBufferArray(scip, &zeroiteminserted[0]);
+   SCIPfreeBufferArray(scip, &tmpboolindices);
 
    /* calculate the clique partition and the maximal sum of weights using the clique information */
    assert(consdata->sorted);
    SCIP_CALL( calcCliquepartition(scip, consdata) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cliqueused, consdata->nvars) );
-   BMSclearMemoryArray(cliqueused, consdata->nvars);
+
+   assert(conshdlrdata->bools3size > 0);
+
+   /* next if condition should normally not be true, because it means that presolving has created more binary variables
+    * in one constraint than binary + integer variables existed in the whole problem at the presolving initialization method, but
+    * for example if you would transform all integers into their binary representation then it maybe happens
+    */ 
+   if( conshdlrdata->bools3size < consdata->nvars )
+   {
+      int oldsize;
+      oldsize = conshdlrdata->bools3size;
+
+      while( conshdlrdata->bools3size < consdata->nvars )
+         conshdlrdata->bools3size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools3, conshdlrdata->bools3size) );
+      BMSclearMemoryArray(&conshdlrdata->bools3[oldsize], conshdlrdata->bools3size - oldsize);
+   }
+
+   cliqueused = conshdlrdata->bools3;
+
+   /* check for cleared array, all entries are zero */
+#ifndef NDEBUG
+   for( tmp = consdata->nvars - 1; tmp >= 0; --tmp )
+      assert(cliqueused[tmp] == 0);
+#endif
+
    maxcliqueweightsum = 0;
+
+   tmp = 0;
+
    for( i = 0; i < consdata->nvars; ++i )
    {
       assert(0 <= consdata->cliquepartition[i] && consdata->cliquepartition[i] < consdata->nvars);
@@ -3265,14 +3620,43 @@ SCIP_RETCODE tightenWeightsLift(
       {
          maxcliqueweightsum += consdata->weights[i];
          cliqueused[consdata->cliquepartition[i]] = TRUE;
+         tmpindices[tmp] = consdata->cliquepartition[i];
+         ++tmp;
       }
    }
+   /* clear cliqueused */
+   for( --tmp; tmp >= 0; --tmp)
+      cliqueused[tmp] = FALSE;
+
+   assert(conshdlrdata->bools4size > 0);
+
+   /* next if condition should normally not be true, because it means that presolving has created more binary variables
+    * in one constraint than binary + integer variables existed in the whole problem at the presolving initialization method, but
+    * for example if you would transform all integers into their binary representation then it maybe happens
+    */ 
+   if( conshdlrdata->bools4size < consdata->nvars )
+   {
+      int oldsize;
+      oldsize = conshdlrdata->bools4size;
+
+      while( conshdlrdata->bools4size < consdata->nvars )
+         conshdlrdata->bools4size *= 2;
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools4, conshdlrdata->bools4size) );
+      BMSclearMemoryArray(&conshdlrdata->bools4[oldsize], conshdlrdata->bools4size - oldsize);
+   }
+
+   itemremoved = conshdlrdata->bools4;
+
+   /* check for cleared array, all entries are zero */
+#ifndef NDEBUG
+   for( tmp = consdata->nvars - 1; tmp >= 0; --tmp )
+      assert(itemremoved[tmp] == 0);
+#endif
 
    /* for each binary variable xi and each fixing v, calculate the cliqueweightsum and update the weight of the
     * variable in the knapsack (this is sequence-dependent because the new or modified weights have to be
     * included in subsequent cliqueweightsum calculations)
     */
-   SCIP_CALL( SCIPallocBufferArray(scip, &itemremoved, consdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &addvars, 2*nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &addweights, 2*nbinvars) );
    naddvars = 0;
@@ -3286,6 +3670,8 @@ SCIP_RETCODE tightenWeightsLift(
          int idx;
          int j;
 
+	 tmp = 0;
+
          probindex = liftcands[val][i];
          assert(0 <= probindex && probindex < nbinvars);
 
@@ -3295,7 +3681,6 @@ SCIP_RETCODE tightenWeightsLift(
             continue;
 
          /* mark the items that are implied to zero by setting the current variable to the current value */
-         BMSclearMemoryArray(itemremoved, consdata->nvars);
          for( idx = firstidxs[val][probindex]; idx != 0; idx = nextidxs[idx] )
          {
             assert(0 < idx && idx < nzeroitems);
@@ -3305,7 +3690,6 @@ SCIP_RETCODE tightenWeightsLift(
 
          /* calculate the residual cliqueweight sum */
          cliqueweightsum = addweightsum; /* the previously added items are single-element cliques */
-         BMSclearMemoryArray(cliqueused, consdata->nvars);
          for( j = 0; j < consdata->nvars; ++j )
          {
             assert(0 <= consdata->cliquepartition[j] && consdata->cliquepartition[j] < consdata->nvars);
@@ -3313,6 +3697,8 @@ SCIP_RETCODE tightenWeightsLift(
             {
                cliqueweightsum += consdata->weights[j];
                cliqueused[consdata->cliquepartition[j]] = TRUE;
+	       tmpindices[tmp] = consdata->cliquepartition[j];
+               ++tmp;
                if( cliqueweightsum >= consdata->capacity )
                   break;
             }
@@ -3339,8 +3725,36 @@ SCIP_RETCODE tightenWeightsLift(
             SCIPdebugMessage("knapsack constraint <%s>: adding lifted item %"SCIP_LONGINT_FORMAT"<%s>\n",
                SCIPconsGetName(cons), weight, SCIPvarGetName(var));
          }
+
+	 /* clear itemremoved */
+         for( idx = firstidxs[val][probindex]; idx != 0; idx = nextidxs[idx] )
+         {
+            assert(0 < idx && idx < nzeroitems);
+            assert(0 <= zeroitems[idx] && zeroitems[idx] < consdata->nvars);
+            itemremoved[zeroitems[idx]] = FALSE;
+	 }
+	 /* clear cliqueused */
+	 for( --tmp; tmp >= 0; --tmp)
+	   cliqueused[tmpindices[tmp]] = FALSE;
       }
    }
+   SCIPfreeBufferArray(scip, &tmpindices);
+
+   /* clear part of zeroweightsums */
+   for( --tmp3; tmp3 >= 0; --tmp3)
+      zeroweightsums[tmpboolindices3[tmp3]][tmpindices3[tmp3]] = 0;
+
+   /* clear rest of zeroweightsums and firstidxs */
+   for( --tmp2; tmp2 >= 0; --tmp2)
+   {
+      zeroweightsums[tmpboolindices2[tmp2]][tmpindices2[tmp2]] = 0;
+      firstidxs[tmpboolindices2[tmp2]][tmpindices2[tmp2]] = 0;
+   }  
+   
+   SCIPfreeBufferArray(scip, &tmpindices2);
+   SCIPfreeBufferArray(scip, &tmpindices3);
+   SCIPfreeBufferArray(scip, &tmpboolindices2);
+   SCIPfreeBufferArray(scip, &tmpboolindices3);
 
    /* add all additional item weights */
    for( i = 0; i < naddvars; ++i )
@@ -3355,14 +3769,8 @@ SCIP_RETCODE tightenWeightsLift(
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &addweights);
    SCIPfreeBufferArray(scip, &addvars);
-   SCIPfreeBufferArray(scip, &itemremoved);
-   SCIPfreeBufferArray(scip, &cliqueused);
    SCIPfreeBufferArray(scip, &nextidxs);
    SCIPfreeBufferArray(scip, &zeroitems);
-   SCIPfreeBufferArray(scip, &zeroweightsums[1]);
-   SCIPfreeBufferArray(scip, &zeroweightsums[0]);
-   SCIPfreeBufferArray(scip, &firstidxs[1]);
-   SCIPfreeBufferArray(scip, &firstidxs[0]);
    SCIPfreeBufferArray(scip, &liftcands[1]);
    SCIPfreeBufferArray(scip, &liftcands[0]);
 
@@ -3430,7 +3838,7 @@ SCIP_RETCODE tightenWeights(
    assert(consdata->weightsum > consdata->capacity); /* otherwise, the constraint is redundant */
    assert(consdata->nvars > 0);
 
-   /* make sure, all multiple items are merged */
+
    SCIP_CALL( mergeMultiples(scip, cons) );
 
    /* apply rule (1) */
@@ -3625,7 +4033,7 @@ SCIP_RETCODE tightenWeights(
                            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                            SCIPconsIsStickingAtNode(cons)) );
                      SCIPdebugMessage(" -> adding clique constraint: ");
-                     SCIPdebug(SCIPprintCons(scip, cliquecons, NULL));
+                     SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cliquecons, NULL) ) );
                      SCIP_CALL( SCIPaddCons(scip, cliquecons) );
                      SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                      SCIPfreeBufferArray(scip, &cliquevars);
@@ -3798,19 +4206,130 @@ SCIP_DECL_CONSFREE(consFreeKnapsack)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitKnapsack NULL
+static
+SCIP_DECL_CONSINIT(consInitKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int nvars;
 
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   nvars = SCIPgetNBinVars(scip);
+   nvars += SCIPgetNIntVars(scip); /* maybe some integer variables get upgraded to binary variables due to presolving, so we need to count them too */
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->reals1, nvars) );
+   BMSclearMemoryArray(conshdlrdata->reals1, nvars);
+   conshdlrdata->reals1size = nvars;
+
+   return SCIP_OKAY;
+}
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitKnapsack NULL
+static
+SCIP_DECL_CONSEXIT(consExitKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->reals1);
+   conshdlrdata->reals1size = 0;
+
+   return SCIP_OKAY;
+}
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#define consInitpreKnapsack NULL
+static
+SCIP_DECL_CONSINITPRE(consInitpreKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int nvars;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( nconss == 0 || conss != NULL );
+   assert( result != NULL );
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   nvars = SCIPgetNBinVars(scip);
+   nvars += SCIPgetNIntVars(scip); /* maybe some integer variables get upgraded to binary variables due to presolving, so we need to count them too */
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->ints1, nvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->ints2, nvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->longints1, nvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->longints2, nvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->bools1, nvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->bools2, nvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->bools3, nvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->bools4, nvars) );
+
+   BMSclearMemoryArray(conshdlrdata->ints1, nvars);
+   BMSclearMemoryArray(conshdlrdata->ints2, nvars);
+   BMSclearMemoryArray(conshdlrdata->longints1, nvars);
+   BMSclearMemoryArray(conshdlrdata->longints2, nvars);
+   BMSclearMemoryArray(conshdlrdata->bools1, nvars);
+   BMSclearMemoryArray(conshdlrdata->bools2, nvars);
+   BMSclearMemoryArray(conshdlrdata->bools3, nvars);
+   BMSclearMemoryArray(conshdlrdata->bools4, nvars);
+
+   conshdlrdata->ints1size = nvars;
+   conshdlrdata->ints2size = nvars;
+   conshdlrdata->longints1size = nvars;
+   conshdlrdata->longints2size = nvars;
+   conshdlrdata->bools1size = nvars;
+   conshdlrdata->bools2size = nvars;
+   conshdlrdata->bools3size = nvars;
+   conshdlrdata->bools4size = nvars;
+
+   return SCIP_OKAY;
+}
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
-#define consExitpreKnapsack NULL
+static
+SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->ints1);
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->ints2);
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->longints1);
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->longints2);
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->bools1);
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->bools2);
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->bools3);
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->bools4);
+
+   conshdlrdata->ints1size = 0;
+   conshdlrdata->ints2size = 0;
+   conshdlrdata->longints1size = 0;
+   conshdlrdata->longints2size = 0;
+   conshdlrdata->bools1size = 0;
+   conshdlrdata->bools2size = 0;
+   conshdlrdata->bools3size = 0;
+   conshdlrdata->bools4size = 0;
+
+   return SCIP_OKAY;
+}
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
@@ -3823,6 +4342,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolKnapsack)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int c;
+
+   assert( scip != NULL );
 
    /* release the rows of all constraints */
    for( c = 0; c < nconss; ++c )
@@ -4205,7 +4726,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          continue;
 
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
-      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
       consdata->presolved = TRUE;
 
@@ -4259,7 +4780,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          /* try to simplify inequalities */
          if( conshdlrdata->simplifyinequalities )
          {
-	   SCIP_CALL( simplifyInequalities(scip, cons, nchgcoefs, nchgsides, &cutoff) );
+	   SCIP_CALL( simplifyInequalities(scip, cons, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 	   if( cutoff )
 	      break;
          }

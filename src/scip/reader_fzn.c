@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.22 2009/07/23 17:35:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.23 2009/08/03 15:30:46 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2497,7 +2497,6 @@ SCIP_RETCODE getActiveVariables(
 
       /* avoid overflow by reallocation */
       if( requiredsize > *nvars )
-      if ( requiredsize > *nvars )
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
