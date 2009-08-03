@@ -162,6 +162,7 @@ fixed bugs:
 - fixed compiler warning caused by no initialization of two integer in cons_knapsack.c
 - adjusted assert in var.c
 - fixed bug in SCIPvarGetActiveRepresentatives() in var.c
+- fixed bug with objective limit in lp.c: previously the infinity value of SCIP was used as default - now the value of LPI is used. In the earlier version in many cases the problems where never infeasible.
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
