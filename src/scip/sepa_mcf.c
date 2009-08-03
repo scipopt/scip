@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.119 2009/07/28 17:00:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.120 2009/08/03 22:49:12 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -73,6 +73,7 @@
 #define DEFAULT_MAXSEPACUTS                 100   /**< maximal number of cuts separated per separation round (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTSROOT             200   /**< maximal number of cuts separated per separation round in root node (-1: unlimited) */
 #define DEFAULT_MAXINCONSISTENCYRATIO       0.02  /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) at all */
+#define DEFAULT_MAXARCINCONSISTENCYRATIO     0.5 /**< maximum inconsistency ratio for arcs not to be deleted */
 #define DEFAULT_CHECKCUTSHORECONNECTIVITY   TRUE  /**< should we only separate if the cuts shores are connected */
 #define DEFAULT_SEPARATESINGLENODECUTS      TRUE  /**< should we separate inequalities based on single node cuts */
 #define DEFAULT_SEPARATEFLOWCUTSET          TRUE  /**< should we separate flowcutset inequalities */
@@ -91,7 +92,6 @@
 #define MAXCOLROWRATIO                    100.0 /**< maximum ratio cols/rows for the separator to be switched on */
 #define MAXFLOWVARFLOWROWRATIO            100.0 /**< maximum ratio flowvars/flowrows for the separator to be switched on */
 #define MAXARCNODERATIO                   100.0 /**< maximum ratio arcs/nodes for the separator to be switched on */
-#define MAXARCINCONSISTENCYRATIO            0.5 /**< maximum inconsistency ratio for arcs not to be deleted */
 #define MAXNETWORKS                           4 /**< maximum number of networks to consider */
 #define MAXFLOWCANDDENSITY                  0.1 /**< maximum density of rows to be accepted as flow canditates*/
 #define MINCOMNODESFRACTION                 0.5 /**< minimal size of commodity relative to largest commodity to keep it in the network */
@@ -113,7 +113,9 @@
 #ifdef MCF_DEBUG
 #define MCFdebugMessage printf
 #else
-#define MCFdebugMessage while(0) printf
+/*lint --e{506}*/
+/*lint --e{681}*/
+#define MCFdebugMessage while(FALSE) printf
 #endif
 
 /*
@@ -175,6 +177,7 @@ struct SCIP_SepaData
    int                   maxsepacuts;                /**< maximal number of cmir cuts separated per separation round */
    int                   maxsepacutsroot;            /**< maximal number of cmir cuts separated per separation round in root node -- default separation */
    SCIP_Real             maxinconsistencyratio;      /**< maximum inconsistency ratio (inconsistencies/(arcs*commodities)) for separation at all*/
+   SCIP_Real             maxarcinconsistencyratio;   /**< maximum inconsistency ratio for arcs not to be deleted */
    SCIP_Bool             checkcutshoreconnectivity;  /**< should we only separate if the cuts shores are connected */
    SCIP_Bool             separatesinglenodecuts;     /**< should we separate inequalities based on single node cuts ? */
    SCIP_Bool             separateflowcutset;         /**< should we separate flowcutset inequalities on the network cuts ? */
@@ -648,7 +651,7 @@ void mcfnetworkPrint(
 )
 {
    if ( mcfnetwork == NULL )
-      printf("MCF network is empty\n");
+      MCFdebugMessage("MCF network is empty\n");
    else
    {
       int v;
@@ -658,31 +661,31 @@ void mcfnetworkPrint(
       {
          int k;
 
-         printf("node %2d:\n", v);
+         MCFdebugMessage("node %2d:\n", v);
          for ( k = 0; k < mcfnetwork->ncommodities; k++ )
          {
-            printf("  commodity %2d: ", k);
+            MCFdebugMessage("  commodity %2d: ", k);
             if ( mcfnetwork->nodeflowrows[v][k] != NULL )
             {
-               printf("<%s> [%+g] [inv:%d]\n", SCIProwGetName(mcfnetwork->nodeflowrows[v][k]),
+               MCFdebugMessage("<%s> [%+g] [inv:%d]\n", SCIProwGetName(mcfnetwork->nodeflowrows[v][k]),
                       mcfnetwork->nodeflowscales[v][k], mcfnetwork->nodeflowinverted[v][k]);
                /*SCIProwPrint(mcfnetwork->nodeflowrows[v][k], NULL);*/
             }
             else
-               printf("-\n");
+               MCFdebugMessage("-\n");
          }
       }
 
       for ( a = 0; a < mcfnetwork->narcs; a++ )
       {
-         printf("arc %2d [%2d -> %2d]: ", a, mcfnetwork->arcsources[a], mcfnetwork->arctargets[a]);
+         MCFdebugMessage("arc %2d [%2d -> %2d]: ", a, mcfnetwork->arcsources[a], mcfnetwork->arctargets[a]);
          if ( mcfnetwork->arccapacityrows[a] != NULL )
          {
-            printf("<%s> [%+g]\n", SCIProwGetName(mcfnetwork->arccapacityrows[a]), mcfnetwork->arccapacityscales[a]);
+            MCFdebugMessage("<%s> [%+g]\n", SCIProwGetName(mcfnetwork->arccapacityrows[a]), mcfnetwork->arccapacityscales[a]);
             /*SCIProwPrint(mcfnetwork->arccapacityrows[a], NULL);*/
          }
          else
-            printf("-\n");
+            MCFdebugMessage("-\n");
       }
    }
 }
@@ -721,21 +724,21 @@ void printCommodities(
 
    for ( k = 0; k < ncommodities; k++ )
    {
-      printf("commodity %d (sign: %+d):\n", k, commoditysigns[k]);
+      MCFdebugMessage("commodity %d (sign: %+d):\n", k, commoditysigns[k]);
 
       for ( c = 0; c < ncols; c++ )
       {
          if ( colcommodity[c] == k )
-            printf(" col <%s>: arc %d\n", SCIPvarGetName(SCIPcolGetVar(cols[c])), colarcid != NULL ? colarcid[c] : -1);
+            MCFdebugMessage(" col <%s>: arc %d\n", SCIPvarGetName(SCIPcolGetVar(cols[c])), colarcid != NULL ? colarcid[c] : -1);
       }
       for ( r = 0; r < nrows; r++ )
       {
          if ( rowcommodity[r] == k )
-            printf(" row <%s>: node %d [sign:%+d, inv:%+d]\n", SCIProwGetName(rows[r]), rownodeid != NULL ? rownodeid[r] : -1,
+            MCFdebugMessage(" row <%s>: node %d [sign:%+d, inv:%+d]\n", SCIProwGetName(rows[r]), rownodeid != NULL ? rownodeid[r] : -1,
                    (flowrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1,
                    (flowrowsigns[r] & INVERTED) != 0 ? -1 : +1);
       }
-      printf("\n");
+      MCFdebugMessage("\n");
    }
 
    if ( rownodeid != NULL )
@@ -744,57 +747,57 @@ void printCommodities(
 
       for ( v = 0; v < nnodes; v++ )
       {
-         printf("node %d:\n", v);
+         MCFdebugMessage("node %d:\n", v);
          for ( r = 0; r < nrows; r++ )
          {
             if ( rownodeid[r] == v )
-               printf(" row <%s> [sign:%+d, inv:%+d]\n", SCIProwGetName(rows[r]),
+               MCFdebugMessage(" row <%s> [sign:%+d, inv:%+d]\n", SCIProwGetName(rows[r]),
                       (flowrowsigns[r] & RHSASSIGNED) != 0 ? +1 : -1,
                       (flowrowsigns[r] & INVERTED) != 0 ? -1 : +1);
          }
-         printf("\n");
+         MCFdebugMessage("\n");
       }
    }
 
-   printf("capacities:\n");
+   MCFdebugMessage("capacities:\n");
    for ( a = 0; a < mcfdata->narcs; a++ )
    {
-      printf("  arc %d: ", a);
+      MCFdebugMessage("  arc %d: ", a);
       if ( capacityrows[a] != NULL )
       {
          r = SCIProwGetLPPos(capacityrows[a]);
          assert(0 <= r && r < nrows);
          if ( (capacityrowsigns[r] & LHSASSIGNED) != 0 )
-            printf(" row <%s> [sign:-1]\n", SCIProwGetName(rows[r]));
+            MCFdebugMessage(" row <%s> [sign:-1]\n", SCIProwGetName(rows[r]));
          else if ( (capacityrowsigns[r] & RHSASSIGNED) != 0 )
-            printf(" row <%s> [sign:+1]\n", SCIProwGetName(rows[r]));
+            MCFdebugMessage(" row <%s> [sign:+1]\n", SCIProwGetName(rows[r]));
       }
       else
-         printf(" -\n");
+         MCFdebugMessage(" -\n");
    }
-   printf("\n");
+   MCFdebugMessage("\n");
 
-   printf("unused columns:\n");
+   MCFdebugMessage("unused columns:\n");
    for ( c = 0; c < ncols; c++ )
    {
       if ( colcommodity[c] == -1 )
       {
          SCIP_VAR* var = SCIPcolGetVar(cols[c]);
-         printf(" col <%s> [%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         MCFdebugMessage(" col <%s> [%g,%g]\n", SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
       }
    }
-   printf("\n");
+   MCFdebugMessage("\n");
 
-   printf("unused rows:\n");
+   MCFdebugMessage("unused rows:\n");
    for ( r = 0; r < nrows; r++ )
    {
       if ( rowcommodity[r] == -1 && (capacityrowsigns == NULL || (capacityrowsigns[r] & (LHSASSIGNED | RHSASSIGNED)) == 0) )
       {
-         printf(" row <%s>\n", SCIProwGetName(rows[r]));
+         MCFdebugMessage(" row <%s>\n", SCIProwGetName(rows[r]));
          /*SCIPdebug( SCIPprintRow(scip, rows[r], NULL) );*/
       }
    }
-   printf("\n");
+   MCFdebugMessage("\n");
 }
 #endif
 
@@ -1233,6 +1236,7 @@ SCIP_RETCODE extractCapacityRows(
 
          /* calculate mean commodity excess: in the (un)directed case there should be exactly */
          /* one (two) flow variable per commodity. in this case commodityexcessratio = 0   */
+         assert(ncoveredcommodities > 0);
          commodityexcessratio =
                ABS((nposflowcoefs + nnegflowcoefs)/(SCIP_Real)ncoveredcommodities - maxcolspercommoditylimit);
 
@@ -3120,7 +3124,7 @@ SCIP_RETCODE findUncapacitatedArcs(
    ninccols = 0;
 
    /* we only accept an arc if at least this many flow variables give rise to this arc */
-   arcsthreshold = SCIPceil(scip, (SCIP_Real)ncommodities * UNCAPACITATEDARCSTRESHOLD);
+      arcsthreshold = (int) SCIPceil(scip, (SCIP_Real) ncommodities * UNCAPACITATEDARCSTRESHOLD );
 
    /* in the undirected case, there are two variables per commodity in each capacity row */
    if ( modeltype == SCIP_MCFMODELTYPE_UNDIRECTED )
@@ -3158,7 +3162,6 @@ SCIP_RETCODE findUncapacitatedArcs(
       for ( ; n < nflowcands && sortedflowcandnodeid[n] == v; n++ )
       {
          SCIP_COL** rowcols;
-         SCIP_Real* rowvals;
          int rowlen;
          int r;
          int i;
@@ -3169,7 +3172,6 @@ SCIP_RETCODE findUncapacitatedArcs(
 
          /* update sourcecount and targetcount for all flow columns in the row that are not yet assigned to an arc */
          rowcols = SCIProwGetCols(rows[r]);
-         rowvals = SCIProwGetVals(rows[r]);
          rowlen  = SCIProwGetNLPNonz(rows[r]);
          for ( i = 0; i < rowlen; i++ )
          {
@@ -3689,14 +3691,15 @@ SCIP_RETCODE identifySourcesTargets(
    MCFEFFORTLEVEL*       effortlevel            /**< pointer to store effort level of separation */
 )
 {
-   int*              colarcid              = mcfdata->colarcid;
-   int*              colcommodity          = mcfdata->colcommodity;
-   int               narcs                 = mcfdata->narcs;
-   int               nnodes                = mcfdata->nnodes;
-   int               ncommodities          = mcfdata->ncommodities;
-   SCIP_ROW**        capacityrows          = mcfdata->capacityrows;
-   SCIP_MCFMODELTYPE modeltype             = mcfdata->modeltype;
-   SCIP_Real         maxinconsistencyratio = sepadata->maxinconsistencyratio;
+   int*              colarcid                 = mcfdata->colarcid;
+   int*              colcommodity             = mcfdata->colcommodity;
+   int               narcs                    = mcfdata->narcs;
+   int               nnodes                   = mcfdata->nnodes;
+   int               ncommodities             = mcfdata->ncommodities;
+   SCIP_ROW**        capacityrows             = mcfdata->capacityrows;
+   SCIP_MCFMODELTYPE modeltype                = mcfdata->modeltype;
+   SCIP_Real         maxinconsistencyratio    = sepadata->maxinconsistencyratio;
+   SCIP_Real         maxarcinconsistencyratio = sepadata->maxarcinconsistencyratio;
    int*              arcsources;
    int*              arctargets;
    int*              colsources;
@@ -3959,13 +3962,13 @@ SCIP_RETCODE identifySourcesTargets(
       ntargetinconsistencies = (totaltargetcnt - besttargetcnt)/ntouchedcoms;
 
       /* delete arcs that have to large inconsistency */
-      if ( nsourceinconsistencies > MAXARCINCONSISTENCYRATIO )
+      if ( nsourceinconsistencies > maxarcinconsistencyratio )
       {
          /* delete source assignment */
          bestsourcev = -1;
       }
 
-      if ( ntargetinconsistencies > MAXARCINCONSISTENCYRATIO )
+      if ( ntargetinconsistencies > maxarcinconsistencyratio )
       {
          /* delete target assignment */
          besttargetv = -1;
@@ -4433,7 +4436,7 @@ SCIP_RETCODE mcfnetworkExtract(
 #ifdef COUNTNETWORKVARIABLETYPES
 /** extracts MCF network structures from the current LP */
 static
-SCIP_RETCODE countVariableTypes(
+SCIP_RETCODE printFlowSystemInfo(
    SCIP*                scip,               /**< SCIP data structure */
    SCIP_MCFNETWORK**    mcfnetworks,        /**< array of MCF network structures */
    int                  nmcfnetworks       /**< number of MCF networks */
@@ -4447,6 +4450,10 @@ SCIP_RETCODE countVariableTypes(
    int m;
    int c;
    int a;
+   int k;
+   int v;
+   int nflowrows = 0;
+   int ncaprows = 0;
    int nflowvars = 0;
    int nintflowvars = 0;
    int nbinflowvars = 0;
@@ -4472,7 +4479,10 @@ SCIP_RETCODE countVariableTypes(
       SCIP_MCFNETWORK* mcfnetwork = mcfnetworks[m];
 
       int narcs                           = mcfnetwork->narcs;
+      int nnodes                          = mcfnetwork->nnodes;
+      int ncommodities                    = mcfnetwork->ncommodities;
       SCIP_ROW**        arccapacityrows   = mcfnetwork->arccapacityrows;
+      SCIP_ROW***       nodeflowrows      = mcfnetwork->nodeflowrows;
       int*              colcommodity      = mcfnetwork->colcommodity;
 
       /* get flow variable types */
@@ -4506,7 +4516,7 @@ SCIP_RETCODE countVariableTypes(
             }
          }
       }
-      /* get cap variable types */
+      /* get cap variable types and nof cap rows*/
       for (a=0; a<narcs; a++)
       {
          SCIP_ROW*         row;
@@ -4518,6 +4528,7 @@ SCIP_RETCODE countVariableTypes(
             int rowlen;
             int i;
 
+            ncaprows++;
             rowcols = SCIProwGetCols(row);
             rowlen = SCIProwGetNLPNonz(row);
 
@@ -4549,19 +4560,33 @@ SCIP_RETCODE countVariableTypes(
                         SCIPABORT();
                   }
                }
-
             }
-
          }
-
       }
+      /* get nof flow rows */
+      for (k=0; k<ncommodities; k++)
+      {
+         /* get nof flow rows */
+         for (v=0; v<nnodes; v++)
+         {
+            SCIP_ROW*         row;
+            row = nodeflowrows[v][k];
+
+            if ( row != NULL )
+               nflowrows++;
+         }
+      }
+
+   MCFdebugMessage("----- network %i -----\n",m);
+   MCFdebugMessage("   nof flowrows: %5d\n", nflowrows);
+   MCFdebugMessage("   nof caprows:  %5d\n", ncaprows);
+   MCFdebugMessage("   nof flowvars: %5d of which [ %d , %d , %d ] are continuous, integer, binary\n",
+                   nflowvars, ncontflowvars, nintflowvars, nbinflowvars);
+   MCFdebugMessage("   nof capvars:  %5d of which [ %d , %d , %d ] are continuous, integer, binary\n",
+                   ncapvars, ncontcapvars, nintcapvars, nbincapvars);
 
    }
 
-   MCFdebugMessage("count: %d flowvars of which [ %d , %d , %d ] are continuous, integer, binary\n",
-                   nflowvars, ncontflowvars, nintflowvars, nbinflowvars);
-   MCFdebugMessage("count: %d capvars of which [ %d , %d , %d ] are continuous, integer, binary\n",
-                   ncapvars, ncontcapvars, nintcapvars, nbincapvars);
 
    MCFdebugMessage("****** END VAR COUNTING ********* \n\n");
 
@@ -5152,9 +5177,7 @@ SCIP_RETCODE nodepartitionCreate(
       assert(nodepair != NULL);
       node1 = nodepair->node1;
       node2 = nodepair->node2;
-#ifdef SCIP_DEBUG
       weight  = nodepair->weight;
-#endif
 
       assert(node1 >= 0 && node1 < mcfnetwork->nnodes);
       assert(node2 >= 0 && node2 < mcfnetwork->nnodes);
@@ -5313,15 +5336,14 @@ nodepartitionIsConnected
    const int* arcsources   = mcfnetwork->arcsources;
    const int* arctargets   = mcfnetwork->arctargets;
    int        narcs        = mcfnetwork->narcs;
+   int        nclusters    = nodepartition->nclusters;
 
-   int  nclusters;
    int  ncomponents;
    int  a;
    int* rep;
 
-   /* identify number of clusters */
-   nclusters = nodepartition->nclusters;
-   SCIP_CALL( SCIPallocBufferArray(scip, &rep, nclusters) );
+   if( SCIPallocBufferArray(scip, &rep, nclusters) != SCIP_OKAY )
+      return 0;
 
    assert(nodepartition != NULL);
 
@@ -5398,10 +5420,10 @@ void nodepartitionPrint(
    {
       int i;
 
-      printf("cluster %d:", c);
+      MCFdebugMessage("cluster %d:", c);
       for ( i = nodepartition->clusterbegin[c]; i < nodepartition->clusterbegin[c+1]; i++ )
-         printf(" %d", nodepartition->clusternodes[i]);
-      printf("\n");
+         MCFdebugMessage(" %d", nodepartition->clusternodes[i]);
+      MCFdebugMessage("\n");
    }
 }
 #endif
@@ -5656,8 +5678,8 @@ SCIP_RETCODE addCut(
    int v;
 
 /* variables for knapsack cover separation */
-   SCIP_VAR** cutvars;
-   SCIP_Real* cutvals;
+   SCIP_VAR** cutvars = NULL;
+   SCIP_Real* cutvals = NULL;
    int ncutvars;
 
 
@@ -5694,6 +5716,7 @@ SCIP_RETCODE addCut(
 
       if ( sepadata->separateknapsack )
       {
+         assert(cutvars != NULL && cutvals != NULL);
          cutvars[ncutvars] = vars[v];
          cutvals[ncutvars] = cutcoefs[v];
          ncutvars++;
@@ -6284,7 +6307,7 @@ SCIP_RETCODE generateClusterCuts(
                      assert(r < nrows);
                      if ( r >= 0 && rowweights[r] != 0.0 )
                      {
-                        printf(" -> arc %d, capacity row <%s>: weight=%g slack=%g prod=%g dual=%g\n", a,
+                        MCFdebugMessage(" -> arc %d, capacity row <%s>: weight=%g slack=%g prod=%g dual=%g\n", a,
                                SCIProwGetName(arccapacityrows[a]), rowweights[r],
                                SCIPgetRowFeasibility(scip, arccapacityrows[a]),
                                SCIPgetRowFeasibility(scip, arccapacityrows[a]) * arccapacityscales[a], SCIProwGetDualsol(arccapacityrows[a]));
@@ -6523,7 +6546,7 @@ SCIP_RETCODE separateCuts(
       }
 
 #ifdef COUNTNETWORKVARIABLETYPES
-      SCIP_CALL( countVariableTypes(scip,sepadata->mcfnetworks,sepadata->nmcfnetworks));
+      SCIP_CALL( printFlowSystemInfo(scip,sepadata->mcfnetworks,sepadata->nmcfnetworks));
 
 #endif
    }
@@ -6787,6 +6810,10 @@ SCIP_RETCODE SCIPincludeSepaMcf(
                                "separating/mcf/maxinconsistencyratio",
                                "maximum inconsistency ratio for separation at all",
                                &sepadata->maxinconsistencyratio, TRUE, DEFAULT_MAXINCONSISTENCYRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+                               "separating/mcf/maxarcinconsistencyratio",
+                               "maximum inconsistency ratio of arcs not to be deleted",
+                               &sepadata->maxarcinconsistencyratio, TRUE, DEFAULT_MAXARCINCONSISTENCYRATIO, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
                                "separating/mcf/checkcutshoreconnectivity",
                                "should we separate only if the cuts shores are connected?",
