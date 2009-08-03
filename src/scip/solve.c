@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.4 2009/07/24 12:52:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.5 2009/08/03 07:40:03 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -70,6 +70,14 @@ SCIP_Bool SCIPsolveIsStopped(
 {
    assert(set != NULL);
    assert(stat != NULL);
+
+   /* in case lowerbound >= upperbound, we do not want to terminate with SCIP_STATUS_GAPLIMIT but with the ordinary 
+    * SCIP_STATUS_OPTIMAL/INFEASIBLE/...
+    */
+   if( set->stage >= SCIP_STAGE_SOLVING 
+      && ((set->misc_exactsolve && SCIPgetUpperbound(set->scip) <= SCIPgetLowerbound(set->scip))
+         || (!set->misc_exactsolve && SCIPsetIsLE(set, SCIPgetUpperbound(set->scip), SCIPgetLowerbound(set->scip)))) )
+      return FALSE;
 
    if( SCIPinterrupted() || stat->userinterrupt )
    {

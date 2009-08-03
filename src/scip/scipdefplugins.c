@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.3 2009/07/13 12:48:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.69.2.4 2009/08/03 07:40:03 bzfwolte Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -32,8 +32,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    )
 {
    /**@todo modify other plugins such that they can be used for exact mip solving */ 
-   if( SCIPisExactSolve(scip) )
-   {
+#ifdef EXACTSOLVE 
 #ifdef EXACTSOLVE_OUT 
       printf("\nExact MIP Solving - Development version (Only works if all vars have lower and upper bounds.)\n\n"); 
 #endif
@@ -55,9 +54,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
 
       SCIP_CALL( SCIPincludeDispDefault(scip) );
       SCIP_CALL( SCIPincludeDialogDefault(scip) );
-   }
-   else
-   {
+#else
       SCIP_CALL( SCIPincludeConshdlrLinear(scip) ); /* linear must be first due to constraint upgrading */
       SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
       SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
@@ -151,7 +148,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeDialogDefault(scip) );
 
       SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
-   }
+#endif 
 
    return SCIP_OKAY;
 }

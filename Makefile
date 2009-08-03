@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.230.2.3 2009/07/13 12:48:47 bzfwolte Exp $
+# $Id: Makefile,v 1.230.2.4 2009/08/03 07:40:03 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -157,7 +157,8 @@ FLAGS		+=	-DROUNDING_FE
 FLAGS		+=	-DEXACTSOLVE_OUT		# general info 
 FLAGS		+=	-DEXACTSOLVE			# flag for switching between exact and inexact version of code
 LDFLAGS		+=	$(LINKCC_l)mpfr$(LINKLIBSUFFIX)
-LDFLAGS		+=	$(LINKCC_l)gmp$(LINKLIBSUFFIX)
+LDFLAGS		+=	-I/nfs/optimi/kombadon/bzfwolte/projects/gmp/gmp-4.3.1/lib/include
+LDFLAGS		+=	-L/nfs/optimi/kombadon/bzfwolte/projects/gmp/gmp-4.3.1/lib/lib
 endif
 
 ifeq ($(EXACTGETTESTSET),true)

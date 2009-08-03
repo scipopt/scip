@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.201.2.3 2009/07/13 12:48:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.201.2.4 2009/08/03 07:40:03 bzfwolte Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -795,7 +795,7 @@ SCIP_RETCODE nodeReleaseParent(
    {
       SCIP_Bool freeParent;
       SCIP_Bool singleChild;
-
+      
       freeParent = FALSE;
       singleChild = FALSE;
       switch( SCIPnodeGetType(parent) )
@@ -1385,9 +1385,12 @@ SCIP_RETCODE nodeDeactivate(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   SCIP_Bool freeNode;
+   
    assert(node != NULL);
    assert(node->active);
    assert(tree != NULL);
+   assert(SCIPnodeGetType(node) != SCIP_NODETYPE_FOCUSNODE);
 
    SCIPdebugMessage("deactivate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d  (reprop subtree mark: %d)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
@@ -1402,6 +1405,40 @@ SCIP_RETCODE nodeDeactivate(
    /* count number of deactivated nodes (ignoring probing switches) */
    if( !SCIPtreeProbing(tree) )
       stat->ndeactivatednodes++;
+
+   /* free node if it is a deadend node, i.e., has no children */
+   freeNode = FALSE;
+   switch( SCIPnodeGetType(node) )   
+   {
+   case SCIP_NODETYPE_FOCUSNODE:
+   case SCIP_NODETYPE_PROBINGNODE:
+   case SCIP_NODETYPE_SIBLING:
+   case SCIP_NODETYPE_CHILD:
+   case SCIP_NODETYPE_LEAF:
+   case SCIP_NODETYPE_DEADEND:
+   case SCIP_NODETYPE_REFOCUSNODE:
+      freeNode = FALSE;
+      break;
+   case SCIP_NODETYPE_JUNCTION:
+      freeNode = (node->data.junction.nchildren == 0); 
+      break;
+   case SCIP_NODETYPE_PSEUDOFORK:
+      freeNode = (node->data.pseudofork->nchildren == 0); 
+      break;
+   case SCIP_NODETYPE_FORK:
+      freeNode = (node->data.fork->nchildren == 0); 
+      break;
+   case SCIP_NODETYPE_SUBROOT:
+      freeNode = (node->data.subroot->nchildren == 0); 
+      break;
+   default:
+      SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(node));
+      return SCIP_INVALIDDATA;
+   }
+   if( freeNode ) 
+   {
+      SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
+   }
 
    return SCIP_OKAY;
 }
@@ -3741,7 +3778,7 @@ SCIP_RETCODE SCIPnodeFocus(
 
       /* move children to the queue, make them LEAFs */
       SCIP_CALL( treeNodesToQueue(tree, blkmem, set, stat, lp, tree->children, &tree->nchildren, childrenlpstatefork, 
-            primal->cutoffbound) );
+           primal->cutoffbound) );
    }
    else
    {
@@ -3813,7 +3850,7 @@ SCIP_RETCODE SCIPnodeFocus(
       (*node)->nodetype = SCIP_NODETYPE_FOCUSNODE; /*lint !e641*/
    }
    assert(tree->nchildren == 0);
-   
+
    /* set new focus node, LP fork, LP state fork, and subroot */
    assert(subroot == NULL || (lpstatefork != NULL && subroot->depth <= lpstatefork->depth));
    assert(lpstatefork == NULL || (lpfork != NULL && lpstatefork->depth <= lpfork->depth));

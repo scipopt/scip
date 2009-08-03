@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.2 2009/07/24 12:52:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.3 2009/08/03 07:40:03 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -441,6 +441,8 @@ SCIP_RETCODE conshdlrdataFree(
 
    SCIPfreeMemory(scip, conshdlrdata);
 
+   QSexactClear();/* todo: find a good way/place to call this method ?????????????? */
+
    return SCIP_OKAY;
 }
 
@@ -495,7 +497,7 @@ SCIP_RETCODE catchEvents(
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
    
-   /* get transforemd problem variables */
+   /* get transformed problem variables */
    origvars = SCIPgetOrigVars(scip);
    assert(SCIPgetNOrigVars(scip) == consdata->nvars);
    SCIP_CALL( SCIPgetTransformedVars(scip, consdata->nvars, origvars, vars) );
@@ -529,6 +531,7 @@ SCIP_RETCODE dropEvents(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
+   SCIP_VAR** origvars; 
    SCIP_VAR** vars; 
    int i;
    
@@ -536,16 +539,31 @@ SCIP_RETCODE dropEvents(
    assert(eventhdlr != NULL);
    assert(consdata->nvars == 0 || consdata->eventdatas != NULL);
 
-   /* get problem variables */
-   vars = SCIPgetVars(scip);
-   assert(SCIPgetNVars(scip) == consdata->nvars);
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, consdata->nvars) );
+
+   /* get transformed problem variables */
+   origvars = SCIPgetOrigVars(scip);
+   assert(SCIPgetNOrigVars(scip) == consdata->nvars);
+   SCIP_CALL( SCIPgetTransformedVars(scip, consdata->nvars, origvars, vars) );
 
    for( i = 0; i < consdata->nvars; i++)
    {
+      assert(SCIPvarIsOriginal(origvars[i]));
+      assert(SCIPvarIsTransformed(vars[i]));
+      assert(consdata->eventdatas[i] != NULL);
+
       SCIP_CALL( SCIPdropVarEvent(scip, vars[i], SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, consdata->eventdatas[i], 
             consdata->eventdatas[i]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdatas[i]) );
    }
+
+#ifdef DETAILED_DEBUG /*????????????????*/
+   checkOrigVars(scip);
+#endif
+
+   /* free temporary memory */
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -1506,8 +1524,8 @@ SCIP_RETCODE checkIntegrality(
       {
          integral = FALSE;
          branchvar = v;
+#ifdef DETAILED_DEBUG  /*???????????????*/
          SCIPdebugMessage("   exact LP value of intvar %s ", SCIPvarGetName(vars[v]));
-#ifndef NDEBUG
          gmp_printf("<%Qd> is not integral\n", primsol[v]); 
 #endif
       }
@@ -1538,6 +1556,10 @@ SCIP_RETCODE checkIntegrality(
       assert(branchvar == -1);
 
       mpq_init(tmp);
+
+#ifdef DETAILED_DEBUG  /*???????????????*/
+      SCIPdebugMessage("   current exact LP solution is integral\n");
+#endif
 
       /* create primal solution */
       SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -1660,7 +1682,7 @@ SCIP_RETCODE checkIntegrality(
    mpq_clear(lpobjval);
    SCIPfreeBufferArray(scip, &primsol);
 
-   if( !fpvalue )   
+   if( integral && !fpvalue )   
    {
       SCIPerrorMessage("storing optimal solutions of subproblems that are not FP representable is not supported yet\n");
       SCIPABORT();
@@ -1890,25 +1912,33 @@ SCIP_DECL_CONSINITSOL(consInitsolExactlp)
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
-#if 0
 static
 SCIP_DECL_CONSEXITSOL(consExitsolExactlp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of exactlp constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   int c;
+
+   /* release the rows of all constraints */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONSDATA* consdata;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      /* release and free the rows */
+      SCIP_CALL( consdataFreeRows(scip, consdata) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consExitsolExactlp NULL
-#endif
-
 
 /** frees specific constraint data */
 static
 SCIP_DECL_CONSDELETE(consDeleteExactlp)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+
+   SCIPdebugMessage("ConsDelete method of exactlp constraints\n");
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);

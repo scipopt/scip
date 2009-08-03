@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.3 2009/07/24 12:52:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.4 2009/08/03 07:40:03 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -37,6 +37,7 @@
 #include "scip/intervalarith.h"
 #include "scip/cons_exactlp.h"
 // #define READER_OUT /* only for debugging ???????????????? */
+#define REALLOC /* only for debugging ???????????????? */
 #endif
 
 #include "scip/cons_linear.h"
@@ -454,6 +455,7 @@ Bool xlp_addcon_term(
    int  i;
 
    /* reallocate and initialize constraint specific information */ 
+#ifdef REALLOC /* todo: check, if it is ok to do this ????????????? */
    assert(nconss_+1 <= consssize_);
    if( nconss_+1 == consssize_ )
    {
@@ -468,7 +470,44 @@ Bool xlp_addcon_term(
          mpq_init(rhs_[i]);
       }
    }
+#else
+   assert(nconss_+1 <= consssize_);
+   if( nconss_+1 == consssize_ )
+   {
+      mpq_t* lhstmp;
+      mpq_t* rhstmp;
+
+      consssize_ *= 2;
+
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &beg_, consssize_) );
+
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &lhstmp, consssize_) );
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &rhstmp, consssize_) );
+      for( i = 0; i < consssize_; ++i)
+      {
+         mpq_init(lhstmp[i]);
+         mpq_init(rhstmp[i]);
+      }
+
+      for( i = 0; i < nconss_+1; ++i)
+      {
+         mpq_set(lhstmp[i], lhs_[i]);
+         mpq_set(rhstmp[i], rhs_[i]);
+ 
+         mpq_clear(lhs_[i]);
+         mpq_clear(rhs_[i]);
+      }
+
+      SCIPfreeMemoryArray(scip_, &lhs_);
+      SCIPfreeMemoryArray(scip_, &rhs_);
+      
+      lhs_ = lhstmp;
+      rhs_ = rhstmp;
+   }
+#endif
+
    /* reallocate and initialize matrix specific information */ 
+#ifdef REALLOC /* todo: check, if it is ok to do this ????????????? */
    assert(nnonz_ <= nonzsize_);
    if( nnonz_ + term_get_elements(term) > nonzsize_ )
    {
@@ -480,6 +519,34 @@ Bool xlp_addcon_term(
          mpq_init(val_[i]);
       }
    }   
+#else
+   assert(nnonz_ <= nonzsize_);
+   if( nnonz_ + term_get_elements(term) > nonzsize_ )
+   {
+      mpq_t* valtmp;
+
+      nonzsize_ = MAX(2 * nonzsize_, nonzsize_ + term_get_elements(term));
+
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &ind_, nonzsize_) );
+
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &valtmp, nonzsize_) );
+      for( i = 0; i < nonzsize_; ++i)
+      {
+         mpq_init(valtmp[i]);
+      }
+
+      for( i = 0; i < nnonz_; ++i)
+      {
+         mpq_set(valtmp[i], val_[i]);
+ 
+         mpq_clear(val_[i]);
+      }
+
+      SCIPfreeMemoryArray(scip_, &val_);
+      
+      val_ = valtmp;
+   }   
+#endif
 
    /* get exact lhs and rhs for exactlp constraint handler */
    switch( type )
@@ -711,6 +778,7 @@ Var* xlp_addvar(
    SCIP_CALL_ABORT( SCIPgetBoolParam(scip_, "reading/zplreader/dynamiccols", &dynamiccols) );
 
    /* reallocate and initialize variable specific information */ 
+#ifdef REALLOC /* todo: check, if it is ok to do this ????????????? */
    assert(nvars_ <= varssize_);
    if( nvars_ == varssize_ )
    {
@@ -728,6 +796,50 @@ Var* xlp_addvar(
       }
    }
    assert(nvars_ < varssize_);
+#else
+   assert(nvars_ <= varssize_);
+   if( nvars_ == varssize_ )
+   {
+      mpq_t* lbtmp;
+      mpq_t* ubtmp;
+      mpq_t* objtmp;
+
+      varssize_ *= 2;
+
+      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &vars_, varssize_) );
+
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &lbtmp, varssize_) );
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &ubtmp, varssize_) );
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &objtmp, varssize_) );
+      for( i = 0; i < varssize_; ++i)
+      {
+         mpq_init(lbtmp[i]);
+         mpq_init(ubtmp[i]);
+         mpq_init(objtmp[i]);
+         mpq_set_si(objtmp[i], 0, 1); 
+      }
+
+      for( i = 0; i < nvars_; ++i)
+      {
+         mpq_set(lbtmp[i], lb_[i]);
+         mpq_set(ubtmp[i], ub_[i]);
+         mpq_set(objtmp[i], obj_[i]);
+
+         mpq_clear(lb_[i]);
+         mpq_clear(ub_[i]);
+         mpq_clear(obj_[i]);
+      }
+
+      SCIPfreeMemoryArray(scip_, &lb_);
+      SCIPfreeMemoryArray(scip_, &ub_);
+      SCIPfreeMemoryArray(scip_, &obj_);
+      
+      lb_ = lbtmp;
+      ub_ = ubtmp;
+      obj_ = objtmp;
+   }
+   assert(nvars_ < varssize_);
+#endif
 
    /* get exact bounds for exactlp constraint handler and safe FP values for FP problem */
    SCIPdebugMessage("zimpl reader: store lower bound of variable\n");
@@ -1282,10 +1394,10 @@ SCIP_DECL_READERREAD(readerReadZpl)
 
    /* allocate and initialize variable specific information */ 
    varssize_ = 1024;
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &vars_, varssize_) );
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &lb_, varssize_) );
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &ub_, varssize_) );
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &obj_, varssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &vars_, varssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &lb_, varssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &ub_, varssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &obj_, varssize_) );
    for( i = 0; i < varssize_; ++i)
    {
       mpq_init(lb_[i]);
@@ -1296,9 +1408,9 @@ SCIP_DECL_READERREAD(readerReadZpl)
 
    /* allocate and initialize constraint specific information */ 
    consssize_ = 1024;
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &beg_, consssize_) );
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &lhs_, consssize_) );
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &rhs_, consssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &beg_, consssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &lhs_, consssize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &rhs_, consssize_) );
    for( i = 0; i < consssize_; ++i)
    {
       mpq_init(lhs_[i]);
@@ -1307,9 +1419,9 @@ SCIP_DECL_READERREAD(readerReadZpl)
    beg_[0] = 0; /* dummy entry, i.e., correct entry for the constraint created next */
 
    /* allocate and initialize matrix specific information */ 
-   nonzsize_ = 1024;
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &val_, nonzsize_) );
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip, &ind_, nonzsize_) );
+   nonzsize_ = 1024; 
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &val_, nonzsize_) );
+   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_, &ind_, nonzsize_) );
    for( i = 0; i < nonzsize_; ++i)
    {
       mpq_init(val_[i]);
@@ -1511,11 +1623,15 @@ SCIP_DECL_READERREAD(readerReadZpl)
    stickingatnode = FALSE;
    (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "exactlp");
    
+
    SCIP_CALL_ABORT( SCIPcreateConsExactlp(scip, &cons, consname, objsense_, nvars_, obj_, lb_, ub_, nconss_, lhs_, rhs_, 
          nnonz_, beg_, ind_, val_, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, 
          stickingatnode) );
    SCIP_CALL_ABORT( SCIPaddCons(scip, cons) );
    SCIP_CALL_ABORT( SCIPreleaseCons(scip, &cons) );
+#ifdef READER_OUT
+   printf("readerzpl: released exactlp constraint\n");
+#endif
 #endif   
 
    /* transform the problem such that adding primal solutions is possible */
@@ -1552,8 +1668,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
    {
       mpq_clear(val_[i]);
    }
-   SCIPfreeMemoryArray(scip, &ind_);
-   SCIPfreeMemoryArray(scip, &val_);
+   SCIPfreeMemoryArray(scip_, &ind_);
+   SCIPfreeMemoryArray(scip_, &val_);
    nnonz_ = 0;
    nonzsize_ = 0;
 
@@ -1564,8 +1680,8 @@ SCIP_DECL_READERREAD(readerReadZpl)
       mpq_clear(rhs_[i]);
       mpq_clear(lhs_[i]);
    }
-   SCIPfreeMemoryArray(scip, &rhs_);
-   SCIPfreeMemoryArray(scip, &lhs_);
+   SCIPfreeMemoryArray(scip_, &rhs_);
+   SCIPfreeMemoryArray(scip_, &lhs_);
    nconss_ = 0;
    consssize_ = 0;
 
@@ -1576,12 +1692,16 @@ SCIP_DECL_READERREAD(readerReadZpl)
       mpq_clear(obj_[i]);
       mpq_clear(ub_[i]);
       mpq_clear(lb_[i]);
+      if( i < nvars_ )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &vars_[i]) );
+      } 
    }
-   SCIPfreeMemoryArray(scip, &beg_);
-   SCIPfreeMemoryArray(scip, &obj_);
-   SCIPfreeMemoryArray(scip, &ub_);
-   SCIPfreeMemoryArray(scip, &lb_);
-   SCIPfreeMemoryArray(scip, &vars_);
+   SCIPfreeMemoryArray(scip_, &beg_);
+   SCIPfreeMemoryArray(scip_, &obj_);
+   SCIPfreeMemoryArray(scip_, &ub_);
+   SCIPfreeMemoryArray(scip_, &lb_);
+   SCIPfreeMemoryArray(scip_, &vars_);
    nvars_ = 0;
    varssize_ = 0;
 #endif
