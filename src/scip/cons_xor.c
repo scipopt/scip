@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.72 2009/06/15 09:57:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.73 2009/08/03 16:05:52 bzfwinkm Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -48,7 +48,12 @@
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
 
-#define DEFAULT_PRESOLPAIRWISE    FALSE /**< should pairwise constraint comparison be performed in presolving? */
+#define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
+#define HASHSIZE_XORCONS         131101 /**< minimal size of hash table in logicor constraint tables */
+#define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
+#define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
+#define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+
 #define NROWS 4
 
 
@@ -80,6 +85,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for events on watched variables */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
+   SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
 };
 
 
@@ -617,6 +623,125 @@ SCIP_RETCODE consdataSort(
       SCIPfreeBufferArray(scip, &perm);
    }
    assert(consdata->sorted);
+
+   return SCIP_OKAY;
+}
+
+
+/** gets the key of the given element */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyXorcons)
+{  /*lint --e{715}*/
+   /* the key is the element itself */ 
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal; two constraints are equal if they have the same variables */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqXorcons)
+{
+   SCIP* scip;
+   SCIP_CONSDATA* consdata1;
+   SCIP_CONSDATA* consdata2;
+   SCIP_Bool coefsequal;
+   int i;
+
+   consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
+   consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
+   scip = (SCIP*)userptr; 
+   assert(scip != NULL);
+   
+   /* checks trivial case */
+   if( consdata1->nvars != consdata2->nvars )
+      return FALSE;
+
+   /* sorts the constraints */
+   SCIP_CALL_ABORT( consdataSort(scip, consdata1) );
+   SCIP_CALL_ABORT( consdataSort(scip, consdata2) );
+
+   coefsequal = TRUE;
+
+   for( i = 0; i < consdata1->nvars ; ++i )
+   {
+      /* tests if variables are equal */
+      if( consdata1->vars[i] != consdata2->vars[i] )
+      {
+         assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 || 
+            SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
+         coefsequal = FALSE;
+         break;
+      }
+      assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0); 
+   } 
+   
+   return coefsequal;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* consdata;
+   unsigned int hashval;
+   int minidx;
+   int mididx;
+   int maxidx;
+   
+   consdata = SCIPconsGetData((SCIP_CONS*)key);
+   assert(consdata != NULL);
+   assert(consdata->sorted);
+   assert(consdata->nvars > 0);
+
+   minidx = SCIPvarGetIndex(consdata->vars[0]);
+   mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
+   maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
+   assert(minidx >= 0 && minidx <= maxidx);
+
+   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+
+   return hashval;
+}
+
+/** updates the flags of the first constraint according to the ones of the second constraint */
+static
+SCIP_RETCODE updateFlags(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons0,              /**< constraint that should stay */
+   SCIP_CONS*            cons1               /**< constraint that should be deleted */
+   )
+{
+   if( SCIPconsIsInitial(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsInitial(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsSeparated(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsSeparated(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsEnforced(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsEnforced(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsChecked(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsChecked(scip, cons0, TRUE) );
+   }
+   if( SCIPconsIsPropagated(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsPropagated(scip, cons0, TRUE) );
+   }
+   if( !SCIPconsIsDynamic(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsDynamic(scip, cons0, FALSE) );
+   }
+   if( !SCIPconsIsRemovable(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsRemovable(scip, cons0, FALSE) );
+   }
+   if( SCIPconsIsStickingAtNode(cons1) )
+   {
+      SCIP_CALL( SCIPsetConsStickingAtNode(scip, cons0, TRUE) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1199,6 +1324,100 @@ SCIP_RETCODE resolvePropagation(
       SCIPerrorMessage("invalid inference information %d in xor constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
    }
+
+   return SCIP_OKAY;
+}
+
+/** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
+ *  accordingly; in contrast to preprocessConstraintPairs(), it uses a hash table 
+ */
+static
+SCIP_RETCODE detectRedundantConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONS**           conss,              /**< constraint set */
+   int                   nconss,             /**< number of constraints in constraint set */
+   int*                  firstchange,        /**< pointer to store first changed constraint */
+   int*                  ndelconss,          /**< pointer to count number of deleted constraints */
+   SCIP_Bool*            cutoff              /**< pointer to store TRUE, if a cutoff was found */
+)
+{
+   SCIP_HASHTABLE* hashtable;
+   int hashtablesize;
+   int c;
+
+   assert(conss != NULL);
+   assert(ndelconss != NULL);
+
+   /* create a hash table for the constraint set */
+   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = MAX(hashtablesize, HASHSIZE_XORCONS);
+   SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
+         hashGetKeyXorcons, hashKeyEqXorcons, hashKeyValXorcons, (void*) scip) );
+
+   /* check all constraints in the given set for redundancy */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CONS* cons0;
+      SCIP_CONS* cons1;
+      SCIP_CONSDATA* consdata0;
+
+      cons0 = conss[c];
+
+      if( !SCIPconsIsActive(cons0) || SCIPconsIsModifiable(cons0) )
+         continue;
+
+      consdata0 = SCIPconsGetData(cons0);
+      /* sort the constraint */
+      SCIP_CALL( consdataSort(scip, consdata0) );
+
+      /* get constraint from current hash table with same variables as cons0 */
+      cons1 = (SCIP_CONS*)(SCIPhashtableRetrieve(hashtable, (void*)cons0));
+ 
+      if( cons1 != NULL )
+      {
+         SCIP_CONSDATA* consdata1;
+
+         assert(SCIPconsIsActive(cons1));
+         assert(!SCIPconsIsModifiable(cons1));
+      
+         consdata1 = SCIPconsGetData(cons1);
+         
+         assert(consdata0 != NULL && consdata1 != NULL);
+         assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
+         
+         assert(consdata0->sorted && consdata1->sorted);
+         assert(consdata0->vars[0] == consdata1->vars[0]);
+
+         if( consdata0->rhs != consdata1->rhs )
+         {
+            *cutoff = TRUE;
+            goto TERMINATE;
+         }
+
+         /* update flags of constraint which caused the redundancy s.t. nonredundant information doesn't get lost */
+         SCIP_CALL( updateFlags(scip, cons1, cons0) ); 
+
+         /* delete consdel */
+         SCIP_CALL( SCIPdelCons(scip, cons0) );
+         (*ndelconss)++;
+
+         /* update the first changed constraint to begin the next aggregation round with */
+         if( consdata0->changed && SCIPconsGetPos(cons1) < *firstchange )
+            *firstchange = SCIPconsGetPos(cons1);
+
+         assert(SCIPconsIsActive(cons1));
+      }
+      else
+      {
+         /* no such constraint in current hash table: insert cons0 into hash table */  
+         SCIP_CALL( SCIPhashtableInsert(hashtable, (void*) cons0) );
+      }
+   }
+
+ TERMINATE:
+   /* free hash table */
+   SCIPhashtableFree(&hashtable);
 
    return SCIP_OKAY;
 }
@@ -1918,16 +2137,41 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff && conshdlrdata->presolpairwise )
+   if( !cutoff )
    {
-      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
+      if (*nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
-         for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+         
+         if( firstchange < nconss && conshdlrdata->presolusehashing ) 
          {
-            if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+            /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, ndelconss, &cutoff) );
+         }
+         if( conshdlrdata->presolpairwise )
+         {
+            SCIP_Longint npaircomparisons;
+            int lastndelconss;
+            npaircomparisons = 0;
+            lastndelconss = *ndelconss;
+            
+            
+            for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
             {
-               SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
-                     &cutoff, nfixedvars, naggrvars, ndelconss, nchgcoefs) );
+               if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+               {
+                  npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
+
+                  SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
+                        &cutoff, nfixedvars, naggrvars, ndelconss, nchgcoefs) );
+
+                  if( npaircomparisons > NMINCOMPARISONS )
+                  {
+                     if( (*ndelconss - lastndelconss) / (npaircomparisons + 0.0) < MINGAINPERNMINCOMPARISONS )
+                        break;
+                     lastndelconss = *ndelconss;
+                     npaircomparisons = 0;
+                  }
+               }
             }
          }
       }
@@ -2086,6 +2330,10 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
          "constraints/xor/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/xor/presolusehashing",
+         "should hash table be used for detecting redundant constraints in advance", 
+         &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
 
    return SCIP_OKAY;
 }

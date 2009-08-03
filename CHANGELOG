@@ -51,6 +51,8 @@ interface:
 - extend Makefile to link against Ipopt if IPOPT=true is set
 - added function SCIPvarsGetProbvarBinary() in pub_var.h; gets active, fixed, or multi-aggregated problem variables of binary variables and corresponding negated status
 - added SCIPsortPtrPtrLongInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- new parameter <constraints/xor/presolusehashing> in cons_xor.c, should pairwise presolving use hashing?, default TRUE
+- added detectRedundantConstraints() in cons_xor.c and necessary hash-functions for fast pairwise presolving
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -91,6 +93,7 @@ performance improvements:
 - improved performance in SCIPcliquelistRemoveFromCliques()
 - improved performance in SCIPcalcCliquePartition()
 - improved performance in SCIPvarGetActiveRepresentatives() in var.c
+- improved pairwise presolving in cons_xor.c due to using a hashtable 
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 
