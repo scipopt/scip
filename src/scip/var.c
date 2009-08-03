@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.254 2009/08/03 15:30:47 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.255 2009/08/03 15:53:47 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -3095,6 +3095,13 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    SCIP_Real multconstant;
    int pos;
 
+   int noldtmpvars;
+
+   SCIP_VAR** tmpvars2;
+   SCIP_Real* tmpscalars2;
+   int tmpvarssize2;
+   int ntmpvars2;
+
    assert( set != NULL );
    assert( vars != NULL );
    assert( scalars != NULL );
@@ -3114,14 +3121,18 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    ntmpvars = *nvars;
    tmpvarssize = *nvars;
 
+   tmpvarssize2 = 1;
+   ntmpvars2 = 0;
 
    /* use memory array allocation because it's possible to reallocate for these arrays a too big size later on, which we don't want to 
     * keep in scip
     */
-   SCIP_ALLOC( BMSallocMemoryArray(&activevars, activevarssize) );
-   SCIP_ALLOC( BMSallocMemoryArray(&activescalars, activevarssize) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&tmpvars, vars, ntmpvars) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&tmpscalars, scalars, ntmpvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpscalars2, tmpvarssize2) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activevars, activevarssize) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &activescalars, activevarssize) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpvars, vars, ntmpvars) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &tmpscalars, scalars, ntmpvars) );
 
    /* to avoid unnecessary expanding of variable arrays while disaggregating several variables multiple times combine same variables
     * first, first get all corresponding variables with status loose, column, multaggr or fixed 
@@ -3149,6 +3160,9 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       tmpscalars[v] = scalar;
       
    }
+   
+   noldtmpvars = ntmpvars;
+
    /* sort all variables to combine equal variables easily */
    SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
    for( v = ntmpvars - 1; v > 0; --v )
@@ -3163,12 +3177,15 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       }
    }
    /* sort all variables again to combine equal variables later on */
-   SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
+   if( noldtmpvars > ntmpvars )
+      SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
+   
 
    --ntmpvars;
    /* collect for each variable the representation in active variables */
    for( ; ntmpvars >= 0; --ntmpvars )
    {
+      ntmpvars2 = 0;
       var = tmpvars[ntmpvars];
       scalar = tmpscalars[ntmpvars];
 
@@ -3190,8 +3207,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          if( nactivevars >= activevarssize )
          {
             activevarssize *= 2;
-            SCIP_ALLOC( BMSreallocMemoryArray(&activevars, activevarssize) );
-            SCIP_ALLOC( BMSreallocMemoryArray(&activescalars, activevarssize) );
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activevars, activevarssize) );
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &activescalars, activevarssize) );
             assert(nactivevars < activevarssize);
          }
          activevars[nactivevars] = var;
@@ -3209,10 +3226,20 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
          {
 	    while( nmultvars + ntmpvars > tmpvarssize )
                tmpvarssize *= 2;
-            SCIP_ALLOC( BMSreallocMemoryArray(&tmpvars, tmpvarssize) );
-            SCIP_ALLOC( BMSreallocMemoryArray(&tmpscalars, tmpvarssize) );
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars, tmpvarssize) );
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpscalars, tmpvarssize) );
             assert(nmultvars + ntmpvars <= tmpvarssize);
          }
+
+         if( nmultvars > tmpvarssize2 )
+         {
+	    while( nmultvars > tmpvarssize2 )
+               tmpvarssize2 *= 2;
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpvars2, tmpvarssize2) );
+            SCIP_CALL( SCIPsetReallocBufferArray(set, &tmpscalars2, tmpvarssize2) );
+            assert(nmultvars <= tmpvarssize2);
+         }
+
          --nmultvars;
 
          for( ; nmultvars >= 0; --nmultvars )
@@ -3239,10 +3266,36 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             }
             else
             {
-	       SCIPsortedvecInsertPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, multvar, scalar * multscalar, &ntmpvars);
-	       assert(ntmpvars <= tmpvarssize);
+               tmpvars2[ntmpvars2] = multvar;
+               tmpscalars2[ntmpvars2] = scalar * multscalar;
+               ++(ntmpvars2);
+               assert(ntmpvars2 <= tmpvarssize2);
             }
          }
+
+         /* sort all variables to combine equal variables easily */
+         SCIPsortPtrReal((void**)tmpvars2, tmpscalars2, SCIPvarComp, ntmpvars2);
+         for( v = ntmpvars2 - 1; v > 0; --v )
+         {
+            /* combine same variables */
+            if( SCIPvarCompare(tmpvars2[v], tmpvars2[v - 1]) == 0 )
+            {
+               tmpscalars2[v - 1] += tmpscalars2[v];
+               --ntmpvars2;
+               tmpvars2[v] = tmpvars2[ntmpvars2];
+               tmpscalars2[v] = tmpscalars2[ntmpvars2];
+            }
+         }
+         
+         for( v = 0; v < ntmpvars2; ++v )
+         {
+            tmpvars[ntmpvars] = tmpvars2[v];
+            tmpscalars[ntmpvars] = tmpscalars2[v];
+            ++(ntmpvars);
+            assert(ntmpvars <= tmpvarssize);
+         }
+         SCIPsortPtrReal((void**)tmpvars, tmpscalars, SCIPvarComp, ntmpvars);
+
          activeconstant += scalar * SCIPvarGetMultaggrConstant(var);
 
          break;
@@ -3306,10 +3359,12 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
       }
    }
 
-   BMSfreeMemoryArray(&tmpvars);
-   BMSfreeMemoryArray(&tmpscalars);
-   BMSfreeMemoryArray(&activevars);
-   BMSfreeMemoryArray(&activescalars);
+   SCIPsetFreeBufferArray(set, &tmpvars2);
+   SCIPsetFreeBufferArray(set, &tmpscalars2);
+   SCIPsetFreeBufferArray(set, &tmpvars);
+   SCIPsetFreeBufferArray(set, &tmpscalars);
+   SCIPsetFreeBufferArray(set, &activevars);
+   SCIPsetFreeBufferArray(set, &activescalars);
 
    return SCIP_OKAY;
 }

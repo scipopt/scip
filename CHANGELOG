@@ -90,6 +90,7 @@ performance improvements:
 - improved performance in tightenWeightsLift() and SCIPseparateRelaxedKnapsack() in cons_knapsack.c, due to now sparse-cleaning "global" arrays instead of using BMSclearMemory... functions for cleaning local arrays each time 
 - improved performance in SCIPcliquelistRemoveFromCliques()
 - improved performance in SCIPcalcCliquePartition()
+- improved performance in SCIPvarGetActiveRepresentatives() in var.c
 
 fixed bugs:
 - fixed bug in SCIPlpSolveAndEval(): if fastmip and pricers enabled and objlimit was reached but CPLEX did not perform 
