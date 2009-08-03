@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.24 2009/07/31 18:29:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.25 2009/08/03 13:12:51 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2250,11 +2250,11 @@ SCIP_RETCODE presolveTryAddLinearReform(
 }
 
 #ifdef WITH_SOC3
-/** creates SOC constraints for input sum_{i=1}^n alpha_i x_i^2 <= beta y.
+/** creates SOC3 constraints for input sum_{i=1}^n alpha_i x_i^2 <= beta y^2.
  * if n>2, calls same function recursively
  */
 static
-SCIP_RETCODE presolveCreateSOC(
+SCIP_RETCODE presolveCreateSOC3(
    SCIP*        scip,       /**< SCIP data structure */
    SCIP_VAR**   lhsvar,     /**< variables on left hand side (x_i) */
    SCIP_Real*   lhscoeff,   /**< coefficients of variables on left hand side (alpha_i) */
@@ -2320,7 +2320,7 @@ SCIP_RETCODE presolveCreateSOC(
       SCIP_CALL( SCIPaddVar(scip, auxvar1) );
 
       /* constraint alpha_0 x_0^2 + alpha_1 x_1^2 <= auxvar^2 */
-      SCIP_CALL( presolveCreateSOC(scip, lhsvar, lhscoeff, 2, auxvar1, 1., name, origcons, soc3_nr_auxvars) );
+      SCIP_CALL( presolveCreateSOC3(scip, lhsvar, lhscoeff, 2, auxvar1, 1., name, origcons, soc3_nr_auxvars) );
 
       /* create new constraint alpha_2 x_2^2 + auxvar^2 <= rhscoeff * rhsvar^2 */
       SCIPsnprintf(name, 255, "%s_soc3", basename); /* TODO think of better name */
@@ -2359,13 +2359,13 @@ SCIP_RETCODE presolveCreateSOC(
    SCIP_CALL( SCIPaddVar(scip, auxvar1) );
 
    /* constraints for left half of lhs */
-   SCIP_CALL( presolveCreateSOC(scip, lhsvar, lhscoeff, nlhs/2, auxvar1, 1., name, origcons, soc3_nr_auxvars) );
+   SCIP_CALL( presolveCreateSOC3(scip, lhsvar, lhscoeff, nlhs/2, auxvar1, 1., name, origcons, soc3_nr_auxvars) );
 
    SCIPsnprintf(name, 255, "%s#z2", basename);
    SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, auxvar2) );
 
-   SCIP_CALL( presolveCreateSOC(scip, &lhsvar[nlhs/2], &lhscoeff[nlhs/2], nlhs-nlhs/2, auxvar2, 1., name, origcons, soc3_nr_auxvars) );
+   SCIP_CALL( presolveCreateSOC3(scip, &lhsvar[nlhs/2], &lhscoeff[nlhs/2], nlhs-nlhs/2, auxvar2, 1., name, origcons, soc3_nr_auxvars) );
    
    /* SOC constraint binding both auxvar's */
    SCIPsnprintf(name, 255, "%s_soc3", basename); /* TODO think of better name */
@@ -2539,7 +2539,7 @@ SCIP_RETCODE presolveTryAddSOC(
 #ifdef SCIP_DEBUG
       SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 #endif
-      SCIP_CALL( presolveCreateSOC(scip, lhsvar, lhscoeff, lhscount, rhsvar, rhscoeff, SCIPconsGetName(cons), cons, soc3_nr_auxvars) );
+      SCIP_CALL( presolveCreateSOC3(scip, lhsvar, lhscoeff, lhscount, rhsvar, rhscoeff, SCIPconsGetName(cons), cons, soc3_nr_auxvars) );
       consdata->soc_added = TRUE;
    }
 
