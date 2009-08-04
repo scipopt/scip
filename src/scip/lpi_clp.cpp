@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.57 2009/08/03 14:53:16 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.58 2009/08/04 16:55:06 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -375,19 +375,14 @@ void setFastmipClpParameters(
     * Sometimes 512+8192 and 8192 or 8 are used as well.
     */
 
-   // for Clp 1.6 stable:
    // 2048 does not seem to work
-   //
-   // for Clp trunk:
    // 65536 does not seem to work
    // 262144 does not seem to work
 
 #ifndef NDEBUG
    // in debug mode: leave checks on
-   //lpi->clp->setSpecialOptions(32|64|1024|32768|262144);
    lpi->clp->setSpecialOptions(32|64|1024|32768);
 #else
-   // lpi->clp->setSpecialOptions(32|64|128|1024|4096|32768|262144);
    lpi->clp->setSpecialOptions(32|64|128|1024|4096|32768);
 #endif
 
@@ -1827,13 +1822,15 @@ SCIP_RETCODE SCIPlpiStrongbranch(
     *           repository.  See COIN_CLP_VETTED comments.
     *  0x01000000 is Cbc (and in branch and bound)
     *  0x02000000 is in a different branch and bound
+    *
+    *  2048 does not seem to work
+    *  For other options that do not work see above.
     */
 #ifndef NDEBUG
    // in debug mode: leave checks on
-   clp->setSpecialOptions(64|512|1024|2048);
+   clp->setSpecialOptions(64|512|1024);
 #else
-   // clp->setSpecialOptions(64|128|512|4096);
-   clp->setSpecialOptions(64|128|512|1024|2048|4096);
+   clp->setSpecialOptions(64|128|512|1024|4096);
 #endif
 
    /* 'startfinish' options for strong branching:
