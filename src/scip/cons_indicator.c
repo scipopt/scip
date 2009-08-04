@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.39 2009/08/03 20:03:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.40 2009/08/04 18:24:31 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2091,6 +2091,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       {
 	 SCIP_CALL( SCIPgetTransformedCons(scip, consdata->lincons, &consdata->lincons) );
 	 assert( consdata->lincons != NULL );
+	 SCIP_CALL( SCIPcaptureCons(scip, consdata->lincons) );
       }
 
       /* add constraint to alternative LP if not already done */
