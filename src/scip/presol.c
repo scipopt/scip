@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.c,v 1.45 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol.c,v 1.46 2009/08/05 18:59:02 bzfwinkm Exp $"
 
 /**@file   presol.c
  * @brief  methods for presolvers
@@ -183,6 +183,7 @@ SCIP_RETCODE SCIPpresolInit(
    presol->nupgdconss = 0;
    presol->nchgcoefs = 0;
    presol->nchgsides = 0;
+   presol->wasdelayed = 0;
 
    /* call initialization method of presolver */
    if( presol->presolinit != NULL )
@@ -241,6 +242,7 @@ SCIP_RETCODE SCIPpresolInitpre(
    presol->lastnupgdconss = 0;
    presol->lastnchgcoefs = 0;
    presol->lastnchgsides = 0;
+   presol->wasdelayed = 0;
 
    /* call presolving initialization method of presolver */
    if( presol->presolinitpre != NULL )

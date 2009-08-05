@@ -164,6 +164,7 @@ fixed bugs:
 - fixed bug in SCIPvarGetActiveRepresentatives() in var.c
 - fixed bug with objective limit in lp.c: previously the infinity value of SCIP was used as default - now the value of LPI is used. In the earlier version in many cases the problems where never infeasible.
 - added and adjusted some asserts, initialized some values
+- fixed bug in presol.c caused by not reseting presolver-wasdelayed status
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
