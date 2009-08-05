@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.36 2009/08/03 20:03:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.37 2009/08/05 18:55:44 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -846,7 +846,7 @@ SCIP_RETCODE getVariable(
          /* no such constraint in current hash table: insert cons0 into hash table */  
          SCIP_CALL( SCIPhashtableInsert(opbinput->hashtable, (void*) newdata) );
 
-         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
          
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
