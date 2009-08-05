@@ -60,7 +60,7 @@
 =opt=  markshare1_1  0.0000000000e+00
 =opt=  markshare2    1.0000000000e+00
 =unkn= markshare2_1  ?
-=unkn= markshare4_0  ?
+=opt=  markshare4_0  1.0000000000e+00
 =opt=  mas74         1.1801185700e+04
 =opt=  mas76         4.0005054100e+04
 =opt=  mas284        9.1405723682e+04
@@ -106,10 +106,10 @@
 =opt=  neos616206    9.3760000000e+02 
 =opt=  neos632659   -9.4000000000e+01
 =opt=  neos648910    3.2000000000e+01
-=unkn= neos808444    ?
+=opt=  neos808444    0.0000000000e+00
 =opt=  neos818918    1.7000000000e+03
 =opt=  neos823206    8.38601957831325e+01
-=unkn= neos897005    ?
+=opt=  neos897005    1.4000000000e+01
 =opt=  net12         2.1400000000e+02
 =opt=  noswot       -4.1000000000e+01
 =opt=  nsrand-ipx    5.1200000000e+04
