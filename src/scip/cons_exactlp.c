@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.3 2009/08/03 07:40:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.4 2009/08/05 10:10:27 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -306,6 +306,49 @@ SCIP_Bool isPosInfinity(
    )
 {  /*lint --e{715} */
    return SCIPlpiexIsPosInfinity(conshdlrdata->lpiex, val);
+}
+
+/** returns whether given rational number can be stored as FP number without roundinf errors */
+SCIP_Bool mpqIsReal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   mpq_t                 val                 /**< given rational number */
+)
+{
+   SCIP_Bool result;
+   mpq_t tmp;
+  
+   mpq_init(tmp); 
+
+   mpq_set_d(tmp, mpqGetRealApprox(scip, val));
+
+   if( mpq_equal(tmp, val) == 0 )
+      result = FALSE; /* approx(a) =/= a */
+   else
+      result = TRUE;
+
+#ifndef NDEBUG
+   {
+      SCIP_Bool resultnew;
+      
+      mpq_set_d(tmp, mpqGetRealRelax(scip, val, GMP_RNDU));
+      if( mpq_equal(tmp, val) == 0 )
+         resultnew = FALSE; /* approx(a) =/= a */
+      else
+         resultnew = TRUE;
+      assert(result == resultnew);
+      
+      mpq_set_d(tmp, mpqGetRealRelax(scip, val, GMP_RNDD));
+      if( mpq_equal(tmp, val) == 0 )
+         resultnew = FALSE; /* approx(a) =/= a */
+      else
+         resultnew = TRUE;
+      assert(result == resultnew);
+   }
+#endif
+
+   mpq_clear(tmp); 
+
+   return result;
 }
 
 /** converts given rational number into an FP number; uses given rounding mode during conversion 
@@ -1117,16 +1160,6 @@ SCIP_RETCODE createRelaxation(
          rowlhs = mpqGetRealRelax(scip, consdata->lhs[c], GMP_RNDD);
          rowrhs = mpqGetRealRelax(scip, consdata->rhs[c], GMP_RNDU);
 
-         if( !SCIPisInfinity(scip, -rowlhs) && !SCIPisInfinity(scip, rowrhs) )
-         {
-            /* todo: create two rows and modify consdata structures in order to be able to transform a basis 
-             * to the original problem later ??????? 
-             */
-            SCIPerrorMessage("consinitlp: for ranged rows, creating a FP relaxation is not supported yet\n");
-            SCIPABORT(); /*lint --e{527}*/
-            goto TERMINATE;
-         }            
-        
          v = 0;
          nrowvars = consdata->beg[c+1] - consdata->beg[c];
          assert(nrowvars >= 0 && nrowvars <= SCIPgetNVars(scip));
@@ -1154,7 +1187,7 @@ SCIP_RETCODE createRelaxation(
             {
                if( !SCIPisInfinity(scip, rowrhs) )
                {
-                  assert(SCIPisInfinity(scip, -rowlhs));
+                  assert(SCIPisInfinity(scip, -rowlhs) || mpqIsReal(scip, consdata->val[i]));
                   rowvals[v] = mpqGetRealRelax(scip, consdata->val[i], GMP_RNDD);
                }
                else
@@ -1171,7 +1204,7 @@ SCIP_RETCODE createRelaxation(
             {
                if( !SCIPisInfinity(scip, rowrhs) )
                {
-                  assert(SCIPisInfinity(scip, -rowlhs));
+                  assert(SCIPisInfinity(scip, -rowlhs) || mpqIsReal(scip, consdata->val[i]));
                   rowvals[v] = mpqGetRealRelax(scip, consdata->val[i], GMP_RNDU);
                }
                else
@@ -1188,7 +1221,7 @@ SCIP_RETCODE createRelaxation(
                /* todo: split variable into positive and negative part and modify consdata structures in order to be able 
                 * to transform a basis to the original problem later ??????? 
                 */
-               SCIPerrorMessage("consinitlp: for variable that are neither nonnegative nor nonpositive, creating a FP relaxation is not supported yet\n");
+               SCIPerrorMessage("consinitlp: for variables that are neither nonnegative nor nonpositive, creating a FP relaxation is not supported yet\n");
                SCIPABORT(); /*lint --e{527}*/
                goto TERMINATE;
             }
@@ -1483,6 +1516,7 @@ SCIP_RETCODE checkIntegrality(
    int v;
    int ncols;
    SCIP_Bool fpvalue;
+   SCIP_Bool inrange;
    SCIP_Bool integral;
    int branchvar;
 #ifdef DETAILED_DEBUG /*????????? */
@@ -1565,12 +1599,13 @@ SCIP_RETCODE checkIntegrality(
       SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
       
       fpvalue = TRUE;
+      inrange = TRUE;
 
       /* check whether it is likely that the lpobjval is treated as infinite in scip, i.e., is out of range in scip */
       if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, lpobjval))) )
-         fpvalue = FALSE;
-      
-      for( v = 0; v < nvars && fpvalue; ++v )
+         inrange = FALSE;
+
+      for( v = 0; v < nvars && inrange; ++v )
       {
          SCIP_Real scipsolval;
 
@@ -1578,27 +1613,38 @@ SCIP_RETCODE checkIntegrality(
 
          /* check whether we can stored the primal solution without FP errors */
          mpq_set_d(tmp, scipsolval);
-         if( !mpq_equal(primsol[v], tmp) || SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, primsol[v]))) )
+         if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, primsol[v]))) )
+            inrange = FALSE;
+         if( !mpq_equal(primsol[v], tmp) )
             fpvalue = FALSE;
 
          /* set solution value */
          SCIP_CALL( SCIPsetSolVal(scip, sol, vars[v], scipsolval) );
       }
       mpq_set_d(tmp, SCIPgetSolTransObj(scip, sol));
-      assert(!fpvalue || mpq_cmp(lpobjval, tmp) <= 0);
+      assert(!inrange || !fpvalue || mpq_cmp(lpobjval, tmp) <= 0);
 
-      /* @todo (later): ????????? 
-       * - maybe improve objval
-       * - store all primal solutions in the exactlp conshdlr with the exact objval and 
-       *   hand over an FP approximation of the exact sol with safe objval to scip (step 3c)
-       */
-      if( !fpvalue )   
+      if( !inrange )   
          SCIPfreeSol(scip, &sol);
       else   
       {
          SCIP_Bool stored;
+
+         /* @todo (later): ????????? 
+          * 1. maybe improve objval (using SCIPsetSolTransObj() is only a workaround, and this method is not very safe, 
+          *    i.e., should be deleted from the source code later when point 2. was implemented)
+          * 2. store all primal solutions in the exactlp conshdlr with the exact objval and 
+          *    hand over an FP approximation of the exact sol with safe objval to scip (step 3c)
+          */
+         /* store safe objective value for approximate primal solution */ 
+         SCIP_CALL( SCIPsetSolTransObj(scip, sol, mpqGetRealRelax(scip, lpobjval, GMP_RNDU)) );
+
          SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
-         assert(stored); /* todo: check whether this assert is correct ????????? */
+         
+         if( stored && !fpvalue )
+         {
+            SCIPerrorMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
+         }
       }
 
       *result = SCIP_CUTOFF;
@@ -1682,9 +1728,9 @@ SCIP_RETCODE checkIntegrality(
    mpq_clear(lpobjval);
    SCIPfreeBufferArray(scip, &primsol);
 
-   if( integral && !fpvalue )   
+   if( integral && !inrange )   
    {
-      SCIPerrorMessage("storing optimal solutions of subproblems that are not FP representable is not supported yet\n");
+      SCIPerrorMessage("storing optimal solutions of subproblems that is out of FP range is not supported yet\n");
       SCIPABORT();
    }
 
@@ -2031,7 +2077,7 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    consdata = SCIPconsGetData(conss[0]);
    assert(consdata != NULL);
 
-   *result = SCIP_DIDNOTRUN; /* todo: find out which result should be returend ?????????*/
+   *result = SCIP_DIDNOTRUN; 
 
    /* in case the FP problem is a relaxation of the original problem, we have already calculated a proved lower bound
     * via postprocessing the LP solution of the FP problem 
@@ -2145,7 +2191,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    assert(!SCIPhasCurrentNodeLP(scip));
    assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE 
       || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_NOTSOLVED
-      || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ERROR);
+      || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ERROR
+      || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_TIMELIMIT
+      || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_ITERLIMIT);
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -2159,6 +2207,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    assert(consdata != NULL);
 
    *result = SCIP_INFEASIBLE;
+
+   /* todo: (later) this is ugly and only used to avoid stopping with the hard time limit. 
+    *       Should be improved later (set a time and iteration limit on solving LPEX anyway) ?????????????? */
+   if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_TIMELIMIT )
+      return SCIP_OKAY;
 
    /* constructs exact LP of current node */
    constructCurrentLPEX(scip, conshdlrdata, consdata);

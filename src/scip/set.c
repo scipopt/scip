@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194.2.3 2009/07/13 12:48:49 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.4 2009/08/05 10:10:27 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -178,6 +178,8 @@
 #define SCIP_DEFAULT_MISC_EXACTSOLVE       TRUE /**< should the problem be solved exactly (with proven dual bounds)? */
 #define SCIP_DEFAULT_MISC_USEFPRELAX      FALSE /**< if problem is solved exactly, should floating point problem be 
                                                  *   a relaxation of the original problem (instead of an approximation)? */
+#define SCIP_DEFAULT_MISC_DBMETHOD          'n' /**< method for computing truely valid dual bounds at the nodes
+                                                 *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'e'xact LP) */
 
 
 /* Node Selection */
@@ -785,9 +787,15 @@ SCIP_RETCODE SCIPsetCreate(
          "if problem is solved exactly, should floating point problem be a relaxation of the original problem (instead of an approximation)?",
          &(*set)->misc_usefprelax, FALSE, SCIP_DEFAULT_MISC_USEFPRELAX,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
+         "misc/dbmethod",
+         "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'e'xact LP)",
+         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvre",
+         NULL, NULL) );
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    (*set)->misc_usefprelax = SCIP_DEFAULT_MISC_USEFPRELAX;
+   (*set)->misc_dbmethod = SCIP_DEFAULT_MISC_DBMETHOD;
 #endif
 
    /* node selection */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.2 2009/07/24 12:52:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.3 2009/08/05 10:10:27 bzfwolte Exp $"
 //#define SCIP_DEBUG
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
@@ -2278,7 +2278,7 @@ SCIP_RETCODE SCIPlpiexSetBase(
    }
 
    /* set the basis */
-   rval = mpq_QSget_basis_array(lpi->prob, icstat, irstat);
+   rval = mpq_QSload_basis_array(lpi->prob, icstat, irstat);
    QS_RETURN(rval);
 }
 

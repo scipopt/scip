@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.4 2009/07/24 12:52:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.5 2009/08/05 10:10:27 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -729,6 +729,19 @@ SCIP_Bool SCIPuseFPRelaxation(
    assert(scip->set != NULL);
 
    return (scip->set->misc_usefprelax);
+}
+
+/** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 
+ *  'v'erify LP basis, 'r'epair LP basis, 'e'xact LP); only relevant for solving the problem provably correct 
+ */
+char SCIPdualBoundMethod(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return (scip->set->misc_dbmethod);
 }
 
 /** returns whether the user pressed CTRL-C to interrupt the solving process */
@@ -11149,7 +11162,7 @@ SCIP_RETCODE SCIPendDive(
       char lowerboundtype;
 
       if( scip->set->misc_exactsolve )
-         if( scip->set->misc_usefprelax )
+         if( scip->set->misc_usefprelax && scip->set->misc_dbmethod == 'n' )
             lowerboundtype = 's';
          else 
             lowerboundtype = 'i';
@@ -12428,6 +12441,29 @@ SCIP_Real SCIPgetSolTransObj(
       else
          return SCIPlpGetPseudoObjval(scip->lp, scip->set);
    }
+}
+
+/* todo: ???????????? this is only for a workaround method for the exactlp constraint handler, 
+ * as I can not store solutions which are not FP representable at the moment, 
+ * but at least I want to have the correct primal bound (delete this method from the code again later) ?????????????? 
+ */
+/** sets transformed objective value of primal CIP solution; has to be called after solution has been constructed; 
+ *  has to be called before solution is added to the solution storage
+ */
+SCIP_RETCODE SCIPsetSolTransObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_Real             obj                 /**< transformed objective value of given solution */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetSolTransObj", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   assert(sol != NULL);
+   assert(SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL);
+   
+   SCIPsolSetObj(sol, obj);
+
+   return SCIP_OKAY;
 }
 
 /** maps original space objective value into transformed objective value */

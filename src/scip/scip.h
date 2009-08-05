@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310.2.3 2009/07/24 12:52:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.4 2009/08/05 10:10:27 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -215,6 +215,13 @@ SCIP_Bool SCIPisExactSolve(
  *  only relevant for solving the problem provably correct 
  */
 SCIP_Bool SCIPuseFPRelaxation(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 
+ *  'v'erify LP basis, 'r'epair LP basis, 'e'xact LP); only relevant for solving the problem provably correct 
+ */
+char SCIPdualBoundMethod(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -4623,6 +4630,20 @@ extern
 SCIP_Real SCIPgetSolTransObj(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
+   );
+
+/* todo: ???????????? this is only for a workaround method for the exactlp constraint handler, 
+ * as I can not store solutions which are not FP representable at the moment, 
+ * but at least I want to have the correct primal bound (delete this method from the code again later) ?????????????? 
+ */
+/** sets transformed objective value of primal CIP solution; has to be called after solution has been constructed; 
+ *  has to be called before solution is added to the solution storage
+ */
+extern
+SCIP_RETCODE SCIPsetSolTransObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_Real             obj                 /**< transformed objective value of given solution */
    );
 
 /** maps original space objective value into transformed objective value */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.85.2.3 2009/07/13 12:48:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.85.2.4 2009/08/05 10:10:27 bzfwolte Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -520,7 +520,7 @@ int primalSearchSolPos(
    assert(primal != NULL);
 
    obj = SCIPsolGetObj(sol, set, prob);
-   
+
    left = -1;
    right = primal->nsols;
    while( left < right-1 )

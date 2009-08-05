@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.201.2.4 2009/08/03 07:40:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.201.2.5 2009/08/05 10:10:28 bzfwolte Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -5036,7 +5036,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
             char lowerboundtype;
             
             if( set->misc_exactsolve )
-               if( set->misc_usefprelax )
+               if( set->misc_usefprelax && set->misc_dbmethod == 'n' )
                   lowerboundtype = 's';
                else 
                   lowerboundtype = 'i';

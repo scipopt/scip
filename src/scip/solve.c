@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.5 2009/08/03 07:40:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.6 2009/08/05 10:10:28 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1528,7 +1528,7 @@ SCIP_RETCODE priceAndCutLoop(
             char lowerboundtype;
             
             if( set->misc_exactsolve )
-               if( set->misc_usefprelax )
+               if( set->misc_usefprelax && set->misc_dbmethod == 'n' )
                   lowerboundtype = 's';
                else 
                   lowerboundtype = 'i';
@@ -1785,7 +1785,7 @@ SCIP_RETCODE priceAndCutLoop(
       assert(lp->solved);
 
       if( set->misc_exactsolve )
-         if( set->misc_usefprelax )
+         if( set->misc_usefprelax && set->misc_dbmethod == 'n' )
             lowerboundtype = 's';
          else 
             lowerboundtype = 'i';

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.4 2009/08/03 07:40:03 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.5 2009/08/05 10:10:27 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -36,7 +36,7 @@
 #include <gmp.h> /* gmp.h has to be included before mme.h */
 #include "scip/intervalarith.h"
 #include "scip/cons_exactlp.h"
-// #define READER_OUT /* only for debugging ???????????????? */
+//#define READER_OUT /* only for debugging ???????????????? */
 #define REALLOC /* only for debugging ???????????????? */
 #endif
 
@@ -288,11 +288,11 @@ void xlp_addtonzo(
 
 #else
 
+#ifndef EXACTSOLVE
 /** method creates a linear constraint and is called directly from ZIMPL 
  *
  *  @note this method is used by ZIMPL from version 2.10; 
  */
-#ifndef EXACTSOLVE
 Bool xlp_addcon_term(
    const char*           name,               /**< constraint name */
    ConType               type,               /**< constraint type */
@@ -442,6 +442,75 @@ Bool xlp_addcon_term(
    return FALSE;
 }
 #else 
+
+/** method stores a linear constraint in the constraints matrix and checks whether it has to be split into 
+ *  lhs and rhs constraints
+ */
+static
+Bool storeConstraint(
+   ConType               type,               /**< constraint type */
+   const Term*           term      
+   )
+{
+   Bool split;
+   int i;
+   
+   split = FALSE;
+
+   /* get exact (nonzero) coefficients for exactlp constraint handler */
+   for(i = 0; i < term_get_elements(term); i++)
+   {
+      SCIP_VAR* scipvar;
+      int varidx;
+
+      assert(SCIPuseFPRelaxation(scip_) || !split); 
+
+      /* coefficient of variable */
+      assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+      assert(mono_is_linear(term_get_element(term, i)));
+      numb_get_mpq(mono_get_coeff(term_get_element(term, i)), val_[nnonz_]);
+
+      /* we have to split the row into lhs and rhs part if
+       *  - we use an FP relaxation for calculating dual bounds,
+       *  - lhs and rhs of constraints are not -inf and inf, respectively, and
+       *  - current coefficient is not FP representable
+       */
+      if( SCIPuseFPRelaxation(scip_) && (type == CON_RANGE || type == CON_RANGE) )
+      {
+         split = split || !mpqIsReal(scip_, val_[nnonz_]);
+      }
+
+      /* index of variable */
+      scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+      varidx = SCIPvarGetIndex(scipvar);
+      assert(SCIPvarGetIndex(vars_[varidx]) == varidx);
+      assert(vars_[varidx] == scipvar);
+      ind_[nnonz_] = varidx;
+#ifdef READER_OUT  /*???????????????*/
+      gmp_printf("nnonz=%d, i=%d, nelem=%d, var=%s given=%g stored=%Qd\n", nnonz_, i, term_get_elements(term), 
+         SCIPvarGetName(scipvar), numb_todbl(mono_get_coeff(term_get_element(term, i))), val_[nnonz_]);
+#endif
+      /* update number of nonzero coefficients */
+      nnonz_++;
+   }
+
+   /* update number of constraints */
+   nconss_++;
+      
+   /* set dummy entry, i.e., correct entry for the constraint created next */
+   beg_[nconss_] = nnonz_;  
+   assert(beg_[nconss_-1] <= beg_[nconss_]);
+#ifdef READER_OUT  /*???????????????*/
+   gmp_printf("new: beg[%d]=%d\n", nconss_, beg_[nconss_]);
+#endif
+
+   return split;
+}
+
+/** method creates a linear constraint and is called directly from ZIMPL 
+ *
+ *  @note this method is used by ZIMPL from version 2.10; 
+ */
 Bool xlp_addcon_term(
    const char*           name,               /**< constraint name */
    ConType               type,               /**< constraint type */
@@ -456,28 +525,28 @@ Bool xlp_addcon_term(
 
    /* reallocate and initialize constraint specific information */ 
 #ifdef REALLOC /* todo: check, if it is ok to do this ????????????? */
-   assert(nconss_+1 <= consssize_);
-   if( nconss_+1 == consssize_ )
+   assert(nconss_ <= consssize_);
+   if( nconss_ + 2 > consssize_ )
    {
-      consssize_ *= 2;
+      consssize_ = MAX(2 * consssize_, consssize_ + 2);
 
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &beg_, consssize_) );
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &lhs_, consssize_) );
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &rhs_, consssize_) );
-      for( i = nconss_+1; i < consssize_; ++i)
+      for( i = nconss_; i < consssize_; ++i)
       {
          mpq_init(lhs_[i]);
          mpq_init(rhs_[i]);
       }
    }
 #else
-   assert(nconss_+1 <= consssize_);
-   if( nconss_+1 == consssize_ )
+   assert(nconss_ <= consssize_);
+   if( nconss_ + 2 > consssize_ )
    {
       mpq_t* lhstmp;
       mpq_t* rhstmp;
 
-      consssize_ *= 2;
+      consssize_ = MAX(2 * consssize_, consssize_ + 2);
 
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &beg_, consssize_) );
 
@@ -489,7 +558,7 @@ Bool xlp_addcon_term(
          mpq_init(rhstmp[i]);
       }
 
-      for( i = 0; i < nconss_+1; ++i)
+      for( i = 0; i < nconss_; ++i)
       {
          mpq_set(lhstmp[i], lhs_[i]);
          mpq_set(rhstmp[i], rhs_[i]);
@@ -509,9 +578,9 @@ Bool xlp_addcon_term(
    /* reallocate and initialize matrix specific information */ 
 #ifdef REALLOC /* todo: check, if it is ok to do this ????????????? */
    assert(nnonz_ <= nonzsize_);
-   if( nnonz_ + term_get_elements(term) > nonzsize_ )
+   if( nnonz_ + (2 * term_get_elements(term)) > nonzsize_ )
    {
-      nonzsize_ = MAX(2 * nonzsize_, nonzsize_ + term_get_elements(term));
+      nonzsize_ = MAX(2 * nonzsize_, nonzsize_ + (2 * term_get_elements(term)));
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &val_, nonzsize_) );
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &ind_, nonzsize_) );
       for( i = nnonz_; i < nonzsize_; ++i)
@@ -521,11 +590,11 @@ Bool xlp_addcon_term(
    }   
 #else
    assert(nnonz_ <= nonzsize_);
-   if( nnonz_ + term_get_elements(term) > nonzsize_ )
+   if( nnonz_ + (2 * term_get_elements(term)) > nonzsize_ )
    {
       mpq_t* valtmp;
 
-      nonzsize_ = MAX(2 * nonzsize_, nonzsize_ + term_get_elements(term));
+      nonzsize_ = MAX(2 * nonzsize_, nonzsize_ + (2 * term_get_elements(term)));
 
       SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &ind_, nonzsize_) );
 
@@ -588,40 +657,22 @@ Bool xlp_addcon_term(
    maxdegree = term_get_degree(term);
    if (maxdegree <= 1)
    {
-      /* get exact (nonzero) coefficients for exactlp constraint handler */
-      for(i = 0; i < term_get_elements(term); i++)
+      Bool split;
+
+      split = storeConstraint(type, term);
+
+      if( split )
       {
-         SCIP_VAR* scipvar;
-         int varidx;
+         assert(type == CON_RANGE || type == CON_EQUAL);
 
-         /* index of variable */
-         assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
-         assert(mono_is_linear(term_get_element(term, i)));
-         numb_get_mpq(mono_get_coeff(term_get_element(term, i)), val_[nnonz_]);
+         /* change constraint just stored to an rhs constraints */
+         mpq_set(lhs_[nconss_-1], *negInfinity(conshdlrdata_));
 
-         /* coefficient of variable */
-         scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-         varidx = SCIPvarGetIndex(scipvar);
-         assert(SCIPvarGetIndex(vars_[varidx]) == varidx);
-         assert(vars_[varidx] == scipvar);
-         ind_[nnonz_] = varidx;
-#ifdef READER_OUT  /*???????????????*/
-         gmp_printf("nnonz=%d, i=%d, nelem=%d, var=%s given=%g stored=%Qd\n", nnonz_, i, term_get_elements(term), 
-            SCIPvarGetName(scipvar), numb_todbl(mono_get_coeff(term_get_element(term, i))), val_[nnonz_]);
-#endif
-         /* update number of nonzero coefficients */
-         nnonz_++;
+         /* store the constraint again as lhs constraint */
+         split = storeConstraint(type, term);
+         assert(split);
+         mpq_set(rhs_[nconss_-1], *posInfinity(conshdlrdata_));
       }
-
-      /* update number of constraints */
-      nconss_++;
-      
-      /* set dummy entry, i.e., correct entry for the constraint created next */
-      beg_[nconss_] = nnonz_;  
-      assert(beg_[nconss_-1] <= beg_[nconss_]);
-#ifdef READER_OUT  /*???????????????*/
-      gmp_printf("new: beg[%d]=%d\n", nconss_, beg_[nconss_]);
-#endif
    }
 #ifdef WITH_QUAD
    else if (maxdegree == 2)
@@ -1334,6 +1385,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    mpq_t ubtmp;
    mpq_t objtmp;
    int idx;
+   int nswitch;
 #endif
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
@@ -1554,15 +1606,23 @@ SCIP_DECL_READERREAD(readerReadZpl)
    mpq_init(ubtmp);
    mpq_init(objtmp);
    idx = 0;
+   nswitch = 0;
 
-   for( i = 0; i < nvars_; ++i )
+   for( i = 0; i < nvars_-1+nswitch; ++i )
    {
       int probindex;
 
       assert(idx <= i);
+      assert(idx < nvars_);
+      assert(nswitch <= nvars_);
 
       probindex = SCIPvarGetProbindex(vars_[idx]);
       assert(probindex >= idx);
+
+#ifdef READER_OUT /*????????????????*/
+      printf("i=%d| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>", i, idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
+         probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
+#endif
 
       /* position of current variable is incorrect */      
       if( idx != probindex )
@@ -1582,14 +1642,26 @@ SCIP_DECL_READERREAD(readerReadZpl)
          mpq_set(ub_[idx], ubtmp);
          mpq_set(obj_[idx], objtmp);
          vars_[idx] = vartmp;
+
+         nswitch++;
+#ifdef READER_OUT /*????????????????*/
+         printf(" --> switch --> i=%d (idx=%d)| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>\n", i, idx, idx, SCIPvarGetName(vars_[idx]), SCIPvarGetProbindex(vars_[idx]), 
+         probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
+#endif
       }
       /* position of current variable is correct */      
       else
       {
          /* move to variable on next position */
          idx++;
+
+#ifdef READER_OUT /*????????????????*/
+         printf(" --> NO switch --> i=%d (idx=%d)| idxpos=%d: var=<%s,%d> | probindexpos=%d:  var=<%s,%d>\n", i, idx, idx-1, SCIPvarGetName(vars_[idx-1]), SCIPvarGetProbindex(vars_[idx-1]), 
+         probindex, SCIPvarGetName(vars_[probindex]), SCIPvarGetProbindex(vars_[probindex]) );
+#endif
       }
    }
+
    mpq_clear(objtmp);
    mpq_clear(ubtmp);
    mpq_clear(lbtmp);

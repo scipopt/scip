@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.81.2.3 2009/07/24 12:52:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.81.2.4 2009/08/05 10:10:28 bzfwolte Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -972,6 +972,22 @@ SCIP_Real SCIPsolGetObj(
       return SCIPprobInternObjval(prob, set, sol->obj);
    else
       return sol->obj;
+}
+
+/* todo: ???????????? this is only for a workaround method for the exactlp constraint handler, 
+ * as I can not store solutions which are not FP representable at the moment, 
+ * but at least I want to have the correct primal bound (delete this method from the code again later) ?????????????? 
+ */
+/** sets objective value of primal CIP solution in transformed problem */
+void SCIPsolSetObj(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             obj                 /**< transformed objective value */
+   )
+{
+   assert(sol != NULL);
+   assert(sol->solorigin != SCIP_SOLORIGIN_ORIGINAL);
+   
+   sol->obj = obj;
 }
 
 /** updates primal solutions after a change in a variable's objective value */

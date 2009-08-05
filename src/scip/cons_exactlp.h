@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.1 2009/07/13 12:48:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.h,v 1.1.2.2 2009/08/05 10:10:27 bzfwolte Exp $"
 
 /**@file   cons_exactlp.h
  * @brief  constraint handler for exactlp constraints
@@ -55,6 +55,13 @@ extern
 SCIP_Bool isPosInfinity(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
    mpq_t                 val                 /**< value to be compared against infinity */
+   );
+
+/** returns whether given rational number can be stored as FP number without roundinf errors */
+extern
+SCIP_Bool mpqIsReal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   mpq_t                 val                 /**< given rational number */
    );
 
 /** converts given rational number into an FP number; uses given rounding mode during conversion 
