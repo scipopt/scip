@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.11 2009/08/06 13:09:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.12 2009/08/06 15:35:58 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -78,6 +78,7 @@ struct SCIP_HeurData
    int            nlpiterlimit;          /**< iteration limit of NLP solver; 0 for off */
    SCIP_Real      nlptimelimit;          /**< time limit of NLP solver; 0 for off */
    SCIP_Real      resolvetolfactor;      /**< factor for feasiblity tolerance when resolving NLP due to disagreement of feasibility */
+   SCIP_Bool      resolvefromscratch;    /**< whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution */
    
    SCIP_Longint   iterused;              /**< number of iterations used so far */
    int            iteroffset;            /**< number of iterations added to the contingent of the total number of iterations */
@@ -933,7 +934,8 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       { /* resolve with tighter tolerances */
          SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip));
          SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
-         SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, primals) );
+         if (!heurdata->resolvefromscratch)
+            SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, primals) );
          SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
          SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
          heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
@@ -997,14 +999,15 @@ SCIP_RETCODE SCIPincludeHeurNlp(
          heurdata) );
 
    /* add Nlp primal heuristic parameters */
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpverblevel",      "verbosity level of NLP solver",                                                  &heurdata->nlpverblevel, FALSE, 0,   0, 2,                  NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpiterlimit",      "iteration limit of NLP solver; 0 to use solver default",                         &heurdata->nlpiterlimit, FALSE, 0,   0, INT_MAX,            NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nlptimelimit",      "time limit of NLP solver; 0 to use solver default",                              &heurdata->nlptimelimit, FALSE, 0,   0, SCIPinfinity(scip), NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor",  "if SCIP does not accept a solution which the NLP solver thinks is feasible, the feasibility tolerance is reduced by this factor and the NLP resolved (set to 1. to turn off resolve", &heurdata->resolvetolfactor, TRUE, 0.005, 0, 1., NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/iteroffset",        "number of iterations added to the contingent of the total number of iterations", &heurdata->iteroffset,   FALSE, 500, 0, INT_MAX,            NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/iterquotient",      "contingent of NLP iterations in relation to the number of nodes in SCIP",        &heurdata->iterquot,     FALSE, 0.1, 0, SCIPinfinity(scip), NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/itermin",           "contingent of NLP iterations in relation to the number of nodes in SCIP",        &heurdata->itermin,      FALSE, 300, 0, INT_MAX,            NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/varbound_explicit", "whether variable bound constraints should be handled explicitly before solving NLP instead of adding them to the NLP", &heurdata->varbound_explicit, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpverblevel",       "verbosity level of NLP solver",                                                  &heurdata->nlpverblevel, FALSE, 0,   0, 2,                  NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpiterlimit",       "iteration limit of NLP solver; 0 to use solver default",                         &heurdata->nlpiterlimit, FALSE, 0,   0, INT_MAX,            NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nlptimelimit",       "time limit of NLP solver; 0 to use solver default",                              &heurdata->nlptimelimit, FALSE, 0,   0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor",   "if SCIP does not accept a solution which the NLP solver thinks is feasible, the feasibility tolerance is reduced by this factor and the NLP resolved (set to 1. to turn off resolve", &heurdata->resolvetolfactor, FALSE, 0.01, 0, 1., NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/resolvefromscratch", "whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution", &heurdata->resolvefromscratch, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/iteroffset",         "number of iterations added to the contingent of the total number of iterations", &heurdata->iteroffset,   FALSE, 500, 0, INT_MAX,            NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/iterquotient",       "contingent of NLP iterations in relation to the number of nodes in SCIP",        &heurdata->iterquot,     FALSE, 0.1, 0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/itermin",            "contingent of NLP iterations in relation to the number of nodes in SCIP",        &heurdata->itermin,      FALSE, 300, 0, INT_MAX,            NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/varbound_explicit",  "whether variable bound constraints should be handled explicitly before solving NLP instead of adding them to the NLP", &heurdata->varbound_explicit, FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
