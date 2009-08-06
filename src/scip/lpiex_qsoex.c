@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.3 2009/08/05 10:10:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.4 2009/08/06 15:06:13 bzfwolte Exp $"
 //#define SCIP_DEBUG
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
@@ -2615,6 +2615,36 @@ SCIP_RETCODE SCIPlpiexWriteState(
    }
 
    return SCIP_OKAY;
+}
+
+/** checks whether LPi state (i.e. basis information) is dual feasbile and returns corresponing dual objective value */
+SCIP_RETCODE SCIPlpiexStateDualFeasible(
+   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPISTATE*        lpistate,           /**< LPi state information (like basis information) */
+   SCIP_Bool*            result,             /**< pointer to store whether given LPi state is dual feasible */
+   mpq_t*                dualobjval          /**< pointer to store dual objective value in case of dual feasibility */
+   )
+{  /*lint --e{715} */
+   int rval = 0;
+   QSbasis* B;
+
+   /* loads LPi state (like basis information) into solver */ 
+   SCIP_CALL( SCIPlpiexSetState(lpi, blkmem, lpistate) );
+ 
+   /* checks whether basis just loaded into the solver is dual feasible */
+   B =  mpq_QSget_basis(lpi->prob);
+
+#ifndef NDEBUG
+   rval = QSexact_basis_dualstatus(lpi->prob, B, (char*) result, dualobjval, 0);
+#else
+   rval = QSexact_basis_dualstatus(lpi->prob, B, (char*) result, dualobjval, 1);
+#endif
+
+   if( B )
+      mpq_QSfree_basis(B);
+
+   QS_RETURN(rval);
 }
 
 /**@} */

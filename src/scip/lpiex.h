@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.1 2009/07/13 12:48:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.2 2009/08/06 15:06:13 bzfwolte Exp $"
 
 /**@file   lpiex.h
  * @brief  interface methods for specific LP solvers
@@ -704,6 +704,16 @@ extern
 SCIP_RETCODE SCIPlpiexWriteState(
    SCIP_LPIEX*           lpi,                /**< LP interface structure */
    const char*           fname               /**< file name */
+   );
+
+/** checks whether LPi state (i.e. basis information) is dual feasbile and returns corresponing dual objective value */
+extern
+SCIP_RETCODE SCIPlpiexStateDualFeasible(
+   SCIP_LPIEX*           lpi,                /**< LP interface structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LPISTATE*        lpistate,           /**< LPi state information (like basis information) */
+   SCIP_Bool*            result,             /**< pointer to store whether given LPi state is dual feasible */
+   mpq_t*                dualobjval          /**< pointer to store dual objective value in case of dual feasibility */
    );
 
 /**@} */

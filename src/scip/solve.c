@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.6 2009/08/05 10:10:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.7 2009/08/06 15:06:13 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2445,7 +2445,9 @@ SCIP_RETCODE solveNode(
    focusnodehaslp = (set->lp_solvedepth == -1 || actdepth <= set->lp_solvedepth);
    focusnodehaslp = focusnodehaslp && (set->lp_solvefreq >= 1 && actdepth % set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp || (actdepth == 0 && set->lp_solvefreq == 0);
-   focusnodehaslp = focusnodehaslp || (actdepth == 0 && prob->ncontvars > 0);
+#ifndef EXACTSOLVE
+   focusnodehaslp = focusnodehaslp || (actdepth == 0 && prob->ncontvars > 0); 
+#endif
    focusnodehaslp = focusnodehaslp && ((set->misc_exactsolve && SCIPlpGetPseudoObjval(lp, set) < primal->cutoffbound)
          || (!set->misc_exactsolve && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set), primal->cutoffbound)));
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);

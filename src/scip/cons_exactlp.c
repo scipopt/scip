@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.4 2009/08/05 10:10:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.5 2009/08/06 15:06:13 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -1151,7 +1151,7 @@ SCIP_RETCODE createRelaxation(
 
    if( SCIPuseFPRelaxation(scip) ) 
    {
-     /* for each row of the exactlp constraint, create a row with FP data that defines a relaxation */
+      /* for each row of the exactlp constraint, create a row with FP data that defines a relaxation */
       for( c = 0; c < consdata->nconss; ++c )
       {
          int v;
@@ -1213,7 +1213,12 @@ SCIP_RETCODE createRelaxation(
                   rowvals[v] = mpqGetRealRelax(scip, consdata->val[i], GMP_RNDD);
                }
             }
-            /* x_j <= 0 and x_j >= 0 may hold ==> 
+            /* x_j <= 0 and x_j >= 0 may hold but a_j is FP representable */
+            else if( mpqIsReal(scip, consdata->val[i]) )
+            {
+               rowvals[v] = mpqGetRealApprox(scip, consdata->val[i]);
+            }
+            /* x_j <= 0 and x_j >= 0 may hold and a_j is not FP representable ==> 
              *   split x_j into negative and positive part 
              */
             else
@@ -1668,6 +1673,9 @@ SCIP_RETCODE checkIntegrality(
          {
             solvelpagain = TRUE;
             *result = SCIP_SOLVELP;
+#ifdef DETAILED_DEBUG  /*???????????????*/
+            SCIPdebugMessage("   ---> LP was infeasible but LPEX not: solve LP once again with basis of LPEX\n");
+#endif
          }
       }
 
@@ -1717,6 +1725,9 @@ SCIP_RETCODE checkIntegrality(
          }
 #endif
          *result = SCIP_BRANCHED;
+#ifdef DETAILED_DEBUG  /*???????????????*/
+         SCIPdebugMessage("   ---> LP was not solved: branch on result of LPEX\n");
+#endif
       }
    }
 
@@ -2065,11 +2076,15 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   int ncolsex;
+   int nrowsex;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
    assert(nconss == 1);
+
+   SCIPdebugMessage("separating exactlp constraint <%s> on LP solution\n", SCIPconsGetName(conss[0]));
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2084,13 +2099,67 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
     */
    if( SCIPuseFPRelaxation(scip) ) 
       return SCIP_OKAY;
-
-   /* todo: CONTINUE here ?????????
-    * - fill lpiex
-    * - calculate safe lower bound and hand it to SCIP
-    */
-   //   SCIP_CALL( constructCurrentLPEX(scip, conshdlrdata, consdata) );
    
+   switch( SCIPdualBoundMethod(scip) )
+   {
+   case 'v':
+      SCIP_CALL( constructCurrentLPEX(scip, conshdlrdata, consdata) );
+
+      SCIP_CALL( SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncolsex) );
+      SCIP_CALL( SCIPlpiexGetNRows(conshdlrdata->lpiex, &nrowsex) );
+      if( ncolsex == SCIPgetNLPCols(scip) && nrowsex == SCIPgetNLPRows(scip) )
+      {
+         SCIP_LPISTATE* lpistate;
+         SCIP_Bool dualfeasible;
+         mpq_t dualobjval;
+         
+         mpq_init(dualobjval);
+
+         SCIP_CALL( SCIPgetLPState(scip, &lpistate) ); 
+         SCIP_CALL( SCIPlpiexStateDualFeasible(conshdlrdata->lpiex, SCIPblkmem(scip), lpistate, &dualfeasible, &dualobjval) );
+         
+         SCIPdebugMessage("DB method <v>: LP basis %s dual feasible\n", dualfeasible ? "is" : "is not");
+      
+         if( dualfeasible )
+         {
+#ifdef DETAILED_DEBUG /*????????? */
+            SCIP_Real oldlb;
+            oldlb = SCIPgetLocalLowerbound(scip);
+#endif
+            SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+#ifdef DETAILED_DEBUG /*????????? */
+            if( oldlb < SCIPgetLocalLowerbound(scip) )
+            {
+               SCIPdebugMessage("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+            }
+#endif
+         }
+         /* todo: CONTINUE HERE ??????????????
+          * - handle case that basis is dual infeasible 
+          */
+
+         mpq_clear(dualobjval);
+         SCIPerrorMessage("Dual bounding method <%c> has not been COMPLETELY implemented yet\n", SCIPdualBoundMethod(scip)); /*????????????????*/
+         SCIPABORT();/*????????????????*/
+      }
+      break;
+
+   case 'r':
+      SCIPerrorMessage("Dual bounding method <%c> has not been implemented yet\n", SCIPdualBoundMethod(scip));
+      SCIPABORT();
+      break;
+
+   case 'p':
+      SCIPerrorMessage("Dual bounding method <%c> has not been implemented yet\n", SCIPdualBoundMethod(scip));
+      SCIPABORT();
+      /* todo: put Dans code here ?????????????? */
+      break;
+
+   default:
+      SCIPerrorMessage("invalid parameter setting <%c> for dual bounding method\n", SCIPdualBoundMethod(scip));
+      return SCIP_PARAMETERWRONGVAL;
+   }
+ 
    return SCIP_OKAY;
 }
 

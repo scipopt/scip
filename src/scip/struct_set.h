@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.77.2.3 2009/08/05 10:10:28 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.77.2.4 2009/08/06 15:06:13 bzfwolte Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -215,7 +215,8 @@ struct SCIP_Set
    SCIP_Bool             misc_usefprelax;    /**< if problem is solved exactly, should floating point problem be 
                                               *   a relaxation of the original problem (instead of an approximation)? */
    char                  misc_dbmethod;      /**< method for computing truely valid dual bounds at the nodes
-                                              *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'e'xact LP) */
+                                              *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
+                                              *   'p'roject and scale, 'e'xact LP) */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

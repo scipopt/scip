@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.5 2009/08/05 10:10:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.6 2009/08/06 15:06:13 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -732,7 +732,8 @@ SCIP_Bool SCIPuseFPRelaxation(
 }
 
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 
- *  'v'erify LP basis, 'r'epair LP basis, 'e'xact LP); only relevant for solving the problem provably correct 
+ *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP); only relevant for solving the problem 
+ *  provably correct 
  */
 char SCIPdualBoundMethod(
    SCIP*                 scip                /**< SCIP data structure */

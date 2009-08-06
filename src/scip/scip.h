@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310.2.4 2009/08/05 10:10:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.5 2009/08/06 15:06:13 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -214,13 +214,16 @@ SCIP_Bool SCIPisExactSolve(
 /** returns whether the floating point problem should be a relaxation of the original problem (instead of an approximation);
  *  only relevant for solving the problem provably correct 
  */
+extern
 SCIP_Bool SCIPuseFPRelaxation(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns which method is used for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 
- *  'v'erify LP basis, 'r'epair LP basis, 'e'xact LP); only relevant for solving the problem provably correct 
+ *  'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP); only relevant for solving the problem 
+ *  provably correct 
  */
+extern
 char SCIPdualBoundMethod(
    SCIP*                 scip                /**< SCIP data structure */
    );
