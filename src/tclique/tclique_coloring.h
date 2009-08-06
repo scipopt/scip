@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.h,v 1.6 2009/04/06 13:07:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.h,v 1.7 2009/08/06 00:50:14 bzfwinkm Exp $"
 
 /**@file   tclique_coloring.h
  * @brief  coloring part of algorithm for maximum cliques
@@ -30,6 +30,9 @@
 #include "blockmemshell/memory.h"
 #include "tclique/tclique.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef struct _ITV{
    int inf;
@@ -69,5 +72,9 @@ TCLIQUE_WEIGHT tcliqueColoring(
    int*             nclique,            /**< pointer to store number of nodes in the clique */
    TCLIQUE_WEIGHT*  weightclique        /**< pointer to store the weight of the clique */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

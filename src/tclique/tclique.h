@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique.h,v 1.9 2009/04/06 13:07:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: tclique.h,v 1.10 2009/08/06 00:50:14 bzfwinkm Exp $"
 
 /**@file   tclique.h
  * @brief  tclique user interface
@@ -27,6 +27,9 @@
 #ifndef __TCLIQUE_H__
 #define __TCLIQUE_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Data Types and Structures
@@ -279,5 +282,9 @@ void tcliqueMaxClique(
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
    TCLIQUE_STATUS*  status              /**< pointer to store the status of the solving call */
    );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

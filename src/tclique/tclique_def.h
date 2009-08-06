@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_def.h,v 1.5 2009/04/06 13:07:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: tclique_def.h,v 1.6 2009/08/06 00:50:14 bzfwinkm Exp $"
 
 /**@file   tclique_def.h
  * @brief  tclique defines
@@ -28,6 +28,9 @@
 #include "scip/def.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #ifndef ALLOC_ABORT
 #define ALLOC_ABORT(x) do                                               \
@@ -73,6 +76,8 @@
 #define MAX(x,y)  ((x) >= (y) ? (x) : (y))
 #endif
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif
