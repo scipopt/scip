@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.10 2009/07/31 18:29:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.11 2009/08/06 13:09:02 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -791,6 +791,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    SCIP_HEURDATA* heurdata;
    SCIP_Real*     startpoint;
    SCIP_Longint   itercontingent;
+   SCIP_Real      timelimit;
    assert(scip != NULL);
    assert(heur != NULL);
   
@@ -836,6 +837,21 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    if (heurdata->nlpiterlimit)
       itercontingent = MIN(itercontingent, heurdata->nlpiterlimit);
 
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+   if( !SCIPisInfinity(scip, timelimit) )
+   {
+      timelimit -= SCIPgetSolvingTime(scip);
+      if( timelimit < 10.0 )
+      {
+         SCIPdebugMessage("skip NLP heuristic; only %g seconds time left\n", timelimit);
+         return SCIP_OKAY;
+      }
+      if (heurdata->nlptimelimit)
+         timelimit = MIN(heurdata->nlptimelimit, timelimit);
+      SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_TILIM, timelimit) );
+   }
+   
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, heurdata->nvars) );
 
    SCIP_CALL( SCIPgetSolVals(scip, heurdata->startcandidate, heurdata->nvars, heurdata->var_nlp2scip, startpoint) );
@@ -867,7 +883,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       SCIPfreeSol(scip, &heurdata->startcandidate);
       
    SCIP_CALL( SCIPnlpiSetIntPar(scip, heurdata->nlpi, SCIP_NLPPAR_ITLIM, itercontingent) );
-   SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT"\n", itercontingent);
+   SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT" and timelimit %g\n", itercontingent, timelimit);
    
    SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
 
@@ -884,7 +900,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
 
    heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
-   SCIPdebugMessage("NLP solver used %d iterations\n", SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics));
+   SCIPdebugMessage("NLP solver used %d iterations and %g seconds\n", SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics), SCIPnlpStatisticsGetTotalTime(heurdata->nlpstatistics));
 
    if (SCIPnlpiGetSolstat(scip, heurdata->nlpi) <= SCIP_NLPSOLSTAT_FEASIBLE)
    {
@@ -951,6 +967,8 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    }
    else
       *result = SCIP_DIDNOTFIND;
+   
+   /* TODO reset time and iterlimit in nlp solver? */
    
    return SCIP_OKAY;
 }
