@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.2 2009/08/06 15:06:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.3 2009/08/07 13:24:47 bzfsteff Exp $"
 
 /**@file   lpiex.h
  * @brief  interface methods for specific LP solvers
@@ -828,5 +828,33 @@ SCIP_RETCODE SCIPlpiexWriteLP(
 /**@} */
 
 
+/*
+ * Exact LU decomposition solver interface
+ */
+
+/**@name Exact LU decomposition solver interface */
+/**@{ */
+
+/** computes and stores matrix factorization within the LPIEX structure */
+extern
+SCIP_RETCODE SCIPlpiexCreateFactor(
+   SCIP_LPIEX*           lpi,            /**< LP interface structure */
+   int                   dim,            /**< dimension of matrix */
+   int*                  cbeg,           /**< column indices of matrix */
+   int*                  clen,           /**< column lengths of matrix */
+   int*                  cindx,          /**< row index of entries */
+   mpq_t*                ccoef           /**< coef values of matrix */
+    );
+
+
+/** solves a system using the stored factorization */
+extern
+SCIP_RETCODE SCIPlpiexFactorSolve(
+   SCIP_LPIEX*           lpi,            /**< LP interface structure */
+   int                   dim,            /**< dimension of matrix */
+   mpq_t*                sol,            /**< solution to system */
+   mpq_t*                rhs             /**< rhs of system */
+   );
+/**@} */
 
 #endif

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.4 2009/08/06 15:06:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.5 2009/08/07 13:24:47 bzfsteff Exp $"
 //#define SCIP_DEBUG
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
@@ -56,6 +56,7 @@ struct SCIP_LPiEx
    mpq_t* itab;     /**< array of length tbsz */
    char* ibas;	    /**< array of length tbsz */
    int pricing;	    /**< SCIP pricing option */
+   mpq_factor_work* factor;  /**< factorized matrix  */
 };
 
 /** solver name */
@@ -385,6 +386,9 @@ SCIP_RETCODE SCIPlpiexCreate(
    SCIP_ALLOC( BMSallocMemory(lpi) );
    memset(*lpi, 0, sizeof(struct SCIP_LPiEx));
 
+   /* factor work is NULL unless used */
+   (*lpi)->factor =  (mpq_factor_work* ) NULL; 
+
    (*lpi)->prob = mpq_QScreate_prob(name, (int) objsen);
    if ( (*lpi)->prob == NULL )
    {
@@ -426,6 +430,13 @@ SCIP_RETCODE SCIPlpiexFree(
    assert(*lpi != NULL);
 
    SCIPdebugMessage("SCIPlpiexFree()\n");
+
+   /* free factor work */   
+   if( (*lpi)->factor != NULL)
+   {
+      mpq_ILLfactor_free_factor_work((*lpi)->factor);
+      BMSfreeMemoryArray( &((*lpi)->factor) );
+   }  
 
    /* free LP */
    mpq_QSfree_prob((*lpi)->prob);
@@ -2949,6 +2960,101 @@ SCIP_RETCODE SCIPlpiexWriteLP(
    if ( mpq_QSwrite_prob(lpi->prob, fname, &(fname[j])) )
       return SCIP_WRITEERROR;
 
+   return SCIP_OKAY;
+}
+
+
+/** computes and stores matrix factorization within the LPIEX structure */
+SCIP_RETCODE SCIPlpiexCreateFactor(
+   SCIP_LPIEX*           lpi,            /**< LP interface structure */
+   int                   dim,            /**< dimension of matrix */
+   int*                  cbeg,           /**< column indices of matrix */
+   int*                  clen,           /**< column lengths of matrix */
+   int*                  cindx,          /**< row index of entries */
+   mpq_t*                ccoef           /**< coef values of matrix */
+   )
+{
+   int i;
+   int rval;
+   if(lpi->factor == NULL)
+   {
+      int nsing;                                                
+      int *singr;                                               
+      int *singc; 
+      int * basis;
+ 
+      SCIP_ALLOC(  BMSallocMemoryArray(&lpi->factor,1) );
+      
+      SCIP_ALLOC(  BMSallocMemoryArray(&basis,dim) );
+      for(i = 0; i < dim; i++)
+      { 
+         basis[i] = i;
+      }      
+/*       mpq_factor_work *f = (mpq_factor_work *) NULL; */
+/*       f = (mpq_factor_work *) malloc (sizeof (mpq_factor_work)); */
+      /* this is just a temporary fix for debugging, this should use lpi->factor!!! */
+      mpq_init(lpi->factor->fzero_tol);
+      mpq_init(lpi->factor->szero_tol);
+      mpq_init(lpi->factor->partial_tol);
+      mpq_init(lpi->factor->partial_cur);
+
+      mpq_ILLfactor_init_factor_work (lpi->factor );/*  lpi->factor  */
+      mpq_ILLfactor_create_factor_work (lpi->factor,dim);   
+
+      nsing = 0;
+      singr = 0;
+      singc = 0;
+
+      rval = mpq_ILLfactor(lpi->factor,basis, cbeg,clen,cindx,ccoef,&nsing,&singr,&singc);
+      assert(!rval);
+      if (nsing > 0) 
+      {
+         printf ("Matrix is nonsingular \n");
+      }
+
+      BMSfreeMemoryArray( &basis );
+   }
+   return SCIP_OKAY;
+}
+
+/** solves a system using the stored factorization */
+SCIP_RETCODE SCIPlpiexFactorSolve(
+   SCIP_LPIEX*           lpi,            /**< LP interface structure */
+   int                   dim,            /**< dimension of matrix */
+   mpq_t*                sol,            /**< solution to system */
+   mpq_t*                rhs             /**< rhs of system */
+   )
+{
+   int i;
+   if(lpi->factor != NULL)
+   {
+      mpq_svector ssol;
+      mpq_svector srhs;
+
+      mpq_ILLsvector_init (& ssol);
+      mpq_ILLsvector_init (& srhs);
+      mpq_ILLsvector_alloc (& ssol,dim);
+      mpq_ILLsvector_alloc (& srhs,dim);
+
+      for(i = 0; i < dim; i++)
+      {
+	 mpq_set(srhs.coef[i],rhs[i]);
+         srhs.indx[i] = i;
+      }
+
+      /* solve the system */
+      mpq_ILLfactor_ftran(lpi->factor, &srhs, &ssol);
+
+      for(i = 0; i < ssol.nzcnt ; i++)
+         mpq_set_ui(sol[i],0,1);
+      for(i = 0; i < ssol.nzcnt ; i++)
+      {
+	 mpq_set(sol[ssol.indx[i]],ssol.coef[i]);
+      }
+
+      mpq_ILLsvector_free (& ssol);
+      mpq_ILLsvector_free (& srhs);
+   }
    return SCIP_OKAY;
 }
 

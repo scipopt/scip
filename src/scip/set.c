@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194.2.5 2009/08/06 15:06:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.6 2009/08/07 13:24:47 bzfsteff Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -791,7 +791,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddCharParam(*set, blkmem,
          "misc/dbmethod",
          "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP)",
-         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvre",
+         &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpe",
          NULL, NULL) );
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
