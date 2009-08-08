@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.12 2009/08/06 15:35:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.13 2009/08/08 15:35:20 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -233,6 +233,8 @@ SCIP_RETCODE addLinearConstraints(
    int              i, j, k;
    int              nconss;
    SCIP_CONS**      conss;
+   int              nuseconss = 0;
+   SCIP_CONS**      useconss;
    int              nnz;
    SCIP_Real*       lhs;
    SCIP_Real*       rhs;
@@ -253,33 +255,52 @@ SCIP_RETCODE addLinearConstraints(
    if (!nconss)
       return SCIP_OKAY;
    
+   SCIP_CALL( SCIPallocBufferArray(scip, &useconss, nconss) );
+   
    nnz = 0;
    for (i = 0; i < nconss; ++i)
-      nnz += SCIPgetNVarsLinear(scip, conss[i]);
+   {
+      for (k = 0; k < SCIPgetNVarsLinear(scip, conss[i]); ++k)
+      {
+         if (SCIPvarGetType(SCIPgetVarsLinear(scip, conss[i])[k]) > SCIP_VARTYPE_INTEGER)
+         {
+            nnz += SCIPgetNVarsLinear(scip, conss[i]);
+            useconss[nuseconss] = conss[i];
+            ++nuseconss;
+            break;
+         }
+      }
+   }
    
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowoffset, nconss+1) );
+   if (!nuseconss)
+   {
+      SCIPfreeBufferArray(scip, &useconss);
+      return SCIP_OKAY;
+   }
+   
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nuseconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nuseconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowoffset, nuseconss+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &colindex, nnz) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coeff, nnz) );
    
    j = 0;
-   for (i = 0; i < nconss; ++i)
+   for (i = 0; i < nuseconss; ++i)
    {
-      lhs[i] = SCIPgetLhsLinear(scip, conss[i]);
-      rhs[i] = SCIPgetRhsLinear(scip, conss[i]);
+      lhs[i] = SCIPgetLhsLinear(scip, useconss[i]);
+      rhs[i] = SCIPgetRhsLinear(scip, useconss[i]);
       rowoffset[i] = j;
-      memcpy(&coeff[j], SCIPgetValsLinear(scip, conss[i]), SCIPgetNVarsLinear(scip, conss[i]) * sizeof(SCIP_Real));
-      for (k = 0; k < SCIPgetNVarsLinear(scip, conss[i]); ++k, ++j)
+      memcpy(&coeff[j], SCIPgetValsLinear(scip, useconss[i]), SCIPgetNVarsLinear(scip, useconss[i]) * sizeof(SCIP_Real));
+      for (k = 0; k < SCIPgetNVarsLinear(scip, useconss[i]); ++k, ++j)
       {
-         assert(SCIPhashmapExists(heurdata->var_scip2nlp, SCIPgetVarsLinear(scip, conss[i])[k]));
-         colindex[j] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, SCIPgetVarsLinear(scip, conss[i])[k]);
+         assert(SCIPhashmapExists(heurdata->var_scip2nlp, SCIPgetVarsLinear(scip, useconss[i])[k]));
+         colindex[j] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, SCIPgetVarsLinear(scip, useconss[i])[k]);
       }
    }
-   rowoffset[nconss] = nnz;
+   rowoffset[nuseconss] = nnz;
    assert(j == nnz);
    
-   SCIP_CALL( SCIPnlpiAddConstraints(scip, heurdata->nlpi, nconss,
+   SCIP_CALL( SCIPnlpiAddConstraints(scip, heurdata->nlpi, nuseconss,
       lhs, rhs,
       rowoffset, colindex, coeff,
       NULL, NULL, NULL, NULL, NULL,
@@ -294,6 +315,7 @@ SCIP_RETCODE addLinearConstraints(
    SCIPfreeBufferArray(scip, &rowoffset);
    SCIPfreeBufferArray(scip, &colindex);
    SCIPfreeBufferArray(scip, &coeff);
+   SCIPfreeBufferArray(scip, &useconss);
    
    return SCIP_OKAY;
 }
