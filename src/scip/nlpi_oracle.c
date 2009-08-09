@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.2 2009/08/09 15:49:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.3 2009/08/09 19:44:56 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @brief   implementation of NLPI oracle interface
@@ -48,6 +48,7 @@ struct SCIP_NlpiOracle
    int**            conquadrow;    /**< quadrow[.] gives row    indices for quadratic part, or NULL if no quadratic part in this constraint */
    int**            conquadcol;    /**< quadcol[.] gives column indices for quadratic part, or NULL if no quadratic part in this constraint */
    SCIP_Real**      conquadval;    /**< quadval[.] gives coefficients in quadratic part, or NULL if no quadratic part in this constraint */
+   int**            conexprvaridx; /**< exprvaridx[.] gives indices of variables from expression in NLP, or NULL if no nonquadratic part in this constraint */
    SCIP_EXPRTREE**  conexprtree;   /**< exprtree[.] gives nonquadratic part, or NULL if no nonquadratic part in this constraint */
    char**           conname;       /**< constraint names */
 
@@ -59,6 +60,7 @@ struct SCIP_NlpiOracle
    int*             objquadrow;    /**< row    indices in quadratic part of objective, or NULL if no quadratic part in objective */
    int*             objquadcol;    /**< column indices in quadratic part in objective, or NULL if no quadratic part in objective */ 
    SCIP_Real*       objquadval;    /**< coefficients in quadratic part in objective, or NULL if no quadratic part in objective */
+   int*             objexprvaridx; /**< exprvaridx[.] gives indices of variables from expression in NLP, or NULL if no nonquadratic part in objective */
    SCIP_EXPRTREE*   objexprtree;   /**< expression tree of nonquadratic part in objective, or NULL if no nonquadratic part in objective */
 
    int*             jacoffset;     /**< rowwise jacobi sparsity pattern: constraint offsets in jaccol */
@@ -143,6 +145,7 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    (*oracle)->conquadrow    = NULL;
    (*oracle)->conquadcol    = NULL;
    (*oracle)->conquadval    = NULL;
+   (*oracle)->conexprvaridx = NULL;
    (*oracle)->conexprtree   = NULL;
    (*oracle)->conname       = NULL;
 
@@ -154,6 +157,7 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    (*oracle)->objquadrow    = NULL;
    (*oracle)->objquadcol    = NULL;
    (*oracle)->objquadval    = NULL;
+   (*oracle)->objexprvaridx = NULL;
    (*oracle)->objexprtree   = NULL;
    
    (*oracle)->jacoffset     = NULL;
@@ -223,11 +227,18 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    
    if ((*oracle)->conexprtree)
    {
-#ifdef WITH_NL
       for (i = 0; i < (*oracle)->ncons; ++i)
-         SCIP_CALL( SCIPexprtreeFree(scip, &(*oracle)->conexprtree[i]) );
+      {
+         if ((*oracle)->conexprtree[i])
+         {
+#ifdef WITH_NL
+            SCIP_CALL( SCIPexprtreeFree(scip, &(*oracle)->conexprtree[i]) );
 #endif
+            SCIPfreeMemoryArrayNull(scip, &(*oracle)->conexprvaridx[i]);
+         }
+      }
       SCIPfreeMemoryArray(scip, &(*oracle)->conexprtree);
+      SCIPfreeMemoryArray(scip, &(*oracle)->conexprvaridx);
    }
    
    if ((*oracle)->conname)
@@ -242,10 +253,13 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadrow);
    SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadcol);
    SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadval);
-#ifdef WITH_NL
    if ((*oracle)->objexprtree)
+   {
+#ifdef WITH_NL
       SCIP_CALL( SCIPexprtreeFree(scip, &(*oracle)->objexprtree) );
 #endif
+      SCIPfreeMemoryArray(scip, &(*oracle)->objexprvaridx);
+   }
 
    SCIPnlpiOracleInvalidateJacobiSparsity(scip, *oracle);
    SCIPnlpiOracleInvalidateHessianLagSparsity(scip, *oracle);
@@ -353,7 +367,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    int* const*                 exprvaridx, /**< NULL if no nonquadratic parts, otherwise epxrvaridx[.] maps variable indices in expression tree to indices in nlp */
    SCIP_EXPRTREE* const*       exprtree,   /**< NULL if no nonquadratic parts, otherwise exprtree[.] gives nonquadratic part, or NULL if no nonquadratic part in this constraint */
    const char**                connames    /**< names of new constraints, or NULL if no names should be stored */
-)
+   )
 {
    int        i, oldnnz;
    SCIP_Bool  addednlcon = FALSE;  /* whether a nonlinear constraint was added */
@@ -497,28 +511,42 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    {
       if (!oracle->conexprtree && oracle->ncons)
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conexprtree, oracle->ncons + ncons) );
-         memset(oracle->conexprtree, 0, oracle->ncons * sizeof(SCIP_EXPRTREE*));
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conexprtree,   oracle->ncons + ncons) );
+         memset(oracle->conexprtree,   0, oracle->ncons * sizeof(SCIP_EXPRTREE*));
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conexprvaridx, oracle->ncons + ncons) );
+         memset(oracle->conexprvaridx, 0, oracle->ncons * sizeof(int*));
       }
       else
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprtree, oracle->ncons + ncons) );
+      {
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprtree,   oracle->ncons + ncons) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprvaridx, oracle->ncons + ncons) );
+      }
       for (i = 0; i < ncons; ++i)
          if (exprtree[i])
          {
 #ifdef WITH_NL
             SCIP_CALL( SCIPexprtreeCopy(scip, &oracle->conexprtree[oracle->ncons + i], exprtree[i]) );
             /* @TODO set oracle->vardegree for variables in exprtree to INF */
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conexprvaridx[oracle->ncons + i], exprvaridx[i], SCIPexprtreeGetNVars(exprtree[i])) );
+#else
+            SCIPerrorMessage("nonquadratic functions not supported in NLPI yet.\n");
+            return SCIP_ERROR;
 #endif
             
             addednlcon = TRUE;
          }
          else
+         {
             oracle->conexprtree[oracle->ncons + i] = NULL;
+            oracle->conexprvaridx[oracle->ncons + i] = NULL;
+         }
    }
    else if (oracle->conexprtree)
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprtree, oracle->ncons + ncons) );
-      memset(oracle->conexprtree + oracle->ncons, 0, ncons * sizeof(SCIP_EXPRTREE*));
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprtree,   oracle->ncons + ncons) );
+      memset(oracle->conexprtree   + oracle->ncons, 0, ncons * sizeof(SCIP_EXPRTREE*));
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprvaridx, oracle->ncons + ncons) );
+      memset(oracle->conexprvaridx + oracle->ncons, 0, ncons * sizeof(int*));
    }
 
    if (connames)
@@ -578,11 +606,14 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    SCIPfreeMemoryArrayNull(scip, &oracle->objquadrow);
    SCIPfreeMemoryArrayNull(scip, &oracle->objquadcol);
    SCIPfreeMemoryArrayNull(scip, &oracle->objquadval);
-#ifdef WITH_NL
    if (oracle->objexprtree)
+   {
+#ifdef WITH_NL
       SCIP_CALL( SCIPexprtreeFree(scip, &oracle->objexprtree) );
 #endif
-   /* @TODO this does not clear the vardegree's */
+      SCIPfreeMemoryArray(scip, &oracle->objexprvaridx);
+      /* @TODO this does not clear the vardegree's */
+   }
    
    if (nquadrows || oracle->objquadlen || exprtree || oracle->objexprtree)
       SCIPnlpiOracleInvalidateHessianLagSparsity(scip, oracle);
@@ -645,6 +676,10 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
 #ifdef WITH_NL
       SCIP_CALL( SCIPexprtreeCopy(scip, &oracle->objexprtree, (SCIP_EXPRTREE*)exprtree) );
       /* @TODO set vardegree */
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objexprvaridx, exprvaridx, SCIPexprtreeGetNVars(oracle->objexprtree)) );
+#else
+      SCIPerrorMessage(scip, "nonquadratic functions not supported in NLPI yet\n");
+      return SCIP_ERROR;
 #endif
    }
    
@@ -902,7 +937,7 @@ int SCIPnlpiOracleGetConstraintDegree(
    
    if (oracle->conexprtree && oracle->conexprtree[conidx])
    {
-      ;  /* @TODO */
+      return 65535;  /* @TODO */
    }
    
    if (oracle->conquadlen && oracle->conquadlen[conidx])
@@ -928,7 +963,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionValue(
    SCIP_EXPRTREE*        exprtree,   /**< nonquadratic part */
    const SCIP_Real*      x,          /**< the point where to evaluate */
    SCIP_Real*            val         /**< buffer to store function value */
-)
+   )
 {
    assert(scip != NULL);
    assert(oracle != NULL);
@@ -983,7 +1018,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionGradient(
    SCIP_Bool             new_x,      /**< give TRUE here if the function has been evaluated for this point before */
    SCIP_Real*            val,        /**< buffer to store function value */
    SCIP_Real*            grad        /**< buffer to store function gradient */
-)
+   )
 {
    assert(scip != NULL);
    assert(oracle != NULL);
