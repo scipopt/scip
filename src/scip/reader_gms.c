@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.15 2009/08/03 21:00:37 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.16 2009/08/09 13:44:41 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -257,7 +257,7 @@ SCIP_RETCODE printActiveVariables(
 
    if( nvars == 0 )
    {
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix, suffix);
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix ? prefix : "", suffix ? suffix : "");
 
       appendLine(scip, file, linebuffer, linecnt, buffer);
    }
@@ -288,7 +288,7 @@ SCIP_RETCODE printActiveVariables(
             /* we start a new line; therefore we tab this line */
             appendLine(scip, file, linebuffer, linecnt, "     ");
 
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix, suffix);
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix ? prefix : "", suffix ? suffix : "");
 
          appendLine(scip, file, linebuffer, linecnt, buffer);
       }
@@ -322,16 +322,16 @@ SCIP_RETCODE printActiveVariables(
 
                if( SCIPisEQ(scip, activevals[v], 1.0) )
                   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%s%s%s%s", ext, strchr(ext, '(') == NULL ? "+" : "",
-                        varname, (v == closingbracket) ? ")" : "", (v == closingbracket) ? suffix : "");
+                        varname, (v == closingbracket) ? ")" : "", (v == closingbracket && suffix) ? suffix : "");
                else if( SCIPisEQ(scip, activevals[v], -1.0) )
                   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s-%s%s%s", ext,
-                        varname, (v == closingbracket) ? ")" : "", (v == closingbracket) ? suffix : "");
+                        varname, (v == closingbracket) ? ")" : "", (v == closingbracket && suffix) ? suffix : "");
                else if( strchr(ext, '(') != NULL )
                   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%.15g*%s%s%s", ext,
-                        activevals[v], varname, (v == closingbracket) ? ")" : "", (v == closingbracket) ? suffix : "");
+                        activevals[v], varname, (v == closingbracket) ? ")" : "", (v == closingbracket && suffix) ? suffix : "");
                else
                   (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%+.15g*%s%s%s", ext,
-                        activevals[v], varname, (v == closingbracket) ? ")" : "", (v == closingbracket) ? suffix : "");
+                        activevals[v], varname, (v == closingbracket) ? ")" : "", (v == closingbracket && suffix) ? suffix : "");
 
                appendLine(scip, file, linebuffer, linecnt, buffer);
 
@@ -346,7 +346,7 @@ SCIP_RETCODE printActiveVariables(
                /* we start a new line; therefore we tab this line */
                appendLine(scip, file, linebuffer, linecnt, "     ");
 
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%+.15g)%s", ext, activeconstant, suffix);
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s%+.15g)%s", ext, activeconstant, suffix ? suffix : "");
 
             appendLine(scip, file, linebuffer, linecnt, buffer);
          }
@@ -357,7 +357,7 @@ SCIP_RETCODE printActiveVariables(
                /* we start a new line; therefore we tab this line */
                appendLine(scip, file, linebuffer, linecnt, "     ");
 
-            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix, suffix);
+            (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%s(0)%s", prefix ? prefix : "", suffix ? suffix : "");
 
             appendLine(scip, file, linebuffer, linecnt, buffer);
          }
@@ -608,9 +608,9 @@ SCIP_RETCODE printQuadraticRow(
 
       if( !SCIPisZero(scip, quadsqrcoeffs[t]) )
       {
-         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*", quadsqrcoeffs[t]);
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%+.15g*sqr", quadsqrcoeffs[t]);
 
-         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, "**2 ", 1, &var, NULL, transformed) );
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, NULL, 1, &var, NULL, transformed) );
       }
    }
 
