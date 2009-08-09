@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.13 2009/08/08 15:35:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.14 2009/08/09 15:49:58 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -179,7 +179,7 @@ SCIP_RETCODE setupNLP(
          ++cnt;
       }
    }
-   SCIP_CALL( SCIPnlpiSetObjective(scip, heurdata->nlpi, cnt, objvar, objcoeff, 0, NULL, NULL, NULL, NULL, NULL, 0.) );
+   SCIP_CALL( SCIPnlpiSetObjective(scip, heurdata->nlpi, cnt, objvar, objcoeff, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0.) );
    
    SCIPfreeBufferArray(scip, &objcoeff);
    SCIPfreeBufferArray(scip, &objvar);
@@ -304,7 +304,7 @@ SCIP_RETCODE addLinearConstraints(
       lhs, rhs,
       rowoffset, colindex, coeff,
       NULL, NULL, NULL, NULL, NULL,
-      NULL, NULL
+      NULL, NULL, NULL
 #ifdef WITH_DSL
       , NULL
 #endif
@@ -421,7 +421,7 @@ SCIP_RETCODE collectVarBoundConstraints(
          lhs, rhs,
          rowoffset, colindex, coeff,
          NULL, NULL, NULL, NULL, NULL,
-         NULL, NULL
+         NULL, NULL, NULL
 #ifdef WITH_DSL
          , NULL
 #endif

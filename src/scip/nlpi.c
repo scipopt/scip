@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.1 2009/07/27 19:02:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.2 2009/08/09 15:49:58 bzfviger Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -187,7 +187,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS( SCIPnlpiAddConstraints )
    assert( nlpi );
    
    SCIP_CALL( ( *( nlpi -> nlpiaddconstraints ) ) ( scip, nlpi, ncons, lhs, rhs, linoffset, linind, linval,
-      nquadrows, quadrowidx, quadoffset, quadind, quadval, exprtree, names) );
+      nquadrows, quadrowidx, quadoffset, quadind, quadval, exprvaridx, exprtree, names) );
    
    return SCIP_OKAY;
 }
@@ -221,7 +221,7 @@ SCIP_DECL_NLPISETOBJECTIVE( SCIPnlpiSetObjective )
    assert( nlpi );
    
    SCIP_CALL( ( *( nlpi -> nlpisetobjective ) )( scip, nlpi, nlin, linind, linval, nquadcols, quadcols, 
-      quadoffset, quadind, quadval, exprtree, constant ) );
+      quadoffset, quadind, quadval, exprvaridx, exprtree, constant ) );
    
    return SCIP_OKAY;
 }

@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.2 2009/07/31 11:37:16 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.3 2009/08/09 15:49:58 bzfviger Exp $"
 
 /**@file   nlpi_oracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -86,6 +86,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    int* const*                 quadoffset, /**< NULL if no quadratic parts, otherwise quadoffset[.] gives start index of each rows quadratic coefficients in quadind[.] and quadval[.] (quadoffset[.][nvars] gives length of quadind[.] and quadval[.]), or NULL if no quadratic part in this constraint */
    int* const*                 quadind,    /**< NULL if no quadratic parts, otherwise quadind[.] gives column indices for quadratic part, or NULL if no quadratic part in this constraint */
    SCIP_Real* const*           quadval,    /**< NULL if no quadratic parts, otherwise quadval[.] gives coefficients in quadratic part, or NULL if no quadratic part in this constraint */
+   int* const*                 exprvaridx, /**< NULL if no nonquadratic parts, otherwise epxrvaridx[.] maps variable indices in expression tree to indices in nlp */
    SCIP_EXPRTREE* const*       exprtree,   /**< NULL if no nonquadratic parts, otherwise exprtree[.] gives nonquadratic part, or NULL if no nonquadratic part in this constraint */
    const char**                connames    /**< names of new constraints, or NULL if no names should be stored */
 );
@@ -106,6 +107,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    const int*                 quadoffset, /**< start index of each rows quadratic coefficients in quadind and quadval (quadoffset[.][nvars] gives length of quadind and quadval), or NULL if no quadratic part */
    const int*                 quadind,    /**< column indices in quadratic part, or NULL if no quadratic part */ 
    const SCIP_Real*           quadval,    /**< coefficients in quadratic part, or NULL if no quadratic part */
+   const int*                 exprvaridx, /**< maps variable indices in expression tree to indices in nlp, or NULL if no nonquadratic part */
    const SCIP_EXPRTREE*       exprtree    /**< expression tree of nonquadratic part, or NULL if no nonquadratic part */
 );
 

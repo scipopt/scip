@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.25 2009/08/03 13:12:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.26 2009/08/09 15:49:58 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4762,7 +4762,7 @@ SCIP_RETCODE SCIPconsInitnlpiQuadratic(
       lhs, rhs,
       linoffset, linindex, lincoeff,
       nquadrows, quadrowidx, quadoffset, quadindex, quadcoeff,
-      NULL, NULL) );
+      NULL, NULL, NULL) );
 
    for (i = 0; i < nconss; ++i)
    {

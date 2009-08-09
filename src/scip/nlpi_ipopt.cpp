@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.3 2009/07/31 16:58:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.4 2009/08/09 15:49:58 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @brief   Ipopt NLP interface
@@ -289,7 +289,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsIpopt )
       ncons, lhs, rhs,
       linoffset, linind, linval,
       nquadrows, quadrowidx, quadoffset, quadind, quadval,
-      exprtree, names) );
+      exprvaridx, exprtree, names) );
 
    data->firstrun = TRUE;
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
@@ -311,7 +311,7 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveIpopt )
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, data->oracle,
       constant, nlin, linind, linval,
       nquadcols, quadcols, quadoffset, quadind, quadval,
-      exprtree) );
+      exprvaridx, exprtree) );
 
    data->firstrun = TRUE;
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);

@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.4 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.5 2009/08/09 15:49:58 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @brief  type definitions for specific NLP solvers interface
@@ -157,6 +157,9 @@ x ( \
  *  - quadval coefficient values
  *    entry of array may be NULL in case of no quadratic part
  *    may be NULL in case of no quadratic part in any constraint
+ *  - exprvaridx indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
+ *    entry of array may be NULL in case of no expression tree
+ *    may be NULL in case of no expression tree in any constraint
  *  - exprtree expression tree for nonquadratic part of constraints
  *    entry of array may be NULL in case of no nonquadratic part
  *    may be NULL in case of no nonquadratic part in any constraint
@@ -179,6 +182,7 @@ x ( \
    int* const*                 quadoffset, \
    int* const*                 quadind, \
    SCIP_Real* const*           quadval, \
+   int* const*                 exprvaridx, \
    SCIP_EXPRTREE* const*       exprtree, \
    const char**                names \
    )
@@ -198,14 +202,13 @@ x ( \
  *    quadoffset[.][nquadcols] gives length of quadind and quadval
  *    may be NULL in case of no quadratic part
  *  - quadind column indices
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
+ *    may be NULL in case of no quadratic part
  *  - quadval coefficient values
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
+ *    may be NULL in case of no quadratic part
+ *  - exprvaridx indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
+ *    may be NULL in case of no expression tree
  *  - exprtree expression tree for nonquadratic part of constraints
- *    entry of array may be NULL in case of no nonquadratic part
- *    may be NULL in case of no nonquadratic part in any constraint
+ *    may be NULL in case of no nonquadratic part
  *  - objective values offset
  */
 #define SCIP_DECL_NLPISETOBJECTIVE( x ) \
@@ -221,6 +224,7 @@ x ( \
    const int*                 quadoffset, \
    const int*                 quadind, \
    const SCIP_Real*           quadval, \
+   const int*                 exprvaridx, \
    const SCIP_EXPRTREE*       exprtree, \
    const SCIP_Real            constant \
    )
