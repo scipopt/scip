@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.16 2009/07/31 11:37:15 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.17 2009/08/10 16:24:46 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -122,6 +122,15 @@ void SCIPintervalAdd(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
+/** adds operand1 and scalar operand2 and stores result in resultant */
+extern
+void SCIPintervalAddScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   );
+
 /** substracts operand2 from operand1 and stores result in resultant */
 extern
 void SCIPintervalSub(
@@ -129,6 +138,15 @@ void SCIPintervalSub(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
+   );
+
+/** substracts scalar operand2 from operand1 and stores result in resultant */
+extern
+void SCIPintervalSubScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
    );
 
 /** undoes a substraction operation.

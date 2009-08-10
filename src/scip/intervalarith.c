@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.23 2009/07/29 10:04:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.24 2009/08/10 16:24:46 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -308,6 +308,49 @@ void SCIPintervalAdd(
    setRoundingMode(roundmode);
 }
 
+
+/** adds operand1 and scalar operand2 and stores result in resultant */
+void SCIPintervalAddScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   )
+{
+   ROUNDMODE roundmode;
+
+   assert(resultant != NULL);
+   assert(operand1.inf <= operand1.sup);
+   assert(operand1.inf <  infinity);
+   assert(operand1.sup > -infinity);
+   assert(operand2     <  infinity);
+   assert(operand2     > -infinity);
+
+   roundmode = getRoundingMode();
+
+   if( operand1.inf <= -infinity )
+   {
+      resultant->inf = -infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_DOWNWARDS);
+      resultant->inf = operand1.inf + operand2;
+   }
+   
+   if( operand1.sup >=  infinity )
+   {
+      resultant->sup =  infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_UPWARDS);
+      resultant->sup = operand1.sup + operand2;
+   }
+   
+   setRoundingMode(roundmode);
+}
+
 /** substracts operand2 from operand1 and stores result in resultant */
 void SCIPintervalSub(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -346,6 +389,48 @@ void SCIPintervalSub(
    {
       setRoundingMode(SCIP_ROUND_UPWARDS);
       resultant->sup = operand1.sup - operand2.inf;
+   }
+
+   setRoundingMode(roundmode);
+}
+
+/** substracts scalar operand2 from operand1 and stores result in resultant */
+void SCIPintervalSubScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   )
+{
+   ROUNDMODE roundmode;
+
+   assert(resultant != NULL);
+   assert(operand1.inf <= operand1.sup);
+   assert(operand1.inf <  infinity);
+   assert(operand1.sup > -infinity);
+   assert(operand2     <  infinity);
+   assert(operand2     > -infinity);
+
+   roundmode = getRoundingMode();
+
+   if( operand1.inf <= -infinity )
+   {
+      resultant->inf = -infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_DOWNWARDS);
+      resultant->inf = operand1.inf - operand2;
+   }
+   
+   if( operand1.sup >=  infinity )
+   {
+      resultant->sup =  infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_UPWARDS);
+      resultant->sup = operand1.sup - operand2;
    }
 
    setRoundingMode(roundmode);
