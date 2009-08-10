@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.3 2009/08/09 19:44:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.4 2009/08/10 14:25:26 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @brief   implementation of NLPI oracle interface
@@ -678,7 +678,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       /* @TODO set vardegree */
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objexprvaridx, exprvaridx, SCIPexprtreeGetNVars(oracle->objexprtree)) );
 #else
-      SCIPerrorMessage(scip, "nonquadratic functions not supported in NLPI yet\n");
+      SCIPerrorMessage("nonquadratic functions not supported in NLPI yet\n");
       return SCIP_ERROR;
 #endif
    }
