@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.4 2009/08/09 15:49:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.5 2009/08/11 18:46:45 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @brief   Ipopt NLP interface
@@ -22,6 +22,7 @@
 
 /* @TODO warm starts
  * @TODO ScipJournal to redirect Ipopt output 
+ * @TODO use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1158,7 +1159,7 @@ bool ScipNLP::eval_f(Index n, const Number* x, bool new_x, Number& obj_value)
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
-   
+
    SCIP_RETCODE retcode = SCIPnlpiOracleEvalObjectiveValue(scip, nlpidata->oracle, x, &obj_value);
 
    return retcode == SCIP_OKAY ? true : false;
@@ -1172,9 +1173,9 @@ bool ScipNLP::eval_grad_f(Index n, const Number* x, bool new_x, Number* grad_f)
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
-   
+
    SCIP_Real dummy;
-   SCIP_RETCODE retcode = SCIPnlpiOracleEvalObjectiveGradient(scip, nlpidata->oracle, x, new_x, &dummy, grad_f);
+   SCIP_RETCODE retcode = SCIPnlpiOracleEvalObjectiveGradient(scip, nlpidata->oracle, x, TRUE, &dummy, grad_f);
 
    return retcode == SCIP_OKAY ? true : false;
 }
@@ -1187,7 +1188,7 @@ bool ScipNLP::eval_g(Index n, const Number* x, bool new_x, Index m, Number* g)
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
-   
+
    SCIP_RETCODE retcode = SCIPnlpiOracleEvalConstraintValues(scip, nlpidata->oracle, x, g);
 
    return retcode == SCIP_OKAY ? true : false;
@@ -1228,7 +1229,7 @@ bool ScipNLP::eval_jac_g(Index n, const Number* x, bool new_x, Index m, Index ne
    }
    else
    {
-      SCIP_RETCODE retcode = SCIPnlpiOracleEvalJacobian(scip, nlpidata->oracle, x, new_x, NULL, values);
+      SCIP_RETCODE retcode = SCIPnlpiOracleEvalJacobian(scip, nlpidata->oracle, x, TRUE, NULL, values);
       if (retcode != SCIP_OKAY)
          return false;
    }
@@ -1271,7 +1272,7 @@ bool ScipNLP::eval_h(Index n, const Number* x, bool new_x, Number obj_factor, In
    }
    else
    {
-      SCIP_RETCODE retcode = SCIPnlpiOracleEvalHessianLag(scip, nlpidata->oracle, x, new_x, obj_factor, lambda, values);
+      SCIP_RETCODE retcode = SCIPnlpiOracleEvalHessianLag(scip, nlpidata->oracle, x, TRUE, obj_factor, lambda, values);
       if (retcode != SCIP_OKAY)
          return false;
    }
