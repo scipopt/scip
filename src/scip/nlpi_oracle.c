@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.5 2009/08/11 18:48:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.6 2009/08/11 18:58:30 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @brief   implementation of NLPI oracle interface
@@ -1145,13 +1145,23 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionGradient(
       
       SCIP_CALL( SCIPexprintGradDense(scip, oracle->exprinterpreter, exprtree, xx, new_x, NULL, &nlval, g) );
       if (nlval != nlval || SCIPisInfinity(scip, nlval) || SCIPisInfinity(scip, -nlval))
-         *val = nlval;
+      {
+         SCIPfreeBufferArrayNull(scip, &xx);
+         SCIPfreeBufferArray(scip, &g);
+         SCIPdebugMessage("gradient evaluation yield invalid function value %g\n", nlval);
+         return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
+      }
       else
       {
          *val += nlval;
          for (i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i)
             if (g[i] != g[i])
-               *val = g[i];
+            {
+               SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", g[i]);
+               SCIPfreeBufferArrayNull(scip, &xx);
+               SCIPfreeBufferArray(scip, &g);
+               return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
+            }
             else
                grad[exprvaridx[i]] += g[i];
       }
@@ -1464,7 +1474,12 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
       }
       else
       { /* @TODO do this sparse too */
-         SCIP_CALL( SCIPnlpiOracleEvalConstraintGradient(scip, oracle, i, x, new_x, convals ? &convals[i] : &dummy, grad) );
+         SCIP_RETCODE retcode = SCIPnlpiOracleEvalConstraintGradient(scip, oracle, i, x, new_x, convals ? &convals[i] : &dummy, grad);
+         if (retcode != SCIP_OKAY)
+         {
+            SCIPfreeBufferArray(scip, &grad);
+            return retcode;
+         }
       
          for (; j < oracle->jacoffset[i+1]; ++j, ++k)
             jacobi[k] = grad[oracle->jaccol[j]];
@@ -1741,8 +1756,15 @@ SCIP_RETCODE SCIPnlpiOracleHessLagAddExprtree(
          xx[i] = x[exprvaridx[i]];
       }
    }
-/* @TODO handle nan's in val and h */   
+   
    SCIP_CALL( SCIPexprintHessianDense(scip, oracle->exprinterpreter, exprtree, xx, new_x, NULL, &val, h) );
+   if (val != val)
+   {
+      SCIPdebugMessage("hessian evaluation yield invalid function value %g\n", val);
+      SCIPfreeBufferArrayNull(scip, &xx);
+      SCIPfreeBufferArray(scip, &h);
+      return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
+   }
 
    hh = h;
    for (i = 0; i < n; ++i) /* rows */
@@ -1751,6 +1773,14 @@ SCIP_RETCODE SCIPnlpiOracleHessLagAddExprtree(
       {
          if (!*hh)
             continue;
+         
+         if (*hh != *hh)
+         {
+            SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *hh);
+            SCIPfreeBufferArrayNull(scip, &xx);
+            SCIPfreeBufferArray(scip, &h);
+            return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
+         }
          
          row = MAX(exprvaridx[i], exprvaridx[j]);
          col = MIN(exprvaridx[i], exprvaridx[j]);
