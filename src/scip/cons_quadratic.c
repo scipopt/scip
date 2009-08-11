@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.26 2009/08/09 15:49:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.27 2009/08/11 12:37:31 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -166,6 +166,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool       do_scaling;          /**< whether constraints should be scaled in the feasibility check */
    SCIP_Bool       fast_propagate;      /**< whether a faster but maybe less effective propagation should be used */
    SCIP_Real       defaultbound;        /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
+   SCIP_Real       cutmaxrange;         /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
 
    SCIP_HEUR*      nlpheur;             /**< a pointer to the NLP heuristic */
    SCIP_EVENTHDLR* eventhdlr;           /**< our handler for variable bound change events */
@@ -3356,7 +3357,7 @@ SCIP_RETCODE areIntervalFeasible(
 }
 
 
-/** generates a cut based on McCormick
+/** generates a cut based on linearization (if convex) or McCormick (if nonconvex)
  */
 static
 SCIP_RETCODE generateCut(
@@ -3364,7 +3365,8 @@ SCIP_RETCODE generateCut(
    SCIP_CONS*      cons,       /**< constraint */
    SCIP_SOL*       sol,        /**< solution to separate, or NULL if LP solution should be used */
    SCIP_BOUNDTYPE  violbound,  /**< for which bound a cut should be generated */
-   SCIP_ROW**      row         /**< storage for cut */
+   SCIP_ROW**      row,        /**< storage for cut */
+   SCIP_Real       maxrange    /**< maximal range allowed */
 )
 {
    SCIP_CONSDATA* consdata;
@@ -3429,7 +3431,7 @@ SCIP_RETCODE generateCut(
             bnd      += consdata->quadsqrcoeff[j] * f * (f+1);
          }
 
-         SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->quadvar[j], rowcoeff) );
+         SCIP_CALL( SCIPaddVarToRow(scip, *row, x, rowcoeff) );
       }
 
       for (j = 0; j < consdata->n_bilin; ++j)
@@ -3616,6 +3618,25 @@ SCIP_RETCODE generateCut(
       }
    }
 
+   SCIPdebugMessage(" -> found cut rhs=%f, min=%f, max=%f range=%g\n",
+       ABS(bnd),
+       SCIPgetRowMinCoef(scip, *row), SCIPgetRowMaxCoef(scip, *row),
+       SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row));
+
+   if (SCIPisInfinity(scip, ABS(bnd)))
+   { /* seems to be a numerically bad cut */
+      SCIPdebugMessage("skip cut for constraint %s because of very large left or right hand side: %g\n", SCIPconsGetName(cons), bnd);
+      SCIP_CALL( SCIPreleaseRow(scip, row) );
+      return SCIP_OKAY;
+   }
+
+   if (SCIPisGT(scip, SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row), maxrange))
+   { /* seems to be a numerically bad cut */
+      SCIPdebugMessage("skip cut for constraint %s because of very large range: %g\n", SCIPconsGetName(cons), SCIPgetRowMaxCoef(scip, *row)/SCIPgetRowMinCoef(scip, *row));
+      SCIP_CALL( SCIPreleaseRow(scip, row) );
+      return SCIP_OKAY;
+   }
+
    if (violbound == SCIP_BOUNDTYPE_LOWER)
       SCIP_CALL( SCIPchgRowLhs(scip, *row, bnd) );
    else
@@ -3671,7 +3692,7 @@ SCIP_RETCODE separatePoint(
          violbound = SCIPisFeasPositive(scip, consdata->lhsviol) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
 
          /* generate cut */
-         SCIP_CALL( generateCut(scip, conss[c], sol, violbound, &row) );
+         SCIP_CALL( generateCut(scip, conss[c], sol, violbound, &row, conshdlrdata->cutmaxrange) );
          if (!row) /* failed to generate cut */
             continue;
 
@@ -3867,6 +3888,58 @@ SCIP_RETCODE registerVariableInfeasibilities(
       }
    }
 
+   return SCIP_OKAY;
+}
+
+/** registers a variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
+static
+SCIP_RETCODE registerLargeLPValueVariableForBranching(
+   SCIP*          scip,       /**< SCIP data structure */
+   SCIP_CONSHDLR* conshdlr,   /**< constraint handler */
+   SCIP_CONS**    conss,      /**< constraints */
+   int            nconss,     /**< number of constraints */
+   SCIP_VAR**     brvar       /**< buffer to store branching variable */
+   )
+{
+   SCIP_CONSDATA*      consdata;
+   SCIP_Real           val, brvarval = 0.0;
+   int                 i, c;
+   
+   assert(scip != NULL);
+   assert(conss != NULL || nconss == 0);
+   
+   *brvar = NULL;
+   
+   for (c = 0; c < nconss; ++c)
+   {
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      
+      if (!SCIPisFeasPositive(scip, consdata->lhsviol) && !SCIPisFeasPositive(scip, consdata->rhsviol))
+         continue;
+      
+      for (i = 0; i < consdata->n_quadvar; ++i)
+      {
+         val = SCIPgetSolVal(scip, NULL, consdata->quadvar[i]);
+         if (ABS(val) > brvarval)
+         {
+            brvarval = ABS(val);
+            *brvar = consdata->quadvar[i];
+         }
+      }
+   }
+   
+   if (*brvar)
+   {
+#ifdef WITH_CONSBRANCHNL
+      assert(SCIPconshdlrGetData(conshdlr) != NULL);
+      assert(SCIPconshdlrGetData(conshdlr)->branchnl != NULL);
+      SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, SCIPconshdlrGetData(conshdlr)->branchnl, *brvar, brvarval) );
+#else
+      SCIP_CALL(  updateVarInfeasibility(scip, conshdlr, *brvar, brvarval) );
+#endif
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -5204,12 +5277,17 @@ SCIP_DECL_CONSTRANS(consTransQuadratic)
 static
 SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 {  
-   SCIP_CONSDATA* consdata;
-   SCIP_ROW*      row;
-   int            i;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA*     consdata;
+   SCIP_ROW*          row;
+   int                i;
 
    assert(scip  != NULL);
+   assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
+   
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    for (i = 0; i < nconss; ++i)
    {
@@ -5218,7 +5296,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 
       if (!SCIPisInfinity(scip, -consdata->lhs))
       {
-         SCIP_CALL( generateCut(scip, conss[i], NULL, SCIP_BOUNDTYPE_LOWER, &row) );
+         SCIP_CALL( generateCut(scip, conss[i], NULL, SCIP_BOUNDTYPE_LOWER, &row, conshdlrdata->cutmaxrange) );
          if (row)
          {
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
@@ -5230,7 +5308,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
       }
       if (!SCIPisInfinity(scip, consdata->rhs))
       {
-         SCIP_CALL( generateCut(scip, conss[i], NULL, SCIP_BOUNDTYPE_UPPER, &row) );
+         SCIP_CALL( generateCut(scip, conss[i], NULL, SCIP_BOUNDTYPE_UPPER, &row, conshdlrdata->cutmaxrange) );
          if (row)
          {
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */) );
@@ -5241,6 +5319,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
          }
       }
    }
+
    return SCIP_OKAY;
 }
 #else
@@ -5377,10 +5456,19 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
 
    SCIP_CALL( registerVariableInfeasibilities(scip, conshdlr, conss, nconss, &nnotify) );
    if (!nnotify)
-   {
-      SCIPwarningMessage("Could not find any branching variable candidate. Cutting off node.\n");
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
+   { /* fallback: separation probably failed because of numerical difficulties with a convex constraint; try to resolve by branching */ 
+      SCIP_VAR* brvar = NULL;
+      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conshdlr, conss, nconss, &brvar) );
+      if (!brvar)
+      {
+         SCIPwarningMessage("Could not find any branching variable candidate. Cutting off node.\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable %s with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
+      }
    }
 #ifndef WITH_CONSBRANCHNL
    SCIP_CALL( enforceByBranching(scip, conshdlr, result) );
@@ -6162,21 +6250,22 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          conshdlrdata) );
 
    /* add quadratic constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_sqrbinary",           "whether a square of a binary variables should be replaced by the binary variable",                                                                           &conshdlrdata->replace_sqrbinary,           FALSE, TRUE,                                       NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod",          "whether products with a binary variable should be replaced by a new variable and an AND constraint (if possible) or a set of equivalent linear constraints", &conshdlrdata->replace_binaryprod,          FALSE, TRUE,                                       NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod_forceAND", "whether products of binary variables should be replaced always by an AND constraint",                                                                        &conshdlrdata->replace_binaryprod_forceAND, FALSE, FALSE,                                      NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_sqrbinary",           "whether a square of a binary variables should be replaced by the binary variable",                                                                           &conshdlrdata->replace_sqrbinary,           FALSE, TRUE,                                        NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod",          "whether products with a binary variable should be replaced by a new variable and an AND constraint (if possible) or a set of equivalent linear constraints", &conshdlrdata->replace_binaryprod,          FALSE, TRUE,                                        NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod_forceAND", "whether products of binary variables should be replaced always by an AND constraint",                                                                        &conshdlrdata->replace_binaryprod_forceAND, FALSE, FALSE,                                       NULL, NULL) );
 #ifdef WITH_SOC3
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/upgrade_soc",                 "whether constraints should be upgraded to SOC constraints, if possible",                                                                                     &conshdlrdata->upgrade_soc,                 FALSE, FALSE,                                      NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/soc3nrauxvar",                "number of auxiliary variables when adding a SOC3 constraint; 0 to determine automatically (could become very large!); -1 to turn off",                       &conshdlrdata->soc3_nr_auxvars,             FALSE, 8, -1, INT_MAX,                             NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/upgrade_soc",                 "whether constraints should be upgraded to SOC constraints, if possible",                                                                                     &conshdlrdata->upgrade_soc,                 FALSE, FALSE,                                       NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/soc3nrauxvar",                "number of auxiliary variables when adding a SOC3 constraint; 0 to determine automatically (could become very large!); -1 to turn off",                       &conshdlrdata->soc3_nr_auxvars,             FALSE, 8, -1, INT_MAX,                              NULL, NULL) );
 #endif
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",                "whether quadratic constraints consisting of several quadratic blocks should be disaggregated in several constraints",                                        &conshdlrdata->disaggregation,              FALSE, TRUE,                                       NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",                 "minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy",                                                                           &conshdlrdata->mincutefficacy,              FALSE, 0.0001, 0., SCIPinfinity(scip),             NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",                     "whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",                                             &conshdlrdata->do_scaling,                  FALSE, TRUE,                                       NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/fastpropagate",               "whether a propagation should be used that is faster in case of bilinear term, but also less efficient",                                                      &conshdlrdata->fast_propagate,              FALSE, TRUE,                                       NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/defaultbound",                "a default bound to impose on unbounded variables in quadratic terms (-defaultbound is used for missing lower bounds)",                                       &conshdlrdata->defaultbound,                TRUE,  SCIPinfinity(scip), 0., SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",                "whether quadratic constraints consisting of several quadratic blocks should be disaggregated in several constraints",                                        &conshdlrdata->disaggregation,              FALSE, TRUE,                                        NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",                 "minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy",                                                                           &conshdlrdata->mincutefficacy,              FALSE, 0.0001, 0.0, SCIPinfinity(scip),             NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",                     "whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",                                             &conshdlrdata->do_scaling,                  FALSE, TRUE,                                        NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/fastpropagate",               "whether a propagation should be used that is faster in case of bilinear term, but also less efficient",                                                      &conshdlrdata->fast_propagate,              FALSE, TRUE,                                        NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/defaultbound",                "a default bound to impose on unbounded variables in quadratic terms (-defaultbound is used for missing lower bounds)",                                       &conshdlrdata->defaultbound,                TRUE,  SCIPinfinity(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrange",                 "maximal range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",                                          &conshdlrdata->cutmaxrange,                 FALSE, 1e+10, 0.0, SCIPinfinity(scip),              NULL, NULL) );
 #ifndef WITH_CONSBRANCHNL
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/strategy",                    "strategy to use for selecting branching variable: b: rb-int-br, r: rb-int-br-rev, i: rb-inf",                                                                &conshdlrdata->strategy,                    FALSE, 'r', "bri",                                 NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/mindistbrpointtobound",       "minimal fractional distance of branching point to variable bounds; a value of 0.5 leads to branching always in the middle of a bounded domain",              &conshdlrdata->mindistbrpointtobound,       FALSE, 0.2, 0.0001, 0.5,                           NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/strategy",                    "strategy to use for selecting branching variable: b: rb-int-br, r: rb-int-br-rev, i: rb-inf",                                                                &conshdlrdata->strategy,                    FALSE, 'r', "bri",                                  NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/mindistbrpointtobound",       "minimal fractional distance of branching point to variable bounds; a value of 0.5 leads to branching always in the middle of a bounded domain",              &conshdlrdata->mindistbrpointtobound,       FALSE, 0.2, 0.0001, 0.5,                            NULL, NULL) );
 #endif
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change to a quadratic constraint",
