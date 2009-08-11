@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.3 2009/08/09 15:49:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.4 2009/08/11 18:48:30 bzfviger Exp $"
 
 /**@file   nlpi_oracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -286,7 +286,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP*                 scip,       /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,          /**< point where to evaluate */
-   SCIP_Bool             new_x,      /**< give TRUE here if the objective function has been evaluated for this point before */
+   SCIP_Bool             new_x,      /**< indicates whether the function has not been evaluated for this point before */
    SCIP_Real*            objval,     /**< pointer to buffer to store objective value */
    SCIP_Real*            objgrad     /**< pointer to buffer to store (dense) objective gradient */  
 );
@@ -299,7 +299,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
    const int             conidx,     /**< index of constraint to compute gradient for */
    const SCIP_Real*      x,          /**< point where to evaluate */
-   SCIP_Bool             new_x,      /**< give TRUE here if this constraint function has been evaluated for this point before */ 
+   SCIP_Bool             new_x,      /**< indicates whether the function has not been evaluated for this point before */ 
    SCIP_Real*            conval,     /**< pointer to buffer to store constraint value */
    SCIP_Real*            congrad     /**< pointer to buffer to store (dense) constraint gradient */  
 );
@@ -325,7 +325,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP*                 scip,       /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,          /**< point where to evaluate */
-   SCIP_Bool             new_x,      /**< give TRUE here all constraint functions have been evaluated for this point before */
+   SCIP_Bool             new_x,      /**< indicates whether some function has not been evaluated for this point before */
    SCIP_Real*            convals,    /**< pointer to buffer to store constraint values, can be NULL */ 
    SCIP_Real*            jacobi      /**< pointer to buffer to store sparse jacobian values */  
 );
@@ -353,7 +353,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP*                 scip,       /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,          /**< point where to evaluate */
-   SCIP_Bool             new_x,      /**< give TRUE here the objective and all constraint functions have been evaluated for this point before */
+   SCIP_Bool             new_x,      /**< indicates whether some function has not been evaluated for this point before */
    SCIP_Real             objfactor,  /**< weight for objective function */
    const SCIP_Real*      lambda,     /**< weights (Lagrangian multipliers) for the constraints */ 
    SCIP_Real*            hessian     /**< pointer to buffer to store sparse hessian values */  
