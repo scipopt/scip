@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.120 2009/08/03 22:49:12 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.121 2009/08/11 16:47:14 bzfraack Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -6277,6 +6277,9 @@ SCIP_RETCODE generateClusterCuts(
                                    &success, &cutislocal) );
             assert(ALLOWLOCAL || !cutislocal);
 
+            // no success means row was too long or empty, there is a free
+            // variable or for numerical reasons, it does not mean that the
+            // cMIR cut was not violated
             if ( ! success )
                continue;
 
