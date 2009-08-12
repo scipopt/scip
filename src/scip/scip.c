@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.6 2009/08/06 15:06:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.7 2009/08/12 09:27:15 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -743,6 +743,17 @@ char SCIPdualBoundMethod(
    assert(scip->set != NULL);
 
    return (scip->set->misc_dbmethod);
+}
+
+/** returns whether pseudo solutions should be ignored for calculating dual bounds */
+SCIP_Bool SCIPignorePseudosol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+
+   return (scip->set->misc_ignorepssol);
 }
 
 /** returns whether the user pressed CTRL-C to interrupt the solving process */

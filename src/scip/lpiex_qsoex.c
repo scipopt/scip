@@ -12,8 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.5 2009/08/07 13:24:47 bzfsteff Exp $"
-//#define SCIP_DEBUG
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.6 2009/08/12 09:27:15 bzfwolte Exp $"
+//#define SCIP_DEBUG2 /*?????????????????*/
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
  * @author Daniel Espinoza
@@ -2646,7 +2646,7 @@ SCIP_RETCODE SCIPlpiexStateDualFeasible(
    /* checks whether basis just loaded into the solver is dual feasible */
    B =  mpq_QSget_basis(lpi->prob);
 
-#ifndef NDEBUG
+#ifdef SCIP_DEBUG2
    rval = QSexact_basis_dualstatus(lpi->prob, B, (char*) result, dualobjval, 0);
 #else
    rval = QSexact_basis_dualstatus(lpi->prob, B, (char*) result, dualobjval, 1);

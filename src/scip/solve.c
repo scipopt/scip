@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.254.2.7 2009/08/06 15:06:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.254.2.8 2009/08/12 09:27:16 bzfwolte Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -683,7 +683,8 @@ SCIP_RETCODE solveNodeInitialLP(
    assert(lp->flushed);
    assert(lp->solved || *lperror);
 
-   if( !(*lperror) )
+   // if( !(*lperror) )/* old version which does not work for dbmethod=verify and basis dualinfeasible (i.e., dualbound = -inf) ????????? */
+   if( !(*lperror) && !set->misc_exactsolve )/* new workaround version ?????????? */
    {
       SCIP_EVENT event;
 

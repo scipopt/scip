@@ -12,10 +12,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.6 2009/08/07 13:24:47 bzfsteff Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.7 2009/08/12 09:27:14 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
+//#define PSEUDOOBJ_OUT /* only for debugging ?????????? */
 //#define BASIS_OUT /* only for debugging ???????????????? */
 //#define EXLPSOLVER_OUT /* only for debugging ???????????????? */
 //#define DETAILED_DEBUG /* only for debugging ???????????????? */
@@ -77,6 +78,9 @@ struct SCIP_ConshdlrData
    SCIP_LPIEX*           lpiex;              /**< Exact LP solver interface */
    SCIP_Bool             lpexconstructed;    /**< was the exact LP of some prior node already constructed (constraints)? */
    SCIP_NODE*            lastenfopsnode;     /**< last node at which enfops was called */ 
+   mpq_t                 pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
+                                              *   ignoring variables, with infinite best bound */
+   int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
    SCIP_LPIEX*           psfactor;           /**< stores factorized matrix for project and scale */
    mpq_t*                interiorpt;         /**< stores relative interior point for root node dual problem */
    int*                  impliedeq;          /**< 1 if constraints dual variable is always zero, 0 otherwise */
@@ -92,6 +96,8 @@ struct SCIP_ConsData
    mpq_t*                obj;                /**< objective function values of variables */
    mpq_t*                lb;                 /**< lower bounds of variables */
    mpq_t*                ub;                 /**< upper bounds of variables */
+   mpq_t*                lbloc;              /**< local lower bounds of variables */
+   mpq_t*                ubloc;              /**< local upper bounds of variables */
    int*                  bndchglbpos;        /**< positions of variables in unprocessed lower bound change arrays, or -1 */
    int*                  bndchgubpos;        /**< positions of variables in unprocessed upper bound change arrays, or -1 */
    int                   nconss;             /**< number of constraints */
@@ -277,8 +283,60 @@ SCIP_RETCODE checkLoadState(
 
    return SCIP_OKAY;
 }
+#endif
 
+#ifndef NDEBUG
+/** checks whether pseudo objective value has been updated correctly */
+static
+void checkPseudoobjval(
+   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,      /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< constraint data */
+   )
+{
+      mpq_t pseudoobjval;
+      int pseudoobjvalinf; 
+      mpq_t prod;
+      int i;
 
+      mpq_init(pseudoobjval);
+      mpq_set_d(pseudoobjval, 0.0);
+      pseudoobjvalinf = 0;
+      mpq_init(prod);
+ 
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+         /* add new pseudo objective value */
+         if( mpq_sgn(consdata->obj[i]) > 0 )
+         {
+            if( isNegInfinity(conshdlrdata, consdata->lbloc[i]) )
+               pseudoobjvalinf++;
+            else
+            { 
+               /* pseudoobjval += lb * obj */
+               mpq_mul(prod, consdata->lbloc[i], consdata->obj[i]);
+               mpq_add(pseudoobjval, pseudoobjval, prod);
+            }
+         }
+         else if( mpq_sgn(consdata->obj[i]) < 0 )
+         {
+            if( isPosInfinity(conshdlrdata, consdata->ubloc[i]) )
+               pseudoobjvalinf++;
+            else
+            {
+               /* pseudoobjval += ub * obj */
+               mpq_mul(prod,  consdata->ubloc[i], consdata->obj[i]);
+               mpq_add(pseudoobjval, pseudoobjval, prod);
+            }
+         }
+      }
+
+      assert(pseudoobjvalinf == conshdlrdata->pseudoobjvalinf);
+      assert(mpq_equal(pseudoobjval, conshdlrdata->pseudoobjval) != 0);
+
+      mpq_clear(pseudoobjval);
+      mpq_clear(prod);
+}
 #endif
 
 /** returns value treated as negative infinite in exactlp constraint handler */
@@ -465,6 +523,10 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->lpexconstructed = FALSE;
    (*conshdlrdata)->lastenfopsnode = NULL;
 
+   mpq_init((*conshdlrdata)->pseudoobjval);
+   mpq_set_d((*conshdlrdata)->pseudoobjval, 0.0);
+   (*conshdlrdata)->pseudoobjvalinf = 0;
+
    (*conshdlrdata)->interiorpt = NULL;
    (*conshdlrdata)->impliedeq = NULL;
 
@@ -511,6 +573,7 @@ SCIP_RETCODE conshdlrdataFree(
    }
    assert((*conshdlrdata)->lpiex == NULL);
 
+   mpq_clear((*conshdlrdata)->pseudoobjval);
    mpq_clear((*conshdlrdata)->commonslack);
    mpq_clear((*conshdlrdata)->posinfinity);
    mpq_clear((*conshdlrdata)->neginfinity);
@@ -691,16 +754,22 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->obj, nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->lb, nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->ub, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->lbloc, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->ubloc, nvars) );
 
       for( j = 0; j < nvars; ++j )
       {
          mpq_init((*consdata)->obj[j]);
          mpq_init((*consdata)->lb[j]);
          mpq_init((*consdata)->ub[j]);
+         mpq_init((*consdata)->lbloc[j]);
+         mpq_init((*consdata)->ubloc[j]);
 
          mpq_set((*consdata)->obj[j], obj[j]);
          mpq_set((*consdata)->lb[j], lb[j]);
          mpq_set((*consdata)->ub[j], ub[j]);
+         mpq_set((*consdata)->lbloc[j], lb[j]);
+         mpq_set((*consdata)->ubloc[j], ub[j]);
       }
    }
    else
@@ -708,6 +777,8 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->obj = NULL;
       (*consdata)->lb = NULL;
       (*consdata)->ub = NULL;
+      (*consdata)->lbloc = NULL;
+      (*consdata)->ubloc = NULL;
    }
    
    /* store constraint specific information */ 
@@ -882,7 +953,11 @@ SCIP_RETCODE consdataFree(
       mpq_clear((*consdata)->obj[j]);
       mpq_clear((*consdata)->lb[j]);
       mpq_clear((*consdata)->ub[j]);
+      mpq_clear((*consdata)->lbloc[j]);
+      mpq_clear((*consdata)->ubloc[j]);
    }
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->ubloc, (*consdata)->nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->lbloc, (*consdata)->nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->ub, (*consdata)->nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->lb, (*consdata)->nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->obj, (*consdata)->nvars);
@@ -1260,8 +1335,12 @@ SCIP_RETCODE createRelaxation(
                 * to transform a basis to the original problem later ??????? 
                 */
                SCIPerrorMessage("consinitlp: for variables that are neither nonnegative nor nonpositive, creating a FP relaxation is not supported yet\n");
-               SCIPABORT(); /*lint --e{527}*/
-               goto TERMINATE;
+
+               /* free temporary memory */
+               SCIPfreeBufferArray(scip, &rowvals);
+               SCIPfreeBufferArray(scip, &rowvars);
+
+               return SCIP_ERROR;
             }
 
             rowvars[v] = vars[probidx];
@@ -1324,7 +1403,6 @@ SCIP_RETCODE createRelaxation(
       }
    }
 
- TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &rowvals);
    SCIPfreeBufferArray(scip, &rowvars);
@@ -1362,6 +1440,116 @@ SCIP_RETCODE addRelaxation(
          SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[r], TRUE) ); 
       }
    }
+
+   return SCIP_OKAY;
+}
+
+/** gets current pseudo objective value */
+static
+const mpq_t* getPseudoObjval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< exactlp constraint data to process the bound change for */
+   )
+{
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->pseudoobjvalinf >= 0);
+   assert(conshdlrdata->lpexconstructed && consdata->nbndchgub == 0 && consdata->nbndchglb == 0);
+   
+   if( conshdlrdata->pseudoobjvalinf > 0 || SCIPignorePseudosol(scip) )
+      return negInfinity(conshdlrdata);
+   else
+      return (const mpq_t*) (&conshdlrdata->pseudoobjval);
+}
+
+/** updates current pseudo objective values for a change in a variable's  objective value or bounds */
+static
+SCIP_RETCODE updateVar(
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   mpq_t                 oldobj,             /**< old objective value of variable */
+   mpq_t                 oldlb,              /**< old objective value of variable */
+   mpq_t                 oldub,              /**< old objective value of variable */
+   mpq_t                 newobj,             /**< new objective value of variable */
+   mpq_t                 newlb,              /**< new objective value of variable */
+   mpq_t                 newub               /**< new objective value of variable */
+   )
+{
+   mpq_t deltaval;
+   mpq_t prod;
+   int deltainf;
+
+   assert(conshdlrdata->pseudoobjvalinf >= 0);
+
+   mpq_init(deltaval);
+   mpq_init(prod);
+   mpq_set_d(deltaval, 0.0);
+   deltainf = 0;
+
+#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????? */
+   gmp_printf("obj: %Qd -> %Qd, lb:  %Qd -> %Qd, ub:  %Qd -> %Qd: pseudoobjval: %Qd (%d) --> ", 
+      oldobj, newobj, oldlb, newlb, oldub, newub, conshdlrdata->pseudoobjval, conshdlrdata->pseudoobjvalinf); 
+#endif
+
+   /* subtract old pseudo objective value */
+   if( mpq_sgn(oldobj) > 0 )
+   {
+      if( isNegInfinity(conshdlrdata, oldlb) )
+         deltainf--;
+      else
+      {
+         /* deltaval -= oldlb * oldobj */
+         mpq_mul(prod, oldlb, oldobj);
+         mpq_sub(deltaval, deltaval, prod);
+      }
+   }
+   else if( mpq_sgn(oldobj) < 0 )
+   {
+      if( isPosInfinity(conshdlrdata, oldub) )
+         deltainf--;
+      else
+      {
+         /* deltaval -= oldub * oldobj */
+         mpq_mul(prod, oldub, oldobj);
+         mpq_sub(deltaval, deltaval, prod);
+      }
+   }
+
+   /* add new pseudo objective value */
+   if( mpq_sgn(newobj) > 0 )
+   {
+      if( isNegInfinity(conshdlrdata, newlb) )
+         deltainf++;
+      else
+      { 
+         /* deltaval += newlb * newobj */
+         mpq_mul(prod, newlb, newobj);
+         mpq_add(deltaval, deltaval, prod);
+      }
+   }
+   else if( mpq_sgn(newobj) < 0 )
+   {
+      if( isPosInfinity(conshdlrdata, newub) )
+         deltainf++;
+      else
+      {
+         /* deltaval += newub * newobj */
+         mpq_mul(prod, newub, newobj);
+         mpq_add(deltaval, deltaval, prod);
+      }
+   }
+
+   /* update the pseudo objective values */
+   mpq_add(conshdlrdata->pseudoobjval, conshdlrdata->pseudoobjval, deltaval);
+   conshdlrdata->pseudoobjvalinf += deltainf;
+
+#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????? */
+   gmp_printf("%Qd (%d)\n", conshdlrdata->pseudoobjval, conshdlrdata->pseudoobjvalinf); 
+#endif
+
+   assert(conshdlrdata->pseudoobjvalinf >= 0);
+
+   mpq_clear(deltaval);
+   mpq_clear(prod);
 
    return SCIP_OKAY;
 }
@@ -1471,6 +1659,7 @@ SCIP_RETCODE constructCurrentLPEX(
    {
       SCIP_VAR** vars;
       char** colnames; /* todo: is this implemented in a correct way ????????????*/
+      mpq_t tmpzero;
        
       /* allocate and initialize temporary memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &colnames, consdata->nvars) );
@@ -1505,6 +1694,24 @@ SCIP_RETCODE constructCurrentLPEX(
 
       conshdlrdata->lpexconstructed = TRUE;
 
+      /* calculate pseudo objective value */
+      mpq_init(tmpzero);
+      mpq_set_d(tmpzero, 0.0);
+      for( i = 0; i < consdata->nvars; ++i )
+      {
+#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????? */
+         printf("update ub of var with probidx %d: ", i); 
+#endif
+         SCIP_CALL( updateVar(conshdlrdata, tmpzero, tmpzero, tmpzero, consdata->obj[i], consdata->lb[i], 
+               consdata->ub[i]) );
+      }
+      mpq_clear(tmpzero);
+
+#ifndef NDEBUG
+      /* check whether pseudo objective value was updated correctly */
+      checkPseudoobjval(scip, conshdlrdata, consdata);
+#endif
+
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &colnames);
    }
@@ -1515,6 +1722,22 @@ SCIP_RETCODE constructCurrentLPEX(
    {
       SCIP_CALL( SCIPlpiexChgBounds(conshdlrdata->lpiex, consdata->nbndchglb, consdata->bndchglbind, 
             consdata->bndchglb, NULL) );
+
+      /* update pseudo objective value and local lower bounds */
+      for( i = 0; i <  consdata->nbndchglb; ++i )
+      {
+         int probidx;
+         
+         probidx = consdata->bndchglbind[i];
+
+#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????? */
+         printf("update lb of var with probidx %d: ", probidx); 
+#endif
+         SCIP_CALL( updateVar(conshdlrdata, consdata->obj[probidx], consdata->lbloc[probidx], consdata->ubloc[probidx],
+               consdata->obj[probidx], consdata->bndchglb[i], consdata->ubloc[probidx]) );
+         
+         mpq_set(consdata->lbloc[probidx], consdata->bndchglb[i]);
+      }
 
       /* delete unprocessed lower bound change information */
       for( i = 0; i < consdata->nvars; ++i )
@@ -1528,11 +1751,32 @@ SCIP_RETCODE constructCurrentLPEX(
       SCIP_CALL( SCIPlpiexChgBounds(conshdlrdata->lpiex, consdata->nbndchgub, consdata->bndchgubind, 
             NULL, consdata->bndchgub) );
 
+      /* update pseudo objective value and local lower bounds */
+      for( i = 0; i <  consdata->nbndchgub; ++i )
+      {
+         int probidx;
+         
+         probidx = consdata->bndchgubind[i];
+
+#ifdef PSEUDOOBJ_OUT /* only for debugging ?????????? */
+         printf("update ub of var with probidx %d: ", probidx); 
+#endif
+         SCIP_CALL( updateVar(conshdlrdata, consdata->obj[probidx], consdata->lbloc[probidx], consdata->ubloc[probidx],
+               consdata->obj[probidx], consdata->lbloc[probidx], consdata->bndchgub[i]) );
+         
+         mpq_set(consdata->ubloc[probidx], consdata->bndchgub[i]);
+      }
+
       /* delete unprocessed upper bound change information */
       for( i = 0; i < consdata->nvars; ++i )
          consdata->bndchgubpos[i] = -1;
       consdata->nbndchgub = 0;
    }
+
+#ifndef NDEBUG
+   /* check whether pseudo objective value was updated correctly */
+   checkPseudoobjval(scip, conshdlrdata, consdata);
+#endif
 
    return SCIP_OKAY;
 }
@@ -1769,7 +2013,7 @@ SCIP_RETCODE constructPSData(
    SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnconss, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
 
    /* write LP to file */
-   SCIP_CALL( SCIPlpiexWriteLP(pslpiex, "prob/psdebug.lp") ); /* ????????????*/
+   //SCIP_CALL( SCIPlpiexWriteLP(pslpiex, "prob/psdebug.lp") ); /* ????????????*/
 
    /* solve the LP */
    SCIP_CALL( SCIPlpiexSolveDual(pslpiex));
@@ -2205,9 +2449,9 @@ SCIP_RETCODE checkIntegrality(
    /* get all problem variables and integer region in vars array */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbin, &nint, NULL, NULL) );
    
+   /* check whether primal solution satisfies all integrality restrictions */
    integral = TRUE;
    branchvar = -1;
-   /* check whether primal solution satisfies all integrality restrictions */
    for( v = 0; v < nbin + nint && integral; ++v )
    {
       assert(SCIPvarGetProbindex(vars[v]) == v);
@@ -2270,7 +2514,7 @@ SCIP_RETCODE checkIntegrality(
 
          scipsolval = mpqGetRealApprox(scip, primsol[v]);
 
-         /* check whether we can stored the primal solution without FP errors */
+         /* check whether we can store the primal solution without FP errors */
          mpq_set_d(tmp, scipsolval);
          if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, primsol[v]))) )
             inrange = FALSE;
@@ -2281,7 +2525,7 @@ SCIP_RETCODE checkIntegrality(
          SCIP_CALL( SCIPsetSolVal(scip, sol, vars[v], scipsolval) );
       }
       mpq_set_d(tmp, SCIPgetSolTransObj(scip, sol));
-      assert(!inrange || !fpvalue || mpq_cmp(lpobjval, tmp) <= 0);
+      assert(!inrange || !fpvalue || !SCIPuseFPRelaxation(scip) || mpq_cmp(lpobjval, tmp) <= 0);
 
       if( !inrange )   
          SCIPfreeSol(scip, &sol);
@@ -2302,7 +2546,7 @@ SCIP_RETCODE checkIntegrality(
          
          if( stored && !fpvalue )
          {
-            SCIPerrorMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
+            SCIPwarningMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
          }
       }
 
@@ -2396,7 +2640,7 @@ SCIP_RETCODE checkIntegrality(
    if( integral && !inrange )   
    {
       SCIPerrorMessage("storing optimal solutions of subproblems that is out of FP range is not supported yet\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
 
    return SCIP_OKAY;
@@ -2504,14 +2748,14 @@ SCIP_RETCODE evaluateLPEX(
       /* check whether exact LP solution is feasible for the MIP; if it is feasible the solution is stored 
        * and the current node is cut off otherwise a branching is created
        */
-      checkIntegrality(scip, conshdlrdata, result);
+      SCIP_CALL( checkIntegrality(scip, conshdlrdata, result) );
       assert(*result == SCIP_CUTOFF || SCIP_BRANCHED);
 
    }
    else if( SCIPlpiexIsObjlimExc(conshdlrdata->lpiex) )
    {
       SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
    else if( SCIPlpiexIsPrimalInfeasible(conshdlrdata->lpiex) )
    {
@@ -2522,17 +2766,17 @@ SCIP_RETCODE evaluateLPEX(
    else if( SCIPlpiexExistsPrimalRay(conshdlrdata->lpiex) ) /* todo: check why in lp.c SCIPlpiIsPrimalUnbounded() is not used ????*/
    {
       SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
    else if( SCIPlpiexIsIterlimExc(conshdlrdata->lpiex) )
    {
       SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
    else if( SCIPlpiexIsTimelimExc(conshdlrdata->lpiex) )
    {
       SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
    else
    {
@@ -2724,7 +2968,6 @@ SCIP_DECL_CONSINITLP(consInitlpExactlp)
 }
 
 /** separation method of constraint handler for LP solutions */
-/* todo: implement this (because of sepafreq = 1, there will be an error ??????? */
 static
 SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 {  /*lint --e{715}*/
@@ -2732,13 +2975,17 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    SCIP_CONSDATA* consdata;
    int ncolsex;
    int nrowsex;
+#ifdef DETAILED_DEBUG /*????????? */
+   SCIP_Real oldlb;
+#endif
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
    assert(nconss == 1);
 
-   SCIPdebugMessage("separating exactlp constraint <%s> on LP solution\n", SCIPconsGetName(conss[0]));
+   SCIPdebugMessage("separating exactlp constraint <%s> on LP solution (LP solstat=%d)\n", SCIPconsGetName(conss[0]),
+      SCIPgetLPSolstat(scip));
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2757,7 +3004,27 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
    switch( SCIPdualBoundMethod(scip) )
    {
    case 'v':
+      /* constructs exact LP of current node */
       SCIP_CALL( constructCurrentLPEX(scip, conshdlrdata, consdata) );
+
+   /* try to improve current local lower bound by using the result of the exact LP solver */
+#ifdef DETAILED_DEBUG /*????????? */
+      oldlb = SCIPgetLocalLowerbound(scip);
+#endif
+      /* updates lower bound of current node wrt the pseudo objective value */
+      SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
+            mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+
+#ifdef DETAILED_DEBUG /*????????? */
+      if( oldlb < SCIPgetLocalLowerbound(scip) )
+      {
+         SCIPdebugMessage("by pseudosol: lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+      }
+      else
+      {
+         SCIPdebugMessage("by pseudosol: lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+      }
+#endif
 
       SCIP_CALL( SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncolsex) );
       SCIP_CALL( SCIPlpiexGetNRows(conshdlrdata->lpiex, &nrowsex) );
@@ -2769,22 +3036,45 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
          
          mpq_init(dualobjval);
 
+         /* test whether LP state (i.e. basis information) of inexact LP is dual feasbile in rational arithmetic */
          SCIP_CALL( SCIPgetLPState(scip, &lpistate) ); 
-         SCIP_CALL( SCIPlpiexStateDualFeasible(conshdlrdata->lpiex, SCIPblkmem(scip), lpistate, &dualfeasible, &dualobjval) );
+#if 0 /* use 1 only for debugging ?????????????????? */
+         {
+            SCIP_Bool lperror;
+#ifdef EXLPSOLVER_OUT /* only for debugging ????????? */ 
+            printf("\n<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and solve LPEX exactly - START >>>>>>>>>>>>>>>>\n");
+#endif
+            SCIP_CALL( loadLPState(scip, conshdlrdata) );
+            SCIP_CALL( solveLPEX(scip, conshdlrdata, SCIP_LPALGO_DUALSIMPLEX, &lperror) );
+#ifdef EXLPSOLVER_OUT /* only for debugging ????????? */ 
+            printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and solve LPEX exactly - END   >>>>>>>>>>>>>>>>\n\n");
+#endif
+         }
+#endif
+
+#ifdef EXLPSOLVER_OUT /* only for debugging ????????? */ 
+         printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and only check basis   - START >>>>>>>>>>>>>>>>\n");
+#endif
+         SCIP_CALL( SCIPlpiexStateDualFeasible(conshdlrdata->lpiex, SCIPblkmem(scip), lpistate, &dualfeasible, 
+               &dualobjval) );
+#ifdef EXLPSOLVER_OUT /* only for debugging ????????? */ 
+         printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and only check basis   - END   >>>>>>>>>>>>>>>>\n\n");
+#endif
          
          SCIPdebugMessage("DB method <v>: LP basis %s dual feasible\n", dualfeasible ? "is" : "is not");
       
          if( dualfeasible )
          {
 #ifdef DETAILED_DEBUG /*????????? */
-            SCIP_Real oldlb;
             oldlb = SCIPgetLocalLowerbound(scip);
 #endif
+
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, dualobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+
 #ifdef DETAILED_DEBUG /*????????? */
             if( oldlb < SCIPgetLocalLowerbound(scip) )
             {
-               SCIPdebugMessage("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+               SCIPdebugMessage("by db method: lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
             }
 #endif
          }
@@ -2793,15 +3083,15 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
           */
 
          mpq_clear(dualobjval);
-         SCIPerrorMessage("Dual bounding method <%c> has not been COMPLETELY implemented yet\n", SCIPdualBoundMethod(scip)); /*????????????????*/
-         SCIPABORT();/*????????????????*/
+         //SCIPerrorMessage("Dual bounding method <%c> has not been COMPLETELY implemented yet\n", SCIPdualBoundMethod(scip)); /*????????????????*/
+         //SCIPABORT();/*????????????????*/
       }
       break;
 
    case 'r':
       SCIPerrorMessage("Dual bounding method <%c> has not been implemented yet\n", SCIPdualBoundMethod(scip));
-      SCIPABORT();
-      break;
+      return SCIP_ERROR;
+      // break;
 
    case 'p':
       SCIP_CALL( constructPSData(scip, conshdlrdata, consdata) );
@@ -2812,8 +3102,8 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
        * - pass dual bound to SCIP
        */
       SCIPerrorMessage("Dual bounding method <%c> has not been completely implemented yet\n", SCIPdualBoundMethod(scip));
-      SCIPABORT();
-      break;
+      return SCIP_ERROR;
+      // break;
 
    default:
       SCIPerrorMessage("invalid parameter setting <%c> for dual bounding method\n", SCIPdualBoundMethod(scip));
@@ -2869,6 +3159,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    /* constructs exact LP of current node */
    constructCurrentLPEX(scip, conshdlrdata, consdata);
 
+   if( !SCIPuseFPRelaxation(scip) )
+   {
+      /* updates lower bound of current node wrt the pseudo objective value */
+      SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
+            mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+   }
+   
    /* load LP state from inexact LP into exact LP solver */
    SCIP_CALL( loadLPState(scip, conshdlrdata) );
 
@@ -2892,7 +3189,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    if( lperror )
    {
       SCIPerrorMessage("exact LP solver returns error: case not handled yet\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
 
    /* evaluate result of exact LP solver */
@@ -2945,6 +3242,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    /* constructs exact LP of current node */
    constructCurrentLPEX(scip, conshdlrdata, consdata);
 
+   if( !SCIPuseFPRelaxation(scip) )
+   {
+      /* updates lower bound of current node wrt the pseudo objective value */
+      SCIP_CALL( SCIPupdateLocalLowerbound(scip, 
+            mpqGetRealRelax(scip, *getPseudoObjval(scip, conshdlrdata, consdata), GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+   }
+
    /* load LP state from inexact LP into exact LP solver */
    if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
@@ -2971,7 +3275,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    if( lperror )
    {
       SCIPerrorMessage("exact LP solver returns error: case not handled yet\n");
-      SCIPABORT();
+      return SCIP_ERROR;
    }
 
    /* evaluate result of exact LP solver */
@@ -3283,6 +3587,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdExactlp)
 static
 SCIP_DECL_EVENTEXEC(eventExecExactlp)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Real newbound;
    int varind;
@@ -3301,6 +3606,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
 
    newbound = SCIPeventGetNewbound(event);
 
+   conshdlrdata = SCIPconshdlrGetData(SCIPfindConshdlr(scip, CONSHDLR_NAME));
       
    switch( SCIPeventGetType(event) )
    {
@@ -3322,7 +3628,12 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
          consdata->bndchglbpos[varind] = consdata->nbndchglb; 
 
          /* store new lower bound and index of variable */
-         mpq_set_d(consdata->bndchglb[consdata->nbndchglb], newbound);
+         if( SCIPisInfinity(scip, -newbound) )
+            mpq_set(consdata->bndchglb[consdata->nbndchglb], *negInfinity(conshdlrdata));
+         else if( SCIPisInfinity(scip, newbound) )
+            mpq_set(consdata->bndchglb[consdata->nbndchglb], *posInfinity(conshdlrdata));
+         else         
+            mpq_set_d(consdata->bndchglb[consdata->nbndchglb], newbound);
          consdata->bndchglbind[consdata->nbndchglb] = varind;
 
          /* update number of unprocessed lower bound change events */
@@ -3330,7 +3641,12 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       }
       else
       {
-         mpq_set_d(consdata->bndchglb[consdata->bndchglbpos[varind]], newbound);
+         if( SCIPisInfinity(scip, -newbound) )
+            mpq_set(consdata->bndchglb[consdata->nbndchglb], *negInfinity(conshdlrdata));
+         else if( SCIPisInfinity(scip, newbound) )
+            mpq_set(consdata->bndchglb[consdata->nbndchglb], *posInfinity(conshdlrdata));
+         else         
+            mpq_set_d(consdata->bndchglb[consdata->bndchglbpos[varind]], newbound);
          assert(consdata->bndchglbind[consdata->bndchglbpos[varind]] == varind);
       }
       break;
@@ -3353,7 +3669,12 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
          consdata->bndchgubpos[varind] = consdata->nbndchgub;
 
          /* store new upper bound and index of variable */
-         mpq_set_d(consdata->bndchgub[consdata->nbndchgub], newbound);
+         if( SCIPisInfinity(scip, -newbound) )
+            mpq_set(consdata->bndchgub[consdata->nbndchgub], *negInfinity(conshdlrdata));
+         else if( SCIPisInfinity(scip, newbound) )
+            mpq_set(consdata->bndchgub[consdata->nbndchgub], *posInfinity(conshdlrdata));
+         else         
+            mpq_set_d(consdata->bndchgub[consdata->nbndchgub], newbound);
          consdata->bndchgubind[consdata->nbndchgub] = varind;
 
          /* update number of unprocessed upper bound change events */
@@ -3361,7 +3682,12 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       }
       else
       {
-         mpq_set_d(consdata->bndchgub[consdata->bndchgubpos[varind]], newbound);
+         if( SCIPisInfinity(scip, -newbound) )
+            mpq_set(consdata->bndchgub[consdata->nbndchgub], *negInfinity(conshdlrdata));
+         else if( SCIPisInfinity(scip, newbound) )
+            mpq_set(consdata->bndchgub[consdata->nbndchgub], *posInfinity(conshdlrdata));
+         else         
+            mpq_set_d(consdata->bndchgub[consdata->bndchgubpos[varind]], newbound);
          assert(consdata->bndchgubind[consdata->bndchgubpos[varind]] == varind);
       }
       break;

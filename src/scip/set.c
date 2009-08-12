@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.194.2.6 2009/08/07 13:24:47 bzfsteff Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.194.2.7 2009/08/12 09:27:16 bzfwolte Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -181,6 +181,7 @@
 #define SCIP_DEFAULT_MISC_DBMETHOD          'n' /**< method for computing truely valid dual bounds at the nodes
                                                  *   ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 
                                                  *   'p'roject and scale, 'e'xact LP) */
+#define SCIP_DEFAULT_MISC_IGNOREPSSOL     FALSE /**< should pseudo solutions be ignored for dual bounds? */
 
 
 /* Node Selection */
@@ -793,10 +794,16 @@ SCIP_RETCODE SCIPsetCreate(
          "method for computing truely valid dual bounds at the nodes ('n'eumaier and shcherbina, 'v'erify LP basis, 'r'epair LP basis, 'p'roject and scale, 'e'xact LP)",
          &(*set)->misc_dbmethod, FALSE, SCIP_DEFAULT_MISC_DBMETHOD, "nvrpe",
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/ignorepssol",
+         "should pseudo solutions be ignored for dual bounds?",
+         &(*set)->misc_ignorepssol, FALSE, SCIP_DEFAULT_MISC_IGNOREPSSOL,
+         NULL, NULL) );
 #else
    (*set)->misc_exactsolve = SCIP_DEFAULT_MISC_EXACTSOLVE;
    (*set)->misc_usefprelax = SCIP_DEFAULT_MISC_USEFPRELAX;
    (*set)->misc_dbmethod = SCIP_DEFAULT_MISC_DBMETHOD;
+   (*set)->misc_ignorepssol = SCIP_DEFAULT_MISC_IGNOREPSSOL;
 #endif
 
    /* node selection */

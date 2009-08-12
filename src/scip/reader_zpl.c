@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.5 2009/08/05 10:10:27 bzfwolte Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.27.2.6 2009/08/12 09:27:15 bzfwolte Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -250,6 +250,7 @@ Con* xlp_addcon(
    )
 {
    SCIPerrorMessage("xlp_addcon: exact version not supported.\n");
+   readerror_ = TRUE;
    return NULL;
 }
 #endif
@@ -283,6 +284,7 @@ void xlp_addtonzo(
    )
 {
    SCIPerrorMessage("xlp_addtonzo: exact version not supported.\n");
+   readerror_ = TRUE;
 }
 #endif
 
@@ -475,7 +477,7 @@ Bool storeConstraint(
        *  - lhs and rhs of constraints are not -inf and inf, respectively, and
        *  - current coefficient is not FP representable
        */
-      if( SCIPuseFPRelaxation(scip_) && (type == CON_RANGE || type == CON_RANGE) )
+      if( SCIPuseFPRelaxation(scip_) && (type == CON_RANGE || type == CON_EQUAL) )
       {
          split = split || !mpqIsReal(scip_, val_[nnonz_]);
       }
@@ -669,9 +671,10 @@ Bool xlp_addcon_term(
          mpq_set(lhs_[nconss_-1], *negInfinity(conshdlrdata_));
 
          /* store the constraint again as lhs constraint */
+         numb_get_mpq(lhs, lhs_[nconss_]);
+         mpq_set(rhs_[nconss_], *posInfinity(conshdlrdata_));
          split = storeConstraint(type, term);
          assert(split);
-         mpq_set(rhs_[nconss_-1], *posInfinity(conshdlrdata_));
       }
    }
 #ifdef WITH_QUAD
@@ -1067,6 +1070,7 @@ Sos* xlp_addsos(
    )
 {  /*lint --e{715}*/
    SCIPerrorMessage("xlp_addsos: exact version not supported.\n");
+   readerror_ = TRUE;
    return NULL;
 }
 #endif
@@ -1101,12 +1105,14 @@ void xlp_addtosos(
    )
 {
    SCIPerrorMessage("xlp_addtosos: exact version not supported.\n");
+   readerror_ = TRUE;
 }
 #endif
 
 Bool xlp_addsos_term(const char* name, SosType type, const Numb* priority, const Term* term)
 {
    SCIPerrorMessage("xlp_addsos_term not implemented\n");
+   readerror_ = TRUE;
    return TRUE;
 }
 
@@ -1178,6 +1184,7 @@ Bound* xlp_getlower(
    )
 {
    SCIPerrorMessage("xlp_getlower: exact version not supported yet.\n");
+   readerror_ = TRUE;
    return NULL;
 }
 #endif
@@ -1220,6 +1227,7 @@ Bound* xlp_getupper(
    )
 {
    SCIPerrorMessage("xlp_getupper: exact version not supported yet.\n");
+   readerror_ = TRUE;
    return NULL;
 }
 #endif
@@ -1301,9 +1309,8 @@ void xlp_addtocost(
       if( !mpq_equal(scipvalmpq, tmp) )
       {
          /* todo: scaling obj function to integral values in order to meet this requirements ??? */
-         mpq_clear(tmp);
          SCIPerrorMessage("given obj coefficient of var is not FP representable which is required for working with an FP relaxation\n");
-         SCIPABORT();
+         readerror_ = TRUE;
       }
       mpq_clear(tmp);
    }
@@ -1317,7 +1324,7 @@ void xlp_addtocost(
 #endif
 
    mpq_clear(scipvalmpq);
-   
+
 }
 #endif
 

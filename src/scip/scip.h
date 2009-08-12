@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310.2.5 2009/08/06 15:06:13 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.6 2009/08/12 09:27:16 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -225,6 +225,12 @@ SCIP_Bool SCIPuseFPRelaxation(
  */
 extern
 char SCIPdualBoundMethod(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether pseudo solutions should be ignored for calculating dual bounds */
+extern
+SCIP_Bool SCIPignorePseudosol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

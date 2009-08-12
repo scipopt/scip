@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.3 2009/07/13 12:48:48 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.4 2009/08/12 09:27:15 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -11078,7 +11078,7 @@ SCIP_Real SCIPlpGetPseudoObjval(
    assert(lp->pseudoobjvalinf >= 0);
    assert(set != NULL);
 
-   if( lp->pseudoobjvalinf > 0 ||  set->npricers > 0 )
+   if( lp->pseudoobjvalinf > 0 ||  set->npricers > 0 || set->misc_ignorepssol )
       return -SCIPsetInfinity(set);
    else
       return lp->pseudoobjval;
@@ -13262,7 +13262,7 @@ SCIP_RETCODE SCIPlpIsInfeasibilityProved(
    SCIP_CALL( provedBound(lp, set, TRUE, &bound) );
 
    *proved = (bound > 0.0);
-
+   
    SCIPdebugMessage("proved farkas value of LP: %g -> infeasibility %sproved\n", bound, *proved ? "" : "not ");
 
    return SCIP_OKAY;
