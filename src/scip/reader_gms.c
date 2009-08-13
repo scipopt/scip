@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.17 2009/08/13 17:35:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.18 2009/08/13 21:19:59 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -972,6 +972,7 @@ SCIP_RETCODE SCIPwriteGms(
    SCIP_Bool freeints;
    SCIP_Bool nondefbounds;
    SCIP_Bool nlcons;
+   SCIP_Bool rangedrow;
 
    assert( scip != NULL );
    assert( nvars > 0 );
@@ -1173,9 +1174,32 @@ SCIP_RETCODE SCIPwriteGms(
       cons = conss[c];
       assert( cons != NULL );
 
-      /* we declare all constraints, although we might not define each of them later */
+      conshdlr = SCIPconsGetHdlr(cons);
+      assert( conshdlr != NULL );
+
       printConformName(scip, consname, GMS_MAX_NAMELEN, SCIPconsGetName(cons));
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
+      conshdlrname = SCIPconshdlrGetName(conshdlr);
+      assert( transformed == SCIPconsIsTransformed(cons) );
+
+      rangedrow = strcmp(conshdlrname, "linear") == 0 && !SCIPisEQ(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons))
+	 && !SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsLinear(scip, cons));
+      rangedrow = rangedrow || (strcmp(conshdlrname, "quadratic") == 0 && !SCIPisEQ(scip, SCIPgetLhsQuadratic(cons), SCIPgetRhsQuadratic(cons))
+         && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(cons)) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(cons)));
+      rangedrow = rangedrow || (strcmp(conshdlrname, "varbound") == 0 && !SCIPisEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons))
+	 && !SCIPisInfinity(scip, -SCIPgetLhsVarbound(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsVarbound(scip, cons)));
+
+      /* we declare only those constraints which we can print in GAMS format */
+      printConformName(scip, consname, GMS_MAX_NAMELEN, SCIPconsGetName(cons));
+      if( rangedrow )
+      {
+         assert( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "varbound") == 0 );
+
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s%s%s%s", consname, "_lhs, ", consname, "_rhs", (c < nconss - 1) ? "," : ";");
+      }
+      else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0 )
+      {
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
+      }
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
       
