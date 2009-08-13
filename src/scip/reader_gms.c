@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.21 2009/08/13 22:31:53 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.22 2009/08/13 22:33:11 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1204,11 +1204,6 @@ SCIP_RETCODE SCIPwriteGms(
             || strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0 )
       {
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
-      }
-      else
-      {  /*@todo abort more gracefully */
-         SCIPerrorMessage("cannot print %s constraints\n", conshdlrname);
-         return SCIP_ERROR;
       }
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
