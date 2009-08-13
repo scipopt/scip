@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.20 2009/08/13 22:25:36 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.21 2009/08/13 22:31:53 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1200,8 +1200,8 @@ SCIP_RETCODE SCIPwriteGms(
 
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s%s%s%s", consname, "_lhs, ", consname, "_rhs", (c < nconss - 1) ? "," : ";");
       }
-      else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0 ||
-               strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0)
+      else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0
+            || strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0 )
       {
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
       }
