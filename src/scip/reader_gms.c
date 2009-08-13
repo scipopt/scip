@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.18 2009/08/13 21:19:59 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.19 2009/08/13 22:01:30 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1196,9 +1196,15 @@ SCIP_RETCODE SCIPwriteGms(
 
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s%s%s%s", consname, "_lhs, ", consname, "_rhs", (c < nconss - 1) ? "," : ";");
       }
-      else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0 )
+      else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0 ||
+               strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0)
       {
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
+      }
+      else
+      {  /*@todo abort more gracefully */
+         SCIPerrorMessage("cannot print %s constraints\n", conshdlrname);
+         return SCIP_ERROR;
       }
       appendLine(scip, file, linebuffer, &linecnt, buffer);
    }
