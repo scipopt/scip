@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.16 2009/08/09 13:44:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.17 2009/08/13 17:35:19 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -66,6 +66,8 @@
 /*
  * Local methods (for writing)
  */
+
+static const char badchars[] = "#*+/-";
 
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
@@ -176,26 +178,31 @@ void appendLine(
       endLine(scip, file, linebuffer, linecnt);
 }
 
-/** checks string for occurences of '#' and replaces those by '_'; returns TRUE iff name has been changed */
+/** checks string for occurences of '#', '*', '+', '/', and '-' and replaces those by '_' */
 static
 void conformName(
    char*                      name                /**< string to adjust */
    )
 {
+   const char* badchar;
+   
    assert( name != NULL );
-
-   char* c = strchr(name, '#');
-
-   while( c != NULL )
+   
+   for (badchar = badchars; *badchar; ++badchar)
    {
-      assert( *c == '#' );
+      char* c = strchr(name, *badchar);
 
-      *c = '_';
-      c = strchr(name, '#');
+      while( c != NULL )
+      {
+         assert( *c == *badchar );
+
+         *c = '_';
+         c = strchr(c, *badchar);
+      }
    }
 }
 
-/* print first len-1 characters of name to string s and replace '#' by '_' if necessary */
+/* print first len-1 characters of name to string s and replace '#', '*', '+', '/', and '-' by '_' if necessary */
 static
 void printConformName(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -213,7 +220,7 @@ void printConformName(
 
    (void) SCIPsnprintf(t, len, "%s", name);
 
-   if( strchr(t, '#') != NULL && replacesharps )
+   if( replacesharps )
       conformName(t);
 }
 
@@ -733,6 +740,7 @@ void checkVarnames(
    int v;
    SCIP_VAR* var;
    SCIP_Bool replacesharps;
+   const char* badchar;
 
    assert( scip != NULL );
    assert( vars != NULL );
@@ -745,19 +753,20 @@ void checkVarnames(
       var = vars[v];
       assert( var != NULL );
 
-      if( strchr(SCIPvarGetName(var), '#') != NULL )
-      {
-         if( replacesharps )
+      for (badchar = badchars; *badchar; ++badchar)
+         if( strchr(SCIPvarGetName(var), *badchar) != NULL )
          {
-            SCIPwarningMessage("there is a variable name with symbol '#', not allowed in GAMS format; all '#' replaced by '_' (consider using 'write genproblem'/'write gentransproblem').\n");
-         }
-         else
-         {
-            SCIPwarningMessage("there is a variable name with symbol '#', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replacesharps' to TRUE and risk duplicate variable names.\n");
-         }
+            if( replacesharps )
+            {
+               SCIPwarningMessage("there is a variable name with symbol '%c', not allowed in GAMS format; all '%c' replaced by '_' (consider using 'write genproblem'/'write gentransproblem').\n", *badchar, *badchar);
+            }
+            else
+            {
+               SCIPwarningMessage("there is a variable name with symbol '%c', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replacesharps' to TRUE and risk duplicate variable names.\n", *badchar);
+            }
 
-         return;
-      }
+            return;
+         }
    }
 
    /* check if the variable names are too long */
@@ -789,6 +798,7 @@ void checkConsnames(
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    SCIP_Bool replacesharps;
+   const char* badchar;
 
    assert( scip != NULL );
    assert( conss != NULL );
@@ -801,19 +811,20 @@ void checkConsnames(
       cons = conss[c];
       assert( cons != NULL );
 
-      if( strchr(SCIPconsGetName(cons), '#') != NULL )
-      {
-         if( replacesharps )
+      for (badchar = badchars; *badchar; ++badchar)
+         if( strchr(SCIPconsGetName(cons), '#') != NULL )
          {
-            SCIPwarningMessage("there is a constraint name with symbol '#', not allowed in GAMS format; all '#' replaced by '_' (consider using 'write genproblem'/'write gentransproblem').\n");
-         }
-         else
-         {
-            SCIPwarningMessage("there is a constraint name with symbol '#', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replacesharps' to TRUE and risk duplicate variable names.\n");
-         }
+            if( replacesharps )
+            {
+               SCIPwarningMessage("there is a constraint name with symbol '%c', not allowed in GAMS format; all '%c' replaced by '_' (consider using 'write genproblem'/'write gentransproblem').\n", *badchar, *badchar);
+            }
+            else
+            {
+               SCIPwarningMessage("there is a constraint name with symbol '%c', not allowed in GAMS format; use 'write genproblem'/'write gentransproblem', or set 'reading/gmsreader/replacesharps' to TRUE and risk duplicate variable names.\n", *badchar);
+            }
 
-         return;
-      }
+            return;
+         }
    }
 
    /* check if the constraint names are too long */
