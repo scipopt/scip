@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.44 2009/07/23 14:17:44 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.45 2009/08/14 14:53:14 bzfpfets Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -35,6 +35,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"
 #include "scip/cons_sos2.h"
+#include "scip/cons_indicator.h"
 #include "scip/cons_quadratic.h"
 #include "scip/pub_misc.h"
 
@@ -44,9 +45,8 @@
 #include "zimpl/mme.h"
 #include "zimpl/xlpglue.h"
 
-/** the ZIMPL_VERSION is defind by ZIMPL version 2.10 and higher. ZIMPL 2.10 made same changes in the interface to
- *  SCIP. Therefore we us this define to disdinguish betwenn all version up to 2.09 and all version from 2.10 */
-#ifdef ZIMPL_VERSION
+/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
+#if (ZIMPL_VERSION >= 300)
 #include "zimpl/mono.h"
 #endif
 
@@ -124,9 +124,258 @@ Bool xlp_conname_exists(const char* conname)
 }
 
 
-/** the ZIMPL_VERSION is defind by ZIMPL version 2.10 and higher. ZIMPL 2.10 made same changes in the interface to
- *  SCIP. Therefore we us this define to disdinguish betwenn all version up to 2.09 and all version from 2.10 */
-#ifndef ZIMPL_VERSION 
+/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
+#if (ZIMPL_VERSION >= 300)
+
+/** method creates a linear constraint and is called directly from ZIMPL 
+ *
+ *  @note this method is used by ZIMPL from version 3.00; 
+ */
+Bool xlp_addcon_term(
+   const char*           name,               /**< constraint name */
+   ConType               type,               /**< constraint type */
+   const Numb*           lhs,                /**< left hand side */
+   const Numb*           rhs,                /**< right hand side */
+   unsigned int          flags,              /**< special constraint flags */
+   const Term*           term      
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_Real sciplhs;
+   SCIP_Real sciprhs;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool modifiable;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
+   int  i;
+   int  maxdegree;
+   
+   switch( type )
+   {
+   case CON_FREE:
+      sciplhs = -SCIPinfinity(scip_);
+      sciprhs = SCIPinfinity(scip_);
+      break;
+   case CON_LHS:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = SCIPinfinity(scip_);
+      break;
+   case CON_RHS:
+      sciplhs = -SCIPinfinity(scip_);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      break;
+   case CON_RANGE:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      break;
+   case CON_EQUAL:
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      assert(sciplhs == sciprhs);
+      break;
+   default:
+      SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+      sciplhs = (SCIP_Real)numb_todbl(lhs);
+      sciprhs = (SCIP_Real)numb_todbl(rhs);
+      readerror_ = TRUE;
+      break;
+   }
+
+   initial = !((flags & LP_FLAG_CON_SEPAR) != 0);
+   separate = TRUE;
+   enforce = TRUE;
+   check = enforce;
+   propagate = TRUE;
+   local = FALSE;
+   modifiable = FALSE;
+   dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
+   removable = dynamic;
+   maxdegree = term_get_degree(term);
+
+   if (maxdegree <= 1)
+   {
+      /* if the constraint gives an indicator constraint */
+      if ( flags & LP_FLAG_CON_INDIC )
+      {
+	 Bool lhsIndCons = FALSE;  /* generate lhs form for indicator constraints */
+	 Bool rhsIndCons = FALSE;  /* generate rhs form for indicator constraints */
+
+	 /* currently indicator constraints can only handle "<=" constraints */
+	 switch( type )
+	 {
+	 case CON_LHS:
+	    lhsIndCons = TRUE;
+	    break;
+	 case CON_RHS:
+	    rhsIndCons = TRUE;
+	    break;
+	 case CON_RANGE:
+	 case CON_EQUAL:
+	    lhsIndCons = TRUE;
+	    rhsIndCons = TRUE;
+	    break;
+	 case CON_FREE:
+	 default:
+	    SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+	    readerror_ = TRUE;
+	    break;
+	 }
+
+	 /* insert lhs form of indicator */
+	 if ( lhsIndCons )
+	 {
+	    SCIP_CALL_ABORT( SCIPcreateConsIndicator(scip_, &cons, name, NULL, 0, NULL, NULL, -sciplhs,
+		  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+	    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+	    
+	    for (i = 0; i < term_get_elements(term); i++)
+	    {
+	       SCIP_VAR* scipvar;
+	       SCIP_Real scipval;
+	       const Mono* mono = term_get_element(term, i);
+	       MFun mfun;
+
+	       scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
+		
+	       /* check whether variable is the binary variable */
+	       mfun = mono_get_function(mono);
+	       if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
+	       {
+		  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
+		  SCIP_CALL( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
+	       }
+	       else
+	       {
+		  assert(!numb_equal(mono_get_coeff(mono), numb_zero()));
+		  assert(mono_is_linear(mono));
+      
+		  scipval = -numb_todbl(mono_get_coeff(mono));
+		  SCIP_CALL_ABORT( SCIPaddVarIndicator(scip_, cons, scipvar, scipval) );
+	       }
+	    }
+	 }
+
+	 /* insert rhs form of indicator */
+	 if ( rhsIndCons )
+	 {
+	    SCIP_CALL_ABORT( SCIPcreateConsIndicator(scip_, &cons, name, NULL, 0, NULL, NULL, sciprhs,
+		  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+	    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+	    
+	    for (i = 0; i < term_get_elements(term); i++)
+	    {
+	       SCIP_VAR* scipvar;
+	       SCIP_Real scipval;
+	       const Mono* mono = term_get_element(term, i);
+	       MFun mfun;
+
+	       scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
+		
+	       /* check whether variable is the binary variable */
+	       mfun = mono_get_function(mono);
+	       if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
+	       {
+		  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
+		  SCIP_CALL( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
+	       }
+	       else
+	       {
+		  assert(!numb_equal(mono_get_coeff(mono), numb_zero()));
+		  assert(mono_is_linear(mono));
+      
+		  scipval = numb_todbl(mono_get_coeff(mono));
+		  SCIP_CALL_ABORT( SCIPaddVarIndicator(scip_, cons, scipvar, scipval) );
+	       }
+	    }
+	 }
+      }
+      else
+      {
+	 SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
+	       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+	 SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+	 
+	 for (i = 0; i < term_get_elements(term); i++)
+	 {
+	    SCIP_VAR* scipvar;
+	    SCIP_Real scipval;
+
+	    assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+	    assert(mono_is_linear(term_get_element(term, i)));
+	    
+	    scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+	    scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+	    
+	    SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
+	 }
+      }
+   }
+   else if (maxdegree == 2)
+   {
+      int        n_linvar   = 0;
+      int        n_quadterm = 0;
+      SCIP_VAR** linvar;
+      SCIP_VAR** quadvar1;
+      SCIP_VAR** quadvar2;
+      SCIP_Real* lincoeff;
+      SCIP_Real* quadcoeff;
+      Mono*      monom;
+  	  
+      SCIP_CALL( SCIPallocBufferArray(scip_, &linvar,    term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar1,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar2,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
+      SCIP_CALL( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
+  	  
+      for (i = 0; i < term_get_elements(term); ++i)
+      {
+         monom = term_get_element(term, i);
+         assert(!numb_equal(mono_get_coeff(monom), numb_zero()));
+         assert(mono_get_degree(monom) <= 2);
+         assert(mono_get_degree(monom) > 0);
+         if (mono_get_degree(monom) == 1)
+         {
+            linvar  [n_linvar] = (SCIP_VAR*)mono_get_var(monom, 0);
+            lincoeff[n_linvar] = numb_todbl(mono_get_coeff(monom));
+            ++n_linvar;
+         }
+         else
+         {
+            assert(mono_get_degree(monom) == 2);
+            quadvar1 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 0);
+            quadvar2 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 1);
+            quadcoeff[n_quadterm] = numb_todbl(mono_get_coeff(monom));
+            ++n_quadterm;
+         }
+      }
+
+      SCIP_CALL_ABORT( SCIPcreateConsQuadratic(scip_, &cons, name, n_linvar, linvar, lincoeff, n_quadterm, quadvar1, quadvar2, quadcoeff, sciplhs, sciprhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+      
+      SCIPfreeBufferArray(scip_, &linvar);
+      SCIPfreeBufferArray(scip_, &quadvar1);
+      SCIPfreeBufferArray(scip_, &quadvar2);
+      SCIPfreeBufferArray(scip_, &lincoeff);
+      SCIPfreeBufferArray(scip_, &quadcoeff);
+   }
+   else
+   {
+      SCIPerrorMessage("xpl_addcon_term for degree > 2 not implemented\n");
+      return TRUE;
+   }
+
+   SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
+   
+   return FALSE;
+}
+
+#else
 
 /** method creates a linear constraint and is called directly from ZIMPL
  *
@@ -226,159 +475,8 @@ void xlp_addtonzo(
    SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, scipcons, scipvar, scipval) );
 }
 
-#else
+#endif /* end of #if (ZIMPL_VERSION >= 300) */
 
-/** method creates a linear constraint and is called directly from ZIMPL 
- *
- *  @note this method is used by ZIMPL from version 2.10; 
- */
-Bool xlp_addcon_term(
-   const char*           name,               /**< constraint name */
-   ConType               type,               /**< constraint type */
-   const Numb*           lhs,                /**< left hand side */
-   const Numb*           rhs,                /**< right hand side */
-   unsigned int          flags,              /**< special constraint flags */
-   const Term*           term      
-   )
-{
-   SCIP_CONS* cons;
-   SCIP_Real sciplhs;
-   SCIP_Real sciprhs;
-   SCIP_Bool initial;
-   SCIP_Bool separate;
-   SCIP_Bool enforce;
-   SCIP_Bool check;
-   SCIP_Bool propagate;
-   SCIP_Bool local;
-   SCIP_Bool modifiable;
-   SCIP_Bool dynamic;
-   SCIP_Bool removable;
-   /* Con* zplcon; */
-   int  i;
-   int  maxdegree;
-   
-   switch( type )
-   {
-   case CON_FREE:
-      sciplhs = -SCIPinfinity(scip_);
-      sciprhs = SCIPinfinity(scip_);
-      break;
-   case CON_LHS:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = SCIPinfinity(scip_);
-      break;
-   case CON_RHS:
-      sciplhs = -SCIPinfinity(scip_);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      break;
-   case CON_RANGE:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      break;
-   case CON_EQUAL:
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      assert(sciplhs == sciprhs);
-      break;
-   default:
-      SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
-      sciplhs = (SCIP_Real)numb_todbl(lhs);
-      sciprhs = (SCIP_Real)numb_todbl(rhs);
-      readerror_ = TRUE;
-      break;
-   }
-
-   initial = !((flags & LP_FLAG_CON_SEPAR) != 0);
-   separate = TRUE;
-   enforce = TRUE;
-   check = enforce;
-   propagate = TRUE;
-   local = FALSE;
-   modifiable = FALSE;
-   dynamic = ((flags & LP_FLAG_CON_SEPAR) != 0);
-   removable = dynamic;
-   maxdegree = term_get_degree(term);
-
-   if (maxdegree <= 1)
-   {
-      SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-
-      for(i = 0; i < term_get_elements(term); i++)
-      {
-         SCIP_VAR* scipvar;
-         SCIP_Real scipval;
-
-         assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
-         assert(mono_is_linear(term_get_element(term, i)));
-      
-         scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-         scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
-
-         SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
-      }
-   }
-   else if (maxdegree == 2)
-   {
-      int        n_linvar   = 0;
-      int        n_quadterm = 0;
-      SCIP_VAR** linvar;
-      SCIP_VAR** quadvar1;
-      SCIP_VAR** quadvar2;
-      SCIP_Real* lincoeff;
-      SCIP_Real* quadcoeff;
-      Mono*      monom;
-  	  
-      SCIP_CALL( SCIPallocBufferArray(scip_, &linvar,    term_get_elements(term)) );
-      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar1,  term_get_elements(term)) );
-      SCIP_CALL( SCIPallocBufferArray(scip_, &quadvar2,  term_get_elements(term)) );
-      SCIP_CALL( SCIPallocBufferArray(scip_, &lincoeff,  term_get_elements(term)) );
-      SCIP_CALL( SCIPallocBufferArray(scip_, &quadcoeff, term_get_elements(term)) );
-  	  
-      for (i = 0; i < term_get_elements(term); ++i)
-      {
-         monom = term_get_element(term, i);
-         assert(!numb_equal(mono_get_coeff(monom), numb_zero()));
-         assert(mono_get_degree(monom) <= 2);
-         assert(mono_get_degree(monom) > 0);
-         if (mono_get_degree(monom) == 1)
-         {
-            linvar  [n_linvar] = (SCIP_VAR*)mono_get_var(monom, 0);
-            lincoeff[n_linvar] = numb_todbl(mono_get_coeff(monom));
-            ++n_linvar;
-         }
-         else
-         {
-            assert(mono_get_degree(monom) == 2);
-            quadvar1 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 0);
-            quadvar2 [n_quadterm] = (SCIP_VAR*)mono_get_var(monom, 1);
-            quadcoeff[n_quadterm] = numb_todbl(mono_get_coeff(monom));
-            ++n_quadterm;
-         }
-      }
-
-      SCIP_CALL_ABORT( SCIPcreateConsQuadratic(scip_, &cons, name, n_linvar, linvar, lincoeff, n_quadterm, quadvar1, quadvar2, quadcoeff, sciplhs, sciprhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
-      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-      
-      SCIPfreeBufferArray(scip_, &linvar);
-      SCIPfreeBufferArray(scip_, &quadvar1);
-      SCIPfreeBufferArray(scip_, &quadvar2);
-      SCIPfreeBufferArray(scip_, &lincoeff);
-      SCIPfreeBufferArray(scip_, &quadcoeff);
-   }
-   else
-   {
-      SCIPerrorMessage("xpl_addcon_term for degree > 2 not implemented\n");
-      return TRUE;
-   }
-
-   SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
-   
-   return FALSE;
-}
-#endif /* end of #ifndef ZIMPL_VERSION */
 
 /** method adds an variable; is called directly by ZIMPL */
 Var* xlp_addvar(
@@ -491,11 +589,103 @@ Var* xlp_addvar(
    return zplvar;
 }
 
+
+/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
+#if (ZIMPL_VERSION >= 300)
+
+Bool xlp_addsos_term(
+   const char*           name,               /**< constraint name */
+   SosType               type,               /**< SOS type */
+   const Numb*           priority,           /**< priority */
+   const Term*           term                /**< terms indicating sos */
+   )
+{
+  /*lint --e{715}*/
+   SCIP_CONS* cons;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool local;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
+   int i;
+
+   switch( type )
+   {
+   case SOS_TYPE1:
+      initial = TRUE;
+      separate = TRUE;
+      enforce = TRUE;
+      check = enforce;
+      propagate = TRUE;
+      local = FALSE;
+      dynamic = FALSE;
+      removable = dynamic;
+
+      SCIP_CALL_ABORT( SCIPcreateConsSOS1(scip_, &cons, name, 0, NULL, NULL,
+            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+
+      for (i = 0; i < term_get_elements(term); i++)
+      {
+         SCIP_VAR* var;
+         SCIP_Real weight;
+
+         assert( mono_is_linear(term_get_element(term, i)) );
+
+         var = (SCIP_VAR*) mono_get_var(term_get_element(term, i), 0);
+         weight = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+
+	 SCIP_CALL_ABORT( SCIPaddVarSOS1(scip_, cons, var, weight) );
+      }
+      SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
+      break;
+   case SOS_TYPE2:
+      initial = TRUE;
+      separate = TRUE;
+      enforce = TRUE;
+      check = enforce;
+      propagate = TRUE;
+      local = FALSE;
+      dynamic = FALSE;
+      removable = dynamic;
+
+      SCIP_CALL_ABORT( SCIPcreateConsSOS2(scip_, &cons, name, 0, NULL, NULL, 
+            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+      SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+      for (i = 0; i < term_get_elements(term); i++)
+      {
+         SCIP_VAR* var;
+         SCIP_Real weight;
+
+         assert( mono_is_linear(term_get_element(term, i)) );
+
+         var = (SCIP_VAR*) mono_get_var(term_get_element(term, i), 0);
+         weight = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+
+	 SCIP_CALL_ABORT( SCIPaddVarSOS2(scip_, cons, var, weight) );
+      }
+      SCIP_CALL_ABORT( SCIPreleaseCons(scip_, &cons) );
+      break;
+   case SOS_ERR:
+   default:
+      SCIPwarningMessage("invalid SOS type <%d> in ZIMPL callback xlp_addsos_term()\n", type);
+      readerror_ = TRUE;
+      break;
+   }
+
+   return FALSE;
+}
+
+#else
+
 /** method adds SOS constraints */
 Sos* xlp_addsos(
    const char*           name,               /**< constraint name */
    SosType               type,               /**< SOS type */
-   const Numb*           priority            /**< */
+   const Numb*           priority            /**< priority */
    )
 {  /*lint --e{715}*/
    SCIP_CONS* cons;
@@ -577,11 +767,11 @@ void xlp_addtosos(
       SCIP_CALL_ABORT( SCIPaddVarSOS2(scip_, scipcons, scipvar, numb_todbl(weight)) );
 }
 
-Bool xlp_addsos_term(const char* name, SosType type, const Numb* priority, const Term* term)
-{
-   SCIPerrorMessage("xlp_addsos_term not implemented\n");
-   return TRUE;
-}
+#endif /* end of #if (ZIMPL_VERSION >= 300) */
+
+
+/** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
+#if (ZIMPL_VERSION >= 300)
 
 /** retuns the variable name */
 const char* xlp_getvarname(
@@ -590,6 +780,9 @@ const char* xlp_getvarname(
 {
    return SCIPvarGetName((SCIP_VAR*)var);
 }
+
+#endif /* end of #if (ZIMPL_VERSION >= 300) */
+
 
 /** return variable type */
 VarClass xlp_getclass(
@@ -716,11 +909,13 @@ Bool xlp_hassos(void)
    return TRUE;
 }
 
+#if (ZIMPL_VERSION >= 300)
+#else
 Bool xlp_concheck(const Con* con)
 {  /*lint --e{715}*/
    return TRUE;
 }
-
+#endif
 
 
 /*
