@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.15 2009/08/09 19:44:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.16 2009/08/14 22:21:47 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -43,6 +43,7 @@
 #endif
 #ifdef WITH_NL
 #include "cons_nl_C.h"
+#include "expression.h"
 #endif
 
 #define HEUR_NAME             "nlp"
@@ -797,7 +798,19 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
       {
          conshdlr = SCIPfindConshdlr(scip, "nonlinear");
          if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-            havenlp = TRUE;  /* @TODO check if some nonlinear constraint has a continuous nonlinear variable */
+         {
+            SCIP_CONS*     cons;
+            SCIP_EXPRTREE* exprtree;
+            int            i, j;
+            for (i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i)
+            {
+               cons = SCIPconshdlrGetConss(conshdlr)[i];
+               exprtree = SCIPgetExprtreeNonlinear(cons);
+               for (j = 0; !havenlp && j < SCIPexprtreeGetNVars(exprtree); ++j)
+                  if (SCIPvarGetType(SCIPexprtreeGetVars(exprtree)[j]) > SCIP_VARTYPE_IMPLINT)
+                     havenlp = TRUE;
+            }
+         }
       }
 #endif
    }
@@ -920,6 +933,9 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
          timelimit = MIN(heurdata->nlptimelimit, timelimit);
       SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_TILIM, timelimit) );
    }
+
+   /* ok, we will try our luck */
+   *result = SCIP_DIDNOTFIND;
    
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, heurdata->nvars) );
 
@@ -962,7 +978,6 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  SCIPnlpiGetTermstat(scip, heurdata->nlpi));
       SCIP_CALL( destroyNLP(scip, heur) );
-      *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
    }
 
@@ -1035,8 +1050,6 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       else
          SCIP_CALL( SCIPfreeSol(scip, &sol) );
    }
-   else
-      *result = SCIP_DIDNOTFIND;
    
    /* TODO reset time and iterlimit in nlp solver? */
    
