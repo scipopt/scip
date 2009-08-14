@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.27 2009/08/11 12:37:31 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.28 2009/08/14 12:13:05 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -1948,7 +1948,7 @@ SCIP_RETCODE presolveTryAddAND(
                   continue;
                }
 
-               SCIPsnprintf(name, 255, "%s*%s", SCIPvarGetName(x), SCIPvarGetName(y));
+               SCIPsnprintf(name, 255, "prod%s*%s", SCIPvarGetName(x), SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0., 1., 0., SCIP_VARTYPE_BINARY, TRUE, TRUE, NULL, NULL, NULL, NULL) );
                SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
@@ -2118,7 +2118,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
          if (n_xvars == 1 && SCIPvarGetType(xvars[0]) == SCIP_VARTYPE_BINARY)
          { /* product of two binary variables, replace by auxvar and AND constraint */
             /* add auxiliary variable z */
-            SCIPsnprintf(name, 255, "%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+            SCIPsnprintf(name, 255, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, 0., 1., 0., SCIP_VARTYPE_BINARY, TRUE, TRUE, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
             
@@ -2143,15 +2143,15 @@ SCIP_RETCODE presolveTryAddLinearReform(
          { /* product of binary avariable with more than one binary or with continuous variables, replace by auxvar and linear constraints */
             /* add auxiliary variable z */
             if (n_xvars == 1)
-               SCIPsnprintf(name, 255, "%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+               SCIPsnprintf(name, 255, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
             else
-               SCIPsnprintf(name, 255, "%s*%s*...", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
+               SCIPsnprintf(name, 255, "prod%s*%s*more", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
             SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, MIN(0., SCIPintervalGetInf(xbnds)), MAX(0., SCIPintervalGetSup(xbnds)), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, TRUE, NULL, NULL, NULL, NULL) );
             SCIP_CALL( SCIPaddVar(scip, auxvar) );
 
             if (!SCIPisZero(scip, SCIPintervalGetInf(xbnds)))
             { /* add 0 <= z - xbnds.inf * y constraint (as varbound constraint) */
-               /* TODO find a nice name */
+               SCIPsnprintf(name, 255, "linreform%s_1", SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbnds), 0, SCIPinfinity(scip),
                   SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                   SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
@@ -2165,7 +2165,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             }
             if (!SCIPisZero(scip, SCIPintervalGetSup(xbnds)))
             { /* add z - xbnds.sup * y <= 0 constraint (as varbound constraint) */
-               /* TODO find a nice name */
+               SCIPsnprintf(name, 255, "linreform%s_2", SCIPvarGetName(y));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbnds), -SCIPinfinity(scip), 0,
                   SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                   SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
@@ -2184,6 +2184,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             xcoeff[n_xvars]   = SCIPintervalGetInf(xbnds);
             xcoeff[n_xvars+1] = -1;
 
+            SCIPsnprintf(name, 255, "linreform%s_3", SCIPvarGetName(y));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, n_xvars+2, xvars, xcoeff, SCIPintervalGetInf(xbnds), SCIPinfinity(scip),
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
@@ -2198,6 +2199,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             /* add sum_i a_i*x_i + xbnds.sup * y - z <= xbnds.sup constraint */
             xcoeff[n_xvars]   = SCIPintervalGetSup(xbnds);
 
+            SCIPsnprintf(name, 255, "linreform%s_4", SCIPvarGetName(y));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, n_xvars+2, xvars, xcoeff, -SCIPinfinity(scip), SCIPintervalGetSup(xbnds),
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
                SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
