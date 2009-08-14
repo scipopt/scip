@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.41 2009/08/07 21:06:35 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.42 2009/08/14 14:45:29 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3271,6 +3271,27 @@ SCIP_CONS* SCIPgetLinearConsIndicator(
    return consdata->lincons;
 }
 
+/** sets binary indicator variable for indicator constraint */
+extern
+SCIP_RETCODE SCIPsetBinaryVarIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             binvar              /**< binary variable to add to the inequality */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( cons != NULL );
+   assert( binvar != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   consdata->binvar = binvar;
+
+   return SCIP_OKAY;
+}   
 
 /** gets binary variable corresponding to indicator constraint */
 SCIP_VAR* SCIPgetBinaryVarIndicator(

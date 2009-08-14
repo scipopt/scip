@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.h,v 1.10 2009/07/31 11:37:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_indicator.h,v 1.11 2009/08/14 14:45:29 bzfpfets Exp $"
 
 /**@file   cons_indicator.h
  * @brief  constraint handler for indicator constraints
@@ -84,7 +84,6 @@ SCIP_RETCODE SCIPcreateConsIndicator(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-
 /** adds variable to the inequality of the indicator constraint */
 extern
 SCIP_RETCODE SCIPaddVarIndicator(
@@ -98,6 +97,14 @@ SCIP_RETCODE SCIPaddVarIndicator(
 extern
 SCIP_CONS* SCIPgetLinearConsIndicator(
    SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** sets binary indicator variable for indicator constraint */
+extern
+SCIP_RETCODE SCIPsetBinaryVarIndicator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             binvar              /**< binary variable to add to the inequality */
    );
 
 /** gets binary variable corresponding to indicator constraint */
