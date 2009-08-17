@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.333 2009/08/03 20:03:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.334 2009/08/17 22:17:19 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -3658,7 +3658,7 @@ SCIP_RETCODE applyFixings(
 #ifndef NDEBUG
    /* check, if all fixings are applied */
    for( v = 0; v < consdata->nvars; ++v )
-      assert(SCIPvarIsActive(consdata->vars[v]) || SCIPvarGetStatus(consdata->vars[v]) == SCIP_VARSTATUS_MULTAGGR);
+      assert(SCIPvarIsActive(consdata->vars[v]));
 #endif
 
    return SCIP_OKAY;
