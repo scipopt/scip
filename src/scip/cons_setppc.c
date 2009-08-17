@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.138 2009/06/25 11:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.139 2009/08/17 18:27:13 bzfwinkm Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
  * @brief  constraint handler for the set partitioning / packing / covering constraints
  * @author Tobias Achterberg
+ * @author Michael Winkler
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -98,6 +99,7 @@ struct SCIP_ConsData
    unsigned int          cliqueadded:1;      /**< was the set partitioning / packing constraint already added as clique? */
    unsigned int          validsignature:1;   /**< is the bit signature valid? */
    unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
+   unsigned int          merged:1;           /**< are the constraint's equal variables already merged? */
 };
 
 
@@ -399,6 +401,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->cliqueadded = FALSE;
    (*consdata)->validsignature = FALSE;
    (*consdata)->changed = TRUE;
+   (*consdata)->merged = FALSE;
 
    return SCIP_OKAY;
 }
@@ -766,6 +769,8 @@ SCIP_RETCODE addCoef(
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->row, var, 1.0) );
    }
 
+   consdata->merged = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -819,6 +824,155 @@ SCIP_RETCODE delCoefPos(
    return SCIP_OKAY;
 }
 
+/** find pairs of negated variables in constraint:
+ *  partitioning/packing: all other variables must be zero, constraint is redundant
+ *  covering: constraint is redundant
+ *
+ *  find sets of equal variables in constraint:
+ *  partitioning/packing: variable must be zero
+ *  covering: multiple entries of variable can be replaced by single entry
+ */
+static
+SCIP_RETCODE mergeMultiples(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   int*                  nfixedvars,         /**< pointer to store number of fixed variables */
+   int*                  ndelconss,          /**< pointer to store number of deleted constraints */
+   int*                  nchgcoefs,          /**< pointer to store number of changed coefficients */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a fixing leads to a cutoff */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nfixedvars != NULL);
+   assert(ndelconss != NULL);
+   assert(nchgcoefs != NULL);
+   assert(cutoff != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->merged ) 
+      return SCIP_OKAY;
+
+   if( consdata->nvars <= 1 )
+   {
+      consdata->merged = TRUE;
+      return SCIP_OKAY;
+   }
+
+   assert(consdata->vars != NULL || consdata->nvars == 0);
+
+   /* sorting array after indices of variables, that's only for faster merging */ 
+   SCIPsortPtr((void**)consdata->vars, SCIPvarCompActiveAndNegated, consdata->nvars);
+   /* setppc sorting now lost */ 
+   consdata->sorted = FALSE;
+
+   /* loop backwards through the items: deletion only affects rear items */
+   for( v = consdata->nvars - 1; v > 0; --v )
+   {
+      SCIP_VAR* var1;
+      SCIP_VAR* var2;
+      SCIP_Bool negated1;
+      SCIP_Bool negated2;
+      
+      negated1 = FALSE;
+      negated2 = FALSE;
+      
+      var1 = consdata->vars[v];
+      assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
+      if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
+      {
+         var1 = SCIPvarGetNegatedVar(var1);
+         negated1 = TRUE;
+      }
+      assert(var1 != NULL);
+      
+      var2 = consdata->vars[v-1];
+      assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
+      if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
+      {
+         var2 = SCIPvarGetNegatedVar(var2);
+         negated2 = TRUE;
+      }
+      assert(var2 != NULL);
+      
+      if( var1 == var2 )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool fixed;
+
+         /* one variables is active and the other is the same negated variable */
+         if( negated1 != negated2  )
+         {
+            /* all other variable have to be zero if it's a partitioning or packing constraint */
+            if( consdata->setppctype != SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
+            {
+               int i;
+
+               assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
+                  || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
+
+               for( i = consdata->nvars - 1; i >= 0; --i )
+                  if( i != v && i != (v-1) )
+                  {
+                     SCIP_CALL( SCIPfixVar(scip, consdata->vars[i], 0.0, &infeasible, &fixed) );
+                     if( infeasible )
+                     {
+                        SCIPdebugMessage("setppc constraint <%s>: infeasible fixing <%s> == 0\n",
+                           SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[i]));
+                        *cutoff = TRUE;
+                        return SCIP_OKAY;
+                     }
+                     assert(fixed);
+                     ++(*nfixedvars);
+                  }
+            }
+            /* all setppc-type constraints are redundant */
+            SCIP_CALL( SCIPdelCons(scip, cons) );
+            ++(*ndelconss);
+            return SCIP_OKAY;
+         }
+         /* both variables are either active or negated */
+         else
+         {
+            /* this variable can be fixed to zero if it's a partitioning or packing constraint */
+            if( consdata->setppctype != SCIP_SETPPCTYPE_COVERING ) /*lint !e641*/
+            {
+               assert(consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING
+                  || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
+
+               SCIP_CALL( SCIPfixVar(scip, var1, negated1 ? 1.0 : 0.0, &infeasible, &fixed) );
+               if( infeasible )
+               {
+                  SCIPdebugMessage("setppc constraint <%s>: infeasible fixing <%s> == %g\n",
+                     SCIPconsGetName(cons), SCIPvarGetName(var1), negated1 ? 1.0 : 0.0);
+                  *cutoff = TRUE;
+                  return SCIP_OKAY;
+               }
+               assert(fixed);
+               ++(*nfixedvars);
+            }
+            /* multiple entries of variable can be replaced by single entry */
+            else
+            {
+               SCIP_CALL( delCoefPos(scip, cons, v) ); /* only some changed behind position v-1, so it's okay */
+               ++(*nchgcoefs);
+            }
+         }
+         consdata->changed = TRUE;
+      }
+   }
+   consdata->merged = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** deletes all zero-fixed variables */
 static
 SCIP_RETCODE applyFixings(
@@ -828,6 +982,9 @@ SCIP_RETCODE applyFixings(
 {
    SCIP_CONSDATA* consdata;
    int v;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2775,6 +2932,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    int firstclique;
    int lastclique;
    int c;
+   SCIP_Bool cutoff;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -2784,6 +2942,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    *result = SCIP_DIDNOTFIND;
    oldnfixedvars = *nfixedvars;
    oldndelconss = *ndelconss;
+   cutoff = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -2812,14 +2971,21 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
          SCIP_CALL( applyFixings(scip, cons) );
       }
 
-      /**@todo find pairs of negated variables in constraint:
-       *       partitioning/packing: all other variables must be zero, constraint is redundant
-       *       covering: constraint is redundant
+      /** find pairs of negated variables in constraint:
+       *  partitioning/packing: all other variables must be zero, constraint is redundant
+       *  covering: constraint is redundant
+       *
+       *  find sets of equal variables in constraint:
+       *  partitioning/packing: variable must be zero
+       *  covering: multiple entries of variable can be replaced by single entry
        */
-      /**@todo find sets of equal variables in constraint:
-       *       partitioning/packing: variable must be zero
-       *       covering: multiple entries of variable can be replaced by single entry
-       */
+      SCIP_CALL( mergeMultiples(scip, cons, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
+
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
 
       if( consdata->nfixedones >= 2 )
       {
@@ -3082,8 +3248,6 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
             assert(*result != SCIP_CUTOFF);
             if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               SCIP_Bool cutoff;
-
                npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? c : (c - firstchange);
 
                SCIP_CALL( removeRedundantConstraints(scip, conss, firstchange, c, &cutoff, nfixedvars, ndelconss, nchgsides) );

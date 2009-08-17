@@ -53,6 +53,7 @@ interface:
 - added SCIPsortPtrPtrLongInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - new parameter <constraints/xor/presolusehashing> in cons_xor.c, should pairwise presolving use hashing?, default TRUE
 - added detectRedundantConstraints() in cons_xor.c and necessary hash-functions for fast pairwise presolving
+- added function SCIPvarCompareActiveAndNegated and SCIPvarCompActiveAndNegated in pub_var.h for comparing variables negated or active the same way 
 
 features:
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
@@ -79,6 +80,7 @@ features:
 - the linear constraint handler is able to parse a string in CIP format and create a corresponding linear constraint
 - interval arithmetic functions can work with unbounded intervals
   added new functions to allow more operations on intervals, including solving quadratic interval equations
+- added new preprocessing step (mergeMultiples) in cons_setppc.c where equal variables are merged
 
 performance improvements:
 - replaced some function calls in loop conditions
@@ -166,6 +168,7 @@ fixed bugs:
 - added and adjusted some asserts, initialized some values
 - fixed bug in presol.c caused by not reseting presolver-wasdelayed status
 - fixed bug in solve.c caused by integer overflow due to setting the number of cuts to INT_MAX
+- fixed bug in cons_knapsack.c caused by having a multi-aggregated variable in a knapsack constraint, now applyFixing is able to resolve a binary multi-aggregation with integral values
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

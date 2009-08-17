@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.256 2009/08/03 20:03:57 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.257 2009/08/17 18:27:13 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8163,6 +8163,43 @@ void SCIPvarChgBranchDirection(
       SCIPerrorMessage("unknown variable status\n");
       SCIPABORT();
    }
+}
+
+/** compares the index of two variables, only active or negated variables are allowed, if a variable
+ *  is negated then the index of the corresponding active variable is taken, returns -1 if first is
+ *  smaller than, and +1 if first is greater than second variable index; returns 0 if both indices
+ *  are equal, which means both variables are equal
+ */
+int SCIPvarCompareActiveAndNegated(
+   SCIP_VAR*             var1,               /**< first problem variable */
+   SCIP_VAR*             var2                /**< second problem variable */
+   )
+{
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+   assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
+   
+   if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
+      var1 = SCIPvarGetNegatedVar(var1);
+   if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
+      var2 = SCIPvarGetNegatedVar(var2);
+   
+   if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
+      return -1;
+   else if( SCIPvarGetIndex(var1) > SCIPvarGetIndex(var2) )
+      return +1;
+   
+   assert(var1 == var2);
+   return 0;
+}
+
+/** comparison method for sorting active and negated variables by non-decreasing index, active and negated 
+ *  variables are handled as the same variables
+ */
+SCIP_DECL_SORTPTRCOMP(SCIPvarCompActiveAndNegated)
+{
+   return SCIPvarCompareActiveAndNegated((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
 }
 
 /** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second

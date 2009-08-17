@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.75 2009/08/03 15:30:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.76 2009/08/17 18:27:13 bzfwinkm Exp $"
 
 /**@file   pub_var.h
  * @brief  public methods for problem variables
@@ -70,6 +70,23 @@ extern
 SCIP_Bool SCIPvarMayRoundUp(
    SCIP_VAR*             var                 /**< problem variable */
    );
+
+/** compares the index of two variables, only active or negated variables are allowed, if a variable
+ *  is negated then the index of the corresponding active variable is taken, returns -1 if first is
+ *  smaller than, and +1 if first is greater than second variable index; returns 0 if both indices
+ *  are equal, which means both variables are equal
+ */
+extern
+int SCIPvarCompareActiveAndNegated(
+   SCIP_VAR*             var1,               /**< first problem variable */
+   SCIP_VAR*             var2                /**< second problem variable */
+   );
+   
+/** comparison method for sorting active and negated variables by non-decreasing index, active and negated 
+ *  variables are handled as the same variables
+ */
+extern
+SCIP_DECL_SORTPTRCOMP(SCIPvarCompActiveAndNegated);
 
 /** compares the index of two variables, returns -1 if first is smaller than, and +1 if first is greater than second
  *  variable index; returns 0 if both indices are equal, which means both variables are equal

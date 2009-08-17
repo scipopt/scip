@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.174 2009/08/03 20:03:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.175 2009/08/17 18:27:13 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -2756,45 +2756,6 @@ SCIP_RETCODE removeZeroWeights(
    return SCIP_OKAY;
 }
 
-/** compares the index of two variables, only active or negated variables are allowed, if a variable
- *  is negated then the index of the corresponding active variable is taken, returns -1 if first is
- *  smaller than, and +1 if first is greater than second variable index; returns 0 if both indices
- *  are equal, which means both variables are equal
- */
-static
-int activeandnegVarCompare(
-   SCIP_VAR*             var1,               /**< first problem variable */
-   SCIP_VAR*             var2                /**< second problem variable */
-   )
-{
-  assert(var1 != NULL);
-  assert(var2 != NULL);
-  assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
-  assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
-
-  if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
-    var1 = SCIPvarGetNegatedVar(var1);
-  if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
-    var2 = SCIPvarGetNegatedVar(var2);
-
-  if( SCIPvarGetIndex(var1) < SCIPvarGetIndex(var2) )
-    return -1;
-  else if( SCIPvarGetIndex(var1) > SCIPvarGetIndex(var2) )
-    return +1;
-  else
-    {
-      assert(var1 == var2);
-      return 0;
-    }
-}
-
-/** comparison method for sorting variables by non-decreasing index */
-static
-SCIP_DECL_SORTPTRCOMP(activeandnegVarComp)
-{
-  return activeandnegVarCompare((SCIP_VAR*)elem1, (SCIP_VAR*)elem2);
-}
-
 /** replaces multiple occurrences of a variable or its negation by a single coefficient */
 static
 SCIP_RETCODE mergeMultiples(
@@ -2805,6 +2766,9 @@ SCIP_RETCODE mergeMultiples(
    SCIP_CONSDATA* consdata;
    int v;
    int prev;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2818,11 +2782,11 @@ SCIP_RETCODE mergeMultiples(
       return SCIP_OKAY;
    }
 
-   assert(consdata->vars != NULL);
+   assert(consdata->vars != NULL || consdata->nvars == 0);
 
    /* sorting array after indices of variables, that's only for faster merging */ 
    SCIPsortPtrPtrLongInt((void**)consdata->vars, (void**)consdata->eventdatas, consdata->weights, consdata->cliquepartition,
-			 activeandnegVarComp, consdata->nvars);
+			 SCIPvarCompActiveAndNegated, consdata->nvars);
    /* knapsack-sorting (descreasing weights) now lost */ 
    consdata->sorted = FALSE;
 
@@ -3076,16 +3040,26 @@ SCIP_RETCODE simplifyInequalities(
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< knapsack constraint */
+   SCIP_CONS*            cons,               /**< knapsack constraint */
+   SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
    SCIP_CONSDATA* consdata;
    int v;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(cutoff != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->nvars == 0 || consdata->vars != NULL);
+   
+   *cutoff = FALSE;
 
+   SCIPdebugMessage("apply fixings:\n");
+   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+   
    v = 0;
    while( v < consdata->nvars )
    {
@@ -3109,40 +3083,144 @@ SCIP_RETCODE applyFixings(
       else
       {
          SCIP_VAR* repvar;
+	 SCIP_VAR* negvar;
+         SCIP_VAR* workvar;
          SCIP_Longint weight;
          SCIP_Bool negated;
-         
+	 
+	 weight = consdata->weights[v];
+	 
          /* get binary representative of variable */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+	 assert(repvar != NULL);
 
-         /* check, if the variable should be replaced with the representative */
-         if( repvar != var )
+	 /* check for multiaggregation */
+	 if( SCIPvarIsNegated(repvar) )
+	 {
+	    workvar = SCIPvarGetNegatedVar(repvar);
+	    assert(workvar != NULL);
+	    negated = TRUE;
+	 }
+	 else
+	 {
+	    workvar = repvar;
+	    negated = FALSE;
+	 }
+
+	 /* @todo maybe resolve the problem that the eliminating of the multi-aggreation leads to a non-knapsack
+          * constraint (converting into a linear constraint), for example the multiaggregation consist of a non-binary
+          * variable or due to resolving now their are non-integral coefficients or a non-integral capacity 
+          *
+          * If repvar is not negated so workwar = repvar, otherwise workvar = 1 - repvar. This means,
+          * weight * workvar = weight * (a_1*y_1 + ... + a_n*y_n + c) 
+          *
+          * The explaination for  the following block:  
+	  * 1a) If repvar is a multiaggregated variable weight * repvar should be replaced by 
+	  *     weight * (a_1*y_1 + ... + a_n*y_n + c).
+	  * 1b) If repvar is a negated variable of a multiaggregated variable weight * repvar should be replaced by 
+	  *     weight - weight * (a_1*y_1 + ... + a_n*y_n + c), for better further use here we switch the sign of weight
+	  *     so now we have the replacement -weight + weight * (a_1*y_1 + ... + a_n*y_n + c).
+	  * 2)  For all replacement variable we check:
+	  * 2a) weight * a_i < 0 than we add -weight * a_i * y_i_neg to the constraint and adjust the capacity through 
+	  *     capacity -= weight * a_i caused by the negation of y_i.
+	  * 2b) weight * a_i >= 0 than we add weight * a_i * y_i to the constraint.
+	  * 3a) If repvar was not negated we need to substract weight * c from capacity.
+	  * 3b) If repvar was negated we need to substract weight * (c - 1) from capacity(note we switched the sign of 
+	  *     weight in this case.
+	  */
+	 if( SCIPvarGetStatus(workvar) == SCIP_VARSTATUS_MULTAGGR )
+	 {
+	    SCIP_VAR** aggrvars;
+	    SCIP_Real* aggrscalars;
+	    SCIP_Real aggrconst;
+	    int naggrvars;
+	    int i;
+
+	    SCIP_CALL( SCIPflattenVarAggregationGraph(scip, workvar) );
+	    naggrvars = SCIPvarGetMultaggrNVars(workvar);
+	    aggrvars = SCIPvarGetMultaggrVars(workvar);
+	    aggrscalars = SCIPvarGetMultaggrScalars(workvar);
+	    aggrconst = SCIPvarGetMultaggrConstant(workvar);
+	    assert((aggrvars != NULL && aggrscalars != NULL) || naggrvars == 0);
+
+	    if( !SCIPisIntegral(scip, weight * aggrconst) )
+            {
+               SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrconst = %g\n", weight*aggrconst);
+               return SCIP_ERROR;
+	    }
+
+	    /* if workvar was negated, we have to flip the weight */
+	    if( negated )
+	      weight *= -1;
+
+	    for( i = naggrvars - 1; i >= 0; --i )
+	    {
+	       if( SCIPvarGetType(aggrvars[i]) != SCIP_VARTYPE_BINARY )
+               {
+                  SCIPerrorMessage("try to resolve a multiaggregation with a non-binary variable <%s>\n", aggrvars[i]);
+                  return SCIP_ERROR;
+               }
+	       if( !SCIPisIntegral(scip, weight * aggrscalars[i]) )
+               {
+                  SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrscalars = %g\n", weight*aggrscalars[i]);
+                  return SCIP_ERROR;
+               }
+	       /* if the new coefficent is smaller than zero, we need to add the negated variable instead and adjust the capacity */
+	       if( SCIPisLT(scip, weight * aggrscalars[i], 0) )
+	       {
+		  SCIP_CALL( SCIPgetNegatedVar(scip, aggrvars[i], &negvar));
+		  assert(negvar != NULL);
+		  SCIP_CALL( addCoef(scip, cons, negvar, (SCIP_Longint)(SCIPfloor(scip, -weight * aggrscalars[i] + 0.5))) );
+		  consdata->capacity -= (SCIP_Longint)(SCIPfloor(scip, weight * aggrscalars[i] + 0.5));
+	       }
+	       else 
+	       {
+		  SCIP_CALL( addCoef(scip, cons, aggrvars[i], (SCIP_Longint)(SCIPfloor(scip, weight * aggrscalars[i] + 0.5))) );
+	       }
+	    }
+            /* delete old coefficient */
+	    SCIP_CALL( delCoefPos(scip, cons, v) );
+
+	    /* adjust the capacity with the aggregation constant and if necessary the extra weight through tne negation */ 
+	    if(negated)
+	       consdata->capacity -= (SCIP_Longint)SCIPfloor(scip, weight * (aggrconst - 1) + 0.5);
+	    else
+	       consdata->capacity -= (SCIP_Longint)SCIPfloor(scip, weight * aggrconst + 0.5);
+
+            if( consdata->capacity < 0 )
+            {
+               *cutoff = TRUE;
+               break;
+	    }
+	 }
+	 /* check, if the variable should be replaced with the representative */
+         else if( repvar != var )
          {
-            weight = consdata->weights[v];
-
-            /* delete old (aggregated) variable */
-            SCIP_CALL( delCoefPos(scip, cons, v) );
-
-            /* add representative instead */
-            SCIP_CALL( addCoef(scip, cons, repvar, weight) );
-         }
+	    /* delete old (aggregated) variable */
+	    SCIP_CALL( delCoefPos(scip, cons, v) );
+	    
+	    /* add representative instead */
+	    SCIP_CALL( addCoef(scip, cons, repvar, weight) );
+	 }
          else
             ++v;
       }
    }
    assert(consdata->onesweightsum == 0);
 
-   SCIPdebugMessage("after fixings:\n");
+   SCIPdebugMessage("after applyFixings, before merging:\n");
    SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
-
-   /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have
-    * to clean up the constraint
-    */
-   SCIP_CALL( mergeMultiples(scip, cons) );
    
-   SCIPdebugMessage("after merging:\n");
-   SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
-
+   /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have to
+    * clean up the constraint
+    */
+   if( !cutoff )
+   {
+      SCIP_CALL( mergeMultiples(scip, cons) );
+      SCIPdebugMessage("after applyFixings and merging:\n");
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+   }
+   
    return SCIP_OKAY;
 }
 
@@ -4742,7 +4820,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
          || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
       {
-         SCIP_CALL( applyFixings(scip, cons) );
+         SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+         if( cutoff )
+            break;
       }
       thisnfixedvars = *nfixedvars;
       thisnchgbds = *nchgbds;
@@ -4765,7 +4845,9 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       /* remove again all fixed variables, if further fixings were found */
       if( *nfixedvars > thisnfixedvars || *nchgbds > thisnchgbds )
       {
-         SCIP_CALL( applyFixings(scip, cons) );
+         SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+         if( cutoff )
+            break;
       }
 
       if( !SCIPconsIsModifiable(cons) )
