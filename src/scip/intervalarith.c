@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.24 2009/08/10 16:24:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.25 2009/08/17 18:15:52 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1460,6 +1460,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    else
    {
       SCIPintervalSolveUnivariateQuadExpressionPositive2(infinity, resultant, -sqrcoeff, -lincoeff.inf, -rhs.sup);
+      SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", -sqrcoeff, -lincoeff.inf, -rhs.sup, resultant->inf, resultant->sup);
    }
    
    /* find x>=0 s.t. ax^2 + b.sup x >= c.inf */
@@ -1467,10 +1468,11 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    {
       SCIP_INTERVAL res2;
       SCIPintervalSolveUnivariateQuadExpressionPositive2(infinity, &res2, sqrcoeff, lincoeff.sup, rhs.inf);
-      SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%g, %g]\n", sqrcoeff, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
-      SCIPdebugMessage("intersect [%g, %g] and [%g, %g]\n", resultant->inf, resultant->sup, res2.inf, res2.sup);
+      SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
+      SCIPdebugMessage("intersect [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
       /* intersect both results */
       SCIPintervalIntersect(resultant, *resultant, res2);
+      SCIPdebugPrintf(" gives [%.20f, %.20f]\n", resultant->inf, resultant->sup);
    }
    /* else res2 = [0, infty] */
    
@@ -1538,9 +1540,9 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive2(
    }
    else
    { /* b < 0 */
-      setRoundingMode(SCIP_ROUND_DOWNWARDS);
       if( rhs > 0 )
       { /* b < 0 and c > 0 */
+         setRoundingMode(SCIP_ROUND_DOWNWARDS);
          if( sqrcoeff > 0 )
          {
             delta = b*b + sqrcoeff*rhs;
@@ -1554,6 +1556,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive2(
       }
       else
       { /* b < 0 and c <= 0 */
+         /* setRoundingMode(SCIP_ROUND_DOWNWARDS); */
          delta = b*b + sqrcoeff * rhs;
          if( delta >= 0 && sqrcoeff <= 0 )
          {
