@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.17 2009/06/26 18:42:37 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.18 2009/08/17 18:59:04 bzfheinz Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -381,19 +381,17 @@ void* BMSduplicateMemory_call(
 
 /** frees an allocated memory element */
 void BMSfreeMemory_call(
-   void**                ptr,                /**< address of pointer to memory element */
+   void*                 ptr,                /**< pointer to memory element */
    const char*           filename,           /**< source file where the deallocation is performed */
    int                   line                /**< line number in source file where the deallocation is performed */
    )
 {
-   assert(ptr != NULL);
-
-   if( *ptr != NULL )
+   if( ptr != NULL )
    {
 #ifndef NDEBUG
-      removeMemlistEntry(*ptr, filename, line);
+      removeMemlistEntry(ptr, filename, line);
 #endif
-      free(*ptr);
+      free(ptr);
    }
    else
    {
@@ -1343,19 +1341,18 @@ void* BMSduplicateChunkMemory_call(
 /** frees a memory element of the given chunk block */
 void BMSfreeChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
-   void**                ptr,                /**< pointer to memory element to free */
+   void*                 ptr,                /**< memory element to free */
    size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    )
 {
    assert(chkmem != NULL);
-   assert(ptr != NULL);
    assert((int)size == chkmem->elemsize);
    
-   debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, (void*)*ptr, filename, line);
+   debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, ptr, filename, line);
 
-   if( *ptr == NULL )
+   if( ptr == NULL )
    {
       printErrorHeader(filename, line);
       printError("Tried to free null block pointer\n");
@@ -1363,9 +1360,8 @@ void BMSfreeChunkMemory_call(
    }
 
    /* free memory in chunk block */
-   freeChkmemElement(chkmem, *ptr, filename, line);
-   *ptr = NULL;
-
+   freeChkmemElement(chkmem, ptr, filename, line);
+   
    checkChkmem(chkmem);
 }
 
@@ -1651,7 +1647,7 @@ void* BMSreallocBlockMemory_call(
    newptr = BMSallocBlockMemory_call(blkmem, newsize, filename, line);
    if( newptr != NULL )
       BMScopyMemorySize(newptr, ptr, MIN(oldsize, newsize));
-   BMSfreeBlockMemory_call(blkmem, &ptr, oldsize, filename, line);
+   BMSfreeBlockMemory_call(blkmem, ptr, oldsize, filename, line);
 
    return newptr;
 }
@@ -1679,7 +1675,7 @@ void* BMSduplicateBlockMemory_call(
 /** frees memory element in the block memory pool */
 void BMSfreeBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   void**                ptr,                /**< pointer to memory element to free */
+   void*                 ptr,                /**< memory element to free */
    size_t                size,               /**< size of memory element */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -1688,15 +1684,13 @@ void BMSfreeBlockMemory_call(
    BMS_CHKMEM* chkmem;
    int hashnumber;
 
-   assert(ptr != NULL);
-
-   if( *ptr != NULL )
+   if( ptr != NULL )
    {
       /* calculate hash number of given size */
       alignSize(&size);
       hashnumber = getHashNumber((int)size);
 
-      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, *ptr, filename, line);
+      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
 
       /* find correspoding chunk block */
       chkmem = blkmem->chkmemhash[hashnumber];
@@ -1706,15 +1700,14 @@ void BMSfreeBlockMemory_call(
       {
 	 printErrorHeader(filename, line);
          printError("Tried to free pointer <%p> in block memory <%p> of unknown size %lld\n",
-            *ptr, (void*)blkmem, (long long) size);
+            ptr, (void*)blkmem, (long long) size);
 	 return;
       }
       assert(chkmem->elemsize == (int)size);
 
       /* free memory in chunk block */
-      freeChkmemElement(chkmem, *ptr, filename, line);
-      *ptr = NULL;
-
+      freeChkmemElement(chkmem, ptr, filename, line);
+      
       blkmem->memused -= size;
       assert(blkmem->memused >= 0);
    }
