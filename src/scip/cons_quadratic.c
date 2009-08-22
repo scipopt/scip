@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.28 2009/08/14 12:13:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.29 2009/08/22 03:22:52 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -34,6 +34,7 @@
  * - skip separation in enfolp if for current LP (check LP id) was already separated
  * - don't iterate over hash map, use array additionally
  * - watch unbounded variables to enable/disable propagation
+ * - sort order in bilinvar1/bilinvar2 such that the var which is involved in more terms is in bilinvar1, and use this info propagate and AddLinearReform
  */
 
 #include <assert.h>
@@ -155,8 +156,7 @@ typedef struct VarInfeasibility VARINFEASIBILITY;
 struct SCIP_ConshdlrData
 {
    SCIP_Bool       replace_sqrbinary;   /**< whether squares of binary variables are replaced by the variable itself */
-   SCIP_Bool       replace_binaryprod;  /**< whether products with binary variables are replaced by an auxiliary variable and an equivalent linear formulation */
-   SCIP_Bool       replace_binaryprod_forceAND;  /**< whether products of binary variables should always be replaced by AND constraints */
+   int             replace_binaryprod_length; /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    SCIP_Bool       disaggregation;      /**< whether we should disaggregate block separable quadratic constraints */
 #ifdef WITH_SOC3
    SCIP_Bool       upgrade_soc;         /**< whether we should upgrade to SOC constraints, if possible */
@@ -2025,7 +2025,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIP*           scip,        /**< SCIP data structure */
    SCIP_CONS*      cons,        /**< constraint */
    SCIP_HASHMAP*   terms,       /**< constraint function in form of PresolveQuadTerm's */
-   int*            n_varsadded  /**< buffer where to store the number of auxiliary variables added */
+   int*            n_varsadded, /**< buffer where to store the number of auxiliary variables added */
+   int             maxnrvar     /**< maximal number of variables in linear term to consider when replacing by one auxiliary variable */
 )
 {
    SCIP_VAR**         xvars  = NULL;
@@ -2045,6 +2046,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
    int                n_bilin;
    SCIP_VAR*          auxvar;
    SCIP_CONS*         auxcons;
+   SCIP_Bool          maxnrvar_full; /* indicates whether we stopped collecting xvars because the maxnrvar limit was reached */
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2053,9 +2055,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
    
    *n_varsadded = 0;
 
-   for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
-      for (list = SCIPhashmapGetList(terms, i); list; list = SCIPhashmapListGetNext(list))
+   if (!maxnrvar)
+      return SCIP_OKAY;
+   
+   for (i = 0; i < SCIPhashmapGetNLists(terms); i = maxnrvar_full ? i : i+1)
+      for (list = SCIPhashmapGetList(terms, i); list; list = maxnrvar_full ? list : SCIPhashmapListGetNext(list))
       {
+         maxnrvar_full = FALSE;
+         
          y = (SCIP_VAR*) SCIPhashmapListGetOrigin(list);
          if (SCIPvarGetType(y) != SCIP_VARTYPE_BINARY)
             continue;
@@ -2070,15 +2077,21 @@ SCIP_RETCODE presolveTryAddLinearReform(
          
          n_xvars = 0;
          SCIPintervalSet(&xbnds, 0.);
-         SCIP_CALL( SCIPreallocBufferArray(scip, &xvars,  n_bilin+2) ); /* add 2 for later use when creating linear constraints */
-         SCIP_CALL( SCIPreallocBufferArray(scip, &xcoeff, n_bilin+2) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &xvars,  MIN(maxnrvar, n_bilin)+2) ); /* add 2 for later use when creating linear constraints */
+         SCIP_CALL( SCIPreallocBufferArray(scip, &xcoeff, MIN(maxnrvar, n_bilin)+2) );
          
          /* setup list of variables x_i with coefficients a_i that are multiplied with binary y: y*(sum_i a_i*x_i)
           * and compute range of sum_i a_i*x_i
           */
-         for (j = 0; j < SCIPhashmapGetNLists(yterm->bilin); ++j)
+         for (j = 0; j < SCIPhashmapGetNLists(yterm->bilin) && !maxnrvar_full; ++j)
             for (blist = SCIPhashmapGetList(yterm->bilin, j); blist; blist = SCIPhashmapListGetNext(blist))
             {
+               if (n_xvars >= maxnrvar)
+               {
+                  maxnrvar_full = TRUE;
+                  break;
+               }
+               
                bvar  = (SCIP_VAR*)          SCIPhashmapListGetOrigin(blist);
                if (SCIPisInfinity(scip, -SCIPvarGetLbGlobal(bvar)) || SCIPisInfinity(scip, SCIPvarGetUbGlobal(bvar)))
                   continue;
@@ -2222,7 +2235,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
       
    if (*n_varsadded)
    {
-      SCIPdebugMessage("added %d sets of constraints to reformulate product with binary variable in constraint %s\n", *n_varsadded, SCIPconsGetName(cons));
+      printf("added %d sets of constraints to reformulate product with binary variable in constraint %s\n", *n_varsadded, SCIPconsGetName(cons));
 
       /* clean empty bilin's and empty quad terms */
       for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
@@ -5611,7 +5624,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       assert(consdata != NULL);
 
       have_change = FALSE;
-      if (!consdata->is_removedfixings || !consdata->is_presolved || (!consdata->is_propagated && conshdlrdata->replace_binaryprod))
+      if (!consdata->is_removedfixings || !consdata->is_presolved || (!consdata->is_propagated && conshdlrdata->replace_binaryprod_length))
       {
          SCIPdebugMessage("process constraint %s\n", SCIPconsGetName(conss[c]));
          terms = NULL;
@@ -5622,10 +5635,10 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          SCIPdebugPrintf("\n");
 #endif
 
-         if (conshdlrdata->replace_binaryprod)
+         if (conshdlrdata->replace_binaryprod_length)
          {
             int n_consadded = 0;
-
+#if 0
             if (conshdlrdata->replace_binaryprod_forceAND)
             {
                SCIP_CALL( presolveTryAddAND(scip, conss[c], terms, &n_consadded) );
@@ -5635,8 +5648,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                   have_change = TRUE;
                }
             }
-
-            SCIP_CALL( presolveTryAddLinearReform(scip, conss[c], terms, &n_consadded) );
+#endif
+            SCIP_CALL( presolveTryAddLinearReform(scip, conss[c], terms, &n_consadded, conshdlrdata->replace_binaryprod_length) );
             if (n_consadded)
             { /* does this count as an upgrade? */
                *result = SCIP_SUCCESS;
@@ -6253,8 +6266,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 
    /* add quadratic constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_sqrbinary",           "whether a square of a binary variables should be replaced by the binary variable",                                                                           &conshdlrdata->replace_sqrbinary,           FALSE, TRUE,                                        NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod",          "whether products with a binary variable should be replaced by a new variable and an AND constraint (if possible) or a set of equivalent linear constraints", &conshdlrdata->replace_binaryprod,          FALSE, TRUE,                                        NULL, NULL) );
+/*   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod",          "whether products with a binary variable should be replaced by a new variable and an AND constraint (if possible) or a set of equivalent linear constraints", &conshdlrdata->replace_binaryprod,          FALSE, TRUE,                                        NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod_forceAND", "whether products of binary variables should be replaced always by an AND constraint",                                                                        &conshdlrdata->replace_binaryprod_forceAND, FALSE, FALSE,                                       NULL, NULL) );
+*/
+   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod",          "max. length of linear term which when multiplied with a binary variables is replaced by an auxiliary variable and a linear reformulation (0 to turn off)",   &conshdlrdata->replace_binaryprod_length,   FALSE, INT_MAX, 0, INT_MAX,                         NULL, NULL) );
 #ifdef WITH_SOC3
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/upgrade_soc",                 "whether constraints should be upgraded to SOC constraints, if possible",                                                                                     &conshdlrdata->upgrade_soc,                 FALSE, FALSE,                                       NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/soc3nrauxvar",                "number of auxiliary variables when adding a SOC3 constraint; 0 to determine automatically (could become very large!); -1 to turn off",                       &conshdlrdata->soc3_nr_auxvars,             FALSE, 8, -1, INT_MAX,                              NULL, NULL) );
