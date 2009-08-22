@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.29 2009/08/22 03:22:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.30 2009/08/22 03:38:22 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -1893,7 +1893,7 @@ SCIP_RETCODE presolveDisaggregate(
 
    return SCIP_OKAY;
 }
-
+#if 0
 /** Reformulates products of binary variables as AND constraint.
  * For a product y*x, with x and y binary variables, the product is replaced by a new auxiliary variable z and the constraint z = {x and y} is added.
  */
@@ -2015,6 +2015,7 @@ SCIP_RETCODE presolveTryAddAND(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
  * A product x*y, with y a binary variable and x a continous variable with finite bounds,
@@ -2046,7 +2047,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
    int                n_bilin;
    SCIP_VAR*          auxvar;
    SCIP_CONS*         auxcons;
-   SCIP_Bool          maxnrvar_full; /* indicates whether we stopped collecting xvars because the maxnrvar limit was reached */
+   SCIP_Bool          maxnrvar_full = FALSE; /* indicates whether we stopped collecting xvars because the maxnrvar limit was reached */
 
    assert(scip != NULL);
    assert(cons != NULL);
