@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.30 2009/08/22 03:38:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.31 2009/08/23 03:53:13 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4443,6 +4443,16 @@ SCIP_RETCODE propagateBounds(
 
    /* intersects linrangesum+quadrange with consbounds */
    SCIPintervalAdd(intervalinfty, &tmp, linrangesum, consdata->quadrange);
+#if 1 /* hopefully ok now where bug in interval arith. fixed */
+   SCIPintervalIntersect(&consbounds, consbounds, tmp);
+   if (SCIPintervalIsEmpty(consbounds))
+   {
+      SCIPdebugMessage("found %s infeasible due to forward propagation\n", SCIPconsGetName(cons));
+      *result = SCIP_CUTOFF;
+      SCIP_CALL( SCIPresetConsAge(scip, cons) );
+      return SCIP_OKAY;
+   }
+#else
    SCIPintervalIntersect(&tmp, consbounds, tmp);
    if (SCIPintervalIsEmpty(tmp))
    { /* check again with slightly larger bounds: workaround for instance product */
@@ -4465,7 +4475,8 @@ SCIP_RETCODE propagateBounds(
    }
    else
       consbounds = tmp;
-
+#endif
+   
    /* domain propagation for linear variables */
    for (i = 0; i < consdata->n_linvar; ++i)
    {
