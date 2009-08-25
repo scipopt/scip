@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.23 2009/08/13 22:49:28 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.24 2009/08/25 12:55:24 bzfgleix Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -960,6 +960,8 @@ SCIP_RETCODE SCIPwriteGms(
    char varname[GMS_MAX_NAMELEN];
    char buffer[GMS_MAX_PRINTLEN];
 
+   SCIP_Real* objcoeffs;
+
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
    SCIP_CONS* cons;
@@ -1217,6 +1219,8 @@ SCIP_RETCODE SCIPwriteGms(
    (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " objequ .. objvar =e= ");
    appendLine(scip, file, linebuffer, &linecnt, buffer);
 
+   SCIP_CALL( SCIPallocBufferArray(scip, &objcoeffs, nvars) );
+
    for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
@@ -1228,24 +1232,13 @@ SCIP_RETCODE SCIPwriteGms(
          assert( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL ||
             SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED );
 #endif
-      
-      if( SCIPisZero(scip, SCIPvarGetObj(var)) )
-      {
-         if(v == nvars - 1)
-            appendLine(scip, file, linebuffer, &linecnt, ";");
-         continue;
-      }
 
-      if( linecnt == 0 )
-         /* we start a new line; therefore we tab this line */
-         appendLine(scip, file, linebuffer, &linecnt, "     ");
-
-      printConformName(scip, varname, GMS_MAX_NAMELEN, SCIPvarGetName(var));
-      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %+.15g*%s%s", SCIPvarGetObj(var), varname, v == nvars - 1 ? ";" : "");
-
-      appendLine(scip, file, linebuffer, &linecnt, buffer);
+      objcoeffs[v] = SCIPisZero(scip, SCIPvarGetObj(var)) ? 0.0 : SCIPvarGetObj(var);
    }
 
+   SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "", ";", nvars, vars, objcoeffs, transformed) );
+
+   SCIPfreeBufferArray(scip, &objcoeffs);
    endLine(scip, file, linebuffer, &linecnt);
    SCIPinfoMessage(scip, file, "\n");
 
