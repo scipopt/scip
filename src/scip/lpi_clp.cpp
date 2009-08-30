@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.59 2009/08/30 13:13:37 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.60 2009/08/30 14:39:04 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -381,9 +381,9 @@ void setFastmipClpParameters(
 
 #ifndef NDEBUG
    // in debug mode: leave checks on
-   lpi->clp->setSpecialOptions(32|64|1024|32768|262144);
+   lpi->clp->setSpecialOptions(32|64|512|1024|32768);
 #else
-   lpi->clp->setSpecialOptions(32|64|128|1024|4096|32768|262144);
+   lpi->clp->setSpecialOptions(32|64|128|512|1024|4096|32768);
 #endif
 
    // let memory grow only (do not shrink) - [needs specialOptions & 65536 != 0]
@@ -1593,7 +1593,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
     */
    int startFinishOptions = 1 | 4;
    if ( lpi->validFactorization )
-      startFinishOptions = 1 | 2;
+      startFinishOptions = startFinishOptions | 2;
 
    /** Primal algorithm */
    int status = lpi->clp->primal(0, startFinishOptions);
@@ -1666,7 +1666,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
     */
    int startFinishOptions = 1 | 4;
    if ( lpi->validFactorization )
-      startFinishOptions = 1 | 2;
+      startFinishOptions = startFinishOptions | 2;
 
    /** Dual algorithm */
    int status = lpi->clp->dual(0, startFinishOptions);
@@ -1825,13 +1825,13 @@ SCIP_RETCODE SCIPlpiStrongbranch(
     *  0x02000000 is in a different branch and bound
     *
     *  2048 does not seem to work
-    *  For other options that do not work see above.
+    *  262144 does not seem to work
     */
 #ifndef NDEBUG
    // in debug mode: leave checks on
-   clp->setSpecialOptions(64|512|1024|262144);
+   clp->setSpecialOptions(64|512|1024);
 #else
-   clp->setSpecialOptions(64|128|512|1024|4096|262144);
+   clp->setSpecialOptions(64|128|512|1024|4096);
 #endif
 
    /* 'startfinish' options for strong branching:
@@ -1839,8 +1839,10 @@ SCIP_RETCODE SCIPlpiStrongbranch(
     *  2 - use old factorization if same number of rows
     *  4 - skip as much initialization of work areas as possible
     *      (based on whatsChanged in clpmodel.hpp) ** work in progress
+    *
+    *  4 does not seem to work in strong branching ...
     */
-   int startFinishOptions = 1 | 4;
+   int startFinishOptions = 1;
    if ( lpi->validFactorization )
       startFinishOptions = startFinishOptions | 2;
 
