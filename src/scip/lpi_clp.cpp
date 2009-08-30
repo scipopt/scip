@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.58 2009/08/04 16:55:06 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.59 2009/08/30 13:13:37 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -80,7 +80,7 @@
 
 
 /* for debugging: alternatingly write files "debug_[p|d]_[0|1].mps" after each run - use with care! */
-#ifdef LPI_CLP_WRITE_FILES
+#ifdef LPI_CLP_DEBUG_WRITE_FILES
 static int fileNr = 0;
 #endif
 
@@ -381,9 +381,9 @@ void setFastmipClpParameters(
 
 #ifndef NDEBUG
    // in debug mode: leave checks on
-   lpi->clp->setSpecialOptions(32|64|1024|32768);
+   lpi->clp->setSpecialOptions(32|64|1024|32768|262144);
 #else
-   lpi->clp->setSpecialOptions(32|64|128|1024|4096|32768);
+   lpi->clp->setSpecialOptions(32|64|128|1024|4096|32768|262144);
 #endif
 
    // let memory grow only (do not shrink) - [needs specialOptions & 65536 != 0]
@@ -951,10 +951,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const double* colLower = lpi->clp->getColLower();
    const double* colUpper = lpi->clp->getColUpper();
 
-   // updates whatsChanged in Clp (bound checking in Clp)
    for (int j = 0; j < ncols; ++j)
    {
-      clp->setColBounds(ind[j], lb[j], ub[j]);
+      clp->setColumnBounds(ind[j], lb[j], ub[j]);
       if ( sol != 0 )
       {
 	 assert( colLower != 0 );
@@ -1005,8 +1004,7 @@ SCIP_RETCODE SCIPlpiChgSides(
 
    ClpSimplex* clp = lpi->clp;
 
-   // updates whatsChanged in Clp (bound checking in Clp)
-   for( int i = 0; i < nrows; ++i )
+   for (int i = 0; i < nrows; ++i)
       clp->setRowBounds(ind[i], lhs[i], rhs[i]);
 
    return SCIP_OKAY;
@@ -1568,7 +1566,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-#ifdef LPI_CLP_WRITE_FILES
+#ifdef LPI_CLP_DEBUG_WRITE_FILES
    char filename[255];
    snprintf(filename, 255, "debug_p_%d.mps", fileNr);
    fileNr = fileNr % 2;
@@ -1600,7 +1598,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    /** Primal algorithm */
    int status = lpi->clp->primal(0, startFinishOptions);
 
-#ifdef LPI_CLP_WRITE_FILES
+#ifdef LPI_CLP_DEBUG_WRITE_FILES
    char basisname[255];
    snprintf(basisname, 255, "debug_p_%d.bas", fileNr);
    SCIP_CALL( SCIPlpiWriteState(lpi, basisname) );
@@ -1639,12 +1637,14 @@ SCIP_RETCODE SCIPlpiSolveDual(
    assert(lpi != 0);
    assert(lpi->clp != 0);
 
-#ifdef LPI_CLP_WRITE_FILES
+#ifdef LPI_CLP_DEBUG_WRITE_FILES
    char filename[255];
    snprintf(filename, 255, "debug_d_%d.mps", fileNr);
    SCIPlpiWriteLP(lpi, filename);
    SCIPdebugMessage("Wrote file <%s>\n", filename);
-   // lpi->clp->saveModel("debug.sav");
+   snprintf(filename, 255, "debug_d_%d.sav", fileNr);
+   // lpi->clp->saveModel(filename);
+   SCIPdebugMessage("Wrote file <%s>\n", filename);
 #endif
 
    invalidateSolution(lpi);
@@ -1671,7 +1671,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    /** Dual algorithm */
    int status = lpi->clp->dual(0, startFinishOptions);
 
-#ifdef LPI_CLP_WRITE_FILES
+#ifdef LPI_CLP_DEBUG_WRITE_FILES
    char basisname[255];
    snprintf(basisname, 255, "debug_d_%d.bas", fileNr);
    SCIP_CALL( SCIPlpiWriteState(lpi, basisname) );
@@ -1770,6 +1770,7 @@ SCIP_RETCODE SCIPlpiStrongbranch(
 
    // set up output arrays
    int ncols = clp->numberColumns();
+   assert( 0 <= col && col < ncols );
    double** outputSolution;
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution, 2) );
    SCIP_ALLOC( BMSallocMemoryArray( &outputSolution[0], ncols) );
@@ -1828,9 +1829,9 @@ SCIP_RETCODE SCIPlpiStrongbranch(
     */
 #ifndef NDEBUG
    // in debug mode: leave checks on
-   clp->setSpecialOptions(64|512|1024);
+   clp->setSpecialOptions(64|512|1024|262144);
 #else
-   clp->setSpecialOptions(64|128|512|1024|4096);
+   clp->setSpecialOptions(64|128|512|1024|4096|262144);
 #endif
 
    /* 'startfinish' options for strong branching:
@@ -2991,8 +2992,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
        *  above that 8,16,32 etc just for selective SCIPdebug
        */
       if ( ival )
-	 lpi->clp->setLogLevel(2);
-      // lpi->clp->setLogLevel(63);
+	 lpi->clp->setLogLevel(2);      // lpi->clp->setLogLevel(63);
       else
          lpi->clp->setLogLevel(0);
       break;
