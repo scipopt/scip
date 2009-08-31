@@ -13,8 +13,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.319 2009/08/03 20:03:56 bzfwinkm Exp $"
- 
+#pragma ident "@(#) $Id: lp.c,v 1.320 2009/08/31 17:37:10 bzfpfets Exp $"
+
 /**@file   lp.c
  * @brief  LP management methods and datastructures
  * @author Tobias Achterberg
@@ -9746,6 +9746,579 @@ SCIP_RETCODE lpDualSimplex(
    return SCIP_OKAY;
 }
 
+/** calls LPI to perform lexicographic dual simplex to find a lexicographically minimal optimal solution, measures time and counts iterations
+ *
+ *  We follow the approach of the following paper to find a lexicographically minimal optimal
+ *  solution:
+ *
+ *  Zanette, Fischetti, Balas@n
+ *  Can pure cutting plane algorithms work?@n
+ *  IPCO 2008, Bertinoro, Italy.
+ *
+ *  We do, however, not aim for the exact lexicographically minimal optimal solutions, but perform a
+ *  heuristic, i.e., we limit the number of components which are minimized.
+ *
+ *  More precisely, we first solve the problem with the dual simplex algorithm. Then we fix those
+ *  nonbasic variables to their current value (i.e., one of the bounds except maybe for free
+ *  variables) that have nonzero reduced cost. This fixes the objective function value, because only
+ *  pivots that will not change the objective are allowed afterwards.
+ *
+ *  Then the not yet fixed variables are considered in turn. If they are at their lower bounds and
+ *  nonbasic, they are fixed to this bound, since their value cannot be decreased further. Once a
+ *  candidate is found, we set the objective to minimize this variable. We run the primal simplex
+ *  algorithm (since the objective is changed the solution is not dual feasible anymore; if
+ *  variables out of the basis have been fixed to their lower bound, the basis is also not primal
+ *  feasible anymore). After the optimization, we again fix nonbasic variables that have nonzero
+ *  reduced cost. We then choose the next variable and iterate.
+ *
+ *  We stop the process once we do not find candidates or have performed a maximum number of
+ *  iterations.
+ *
+ *  ToDo: 
+ *  - Does this really produce a lexicographically minimal solution? 
+ *  - Can we skip the consideration of basic variables that are at their lower bound? How can we
+ *    guarantee that these variables will not be changed in later stages? We can fix these variables
+ *    to their lower bound, but this destroys the basis.
+ *  - Should we use lexicographical minimization in diving/probing or not?
+ */
+static
+SCIP_RETCODE lpLexDualSimplex(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Bool             resolve,            /**< is this a resolving call (starting with feasible basis)? */
+   SCIP_Bool             keepsol,            /**< should the old LP solution be kept if no iterations were performed? */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   )
+{
+   SCIP_RETCODE retcode;
+   int totalIterations;
+   int lexIterations;
+   int iterations;
+   int rounds;
+
+   assert(lp != NULL);
+   assert(lp->flushed);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(lperror != NULL);
+
+   SCIPdebugMessage("solving lex dual LP %d (LP %d, %d cols, %d rows)\n", stat->nduallps+1, stat->nlps+1, lp->ncols, lp->nrows);
+
+   *lperror = FALSE;
+
+   /* start timing */
+   if ( lp->diving || lp->probing )
+      SCIPclockStart(stat->divinglptime, set);
+   else
+      SCIPclockStart(stat->duallptime, set);
+
+   /* call dual simplex for first lp */
+   retcode = SCIPlpiSolveDual(lp->lpi);
+   if ( retcode == SCIP_LPERROR )
+   {
+      *lperror = TRUE;
+      SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") dual simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
+   }
+   else
+   {
+      SCIP_CALL( retcode );
+   }
+   SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
+   totalIterations = iterations;
+
+   /* stop timing */
+   if ( lp->diving || lp->probing )
+      SCIPclockStop(stat->divinglptime, set);
+   else
+      SCIPclockStop(stat->duallptime, set);
+
+   /* count number of iterations */
+   stat->lpcount++;
+   if ( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
+   {
+      stat->nlpiterations += iterations;
+      if ( resolve && !lp->lpifromscratch && stat->nlps > 1  )
+      {
+         stat->ndualresolvelps++;
+         stat->ndualresolvelpiterations += iterations;
+      }
+      if ( lp->diving || lp->probing )
+      {
+         stat->lastdivenode = stat->nnodes;
+         stat->ndivinglps++;
+         stat->ndivinglpiterations += iterations;
+      }
+      else
+      {
+         stat->nduallps++;
+         stat->nduallpiterations += iterations;
+      }
+   }
+   lexIterations = 0;
+
+   /* search for lexicographically minimal optimal solution */
+   if ( !lp->diving && !lp->probing & SCIPlpiIsOptimal(lp->lpi) )
+   {
+      SCIP_Bool chooseBasic;
+      SCIP_Real* primsol;
+      SCIP_Real* dualsol;
+      SCIP_Real* redcost;
+      int* cstat;
+      int* rstat;
+      SCIP_Real* newobj;
+      SCIP_Real* newlb;
+      SCIP_Real* newub;
+      SCIP_Real* newlhs;
+      SCIP_Real* newrhs;
+      SCIP_Real* oldlb;
+      SCIP_Real* oldub;
+      SCIP_Real* oldlhs;
+      SCIP_Real* oldrhs;
+      SCIP_Real* oldobj;
+      SCIP_Bool* fixedc;
+      SCIP_Bool* fixedr;
+      int* indcol;
+      int* indrow;
+      int* indallcol;
+      int* indallrow;
+      int nDualDeg;
+      int r, c;
+      int cntcol;
+      int cntrow;
+      int nruns;
+      int pos;
+
+      chooseBasic = set->lp_lexdualbasic;
+
+      /* start timing */
+      SCIPclockStart(stat->lexduallptime, set);
+
+      /* get all solution information */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsol, lp->nlpirows) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &redcost, lp->nlpicols) );
+      if ( chooseBasic )
+	 SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
+      else
+	 primsol = NULL;
+
+      /* get basic and nonbasic information */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, lp->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, lp->nlpirows) );
+
+      /* save bounds, lhs/rhs, and objective */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &oldobj, lp->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &oldlb, lp->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &oldub, lp->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &oldlhs, lp->nlpirows) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &oldrhs, lp->nlpirows) );
+      SCIP_CALL( SCIPlpiGetBounds(lp->lpi, 0, lp->nlpicols-1, oldlb, oldub) );
+      SCIP_CALL( SCIPlpiGetSides(lp->lpi, 0, lp->nlpirows-1, oldlhs, oldrhs) );
+      SCIP_CALL( SCIPlpiGetObj(lp->lpi, 0, lp->nlpicols-1, oldobj) );
+
+      /* get storage for several arrays */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &newlb, lp->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &newub, lp->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &indcol, lp->nlpicols) );
+
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &newlhs, lp->nlpirows) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &newrhs, lp->nlpirows) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &indrow, lp->nlpirows) );
+
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &indallcol, lp->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &indallrow, lp->nlpirows) );
+
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &fixedc, lp->nlpicols) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &fixedr, lp->nlpirows) );
+
+      /* initialize: set objective to 0, get fixed variables */
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &newobj, lp->nlpicols) );
+      for (c = 0; c < lp->nlpicols; ++c)
+      {
+	 newobj[c] = 0.0;
+	 indallcol[c] = c;
+	 if ( SCIPsetIsFeasEQ(set, oldlb[c], oldub[c]) )
+	    fixedc[c] = TRUE;
+	 else
+	    fixedc[c] = FALSE;
+      }
+
+      /* initialize: get fixed slack variables */
+      for (r = 0; r < lp->nlpirows; ++r)
+      {
+	 indallrow[r] = r;
+	 if ( SCIPsetIsFeasEQ(set, oldlhs[r], oldrhs[r]) )
+	    fixedr[r] = TRUE;
+	 else
+	    fixedr[r] = FALSE;
+      }
+
+#ifdef DEBUG_LEXDUAL
+      {
+	 int j;
+	 
+	 if ( ! chooseBasic )
+	 {
+	    assert( primsol == NULL );
+	    SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
+	 }
+	 SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
+	 SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
+	 
+	 for (j = 0; j < lp->nlpicols; ++j)
+	 {
+	    if ( fixedc[j] )
+	       printf("%f (%d) [f] ", primsol[j], j);
+	    else
+	    {
+	       char type;
+	       switch ( cstat[j] )
+	       {
+	       case SCIP_BASESTAT_LOWER:
+		  type = 'l'; break;
+	       case SCIP_BASESTAT_UPPER:
+		  type = 'u'; break;
+	       case SCIP_BASESTAT_ZERO:
+		  type = 'z'; break;
+	       case SCIP_BASESTAT_BASIC:
+		  type = 'b'; break;
+	       default: abort();
+	       }
+	       printf("%f (%d) [%c] ", primsol[j], j, type);
+	    }
+	 }
+	 printf("\n\n");
+	 
+	 if ( ! chooseBasic )
+	 {
+	    SCIPsetFreeBufferArray(set, &primsol);
+	    assert( primsol == NULL );
+	 }
+      }
+#endif
+
+      /* perform lexicographic rounds */
+      pos = -1;
+      nruns = 0;
+      rounds = 0;
+      /* SCIP_CALL( lpSetLPInfo(lp, TRUE) ); */
+      do
+      {
+	 int localLexIterations = 0;
+	 int oldpos;
+
+	 /* get current solution */
+	 if ( chooseBasic )
+	    SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, dualsol, NULL, redcost) );
+	 else
+	 {
+	    SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, NULL, dualsol, NULL, redcost) );
+	    assert( primsol == NULL );
+	 }
+
+	 /* get current basis */
+	 SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
+
+	 /* check columns: find first candidate (either basic or nonbasic and zero reduced cost) and fix variables */
+	 nDualDeg = 0;
+	 cntcol = 0;
+	 oldpos = pos;
+	 pos = -1;
+	 for (c = 0; c < lp->nlpicols; ++c)
+	 {
+	    if ( ! fixedc[c] )
+	    {
+	       /* check whether variable is in basis */
+	       if ( cstat[c] == SCIP_BASESTAT_BASIC )
+	       {
+		  /* store first candidate */
+		  if ( pos == -1 && c > oldpos )
+		  {
+		     if ( !chooseBasic || ! SCIPsetIsIntegral(set, primsol[c]) )
+			pos = c;
+		  }
+	       }
+	       else
+	       {
+		  /* reduced cost == 0 -> possible candidate */
+		  if ( SCIPsetIsFeasZero(set, redcost[c]) )
+		  {
+		     ++nDualDeg;
+		     /* only if we have not yet found a candidate */
+		     if ( pos == -1 && c > oldpos )
+		     {
+			/* if the variable is at its lower bound - fix it, because its value cannot be reduced */
+			if ( cstat[c] == SCIP_BASESTAT_LOWER )
+			{
+			   newlb[cntcol] = oldlb[c];
+			   newub[cntcol] = oldlb[c];
+			   indcol[cntcol++] = c;
+			   fixedc[c] = TRUE;
+			}
+			else /* found a nonfixed candidate */
+			{
+			   if ( ! chooseBasic )
+			      pos = c;
+			}
+		     }
+		  }
+		  else
+		  {
+		     /* nonzero reduced cost -> variable can be fixed */
+		     if ( cstat[c] == SCIP_BASESTAT_LOWER )
+		     {
+			newlb[cntcol] = oldlb[c];
+			newub[cntcol] = oldlb[c];
+		     }
+		     else
+		     {
+			if ( cstat[c] == SCIP_BASESTAT_UPPER )
+			{
+			   newlb[cntcol] = oldub[c];
+			   newub[cntcol] = oldub[c];
+			}
+			else
+			{
+			   assert( cstat[c] == SCIP_BASESTAT_ZERO );
+			   newlb[cntcol] = 0.0;
+			   newub[cntcol] = 0.0;
+			}
+		     }
+		     indcol[cntcol++] = c;
+		     fixedc[c] = TRUE;
+		  }
+	       }
+	    }
+	 }
+      
+	 /* check rows */
+	 cntrow = 0;
+	 for (r = 0; r < lp->nlpirows; ++r)
+	 {
+	    if ( ! fixedr[r] )
+	    {
+	       /* consider only nonbasic rows */
+	       if ( rstat[r] != SCIP_BASESTAT_BASIC )
+	       {
+		  assert( rstat[r] != SCIP_BASESTAT_ZERO );
+		  if ( SCIPsetIsFeasZero(set, dualsol[r]) )
+		     ++nDualDeg;
+		  else
+		  {
+		     if ( SCIPsetIsFeasPositive(set, dualsol[r]) ) 
+		     {
+			assert( ! SCIPsetIsInfinity(set, -oldlhs[r]) );
+			newlhs[cntrow] = oldlhs[r];
+			newrhs[cntrow] = oldlhs[r];
+		     }
+		     else
+		     {
+			assert( ! SCIPsetIsInfinity(set, oldrhs[r]) );
+			newlhs[cntrow] = oldrhs[r];
+			newrhs[cntrow] = oldrhs[r];
+		     }
+		     indrow[cntrow++] = r;
+		     fixedr[r] = TRUE;
+		  }
+	       }
+	    }
+	 }
+	 
+	 if ( nDualDeg > 0 && pos >= 0 )
+	 {
+	    assert( 0 <= pos && pos < lp->nlpicols && pos > oldpos );
+
+	    /* change objective */
+	    if ( nruns == 0 )
+	    {
+	       /* set objective to appropriate unit vector for first run */
+	       newobj[pos] = 1.0;
+	       SCIP_CALL( SCIPlpiChgObj(lp->lpi, lp->nlpicols, indallcol, newobj) );
+	    }
+	    else
+	    {
+	       /* set obj. coef. to 1 for other runs (ones remain in previous positions) */
+	       SCIP_Real obj = 1.0;
+	       SCIP_CALL( SCIPlpiChgObj(lp->lpi, 1, &pos, &obj) );
+	    }
+
+	    /* fix variables */
+	    SCIP_CALL( SCIPlpiChgBounds(lp->lpi, cntcol, indcol, newlb, newub) );
+	    SCIP_CALL( SCIPlpiChgSides(lp->lpi, cntrow, indrow, newlhs, newrhs) );
+
+	    /* solve with primal simplex, because we are primal feasible, but not necessarily dual feasible */
+	    retcode = SCIPlpiSolvePrimal(lp->lpi);
+	    if ( retcode == SCIP_LPERROR )
+	    {
+	       *lperror = TRUE;
+	       SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") in lex-dual: primal simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
+	    }
+	    else
+	    {
+	       SCIP_CALL( retcode );
+	    }
+	    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
+	    lexIterations += iterations;
+	    localLexIterations += iterations;
+
+#ifdef DEBUG_LEXDUAL
+	    if ( iterations > 0 )
+	    {
+	       int j;
+	       
+	       if ( ! chooseBasic )
+	       {
+		  assert( primsol == NULL );
+		  SCIP_CALL( SCIPsetAllocBufferArray(set, &primsol, lp->nlpicols) );
+	       }
+	       SCIP_CALL( SCIPlpiGetSol(lp->lpi, NULL, primsol, NULL, NULL, NULL) );
+	       
+	       for (j = 0; j < lp->nlpicols; ++j)
+	       {
+		  if ( fixedc[j] )
+		     printf("%f (%d) [f] ", primsol[j], j);
+		  else
+		  {
+		     char cstart = '[';
+		     char cend = ']';
+		     char type;
+		     
+		     if (j == pos)
+		     {
+			cstart = '*';
+			cend = '*';
+		     }
+		     
+		     switch ( cstat[j] )
+		     {
+		     case SCIP_BASESTAT_LOWER:
+			type = 'l'; break;
+		     case SCIP_BASESTAT_UPPER:
+			type = 'u'; break;
+		     case SCIP_BASESTAT_ZERO:
+			type = 'z'; break;
+		     case SCIP_BASESTAT_BASIC:
+			type = 'b'; break;
+		     default: abort();
+		     }
+		     printf("%f (%d) %c%c%c ", primsol[j], j, cstart, type, cend);
+		  }
+	       }
+	       printf("\n\n");
+	       
+	       if ( ! chooseBasic )
+	       {
+		  SCIPsetFreeBufferArray(set, &primsol);
+		  assert( primsol == NULL );
+	       }
+	    }
+#endif
+
+	    /* count only as round if iterations have been performed */
+	    if ( iterations > 0 )
+	       ++rounds;
+	    ++nruns;
+	 }
+      }
+      while ( pos >= 0 && nDualDeg > 0 && (set->lp_lexdualmaxrounds == -1 || rounds < set->lp_lexdualmaxrounds) );
+
+      /* reset bounds, lhs/rhs, and obj */
+      SCIP_CALL( SCIPlpiChgBounds(lp->lpi, lp->nlpicols, indallcol, oldlb, oldub) );
+      SCIP_CALL( SCIPlpiChgSides(lp->lpi, lp->nlpirows, indallrow, oldlhs, oldrhs) );
+      SCIP_CALL( SCIPlpiChgObj(lp->lpi, lp->nlpicols, indallcol, oldobj) );
+      
+      /* resolve to update solvers internal data structures - should only produce few pivots - is this needed? */
+      retcode = SCIPlpiSolveDual(lp->lpi);
+      if ( retcode == SCIP_LPERROR )
+      {
+	 *lperror = TRUE;
+	 SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") dual simplex solving error in LP %d\n", stat->nnodes, stat->nlps);
+      }
+      else
+      {
+	 SCIP_CALL( retcode );
+      }
+      assert( SCIPlpiIsOptimal(lp->lpi) );
+      SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
+      lexIterations += iterations;
+
+      /* SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) ); */
+
+      /* count number of iterations */
+      if ( totalIterations == 0 && lexIterations > 0 )
+	 stat->nlps++;
+      
+      if ( lexIterations > 0 ) /* don't count the resolves after removing unused columns/rows */
+      {
+	 stat->nlpiterations += lexIterations;
+	 if ( resolve && !lp->lpifromscratch && stat->nlps > 1  )
+	 {
+	    stat->nlexdualresolvelps++;
+	    stat->nlexdualresolvelpiterations += lexIterations;
+	 }
+	 stat->nlexduallps++;
+	 stat->nlexduallpiterations += lexIterations;
+	 
+	 totalIterations += lexIterations;
+      }
+
+      /* free space */
+      SCIPsetFreeBufferArray(set, &newobj);
+
+      SCIPsetFreeBufferArray(set, &fixedr);
+      SCIPsetFreeBufferArray(set, &fixedc);
+
+      SCIPsetFreeBufferArray(set, &indallrow);
+      SCIPsetFreeBufferArray(set, &indallcol);
+
+      SCIPsetFreeBufferArray(set, &indrow);
+      SCIPsetFreeBufferArray(set, &newrhs);
+      SCIPsetFreeBufferArray(set, &newlhs);
+
+      SCIPsetFreeBufferArray(set, &indcol);
+      SCIPsetFreeBufferArray(set, &newub);
+      SCIPsetFreeBufferArray(set, &newlb);
+
+      SCIPsetFreeBufferArray(set, &oldobj);
+      SCIPsetFreeBufferArray(set, &oldrhs);
+      SCIPsetFreeBufferArray(set, &oldlhs);
+      SCIPsetFreeBufferArray(set, &oldub);
+      SCIPsetFreeBufferArray(set, &oldlb);
+
+      SCIPsetFreeBufferArray(set, &rstat);
+      SCIPsetFreeBufferArray(set, &cstat);
+
+      SCIPsetFreeBufferArray(set, &redcost);
+      SCIPsetFreeBufferArray(set, &dualsol);
+      if ( chooseBasic )
+	 SCIPsetFreeBufferArray(set, &primsol);
+      
+      /* stop timing */
+      SCIPclockStop(stat->lexduallptime, set);
+
+      SCIPdebugMessage("solved dual lexicographic LP %d in %d iterations (%d lex. iters.) in %d rounds\n", stat->lpcount, totalIterations, lexIterations, rounds);
+      printf("solved dual lexicographic LP %d in %d iterations (%d lex. iters.) in %d rounds\n", stat->lpcount, totalIterations, lexIterations, rounds);
+   }
+   lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
+   lp->solisbasic = TRUE;
+
+   if ( totalIterations > 0 )
+      stat->nlps++;
+   else
+   {
+      if ( keepsol && !(*lperror) )
+      {
+	 /* the solution didn't change: if the solution was valid before resolve, it is still valid */
+	 if( lp->validsollp == stat->lpcount-1 )
+	    lp->validsollp = stat->lpcount;
+	 if( lp->validfarkaslp == stat->lpcount-1 )
+	    lp->validfarkaslp = stat->lpcount;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls LPI to perform barrier, measures time and counts iterations, gets basis feasibility status */
 static
 SCIP_RETCODE lpBarrier(
@@ -9885,7 +10458,15 @@ SCIP_RETCODE lpAlgorithm(
       break;
 
    case SCIP_LPALGO_DUALSIMPLEX:
-      SCIP_CALL( lpDualSimplex(lp, set, stat, resolve, keepsol, lperror) );
+      /* run dual lexicographic simplex if required */
+      if ( set->lp_lexdualalgo && (!set->lp_lexdualrootonly || stat->maxdepth == 0) )
+      {
+	 SCIP_CALL( lpLexDualSimplex(lp, set, stat, resolve, keepsol, lperror) );
+      }
+      else
+      {
+	 SCIP_CALL( lpDualSimplex(lp, set, stat, resolve, keepsol, lperror) );
+      }
       break;
 
    case SCIP_LPALGO_BARRIER:
