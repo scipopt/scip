@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.49 2009/04/06 13:06:57 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.50 2009/08/31 16:30:31 bzfwinkm Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -212,6 +212,10 @@ SCIP_RETCODE SCIPreaderWrite(
    conss = prob->conss;
    nconss = prob->nconss;
    
+   varnames = NULL;
+   fixedvarnames = NULL; 
+   consnames = NULL;
+
    /* check, if reader is applicable on the given file */
    if( readerIsApplicable(reader, extension) && reader->readerwrite != NULL )
    {

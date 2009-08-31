@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.514 2009/08/03 20:03:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.515 2009/08/31 16:30:31 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2685,6 +2685,7 @@ SCIP_RETCODE writeProblem(
    fileextension = NULL;
    compression = NULL;
    file = NULL;
+   tmpfilename = NULL;
 
    if( filename != NULL &&  filename[0] != '\0' )
    {
