@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.257 2009/08/17 18:27:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.258 2009/08/31 17:26:58 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8165,7 +8165,7 @@ void SCIPvarChgBranchDirection(
    }
 }
 
-/** compares the index of two variables, only active or negated variables are allowed, if a variable
+/** compares the index of two variables, only active, fixed or negated variables are allowed, if a variable
  *  is negated then the index of the corresponding active variable is taken, returns -1 if first is
  *  smaller than, and +1 if first is greater than second variable index; returns 0 if both indices
  *  are equal, which means both variables are equal
@@ -8177,8 +8177,8 @@ int SCIPvarCompareActiveAndNegated(
 {
    assert(var1 != NULL);
    assert(var2 != NULL);
-   assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
-   assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
+   assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_FIXED);
+   assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_FIXED);
    
    if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
       var1 = SCIPvarGetNegatedVar(var1);

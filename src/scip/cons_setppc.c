@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.139 2009/08/17 18:27:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.140 2009/08/31 17:26:58 bzfwinkm Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -884,7 +884,7 @@ SCIP_RETCODE mergeMultiples(
       
       var1 = consdata->vars[v];
       assert(SCIPvarGetType(var1) == SCIP_VARTYPE_BINARY);
-      assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED);
+      assert(SCIPvarIsActive(var1) || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_FIXED);
       if( SCIPvarGetStatus(var1) == SCIP_VARSTATUS_NEGATED )
       {
          var1 = SCIPvarGetNegatedVar(var1);
@@ -894,7 +894,7 @@ SCIP_RETCODE mergeMultiples(
       
       var2 = consdata->vars[v-1];
       assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
-      assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED);
+      assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_FIXED);
       if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
       {
          var2 = SCIPvarGetNegatedVar(var2);
