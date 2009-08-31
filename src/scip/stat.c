@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.80 2009/04/06 13:07:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.81 2009/08/31 17:55:12 bzfpfets Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -50,6 +50,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->lexduallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->barrierlptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->divinglptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -86,6 +87,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->presolvingtime);
    SCIPclockFree(&(*stat)->primallptime);
    SCIPclockFree(&(*stat)->duallptime);
+   SCIPclockFree(&(*stat)->lexduallptime);
    SCIPclockFree(&(*stat)->barrierlptime);
    SCIPclockFree(&(*stat)->divinglptime);
    SCIPclockFree(&(*stat)->strongbranchtime);
@@ -116,6 +118,7 @@ void SCIPstatMark(
    assert(stat->nlps == 0);
    assert(stat->nprimallps == 0);
    assert(stat->nduallps == 0);
+   assert(stat->nlexduallps == 0);
    assert(stat->nbarrierlps == 0);
 
    stat->marked_nvaridx = stat->nvaridx;
@@ -137,6 +140,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->presolvingtime);
    SCIPclockReset(stat->primallptime);
    SCIPclockReset(stat->duallptime);
+   SCIPclockReset(stat->lexduallptime);
    SCIPclockReset(stat->barrierlptime);
    SCIPclockReset(stat->divinglptime);
    SCIPclockReset(stat->strongbranchtime);
@@ -151,9 +155,11 @@ void SCIPstatReset(
    stat->nlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
+   stat->nlexduallpiterations = 0;
    stat->nbarrierlpiterations = 0;
    stat->nprimalresolvelpiterations = 0;
    stat->ndualresolvelpiterations = 0;
+   stat->nlexdualresolvelpiterations = 0;
    stat->nnodelpiterations = 0;
    stat->ninitlpiterations = 0;
    stat->ndivinglpiterations = 0;
@@ -181,9 +187,11 @@ void SCIPstatReset(
    stat->nlps = 0;
    stat->nprimallps = 0;
    stat->nduallps = 0;
+   stat->nlexduallps = 0;
    stat->nbarrierlps = 0;
    stat->nprimalresolvelps = 0;
    stat->ndualresolvelps = 0;
+   stat->nlexdualresolvelps = 0;
    stat->nnodelps = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
