@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.33 2009/08/31 23:34:35 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.34 2009/08/31 23:42:51 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2213,7 +2213,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
       
    if (*n_varsadded)
    {
-      printf("added %d sets of constraints to reformulate product with binary variable in constraint %s\n", *n_varsadded, SCIPconsGetName(cons));
+      SCIPdebugMessage("added %d sets of constraints to reformulate product with binary variable in constraint %s\n", *n_varsadded, SCIPconsGetName(cons));
 
       /* clean empty bilin's and empty quad terms */
       for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
