@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.24 2009/08/25 12:55:24 bzfgleix Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.25 2009/08/31 22:32:36 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -849,8 +849,8 @@ void checkConsnames(
 
       if( strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 )
       {
-         SCIP_Real lhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetLhsQuadratic(cons);
-         SCIP_Real rhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetRhsQuadratic(cons);
+         SCIP_Real lhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetLhsQuadratic(scip, cons);
+         SCIP_Real rhs = strcmp(conshdlrname, "linear") == 0 ? SCIPgetLhsLinear(scip, cons) : SCIPgetRhsQuadratic(scip, cons);
 
          if( SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > GMS_MAX_NAMELEN )
          {
@@ -1189,8 +1189,8 @@ SCIP_RETCODE SCIPwriteGms(
 
       rangedrow = strcmp(conshdlrname, "linear") == 0 && !SCIPisEQ(scip, SCIPgetLhsLinear(scip, cons), SCIPgetRhsLinear(scip, cons))
          && !SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsLinear(scip, cons));
-      rangedrow = rangedrow || (strcmp(conshdlrname, "quadratic") == 0 && !SCIPisEQ(scip, SCIPgetLhsQuadratic(cons), SCIPgetRhsQuadratic(cons))
-         && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(cons)) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(cons)));
+      rangedrow = rangedrow || (strcmp(conshdlrname, "quadratic") == 0 && !SCIPisEQ(scip, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons))
+         && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)));
       rangedrow = rangedrow || (strcmp(conshdlrname, "varbound") == 0 && !SCIPisEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons))
          && !SCIPisInfinity(scip, -SCIPgetLhsVarbound(scip, cons)) && !SCIPisInfinity(scip, SCIPgetRhsVarbound(scip, cons)));
 
@@ -1293,12 +1293,12 @@ SCIP_RETCODE SCIPwriteGms(
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
-               SCIPgetNLinearVarsQuadratic(cons), SCIPgetLinearVarsQuadratic(cons), SCIPgetCoeffLinearVarsQuadratic(cons),
-               SCIPgetNQuadVarsQuadratic(cons), SCIPgetQuadVarsQuadratic(cons), SCIPgetLinearCoeffQuadVarsQuadratic(cons),
-               SCIPgetSqrCoeffQuadVarsQuadratic(cons),
-               SCIPgetNBilinTermQuadratic(cons), SCIPgetBilinVar1Quadratic(cons), SCIPgetBilinVar2Quadratic(cons),
-               SCIPgetBilinCoeffQuadratic(cons),
-               SCIPgetLhsQuadratic(cons),  SCIPgetRhsQuadratic(cons), transformed) );
+               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoeffLinearVarsQuadratic(scip, cons),
+               SCIPgetNQuadVarsQuadratic(scip, cons), SCIPgetQuadVarsQuadratic(scip, cons), SCIPgetLinearCoeffQuadVarsQuadratic(scip, cons),
+               SCIPgetSqrCoeffQuadVarsQuadratic(scip, cons),
+               SCIPgetNBilinTermQuadratic(scip, cons), SCIPgetBilinVar1Quadratic(scip, cons), SCIPgetBilinVar2Quadratic(scip, cons),
+               SCIPgetBilinCoeffQuadratic(scip, cons),
+               SCIPgetLhsQuadratic(scip, cons),  SCIPgetRhsQuadratic(scip, cons), transformed) );
 
          nlcons = TRUE;
       }

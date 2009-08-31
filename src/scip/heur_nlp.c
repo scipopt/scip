@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.17 2009/08/16 16:50:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.18 2009/08/31 22:32:36 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -778,8 +778,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
          for (i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i)
          {
             cons = SCIPconshdlrGetConss(conshdlr)[i];
-            for (j = 0; !havenlp && j < SCIPgetNQuadVarsQuadratic(cons); ++j)
-               if (SCIPvarGetType(SCIPgetQuadVarsQuadratic(cons)[j]) > SCIP_VARTYPE_INTEGER)
+            for (j = 0; !havenlp && j < SCIPgetNQuadVarsQuadratic(scip, cons); ++j)
+               if (SCIPvarGetType(SCIPgetQuadVarsQuadratic(scip, cons)[j]) > SCIP_VARTYPE_INTEGER)
                   havenlp = TRUE;
          }
       }

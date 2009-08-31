@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.31 2009/08/23 03:53:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.32 2009/08/31 22:32:36 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -6553,6 +6553,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
 /** Gets the number of variables in the linear term of a quadratic constraint.
  */
 int SCIPgetNLinearVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6566,6 +6567,7 @@ int SCIPgetNLinearVarsQuadratic(
  * Length is given by SCIPgetNLinearVarsQuadratic.
  */
 SCIP_VAR** SCIPgetLinearVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6578,6 +6580,7 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
 /** Gets the number of variables in the quadratic term of a quadratic constraint.
  */
 int SCIPgetNQuadVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6591,6 +6594,7 @@ int SCIPgetNQuadVarsQuadratic(
  * Length is given by SCIPgetNQuadVarsQuadratic.
  */
 SCIP_VAR** SCIPgetQuadVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6604,6 +6608,7 @@ SCIP_VAR** SCIPgetQuadVarsQuadratic(
  * Length is given by SCIPgetNLinearVarsQuadratic.
  */
 SCIP_Real* SCIPgetCoeffLinearVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6617,6 +6622,7 @@ SCIP_Real* SCIPgetCoeffLinearVarsQuadratic(
  * Length is given by SCIPgetNQuadVarsQuadratic.
  */
 SCIP_Real* SCIPgetLinearCoeffQuadVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6630,6 +6636,7 @@ SCIP_Real* SCIPgetLinearCoeffQuadVarsQuadratic(
  * Length is given by SCIPgetNQuadVarsQuadratic.
  */
 SCIP_Real* SCIPgetSqrCoeffQuadVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6642,6 +6649,7 @@ SCIP_Real* SCIPgetSqrCoeffQuadVarsQuadratic(
 /** Gets the number of bilinear terms in a quadratic constraint.
  */
 int SCIPgetNBilinTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6655,6 +6663,7 @@ int SCIPgetNBilinTermQuadratic(
  * Length is given by SCIPgetNBilinTermQuadratic.
  */
 SCIP_VAR** SCIPgetBilinVar1Quadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6668,6 +6677,7 @@ SCIP_VAR** SCIPgetBilinVar1Quadratic(
  * Length is given by SCIPgetNBilinTermQuadratic.
  */
 SCIP_VAR** SCIPgetBilinVar2Quadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6681,6 +6691,7 @@ SCIP_VAR** SCIPgetBilinVar2Quadratic(
  * Length is given by SCIPgetNBilinTermQuadratic.
  */
 SCIP_Real* SCIPgetBilinCoeffQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6693,6 +6704,7 @@ SCIP_Real* SCIPgetBilinCoeffQuadratic(
 /** Gets the left hand side of a quadratic constraint.
  */
 SCIP_Real SCIPgetLhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {
@@ -6705,6 +6717,7 @@ SCIP_Real SCIPgetLhsQuadratic(
 /** Gets the right hand side of a quadratic constraint.
  */
 SCIP_Real SCIPgetRhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    )
 {

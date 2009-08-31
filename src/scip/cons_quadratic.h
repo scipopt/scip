@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.6 2009/07/31 11:37:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.7 2009/08/31 22:32:36 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @brief  constraint handler for quadratic constraints
@@ -110,6 +110,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
  */
 extern
 int SCIPgetNLinearVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -118,6 +119,7 @@ int SCIPgetNLinearVarsQuadratic(
  */
 extern
 SCIP_VAR** SCIPgetLinearVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -125,6 +127,7 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
  */
 extern
 int SCIPgetNQuadVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -133,6 +136,7 @@ int SCIPgetNQuadVarsQuadratic(
  */
 extern
 SCIP_VAR** SCIPgetQuadVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -141,6 +145,7 @@ SCIP_VAR** SCIPgetQuadVarsQuadratic(
  */
 extern
 SCIP_Real* SCIPgetCoeffLinearVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -149,6 +154,7 @@ SCIP_Real* SCIPgetCoeffLinearVarsQuadratic(
  */
 extern
 SCIP_Real* SCIPgetLinearCoeffQuadVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -157,6 +163,7 @@ SCIP_Real* SCIPgetLinearCoeffQuadVarsQuadratic(
  */
 extern
 SCIP_Real* SCIPgetSqrCoeffQuadVarsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -164,6 +171,7 @@ SCIP_Real* SCIPgetSqrCoeffQuadVarsQuadratic(
  */
 extern
 int SCIPgetNBilinTermQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -172,6 +180,7 @@ int SCIPgetNBilinTermQuadratic(
  */
 extern
 SCIP_VAR** SCIPgetBilinVar1Quadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -180,6 +189,7 @@ SCIP_VAR** SCIPgetBilinVar1Quadratic(
  */
 extern
 SCIP_VAR** SCIPgetBilinVar2Quadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -188,6 +198,7 @@ SCIP_VAR** SCIPgetBilinVar2Quadratic(
  */
 extern
 SCIP_Real* SCIPgetBilinCoeffQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -195,6 +206,7 @@ SCIP_Real* SCIPgetBilinCoeffQuadratic(
  */
 extern
 SCIP_Real SCIPgetLhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
@@ -202,6 +214,7 @@ SCIP_Real SCIPgetLhsQuadratic(
  */
 extern
 SCIP_Real SCIPgetRhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< pointer to hold the created constraint */
    );
 
