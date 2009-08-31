@@ -81,6 +81,7 @@ features:
 - interval arithmetic functions can work with unbounded intervals
   added new functions to allow more operations on intervals, including solving quadratic interval equations
 - added new preprocessing step (mergeMultiples) in cons_setppc.c where equal variables are merged
+- can now run lexicographical dual algorithm (parameter lp/lexdualalgo)
 
 performance improvements:
 - replaced some function calls in loop conditions
