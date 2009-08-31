@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.32 2009/08/31 22:32:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.33 2009/08/31 23:34:35 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -23,13 +23,11 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /** TODO list:
- * - SCIP coding style guidelines
  * - SCIP might fix variables on +/- infty; remove them in presolve and take care later
  * - constraints that are always feasible w.r.t. local/global bounds should be enabled/disabled (see logicor, setppc)
  * - round constraint bounds to integers if all coefficients and variables are (impl.) integer
  * - constraints in one variable should be replaced by linear variable or similar
  * - recognize and reformulate complementarity constraints (x*y = 0)
- * - what is a good sepalp freq? is it 1?
  * - check if some quadratic terms appear in several constraints and try to simplify (e.g., nous1)
  * - skip separation in enfolp if for current LP (check LP id) was already separated
  * - don't iterate over hash map, use array additionally
@@ -45,13 +43,6 @@
 #include "scip/cons_and.h"
 #include "scip/cons_varbound.h"
 #include "scip/intervalarith.h"
-#ifdef WITH_CONSBRANCHNL
-#include "cons_branchnonlinear.h"
-#endif
-#ifdef WITH_SOC3
-#include "cons_soc3.h"
-#include "cons_soc.h"
-#endif
 #include "scip/heur_nlp.h"
 #include "scip/nlpi.h"
 
@@ -110,7 +101,6 @@ struct SCIP_ConsData
    unsigned char   is_removedfixings:1; /**< whether we have removed fixed/aggr/multiaggr variables */
    unsigned char   is_propagated:1; /**< whether the constraint was propagated with respect to the current bounds */
    unsigned char   is_presolved:1;/**< whether we have checked for possibilities of upgrading or implicit integer variables */
-   unsigned char   soc_added:1;   /**< whether a SOC constraint has been added for this constraint */
 
    SCIP_Real       lhsviol;       /**< violation of lower bound by current solution (used temporarily inside constraint handler) */
    SCIP_Real       rhsviol;       /**< violation of lower bound by current solution (used temporarily inside constraint handler) */
@@ -139,7 +129,6 @@ typedef struct PresolveBilinItem
    int           bilinidx;   /**< index in bilin array */
 } PresolveBilinItem;
 
-#ifndef WITH_CONSBRANCHNL
 /** Stores information about the infeasibility assigned to a variable */
 struct VarInfeasibility
 {
@@ -150,7 +139,6 @@ struct VarInfeasibility
 };
 /** Infeasibility of a variable. */
 typedef struct VarInfeasibility VARINFEASIBILITY;
-#endif
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
@@ -158,10 +146,6 @@ struct SCIP_ConshdlrData
    SCIP_Bool       replace_sqrbinary;   /**< whether squares of binary variables are replaced by the variable itself */
    int             replace_binaryprod_length; /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
    SCIP_Bool       disaggregation;      /**< whether we should disaggregate block separable quadratic constraints */
-#ifdef WITH_SOC3
-   SCIP_Bool       upgrade_soc;         /**< whether we should upgrade to SOC constraints, if possible */
-   int             soc3_nr_auxvars;     /**< how many auxiliary variables to use when upgrading to SOC3 constraints */
-#endif
    SCIP_Real       mincutefficacy;      /**< minimal efficacy of a cut in order to add it to relaxation */
    SCIP_Bool       do_scaling;          /**< whether constraints should be scaled in the feasibility check */
    SCIP_Bool       fast_propagate;      /**< whether a faster but maybe less effective propagation should be used */
@@ -171,15 +155,11 @@ struct SCIP_ConshdlrData
    SCIP_HEUR*      nlpheur;             /**< a pointer to the NLP heuristic */
    SCIP_EVENTHDLR* eventhdlr;           /**< our handler for variable bound change events */
 
-#ifndef WITH_CONSBRANCHNL
    SCIP_HASHMAP*      branchcand;             /**< branching candidates */
    VARINFEASIBILITY*  varinfeas;              /**< list of variable infeasibilities */
    
    char               strategy;               /**< branching strategy */
    SCIP_Real          mindistbrpointtobound;  /**< minimal (fractional) distance of branching point to bound */
-#else
-   SCIP_CONSHDLR*  branchnl;            /**< a pointer to the constraint handler for branching on nonlinear variables */
-#endif
 };
 
 /*
@@ -188,7 +168,6 @@ struct SCIP_ConshdlrData
 
 /* put your local methods here, and declare them static */
 
-#ifndef WITH_CONSBRANCHNL
 /** clears list of branching candidates */
 static
 SCIP_RETCODE clearBranchingCandidates(
@@ -581,7 +560,6 @@ SCIP_RETCODE updateVarInfeasibility(
    
    return SCIP_OKAY;
 }
-#endif
 
 /** translate from one value of infinity to another
  * if val is >= infty1, then give infty2, else give val */
@@ -1827,7 +1805,6 @@ SCIP_RETCODE presolveDisaggregate(
       blockconsdata->is_removedfixings = TRUE;
       blockconsdata->is_propagated = FALSE;
       blockconsdata->is_presolved  = FALSE; /* so that in the next presolve round maybe auxvar is made implicit integer */
-      blockconsdata->soc_added     = FALSE;
 
       SCIP_CALL( SCIPcreateCons(scip, &blockcons, name, conshdlr, blockconsdata, 
          SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
@@ -2265,563 +2242,6 @@ SCIP_RETCODE presolveTryAddLinearReform(
 
    return SCIP_OKAY;
 }
-
-#ifdef WITH_SOC3
-/** creates SOC3 constraints for input sum_{i=1}^n alpha_i x_i^2 <= beta y^2.
- * if n>2, calls same function recursively
- */
-static
-SCIP_RETCODE presolveCreateSOC3(
-   SCIP*        scip,       /**< SCIP data structure */
-   SCIP_VAR**   lhsvar,     /**< variables on left hand side (x_i) */
-   SCIP_Real*   lhscoeff,   /**< coefficients of variables on left hand side (alpha_i) */
-   int          nlhs,       /**< number of variables on left hand side (n) */
-   SCIP_VAR*    rhsvar,     /**< variable on right hand side (y) */
-   SCIP_Real    rhscoeff,   /**< coefficient of variable on right hand side (beta) */
-   const char*  basename,   /**< prefix for variable and constraint name */
-   SCIP_CONS*   origcons,   /**< original constraint for which this SOC3 set is added */
-   int          soc3_nr_auxvars /**< number of auxiliary variables to use for a SOC3 constraint, or 0 if automatic */
-   )
-{
-   char       name[255];
-   SCIP_CONS* newcons;
-   SCIP_VAR*  auxvar1;
-   SCIP_VAR*  auxvar2;
-
-   assert(scip     != NULL);
-   assert(lhsvar   != NULL);
-   assert(lhscoeff != NULL);
-   assert(nlhs     >= 2);
-   assert(rhsvar   != NULL);
-   assert(basename != NULL);
-   
-   if (nlhs == 2)
-   { /* end of recursion */
-      assert(lhscoeff[0] > 0);
-      assert(lhscoeff[1] > 0);
-      assert(rhscoeff    > 0);
-      assert(lhsvar[0] != NULL);
-      assert(lhsvar[1] != NULL);
-      SCIPsnprintf(name, 255, "%s_soc3", basename); /* TODO think of better name */
-      if (soc3_nr_auxvars)
-      {
-         SCIP_CALL( SCIPcreateConsSOC3(scip, &newcons, name, soc3_nr_auxvars,
-            sqrt(lhscoeff[0]), lhsvar[0], sqrt(lhscoeff[1]), lhsvar[1], sqrt(rhscoeff), rhsvar,
-            SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
-            SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
-            SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPcreateConsSOC3byTol(scip, &newcons, name, SCIPfeastol(scip),
-            sqrt(lhscoeff[0]), lhsvar[0], sqrt(lhscoeff[1]), lhsvar[1], sqrt(rhscoeff), rhsvar,
-            SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
-            SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
-            SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
-      }
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-      SCIPdebugMessage("added SOC3 constraint %s: ", name);
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
-#endif
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-      
-      return SCIP_OKAY;
-   }
-
-   if (nlhs == 3)
-   { /* a bit special case too */
-      /* for first two variables on lhs, create a new aux.var and a new SOC3 */
-      SCIPsnprintf(name, 255, "%s#z1", basename);
-      SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
-      SCIP_CALL( SCIPaddVar(scip, auxvar1) );
-
-      /* constraint alpha_0 x_0^2 + alpha_1 x_1^2 <= auxvar^2 */
-      SCIP_CALL( presolveCreateSOC3(scip, lhsvar, lhscoeff, 2, auxvar1, 1., name, origcons, soc3_nr_auxvars) );
-
-      /* create new constraint alpha_2 x_2^2 + auxvar^2 <= rhscoeff * rhsvar^2 */
-      SCIPsnprintf(name, 255, "%s_soc3", basename); /* TODO think of better name */
-      if (soc3_nr_auxvars)
-      {
-         SCIP_CALL( SCIPcreateConsSOC3(scip, &newcons, name, soc3_nr_auxvars,
-            sqrt(lhscoeff[2]), lhsvar[2], 1., auxvar1, sqrt(rhscoeff), rhsvar,
-            SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
-            SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
-            SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPcreateConsSOC3byTol(scip, &newcons, name, SCIPfeastol(scip),
-            sqrt(lhscoeff[2]), lhsvar[2], 1., auxvar1, sqrt(rhscoeff), rhsvar,
-            SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
-            SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
-            SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
-      }
-      SCIP_CALL( SCIPaddCons(scip, newcons) );
-      SCIPdebugMessage("added SOC3 constraint %s: ", name);
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
-#endif
-      SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-            
-      SCIP_CALL( SCIPreleaseVar(scip, &auxvar1) );
-      
-      return SCIP_OKAY;
-   }
-   
-   /* nlhs >= 4 */
-   
-   SCIPsnprintf(name, 255, "%s#z1", basename);
-   SCIP_CALL( SCIPcreateVar(scip, &auxvar1, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPaddVar(scip, auxvar1) );
-
-   /* constraints for left half of lhs */
-   SCIP_CALL( presolveCreateSOC3(scip, lhsvar, lhscoeff, nlhs/2, auxvar1, 1., name, origcons, soc3_nr_auxvars) );
-
-   SCIPsnprintf(name, 255, "%s#z2", basename);
-   SCIP_CALL( SCIPcreateVar(scip, &auxvar2, name, 0., SCIPinfinity(scip), 0., SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL) );
-   SCIP_CALL( SCIPaddVar(scip, auxvar2) );
-
-   SCIP_CALL( presolveCreateSOC3(scip, &lhsvar[nlhs/2], &lhscoeff[nlhs/2], nlhs-nlhs/2, auxvar2, 1., name, origcons, soc3_nr_auxvars) );
-   
-   /* SOC constraint binding both auxvar's */
-   SCIPsnprintf(name, 255, "%s_soc3", basename); /* TODO think of better name */
-   if (soc3_nr_auxvars)
-   {
-      SCIP_CALL( SCIPcreateConsSOC3(scip, &newcons, name, soc3_nr_auxvars,
-         1., auxvar1, 1., auxvar2, sqrt(rhscoeff), rhsvar,
-         SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
-         SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
-         SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
-   }
-   else
-   {
-      SCIP_CALL( SCIPcreateConsSOC3byTol(scip, &newcons, name, SCIPfeastol(scip),
-         1., auxvar1, 1., auxvar2, sqrt(rhscoeff), rhsvar,
-         SCIPconsIsInitial(origcons), SCIPconsIsSeparated(origcons), SCIPconsIsEnforced(origcons),
-         SCIPconsIsChecked(origcons), SCIPconsIsPropagated(origcons),  SCIPconsIsLocal(origcons),
-         SCIPconsIsDynamic(origcons), SCIPconsIsRemovable(origcons), SCIPconsIsStickingAtNode(origcons)) );
-   }
-   SCIP_CALL( SCIPaddCons(scip, newcons) );
-   SCIPdebugMessage("added SOC3 constraint %s: ", name);
-#ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPprintCons(scip, newcons, NULL) );
-#endif
-   SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-
-   SCIP_CALL( SCIPreleaseVar(scip, &auxvar1) );
-   SCIP_CALL( SCIPreleaseVar(scip, &auxvar2) );
-   
-   return SCIP_OKAY;
-}
-
-/** adds for a constraint sum_i alpha_i x_i^2 <= beta * y a set of SOC3 constraints */
-static
-SCIP_RETCODE presolveTryAddSOC(
-   SCIP*           scip,        /**< SCIP data structure */
-   SCIP_CONS*      cons,        /**< constraint */
-   SCIP_HASHMAP*   terms,       /**< constraint function in form of PresolveQuadTerm's */
-   SCIP_Real       constant,    /**< constant part of constraint function */
-   int             soc3_nr_auxvars /**< number of auxiliary variables to use for a SOC3 constraint, or 0 if automatic */
-)
-{
-   SCIP_CONSDATA* consdata;
-   int            nterms;
-   SCIP_VAR**     lhsvar;
-   SCIP_Real*     lhscoeff;
-   int            lhscount = 0;
-   SCIP_VAR*      rhsvar = NULL; 
-   SCIP_Real      rhscoeff = 0.0;
-   SCIP_HASHMAPLIST* list;
-   SCIP_VAR*         var;
-   PresolveQuadTerm* term;
-   int            i;
-   
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(terms != NULL);
-   assert(!SCIPisInfinity(scip, ABS(constant)));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
-   if (!SCIPisZero(scip, consdata->rhs - constant) && !SCIPisZero(scip, consdata->lhs - constant))
-      return SCIP_OKAY; /* do not even need to try */
-
-   nterms = SCIPhashmapGetNEntries(terms);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhsvar,   nterms-1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhscoeff, nterms-1) );
-
-   if (SCIPisZero(scip, consdata->rhs - constant))
-   { /* try whether constraint on upper bound is SOC */
-      for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
-         for (list = SCIPhashmapGetList(terms, i); list; list = SCIPhashmapListGetNext(list))
-         {
-            var  = (SCIP_VAR*)         SCIPhashmapListGetOrigin(list);
-            term = (PresolveQuadTerm*) SCIPhashmapListGetImage(list);
-            if (term->lincoeff || term->bilin)
-            { /* variable with linear part or variable in bilinear term -> both sides cannot be SOC */
-               SCIPfreeBufferArray(scip, &lhsvar);
-               SCIPfreeBufferArray(scip, &lhscoeff);
-               return SCIP_OKAY;
-            }
-            if (!term->sqrcoeff) /* loose variable */
-               continue;
-
-            if (term->sqrcoeff > 0)
-            {
-               if (lhscount >= nterms-1)
-               { /* too many variables on lhs, i.e., all variables seem to have positive coefficient */
-                  rhsvar = NULL;
-                  i = SCIPhashmapGetNLists(terms);
-                  break;
-               }
-               lhsvar  [lhscount] = var;
-               lhscoeff[lhscount] = term->sqrcoeff;
-               ++lhscount;
-            }
-            else if (rhsvar || SCIPisNegative(scip, SCIPvarGetLbGlobal(var)))
-            { /* second variable with negative coefficient or neg. coefficient but var not >= 0 -> cannot be SOC */
-               rhsvar = NULL;
-               i = SCIPhashmapGetNLists(terms);
-               break;
-            }
-            else
-            {
-               rhsvar   = var;
-               rhscoeff = -term->sqrcoeff;
-            }
-         }
-   }
-   
-   if (rhsvar && lhscount >= 2)
-   { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
-      consdata->rhs = SCIPinfinity(scip);
-   }
-   else if (SCIPisZero(scip, consdata->lhs - constant))
-   { /* if the first failed, try if constraint on lower bound is SOC (using negated coefficients) */
-      rhsvar = NULL;
-      lhscount = 0;
-      for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
-         for (list = SCIPhashmapGetList(terms, i); list; list = SCIPhashmapListGetNext(list))
-         {
-            var  = (SCIP_VAR*)         SCIPhashmapListGetOrigin(list);
-            term = (PresolveQuadTerm*) SCIPhashmapListGetImage(list);
-
-            if (term->lincoeff || term->bilin)
-            { /* variable with linear part or variable in bilinear term -> both sides cannot be SOC */
-               SCIPfreeBufferArray(scip, &lhsvar);
-               SCIPfreeBufferArray(scip, &lhscoeff);
-               return SCIP_OKAY;
-            }
-
-            if (!term->sqrcoeff) /* loose variable */
-               continue;
-
-            if (term->sqrcoeff < 0)
-            {
-               if (lhscount >= nterms-1)
-               { /* too many variables on lhs, i.e., all variables seem to have positive coefficient */
-                  rhsvar = NULL;
-                  i = SCIPhashmapGetNLists(terms);
-                  break;
-               }
-               lhsvar  [lhscount] =  var;
-               lhscoeff[lhscount] = -term->sqrcoeff;
-               ++lhscount;
-            }
-            else if (rhsvar || SCIPisNegative(scip, SCIPvarGetLbGlobal(var)))
-            { /* second variable with negative coefficient or neg. coefficient but var not >= 0 -> cannot be SOC */
-               rhsvar = NULL;
-               i = SCIPhashmapGetNLists(terms);
-               break;
-            }
-            else
-            {
-               rhsvar   = var;
-               rhscoeff = term->sqrcoeff;
-            }
-         }
-      
-      if (rhsvar && lhscount >= 2)
-      { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
-         consdata->lhs = -SCIPinfinity(scip);         
-      }
-   }
-
-   if (rhsvar && lhscount >= 2)
-   { /* have SOC constraint */
-      SCIPdebugMessage("found constraint %s to be SOC\n", SCIPconsGetName(cons));
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-#endif
-      SCIP_CALL( presolveCreateSOC3(scip, lhsvar, lhscoeff, lhscount, rhsvar, rhscoeff, SCIPconsGetName(cons), cons, soc3_nr_auxvars) );
-      consdata->soc_added = TRUE;
-   }
-
-   SCIPfreeBufferArray(scip, &lhsvar);
-   SCIPfreeBufferArray(scip, &lhscoeff);
-
-   return SCIP_OKAY; 
-}
-
-/** checks if constraint can be formulated as SOC constraint and creates corresponding SOC.
- * Depending on which side could be upgraded, consdata->lhs or rhs is set to -/+infinity.
- */
-static
-SCIP_RETCODE presolveTryUpgradeSOC(
-   SCIP*           scip,        /**< SCIP data structure */
-   SCIP_CONS*      cons,        /**< constraint */
-   SCIP_HASHMAP*   terms,       /**< constraint function in form of PresolveQuadTerm's */
-   SCIP_Real       constant     /**< constant part of constraint function */
-   )
-{
-   SCIP_CONSDATA* consdata;
-   int            nterms;
-   SCIP_VAR**     lhsvar;
-   SCIP_Real*     lhscoeff = NULL;
-   SCIP_Real*     lhsoffset = NULL;
-   SCIP_Real      lhsconstant = 0.0;
-   int            lhscount = 0;
-   SCIP_VAR*      rhsvar = NULL; 
-   SCIP_Real      rhscoeff = 0.0;
-   SCIP_Real      rhsoffset = 0.0;
-   SCIP_HASHMAPLIST* list;
-   SCIP_VAR*         var;
-   PresolveQuadTerm* term;
-   int            i, j;
-   
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(terms != NULL);
-   assert(!SCIPisInfinity(scip, ABS(constant)));
-
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   
-   nterms = SCIPhashmapGetNEntries(terms);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhsvar,   nterms-1) );
-
-   if (!SCIPisInfinity(scip, consdata->rhs))
-   { /* try whether constraint on right hand side is SOC */
-      lhsconstant = constant - consdata->rhs;
-
-      for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
-         for (list = SCIPhashmapGetList(terms, i); list; list = SCIPhashmapListGetNext(list))
-         {
-            var  = (SCIP_VAR*)         SCIPhashmapListGetOrigin(list);
-            term = (PresolveQuadTerm*) SCIPhashmapListGetImage(list);
-            if (term->bilin)
-            { /* variable with bilinear term -> both sides cannot be SOC */
-               SCIPfreeBufferArray(scip, &lhsvar);
-               SCIPfreeBufferArrayNull(scip, &lhscoeff);
-               SCIPfreeBufferArrayNull(scip, &lhsoffset);
-               return SCIP_OKAY;
-            }
-            
-            if (!term->sqrcoeff)
-            {
-               if (term->lincoeff)
-               {  /* linear variable, not supported yet @TODO */
-                  rhsvar = NULL;
-                  i = SCIPhashmapGetNLists(terms);
-                  break;
-               }
-               else
-               {  /* loose variable */
-                  continue;
-               }
-            }
-            
-            if (term->sqrcoeff > 0)
-            {
-               if (lhscount >= nterms-1)
-               { /* too many variables on lhs, i.e., all variables seem to have positive coefficient */
-                  rhsvar = NULL;
-                  i = SCIPhashmapGetNLists(terms);
-                  break;
-               }
-               
-               lhsvar  [lhscount] = var;
-
-               if (term->sqrcoeff != 1.0)
-               {
-                  if (!lhscoeff)
-                  {
-                     SCIP_CALL( SCIPallocBufferArray(scip, &lhscoeff, nterms-1) );
-                     for (j = 0; j < lhscount; ++j)
-                        lhscoeff[j] = 1.0;
-                  }
-                  lhscoeff[lhscount] = sqrt(term->sqrcoeff);
-               }
-               else if (lhscoeff)
-                  lhscoeff[lhscount] = 1.0;
-               
-               if (term->lincoeff != 0.0)
-               {
-                  if (!lhsoffset)
-                  {
-                     SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffset, nterms-1) );
-                     for (j = 0; j < lhscount; ++j)
-                        lhsoffset[j] = 0.0;
-                  }
-                  lhsoffset[lhscount] = term->lincoeff / (2 * term->sqrcoeff);
-                  lhsconstant -= term->lincoeff * term->lincoeff / (4 * term->sqrcoeff);
-               }
-               else if (lhsoffset)
-                  lhsoffset[lhscount] = 0.0;
-               
-               ++lhscount;
-            }
-            else if (rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(var), term->lincoeff / (2*term->sqrcoeff)))
-            { /* second variable with negative coefficient -> cannot be SOC */
-              /* or lower bound of variable does not ensure positivity of right hand side */
-               rhsvar = NULL;
-               i = SCIPhashmapGetNLists(terms);
-               break;
-            }
-            else
-            { 
-               rhsvar    = var;
-               rhscoeff  = sqrt(-term->sqrcoeff);
-               rhsoffset = term->lincoeff / (2*term->sqrcoeff);
-               lhsconstant -= term->lincoeff * term->lincoeff / (4 * term->sqrcoeff);
-            }
-         }
-   }
-   
-   if (rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant))
-   { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
-      consdata->rhs = SCIPinfinity(scip);
-   }
-   else if (!SCIPisInfinity(scip, -consdata->lhs))
-   { /* if the first failed, try if constraint on left hand side is SOC (using negated coefficients) */
-      SCIPfreeBufferArrayNull(scip, &lhscoeff);
-      SCIPfreeBufferArrayNull(scip, &lhsoffset);
-      lhscount = 0;
-      rhsvar = NULL;
-      
-      lhsconstant = consdata->lhs - constant;
-
-      for (i = 0; i < SCIPhashmapGetNLists(terms); ++i)
-         for (list = SCIPhashmapGetList(terms, i); list; list = SCIPhashmapListGetNext(list))
-         {
-            var  = (SCIP_VAR*)         SCIPhashmapListGetOrigin(list);
-            term = (PresolveQuadTerm*) SCIPhashmapListGetImage(list);
-            if (term->bilin)
-            { /* variable with bilinear term -> both sides cannot be SOC */
-               SCIPfreeBufferArray(scip, &lhsvar);
-               SCIPfreeBufferArrayNull(scip, &lhscoeff);
-               SCIPfreeBufferArrayNull(scip, &lhsoffset);
-               return SCIP_OKAY;
-            }
-            
-            if (!term->sqrcoeff)
-            {
-               if (term->lincoeff)
-               {  /* linear variable, not supported yet @TODO */
-                  rhsvar = NULL;
-                  i = SCIPhashmapGetNLists(terms);
-                  break;
-               }
-               else
-               {  /* loose variable */
-                  continue;
-               }
-            }
-            
-            if (term->sqrcoeff < 0)
-            {
-               if (lhscount >= nterms-1)
-               { /* too many variables on lhs, i.e., all variables seem to have negative coefficient */
-                  rhsvar = NULL;
-                  i = SCIPhashmapGetNLists(terms);
-                  break;
-               }
-               
-               lhsvar  [lhscount] = var;
-
-               if (term->sqrcoeff != -1.0)
-               {
-                  if (!lhscoeff)
-                  {
-                     SCIP_CALL( SCIPallocBufferArray(scip, &lhscoeff, nterms-1) );
-                     for (j = 0; j < lhscount; ++j)
-                        lhscoeff[j] = 1.0;
-                  }
-                  lhscoeff[lhscount] = sqrt(-term->sqrcoeff);
-               }
-               else if (lhscoeff)
-                  lhscoeff[lhscount] = 1.0;
-               
-               if (term->lincoeff != 0.0)
-               {
-                  if (!lhsoffset)
-                  {
-                     SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffset, nterms-1) );
-                     for (j = 0; j < lhscount; ++j)
-                        lhsoffset[j] = 0.0;
-                  }
-                  lhsoffset[lhscount] = term->lincoeff / (2 * term->sqrcoeff);
-                  lhsconstant += term->lincoeff * term->lincoeff / (4 * term->sqrcoeff);
-               }
-               else if (lhsoffset)
-                  lhsoffset[lhscount] = 0.0;
-               
-               ++lhscount;
-            }
-            else if (rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(var), term->lincoeff / (2*term->sqrcoeff)))
-            { /* second variable with positive coefficient -> cannot be SOC */
-              /* or lower bound of variable does not ensure positivity of right hand side */
-               rhsvar = NULL;
-               i = SCIPhashmapGetNLists(terms);
-               break;
-            }
-            else
-            { 
-               rhsvar    = var;
-               rhscoeff  = sqrt(term->sqrcoeff);
-               rhsoffset = term->lincoeff / (2*term->sqrcoeff);
-               lhsconstant += term->lincoeff * term->lincoeff / (4 * term->sqrcoeff);
-            }
-         }
-      
-      if (rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant))
-      { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
-         consdata->lhs = -SCIPinfinity(scip);
-      }
-   }
-
-   if (rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant))
-   { /* have SOC constraint */
-      SCIP_CONS* soccons;
-      SCIPdebugMessage("found constraint %s to be SOC\n", SCIPconsGetName(cons));
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
-#endif
-  
-      SCIP_CALL( SCIPcreateConsSOC(scip, &soccons, SCIPconsGetName(cons),
-         lhscount, lhsvar, lhscoeff, lhsoffset, lhsconstant,
-         rhsvar, rhscoeff, rhsoffset,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-#ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPprintCons(scip, soccons, NULL) );
-#endif
-      SCIP_CALL( SCIPaddCons(scip, soccons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &soccons) );
-   }
-
-   SCIPfreeBufferArray(scip, &lhsvar);
-   SCIPfreeBufferArrayNull(scip, &lhscoeff);
-   SCIPfreeBufferArrayNull(scip, &lhsoffset);
-   
-   return SCIP_OKAY;
-}
-#endif
 
 static
 SCIP_RETCODE checkCurvature(
@@ -3765,9 +3185,6 @@ SCIP_RETCODE registerVariableInfeasibilities(
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
-#ifdef WITH_CONSBRANCHNL
-   assert(conshdlrdata->branchnl != NULL);
-#endif
    
    *nnotify = 0;
 
@@ -3807,11 +3224,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
             else
                gap = (xval-xlb)*(xub-xval)/(1+2*ABS(xval));
             assert(!SCIPisNegative(scip, gap));
-#ifdef WITH_CONSBRANCHNL
-            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvar[j], MAX(gap, 0.)) );
-#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->quadvar[j], MAX(gap, 0.)) );
-#endif
             ++*nnotify;
          }
       }
@@ -3822,11 +3235,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          xub  = SCIPvarGetUbLocal(consdata->bilinvar1[j]);
          if (SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub))
          {
-#ifdef WITH_CONSBRANCHNL
-            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvar1[j], SCIPinfinity(scip)) );
-#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvar1[j], SCIPinfinity(scip)) );
-#endif
             ++*nnotify;
             continue;
          }
@@ -3835,11 +3244,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          yub  = SCIPvarGetUbLocal(consdata->bilinvar2[j]);
          if (SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub))
          {
-#ifdef WITH_CONSBRANCHNL
-            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvar2[j], SCIPinfinity(scip)) );
-#else
             SCIP_CALL(  updateVarInfeasibility(scip, conshdlr, consdata->bilinvar2[j], SCIPinfinity(scip)) );
-#endif
             ++*nnotify;
             continue;
          }
@@ -3885,20 +3290,12 @@ SCIP_RETCODE registerVariableInfeasibilities(
          
          if (!SCIPisEQ(scip, xlb, xub))
          {
-#ifdef WITH_CONSBRANCHNL
-            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvar1[j], gap) );
-#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvar1[j], gap) );
-#endif            
             ++*nnotify;
          }
          if (!SCIPisEQ(scip, ylb, yub))
          {
-#ifdef WITH_CONSBRANCHNL
-            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvar2[j], gap) );
-#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvar2[j], gap) );
-#endif
             ++*nnotify;
          }
       }
@@ -3947,13 +3344,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
    
    if (*brvar)
    {
-#ifdef WITH_CONSBRANCHNL
-      assert(SCIPconshdlrGetData(conshdlr) != NULL);
-      assert(SCIPconshdlrGetData(conshdlr)->branchnl != NULL);
-      SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, SCIPconshdlrGetData(conshdlr)->branchnl, *brvar, brvarval) );
-#else
       SCIP_CALL(  updateVarInfeasibility(scip, conshdlr, *brvar, brvarval) );
-#endif
    }
    
    return SCIP_OKAY;
@@ -4927,17 +4318,8 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-#ifdef WITH_CONSBRANCHNL
-   conshdlrdata->branchnl = SCIPfindConshdlr(scip, "branchnonlinear");
-   if (conshdlrdata->branchnl == NULL && nconss > 0)
-   {
-      SCIPerrorMessage("cannot find constraint handler for branching on nonlinear variables");
-      return SCIP_PLUGINNOTFOUND;
-   }
-#else
    /* TODO: what is a good estimate for the hashmap size? should the constraint handler notify about the number of potential candidates? */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->branchcand, SCIPblkmem(scip), MAX(1, SCIPgetNVars(scip))) );
-#endif
    
 #ifndef WITH_LAPACK
    if (nconss)
@@ -4966,13 +4348,9 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-#ifdef WITH_CONSBRANCHNL
-   conshdlrdata->branchnl = NULL;
-#else
    SCIP_CALL( clearBranchingCandidates(scip, conshdlr) );
    if (conshdlrdata->branchcand != NULL)
       SCIPhashmapFree(&conshdlrdata->branchcand);
-#endif
    
    return SCIP_OKAY;
 }
@@ -5283,7 +4661,6 @@ SCIP_DECL_CONSTRANS(consTransQuadratic)
    targetdata->is_removedfixings = FALSE;
    targetdata->is_propagated     = FALSE;
    targetdata->is_presolved      = FALSE;
-   targetdata->soc_added         = FALSE;
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -5497,10 +4874,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
          SCIPdebugMessage("Could not find any usual branching variable candidate. Proposed variable %s with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
       }
    }
-#ifndef WITH_CONSBRANCHNL
+
    SCIP_CALL( enforceByBranching(scip, conshdlr, result) );
    assert(*result == SCIP_BRANCHED);
-#endif
    
    return SCIP_OKAY;
 }
@@ -5559,16 +4935,11 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
       
       for (i = 0; i < consdata->n_quadvar; ++i)
          if (!SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvar[i]), SCIPvarGetUbLocal(consdata->quadvar[i])))
-#ifdef WITH_CONSBRANCHNL
-            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvar[i], consdata->lhsviol + consdata->rhsviol) );
-#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->quadvar[i], consdata->lhsviol + consdata->rhsviol) );
-#endif      
    }
-#ifndef WITH_CONSBRANCHNL
+
    SCIP_CALL( enforceByBranching(scip, conshdlr, result) );
    assert(*result == SCIP_BRANCHED);
-#endif
    
    return SCIP_OKAY;
 }
@@ -5694,37 +5065,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                   continue;
                }
             }
-#ifdef WITH_SOC3
-            if (conshdlrdata->upgrade_soc)
-            {
-               SCIP_CALL( presolveTryUpgradeSOC(scip, conss[c], terms, constant) );
-               if (SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs))
-               { /* can delete constraint here since it was upgraded to SOC3 */
-                  SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-                  SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-                  presolveQuadTermFree(scip, &terms);
-                  continue;
-               }
-            }
-            
-            if (conshdlrdata->soc3_nr_auxvars >= 0 && !consdata->soc_added)
-            { /* try to add outer-approximation by SOC constraint */
-               SCIP_CALL( presolveTryAddSOC(scip, conss[c], terms, constant, conshdlrdata->soc3_nr_auxvars) );
-               if (consdata->soc_added)
-               {
-                  ++*nupgdconss;
-                  *result = SCIP_SUCCESS;
-                  
-                  if (SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs))
-                  { /* can delete constraint here since it was upgraded to SOC3 */
-                     SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-                     SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-                     presolveQuadTermFree(scip, &terms);
-                     continue;
-                  }
-               }
-            }
-#endif
             
             SCIP_CALL( presolveFindComponents(scip, terms, &n_components) );
             assert(n_components >= 0);
@@ -6282,20 +5622,14 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod_forceAND", "whether products of binary variables should be replaced always by an AND constraint",                                                                        &conshdlrdata->replace_binaryprod_forceAND, FALSE, FALSE,                                       NULL, NULL) );
 */
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/replace_binaryprod",          "max. length of linear term which when multiplied with a binary variables is replaced by an auxiliary variable and a linear reformulation (0 to turn off)",   &conshdlrdata->replace_binaryprod_length,   FALSE, INT_MAX, 0, INT_MAX,                         NULL, NULL) );
-#ifdef WITH_SOC3
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/upgrade_soc",                 "whether constraints should be upgraded to SOC constraints, if possible",                                                                                     &conshdlrdata->upgrade_soc,                 FALSE, FALSE,                                       NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/soc3nrauxvar",                "number of auxiliary variables when adding a SOC3 constraint; 0 to determine automatically (could become very large!); -1 to turn off",                       &conshdlrdata->soc3_nr_auxvars,             FALSE, 8, -1, INT_MAX,                              NULL, NULL) );
-#endif
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",                "whether quadratic constraints consisting of several quadratic blocks should be disaggregated in several constraints",                                        &conshdlrdata->disaggregation,              FALSE, TRUE,                                        NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",                 "minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy",                                                                           &conshdlrdata->mincutefficacy,              FALSE, 0.0001, 0.0, SCIPinfinity(scip),             NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",                     "whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",                                             &conshdlrdata->do_scaling,                  FALSE, TRUE,                                        NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/fastpropagate",               "whether a propagation should be used that is faster in case of bilinear term, but also less efficient",                                                      &conshdlrdata->fast_propagate,              FALSE, TRUE,                                        NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/defaultbound",                "a default bound to impose on unbounded variables in quadratic terms (-defaultbound is used for missing lower bounds)",                                       &conshdlrdata->defaultbound,                TRUE,  SCIPinfinity(scip), 0.0, SCIPinfinity(scip), NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrange",                 "maximal range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",                                          &conshdlrdata->cutmaxrange,                 FALSE, 1e+10, 0.0, SCIPinfinity(scip),              NULL, NULL) );
-#ifndef WITH_CONSBRANCHNL
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/strategy",                    "strategy to use for selecting branching variable: b: rb-int-br, r: rb-int-br-rev, i: rb-inf",                                                                &conshdlrdata->strategy,                    FALSE, 'r', "bri",                                  NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/mindistbrpointtobound",       "minimal fractional distance of branching point to variable bounds; a value of 0.5 leads to branching always in the middle of a bounded domain",              &conshdlrdata->mindistbrpointtobound,       FALSE, 0.2, 0.0001, 0.5,                            NULL, NULL) );
-#endif
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change to a quadratic constraint",
       NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );

@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.6 2009/08/11 18:58:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.7 2009/08/31 23:34:35 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @brief   implementation of NLPI oracle interface
@@ -25,10 +25,6 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/nlpi_oracle.h"
-#ifdef WITH_NL
-#include "expression.h"
-#include "exprinterpret.h"
-#endif
 
 #include <string.h>   /* for memcpy */
 
@@ -71,9 +67,6 @@ struct SCIP_NlpiOracle
    int*             heslagcol;     /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
    
    int*             vardegree;     /**< maximal degree of variable over objective and all constraints */
-#ifdef WITH_NL
-   SCIP_EXPRINT*    exprinterpreter; /**< interpreter for expression trees: evaluation and derivatives */
-#endif
 };
 
 /** Invalidates the sparsity pattern of the Jacobian.
@@ -171,9 +164,6 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    (*oracle)->heslagcol     = NULL;
    
    (*oracle)->vardegree     = NULL;
-#ifdef WITH_NL
-   (*oracle)->exprinterpreter = NULL;
-#endif
    
    return SCIP_OKAY;
 }
@@ -184,11 +174,6 @@ SCIP_RETCODE SCIPnlpiOracleInit(
 )
 {
    assert(scip != NULL);
-
-#ifdef WITH_NL
-   SCIPinfoMessage(scip, NULL, "Oracle initializes expression interpreter %s\n", SCIPexprintGetName());
-   SCIP_CALL( SCIPexprintCreate(scip, &oracle->exprinterpreter) );
-#endif
 
    return SCIP_OKAY;
 }
@@ -243,9 +228,6 @@ SCIP_RETCODE SCIPnlpiOracleFree(
       {
          if ((*oracle)->conexprtree[i])
          {
-#ifdef WITH_NL
-            SCIP_CALL( SCIPexprtreeFree(scip, &(*oracle)->conexprtree[i]) );
-#endif
             SCIPfreeMemoryArrayNull(scip, &(*oracle)->conexprvaridx[i]);
          }
       }
@@ -267,9 +249,6 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadval);
    if ((*oracle)->objexprtree)
    {
-#ifdef WITH_NL
-      SCIP_CALL( SCIPexprtreeFree(scip, &(*oracle)->objexprtree) );
-#endif
       SCIPfreeMemoryArray(scip, &(*oracle)->objexprvaridx);
    }
 
@@ -278,10 +257,6 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    
    SCIPfreeMemoryArrayNull(scip, &(*oracle)->vardegree);
 
-#ifdef WITH_NL
-   SCIP_CALL( SCIPexprintFree(scip, &(*oracle)->exprinterpreter) );
-#endif
-   
    SCIPfreeMemory(scip, oracle);
    
    return SCIP_OKAY;
@@ -540,27 +515,8 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       for (i = 0; i < ncons; ++i)
          if (exprtree[i])
          {
-#ifdef WITH_NL
-            int j;
-
-            assert(oracle->exprinterpreter != NULL);
-            assert(SCIPexprtreeHasVarsAsIndex(exprtree[i]));
-            
-            SCIP_CALL( SCIPexprtreeCopy(scip, &oracle->conexprtree[oracle->ncons + i], exprtree[i]) );
-            
-            SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, oracle->conexprtree[oracle->ncons + i]) );
-            
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conexprvaridx[oracle->ncons + i], exprvaridx[i], SCIPexprtreeGetNVars(exprtree[i])) );
-            for (j = 0; j < SCIPexprtreeGetNVars(exprtree[i]); ++j)
-            {
-               assert(exprvaridx[i][j] >= 0);
-               assert(exprvaridx[i][j] <  oracle->nvars);
-               oracle->vardegree[exprvaridx[i][j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
-            }
-#else
             SCIPerrorMessage("nonquadratic functions not supported in NLPI yet.\n");
             return SCIP_ERROR;
-#endif
             
             addednlcon = TRUE;
          }
@@ -637,9 +593,6 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    SCIPfreeMemoryArrayNull(scip, &oracle->objquadval);
    if (oracle->objexprtree)
    {
-#ifdef WITH_NL
-      SCIP_CALL( SCIPexprtreeFree(scip, &oracle->objexprtree) );
-#endif
       SCIPfreeMemoryArray(scip, &oracle->objexprvaridx);
       /* @TODO this does not clear the vardegree's */
    }
@@ -702,27 +655,8 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    
    if (exprtree)
    {
-#ifdef WITH_NL
-      int j;
-      
-      assert(oracle->exprinterpreter != NULL);
-      assert(SCIPexprtreeHasVarsAsIndex((SCIP_EXPRTREE*)exprtree));
-      
-      SCIP_CALL( SCIPexprtreeCopy(scip, &oracle->objexprtree, (SCIP_EXPRTREE*)exprtree) );
-      
-      SCIP_CALL( SCIPexprintCompile(scip, oracle->exprinterpreter, oracle->objexprtree) );
-      
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objexprvaridx, exprvaridx, SCIPexprtreeGetNVars(oracle->objexprtree)) );
-      for (j = 0; j < SCIPexprtreeGetNVars(oracle->objexprtree); ++j)
-      {
-         assert(exprvaridx[j] >= 0);
-         assert(exprvaridx[j] <  oracle->nvars);
-         oracle->vardegree[exprvaridx[j]] = INT_MAX; /* @TODO could try to be more clever, maybe use getMaxDegree function in exprtree */
-      }
-#else
       SCIPerrorMessage("nonquadratic functions not supported in NLPI yet\n");
       return SCIP_ERROR;
-#endif
    }
    
    return SCIP_OKAY;
@@ -1037,29 +971,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionValue(
    
    if (exprtree)
    {
-#ifdef WITH_NL
-      SCIP_Real* xx;
-      int        i;
-      SCIP_Real  nlval;
-      
-      SCIP_CALL( SCIPallocBufferArray(scip, &xx, SCIPexprtreeGetNVars(exprtree)) );
-      for (i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i)
-      {
-         assert(exprvaridx[i] >= 0);
-         xx[i] = x[exprvaridx[i]];
-      }
-      
-      SCIP_CALL( SCIPexprintEval(scip, oracle->exprinterpreter, exprtree, xx, NULL, &nlval) );
-      if (nlval != nlval || SCIPisInfinity(scip, nlval) || SCIPisInfinity(scip, -nlval))
-         *val = nlval;
-      else
-         *val += nlval;
-      
-      SCIPfreeBufferArray(scip, &xx);
-#else
       SCIPerrorMessage("expression tree support not available\n");
       return SCIP_ERROR;
-#endif
    }
 
    return SCIP_OKAY;
@@ -1125,53 +1038,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionGradient(
    
    if (exprtree)
    {
-#ifdef WITH_NL
-      SCIP_Real* xx = NULL;
-      SCIP_Real* g;
-      int        i;
-      SCIP_Real  nlval;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &g,  SCIPexprtreeGetNVars(exprtree)) );
-
-      if (new_x)
-      {
-         SCIP_CALL( SCIPallocBufferArray(scip, &xx, SCIPexprtreeGetNVars(exprtree)) );
-         for (i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i)
-         {
-            assert(exprvaridx[i] >= 0);
-            xx[i] = x[exprvaridx[i]];
-         }
-      }
-      
-      SCIP_CALL( SCIPexprintGradDense(scip, oracle->exprinterpreter, exprtree, xx, new_x, NULL, &nlval, g) );
-      if (nlval != nlval || SCIPisInfinity(scip, nlval) || SCIPisInfinity(scip, -nlval))
-      {
-         SCIPfreeBufferArrayNull(scip, &xx);
-         SCIPfreeBufferArray(scip, &g);
-         SCIPdebugMessage("gradient evaluation yield invalid function value %g\n", nlval);
-         return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-      }
-      else
-      {
-         *val += nlval;
-         for (i = 0; i < SCIPexprtreeGetNVars(exprtree); ++i)
-            if (g[i] != g[i])
-            {
-               SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", g[i]);
-               SCIPfreeBufferArrayNull(scip, &xx);
-               SCIPfreeBufferArray(scip, &g);
-               return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-            }
-            else
-               grad[exprvaridx[i]] += g[i];
-      }
-      
-      SCIPfreeBufferArrayNull(scip, &xx);
-      SCIPfreeBufferArray(scip, &g);
-#else
       SCIPerrorMessage("expression tree support not available\n");
       return SCIP_ERROR;
-#endif
    }
 
    return SCIP_OKAY;
@@ -1394,13 +1262,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       {
          assert(oracle->conexprvaridx);
          assert(oracle->conexprvaridx[i]);
-#ifdef WITH_NL
-         for (j = 0; j < SCIPexprtreeGetNVars(oracle->conexprtree[i]); ++j)
-            nzflag[oracle->conexprvaridx[i][j]] = TRUE;
-#else
+         
          SCIPerrorMessage("expression tree support not available\n");
          return SCIP_ERROR;
-#endif
       }
       
       /* store variables indices in jaccol */
@@ -1521,68 +1385,6 @@ static void SCIPnlpiOracleHessLagSparsitySetNzFlagForQuad(
    }
 }
 
-#ifdef WITH_NL
-static
-SCIP_RETCODE SCIPnlpiOracleHessLagSparsitySetNzFlagForExprtree(
-   SCIP*                 scip,       /**< pointer to SCIP */
-   SCIP_NLPIORACLE*      oracle,     /**< NLPI oracle */
-   SCIP_Bool*            nzflag,     /**< where to set flags */
-   int*                  nzcount,    /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
-   int*                  exprvaridx, /**< indices of variables from expression tree in NLP */
-   SCIP_EXPRTREE*        exprtree,   /**< expression tree */
-   int                   dim         /**< dimension of matrix */
-)
-{
-   SCIP_Real*  x;
-   SCIP_Bool*  hesnz;
-   int         i, j, n, nn, idx, row, col;
-   
-   assert(scip != NULL);
-   assert(oracle != NULL);
-   assert(nzflag  != NULL);
-   assert(nzcount != NULL);
-   assert(exprvaridx != NULL);
-   assert(exprtree != NULL);
-   assert(dim >= 0);
-   
-   n  = SCIPexprtreeGetNVars(exprtree);
-   nn = n*n;
-   
-   SCIP_CALL( SCIPallocBufferArray(scip, &x, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &hesnz, nn) );
-   
-   for (i = 0; i < n; ++i)
-      x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */
-   
-   SCIP_CALL( SCIPexprintHessianSparsityDense(scip, oracle->exprinterpreter, exprtree, x, NULL, hesnz) );
-   
-   for (i = 0; i < n; ++i) /* rows */
-      for (j = 0; j <= i; ++j) /* cols */
-      {
-         if (!hesnz[i*n + j])
-            continue;
-         
-         row = MAX(exprvaridx[i], exprvaridx[j]);
-         col = MIN(exprvaridx[i], exprvaridx[j]);
-         
-         assert(row < dim);
-         assert(col <= row);
-         
-         idx = (row * (row + 1)) / 2 + col;
-         if (!nzflag[idx])
-         {
-            nzflag[idx] = TRUE;
-            ++*nzcount;
-         }
-      }
-   
-   SCIPfreeBufferArray(scip, &x);
-   SCIPfreeBufferArray(scip, &hesnz);
-   
-   return SCIP_OKAY;
-}
-#endif
-
 /** Gets sparsity pattern of the Hessian matrix of the Lagrangian.
  * Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
  * Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
@@ -1623,14 +1425,10 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
       SCIPnlpiOracleHessLagSparsitySetNzFlagForQuad(scip, nzflag, &nnz, oracle->objquadrow, oracle->objquadcol, oracle->objquadlen);
 
    if (oracle->objexprtree)
-#ifdef WITH_NL
-      SCIP_CALL( SCIPnlpiOracleHessLagSparsitySetNzFlagForExprtree(scip, oracle, nzflag, &nnz, oracle->objexprvaridx, oracle->objexprtree, oracle->nvars) );
-#else
    {
       SCIPerrorMessage("expression tree support not available\n");
       return SCIP_ERROR;
    }
-#endif
 
    for (i = 0; i < oracle->ncons; ++i)
    {
@@ -1639,12 +1437,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
       
       if (oracle->conexprtree && oracle->conexprtree[i])
       {
-#ifdef WITH_NL
-         SCIP_CALL( SCIPnlpiOracleHessLagSparsitySetNzFlagForExprtree(scip, oracle, nzflag, &nnz, oracle->conexprvaridx[i], oracle->conexprtree[i], oracle->nvars) );
-#else
          SCIPerrorMessage("expression tree support not available\n");
          return SCIP_ERROR;
-#endif
       }
    }
    
@@ -1712,98 +1506,6 @@ SCIP_RETCODE SCIPnlpiOracleHessLagAddQuad(
    return SCIP_OKAY;
 }
 
-#ifdef WITH_NL
-static
-SCIP_RETCODE SCIPnlpiOracleHessLagAddExprtree(
-   SCIP*                 scip,       /**< pointer to SCIP */
-   SCIP_NLPIORACLE*      oracle,     /**< oracle */
-   SCIP_Real             weight,     /**< weight of quadratic part */
-   const SCIP_Real*      x,          /**< point for which hessian should be returned */
-   SCIP_Bool             new_x,      /**< whether point has been evaluated before */
-   int*                  exprvaridx, /**< NLP indices for variables in expression tree */
-   SCIP_EXPRTREE*        exprtree,   /**< expression tree */
-   int*                  hesoffset,  /**< row offsets in sparse matrix that is to be filled */ 
-   int*                  hescol,     /**< column indices in sparse matrix that is to be filled */
-   SCIP_Real*            values      /**< buffer for values of sparse matrix that is to be filled */
-)
-{
-   SCIP_Real* xx = NULL;
-   SCIP_Real* h;
-   SCIP_Real* hh;
-   int        i, j, n, nn, row, col, idx;
-   SCIP_Real  val;
-   
-   assert(scip != NULL);
-   assert(oracle != NULL);
-   assert(x != NULL || new_x == FALSE);
-   assert(exprvaridx != NULL);
-   assert(exprtree != NULL);
-   assert(hesoffset != NULL);
-   assert(hescol != NULL);
-   assert(values != NULL);
-
-   n = SCIPexprtreeGetNVars(exprtree);
-   nn = n*n;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &h, nn) );
-
-   if (new_x)
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &xx, n) );
-      for (i = 0; i < n; ++i)
-      {
-         assert(exprvaridx[i] >= 0);
-         xx[i] = x[exprvaridx[i]];
-      }
-   }
-   
-   SCIP_CALL( SCIPexprintHessianDense(scip, oracle->exprinterpreter, exprtree, xx, new_x, NULL, &val, h) );
-   if (val != val)
-   {
-      SCIPdebugMessage("hessian evaluation yield invalid function value %g\n", val);
-      SCIPfreeBufferArrayNull(scip, &xx);
-      SCIPfreeBufferArray(scip, &h);
-      return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-   }
-
-   hh = h;
-   for (i = 0; i < n; ++i) /* rows */
-   {
-      for (j = 0; j <= i; ++j, ++hh) /* cols */
-      {
-         if (!*hh)
-            continue;
-         
-         if (*hh != *hh)
-         {
-            SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *hh);
-            SCIPfreeBufferArrayNull(scip, &xx);
-            SCIPfreeBufferArray(scip, &h);
-            return SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */
-         }
-         
-         row = MAX(exprvaridx[i], exprvaridx[j]);
-         col = MIN(exprvaridx[i], exprvaridx[j]);
-         
-         if (!SCIPsortedvecFindInt(&hescol[hesoffset[row]], col, hesoffset[row+1] - hesoffset[row], &idx))
-         {
-            SCIPerrorMessage("Could not find entry (%d, %d) in hessian sparsity\n", row, col);
-            SCIPfreeBufferArrayNull(scip, &xx);
-            SCIPfreeBufferArray(scip, &h);
-            return SCIP_ERROR;
-         }
-         values[hesoffset[row] + idx] += weight * *hh;
-      }
-      hh += (n-j);
-   }
-   
-   SCIPfreeBufferArrayNull(scip, &xx);
-   SCIPfreeBufferArray(scip, &h);
-
-   return SCIP_OKAY;
-}
-#endif
-
 /** Evaluates the Hessian matrix of the Lagrangian in a given point.
  * The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
  * The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
@@ -1846,12 +1548,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       if (oracle->objexprtree)
       {
          assert(oracle->objexprvaridx);
-#ifdef WITH_NL
-         SCIP_CALL( SCIPnlpiOracleHessLagAddExprtree(scip, oracle, objfactor, x, new_x, oracle->objexprvaridx, oracle->objexprtree, oracle->heslagoffset, oracle->heslagcol, hessian) );
-#else
          SCIPerrorMessage("expression tree support not available\n");
          return SCIP_ERROR;
-#endif
       }
    }
    
@@ -1874,12 +1572,8 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
       {
          assert(oracle->conexprvaridx);
          assert(oracle->conexprvaridx[i]);
-#ifdef WITH_NL
-         SCIP_CALL( SCIPnlpiOracleHessLagAddExprtree(scip, oracle, lambda[i], x, new_x, oracle->conexprvaridx[i], oracle->conexprtree[i], oracle->heslagoffset, oracle->heslagcol, hessian) );
-#else
          SCIPerrorMessage("expression tree support not available\n");
          return SCIP_ERROR;
-#endif
       }
    }
    
@@ -1932,15 +1626,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintFunction(
             fprintf(file, "x%d", quadcol[i]);
       }
    }
-   
-   if (exprtree)
-   {
-      fprintf(file, " +");
-#ifdef WITH_NL
-      SCIPexprtreePrint(file, exprtree);
-#endif
-   }
-   
+      
    return SCIP_OKAY;
 }
 
