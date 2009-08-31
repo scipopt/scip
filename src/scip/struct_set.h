@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.81 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.82 2009/08/31 17:39:41 bzfpfets Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -202,6 +202,10 @@ struct SCIP_Set
    SCIP_Bool             lp_fastmip;         /**< should FASTMIP setting of LP solver be used? */
    SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
+   SCIP_Bool             lp_lexdualalgo;     /**< should the lexicographic dual algorithm be used? */
+   SCIP_Bool             lp_lexdualrootonly; /**< should the lexicographic dual algorithm be applied only at the root node */
+   int                   lp_lexdualmaxrounds;/**< maximum number of rounds in the lexicographic dual algorithm */
+   SCIP_Bool             lp_lexdualbasic;    /**< choose fractional basic variables in lexicographic dual algorithm */
 
    /* memory settings */
    SCIP_Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */
