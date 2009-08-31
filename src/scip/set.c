@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.203 2009/04/06 13:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.204 2009/08/31 17:38:48 bzfpfets Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -159,6 +159,10 @@
 #define SCIP_DEFAULT_LP_FASTMIP            TRUE /**< should FASTMIP setting of LP solver be used? */
 #define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
 #define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
+#define SCIP_DEFAULT_LP_LEXDUALALGO       FALSE /**< should the dual lexicographic algorithm be used? */
+#define SCIP_DEFAULT_LP_LEXDUALROOTONLY    TRUE /**< should the lexicographic dual algorithm be applied only at the root node */
+#define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
+#define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 
 
 /* Memory */
@@ -726,6 +730,26 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/presolving",
          "should presolving of LP solver be used?",
          &(*set)->lp_presolving, TRUE, SCIP_DEFAULT_LP_PRESOLVING,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/lexdualalgo",
+         "should the lexicographic dual alogrithm be used?",
+         &(*set)->lp_lexdualalgo, TRUE, SCIP_DEFAULT_LP_LEXDUALALGO,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/lexdualrootonly",
+         "should the lexicographic dual algorithm be applied only at the root node",
+         &(*set)->lp_lexdualrootonly, TRUE, SCIP_DEFAULT_LP_LEXDUALROOTONLY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "lp/lexdualmaxrounds",
+         "maximum number of rounds in the  lexicographic dual algorithm (-1: unbounded)",
+         &(*set)->lp_lexdualmaxrounds, TRUE, SCIP_DEFAULT_LP_LEXDUALMAXROUNDS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/lexdualbasic",
+         "choose fractional basic variables in lexicographic dual algorithm?",
+         &(*set)->lp_lexdualbasic, TRUE, SCIP_DEFAULT_LP_LEXDUALBASIC,
          NULL, NULL) );
 
    /* memory parameters */
