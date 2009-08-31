@@ -1,8 +1,8 @@
 IP/2matching/d493.mps.gz
 IP/2matching/gr666.mps.gz
 IP/Clique/Instances/p_hat300-1.clq.lp.gz
-IP/Coloring/Infeasible/1-Insertions_4.col.lp.gz
-IP/Coloring/Infeasible/myciel5.col.lp.gz
+IP/Coloring/Infeasible/1-Insertions_4_inf.col.lp.gz
+IP/Coloring/Infeasible/myciel5_inf.col.lp.gz
 IP/GUB/p14/cpa_ilpi_mip.2.mps.gz
 IP/GUB/p4/cpa_ilpi_mip.33.mps.gz
 IP/GUB/p6/cpa_ilpi_mip.23.mps.gz

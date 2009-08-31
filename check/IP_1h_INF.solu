@@ -2,8 +2,8 @@
 =opt=  DSJC250.9.stab                      5
 =opt=  gr666                          286428 
 =opt=  p_hat300-1.clq                      8 
-=inf=  1-Insertions_4.col              1e+20 
-=inf=  myciel5.col                     1e+20 
+=inf=  1-Insertions_4_inf.col          1e+20 
+=inf=  myciel5_inf.col                 1e+20 
 =opt=  cpa_ilpi_mip.2                  31121 
 =opt=  cpa_ilpi_mip.33              21354912 
 =opt=  cpa_ilpi_mip.23              39453281 

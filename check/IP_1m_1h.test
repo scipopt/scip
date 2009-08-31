@@ -4,8 +4,8 @@ IP/Clique/Instances/MANN_a45.clq.lp.gz
 IP/Clique/Instances/brock200_1.clq.lp.gz
 IP/Clique/Instances/c-fat500-1.clq.lp.gz
 IP/Clique/Instances/sanr200_0.7.clq.lp.gz
-IP/Coloring/Infeasible/2-FullIns_4.col.lp.gz
-IP/Coloring/Infeasible/ash608GPIA.col.lp.gz
+IP/Coloring/Infeasible/2-FullIns_4_inf.col.lp.gz
+IP/Coloring/Infeasible/ash608GPIA_inf.col.lp.gz
 IP/Coloring/Instances/4-FullIns_3.col.lp.gz
 IP/Coloring/Instances/homer.col.lp.gz
 IP/GUB/p12/cpa_ilpi_mip.34.mps.gz
