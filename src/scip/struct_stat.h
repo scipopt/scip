@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.52 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.53 2009/08/31 17:54:51 bzfpfets Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -41,9 +41,11 @@ struct SCIP_Stat
    SCIP_Longint          nlpiterations;      /**< total number of LP iterations */
    SCIP_Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    SCIP_Longint          nduallpiterations;  /**< number of iterations in dual simplex */
+   SCIP_Longint          nlexduallpiterations;/**< number of iterations in lexicographic dual simplex */
    SCIP_Longint          nbarrierlpiterations;/**< number of iterations in barrier algorithm */
    SCIP_Longint          nprimalresolvelpiterations;  /**< number of primal LP iterations with advanced start basis */
    SCIP_Longint          ndualresolvelpiterations;    /**< number of dual LP iterations with advanced start basis */
+   SCIP_Longint          nlexdualresolvelpiterations; /**< number of lexicographic dual LP iterations with advanced start basis */
    SCIP_Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    SCIP_Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    SCIP_Longint          ndivinglpiterations;/**< number of iterations in diving and probing */
@@ -78,6 +80,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
    SCIP_CLOCK*           duallptime;         /**< dual LP solution time */
+   SCIP_CLOCK*           lexduallptime;      /**< lexicographic dual LP solution time */
    SCIP_CLOCK*           barrierlptime;      /**< barrier LP solution time */
    SCIP_CLOCK*           divinglptime;       /**< diving and probing LP solution time */
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
@@ -108,9 +111,11 @@ struct SCIP_Stat
    int                   nlps;               /**< total number of LPs solved with at least 1 iteration */
    int                   nprimallps;         /**< number of primal LPs solved */
    int                   nduallps;           /**< number of dual LPs solved */
+   int                   nlexduallps;        /**< number of lexicographic dual LPs solved */
    int                   nbarrierlps;        /**< number of barrier LPs solved */
    int                   nprimalresolvelps;  /**< number of primal LPs solved with advanced start basis and at least 1 iteration */
    int                   ndualresolvelps;    /**< number of dual LPs solved with advanced start basis and at least 1 iteration */
+   int                   nlexdualresolvelps; /**< number of lexicographic dual LPs solved with advanced start basis and at least 1 iteration */
    int                   nnodelps;           /**< number of LPs solved for node relaxations */
    int                   ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    int                   ndivinglps;         /**< number of LPs solved during diving and probing */
