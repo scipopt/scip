@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.515 2009/08/31 16:30:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.516 2009/08/31 17:55:44 bzfpfets Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -14894,6 +14894,16 @@ void printLPStatistics(
       scip->stat->nduallps > 0 ? (SCIP_Real)scip->stat->nduallpiterations/(SCIP_Real)scip->stat->nduallps : 0.0);
    if( SCIPclockGetTime(scip->stat->duallptime) >= 0.01 )
       SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nduallpiterations/SCIPclockGetTime(scip->stat->duallptime));
+   else
+      SCIPmessageFPrintInfo(file, "          -\n");
+
+   SCIPmessageFPrintInfo(file, "  lex dual LP      : %10.2f %10d %10"SCIP_LONGINT_FORMAT" %10.2f",
+      SCIPclockGetTime(scip->stat->lexduallptime),
+      scip->stat->nlexduallps,
+      scip->stat->nlexduallpiterations,
+      scip->stat->nlexduallps > 0 ? (SCIP_Real)scip->stat->nlexduallpiterations/(SCIP_Real)scip->stat->nlexduallps : 0.0);
+   if( SCIPclockGetTime(scip->stat->lexduallptime) >= 0.01 )
+      SCIPmessageFPrintInfo(file, " %10.2f\n", (SCIP_Real)scip->stat->nlexduallpiterations/SCIPclockGetTime(scip->stat->lexduallptime));
    else
       SCIPmessageFPrintInfo(file, "          -\n");
 
