@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.h,v 1.9 2009/08/17 18:59:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: memory.h,v 1.10 2009/08/31 17:00:21 bzfwinkm Exp $"
 
 /**@file   memory.h
  * @brief  memory allocation routines
@@ -26,7 +26,6 @@
 
 
 #include <stdlib.h>
-#include <assert.h>
 
 /* special thanks to Daniel Junglas for following template and macros */
 #ifdef __cplusplus
@@ -75,12 +74,10 @@ extern "C" {
 #define BMSduplicateMemorySize(ptr, source, size) \
                                                 ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), \
                                                 (size_t)(size), __FILE__, __LINE__ ))
-#define BMSfreeMemory(ptr)                    { assert(ptr != NULL); \
-                                                  BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); \
+#define BMSfreeMemory(ptr)                    { BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); \
                                                   *(ptr) = NULL; }
 #define BMSfreeMemoryNull(ptr)                { if( *(ptr) != NULL ) BMSfreeMemory( (ptr) ); }
-#define BMSfreeMemoryArray(ptr)               { assert(ptr != NULL); \
-                                                  BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); \
+#define BMSfreeMemoryArray(ptr)               { BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); \
                                                   *(ptr) = NULL; }
 #define BMSfreeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) BMSfreeMemoryArray( (ptr) ); }
 
@@ -194,8 +191,7 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 #define BMSduplicateChunkMemory(mem, ptr, source) \
                                                 ASSIGN((ptr), BMSduplicateChunkMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSfreeChunkMemory(mem,ptr)           { assert(ptr != NULL); \
-                                                  BMSfreeChunkMemory_call( (mem), (void*)(*(ptr)), sizeof(**(ptr)), \
+#define BMSfreeChunkMemory(mem,ptr)           { BMSfreeChunkMemory_call( (mem), (void*)(*(ptr)), sizeof(**(ptr)), \
                                                   __FILE__, __LINE__ ); \
                                                   *(ptr) = NULL; }
 #define BMSfreeChunkMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) BMSfreeChunkMemory( (mem), (ptr) ); }
@@ -341,18 +337,15 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSduplicateBlockMemoryArray(mem, ptr, source, num) \
                                                 ASSIGN((ptr), BMSduplicateBlockMemory_call( (mem), (const void*)(source), \
                                                 (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSfreeBlockMemory(mem,ptr)           { assert(ptr != NULL); \
-                                                  BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), sizeof(**(ptr)), \
+#define BMSfreeBlockMemory(mem,ptr)           { BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), sizeof(**(ptr)), \
                                                   __FILE__, __LINE__ ); \
                                                   *(ptr) = NULL; }
 #define BMSfreeBlockMemoryNull(mem,ptr)       { if( *(ptr) != NULL ) BMSfreeBlockMemory( (mem), (ptr) ); }
-#define BMSfreeBlockMemoryArray(mem,ptr,num)  { assert(ptr != NULL); \
-                                                  BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), (num)*sizeof(**(ptr)), \
+#define BMSfreeBlockMemoryArray(mem,ptr,num)  { BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), (num)*sizeof(**(ptr)), \
                                                   __FILE__, __LINE__ ); \
                                                   *(ptr) = NULL; }
 #define BMSfreeBlockMemoryArrayNull(mem,ptr,num)  { if( *(ptr) != NULL ) BMSfreeBlockMemoryArray( (mem), (ptr), (num) ); }
-#define BMSfreeBlockMemorySize(mem,ptr,size)  { assert(ptr != NULL); \
-                                                  BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), (size_t)(size), \
+#define BMSfreeBlockMemorySize(mem,ptr,size)  { BMSfreeBlockMemory_call( (mem), (void*)(*(ptr)), (size_t)(size), \
                                                   __FILE__, __LINE__ ); \
                                                   *(ptr) = NULL; }
 #define BMSfreeBlockMemorySizeNull(mem,ptr,size)  { if( *(ptr) != NULL ) BMSfreeBlockMemorySize( (mem), (ptr), (size) ); }
