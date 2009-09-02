@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.347 2009/09/02 10:30:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.348 2009/09/02 15:33:19 bzfgamra Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1898,8 +1898,12 @@ SCIP_RETCODE SCIPinterruptSolve(
 /**@name Variable Methods */
 /**@{ */
 
-/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded; 
- *  an integer variable with bounds zero and one is automatically converted into a binary variable
+/** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
+ *  an integer variable with bounds zero and one is automatically converted into a binary variable;
+ *
+ *  Warning! When doing column generation and the original problem is a maximization problem, notice that SCIP 
+ *  transformed the problem into a minimization problem by multiplying the objective function by -1.
+ *  Thus, the original objective function value of variables created during the solving process has to be multiplied by -1, too.
  */
 extern
 SCIP_RETCODE SCIPcreateVar(
