@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.111 2009/08/03 20:03:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.112 2009/09/02 10:30:43 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -1882,7 +1882,7 @@ SCIP_RETCODE mapVariable(
    SCIP_VAR*             var,                /**< source variable of source SCIP */
    SCIP_HASHMAP*         varmap,             /**< mapping variables of the source SCIP to corresponding variables of the
                                               *   target SCIP */
-   SCIP_Bool*            succeed             /**< pointer to store whether the mapping  was successful or not */
+   SCIP_Bool*            success             /**< pointer to store whether the mapping  was successful or not */
    )
 {
    SCIP_Bool negated;
@@ -1892,8 +1892,8 @@ SCIP_RETCODE mapVariable(
    assert(sourcescip != NULL);
    assert(var != NULL);
    assert(varmap != NULL);
-   assert(succeed != NULL);
-   assert(*succeed == TRUE);
+   assert(success != NULL);
+   assert(*success == TRUE);
 
    *repvar = NULL;
 
@@ -1915,7 +1915,7 @@ SCIP_RETCODE mapVariable(
       /* if there does not exist a corresponding variable, return */
       if( (*repvar) == NULL )
       {
-         (*succeed) = FALSE;
+         (*success) = FALSE;
          return SCIP_OKAY;
       }
       
@@ -1925,7 +1925,7 @@ SCIP_RETCODE mapVariable(
       break;
    case SCIP_VARSTATUS_MULTAGGR:
       /* it is not clear how to handle muliaggr variables; therefore, stop copying */
-      (*succeed) = FALSE;
+      (*success) = FALSE;
       break;
    default:
       SCIPerrorMessage("invalid variable status\n");
@@ -2618,15 +2618,15 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    int nvars;
    int v;
 
-   assert(succeed != NULL);
+   assert(success != NULL);
 
-   (*succeed) = TRUE;
+   (*success) = TRUE;
    
    sourceresvar = SCIPgetResultantAnd(sourcescip, sourcecons);
 
    /* map resultant to active variable of the target SCIP  */
-   SCIP_CALL( mapVariable(scip, &resvar, sourcescip, sourceresvar, varmap, succeed) );
-   if( !(*succeed) )
+   SCIP_CALL( mapVariable(scip, &resvar, sourcescip, sourceresvar, varmap, success) );
+   if( !(*success) )
       return SCIP_OKAY;
    
    /* map operand variables to active variables of the target SCIP  */
@@ -2636,12 +2636,12 @@ SCIP_DECL_CONSCOPY(consCopyAnd)
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    
-   for( v = 0; v < nvars && (*succeed); ++v )
+   for( v = 0; v < nvars && (*success); ++v )
    {
-      SCIP_CALL( mapVariable(scip, &vars[v], sourcescip, sourcevars[v], varmap, succeed) );
+      SCIP_CALL( mapVariable(scip, &vars[v], sourcescip, sourcevars[v], varmap, success) );
    }
    
-   if( *succeed )
+   if( *success )
    {
       SCIP_CALL( SCIPcreateConsAnd(scip, cons, SCIPconsGetName(sourcecons), resvar, nvars, vars, 
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );

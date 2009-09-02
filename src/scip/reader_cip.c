@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.12 2009/07/28 20:27:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.13 2009/09/02 10:30:44 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -271,7 +271,7 @@ SCIP_RETCODE getVariable(
 {
    SCIP_VAR* var;
    char* buf;
-   SCIP_Bool succeed;
+   SCIP_Bool success;
    
    buf = cipinput->strbuf;
    
@@ -288,9 +288,9 @@ SCIP_RETCODE getVariable(
    SCIPdebugMessage("parse variable\n");
    
    /* parse the variable */
-   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, &succeed) );
+   SCIP_CALL( SCIPparseVar(scip, &var, buf, initial, removable, NULL, NULL, NULL, NULL, &success) );
    
-   if( !succeed )
+   if( !success )
    {
       cipinput->haserror = TRUE;
       return SCIP_OKAY;
@@ -353,7 +353,7 @@ SCIP_RETCODE getConstraints(
    SCIP_Bool local;
    SCIP_Bool modifiable;
 
-   SCIP_Bool succeed;
+   SCIP_Bool success;
 
    buf = cipinput->strbuf;
 
@@ -374,9 +374,9 @@ SCIP_RETCODE getConstraints(
    
    /* parse the variable */
    SCIP_CALL( SCIPparseCons(scip, &cons, cipinput->strbuf,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &succeed) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success) );
    
-   if( !succeed )
+   if( !success )
    {
       cipinput->haserror = TRUE;
       return SCIP_OKAY;

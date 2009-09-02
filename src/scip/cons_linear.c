@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.334 2009/08/17 22:17:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.335 2009/09/02 10:30:43 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9074,7 +9074,7 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
 
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, sourcecoefs,
          SCIPgetLhsLinear(sourcescip, sourcecons), SCIPgetRhsLinear(sourcescip, sourcecons), varmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
    return SCIP_OKAY;
 }   
@@ -9117,7 +9117,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    lhs = -SCIPinfinity(scip);
    rhs = SCIPinfinity(scip);
 
-   (*succeed) = TRUE;
+   (*success) = TRUE;
 
    /* read the coefficients */
    coefsign = +1;
@@ -9190,7 +9190,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       if( ncoefs > 0 && !havesign && sense == CIP_SENSE_NOTHING )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected sign ('+' or '-') or sense ('<' or '>')\n");
-         (*succeed) = FALSE;
+         (*success) = FALSE;
          break;
       }
 
@@ -9201,7 +9201,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
          if( havevalue )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: two consecutive values");
-            (*succeed) = FALSE;
+            (*success) = FALSE;
             break;
          }
          havevalue = TRUE;
@@ -9225,7 +9225,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       if( var == NULL )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "unknown variable <%s>", tokenizer.token);
-         (*succeed) = FALSE;
+         (*success) = FALSE;
       }
       
       /* insert the coefficient */
@@ -9255,7 +9255,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       havevalue = FALSE;
    }
 
-   if( *succeed )
+   if( *success )
    {
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, ncoefs, vars, coefs, lhs, rhs, 
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
@@ -9292,7 +9292,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    assert(conshdlr != NULL);
    assert(cons != NULL);
 
-   (*succeed) = TRUE;
+   (*success) = TRUE;
    
    /* set values to default values */
    lhs = -SCIPinfinity(scip);
@@ -9313,7 +9313,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    token = SCIPstrtok(copystr, " ", &saveptr);
 
    /* parse string until no token is left */
-   while ( token != NULL && (*succeed) )
+   while ( token != NULL && (*success) )
    {
       /* check if we have an relation '==', '>=', or '<=' */
       if( strncmp(token, "==", 2) == 0 && strlen(token) == 2 )
@@ -9369,7 +9369,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
             else
             {
                SCIPwarningMessage("unknown variable <%s>\n", varname);
-               (*succeed) = FALSE;
+               (*success) = FALSE;
             }
          }
       }
@@ -9380,7 +9380,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       token = SCIPstrtok(NULL, " ", &saveptr);   
    }
    
-   if( *succeed )
+   if( *success )
    {
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, vals, lhs, rhs, 
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
@@ -9843,7 +9843,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
-   SCIP_Bool*            succeed             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    )
 {
    SCIP_VAR** vars;
@@ -9853,7 +9853,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    int requiredsize;
    int v;
 
-   (*succeed) = TRUE;
+   (*success) = TRUE;
    
    if( nvars == 0 )
       return SCIP_OKAY;
@@ -9898,18 +9898,18 @@ SCIP_RETCODE SCIPcopyConsLinear(
       
    }
    
-   (*succeed) = TRUE;
+   (*success) = TRUE;
 
    /* map variables of the source constraint to variables of the target SCIP */
-   for( v = 0; v < nvars && *succeed; ++v )
+   for( v = 0; v < nvars && *success; ++v )
    {
       vars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, vars[v]);
 
       if( vars[v] == NULL )
-         (*succeed) = FALSE;
+         (*success) = FALSE;
    }
 
-   if( *succeed )
+   if( *success )
    {
       if( !SCIPisInfinity(scip, -lhs) )
          lhs -= constant;

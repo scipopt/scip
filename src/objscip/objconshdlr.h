@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.57 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.58 2009/09/02 10:30:43 bzfheinz Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -742,7 +742,7 @@ public:
       SCIP_Bool          removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
       SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
-      SCIP_Bool*         succeed             /**< pointer to store whether the copying was successful or not */
+      SCIP_Bool*         success             /**< pointer to store whether the copying was successful or not */
       )
    {  /*lint --e{715}*/
       return SCIP_OKAY;
@@ -770,7 +770,7 @@ public:
       SCIP_Bool          removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
       SCIP_Bool          stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
-      SCIP_Bool*         succeed             /**< pointer to store whether the parsing was successful or not */
+      SCIP_Bool*         success             /**< pointer to store whether the parsing was successful or not */
       )
    {  /*lint --e{715}*/
       return SCIP_OKAY;

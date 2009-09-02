@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.516 2009/08/31 17:55:44 bzfpfets Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.517 2009/09/02 10:30:44 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5549,7 +5549,7 @@ SCIP_RETCODE SCIPparseVar(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
    assert(var != NULL);
@@ -5560,7 +5560,7 @@ SCIP_RETCODE SCIPparseVar(
    {
    case SCIP_STAGE_PROBLEM:
       SCIP_CALL( SCIPvarParseOriginal(var, scip->mem->probmem, scip->set, scip->stat,
-            str, initial, removable, vardelorig, vartrans, vardeltrans, vardata, succeed) );
+            str, initial, removable, vardelorig, vartrans, vardeltrans, vardata, success) );
       break;
 
    case SCIP_STAGE_TRANSFORMING:
@@ -5568,7 +5568,7 @@ SCIP_RETCODE SCIPparseVar(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       SCIP_CALL( SCIPvarParseTransformed(var, scip->mem->solvemem, scip->set, scip->stat,
-            str, initial, removable, NULL, NULL, vardeltrans, vardata, succeed) );
+            str, initial, removable, NULL, NULL, vardeltrans, vardata, success) );
       break;
 
    default:
@@ -9085,7 +9085,7 @@ SCIP_RETCODE SCIPcopyCons(
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
-   SCIP_Bool*            succeed             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    )
 {
    assert(cons != NULL);
@@ -9094,7 +9094,7 @@ SCIP_RETCODE SCIPcopyCons(
    SCIP_CALL( checkStage(scip, "SCIPcopyCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
    
    SCIP_CALL( SCIPconsCopy(cons, scip->set, name, conshdlr, sourcescip, sourcecons, varmap, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
    return SCIP_OKAY;
 }
@@ -9133,7 +9133,7 @@ SCIP_RETCODE SCIPparseCons(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
    assert(cons != NULL);
@@ -9141,7 +9141,7 @@ SCIP_RETCODE SCIPparseCons(
    SCIP_CALL( checkStage(scip, "SCIPparseCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
    
    SCIP_CALL( SCIPconsParse(cons, scip->set, str,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
    return SCIP_OKAY;
 }

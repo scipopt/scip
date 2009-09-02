@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.125 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.126 2009/09/02 10:30:44 bzfheinz Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -254,7 +254,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
 /** parses variable information (in cip format) out of a string; if the parsing process was successful a loose variable
@@ -274,7 +274,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
 /** increases usage counter of variable */

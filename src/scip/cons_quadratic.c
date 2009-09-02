@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.34 2009/08/31 23:42:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.35 2009/09/02 10:30:43 bzfheinz Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5488,12 +5488,12 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
    assert(sourcescip != NULL);
    assert(sourcecons != NULL);
    assert(varmap != NULL);
-   assert(succeed != NULL);
+   assert(success != NULL);
    
    consdata = SCIPconsGetData(sourcecons);
    assert(consdata != NULL);
    
-   *succeed = TRUE; /* think positive */
+   *success = TRUE; /* think positive */
    
    if (consdata->n_linvar)
    {
@@ -5503,19 +5503,19 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
          linvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, consdata->linvar[i]);
          if (linvars[i] == NULL)
          {
-            *succeed = FALSE;
+            *success = FALSE;
             break;
          }
       }
    }
    
-   if (consdata->n_bilin && *succeed)
+   if (consdata->n_bilin && *success)
    {
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &bilinvar1, consdata->n_bilin) );
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &bilinvar2, consdata->n_bilin) );
    }
 
-   if (consdata->n_quadvar && *succeed)
+   if (consdata->n_quadvar && *success)
    {
       SCIP_CALL( SCIPallocBufferArray(sourcescip, &quadvars, consdata->n_quadvar) );
       for (i = 0; i < consdata->n_quadvar; ++i)
@@ -5523,7 +5523,7 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
          quadvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, consdata->quadvar[i]);
          if (quadvars[i] == NULL)
          {
-            *succeed = FALSE;
+            *success = FALSE;
             break;
          }
          
@@ -5545,7 +5545,7 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
       }
    }
 
-   if (*succeed)
+   if (*success)
    {
       assert(stickingatnode == FALSE);
       SCIP_CALL( SCIPcreateConsQuadratic2(scip, cons, name ? name : SCIPconsGetName(sourcecons),

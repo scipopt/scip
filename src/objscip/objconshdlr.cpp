@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.41 2009/06/25 11:23:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.42 2009/09/02 10:30:43 bzfheinz Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -481,7 +481,7 @@ SCIP_DECL_CONSCOPY(consCopyObj)
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_copy(scip, conshdlr, cons, name, sourcescip, sourcecons, varmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
    
    return SCIP_OKAY;
 }
@@ -498,7 +498,7 @@ SCIP_DECL_CONSPARSE(consParseObj)
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_parse(scip, conshdlr, cons, name, str, 
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.140 2009/08/31 17:26:58 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.141 2009/09/02 10:30:44 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -3544,7 +3544,7 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
    /* copy the logic using the linear constraint copy method */
    SCIP_CALL( SCIPcopyConsLinear(scip, cons, sourcescip, consname, nvars, sourcevars, NULL,
          lhs, rhs, varmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
 
    return SCIP_OKAY;
 }

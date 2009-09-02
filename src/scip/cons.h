@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.124 2009/07/31 11:37:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.125 2009/09/02 10:30:43 bzfheinz Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -441,7 +441,7 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
-   SCIP_Bool*            succeed             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    );
 
 /** parses constrint information (in cip format) out of a string; if the parsing process was successful a constraint is
@@ -479,7 +479,7 @@ SCIP_RETCODE SCIPconsParse(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
 /** frees a constraint and removes it from the conss array of its constraint handler */

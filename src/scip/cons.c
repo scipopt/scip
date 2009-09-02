@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.186 2009/07/28 20:27:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.187 2009/09/02 10:30:43 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4481,18 +4481,18 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? */
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
-   SCIP_Bool*            succeed             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
    )
 {
    assert(cons != NULL);
    assert(conshdlr != NULL);
 
-   (*succeed) = FALSE;
+   (*success) = FALSE;
    
    if( conshdlr->conscopy != NULL )
    {
       SCIP_CALL( conshdlr->conscopy(set->scip, conshdlr, cons, name, sourcescip, sourcecons, varmap,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
    }
 #if 0
    else
@@ -4540,7 +4540,7 @@ SCIP_RETCODE SCIPconsParse(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node?
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -4552,7 +4552,7 @@ SCIP_RETCODE SCIPconsParse(
 
    assert(cons != NULL);
 
-   (*succeed) = FALSE;
+   (*success) = FALSE;
    
    /* copy string */
    SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
@@ -4574,7 +4574,7 @@ SCIP_RETCODE SCIPconsParse(
    if( conshdlr != NULL && conshdlr->consparse != NULL )
    {
       SCIP_CALL( conshdlr->consparse(set->scip, conshdlr, cons, consname, token, 
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, succeed) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
    }
 #if 0
    else

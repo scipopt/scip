@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.49 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.50 2009/09/02 10:30:44 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -637,12 +637,12 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
  *                      if it may be moved to a more global node?
  *  output:
- *  - succeed         : pointer to store whether the copying was successful or not 
+ *  - success         : pointer to store whether the copying was successful or not 
  */
 #define SCIP_DECL_CONSCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, const char* name, \
       SCIP* sourcescip, SCIP_CONS* sourcecons,  SCIP_HASHMAP* varmap, \
       SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
-      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* succeed)
+      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* success)
 
 /** constraint parsing method of constraint handler
  *
@@ -667,12 +667,12 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - stickingatnode  : should the constraint always be kept at the node where it was added, even
  *                      if it may be moved to a more global node?
  *  output:
- *  - succeed         : pointer to store whether the parsing was successful or not 
+ *  - success         : pointer to store whether the parsing was successful or not 
  */
 #define SCIP_DECL_CONSPARSE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** cons, \
       const char* name, const char* str, \
       SCIP_Bool initial, SCIP_Bool separate, SCIP_Bool enforce, SCIP_Bool check, SCIP_Bool propagate, SCIP_Bool local, \
-      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* succeed)
+      SCIP_Bool modifiable, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool stickingatnode, SCIP_Bool* success)
 
 #ifdef __cplusplus
 }

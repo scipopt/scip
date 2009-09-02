@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.258 2009/08/31 17:26:58 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.259 2009/09/02 10:30:44 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1838,7 +1838,7 @@ SCIP_RETCODE varParse(
    SCIP_Real*            lazylb,             /**< pointer to store if the lower bound is lazy */
    SCIP_Real*            lazyub,             /**< pointer to store if the upper bound is lazy */
    SCIP_Bool             local,              /**< should the local bound be applied */            
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
    char* copystr;
@@ -1852,9 +1852,9 @@ SCIP_RETCODE varParse(
    assert(vartype != NULL);
    assert(lazylb != NULL);
    assert(lazyub != NULL);
-   assert(succeed != NULL);
+   assert(success != NULL);
    
-   (*succeed) = TRUE;
+   (*success) = TRUE;
    
    /* copy string */
    SCIP_ALLOC( BMSduplicateMemoryArray(&copystr, str, strlen(str)+1) );
@@ -1873,7 +1873,7 @@ SCIP_RETCODE varParse(
    else
    {
       SCIPwarningMessage("unknown variable type\n");
-      (*succeed) = FALSE;
+      (*success) = FALSE;
       goto TERMINATE;
    }
    
@@ -1940,7 +1940,7 @@ SCIP_RETCODE SCIPvarParseOriginal(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -1956,9 +1956,9 @@ SCIP_RETCODE SCIPvarParseOriginal(
    assert(stat != NULL);
    
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, succeed) );
+   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, FALSE, success) );
 
-   if( *succeed )
+   if( *success )
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
@@ -1998,7 +1998,7 @@ SCIP_RETCODE SCIPvarParseTransformed(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
-   SCIP_Bool*            succeed             /**< pointer store if the paring process was successful */
+   SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -2014,9 +2014,9 @@ SCIP_RETCODE SCIPvarParseTransformed(
    assert(blkmem != NULL);
 
    /* parse string in cip format for variable information */
-   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, succeed) );
+   SCIP_CALL( varParse(set, str, name, &lb, &ub, &obj, &vartype, &lazylb, &lazyub, TRUE, success) );
 
-   if( *succeed )
+   if( *success )
    {
       /* create variable */
       SCIP_CALL( varCreate(var, blkmem, set, stat, name, lb, ub, obj, vartype, initial, removable,
