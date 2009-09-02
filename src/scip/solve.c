@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.272 2009/08/17 15:17:51 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.273 2009/09/02 15:48:13 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -3224,7 +3224,7 @@ SCIP_RETCODE SCIPsolveCIP(
           * again, because the selected next node may be invalid due to cut off
           */
          assert(!tree->cutoffdelayed);
-         if( nnodes != SCIPtreeGetNNodes(tree) )
+         if( nnodes != SCIPtreeGetNNodes(tree) || SCIPsolveIsStopped(set, stat, TRUE) )
             nextnode = NULL;
       }
 
