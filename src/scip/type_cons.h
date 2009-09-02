@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.50 2009/09/02 10:30:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.51 2009/09/02 15:46:12 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @brief  type definitions for constraints and constraint handlers
@@ -647,7 +647,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 /** constraint parsing method of constraint handler
  *
  *  The constraint handler can provide a callback to parse the output created by the display method
- *  (SCIP_DECL_CONSDISABLE) and to create constraint out of it.
+ *  (SCIP_DECL_CONSDISABLE) and to create a constraint out of it.
  *
  *  input:
  *  - scip            : SCIP main data structure
