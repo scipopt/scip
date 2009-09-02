@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.60 2009/08/30 14:39:04 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.61 2009/09/02 14:59:38 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -1590,8 +1590,10 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
     *  1 - do not delete work areas and factorization at end
     *  2 - use old factorization if same number of rows
     *  4 - skip as much initialization of work areas as possible (work in progress)
+    *
+    *  4 does not seem to work.
     */
-   int startFinishOptions = 1 | 4;
+   int startFinishOptions = 1;
    if ( lpi->validFactorization )
       startFinishOptions = startFinishOptions | 2;
 
@@ -1663,8 +1665,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
     *  1 - do not delete work areas and factorization at end
     *  2 - use old factorization if same number of rows
     *  4 - skip as much initialization of work areas as possible (work in progress)
+    *
+    *  4 does not seem to work.
     */
-   int startFinishOptions = 1 | 4;
+   int startFinishOptions = 1;
    if ( lpi->validFactorization )
       startFinishOptions = startFinishOptions | 2;
 
