@@ -171,6 +171,7 @@ fixed bugs:
 - fixed bug in solve.c caused by integer overflow due to setting the number of cuts to INT_MAX
 - fixed bug in cons_knapsack.c caused by having a multi-aggregated variable in a knapsack constraint, now applyFixing is able to resolve a binary multi-aggregation with integral values
 - fixed bug in SCIPfreeProb() in scip.c: all pricers are deactivated now
+- fixed bug in reader_mps.c with respect to corrupted files
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

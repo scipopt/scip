@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.112 2009/06/22 09:30:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.113 2009/09/02 17:41:21 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -1202,6 +1202,7 @@ SCIP_RETCODE readBounds(
    char        bndname[MPS_MAX_NAMELEN] = { '\0' };
    SCIP_VAR*   var;
    SCIP_Real   val;
+   SCIP_Bool   shifted;
 
    SCIPdebugMessage("read bounds\n");
 
@@ -1217,6 +1218,9 @@ SCIP_RETCODE readBounds(
 	    break;
          return SCIP_OKAY;
       }
+      
+      shifted = FALSE;
+      
       /* Is the value field used ? */
       if (  !strcmp(mpsinputField1(mpsi), "LO")  /* lower bound given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "UP")  /* upper bound given in field 4 */
@@ -1226,7 +1230,10 @@ SCIP_RETCODE readBounds(
          || !strcmp(mpsinputField1(mpsi), "SC")) /* CPLEX extension: semi continuous variable */
       {
          if (mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL)
+         {
             mpsinputInsertName(mpsi, "_BND_", TRUE);
+            shifted = TRUE;
+         }
          if( !mpsi->semicontwarning && !strcmp(mpsinputField1(mpsi), "SC") )
          {
             mpsinputEntryIgnored(scip, mpsi, "not supported semi continuous declaration", mpsinputField1(mpsi),
@@ -1240,7 +1247,10 @@ SCIP_RETCODE readBounds(
          || !strcmp(mpsinputField1(mpsi), "BV"))   /* CPLEX extension: binary variable */
       {
          if (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
+         {
             mpsinputInsertName(mpsi, "_BND_", TRUE);
+            shifted = TRUE;
+         }
       }
       else
       {
@@ -1327,6 +1337,18 @@ SCIP_RETCODE readBounds(
                return SCIP_OKAY;
             }
          }
+      }
+      else
+      {
+         /* check for syntax error */
+         assert(*bndname != '\0');
+         if( strcmp(bndname, mpsinputField3(mpsi)) == 0 && shifted )
+         {
+            mpsinputSyntaxerror(mpsi);
+            return SCIP_OKAY;
+         }
+         
+         mpsinputEntryIgnored(scip, mpsi, "bound", mpsinputField2(mpsi), "variable", mpsinputField3(mpsi), SCIP_VERBLEVEL_NORMAL);
       }
    }
    mpsinputSyntaxerror(mpsi);
@@ -2527,13 +2549,20 @@ void printBoundSection(
 static
 SCIP_DECL_READERREAD(readerReadMps)
 {  /*lint --e{715}*/
+   SCIP_RETCODE retcode;
+
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIP_CALL( readMps(scip, filename) );
+   retcode =  readMps(scip, filename);
 
+   if( retcode == SCIP_NOFILE || retcode == SCIP_PARSEERROR )
+      return retcode;
+
+   SCIP_CALL( retcode );
+      
    *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
