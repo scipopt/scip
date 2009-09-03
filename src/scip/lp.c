@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.320 2009/08/31 17:37:10 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.321 2009/09/03 08:54:05 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9968,7 +9968,7 @@ SCIP_RETCODE lpLexDualSimplex(
 	 for (j = 0; j < lp->nlpicols; ++j)
 	 {
 	    if ( fixedc[j] )
-	       printf("%f (%d) [f] ", primsol[j], j);
+	       SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
 	    else
 	    {
 	       char type;
@@ -9984,10 +9984,10 @@ SCIP_RETCODE lpLexDualSimplex(
 		  type = 'b'; break;
 	       default: abort();
 	       }
-	       printf("%f (%d) [%c] ", primsol[j], j, type);
+	       SCIPdebugMessage("%f (%d) [%c] ", primsol[j], j, type);
 	    }
 	 }
-	 printf("\n\n");
+	 SCIPdebugMessage("\n\n");
 	 
 	 if ( ! chooseBasic )
 	 {
@@ -10176,7 +10176,7 @@ SCIP_RETCODE lpLexDualSimplex(
 	       for (j = 0; j < lp->nlpicols; ++j)
 	       {
 		  if ( fixedc[j] )
-		     printf("%f (%d) [f] ", primsol[j], j);
+		     SCIPdebugMessage("%f (%d) [f] ", primsol[j], j);
 		  else
 		  {
 		     char cstart = '[';
@@ -10201,10 +10201,10 @@ SCIP_RETCODE lpLexDualSimplex(
 			type = 'b'; break;
 		     default: abort();
 		     }
-		     printf("%f (%d) %c%c%c ", primsol[j], j, cstart, type, cend);
+		     SCIPdebugMessage("%f (%d) %c%c%c ", primsol[j], j, cstart, type, cend);
 		  }
 	       }
-	       printf("\n\n");
+	       SCIPdebugMessage("\n\n");
 	       
 	       if ( ! chooseBasic )
 	       {
@@ -10297,7 +10297,6 @@ SCIP_RETCODE lpLexDualSimplex(
       SCIPclockStop(stat->lexduallptime, set);
 
       SCIPdebugMessage("solved dual lexicographic LP %d in %d iterations (%d lex. iters.) in %d rounds\n", stat->lpcount, totalIterations, lexIterations, rounds);
-      printf("solved dual lexicographic LP %d in %d iterations (%d lex. iters.) in %d rounds\n", stat->lpcount, totalIterations, lexIterations, rounds);
    }
    lp->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    lp->solisbasic = TRUE;
