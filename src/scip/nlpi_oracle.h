@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.4 2009/08/11 18:48:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.5 2009/09/03 04:55:13 bzfviger Exp $"
 
 /**@file   nlpi_oracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -41,6 +41,7 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
    SCIP_NLPIORACLE**  oracle   /**< pointer to store NLPIORACLE data structure */
 );
 
+/** initializes NLPI oracle */
 extern
 SCIP_RETCODE SCIPnlpiOracleInit(
    SCIP*              scip,    /**< pointer to SCIP */
@@ -55,8 +56,7 @@ SCIP_RETCODE SCIPnlpiOracleFree(
    SCIP_NLPIORACLE**  oracle   /**< pointer to NLPIORACLE data structure */
 );
 
-/** add variables
- */
+/** adds variables */
 extern
 SCIP_RETCODE SCIPnlpiOracleAddVars(
    SCIP*             scip,    /**< pointer to SCIP */
@@ -67,8 +67,9 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    const char**      varnames /**< names of new variables, or NULL if no names should be stored */
 );
 
-/** add constraints 
- * linear coefficients: row(=constraint) oriented matrix
+/** adds constraints 
+ * 
+ * linear coefficients: row(=constraint) oriented matrix;
  * quadratic coefficiens: row oriented matrix for each constraint
  */
 extern
@@ -92,6 +93,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 );
 
 /** sets or overwrites objective, a minization problem is expected
+ * 
  *  May change sparsity pattern.
  */
 extern
@@ -135,7 +137,7 @@ SCIP_RETCODE SCIPnlpiOracleChgConsBounds(
    const SCIP_Real*      rhs         /**< new right-hand sides, or NULL if all should be +infty */
 );
 
-/** delete a set of variables
+/** deletes a set of variables
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleDelVarSet(
@@ -144,7 +146,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    int*                  delstat     /**< deletion status of vars in input (1 if var should be deleted, 0 if not); new position of var in output (-1 if var was deleted) */
 );
 
-/** delete a set of constraints
+/** deletes a set of constraints
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleDelConsSet(
@@ -154,7 +156,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
 );
 
 /** changes linear coefficients in one constraint or objective
- * Return: Error if coefficient did not exist before
+ * @return error if coefficient did not exist before
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
@@ -167,7 +169,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
 );
   
 /** changes coefficients in the quadratic part of one constraint or objective
- * Return: Error if coefficient did not exist before
+ * @return error if coefficient did not exist before
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
@@ -305,6 +307,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
 );
 
 /** Gets sparsity pattern (rowwise) of Jacobian matrix.
+ * 
  * Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
  * Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary. 
  */
@@ -317,8 +320,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 );
 
 /** Evaluates the Jacobi matrix in a given point.
+ * 
  * The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
- * The user must call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
+ * The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
@@ -331,6 +335,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
 );
 
 /** Gets sparsity pattern of the Hessian matrix of the Lagrangian.
+ * 
  * Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
  * Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
  * Only elements of the lower left triangle and the diagonal are counted.
@@ -344,6 +349,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
 );
 
 /** Evaluates the Hessian matrix of the Lagrangian in a given point.
+ * 
  * The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
  * The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
  * Only elements of the lower left triangle and the diagonal are computed.

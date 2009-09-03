@@ -12,17 +12,16 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.5 2009/08/11 18:46:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.6 2009/09/03 04:55:13 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @brief   Ipopt NLP interface
  * @ingroup NLPINTERFACES
  * @author  Stefan Vigerske
- */
-
-/* @TODO warm starts
- * @TODO ScipJournal to redirect Ipopt output 
- * @TODO use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
+ *
+ * @todo warm starts
+ * @todo ScipJournal to redirect Ipopt output 
+ * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -84,32 +83,35 @@ public:
    { }
 };
 
+/** TNLP implementation for SCIPs NLP */
 class ScipNLP : public TNLP
 {
 private:
-   SCIP*             scip;
-   SCIP_NLPIDATA*    nlpidata;
+   SCIP*             scip;      /**< SCIP data structure */
+   SCIP_NLPIDATA*    nlpidata;  /**< NLPI data */
 
 public:
-
+   /** constructor */
    ScipNLP(SCIP* scip_ = NULL, SCIP_NLPIDATA* nlpidata_ = NULL)
    : scip(scip_), nlpidata(nlpidata_)
    { }
 
+   /** destructor */
    ~ScipNLP() { }
    
+   /** sets SCIP data structure */
    void setSCIP(SCIP* scip_)
    {
       assert(scip_ != NULL);
       scip = scip_;
    }
 
+   /** sets NLPI data structure */
    void setNLPIDATA(SCIP_NLPIDATA* nlpidata_)
    {
       assert(nlpidata_ != NULL);
       nlpidata = nlpidata_;
    }
-
 
    /** Method to return some info about the nlp */
    bool get_nlp_info(Index& n, Index& m, Index& nnz_jac_g, Index& nnz_h_lag, IndexStyleEnum& index_style);
@@ -148,7 +150,8 @@ public:
    bool eval_h(Index n, const Number* x, bool new_x, Number obj_factor, Index m, const Number* lambda, bool new_lambda, Index nele_hess, Index* iRow, Index* jCol, Number* values);
 
    /** Method called by the solver at each iteration.
-    * Checks whether ^C was hit.
+    * 
+    * Checks whether Ctrl-C was hit.
     */
    bool intermediate_callback (AlgorithmMode mode, Index iter, Number obj_value, Number inf_pr, Number inf_du, Number mu, Number d_norm, Number regularization_size, Number alpha_du, Number alpha_pr, Index ls_trials, const IpoptData *ip_data, IpoptCalculatedQuantities *ip_cq);
 
@@ -157,6 +160,7 @@ public:
    void finalize_solution(SolverReturn status, Index n, const Number* x, const Number* z_L, const Number* z_U, Index m, const Number* g, const Number* lambda, Number obj_value, const IpoptData* data, IpoptCalculatedQuantities* cq);
 };
 
+/** clears the last solution arrays and sets the solstat and termstat to unknown and other, resp. */
 static
 void SCIPnlpiIpoptInvalidateSolution(SCIP* scip, SCIP_NLPI* nlpi)
 {
