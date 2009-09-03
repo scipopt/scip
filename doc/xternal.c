@@ -85,6 +85,7 @@
  * - \ref READER  "How to add file readers"
  * - \ref DIALOG  "How to add dialogs"
  * - \ref DISP    "How to add display columns"
+ * - \ref EVENT   "How to add event handler"
  * - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
  * - \ref PARAM   "Adding additional user parameters"
  *
@@ -92,7 +93,7 @@
  *
  * - \ref CHG1    "Changes between version 0.9 and 1.0"
  * - \ref CHG2    "Changes between version 1.0 and 1.1"
- * - \ref CHG3    "Changes since version 1.1"
+ * - \ref CHG3    "Changes between version 1.1 and 1.2"
  *
  */
 
@@ -239,14 +240,11 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CONS How to add constraint handlers
  *
- * @todo extend the documentation with the new callback methods CONSCOPY and CONSPARSE.
- *
- * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.
- * A single constraint handler is responsible for all the constraints belonging to his constraint class.
- * For example, there is one \ref cons_knapsack.c "knapsack constraint handler" that ensures that only solutions are accepted that
- * satisfy all the knapsack constraints in the model. 
- * \n
- * A complete list of all constraint handlers contained in this release can be found \ref CONSHDLRS "here".
+ * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.  A single
+ * constraint handler is responsible for all the constraints belonging to his constraint class.  For example, there is
+ * one \ref cons_knapsack.c "knapsack constraint handler" that ensures that only solutions are accepted that satisfy all
+ * the knapsack constraints in the model. \n A complete list of all constraint handlers contained in this release can be
+ * found \ref CONSHDLRS "here".
  *
  * In the following, we explain how the user can add an own constraint handler.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
@@ -944,6 +942,32 @@
  * The output format that is defined by the CONSPRINT callbacks is called CIP format.
  * In later versions of SCIP, the constraint handlers should also be able to parse (i.e., read) constraints
  * which are given in CIP format.
+ *
+ * @subsection CONSCOPY
+ *
+ * The CONSCOPY callback method is used if constraints should get copied from one SCIP environment into another SCIP
+ * environment. To do so, this method comes with the necessary parameters such as a map mapping the variables from the 
+ * source SCIP environment to the corresponding variables of the target SCIP environment. The following code line shows
+ * how to get the corresponding target variable of given source variable:
+ *
+ * \code
+ * target = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, source);
+ * \endcode
+ *
+ * Furthermore, if the copy process was successful the result pointer success has to be set to TRUE.
+ * For an example implementation we refer to cons_linear.c.
+ *
+ * Additional documentation and the complete list of all parameters can be found in the file in type_cons.h. 
+ *
+ * @subsection CONSPARSE
+ *
+ * This method is the counter part to CONSPRINT. The ideal idea is that a constraint handler is able to parse the output
+ * which it generated via the CONSPRINT method and creates the corresponding constraint. If the parsing was successfully
+ * the result pointer success should be set to TRUE. An example implementation can be found in the \ref cons_linear.c
+ * "linear constraint handler".
+ *
+ * Additional documentation and the complete list of all parameters can be found in the file in type_cons.h. 
+ * 
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3353,6 +3377,207 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page EVENT How to add event handler
+ *
+ * While solving a constraint integer program, SCIP drops thousands of events such as SCIP_EVENTTYPE_VARFIXED (a
+ * complete list of all events is given in type_event.h). These events can be caught and used to do something after a
+ * certain event happens. Events can be used to speed up the solution process. For example, the set partitioning
+ * constraint is only worth to propagate if one of the involved variables are fixed which can be triggered be detected by
+ * catching the event SCIP_EVENTTYPE_VARFIXED. To be able to catch an event it is necessary to write an event handler
+ * which defines what to do after a certain event was caught.
+ *
+ * In the following, we explain how the user can add an own event handler. We give the explanation for creating an own
+ * source file for each additional event handler. Of course, you can collect different event handler in one source file
+ * or you can put the event handler directly into the constraint handler.  In a \ref EVENTUSAGE "second step" we discuss
+ * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the exiting
+ * types of events.
+ *
+ * Take src/scip/cons_logior.c, where the event handle is directly include into the constraint handler. As all other
+ * default plugins, the event handlers are written in C. C++ users can easily adapt the code by using the ObjEventhdlr
+ * wrapper base class and implement the scip_...() virtual methods instead of the SCIP_DECL_EVENT... callback methods.
+ * 
+ * Additional documentation for the callback methods of a display column can be found in the file type_event.h.
+ *
+ * Here is what you have to do to implement an event handler (assuming your event handler is named "bestsol"):
+ * -# Copy the template files src/scip/event_xxx.c and src/scip/event_xxx.h into files named "event_bestsol.c"
+ *    and "event_bestsol.h".
+      \n
+ *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
+ * -# Open the new files with a text editor and replace all occurrences of "xxx" by "bestsol".
+ * -# Adjust the \ref EVENTHDLR_PROPERTIES "properties of the event handler".
+ * -# Implement the \ref EVENT_INTERFACE "interface methods".
+ * -# Implement the \ref EVENT_FUNDAMENTALCALLBACKS "fundamental callback methods".
+ * -# Implement the \ref EVENT_ADDITIONALCALLBACKS "additional callback methods". This is optional.
+ *
+ *
+ * @section EVENTHDLR_PROPERTIES Properties of a Event Handler
+ *
+ * At the top of the new file "event_bestsol.c" you can find the event handler properties.
+ * These are given as compiler defines.
+ * In the C++ wrapper class, you have to provide the event handler properties by calling the constructor
+ * of the abstract base class ObjEventhdlr from within your constructor.
+ * The properties you have to set have the following meaning:
+ *
+ * \par EVENT_NAME: the name of the event handler.
+ * This name has to be unique with respect to all other event handlers. If you are searching for an event handler with
+ * SCIPfindEventhdlr(), this name is looked up.
+ *
+ * \par EVENT_DESC: the description of the display column.
+ * This string is printed as description of the event handler.
+ *
+ * @section EVENTHDLR_DATA Event Handler Data
+ *
+ * Below the header "Data structures" you can find a struct which is called "struct SCIP_EventhdlrData".
+ * In this data structure, you can store the data of your event handler. For example, you should store the adjustable 
+ * parameters of the event handler in this data structure.
+ * If you are using C++, you can add event handler data as usual as object variables to your class.
+ * \n
+ * Defining event handler data is optional. You can leave the struct empty.
+ *
+ *
+ * @section EVENT_INTERFACE Interface Methods
+ *
+ * At the bottom of "event_bestsol.c" you can find the interface method SCIPincludeEventHdlrBestsol(), which also
+ * appears in "event_bestsol.h".
+ * \n
+ * This method has only to be adjusted slightly.
+ * It is responsible for notifying SCIP of the presence of the event handler by calling the method
+ * SCIPincludeEvent().
+ *
+ * The interface method is called by the user, if he wants to include the event handler, i.e., if he wants to use the
+ * event handler in his application.
+ *
+ * If you are using event handler data, you have to allocate the memory for the data at this point.
+ * You can do this by calling
+ * \code
+ * SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+ * \endcode
+ * You also have to initialize the fields in struct SCIP_EventhdlrData afterwards.
+ *
+ * Although this is very uncommon, you may also add user parameters for your event handler, see the method
+ * SCIPincludeConshdlrKnapsack() in the \ref cons_knapsack.c "knapsack constraint handler" for an example.
+ *
+ * 
+ * @section EVENT_FUNDAMENTALCALLBACKS Fundamental Callback Methods of a Event Handler
+ *
+ * Event handler plugins have only one fundamental callback method, namely the \ref EVENTEXEC method.  This method has
+ * to be implemented for every event handler; the other callback methods are optional.  In the C++ wrapper class
+ * ObjEventhdlr, the scip_exec() method (which corresponds to the \ref EVENTEXEC callback) is a virtual abstract member
+ * function.  You have to implement it in order to be able to construct an object of your event handler class.
+ *
+ * Additional documentation to the callback methods can be found in type_event.h.
+ *
+ * @subsection EVENTEXEC
+ *
+ * The EVENTEXEC callback is called after the requested event happened. Then the event handler can do some action in
+ * reaction to the event. 
+ *
+ * Typical the execution method sets a parameter to TRUE to indicate later in solving process that something happened
+ * which should be analyzed further. In the \ref cons_knapsack.c "knapsack constraint handler" you find such a typical
+ * example.
+ *
+ * @section EVENT_ADDITIONALCALLBACKS Additional Callback Methods of a Event Handler
+ *
+ * The additional callback methods need not to be implemented in every case.
+ * They can be used, for example, to initialize and free private data.
+ *
+ * @subsection EVENTFREE
+ *
+ * If you are using event handler data, you have to implement this method in order to free the event handler data.
+ * This can be done by the following procedure:
+ * \code
+ * static
+ * SCIP_DECL_EVENTFREE(eventFreeBestsol)
+ * {
+ *    SCIP_EVENTHDLRDATA* eventhdlrdata;
+ *  
+ *    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+ *    assert(eventhdlrdata != NULL);
+ *
+ *    SCIPfreeMemory(scip, &eventhdlrdata);
+ *
+ *    SCIPeventhdlrSetData(eventhdlr, NULL);
+ *
+ *    return SCIP_OKAY;
+ * }
+ * \endcode
+ * If you have allocated memory for fields in your event handler data, remember to free this memory 
+ * before freeing the event handler data itself. 
+ * If you are using the C++ wrapper class, this method is not available.
+ * Instead, just use the destructor of your class to free the member variables of your class.
+ *
+ * @subsection EVENTINIT
+ *
+ * The EVENTINIT callback is executed after the problem was transformed.
+ * The event handler may, e.g., use this call to initialize its event handler data.
+ *
+ * @subsection EVENTEXIT
+ *
+ * The EVENTEXIT callback is executed before the transformed problem is freed.
+ * In this method, the event handler should free all resources that have been allocated for the solving process in 
+ * \ref EVENTINIT.
+ *
+ * @subsection EVENTINITSOL
+ *
+ * The EVENTINITSOL callback is executed when the presolving was finished and the branch and bound process is about to 
+ * begin. The event handler may use this call to initialize its branch and bound specific data.
+ *
+ * @subsection EVENTEXITSOL
+ *
+ * The EVENTEXITSOL callback is executed before the branch and bound process is freed. The event handler should use this 
+ * call to clean up its branch and bound data specific data.
+ *
+ * @section EVENTUSAGE Catching and Dropping Events
+ *
+ * After you have implemented the event handler, you have to tell SCIP for which events this event handler should be
+ * used. This can be a general evens, such as <code>SCIP_EVENTTYPE_BESTSOLFOUND</code>, or a variable event which is the most common
+ * way. 
+ *
+ * In case of a general (not variable event) you use the function SCIPcatchEvent() to attach to an even and
+ * SCIPdropEvent() to release this event later.
+ *
+ * \code
+ * SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+ * \endcode
+ *
+ * \code
+ * SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+ * \endcode
+ *
+ * If you want trigger some variable event, you use the method SCIPcatchVarEvent() to attach the variable event and
+ * SCIPdropVarEvent() to drop it later.
+ * 
+ * \code
+ * SCIP_CALL( SCIPcatchVarEvent( scip, var, SCIP_EVENTTYPE_VARFIXED, eventhdlr, NULL, NULL) );
+ * \endcode
+ *
+ * \code
+ * SCIP_CALL( SCIPdropVarEvent( scip, var, SCIP_EVENTTYPE_VARFIXED, eventhdlr, NULL, NULL) );
+ * \endcode
+ *
+ * @section EVENTTYPES Event types
+ *
+ * All available events are listed in type_event.h. There are atomic events such as <code>SCIP_EVENTTYPE_VARFIXED</code>
+ * and combined events such as <code>SCIP_EVENTTYPE_VARCHANGED</code>. The events are encode via bit masks. Each atomic
+ * event has a unique power of two. This allows to combine the atomic events.
+ *
+ * SCIP only throws atomic events. However, an event handler might be interested in bunch of events. Through the
+ * underlying bit masks it is possible to combine the atomic events. For example, <code>SCIP_EVENTTYPE_VARCHANGED</code>
+ * is an event which combines the events <code>SCIP_EVENTTYPE_VARFIXED</code>, <code>SCIP_EVENTTYPE_VARUNLOCKED</code>,
+ * <code>SCIP_EVENTTYPE_OBJCHANGED</code>, <code>SCIP_EVENTTYPE_GBDCHANGED</code>,
+ * <code>SCIP_EVENTTYPE_DOMCHANGED</code>, and <code>SCIP_EVENTTYPE_IMPLADDED</code>.
+ *
+ * \code
+ * #define SCIP_EVENTTYPE_VARCHANGED     (SCIP_EVENTTYPE_VARFIXED | SCIP_EVENTTYPE_VARUNLOCKED | SCIP_EVENTTYPE_OBJCHANGED 
+ *                                    | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED)
+ * \endcode
+ *
+ * Depending on the event type, the event offers different information. The methods which are allowed to use to get
+ * access to these information are given in pub_event.h.
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -3780,11 +4005,21 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page CHG3 Interface changes since SCIP 1.1
+/**@page CHG3 Interface changes between SCIP 1.1 and SCIP 1.2
  *
- * - The callback \ref PRICERREDCOST in the pricers got two new parameters: A result pointer and a pointer for providing a 
- *   lower bound. For details, see the documentation of \ref PRICERREDCOST. 
- *
+ * - The callback SCIP_DECL_PRICERREDCOST(x) in the \ref PRICER "pricers" has two new parameters: 
+ *    - A result pointer determine if the pricer guarantees that there exist no more variables. This allows for early branching.
+ *    - A pointer for providing a lower bound. 
+ * - new parameter "mksetcoefsvalid" in method SCIPcalcMIR() to store whether "mksetcoefs" computed in
+ *   SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows is empty or contains
+ *   too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
+ * - new parameter "sol" in SCIPcalcMIR() to separate a sol different from the LP solution 
+ * - new parameter "sol" in SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() to get closest variable bound w.r.t. sol different from LP solution
+ * - The \ref CONS "contraint handlers" have two new callback methods (see type_cons.h for more details).
+ *    - SCIP_DECL_CONSCOPY(x) this method can be use to copy a constraint
+ *    - SCIP_DECL_CONSPARSE(x) this method can be use to pasre a constraint in CIP format
+
+
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -3842,6 +4077,10 @@
 
 /**@defgroup NODESELECTORS Node Selectors
  * @brief This page contains a list of all node selectors which are currently available.
+ */
+
+/**@defgroup NLPIS NLP Interfaces
+ * @brief This page contains a list of all NLP instances which are currently available.
  */
 
 /**@defgroup PRESOLVERS Presolvers
