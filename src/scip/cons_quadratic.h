@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.8 2009/09/03 04:24:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.9 2009/09/03 18:48:43 bzfberth Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -241,7 +241,7 @@ SCIP_Real SCIPgetRhsQuadratic(
  * The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
  */
 extern
-SCIP_RETCODE SCIPconsInitnlpiQuadratic(
+SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    SCIP*           scip,        /**< SCIP data structure */
    SCIP_CONSHDLR*  conshdlr,    /**< constraint handler for quadratic constraints */
    SCIP_NLPI*      nlpi,        /**< NLPI where to add constraints */
