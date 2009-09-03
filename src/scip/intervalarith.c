@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.25 2009/08/17 18:15:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.26 2009/09/03 03:25:41 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -190,7 +190,7 @@ void SCIPintervalSetEmpty(
    resultant->sup = -infinity;
 }
 
-/** indicates whether interval is empty, i.e., whether if inf > sup */
+/** indicates whether interval is empty, i.e., whether inf > sup */
 SCIP_Bool SCIPintervalIsEmpty(
    SCIP_INTERVAL         operand             /**< operand of operation */
    )
@@ -198,7 +198,7 @@ SCIP_Bool SCIPintervalIsEmpty(
    return operand.sup < operand.inf;
 }
 
-/** sets interval to entire [-infty, +infty] */
+/** sets interval to entire [-infinity, +infinity] */
 void SCIPintervalSetEntire(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
@@ -238,7 +238,7 @@ SCIP_Bool SCIPintervalIsSubsetEQ(
           (MIN( infinity, operand1.sup) <= operand2.sup);
 }
 
-/** intersection of two intervals  */
+/** intersection of two intervals */
 void SCIPintervalIntersect(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
@@ -437,8 +437,11 @@ void SCIPintervalSubScalar(
 }
 
 /** undoes a substraction operation.
+ * 
  * In number arithmetic, this would be addition.
  * Substractions of unbounded intervals cannot be undone, but resultant gives still a valid (but probably larger) interval.
+ * 
+ * This is a ''dirty'' operation.
  */
 void SCIPintervalUndoSub(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -831,8 +834,9 @@ void SCIPintervalDiv(
   setRoundingMode(roundmode);
 }
 
-/** divides operand1 by scalar operand2 and stores result in resultant 
- * if operand2 is 0.0, it gives an empty interval as result */
+/** divides operand1 by scalar operand2 and stores result in resultant
+ * 
+ * if operand2 is 0.0, gives an empty interval as result */
 void SCIPintervalDivScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -918,7 +922,7 @@ void SCIPintervalSquare(
    roundmode = getRoundingMode();
 
    if( operand.sup <= 0.0 )
-   {  /** operand is left of 0 */
+   {  /* operand is left of 0 */
       setRoundingMode(SCIP_ROUND_DOWNWARDS);
       resultant->inf = operand.sup * operand.sup;
       if( operand.inf <= -infinity )
@@ -932,7 +936,7 @@ void SCIPintervalSquare(
       }
    }
    else if( operand.inf >= 0.0 )
-   {  /** operand is right of 0 */
+   {  /* operand is right of 0 */
       setRoundingMode(SCIP_ROUND_DOWNWARDS);
       resultant->inf = operand.inf * operand.inf;
       if( operand.sup >= infinity )
@@ -946,7 +950,7 @@ void SCIPintervalSquare(
       }
    }
    else
-   {  /** 0.0 inside resultant */
+   {  /* 0.0 inside resultant */
       SCIP_Real x;
       SCIP_Real y;
       resultant->inf = 0.0;
@@ -1005,6 +1009,7 @@ void SCIPintervalSquareRoot(
 }
 
 /** stores operand1 to the power of operand2 in resultant
+ * 
  * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1)) */
 void SCIPintervalPower(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -1323,7 +1328,8 @@ void SCIPintervalMax(
    resultant->sup = MAX(operand1.sup, operand2.sup);
 }
 
-/** computes exact upper bound on a*x^2 + b*x for x in [xlb, xub], b an interval
+/** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
+ * 
  * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008) */
 SCIP_Real SCIPintervalQuadUpperBound(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -1395,7 +1401,8 @@ SCIP_Real SCIPintervalQuadUpperBound(
 }
 
 /** stores range of quadratic term in resultant
- * given number a and intervals b and x, computes interval for a*x^2+b*x */
+ * 
+ * given scalar a and intervals b and x, computes interval for \f$ a x^2 + b x \f$ */
 void SCIPintervalQuad(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1440,7 +1447,8 @@ void SCIPintervalQuad(
 }
 
 /** solves a quadratic equation with interval linear and constant coefficients
- * Given a number a and intervals b and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x in c */
+ * 
+ * Given a scalar a and intervals b and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$. */
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
@@ -1459,7 +1467,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    }
    else
    {
-      SCIPintervalSolveUnivariateQuadExpressionPositive2(infinity, resultant, -sqrcoeff, -lincoeff.inf, -rhs.sup);
+      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, resultant, -sqrcoeff, -lincoeff.inf, -rhs.sup);
       SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", -sqrcoeff, -lincoeff.inf, -rhs.sup, resultant->inf, resultant->sup);
    }
    
@@ -1467,7 +1475,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
    if (lincoeff.sup <  infinity && rhs.inf >  -infinity)
    {
       SCIP_INTERVAL res2;
-      SCIPintervalSolveUnivariateQuadExpressionPositive2(infinity, &res2, sqrcoeff, lincoeff.sup, rhs.inf);
+      SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(infinity, &res2, sqrcoeff, lincoeff.sup, rhs.inf);
       SCIPdebugMessage("solve %g*x^2 + %g*x >= %g gives [%.20f, %.20f]\n", sqrcoeff, lincoeff.sup, rhs.inf, res2.inf, res2.sup);
       SCIPdebugMessage("intersect [%.20f, %.20f] and [%.20f, %.20f]", resultant->inf, resultant->sup, res2.inf, res2.sup);
       /* intersect both results */
@@ -1483,9 +1491,10 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
 }
 
 /** solves a quadratic equation with linear and constant coefficients
- * Given numbers a, b, and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x >= c
+ * 
+ * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$.
  * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008). */
-void SCIPintervalSolveUnivariateQuadExpressionPositive2(
+void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
@@ -1563,7 +1572,7 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive2(
             z = -b + sqrt(delta);
             resultant->sup = -(rhs/z);
          }
-/* actually we could generate a hole here
+/* @TODO actually we could generate a hole here
          if( delta >= 0 )
          {
             z = -b + sqrt(delta);
@@ -1578,7 +1587,8 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive2(
 }
 
 /** solves a quadratic equation with interval linear and constant coefficients
- * Given a number a and intervals b and c, this function computes an interval that contains all solutions of a*x^2 + b*x in c */
+ * 
+ * Given a scalar a and intervals b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ */
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */

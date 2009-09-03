@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.17 2009/08/10 16:24:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.18 2009/09/03 03:25:41 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -68,13 +68,13 @@ void SCIPintervalSetEmpty(
    SCIP_INTERVAL*        resultant           /**< resultant interval of operation */
    );
 
-/** indicates whether interval is empty, i.e., whether if inf > sup */
+/** indicates whether interval is empty, i.e., whether inf > sup */
 extern
 SCIP_Bool SCIPintervalIsEmpty(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
-/** sets interval to entire [-infty, +infty] */
+/** sets interval to entire [-infinity, +infinity] */
 extern
 void SCIPintervalSetEntire(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -150,8 +150,11 @@ void SCIPintervalSubScalar(
    );
 
 /** undoes a substraction operation.
+ * 
  * In number arithmetic, this would be addition.
  * Substractions of unbounded intervals cannot be undone, but resultant gives still a valid (but probably larger) interval.
+ * 
+ * This is a ''dirty'' operation.
  */
 extern
 void SCIPintervalUndoSub(
@@ -188,8 +191,9 @@ void SCIPintervalDiv(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
-/** divides operand1 by scalar operand2 and stores result in resultant 
- * if operand2 is 0.0, it gives an empty interval as result */
+/** divides operand1 by scalar operand2 and stores result in resultant
+ * 
+ * if operand2 is 0.0, gives an empty interval as result */
 extern
 void SCIPintervalDivScalar(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -215,6 +219,7 @@ void SCIPintervalSquareRoot(
    );
 
 /** stores operand1 to the power of operand2 in resultant
+ * 
  * uses SCIPintervalPowerScalar if operand2 is a scalar, otherwise computes exp(op2*log(op1)) */
 extern
 void SCIPintervalPower(
@@ -265,7 +270,8 @@ void SCIPintervalMax(
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    );
 
-/** computes exact upper bound on a*x^2 + b*x for x in [xlb, xub], b an interval
+/** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
+ * 
  * Uses Algorithm 2.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008) */
 extern
 SCIP_Real SCIPintervalQuadUpperBound(
@@ -276,7 +282,8 @@ SCIP_Real SCIPintervalQuadUpperBound(
    );
 
 /** stores range of quadratic term in resultant
- * given number a and intervals b and x, computes interval for a*x^2+b*x */
+ * 
+ * given scalar a and intervals b and x, computes interval for \f$ a x^2 + b x \f$ */
 extern
 void SCIPintervalQuad(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -288,7 +295,8 @@ void SCIPintervalQuad(
 
 
 /** solves a quadratic equation with interval linear and constant coefficients
- * Given a number a and intervals b and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x in c */
+ * 
+ * Given a scalar a and intervals b and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$. */
 extern
 void SCIPintervalSolveUnivariateQuadExpressionPositive(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -299,10 +307,11 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive(
 );
 
 /** solves a quadratic equation with linear and constant coefficients
- * Given numbers a, b, and c, this function computes an interval that contains all positive solutions of a*x^2 + b*x >= c
+ * 
+ * Given scalar a, b, and c, this function computes an interval that contains all positive solutions of \f$ a x^2 + b x \geq c\f$.
  * Implements Algorithm 3.2 from Domes and Neumaier: Constraint propagation on quadratic constraints (2008). */
 extern
-void SCIPintervalSolveUnivariateQuadExpressionPositive2(
+void SCIPintervalSolveUnivariateQuadExpressionPositiveAllScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_Real             sqrcoeff,           /**< coefficient of x^2 */
@@ -311,7 +320,8 @@ void SCIPintervalSolveUnivariateQuadExpressionPositive2(
 );
 
 /** solves a quadratic equation with interval linear and constant coefficients
- * Given a number a and intervals b and c, this function computes an interval that contains all solutions of a*x^2 + b*x in c */
+ * 
+ * Given a scalar a and intervals b and c, this function computes an interval that contains all solutions of \f$ a x^2 + b x \in c\f$ */
 extern
 void SCIPintervalSolveUnivariateQuadExpression(
    SCIP_Real             infinity,           /**< value for infinity */
