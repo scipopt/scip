@@ -9,11 +9,10 @@
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.322 2009/09/03 09:26:02 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.323 2009/09/03 13:14:11 bzfgamra Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
