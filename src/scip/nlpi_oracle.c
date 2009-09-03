@@ -11,11 +11,11 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.8 2009/09/03 04:55:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.9 2009/09/03 14:34:04 bzfheinz Exp $"
 
 /**@file    nlpi_oracle.c
+ * @ingroup NLPIS
  * @brief   implementation of NLPI oracle interface
- * @ingroup NLPINTERFACES
  * @author  Stefan Vigerske
  * 
  * @todo jacobi evaluation should be sparse

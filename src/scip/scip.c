@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.518 2009/09/02 15:33:19 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.519 2009/09/03 14:34:04 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7386,8 +7386,9 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    return SCIP_OKAY;
 }
 
-/** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal solution
- *  or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is available
+/** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal
+ *  solution or current LP solution if no primal solution is given; returns an index of -1 if no variable upper bound is
+ *  available
  */
 SCIP_RETCODE SCIPgetVarClosestVlb(
    SCIP*                 scip,               /**< SCIP data structure */

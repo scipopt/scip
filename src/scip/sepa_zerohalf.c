@@ -19,6 +19,7 @@
 
 /**
  * @file   sepa_zerohalf.c
+ * @ingroup SEPARATORS
  * @brief  {0,1/2}-cuts separator
  * @author Manuel Kutschka
  *
