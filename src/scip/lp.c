@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.321 2009/09/03 08:54:05 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.322 2009/09/03 09:26:02 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9858,7 +9858,7 @@ SCIP_RETCODE lpLexDualSimplex(
    lexIterations = 0;
 
    /* search for lexicographically minimal optimal solution */
-   if ( !lp->diving && !lp->probing & SCIPlpiIsOptimal(lp->lpi) )
+   if ( !lp->diving && !lp->probing && SCIPlpiIsOptimal(lp->lpi) )
    {
       SCIP_Bool chooseBasic;
       SCIP_Real* primsol;
