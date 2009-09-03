@@ -56,6 +56,7 @@ interface:
 - added function SCIPvarCompareActiveAndNegated and SCIPvarCompActiveAndNegated in pub_var.h for comparing variables negated, active or fixed the same way 
 
 features:
+- new trivial heuristic: tries zero solution, lower and upper bound solution and some variable lock based fixing
 - adjusted hard memory limit to (soft memory limit)*1.1 + 100mb in check.sh, checkcount.sh, check_cplex.sh, check_cluster.sh and check_cbc.sh
 - new interface to QSopt due to Daniel Espinoza
 - new reader for reading and writing FlatZinc models
@@ -183,6 +184,10 @@ plugins:
 - added first version of an interface to NLP solvers (type_nlpi.h, struct_nlpi.h, nlpi.h, nlpi.c, nlpi_oracle.h, nlpi_oracle.c)
 - added first version of an interface to Ipopt (only QCP, no deletion of vars/cons allowed; nlpi_ipopt.(h|c))
 - added heuristic that performs a local search in an NLP (takes only linear and quadratic constraints into account so far)
+
+parameters:
+- new parameter "branching/relpscost/advanced/conflenscore", default value 0.001
+
 
 SCIP version 1.1.0
 ===============
