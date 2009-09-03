@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.h,v 1.2 2009/07/31 11:37:15 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_nlp.h,v 1.3 2009/09/03 04:30:56 bzfviger Exp $"
 
 /**@file   heur_nlp.h
  * @brief  NLP local search primal heuristic
@@ -35,7 +35,8 @@ SCIP_RETCODE SCIPincludeHeurNlp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** Updates the starting point for the NLP heuristic.
+/** updates the starting point for the NLP heuristic
+ * 
  * Is called by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
  */
 extern

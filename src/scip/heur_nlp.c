@@ -11,16 +11,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.19 2009/08/31 23:34:35 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.20 2009/09/03 04:30:56 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
  * @brief   NLP local search primal heuristic
  * @author  Stefan Vigerske
- */
-
-/* @TODO catch changes on global bound changes (e.g., due to new incumbents) and propagate to nlpi
- * @TODO set cutoff or similar
+ * 
+ * @todo catch changes on global bound changes (e.g., due to new incumbents) and propagate to nlpi
+ * @todo set cutoff or similar
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,8 +38,8 @@
 #include "scip/cons_quadratic.h"
 
 #define HEUR_NAME             "nlp"
-#define HEUR_DESC             "primal heuristic that performs a local search in an NLP after fixing integer variables"
-#define HEUR_DISPCHAR         'X'  /* @TODO: need a nice letter */
+#define HEUR_DESC             "primal heuristic that performs a local search in a QCP after fixing integer variables"
+#define HEUR_DISPCHAR         'Q'  /* @todo: need a nice letter */
 #define HEUR_PRIORITY         -2000000
 #define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
@@ -919,7 +918,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
  * primal heuristic specific interface methods
  */
 
-/** creates the Nlp primal heuristic and includes it in SCIP */
+/** creates the NLP local search primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurNlp(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -951,6 +950,10 @@ SCIP_RETCODE SCIPincludeHeurNlp(
    return SCIP_OKAY;
 }
 
+/** updates the starting point for the NLP heuristic
+ * 
+ * Is called by a constraint handler that handles nonlinear constraints when a check on feasibility of a solution fails.
+ */
 SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< NLP heuristic */
