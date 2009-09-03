@@ -12,28 +12,27 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.35 2009/09/02 10:30:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.36 2009/09/03 04:24:25 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
  * @brief  constraint handler for quadratic constraints
  * @author Stefan Vigerske
+ * 
+ * @todo SCIP might fix variables on +/- infty; remove them in presolve and take care later
+ * @todo constraints that are always feasible w.r.t. local/global bounds should be enabled/disabled (see logicor, setppc)
+ * @todo round constraint bounds to integers if all coefficients and variables are (impl.) integer
+ * @todo constraints in one variable should be replaced by linear variable or similar
+ * @todo recognize and reformulate complementarity constraints (x*y = 0)
+ * @todo check if some quadratic terms appear in several constraints and try to simplify (e.g., nous1)
+ * @todo skip separation in enfolp if for current LP (check LP id) was already separated
+ * @todo don't iterate over hash map, use array additionally
+ * @todo watch unbounded variables to enable/disable propagation
+ * @todo sort order in bilinvar1/bilinvar2 such that the var which is involved in more terms is in bilinvar1, and use this info propagate and AddLinearReform
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** TODO list:
- * - SCIP might fix variables on +/- infty; remove them in presolve and take care later
- * - constraints that are always feasible w.r.t. local/global bounds should be enabled/disabled (see logicor, setppc)
- * - round constraint bounds to integers if all coefficients and variables are (impl.) integer
- * - constraints in one variable should be replaced by linear variable or similar
- * - recognize and reformulate complementarity constraints (x*y = 0)
- * - check if some quadratic terms appear in several constraints and try to simplify (e.g., nous1)
- * - skip separation in enfolp if for current LP (check LP id) was already separated
- * - don't iterate over hash map, use array additionally
- * - watch unbounded variables to enable/disable propagation
- * - sort order in bilinvar1/bilinvar2 such that the var which is involved in more terms is in bilinvar1, and use this info propagate and AddLinearReform
- */
 
 #include <assert.h>
 #include <string.h>
@@ -48,7 +47,7 @@
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
-#define CONSHDLR_DESC          "quadratic constraints of the form lhs <= b^T x + x^T A x <= rhs"
+#define CONSHDLR_DESC          "quadratic constraints of the form lhs <= b' x + x' A x <= rhs"
 #define CONSHDLR_SEPAPRIORITY        10 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY       -50 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -4000000 /**< priority of the constraint handler for checking feasibility */
@@ -427,7 +426,7 @@ SCIP_RETCODE selectBranchingVariable(
    return SCIP_OKAY;
 }
 
-/** constraint enforcing method of constraint handler for LP solutions */
+/** finds a branching variable and does branching */
 static
 SCIP_RETCODE enforceByBranching(
 	SCIP*          scip,       /**< SCIP data structure */
@@ -510,7 +509,8 @@ SCIP_RETCODE enforceByBranching(
    return SCIP_OKAY;
 }
 
-/** Updates or initializes the infeasibility of a variable.
+/** updates or initializes the infeasibility of a variable
+ * 
  * If called the first time for some variable, then this variable is added to the list of branching candidates.
  */
 static
@@ -562,6 +562,7 @@ SCIP_RETCODE updateVarInfeasibility(
 }
 
 /** translate from one value of infinity to another
+ * 
  * if val is >= infty1, then give infty2, else give val */
 #define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
 
@@ -775,6 +776,7 @@ SCIP_RETCODE dropVarEvents(
 }
 
 /** sets or replaces function data of constraint
+ * 
  * Takes care of and release/capture of variables, but not of unlock/lock.
  */
 static
@@ -964,6 +966,7 @@ SCIP_RETCODE consdataSetFunctionData(
    return SCIP_OKAY;
 }
 
+/** frees constraint data structure */
 static
 void consdataFree(SCIP* scip, SCIP_CONSDATA** consdata)
 {
@@ -1000,7 +1003,7 @@ void consdataFree(SCIP* scip, SCIP_CONSDATA** consdata)
    *consdata = NULL;
 }
 
-/** Adds a variable with coefficients to the presolve data structure. */
+/** adds a variable with coefficients and bilinear term to the presolve data structure */
 static
 SCIP_RETCODE presolveQuadTermAdd(
    SCIP*         scip,        /**< SCIP data structure */
@@ -1162,7 +1165,7 @@ void presolveQuadTermPrint(
 }
 #endif
 
-/** Adds a linear term into the presolve data structure. */
+/** adds a linear term into the presolve data structure. */
 static
 SCIP_RETCODE presolveAddLinearTerm(
    SCIP*          scip,     /**< SCIP data structure */
@@ -1230,6 +1233,7 @@ SCIP_RETCODE presolveAddLinearTerm(
    return SCIP_OKAY;
 }
 
+/** adds a bilinear term into the presolve data structure */  
 static
 SCIP_RETCODE presolveAddBilinearTerm(
    SCIP*          scip,     /**< SCIP data structure */
@@ -1321,6 +1325,7 @@ SCIP_RETCODE presolveAddBilinearTerm(
    return SCIP_OKAY;
 }
 
+/** adds a square term into the presolve data structure. */
 static
 SCIP_RETCODE presolveAddSquareTerm(
    SCIP*          scip,     /**< SCIP data structure */
@@ -1409,7 +1414,8 @@ SCIP_RETCODE presolveAddSquareTerm(
 }
 
 /** gets constraint function data as set of PresolveQuadTerm's for reformulation and preprocessing
- * replaces fixed and aggregated variables
+ * 
+ * replaces fixed and aggregated variables;
  * replaces squares of binary variables
  */
 static
@@ -1995,8 +2001,14 @@ SCIP_RETCODE presolveTryAddAND(
 #endif
 
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
- * A product x*y, with y a binary variable and x a continous variable with finite bounds,
- * an auxiliary variable z and the inequalities x^L * y <= z <= x^U * y and x - (1-y)*x^L <= z <= x - (1-y)*x^U are added.
+ * 
+ * For a product x*y, with y a binary variable and x a continous variable with finite bounds,
+ * an auxiliary variable z and the inequalities \f$ x^L * y \leq z \leq x^U * y \f$ and \f$ x - (1-y)*x^L \leq z \leq x - (1-y)*x^U \f$ are added.
+ * 
+ * If x is a linear term consisting of more than one variable, it is split up in groups of linear terms of length at most maxnrvar.
+ * For each product of linear term of length at most maxnrvar with y, an auxiliary z and linear inequalities are added.
+ * 
+ * If y is a binary variable, the AND constraint \f$ z = x \wedge y \f$ is added instead of linear constraints.
  */
 static
 SCIP_RETCODE presolveTryAddLinearReform(
@@ -2526,6 +2538,7 @@ SCIP_Real getGradientNorm(
    return sqrt(norm);
 }
 
+/** computes violation of a constraint */
 static
 SCIP_RETCODE computeViolation(
    SCIP*       scip,       /**< SCIP data structure */
@@ -2593,6 +2606,7 @@ SCIP_RETCODE computeViolation(
    return SCIP_OKAY;
 }
 
+/** computes violation of a set of constraints */
 static
 SCIP_RETCODE computeViolations(
    SCIP*        scip,        /**< SCIP data structure */
@@ -2695,8 +2709,11 @@ SCIP_RETCODE addQuadRange(
 }
 
 /** checks by interval analysis whether a violated constraint is infeasible
+ * 
  * If lbviol and ubviol is below feasibility tolerance, the check is skipped.
+ * 
  * If isfeasible is set to false, then constraint is infeasible w.r.t. current local bounds.
+ * 
  * If isfeasible is set to true, then this gives no information.
  */
 static
@@ -3082,6 +3099,7 @@ SCIP_RETCODE generateCut(
 }
 
 /** tries to separate solution or LP solution by a linear cut
+ * 
  * assumes that constraint violations have been computed 
  */
 static
@@ -3350,7 +3368,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
    return SCIP_OKAY;
 }
 
-/** Solves a linear equation b*x in rhs and reduces bounds on x or deduces infeasibility if possible.
+/** solves a linear equation \f$ b*x \in rhs \f$ and reduces bounds on x or deduces infeasibility if possible.
  */
 static
 SCIP_RETCODE propagateBoundsLinearVar(
@@ -3423,7 +3441,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
    return SCIP_OKAY;
 }
 
-/** Solves a quadratic equation a*x^2 + b*x in rhs (with b an interval) and reduces bounds on x or deduces infeasibility if possible.
+/** solves a quadratic equation \f$ a x^2 + b x \in rhs \f$ (with b an interval) and reduces bounds on x or deduces infeasibility if possible.
  */
 static
 SCIP_RETCODE propagateBoundsQuadVar(
@@ -3730,7 +3748,7 @@ void propagateBoundsUpdateBilinRange(
    }
 }
 
-/** Propagates bounds on a constraint */
+/** propagates bounds on a quadratic constraint */
 static
 SCIP_RETCODE propagateBounds(
    SCIP*              scip,     /**< SCIP data structure */
@@ -4101,11 +4119,11 @@ SCIP_RETCODE propagateBounds(
  * The constraint handler should create an NLPI representation of the constraints in the provided NLPI.
  */
 SCIP_RETCODE SCIPconsInitnlpiQuadratic(
-   SCIP*           scip,     /**< SCIP data structure */
-   SCIP_CONSHDLR*  conshdlr, /**< quadratic constraint handler - it's C wrapper*/
-   SCIP_NLPI*      nlpi,     /**< NLPI where to add constraints */
-   int             nconss,   /**< number of constraints */
-   SCIP_CONS**     conss,    /**< quadratic constraints */
+   SCIP*           scip,        /**< SCIP data structure */
+   SCIP_CONSHDLR*  conshdlr,    /**< constraint handler for quadratic constraints */
+   SCIP_NLPI*      nlpi,        /**< NLPI where to add constraints */
+   int             nconss,      /**< number of constraints */
+   SCIP_CONS**     conss,       /**< quadratic constraints */
    SCIP_HASHMAP*   var_scip2nlp /**< mapping from SCIP variables to variable indices in NLPI */
    )
 {
@@ -5638,20 +5656,26 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    return SCIP_OKAY;
 }
 
-/** creates and captures a quadratic constraint */
+/** creates and captures a quadratic constraint
+ * 
+ * Takes a quadratic constraint in the form
+ * \f[
+ * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_jz_j \leq u.
+ * \f]
+ */
 SCIP_RETCODE SCIPcreateConsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   n_linvars,          /**< number of linear terms */
-   SCIP_VAR**            linvars,            /**< variables in linear part */
-   SCIP_Real*            lincoeff,           /**< coefficients of variables in linear part */
-   int                   n_quadterm,         /**< number of quadratic terms */
-   SCIP_VAR**            quadvars1,          /**< index of first variable in quadratic terms */
-   SCIP_VAR**            quadvars2,          /**< index of second variable in quadratic terms */
-   SCIP_Real*            quadcoeff,          /**< coefficients of quadratic terms */
-   SCIP_Real             lhs,                /**< left hand side of quadratic equation */
-   SCIP_Real             rhs,                /**< right hand side of quadratic equation */
+   int                   nlinvars,           /**< number of linear terms (n) */
+   SCIP_VAR**            linvars,            /**< variables in linear part (x_i) */
+   SCIP_Real*            lincoeff,           /**< coefficients of variables in linear part (b_i) */
+   int                   nquadterm,          /**< number of quadratic terms (m) */
+   SCIP_VAR**            quadvars1,          /**< index of first variable in quadratic terms (y_j) */
+   SCIP_VAR**            quadvars2,          /**< index of second variable in quadratic terms (z_j) */
+   SCIP_Real*            quadcoeff,          /**< coefficients of quadratic terms (a_j) */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation (ell) */
+   SCIP_Real             rhs,                /**< right hand side of quadratic equation (u) */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -5694,14 +5718,14 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    consdata->lhs         = lhs;
    consdata->rhs         = rhs;
 
-   SCIP_CALL( SCIPhashmapCreate(&terms, SCIPblkmem(scip), n_linvars + n_quadterm) );
-   for( i = 0; i < n_linvars; ++i )
+   SCIP_CALL( SCIPhashmapCreate(&terms, SCIPblkmem(scip), nlinvars + nquadterm) );
+   for( i = 0; i < nlinvars; ++i )
    {
       if( SCIPisZero(scip, lincoeff[i]) )
          continue;
       SCIP_CALL( presolveQuadTermAdd(scip, terms, linvars[i], lincoeff[i], 0., NULL, 0.) );
    }
-   for( i = 0; i < n_quadterm; ++i )
+   for( i = 0; i < nquadterm; ++i )
    {
       if( SCIPisZero(scip, quadcoeff[i]) )
          continue;
@@ -5742,26 +5766,32 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    return SCIP_OKAY;
 }
 
-/** creates and captures a quadratic constraint */
+/** creates and captures a quadratic constraint
+ * 
+ * Takes a quadratic constraint in the form
+ * \f[
+ * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
+ * \f]
+ */
 SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   n_linvar,           /**< number of linear terms */
-   SCIP_VAR**            linvar,             /**< variables in linear part */ 
-   SCIP_Real*            lincoeff,           /**< coefficients of variables in linear part */ 
-   int                   n_quadvar,          /**< number of quadratic terms */
-   SCIP_VAR**            quadvar,            /**< variables in quadratic terms */
-   SCIP_Real*            quadlincoeff,       /**< linear coefficients of quadratic variables */
-   SCIP_Real*            quadsqrcoeff,       /**< coefficients of square terms of quadratic variables */
+   int                   n_linvar,           /**< number of linear terms (n) */
+   SCIP_VAR**            linvar,             /**< variables in linear part (x_i) */ 
+   SCIP_Real*            lincoeff,           /**< coefficients of variables in linear part (b_i) */ 
+   int                   n_quadvar,          /**< number of quadratic terms (m) */
+   SCIP_VAR**            quadvar,            /**< variables in quadratic terms (y_j) */
+   SCIP_Real*            quadlincoeff,       /**< linear coefficients of quadratic variables (b_j) */
+   SCIP_Real*            quadsqrcoeff,       /**< coefficients of square terms of quadratic variables (a_j) */
    int*                  n_adjbilin,         /**< number of bilinear terms where the variable is involved */
    int**                 adjbilin,           /**< indices of bilinear terms in which variable is involved */
-   int                   n_bilin,            /**< number of bilinear terms */
-   SCIP_VAR**            bilinvar1,          /**< first variable in bilinear term */
-   SCIP_VAR**            bilinvar2,          /**< second variable in bilinear term */
-   SCIP_Real*            bilincoeff,         /**< coefficient of bilinear term */
-   SCIP_Real             lhs,                /**< constraint  left hand side */
-   SCIP_Real             rhs,                /**< constraint right hand side */
+   int                   n_bilin,            /**< number of bilinear terms (p) */
+   SCIP_VAR**            bilinvar1,          /**< first variable in bilinear term (v_k) */
+   SCIP_VAR**            bilinvar2,          /**< second variable in bilinear term (w_k) */
+   SCIP_Real*            bilincoeff,         /**< coefficient of bilinear term (c_k) */
+   SCIP_Real             lhs,                /**< constraint  left hand side (ell) */
+   SCIP_Real             rhs,                /**< constraint right hand side (u) */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? */
    SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? */
