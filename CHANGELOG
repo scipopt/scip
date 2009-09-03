@@ -1,4 +1,4 @@
-current version
+SCIP version 1.2.0
 ===============
 
 interface:
@@ -18,23 +18,17 @@ interface:
 - new methods SCIPgetVarConflictlengthScore(), SCIPgetVarAvgConflictlength(), SCIPgetAvgConflictlengthScore() and their pendants for the 
   current run
 - new method to deactivate a pricer SCIPdeactivatePricer() in scip.c
-- new parameter <constraints/and/enforcecuts> in cons_and.c, should cuts be separated during LP enforcing?
 - new function SCIPsetProbName() to set problem name in scip.h/c (SCIPprobSetName() in prob.h/c)
-- new parameter <constraints/and/presolusehashing> in cons_and.c, should pairwise presolving use hashing?, default TRUE
 - new parameters "lowerbound" and "result" in type_pricer.h: lowerbound can save a lower bound computed by the pricer,
   result indicates whether the pricer guarantees that there exist no more variables if no variable was found
 - new methods SCIPisLPRelax() and SCIPisRootLPRelax() in scip.c and scip.h returning whether the current/root LP is a 
   relaxation of the current/root problem and thus defines a valid lower bound
 - new methods SCIPlpSetIsRelax() and SCIPlpSetRootLPIsRelax() in lp.c and lp.h to set the information, whether the lp is a valid relaxation;
   this information is per default set to true
-- new parameters <constraints/and/aggrlinearization> in cons_and.c, should an aggregated version of the linearization of the 
   and constraint be used. The aggregated version has only 2 linear constraints the default linearization has nvars + 1
-- removed parameter "constraints/and/initiallp" since it is not needed anymore;
-- set "constraints/and/sepafreq" default value to 1
 - added function SCIPgetTransObjscale() and SCIPgetTransObjoffset() in scip.c
 - new interface methods SCIPcolSort(), SCIProwSort(), SCIPcolGetIndex()
 - extended the sort template functions in sorttpl.c with a "five" array; now it possible to used this template to sort up to five arrays
-- new parameters <constraints/countsols/sollimit> in cons_countsols.c, counting stops, if the given number of solutions were found (-1: no limit)  
 - new callback method SCIP_DECL_CONSCOPY(x) in type_cons.h; this method can be use to copy a constraint
 - new callback method SCIP_DECL_CONSPARSE(x) in type_cons.h; this method can be use to pasre a constraint in CIP format
 - added function SCIPaddObjoffset() in scip.h; sets offset of objective function
@@ -51,7 +45,6 @@ interface:
 - extend Makefile to link against Ipopt if IPOPT=true is set
 - added function SCIPvarsGetProbvarBinary() in pub_var.h; gets active, fixed, or multi-aggregated problem variables of binary variables and corresponding negated status
 - added SCIPsortPtrPtrLongInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
-- new parameter <constraints/xor/presolusehashing> in cons_xor.c, should pairwise presolving use hashing?, default TRUE
 - added detectRedundantConstraints() in cons_xor.c and necessary hash-functions for fast pairwise presolving
 - added function SCIPvarCompareActiveAndNegated and SCIPvarCompActiveAndNegated in pub_var.h for comparing variables negated, active or fixed the same way 
 
@@ -186,7 +179,14 @@ plugins:
 - added heuristic that performs a local search in an NLP (takes only linear and quadratic constraints into account so far)
 
 parameters:
-- new parameter "branching/relpscost/advanced/conflenscore", default value 0.001
+- removed parameter <constraints/and/initiallp> since it is not needed anymore;
+- new parameter <constraints/and/enforcecuts> in cons_and.c, should cuts be separated during LP enforcing?
+- new parameter <constraints/and/presolusehashing> in cons_and.c, should pairwise presolving use hashing?, default TRUE
+- new parameter <constraints/and/aggrlinearization> in cons_and.c, should an aggregated version of the linearization of the 
+- set parameter <constraints/and/sepafreq> default value to 1
+- new parameter <constraints/countsols/sollimit> in cons_countsols.c, counting stops, if the given number of solutions were found (-1: no limit)  
+- new parameter <constraints/xor/presolusehashing> in cons_xor.c, should pairwise presolving use hashing?, default TRUE
+- new parameter <branching/relpscost/advanced/conflenscore>, default value 0.001
 
 
 SCIP version 1.1.0
