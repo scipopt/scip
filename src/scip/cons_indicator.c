@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.42 2009/08/14 14:45:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.43 2009/09/04 09:58:34 bzfheinz Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -3272,7 +3272,6 @@ SCIP_CONS* SCIPgetLinearConsIndicator(
 }
 
 /** sets binary indicator variable for indicator constraint */
-extern
 SCIP_RETCODE SCIPsetBinaryVarIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */

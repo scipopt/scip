@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.112 2009/09/02 10:30:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.113 2009/09/04 09:58:34 bzfheinz Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -1930,7 +1930,7 @@ SCIP_RETCODE mapVariable(
    default:
       SCIPerrorMessage("invalid variable status\n");
       return SCIP_INVALIDDATA;
-   }
+   }  /*lint !e788*/
    
    return SCIP_OKAY;
 }
