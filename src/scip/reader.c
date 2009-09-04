@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.50 2009/08/31 16:30:31 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.51 2009/09/04 09:28:10 bzfheinz Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -278,10 +278,13 @@ SCIP_RETCODE SCIPreaderWrite(
          fixedvars, nfixedvars, prob->startnvars, 
          conss, nconss, prob->maxnconss, prob->startnconss, genericnames, result);
          
+      /* reset variable and constraint names to original names */
       if( genericnames )
-      {  /*lint --e{644}  suppress not initialized for varnames and fixedvarnames */
-         /* reset variable and constraint names to original names */
-         
+      {  
+         assert(varnames != NULL);
+         assert(fixedvarnames != NULL);
+         assert(consnames != NULL);
+
          for( i = 0; i < nvars; ++i )
             resetVarname(vars[i], varnames[i]);
                
