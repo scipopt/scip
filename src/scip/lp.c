@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.324 2009/09/04 10:01:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.325 2009/09/04 13:52:51 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10525,9 +10525,13 @@ SCIP_RETCODE lpSolveStable(
 
    /* solve with given settings (usually fast but unprecise) */
    if ( SCIPsetIsInfinity(set, lp->cutoffbound) )
+   {
       SCIP_CALL( lpSetUobjlim(lp, set, lp->cutoffbound) );
+   }
    else
+   {
       SCIP_CALL( lpSetUobjlim(lp, set, lp->cutoffbound - lp->looseobjval) );
+   }
    SCIP_CALL( lpSetFeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetFeastol(set) : SCIPsetFeastol(set), &success) );
    SCIP_CALL( lpSetDualfeastol(lp, tightfeastol ? FEASTOLTIGHTFAC * SCIPsetDualfeastol(set) : SCIPsetDualfeastol(set), 
          &success) );
