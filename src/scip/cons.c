@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.187 2009/09/02 10:30:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.188 2009/09/04 08:40:51 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4559,11 +4559,11 @@ SCIP_RETCODE SCIPconsParse(
    
    /* pasre constraint handler name */
    token = SCIPstrtok(copystr, " []", &saveptr);
-   (void) SCIPsnprintf(conshdlrname, strlen(token)+1, "%s", token);
+   (void) SCIPsnprintf(conshdlrname, (int) strlen(token)+1, "%s", token);
    
    /* pasre constraint name */
    token = SCIPstrtok(NULL, " <>", &saveptr);
-   (void) SCIPsnprintf(consname, strlen(token) + 1, "%s", token);
+   (void) SCIPsnprintf(consname, (int) strlen(token) + 1, "%s", token);
 
 
    token = SCIPstrtok(NULL, ":;", &saveptr);
