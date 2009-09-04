@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.11 2009/09/04 13:47:10 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.12 2009/09/04 13:59:33 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -1643,7 +1643,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
    FILE*                 file        /**< file to print to, or NULL for standard output */
 )
-{
+{  /*lint --e{777} */
    int i;
    assert(scip != NULL);
    assert(oracle != NULL);
@@ -1710,7 +1710,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_Real*            initval,    /**< starting point values for variables or NULL */
    FILE*                 file        /**< file to print to, or NULL for standard output */
 )
-{
+{  /*lint --e{777} */
    int i;
    assert(scip != NULL);
    assert(oracle != NULL);
