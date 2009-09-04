@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.51 2009/05/14 20:31:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.52 2009/09/04 15:58:23 bzfheinz Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -597,7 +597,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
       if( escapecommand )
          SCIPescapeString(h, SCIP_MAXSTRLEN, command);
       else
-         strncpy(h, command, SCIP_MAXSTRLEN-1);
+         (void)strncpy(h, command, SCIP_MAXSTRLEN-1);
    }
    else
       h[0] = '\0';
@@ -605,7 +605,7 @@ SCIP_RETCODE SCIPdialoghdlrAddHistory(
    while( dialog != NULL && dialog != dialoghdlr->rootdialog )
    {
       if( h[0] == '\0' )
-         strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
+         (void)strncpy(h, dialog->name, SCIP_MAXSTRLEN-1);
       else
       {
          (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s %s", dialog->name, h);
@@ -1019,8 +1019,8 @@ void SCIPdialogGetPath(
    dialog = dialog->parent;
    while( dialog != NULL )
    {
-      (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
-      (void) strncpy(path, s, SCIP_MAXSTRLEN);
+      (void)SCIPsnprintf(s, SCIP_MAXSTRLEN, "%s%c%s", dialog->name, sepchar, path);
+      (void)strncpy(path, s, SCIP_MAXSTRLEN);
       dialog = dialog->parent;
    }
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.34 2009/09/04 13:51:15 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.35 2009/09/04 15:58:23 bzfheinz Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -95,7 +95,7 @@ void bufferMessage(
    if( msg == NULL )
    {
       if( buffer != NULL )
-         strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
+         (void)strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
       (*bufferlen) = 0;
       assert(strlen(outmsg) < SCIP_MAXSTRLEN);
       return;
@@ -105,7 +105,7 @@ void bufferMessage(
    if( buffer == NULL )
    {
       /* no buffer exists -> just copy the message to the output */
-      strncpy(outmsg, msg, SCIP_MAXSTRLEN);
+      (void)strncpy(outmsg, msg, SCIP_MAXSTRLEN);
       assert(strlen(outmsg) < SCIP_MAXSTRLEN);
    }
    else
@@ -128,8 +128,8 @@ void bufferMessage(
          if( *bufferlen >= SCIP_MAXSTRLEN-1 || c == '\n' )
          {
             buffer[*bufferlen] = '\0';
-            strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
-            strncpy(buffer, msg, SCIP_MAXSTRLEN);
+            (void)strncpy(outmsg, buffer, SCIP_MAXSTRLEN);
+            (void)strncpy(buffer, msg, SCIP_MAXSTRLEN);
             *bufferlen = (int)strlen(msg);
             assert(*bufferlen < SCIP_MAXSTRLEN-1);
             assert(strlen(outmsg) < SCIP_MAXSTRLEN);

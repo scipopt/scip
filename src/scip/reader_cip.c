@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.13 2009/09/02 10:30:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.14 2009/09/04 15:58:23 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -32,8 +32,6 @@
 #define READER_NAME             "cipreader"
 #define READER_DESC             "file reader for CIP (Constraint Integer Program) format"
 #define READER_EXTENSION        "cip"
-
-#define MAX_LINE_LEN   65536
 
 /** Section of the in CIP files */
 enum CipSection 
@@ -400,7 +398,8 @@ SCIP_RETCODE getConstraints(
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadCip)
-{
+{  /*lint --e{715}*/
+
    CIPINPUT cipinput;
    SCIP_Bool dynamicconss;
    SCIP_Bool dynamiccols;
@@ -471,7 +470,7 @@ SCIP_DECL_READERREAD(readerReadCip)
       default:
          SCIPerrorMessage("invalid CIP state\n");
          SCIPABORT();
-      }	
+      }	/*lint !e788*/ 
    }
 
    /* close file stream */

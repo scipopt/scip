@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.24 2009/08/03 20:03:56 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.25 2009/09/04 15:58:23 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -55,7 +55,6 @@
 
 #define FZN_BUFFERLEN         65536     /**< size of the line buffer for reading or writing */
 #define FZN_MAX_PUSHEDTOKENS  1
-#define FZN_INIT_COEFSSIZE    8192
 
 /*
  * Data structures
@@ -964,7 +963,7 @@ void parseName(
    }   
    
    /* copy identifier name */
-   strncpy(name, fzninput->token, FZN_BUFFERLEN - 1);
+   (void)strncpy(name, fzninput->token, FZN_BUFFERLEN - 1);
    
    /* search for an assignment; therefore, skip annotations */
    do 
@@ -2507,7 +2506,10 @@ SCIP_RETCODE getActiveVariables(
    }
    else
       for( v = 0; v < *nvars; ++v )
+      {
+         assert(vars != NULL);
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
+      }
    
    return SCIP_OKAY;
 }
@@ -2555,7 +2557,7 @@ SCIP_RETCODE appendBuffer(
    assert( extension != NULL );
    
    /* avoid overflow by reallocation */
-   newpos = (*bufferpos) + strlen(extension); 
+   newpos = (*bufferpos) + (int)strlen(extension); 
    if( newpos >= (*bufferlen) )
    { 
       *bufferlen = MAX( newpos, 2*(*bufferlen) );
@@ -2564,7 +2566,7 @@ SCIP_RETCODE appendBuffer(
    }
    
    /* append extension to linebuffer */
-   strncpy((*buffer)+(*bufferpos), extension, (*bufferlen)-(*bufferpos));
+   (void)strncpy((*buffer)+(*bufferpos), extension, (size_t)((*bufferlen)-(*bufferpos)));
    *bufferpos = newpos;
 
    return SCIP_OKAY;
@@ -2755,6 +2757,8 @@ SCIP_RETCODE printLinearCons(
       for( v = 0; v < nactivevars && !hasfloats; v++ )
       {
          SCIP_VAR* var;
+
+         assert(activevars != 0);
          var = activevars[v];         
             
          hasfloats = hasfloats || (SCIPvarGetType(var) != SCIP_VARTYPE_BINARY &&  SCIPvarGetType(var) != SCIP_VARTYPE_INTEGER);
@@ -2769,6 +2773,7 @@ SCIP_RETCODE printLinearCons(
             SCIP_VAR* var;
             int idx;
 
+            assert(activevars != 0);
             var = activevars[v];         
             idx = SCIPvarGetProbindex(var);
             assert( idx >= 0);

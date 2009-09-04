@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.45 2009/08/14 14:53:14 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.46 2009/09/04 15:58:24 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -954,7 +954,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       /* change to the directory of the ZIMPL file, s.t. paths of data files read by the ZIMPL model are relative to
        * the location of the ZIMPL file
        */
-      strncpy(buffer, filename, SCIP_MAXSTRLEN-1);
+      (void)strncpy(buffer, filename, SCIP_MAXSTRLEN-1);
       buffer[SCIP_MAXSTRLEN-1] = '\0';
       SCIPsplitFilename(buffer, &path, &name, &extension, &compression);
       if( compression != NULL )

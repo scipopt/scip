@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.97 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.98 2009/09/04 15:58:23 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -200,7 +200,7 @@ SCIP_RETCODE writeProblem(
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
       /* copy filename */
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
       extension = NULL;
       
       do
@@ -1070,7 +1070,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecRead)
          char* extension;
 
          /* copy filename */
-         SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
          extension = NULL;
          
          do
@@ -1756,7 +1756,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMip)
    if( valuestr[0] == '\0' )
       return SCIP_OKAY;
 
-   strncpy(filename, valuestr, SCIP_MAXSTRLEN-1);
+   (void)strncpy(filename, valuestr, SCIP_MAXSTRLEN-1);
 
    /* second ask for generic variable and row names */
    SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,

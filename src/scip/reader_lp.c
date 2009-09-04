@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.78 2009/07/21 12:41:08 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.79 2009/09/04 15:58:23 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -805,7 +805,7 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the line name */
-            strncpy(name, lpinput->tokenbuf, LP_MAX_LINELEN);
+            (void)strncpy(name, lpinput->tokenbuf, LP_MAX_LINELEN);
             name[LP_MAX_LINELEN - 1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", lpinput->linenumber, name);
          }
@@ -1463,6 +1463,7 @@ SCIP_RETCODE readBounds(
       /* change the bounds of the variable if bounds have been given (do not destroy earlier specification of bounds) */
       if ( lb != 0.0 )
 	 SCIP_CALL( SCIPchgVarLb(scip, var, lb) );
+      /*lint --e{777}*/
       if ( ub != SCIPinfinity(scip) )
 	 SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
       SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", lpinput->linenumber, SCIPvarGetName(var),
@@ -1624,7 +1625,7 @@ SCIP_RETCODE readSos(
          if ( strcmp(lpinput->token, ":") == 0 )
          {
             /* the second token was a colon: the first token is the constraint name */
-            strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
+            (void)strncpy(name, lpinput->tokenbuf, SCIP_MAXSTRLEN);
             name[SCIP_MAXSTRLEN-1] = '\0';
          }
          else
@@ -2001,7 +2002,6 @@ void appendLine(
    const char*           extension           /**< string to extent the line */
    )
 {
-   int len;
    assert( scip != NULL );
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
@@ -2010,10 +2010,10 @@ void appendLine(
 
    /* NOTE: avoid
     *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
-    * because of overlapping memory arreas in memcpy used in sprintf.
+    * because of overlapping memory areas in memcpy used in sprintf.
     */
-   len = strlen(linebuffer);
-   strncat(linebuffer, extension, LP_MAX_PRINTLEN - len);
+   //   len = (int)strlen(linebuffer);
+   strncat(linebuffer, extension, LP_MAX_PRINTLEN - strlen(linebuffer));
 
    (*linecnt) += (int) strlen(extension);
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.113 2009/09/02 17:41:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.114 2009/09/04 15:58:23 bzfheinz Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -313,7 +313,7 @@ void mpsinputSetProbname(
    assert(probname != NULL);
    assert(strlen(probname) < sizeof(mpsi->probname));
 
-   strncpy(mpsi->probname, probname, MPS_MAX_NAMELEN - 1);
+   (void)strncpy(mpsi->probname, probname, MPS_MAX_NAMELEN - 1);
 }
 
 static
@@ -326,7 +326,7 @@ void mpsinputSetObjname(
    assert(objname != NULL);
    assert(strlen(objname) < sizeof(mpsi->objname));
 
-   strncpy(mpsi->objname, objname, MPS_MAX_NAMELEN - 1);
+   (void)strncpy(mpsi->objname, objname, MPS_MAX_NAMELEN - 1);
 }
 
 static
@@ -885,7 +885,7 @@ SCIP_RETCODE readCols(
          }
          assert(var == NULL);
 
-         strncpy(colname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+         (void)strncpy(colname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
 
          SCIP_CALL( SCIPgetBoolParam(scip, "reading/mpsreader/dynamiccols", &dynamiccols) );
 
@@ -986,7 +986,7 @@ SCIP_RETCODE readRhs(
          break;
 
       if (*rhsname == '\0')
-         strncpy(rhsname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+         (void)strncpy(rhsname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
 
       if (!strcmp(rhsname, mpsinputField1(mpsi)))
       {
@@ -1101,7 +1101,7 @@ SCIP_RETCODE readRanges(
          break;
 
       if (*rngname == '\0')
-         strncpy(rngname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
+         (void)strncpy(rngname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
 
       /* The rules are:
        * Row Sign   LHS             RHS
@@ -1262,7 +1262,7 @@ SCIP_RETCODE readBounds(
          break;
 
       if (*bndname == '\0')
-         strncpy(bndname, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
+         (void)strncpy(bndname, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
 
       /* Only read the first Bound in section */
       if (!strcmp(bndname, mpsinputField2(mpsi)))
@@ -1429,7 +1429,7 @@ SCIP_RETCODE readSOS(
 
 	 /* check name */
 	 if ( mpsinputField2(mpsi) != NULL )
-	    strncpy(name, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
+	    (void)strncpy(name, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
 	 else
 	 {
 	    /* create new name */
@@ -2034,7 +2034,7 @@ SCIP_RETCODE checkVarnames(
       }
  
       SCIP_CALL( SCIPallocBufferArray(scip, &varname, (int) *maxnamelen + 1) );
-      (void) SCIPsnprintf(varname, (*maxnamelen) + 1, "%s", SCIPvarGetName(var) );
+      (void) SCIPsnprintf(varname, (int)(*maxnamelen) + 1, "%s", SCIPvarGetName(var) );
       
       /* insert variable with variable name into hash map */
       assert( !SCIPhashmapExists(*varnameHashmap, var) );
@@ -2122,7 +2122,7 @@ SCIP_RETCODE checkConsnames(
       (*maxnamelen) = MAX(*maxnamelen, l);
       
       SCIP_CALL( SCIPallocBufferArray(scip, &consname, (int) *maxnamelen + 1) );
-      (void) SCIPsnprintf(consname, (*maxnamelen) + 1, "%s", SCIPconsGetName(cons) );
+      (void) SCIPsnprintf(consname, (int)(*maxnamelen) + 1, "%s", SCIPconsGetName(cons) );
       
       (*consnames)[c] = consname;
       c++;

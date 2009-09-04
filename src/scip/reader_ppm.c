@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.c,v 1.22 2009/06/12 12:19:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ppm.c,v 1.23 2009/09/04 15:58:24 bzfheinz Exp $"
 
 /**@file   reader_ppm.c
  * @ingroup FILEREADERS 
@@ -178,7 +178,7 @@ void appendLine(
       endLine(scip, file, readerdata, linebuffer, linecnt);
    
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, PPM_MAX_LINELEN - (*linecnt));
+   strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt));
    (*linecnt) += (int) strlen(extension);
 }
 

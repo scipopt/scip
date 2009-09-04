@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.37 2009/08/05 18:55:44 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.38 2009/09/04 15:58:23 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -910,7 +910,7 @@ SCIP_RETCODE readCoefficients(
          if( strcmp(opbinput->token, ":") == 0 )
          {
             /* the second token was a colon ':' the first token is a constraint name */
-            strncpy(name, opbinput->tokenbuf, SCIP_MAXSTRLEN);
+            (void)strncpy(name, opbinput->tokenbuf, SCIP_MAXSTRLEN);
             name[SCIP_MAXSTRLEN-1] = '\0';
             SCIPdebugMessage("(line %d) read constraint name: '%s'\n", opbinput->linenumber, name);
          }
@@ -1505,7 +1505,7 @@ void appendBuffer(
       writeBuffer(scip, file, linebuffer, linecnt);
    
    /* append extension to linebuffer */
-   strncat(linebuffer, extension, OPB_MAX_LINELEN - (*linecnt));
+   strncat(linebuffer, extension, OPB_MAX_LINELEN - (unsigned int)(*linecnt));
    (*linecnt) += (int) strlen(extension);
 }
 
