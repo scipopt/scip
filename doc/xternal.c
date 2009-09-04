@@ -1223,7 +1223,7 @@
  * objective function value of all variables created during the solving process should also be multiplied by -1.
  *
  * In some cases, bounds on variables are enforced by constraints of the problem. Therefore, these bounds do not need to be 
- * added to the LP explicitly, which yields the advantage, that the pricing routine does not need to respect the corresponding dual values.
+ * added to the LP explicitly, which has the advantage that the pricing routine does not need to respect the corresponding dual values.
  * We call these bounds lazy bounds, they may be set by SCIPchgVarLbLazy() and SCIPchgVarUbLazy() for upper or lower bounds, respectively.
  * If the lazy bound is tighter than the local bound, the corresponding bound is not put into the LP.
  * Attention: The lazy bounds need to be valid for each feasible LP solution. If the objective function implies bounds on the variables for 
@@ -3393,21 +3393,21 @@
  * While solving a constraint integer program, SCIP drops thousands of events such as SCIP_EVENTTYPE_VARFIXED (a
  * complete list of all events is given in type_event.h). These events can be caught and used to do something after a
  * certain event happens. Events can be used to speed up the solution process. For example, the set partitioning
- * constraint is only worth to propagate if one of the involved variables are fixed which can be triggered be detected by
+ * constraint is only worth to propagate if one of the involved variables is fixed. This can be detected by
  * catching the event SCIP_EVENTTYPE_VARFIXED. To be able to catch an event it is necessary to write an event handler
  * which defines what to do after a certain event was caught.
  *
  * In the following, we explain how the user can add an own event handler. We give the explanation for creating an own
- * source file for each additional event handler. Of course, you can collect different event handler in one source file
+ * source file for each additional event handler. Of course, you can collect different event handlers in one source file
  * or you can put the event handler directly into the constraint handler.  In a \ref EVENTUSAGE "second step" we discuss
  * the usage of an event handler. This means how to catch and drop events. \ref EVENTTYPES "Finally", we give some notes on the exiting
  * types of events.
  *
- * Take src/scip/cons_logior.c, where the event handle is directly include into the constraint handler. As all other
+ * Take src/scip/cons_logior.c, where the event handler is directly included into the constraint handler. As all other
  * default plugins, the event handlers are written in C. C++ users can easily adapt the code by using the ObjEventhdlr
  * wrapper base class and implement the scip_...() virtual methods instead of the SCIP_DECL_EVENT... callback methods.
  * 
- * Additional documentation for the callback methods of a display column can be found in the file type_event.h.
+ * Additional documentation for the callback methods of an event handler can be found in the file type_event.h.
  *
  * Here is what you have to do to implement an event handler (assuming your event handler is named "bestsol"):
  * -# Copy the template files src/scip/event_xxx.c and src/scip/event_xxx.h into files named "event_bestsol.c"
@@ -3541,10 +3541,10 @@
  * @section EVENTUSAGE Catching and Dropping Events
  *
  * After you have implemented the event handler, you have to tell SCIP for which events this event handler should be
- * used. This can be a general evens, such as <code>SCIP_EVENTTYPE_BESTSOLFOUND</code>, or a variable event which is the most common
+ * used. This can be a general events, such as <code>SCIP_EVENTTYPE_BESTSOLFOUND</code>, or a variable event which is the most common
  * way. 
  *
- * In case of a general (not variable event) you use the function SCIPcatchEvent() to attach to an even and
+ * In case of a general (not variable) event you use the function SCIPcatchEvent() to attach to an even and
  * SCIPdropEvent() to release this event later.
  *
  * \code
@@ -3569,7 +3569,7 @@
  * @section EVENTTYPES Event types
  *
  * All available events are listed in type_event.h. There are atomic events such as <code>SCIP_EVENTTYPE_VARFIXED</code>
- * and combined events such as <code>SCIP_EVENTTYPE_VARCHANGED</code>. The events are encode via bit masks. Each atomic
+ * and combined events such as <code>SCIP_EVENTTYPE_VARCHANGED</code>. The events are encoded via bit masks. Each atomic
  * event has a unique power of two. This allows to combine the atomic events.
  *
  * SCIP only throws atomic events. However, an event handler might be interested in bunch of events. Through the
@@ -4019,18 +4019,24 @@
 /**@page CHG3 Interface changes between SCIP 1.1 and SCIP 1.2
  *
  * - The callback SCIP_DECL_PRICERREDCOST(x) in the \ref PRICER "pricers" has two new parameters: 
- *    - A result pointer determine if the pricer guarantees that there exist no more variables. This allows for early branching.
+ *    - A <code>result</code> pointer determines whether the pricer guarantees that there exist no more variables. This allows for early branching.
  *    - A pointer for providing a lower bound. 
- * - new parameter "mksetcoefsvalid" in method SCIPcalcMIR() to store whether "mksetcoefs" computed in
- *   SCIPlpCalcMIR() is valid. If the mixed knapsack constraint obtained after aggregating LP rows is empty or contains
- *   too many nonzero elements the generation of the c-MIR cut is aborted in SCIPlpCalcMIR() and mksetcoefs is not valid.
- * - new parameter "sol" in SCIPcalcMIR() to separate a sol different from the LP solution 
- * - new parameter "sol" in SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() to get closest variable bound w.r.t. sol different from LP solution
+ *
  * - The \ref CONS "contraint handlers" have two new callback methods (see type_cons.h for more details).
- *    - SCIP_DECL_CONSCOPY(x) this method can be use to copy a constraint
- *    - SCIP_DECL_CONSPARSE(x) this method can be use to pasre a constraint in CIP format
-
-
+ *    - SCIP_DECL_CONSCOPY(x) - this method can be used to copy a constraint.
+ *    - SCIP_DECL_CONSPARSE(x) - this method can be used to parse a constraint in CIP format.
+ *
+ * - SCIP now has "lazy bounds", which are usefull for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
+ *
+ * - SCIP has rudimentary support to solve quadratic nonlinear integer programs - see cons_quadratic.c.
+ *
+ * - There are LP-interfaces to QSopt and Gurobi (rudimentary).
+ *
+ * - SCIP can now handle indicator constraints (reading (from LP, ZIMPL), writing, solving, ...) - see cons_indicator.c.
+ *
+ * - One can now do "early branching" usefull for column generation.
+ *
+ * - Can now run a black-box lexicographic dual simplex algorithm.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
