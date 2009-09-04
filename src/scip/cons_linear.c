@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.335 2009/09/02 10:30:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.336 2009/09/04 18:05:26 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -2316,6 +2316,7 @@ void consdataGetGlbActivityResiduals(
    {
       if( minresactivity != NULL )
       {
+         assert(isminsettoinfinity != NULL);
          *isminsettoinfinity = TRUE;
 
          if( SCIPisInfinity(scip, lb) )
@@ -2359,6 +2360,7 @@ void consdataGetGlbActivityResiduals(
       }
       if( maxresactivity != NULL )
       {
+         assert(ismaxsettoinfinity != NULL);
          *ismaxsettoinfinity = TRUE;
 
          if( SCIPisInfinity(scip, -ub) )
@@ -2405,6 +2407,7 @@ void consdataGetGlbActivityResiduals(
    {
       if( minresactivity != NULL )
       {
+         assert(isminsettoinfinity != NULL);
          *isminsettoinfinity = TRUE;
 
          if( SCIPisInfinity(scip, -ub) )
@@ -2448,6 +2451,7 @@ void consdataGetGlbActivityResiduals(
       }
       if( maxresactivity != NULL )
       {
+         assert(ismaxsettoinfinity != NULL);
          *ismaxsettoinfinity = TRUE;
 
          if( SCIPisInfinity(scip, lb) )
@@ -4888,8 +4892,11 @@ SCIP_RETCODE consdataTightenCoefs(
       return SCIP_OKAY;
 
    /* correct lhs and rhs by min/max activity of surely non-redundant variables */
-   aggrlhs = consdata->lhs - minactivity + minleftactivity;
-   aggrrhs = consdata->rhs - maxactivity + maxleftactivity;
+   aggrlhs = consdata->lhs + minleftactivity - minactivity;
+   aggrrhs = consdata->rhs + maxleftactivity - maxactivity; 
+
+   SCIPdebugMessage("aggrlhs = %g\n", aggrlhs);
+   SCIPdebugMessage("aggrrhs = %g\n", aggrrhs);
 
    /* check if the constraint contains variables which are redundant */
    /* aggrrhs may contain some near-infinity value, but only if rhs is infinity. */
@@ -8565,7 +8572,7 @@ SCIP_DECL_CONSPROP(consPropLinear)
    {
       SCIP_CALL( propagateCons(scip, conss[c], tightenbounds, &cutoff, &nchgbds) );
    }
-
+   
    /* adjust result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
