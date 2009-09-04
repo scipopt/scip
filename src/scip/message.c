@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.35 2009/09/04 15:58:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.36 2009/09/04 17:55:14 bzfwinkm Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -31,7 +31,7 @@
 #include "scip/misc.h"
 
 #ifndef va_copy
-#define va_copy(dest, src) do { BMScopyMemory(&dest, &src, sizeof(dest)); } while (0)
+#define va_copy(dest, src) do { BMScopyMemory(dest, src); } while (0)
 #endif
 
 /** error message print method of default message handler */
