@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.141 2009/09/02 10:30:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.142 2009/09/04 14:36:51 bzfheinz Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -1763,7 +1763,7 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons1, NULL) ) );
          
          /* if necessary change type of setppc constraint */
-         if( consdata1->setppctype != SCIP_SETPPCTYPE_PARTITIONING && consdata0->setppctype != consdata1->setppctype )
+         if( consdata1->setppctype != SCIP_SETPPCTYPE_PARTITIONING && consdata0->setppctype != consdata1->setppctype ) /*lint !e641*/
          {
             /* change the type of cons0 */
             SCIP_CALL( setSetppcType(scip, cons1, SCIP_SETPPCTYPE_PARTITIONING) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.83 2009/09/02 10:30:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.84 2009/09/04 14:36:51 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -145,8 +145,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_VAR*             vbdvar,             /**< binary, integer or implicit integer bounding variable y */
    SCIP_Real             vbdcoef,            /**< coefficient c of bounding variable y */
    SCIP_Real             lhs,                /**< left hand side of variable bound inequality */
-   SCIP_Real             rhs,                /**< right hand side of variable bound inequality */
-   SCIP_Bool             local               /**< is constraint only valid locally? */
+   SCIP_Real             rhs                 /**< right hand side of variable bound inequality */
    )
 {
    assert(consdata != NULL);
@@ -1123,7 +1122,7 @@ SCIP_DECL_CONSTRANS(consTransVarbound)
 
    /* create target constraint data */
    SCIP_CALL( consdataCreate(scip, &targetdata, sourcedata->var, sourcedata->vbdvar, sourcedata->vbdcoef, 
-         sourcedata->lhs, sourcedata->rhs, SCIPconsIsLocal(sourcecons)) );
+         sourcedata->lhs, sourcedata->rhs) );
 
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
@@ -1720,7 +1719,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
    }
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, var, vbdvar, vbdcoef, lhs, rhs, local) );
+   SCIP_CALL( consdataCreate(scip, &consdata, var, vbdvar, vbdcoef, lhs, rhs) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
