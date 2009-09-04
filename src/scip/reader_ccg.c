@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.8 2009/06/12 12:19:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.9 2009/09/04 15:33:21 bzfpfets Exp $"
 
 /**@file   reader_ccg.c
  * @ingroup FILEREADERS 
@@ -85,18 +85,18 @@ SCIP_RETCODE initGraph(
    G->n = nNodes;
    G->m = 0;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &G->deg, nNodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &G->size, nNodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &G->A, nNodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &G->W, nNodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &G->deg, (int) nNodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &G->size, (int) nNodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &G->A, (int) nNodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &G->W, (int) nNodes) );
 
    for (i = 0; i < nNodes; ++i)
    {
       G->deg[i] = 0;
       G->size[i] = initSize;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &(G->A[i]), initSize) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &(G->W[i]), initSize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(G->A[i]), (int) initSize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(G->W[i]), (int) initSize) );
 
       G->A[i][0] = -1;
    }
@@ -139,8 +139,8 @@ SCIP_RETCODE ensureEdgeCapacity(
    {
       int newSize;
       newSize = G->size[node] * 2;
-      SCIP_CALL( SCIPreallocBufferArray(scip, &G->A[node], newSize) );
-      SCIP_CALL( SCIPreallocBufferArray(scip, &G->W[node], newSize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &G->A[node], (int) newSize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &G->W[node], (int) newSize) );
       G->size[node] = newSize;
    }
 
@@ -223,6 +223,7 @@ SCIP_RETCODE createEdgesFromRow(
    {
       int s;
       s = SCIPvarGetProbindex(vars[i]);
+      assert( s >= 0 );
 
       for (j = i+1; j < nvars; ++j)
       {
@@ -230,6 +231,7 @@ SCIP_RETCODE createEdgesFromRow(
 	 int t;
 	 int a;
 	 t = SCIPvarGetProbindex(vars[j]);
+	 assert( t >= 0 );
 
 	 /* search whether edge is already present */
 	 k = 0;
@@ -250,7 +252,7 @@ SCIP_RETCODE createEdgesFromRow(
 	 if (a < 0)
 	 {
 	    /* forward edge */
-	    SCIP_CALL( ensureEdgeCapacity(scip, G, s) );
+	    SCIP_CALL( ensureEdgeCapacity(scip, G, (unsigned int) s) );
 	    k = G->deg[s];
 	    assert( G->A[s][k] == -1 );
 
@@ -261,7 +263,7 @@ SCIP_RETCODE createEdgesFromRow(
 	    ++G->deg[s];
 
 	    /* backward edge */
-	    SCIP_CALL( ensureEdgeCapacity(scip, G, t) );
+	    SCIP_CALL( ensureEdgeCapacity(scip, G, (unsigned int) t) );
 	    k = G->deg[t];
 	    assert( G->A[t][k] == -1 );
 
@@ -286,7 +288,6 @@ SCIP_RETCODE createEdgesFromRow(
 static
 SCIP_RETCODE handleLinearCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            vals,               /**< array of coefficients values (or NULL if all coefficient values are 1) */
    int                   nvars,              /**< number of variables */
@@ -401,9 +402,10 @@ SCIP_RETCODE SCIPwriteCcg(
    SparseGraph G;
 
    assert( scip != NULL );
+   assert( nvars >= 0 );
 
    /* initialize graph */
-   SCIP_CALL( initGraph(scip, &G, nvars, 10) );
+   SCIP_CALL( initGraph(scip, &G, (unsigned int) nvars, 10) );
 
    /* check all constraints */
    for (c = 0; c < nconss; ++c)
@@ -429,8 +431,8 @@ SCIP_RETCODE SCIPwriteCcg(
          
          if( nconsvars > 0 ) 
          { 
-            SCIP_CALL( handleLinearCons(scip, file, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
-				     SCIPgetNVarsLinear(scip, cons), nvars, transformed, &G) );
+            SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
+		  SCIPgetNVarsLinear(scip, cons), nvars, transformed, &G) );
          }
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -441,7 +443,7 @@ SCIP_RETCODE SCIPwriteCcg(
 
          if( nconsvars > 0 ) 
          {
-            SCIP_CALL( handleLinearCons(scip, file, consvars, NULL, nconsvars, nvars, transformed, &G) );
+            SCIP_CALL( handleLinearCons(scip, consvars, NULL, nconsvars, nvars, transformed, &G) );
          }
       }
       else if ( strcmp(conshdlrname, "logicor") == 0 )
@@ -452,7 +454,7 @@ SCIP_RETCODE SCIPwriteCcg(
          
          if( nconsvars > 0 ) 
          { 
-            SCIP_CALL( handleLinearCons(scip, file, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), nvars, transformed, &G) );
+            SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), nvars, transformed, &G) );
          }
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
@@ -471,7 +473,7 @@ SCIP_RETCODE SCIPwriteCcg(
 
          if( nconsvars > 0 ) 
          { 
-            SCIP_CALL( handleLinearCons(scip, file, consvars, consvals, nconsvars, nvars, transformed, &G) );
+            SCIP_CALL( handleLinearCons(scip, consvars, consvals, nconsvars, nvars, transformed, &G) );
          }
 	 SCIPfreeBufferArray(scip, &consvals);
       }
@@ -486,7 +488,7 @@ SCIP_RETCODE SCIPwriteCcg(
 	 consvals[0] = 1.0;
 	 consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
-	 SCIP_CALL( handleLinearCons(scip, file, consvars, consvals, 2, nvars, transformed, &G) );
+	 SCIP_CALL( handleLinearCons(scip, consvars, consvals, 2, nvars, transformed, &G) );
 
 	 SCIPfreeBufferArray(scip, &consvars);
 	 SCIPfreeBufferArray(scip, &consvals);
