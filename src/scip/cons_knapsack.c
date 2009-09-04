@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.176 2009/09/02 10:30:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.177 2009/09/04 13:49:36 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -638,6 +638,7 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
+/* IDX computes the integer index for the optimal solution array */
 #define IDX(j,d) ((j)*(intcap+1)+(d))
 
 /** solves knapsack problem in maximization form exactly using dynamic programming;
@@ -758,6 +759,9 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
 /**todo: use SCIPsolveKnapsackExactly() instead of SCIPsolveKnapsack() in all methods of cons_knapsack */
 
+/* IDX computes the long int index for the optimal solution array */
+#define LIDX(j,d) ((j)*(capacity+1)+(d))
+
 /** solves knapsack problem with dynamic programming;
  *  if needed, one can provide arrays to store all selected items and all not selected items
  */
@@ -776,39 +780,35 @@ SCIP_RETCODE SCIPsolveKnapsack(
    ) 
 {
    SCIP_Real* optvalues;
-   int intcap;
-   int d;
+   SCIP_Longint d;
    int j;
 
    assert(weights != NULL);
    assert(profits != NULL);
    assert(capacity >= 0);
-   assert(capacity < INT_MAX);
+   assert(capacity < SCIP_LONGINT_MAX);
    assert(nitems >= 0);
 
-   intcap = (int)capacity;
-   assert(intcap >= 0);
-   SCIP_CALL( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(intcap+1)) );
-   
+   SCIP_CALL( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(capacity+1)) );
+
    /* fill dynamic programming table with optimal values */
-   for( d = 0; d <= intcap; d++ )
-      optvalues[IDX(0,d)] = 0.0;
-   for( j = 1; j <= nitems; j++ )
+   for( d = 0; d <= capacity; d++ )
+      optvalues[LIDX(0,d)] = 0.0;
+
+   for( j = 0; j < nitems; ++j )
    {
-      int intweight;
+      SCIP_Longint longintweight;
+      assert(0 <= weights[j] && weights[j] < SCIP_LONGINT_MAX);
+      longintweight = weights[j];
 
-      assert(0 <= weights[j-1] && weights[j-1] < INT_MAX);
-      intweight = (int)weights[j-1];
-      assert(intweight >= 0);
-
-      for( d = 0; d < intweight && d <= intcap; d++ )
-         optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
-      for( d = intweight; d <= intcap; d++ )
+      for( d = 0; d < longintweight && d <= capacity; d++ )
+         optvalues[LIDX(j+1,d)] = optvalues[LIDX(j,d)];
+      for( d = longintweight; d <= capacity; d++ )
       {
          SCIP_Real sumprofit;
 
-         sumprofit = optvalues[IDX(j-1,d-intweight)] + profits[j-1];
-         optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
+         sumprofit = optvalues[LIDX(j,d-longintweight)] + profits[j];
+         optvalues[LIDX(j+1,d)] = MAX(sumprofit, optvalues[LIDX(j,d)]);
       } 
    }
 
@@ -822,29 +822,30 @@ SCIP_RETCODE SCIPsolveKnapsack(
 
       *nnonsolitems = 0;
       *nsolitems = 0;
-      d = intcap;
-      
-      for( j = nitems; j > 0; j-- )
+      d = capacity;
+ 
+      for( j = nitems - 1; j >= 0; --j )
       {
-         if( optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
+         if( optvalues[LIDX(j+1,d)] > optvalues[LIDX(j,d)] )
          {
-            assert(0 <= weights[j-1] && weights[j-1] < INT_MAX);
-            solitems[*nsolitems] = items[j-1];
-            (*nsolitems)++;
-            d -= (int)weights[j-1];
+            assert(0 <= weights[j] && weights[j] < SCIP_LONGINT_MAX);
+
+            solitems[*nsolitems] = items[j];
+            ++(*nsolitems);
+            d -= weights[j];
+            assert(d >= 0);
          } 
          else
          { 
-            nonsolitems[*nnonsolitems] = items[j-1];
-            (*nnonsolitems)++;
+            nonsolitems[*nnonsolitems] = items[j];
+            ++(*nnonsolitems);
          }
-         assert(d >= 0);
       }
       assert(*nsolitems + *nnonsolitems == nitems);
    }
 
    if( solval != NULL )
-      *solval = optvalues[IDX(nitems,intcap)];
+      *solval = optvalues[LIDX(nitems,capacity)];
 
    SCIPfreeBufferArray(scip, &optvalues);
 
