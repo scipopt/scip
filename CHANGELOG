@@ -167,6 +167,7 @@ fixed bugs:
 - fixed bug in SCIPfreeProb() in scip.c: all pricers are deactivated now
 - fixed bug in reader_mps.c with respect to corrupted files
 - fixed bug in SCIPsolveKnapsack() in cons_knapsack.c due to problems with coefficients gretaer than INT_MAX 
+- fixed bug in oneopt heuritic with start solution which has become infeasible due to global bound changes
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
