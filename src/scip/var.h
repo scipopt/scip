@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.126 2009/09/02 10:30:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.127 2009/09/04 08:40:37 bzfheinz Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -1029,13 +1029,11 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
    SCIP_Real             scalar              /**< scalar to multiply the conflict scores with */
    );
 
-/* begin ????????????????????? */
-
 /** increases the number of active conflicts by one and the overall length of the variable by the given length */
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
-   SCIP_Real             length              /**< length of the conflict */
+   int                   length              /**< length of the conflict */
    );
 
 /**  gets the number of active conflicts containing this variable in given direction */
@@ -1067,8 +1065,6 @@ SCIP_Real SCIPvarGetAvgConflictlengthCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
-
-/* end ???????????????????????????? */
 
 /** increases the number of branchings counter of the variable */
 extern

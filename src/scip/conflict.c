@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.146 2009/07/30 17:29:15 bzfpfets Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.147 2009/09/04 08:40:37 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -1222,7 +1222,6 @@ SCIP_RETCODE conflictAddConflictCons(
             int conflictlength;
             conflictlength = conflictset->nbdchginfos;
 
-            /* ??????????????????????? */
             for( i = 0; i < conflictlength; i++ )
             {
                SCIP_VAR* var;
@@ -1232,7 +1231,7 @@ SCIP_RETCODE conflictAddConflictCons(
                var = conflictset->bdchginfos[i]->var;
                boundtype =  conflictset->bdchginfos[i]->boundtype;
                assert(stat != NULL);               
-               branchdir = (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
+               branchdir = (boundtype == (unsigned int) SCIP_BOUNDTYPE_LOWER ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS);
                
                SCIP_CALL( SCIPvarIncNActiveConflicts(var, branchdir, conflictlength) );
                SCIPhistoryIncNActiveConflicts(stat->glbhistory, branchdir, conflictlength);
@@ -1242,7 +1241,7 @@ SCIP_RETCODE conflictAddConflictCons(
             conflict->nappliedglbliterals += conflictset->nbdchginfos;
          }
       }
-      SCIPdebugMessage(" -> calling conflict handler <%s> (prio=%d) to create conflict set with %d bounds returned result %d\n",
+      SCIPdebugMessage(" -> call conflict handler <%s> (prio=%d) to create conflict set with %d bounds returned result %d\n",
          SCIPconflicthdlrGetName(set->conflicthdlrs[h]), SCIPconflicthdlrGetPriority(set->conflicthdlrs[h]),
          conflictset->nbdchginfos, result);
    }

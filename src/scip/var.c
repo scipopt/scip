@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.259 2009/09/02 10:30:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.260 2009/09/04 08:40:37 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -9728,7 +9728,7 @@ SCIP_RETCODE SCIPvarScaleConflictScores(
 SCIP_RETCODE SCIPvarIncNActiveConflicts(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir,                /**< branching direction */
-   SCIP_Real             length              /**< length of the conflict */
+   int                   length              /**< length of the conflict */
    )
 {
    assert(var != NULL);
