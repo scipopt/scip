@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.2 2009/08/09 15:49:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.3 2009/09/04 13:47:09 bzfviger Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -23,7 +23,6 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include <string.h>
 
 #include "scip/scip.h"
 #include "scip/nlpi.h"
@@ -64,7 +63,7 @@ SCIPnlpiCreate(
    SCIP_DECL_NLPIFREE              ((*nlpifree)),               /**< free NLPI user data */
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
 )
-{
+{  /*lint --e{715}*/
    assert( scip && nlpi );
 
    assert( nlpiinit && nlpifree && nlpiaddvars && nlpiaddconstraints && nlpisetobjective );

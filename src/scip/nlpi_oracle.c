@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.10 2009/09/04 03:46:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.11 2009/09/04 13:47:10 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPnlpiOracleInit(
    SCIP*              scip,    /**< pointer to SCIP */
    SCIP_NLPIORACLE*   oracle   /**< NLPIORACLE data structure */
 )
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
 
    return SCIP_OKAY;
@@ -359,7 +359,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    SCIP_EXPRTREE* const*       exprtree,   /**< NULL if no nonquadratic parts, otherwise exprtree[.] gives nonquadratic part, or NULL if no nonquadratic part in this constraint */
    const char**                connames    /**< names of new constraints, or NULL if no names should be stored */
    )
-{
+{  /*lint --e{715}*/
    int        i, oldnnz;
    SCIP_Bool  addednlcon = FALSE;  /* whether a nonlinear constraint was added */
    
@@ -517,8 +517,6 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
          {
             SCIPerrorMessage("nonquadratic functions not supported in NLPI yet.\n");
             return SCIP_ERROR;
-            
-            addednlcon = TRUE;
          }
          else
          {
@@ -582,7 +580,7 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    const int*                 exprvaridx, /**< maps variable indices in expression tree to indices in nlp, or NULL if no nonquadratic part */
    const SCIP_EXPRTREE*       exprtree    /**< expression tree of nonquadratic part, or NULL if no nonquadratic part */
 )
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(oracle != NULL);
    
@@ -682,6 +680,7 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
    
    for( i = 0; i < nvars; ++i )
    {
+      assert(indices != NULL); /* for lint */
       assert(indices[i] >= 0);
       assert(indices[i] <  oracle->nvars);
       
@@ -717,6 +716,7 @@ SCIP_RETCODE SCIPnlpiOracleChgConsBounds(
    
    for( i = 0; i < ncons; ++i )
    {
+      assert(indices != NULL); /* for lint */
       assert(indices[i] >= 0);
       assert(indices[i] <  oracle->ncons);
       
@@ -734,7 +734,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
    int*                  delstat     /**< deletion status of vars in input (1 if var should be deleted, 0 if not); new position of var in output (-1 if var was deleted) */
 )
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(oracle != NULL);
    
@@ -751,7 +751,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
    int*                  delstat     /**< deletion status of rows in input (1 if row should be deleted, 0 if not); new position of row in output (-1 if row was deleted) */
 )
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(oracle != NULL);
 
@@ -775,7 +775,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    const int*            varidx,     /**< indices of variables which coefficients should be changed */
    const SCIP_Real*      newcoeff    /**< new coefficients of variables */
 )
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(oracle != NULL);
    
@@ -797,7 +797,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    const int*            colidx,     /**< columns containint modified indices to the corresponding row offset */
    SCIP_Real*            newcoeff    /**< new quadratic coefficients */ 
 )
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(oracle != NULL);
    
@@ -941,7 +941,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionValue(
    const SCIP_Real*      x,          /**< the point where to evaluate */
    SCIP_Real*            val         /**< buffer to store function value */
    )
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(oracle != NULL);
    assert(x != NULL || oracle->nvars == 0);
@@ -953,6 +953,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionValue(
    {
       assert(linind);
       assert(linval);
+      assert(x); /* for lint */
       
       for( ; nlin; --nlin, ++linind, ++linval )
          *val += *linval * x[*linind]; 
@@ -963,6 +964,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionValue(
       assert(quadrow);
       assert(quadcol);
       assert(quadval);
+      assert(x); /* for lint */
       
       for( ; quadlen; --quadlen, ++quadrow, ++quadcol, ++quadval )
          *val += *quadval * x[*quadrow] * x[*quadcol];
@@ -996,7 +998,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionGradient(
    SCIP_Real*            val,        /**< buffer to store function value */
    SCIP_Real*            grad        /**< buffer to store function gradient */
    )
-{
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(oracle != NULL);
    assert(x != NULL || oracle->nvars == 0);
@@ -1010,6 +1012,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionGradient(
    {
       assert(linind);
       assert(linval);
+      assert(x); /* for lint */
       
       for( ; nlin; --nlin, ++linind, ++linval )
       {
@@ -1025,6 +1028,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionGradient(
       assert(quadrow);
       assert(quadcol);
       assert(quadval);
+      assert(x); /* for lint */
       
       for( ; quadlen; --quadlen, ++quadrow, ++quadcol, ++quadval )
       {
@@ -1119,7 +1123,6 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
 
 /** Computes the objective gradient in a given point.
  */
-extern
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP*                 scip,       /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
@@ -1145,7 +1148,6 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
 
 /** Computes a constraints gradient in a given point.
  */
-extern
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP*                 scip,       /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
@@ -1517,7 +1519,6 @@ SCIP_RETCODE SCIPnlpiOracleHessLagAddQuad(
  * The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
  * Only elements of the lower left triangle and the diagonal are computed.
  */
-extern
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP*                 scip,       /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
@@ -1527,7 +1528,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    const SCIP_Real*      lambda,     /**< weights (Lagrangian multipliers) for the constraints */ 
    SCIP_Real*            hessian     /**< pointer to buffer to store sparse hessian values */  
 )
-{
+{  /*lint --e{715}*/
    int i;
    assert(scip != NULL);
    assert(oracle != NULL);
@@ -1601,7 +1602,7 @@ SCIP_RETCODE SCIPnlpiOraclePrintFunction(
    SCIP_Real*            quadval,    /**< coefficients in quadratic part matrix */
    SCIP_EXPRTREE*        exprtree    /**< nonquadratic part */
 )
-{
+{  /*lint --e{715}*/
    int i, j;
    assert(scip != NULL);
    assert(oracle != NULL);
@@ -1637,7 +1638,6 @@ SCIP_RETCODE SCIPnlpiOraclePrintFunction(
    return SCIP_OKAY;
 }
 
-extern
 SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP*                 scip,       /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
@@ -1704,7 +1704,6 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    return SCIP_OKAY;
 }
 
-extern
 SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP*                 scip,       /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,     /**< pointer to NLPIORACLE data structure */
