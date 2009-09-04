@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.43 2009/09/04 09:58:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.44 2009/09/04 10:11:26 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -834,7 +834,9 @@ SCIP_RETCODE updateFirstRow(
    SCIP_LPI* altLP = conshdlrdata->altLP;
    SCIP_HASHMAP* lbHash;
    SCIP_HASHMAP* ubHash;
+#ifdef SCIP_DEBUG
    int cnt;
+#endif
 
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
@@ -1851,6 +1853,7 @@ SCIP_RETCODE enforceIndicators(
       /* should not happen, since we disallow the aggregation of the slack variable */
       SCIPABORT();
 
+#if 0
       if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(slackvar)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(slackvar)) )
       {
 	 SCIPdebugMessage("creating constraint to force multi-aggregated variable <%s> to 0.\n", SCIPvarGetName(slackvar));
@@ -1860,6 +1863,7 @@ SCIP_RETCODE enforceIndicators(
 	 SCIP_CALL( SCIPaddConsNode(scip, node1, cons, NULL) );
 	 SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
+#endif
    }
    else
    {
