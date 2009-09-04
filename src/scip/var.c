@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.260 2009/09/04 08:40:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.261 2009/09/04 09:46:59 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1879,7 +1879,7 @@ SCIP_RETCODE varParse(
    
    /* get variable name */
    token = SCIPstrtok(NULL, " <>:", &saveptr);
-   (void) SCIPsnprintf(name, strlen(token)+1, "%s", token);
+   (void) SCIPsnprintf(name, (int)strlen(token)+1, "%s", token);
    
    /* get objective coefficient */
    token = SCIPstrtok(NULL, " ,:", &saveptr);
@@ -3348,6 +3348,8 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    if( varssize >= *requiredsize )
    {
+      assert(vars != NULL);
+
       *nvars = *requiredsize;
       (*constant) += activeconstant;
 

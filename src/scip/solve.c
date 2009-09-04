@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.273 2009/09/02 15:48:13 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.274 2009/09/04 09:46:59 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -702,7 +702,8 @@ SCIP_RETCODE primalHeuristics(
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    )
-{
+{  /*lint --e{715}*/
+
    SCIP_RESULT result;
    SCIP_Longint oldnbestsolsfound;
    int ndelayedheurs;

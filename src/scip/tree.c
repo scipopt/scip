@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.218 2009/07/28 20:58:05 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.219 2009/09/04 09:46:59 bzfheinz Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -5399,20 +5399,20 @@ void SCIPnodeGetParentBranchings(
 
    for( i = 0; i < nboundchgs; i++)
    {
-      if( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING )
+      if( boundchgs[i].boundchgtype != (unsigned int)SCIP_BOUNDCHGTYPE_BRANCHING )
          break;
       (*nbranchvars)++; 
    }   
 #ifndef NDEBUG
    for( ; i < nboundchgs; i++)
-      assert(boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING); 
+      assert(boundchgs[i].boundchgtype != (unsigned int)SCIP_BOUNDCHGTYPE_BRANCHING); 
 #endif
 
    if( branchvarssize >= *nbranchvars )
    {
       for( i = 0; i < *nbranchvars; i++)
       {
-         assert( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING );
+         assert( boundchgs[i].boundchgtype == (unsigned int)SCIP_BOUNDCHGTYPE_BRANCHING );
          branchvars[i] = boundchgs[i].var;
          boundtypes[i] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
          branchbounds[i] = boundchgs[i].newbound;       

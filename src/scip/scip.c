@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.519 2009/09/03 14:34:04 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.520 2009/09/04 09:46:59 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2614,7 +2614,7 @@ SCIP_RETCODE SCIPreadProb(
    result = SCIP_DIDNOTRUN;
 
    /* copy filename */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, strlen(filename)+1) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpfilename, filename, (int)strlen(filename)+1) );
    
    fileextension = NULL;
    if( extension == NULL )
@@ -2726,6 +2726,7 @@ SCIP_RETCODE writeProblem(
 
    if( filename != NULL &&  filename[0] != '\0' )
    {
+      assert(file != NULL);
       BMSfreeMemoryArray(&tmpfilename);
       fclose(file);
    }
@@ -2734,7 +2735,9 @@ SCIP_RETCODE writeProblem(
    if( retcode == SCIP_WRITEERROR || retcode == SCIP_PLUGINNOTFOUND )
       return retcode;
    else
+   {
       SCIP_CALL( retcode );
+   }
 
    return SCIP_OKAY;
 }
