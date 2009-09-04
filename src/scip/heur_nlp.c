@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.21 2009/09/03 18:48:43 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.22 2009/09/04 03:10:55 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -148,9 +148,10 @@ SCIP_RETCODE addLinearConstraints(
    
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nuseconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nuseconss) );
+   /* three arrays to store linear constraints matrix as sparse matrix */ 
    SCIP_CALL( SCIPallocBufferArray(scip, &rowoffset, nuseconss+1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &colindex, nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &coeff, nnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &colindex, nnz) ); /* array to hold column indices of all linear constraints */
+   SCIP_CALL( SCIPallocBufferArray(scip, &coeff, nnz) ); /* array to hold coefficients of all linear constraints */
    
    j = 0;
    for( i = 0; i < nuseconss; ++i )
@@ -169,8 +170,7 @@ SCIP_RETCODE addLinearConstraints(
       rhs[i] = SCIPgetRhsLinear(scip, useconss[i]);
       rowoffset[i] = j;
 
-      /* SCIP_CALL( SCIPduplicateBufferArray(scip, &coeff[j], vals, nvars) ); ??????????????? */
-      memcpy(&coeff[j], vals, nvars * sizeof(SCIP_Real));
+      memcpy(&coeff[j], vals, nvars * sizeof(SCIP_Real)); /* copy coefficients (vals) into long coeff array starting at position j */
       for( k = 0; k < nvars; ++k, ++j )
       {
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, vars[k]));
@@ -501,9 +501,8 @@ SCIP_RETCODE applyVarBoundConstraints(
       assert(cons != NULL);
       assert(var != NULL);
 
-      /* variable bounds should be fixed already, do not release again */
+      /* integer variables have been fixed in heurExecNlp already, so we skip them here */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-         /* Should there be an assert here ?????????????????????????? */
          continue;
       
       idx = SCIPhashmapGetImage(varmap, var);
@@ -655,7 +654,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    /* do not build NLP if there are no nonlinear continuous or impl. integer variables */
    if( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
    {  
-      /* check if we have nonlinear continuous variables */
+      /* check if we have nonlinear continuous or impl. integer variables */
       SCIP_CONSHDLR* conshdlr;
       
       conshdlr = SCIPfindConshdlr(scip, "quadratic");
@@ -676,7 +675,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
             quadvars = SCIPgetQuadVarsQuadratic(scip, cons);
             assert(nquadvars == 0 || quadvars != NULL);
 
-            /* Are implicit integers really valid here? ???????????????? */
             for( j = 0; !havenlp && j < nquadvars; ++j )
                if( SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_CONTINUOUS )
                   havenlp = TRUE;
@@ -766,8 +764,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    
    *result = SCIP_DIDNOTRUN;
    
-   /* Strange comment. Isn't that the case for MIP, too? ????????????????????? */
-   /* probably do not have continuous or implicit integer variables */
+   /* probably do not have continuous or implicit integer variables in nonlinear functions */
    if( heurdata->nlpi == NULL )
       return SCIP_OKAY;
    
@@ -825,6 +822,8 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    }
 
    /* Timo and Ambros go to bed now, see you tomorrow ?????????? */
+   /* maybe seeing virtually?; hope everyone got a good sleep; thanks for reviewing my code */
+   /* will go to bed soon too */
    *result = SCIP_DIDNOTFIND;
    
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, heurdata->nvars) );
