@@ -168,7 +168,6 @@ fixed bugs:
 - fixed bug in cons_knapsack.c caused by having a multi-aggregated variable in a knapsack constraint, now applyFixing is able to resolve a binary multi-aggregation with integral values
 - fixed bug in SCIPfreeProb() in scip.c: all pricers are deactivated now
 - fixed bug in reader_mps.c with respect to corrupted files
-- fixed bug in SCIPsolveKnapsack() in cons_knapsack.c due to problems with coefficients gretaer than INT_MAX 
 - fixed bug in oneopt heuritic with start solution which has become infeasible due to global bound changes
 
 plugins:
