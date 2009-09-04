@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.44 2009/09/04 10:11:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.45 2009/09/04 10:31:48 bzfheinz Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -834,9 +834,7 @@ SCIP_RETCODE updateFirstRow(
    SCIP_LPI* altLP = conshdlrdata->altLP;
    SCIP_HASHMAP* lbHash;
    SCIP_HASHMAP* ubHash;
-#ifdef SCIP_DEBUG
    int cnt;
-#endif
 
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
@@ -849,6 +847,7 @@ SCIP_RETCODE updateFirstRow(
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
    cnt = 0;
+
    for (v = 0; v < nvars; ++v)
    {
       SCIP_VAR* var = vars[v];
@@ -865,13 +864,11 @@ SCIP_RETCODE updateFirstRow(
 	 ++cnt;
       }
    }
-#ifdef SCIP_DEBUG
    if ( cnt > 0 )
    {
       /* SCIP_CALL( SCIPlpiWriteLP(altLP, "altChg.lp") ); */
       SCIPdebugMessage("Updated bounds of original variables: %d\n", cnt);
    }
-#endif
 
    /* possible force a rescaling: */
    /* conshdlrdata->scaled = FALSE; */
@@ -1847,13 +1844,13 @@ SCIP_RETCODE enforceIndicators(
    /* if slack-variable is multi-aggregated */
    if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_MULTAGGR )
    {
-      SCIP_CONS* cons;
-      SCIP_Real val = 1.0;
-
       /* should not happen, since we disallow the aggregation of the slack variable */
       SCIPABORT();
 
 #if 0
+      SCIP_CONS* cons;
+      SCIP_Real val = 1.0;
+
       if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(slackvar)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(slackvar)) )
       {
 	 SCIPdebugMessage("creating constraint to force multi-aggregated variable <%s> to 0.\n", SCIPvarGetName(slackvar));
