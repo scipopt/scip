@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.9 2009/09/04 15:33:21 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.10 2009/09/04 15:37:40 bzfpfets Exp $"
 
 /**@file   reader_ccg.c
  * @ingroup FILEREADERS 
@@ -137,7 +137,7 @@ SCIP_RETCODE ensureEdgeCapacity(
 {
    if ( G->deg[node] + 2 > G->size[node] )
    {
-      int newSize;
+      unsigned int newSize;
       newSize = G->size[node] * 2;
       SCIP_CALL( SCIPreallocBufferArray(scip, &G->A[node], (int) newSize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &G->W[node], (int) newSize) );
@@ -291,7 +291,6 @@ SCIP_RETCODE handleLinearCons(
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            vals,               /**< array of coefficients values (or NULL if all coefficient values are 1) */
    int                   nvars,              /**< number of variables */
-   int                   ncompletevars,      /**< number of variables in whole problem */
    SCIP_Bool             transformed,        /**< transformed constraint? */
    SparseGraph*          G                   /**< graph */
    )
@@ -432,7 +431,7 @@ SCIP_RETCODE SCIPwriteCcg(
          if( nconsvars > 0 ) 
          { 
             SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLinear(scip, cons), SCIPgetValsLinear(scip, cons),
-		  SCIPgetNVarsLinear(scip, cons), nvars, transformed, &G) );
+		  SCIPgetNVarsLinear(scip, cons), transformed, &G) );
          }
       }
       else if( strcmp(conshdlrname, "setppc") == 0 )
@@ -443,7 +442,7 @@ SCIP_RETCODE SCIPwriteCcg(
 
          if( nconsvars > 0 ) 
          {
-            SCIP_CALL( handleLinearCons(scip, consvars, NULL, nconsvars, nvars, transformed, &G) );
+            SCIP_CALL( handleLinearCons(scip, consvars, NULL, nconsvars, transformed, &G) );
          }
       }
       else if ( strcmp(conshdlrname, "logicor") == 0 )
@@ -454,7 +453,7 @@ SCIP_RETCODE SCIPwriteCcg(
          
          if( nconsvars > 0 ) 
          { 
-            SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), nvars, transformed, &G) );
+            SCIP_CALL( handleLinearCons(scip, SCIPgetVarsLogicor(scip, cons), NULL, SCIPgetNVarsLogicor(scip, cons), transformed, &G) );
          }
       }
       else if ( strcmp(conshdlrname, "knapsack") == 0 )
@@ -473,7 +472,7 @@ SCIP_RETCODE SCIPwriteCcg(
 
          if( nconsvars > 0 ) 
          { 
-            SCIP_CALL( handleLinearCons(scip, consvars, consvals, nconsvars, nvars, transformed, &G) );
+            SCIP_CALL( handleLinearCons(scip, consvars, consvals, nconsvars, transformed, &G) );
          }
 	 SCIPfreeBufferArray(scip, &consvals);
       }
@@ -488,7 +487,7 @@ SCIP_RETCODE SCIPwriteCcg(
 	 consvals[0] = 1.0;
 	 consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
-	 SCIP_CALL( handleLinearCons(scip, consvars, consvals, 2, nvars, transformed, &G) );
+	 SCIP_CALL( handleLinearCons(scip, consvars, consvals, 2, transformed, &G) );
 
 	 SCIPfreeBufferArray(scip, &consvars);
 	 SCIPfreeBufferArray(scip, &consvals);
