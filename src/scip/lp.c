@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.323 2009/09/03 13:14:11 bzfgamra Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.324 2009/09/04 10:01:31 bzfpfets Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -9971,7 +9971,7 @@ SCIP_RETCODE lpLexDualSimplex(
 	    else
 	    {
 	       char type;
-	       switch ( cstat[j] )
+	       switch ( (SCIP_BASESTAT) cstat[j] )
 	       {
 	       case SCIP_BASESTAT_LOWER:
 		  type = 'l'; break;
@@ -10003,7 +10003,6 @@ SCIP_RETCODE lpLexDualSimplex(
       /* SCIP_CALL( lpSetLPInfo(lp, TRUE) ); */
       do
       {
-	 int localLexIterations = 0;
 	 int oldpos;
 
 	 /* get current solution */
@@ -10028,12 +10027,12 @@ SCIP_RETCODE lpLexDualSimplex(
 	    if ( ! fixedc[c] )
 	    {
 	       /* check whether variable is in basis */
-	       if ( cstat[c] == SCIP_BASESTAT_BASIC )
+	       if ( (SCIP_BASESTAT) cstat[c] == SCIP_BASESTAT_BASIC )
 	       {
 		  /* store first candidate */
 		  if ( pos == -1 && c > oldpos )
 		  {
-		     if ( !chooseBasic || ! SCIPsetIsIntegral(set, primsol[c]) )
+		     if ( !chooseBasic || ! SCIPsetIsIntegral(set, primsol[c]) ) /*lint !e613*/
 			pos = c;
 		  }
 	       }
@@ -10047,7 +10046,7 @@ SCIP_RETCODE lpLexDualSimplex(
 		     if ( pos == -1 && c > oldpos )
 		     {
 			/* if the variable is at its lower bound - fix it, because its value cannot be reduced */
-			if ( cstat[c] == SCIP_BASESTAT_LOWER )
+			if ( (SCIP_BASESTAT) cstat[c] == SCIP_BASESTAT_LOWER )
 			{
 			   newlb[cntcol] = oldlb[c];
 			   newub[cntcol] = oldlb[c];
@@ -10064,21 +10063,21 @@ SCIP_RETCODE lpLexDualSimplex(
 		  else
 		  {
 		     /* nonzero reduced cost -> variable can be fixed */
-		     if ( cstat[c] == SCIP_BASESTAT_LOWER )
+		     if ( (SCIP_BASESTAT) cstat[c] == SCIP_BASESTAT_LOWER )
 		     {
 			newlb[cntcol] = oldlb[c];
 			newub[cntcol] = oldlb[c];
 		     }
 		     else
 		     {
-			if ( cstat[c] == SCIP_BASESTAT_UPPER )
+			if ( (SCIP_BASESTAT) cstat[c] == SCIP_BASESTAT_UPPER )
 			{
 			   newlb[cntcol] = oldub[c];
 			   newub[cntcol] = oldub[c];
 			}
 			else
 			{
-			   assert( cstat[c] == SCIP_BASESTAT_ZERO );
+			   assert( (SCIP_BASESTAT) cstat[c] == SCIP_BASESTAT_ZERO );
 			   newlb[cntcol] = 0.0;
 			   newub[cntcol] = 0.0;
 			}
@@ -10097,9 +10096,9 @@ SCIP_RETCODE lpLexDualSimplex(
 	    if ( ! fixedr[r] )
 	    {
 	       /* consider only nonbasic rows */
-	       if ( rstat[r] != SCIP_BASESTAT_BASIC )
+	       if ( (SCIP_BASESTAT) rstat[r] != SCIP_BASESTAT_BASIC )
 	       {
-		  assert( rstat[r] != SCIP_BASESTAT_ZERO );
+		  assert( (SCIP_BASESTAT) rstat[r] != SCIP_BASESTAT_ZERO );
 		  if ( SCIPsetIsFeasZero(set, dualsol[r]) )
 		     ++nDualDeg;
 		  else
@@ -10158,7 +10157,6 @@ SCIP_RETCODE lpLexDualSimplex(
 	    }
 	    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
 	    lexIterations += iterations;
-	    localLexIterations += iterations;
 
 #ifdef DEBUG_LEXDUAL
 	    if ( iterations > 0 )
@@ -10188,7 +10186,7 @@ SCIP_RETCODE lpLexDualSimplex(
 			cend = '*';
 		     }
 		     
-		     switch ( cstat[j] )
+		     switch ( (SCIP_BASESTAT) cstat[j] )
 		     {
 		     case SCIP_BASESTAT_LOWER:
 			type = 'l'; break;
