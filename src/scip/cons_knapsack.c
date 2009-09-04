@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.177 2009/09/04 13:49:36 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.178 2009/09/04 14:12:15 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -789,7 +789,7 @@ SCIP_RETCODE SCIPsolveKnapsack(
    assert(capacity < SCIP_LONGINT_MAX);
    assert(nitems >= 0);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(capacity+1)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &optvalues, ((SCIP_Longint)(nitems+1))*(capacity+1)) );
 
    /* fill dynamic programming table with optimal values */
    for( d = 0; d <= capacity; d++ )
@@ -2121,6 +2121,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    assert(nknapvars > 0);
    assert(knapvars != NULL);
 
+   tmpindices = NULL;
+
    SCIPdebugMessage("separate linear constraint <%s> relaxed to knapsack\n", cons != NULL ? SCIPconsGetName(cons) : "-");
    if( cons != NULL )
    {
@@ -2176,8 +2178,9 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          assert(binvals[tmp] == 0);
       }
 #endif
-      tmp = 0;
    }
+
+   tmp = 0;
 
    /* relax continuous knapsack constraint:
     * 1. make all variables binary:
@@ -2202,6 +2205,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          binvals[SCIPvarGetProbindex(var)] += valscale * knapvals[i];
          if( !noknapsackconshdlr )
          {
+            assert(tmpindices != NULL);
+
             tmpindices[tmp] = SCIPvarGetProbindex(var);
             ++tmp;
          }
@@ -2261,6 +2266,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
             if( !noknapsackconshdlr )
             {
+               assert(tmpindices != NULL);
+
                tmpindices[tmp] = SCIPvarGetProbindex(zvlb[bestlbtype]);
                ++tmp;
             }
@@ -2325,6 +2332,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
             if( !noknapsackconshdlr )
             {
+               assert(tmpindices != NULL);
+
                tmpindices[tmp] = SCIPvarGetProbindex(zvub[bestubtype]);
                ++tmp;
             }
@@ -2430,7 +2439,10 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    {
       /* clear binvals */
       for( --tmp; tmp >= 0; --tmp)
+      {
+         assert(tmpindices != NULL);
          binvals[tmpindices[tmp]] = 0;
+      }
       SCIPfreeBufferArray(scip, &tmpindices);
    }
    SCIPfreeBufferArray(scip, &consvals);
@@ -3149,13 +3161,16 @@ SCIP_RETCODE applyFixings(
                SCIPerrorMessage("try to resolve a multiaggregation with a non-integral value for weight*aggrconst = %g\n", weight*aggrconst);
                return SCIP_ERROR;
 	    }
-
+            
 	    /* if workvar was negated, we have to flip the weight */
 	    if( negated )
 	      weight *= -1;
-
+            
 	    for( i = naggrvars - 1; i >= 0; --i )
 	    {
+               assert(aggrvars != NULL);
+               assert(aggrscalars != NULL);
+
 	       if( SCIPvarGetType(aggrvars[i]) != SCIP_VARTYPE_BINARY )
                {
                   SCIPerrorMessage("try to resolve a multiaggregation with a non-binary variable <%s>\n", aggrvars[i]);
@@ -3167,7 +3182,7 @@ SCIP_RETCODE applyFixings(
                   return SCIP_ERROR;
                }
 	       /* if the new coefficent is smaller than zero, we need to add the negated variable instead and adjust the capacity */
-	       if( SCIPisLT(scip, weight * aggrscalars[i], 0) )
+	       if( SCIPisNegative(scip, weight * aggrscalars[i]) )
 	       {
 		  SCIP_CALL( SCIPgetNegatedVar(scip, aggrvars[i], &negvar));
 		  assert(negvar != NULL);
@@ -3182,7 +3197,8 @@ SCIP_RETCODE applyFixings(
             /* delete old coefficient */
 	    SCIP_CALL( delCoefPos(scip, cons, v) );
 
-	    /* adjust the capacity with the aggregation constant and if necessary the extra weight through tne negation */ 
+	    /* adjust the capacity with the aggregation constant and if necessary the extra weight through tne
+             * negation */ 
 	    if(negated)
 	       consdata->capacity -= (SCIP_Longint)SCIPfloor(scip, weight * (aggrconst - 1) + 0.5);
 	    else
@@ -3215,7 +3231,7 @@ SCIP_RETCODE applyFixings(
    /* if aggregated variables have been replaced, multiple entries of the same variable are possible and we have to
     * clean up the constraint
     */
-   if( !cutoff )
+   if( !(*cutoff) )
    {
       SCIP_CALL( mergeMultiples(scip, cons) );
       SCIPdebugMessage("after applyFixings and merging:\n");
