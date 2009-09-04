@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.520 2009/09/04 09:46:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.521 2009/09/04 15:40:17 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5495,7 +5495,7 @@ SCIP_RETCODE SCIPinterruptSolve(
  *  an integer variable with bounds zero and one is automatically converted into a binary variable;
  *
  *  Warning! When doing column generation and the original problem is a maximization problem, notice that SCIP 
- *  transformed the problem into a minimization problem by multiplying the objective function by -1. 
+ *  will transform the problem into a minimization problem by multiplying the objective function by -1. 
  *  Thus, the original objective function value of variables created during the solving process has to be multiplied by -1, too.
  */
 SCIP_RETCODE SCIPcreateVar(
@@ -6591,7 +6591,13 @@ SCIP_RETCODE SCIPchgVarUbGlobal(
    }  /*lint !e788*/
 }
 
-/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet */
+/** changes lazy lower bound of the variable, this is only possible if the variable is not in the LP yet
+ *
+ *  lazy bounds are bounds, that are enforced by constraints and need not to be put into the LP explicitly
+ *  Attention: These bounds have to be valid for each feasible LP solution. If the objective function implies 
+ *  bounds on the variables for each optimal LP solution, but these bounds may be violated for arbitrary LP solutions, 
+ *  these bounds must not be declared lazy!
+ */
 SCIP_RETCODE SCIPchgVarLbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
@@ -6608,7 +6614,13 @@ SCIP_RETCODE SCIPchgVarLbLazy(
    return SCIP_OKAY;
 }
 
-/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet */
+/** changes lazy upper bound of the variable, this is only possible if the variable is not in the LP yet
+ *
+ *  lazy bounds are bounds, that are enforced by constraints and need not to be put into the LP explicitly
+ *  Attention: These bounds have to be valid for each feasible LP solution. If the objective function implies 
+ *  bounds on the variables for each optimal LP solution, but these bounds may be violated for arbitrary LP solutions, 
+ *  these bounds must not be declared lazy!
+ */
 SCIP_RETCODE SCIPchgVarUbLazy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */

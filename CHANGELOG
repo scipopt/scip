@@ -58,7 +58,9 @@ features:
   constraints which implies these (lazy) bounds. If the lazy lower or upper bound is greater or less than the local lower or upper bound, 
   respectively, then the corresponding bound is not put into the LP. The bounds are set to minus and plus infinity per default which yields 
   the same behavior as before. With the methods SCIPchgVarLbLazy() and SCIPchgVarUbLazy() these bounds can be set. 
-  This is of interest if SCIP gets used as a  branch-and-price framework.
+  This is of interest if SCIP gets used as a  branch-and-price framework. Attention! The lazy bounds need to be valid for each feasible
+  LP solution. If the objective function implies bounds on the variables for each optimal   LP solution, but these bounds may be violated 
+  for arbitrary LP solutions, these bounds must not be declared lazy!
 - added new timing point, SCIP_HEURTIMING_DURINGPRICINGLOOP, for calling heuristics; If this timing point is used the corresponding 
   heuristics is called during the pricing loop of variables; we also added this timing point to heur_simplerounding.{h,c} which
   has the effect that a LP solution which satisfies all integrality conditions during the pricing loop is detected
