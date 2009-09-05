@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.23 2009/09/04 14:52:59 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.24 2009/09/05 15:30:12 bzfwinkm Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -380,6 +380,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    {
       /** @todo try to correct lp rows */
       SCIPdebugMessage("Some global bound changes were not valid in lp rows.\n");
+
+      SCIP_CALL( SCIPfreeSol(scip, &worksol) );
+      SCIPfreeBufferArray(scip, &activities);
+
       return SCIP_OKAY;
    }
 
