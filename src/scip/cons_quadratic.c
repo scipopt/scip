@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.38 2009/09/05 12:35:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.39 2009/09/05 16:57:37 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -95,11 +95,11 @@ struct SCIP_ConsData
    SCIP_VAR**      bilinvar2;     /**< second variable in bilinear term */
    SCIP_Real*      bilincoeff;    /**< coefficient of bilinear term */
 
-   int             is_convex:1;   /**< whether quadratic function is convex */
-   int             is_concave:1;  /**< whether quadratic function is concave */
-   int             is_removedfixings:1; /**< whether we have removed fixed/aggr/multiaggr variables */
-   int             is_propagated:1; /**< whether the constraint was propagated with respect to the current bounds */
-   int             is_presolved:1;/**< whether we have checked for possibilities of upgrading or implicit integer variables */
+   unsigned int    is_convex:1;   /**< whether quadratic function is convex */
+   unsigned int    is_concave:1;  /**< whether quadratic function is concave */
+   unsigned int    is_removedfixings:1; /**< whether we have removed fixed/aggr/multiaggr variables */
+   unsigned int    is_propagated:1; /**< whether the constraint was propagated with respect to the current bounds */
+   unsigned int    is_presolved:1;/**< whether we have checked for possibilities of upgrading or implicit integer variables */
 
    SCIP_Real       lhsviol;       /**< violation of lower bound by current solution (used temporarily inside constraint handler) */
    SCIP_Real       rhsviol;       /**< violation of lower bound by current solution (used temporarily inside constraint handler) */
@@ -2549,7 +2549,7 @@ SCIP_RETCODE computeViolation(
    SCIP_SOL*   sol,        /**< solution or NULL if LP solution should be used */
    SCIP_Bool   do_scaling  /**< whether we should scale the violation by the gradient of the quadratic function */ 
    )
-{
+{  /*lint --e{666}*/
    SCIP_CONSDATA* consdata;
    SCIP_Real      val = 0.0;
    SCIP_Real      varval = 0.0;
@@ -5013,7 +5013,7 @@ SCIP_DECL_CONSPROP(consPropQuadratic)
 #if 1
 static
 SCIP_DECL_CONSPRESOL(consPresolQuadratic)
-{  /*lint --e{715}*/
+{  /*lint --e{715,788}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    int                c;
@@ -5185,7 +5185,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          SCIP_RESULT propresult;
          SCIP_CALL( propagateBounds(scip, conshdlr, conss[c], &propresult, nchgbds) );
          switch (propresult)
-         {  /*lint --e{788} */
+         {
             case SCIP_REDUCEDDOM:
                *result = SCIP_SUCCESS;
                break;
@@ -5385,7 +5385,7 @@ SCIP_DECL_CONSDISABLE(consDisableQuadratic)
 #if 1
 static
 SCIP_DECL_CONSPRINT(consPrintQuadratic)
-{  
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    int            j;
    
@@ -5459,7 +5459,7 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckQuadratic)
-{
+{  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Real          maxviol = 0.0;
@@ -5566,6 +5566,8 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
          {
             assert(consdata->bilinvar1); /* for lint */
             assert(consdata->bilinvar2); /* for lint */
+            assert(bilinvar1); /* for lint */
+            assert(bilinvar2); /* for lint */
             if (consdata->bilinvar1[consdata->adjbilin[i][j]] == consdata->quadvar[i])
             {
                assert(consdata->bilinvar2[consdata->adjbilin[i][j]] != consdata->quadvar[i]);
