@@ -4018,6 +4018,9 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CHG3 Interface changes between SCIP 1.1 and SCIP 1.2
  *
+ * - The most significant change in SCIP for C++ users is that all include files of SCIP
+ *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
+ *
  * - The callback SCIP_DECL_PRICERREDCOST(x) in the \ref PRICER "pricers" has two new parameters: 
  *    - A <code>result</code> pointer determines whether the pricer guarantees that there exist no more variables. This allows for early branching.
  *    - A pointer for providing a lower bound. 
