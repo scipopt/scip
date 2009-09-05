@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.142 2009/09/04 14:36:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.143 2009/09/05 14:09:24 bzfpfets Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -894,7 +894,7 @@ SCIP_RETCODE mergeMultiples(
       
       var2 = consdata->vars[v-1];
       assert(SCIPvarGetType(var2) == SCIP_VARTYPE_BINARY);
-      assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var1) == SCIP_VARSTATUS_FIXED);
+      assert(SCIPvarIsActive(var2) || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(var2) == SCIP_VARSTATUS_FIXED);
       if( SCIPvarGetStatus(var2) == SCIP_VARSTATUS_NEGATED )
       {
          var2 = SCIPvarGetNegatedVar(var2);
