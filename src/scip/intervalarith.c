@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.26 2009/09/03 03:25:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.27 2009/09/05 12:35:37 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1017,7 +1017,7 @@ void SCIPintervalPower(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
    )
-{
+{  /*lint --e{777}*/
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
    assert(operand2.inf <= operand2.sup);
@@ -1051,15 +1051,15 @@ void SCIPintervalPowerScalar(
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
    )
-{
+{  /*lint --e{777}*/
    ROUNDMODE roundmode;
    SCIP_Bool op2isint;
 
    assert(resultant != NULL);
    assert(operand1.inf <= operand1.sup);
    assert(operand1.inf <  infinity);
-   assert(operand2     <  infinity);
    assert(operand1.sup > -infinity);
+   assert(operand2     <  infinity);
    assert(operand2     > -infinity);
    
    op2isint = (ceil(operand2) == operand2);
