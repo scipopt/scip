@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.25 2009/09/05 16:57:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.26 2009/09/05 18:27:23 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -757,7 +757,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolNlp)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecNlp)
-{  /*lint --e{666}*/
+{  /*lint --e{666,715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Real*     startpoint;
    SCIP_Longint   itercontingent;
