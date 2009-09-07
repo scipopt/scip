@@ -54,9 +54,9 @@
  * was Tobias Achterberg (2002-2007) with contributions by Timo Berthold and Kati Wolter. The
  * persons listed above contributed or are currently contributing to SCIP.
  *
- * SCIP is developed together with TU Darmstadt and has approx. 220.000 lines of C code. See the web
- * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to
- * download SCIP.
+ * SCIP is developed together with <a href="http://www.math.tu-bs.de/mo/">TU Braunschweig</a> and <a
+ * href="http://www.opt.tu-darmstadt.de/">TU Darmstadt</a> and has approx. 220.000 lines of C code. See the web
+ * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
  * This documentation provides extensive information about SCIP.
  *
@@ -311,8 +311,8 @@
  *
  * @section COMPILERPROBLEMS Compilation problems:
  *
- * - If the soft-link query script does not work on your machine, read step 2 in the INSTALL file for instructions on
- * manually creating the soft-links.
+ * - If the soft-link query script does not work on your machine, read step 2 in the \ref INSTALL "INSTALL" file for
+ * instructions on manually creating the soft-links.
  *
  * - If you get an error message of the type\n
  * <code>make: *** No rule to make target `lib/???', needed by `obj/O.linux.x86.gnu.opt/lib/scip/???.o'.  Stop.</code>\n
@@ -359,14 +359,15 @@
  *
  * First install MSYS, then MinGW to the mingw folder inside the msys folder.
  * Now you need to install the following packages to the mingw folder:
- *   - zlib (or use ZLIB=false)
- *   - pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
+ * - zlib (or use ZLIB=false)
+ * - pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
  *
- * (After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT
- * to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.)
+ * After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT
+ * to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.
  *
- * You can download these additional packages from <a href="http://gnuwin32.sourceforge.net/packages.html">here</a> or
- * compile the source on your own from their homepages.
+ * You can download these additional packages from 
+ * <a href="http://gnuwin32.sourceforge.net/packages.html">here</a> 
+ * or compile the source on your own from their homepages.
  *
  * Second you need to copy the file sh.exe to bash.exe otherwise various scripts (including makefiles) will not work.
  * Normally the unistd.h covers also the getopt-options, but for mingw you need to add the entry #include <getopt.h>
@@ -4268,6 +4269,10 @@
  * \htmlinclude faq.inc  
  */
 
+
+/**@page INSTALL Installation information
+ * \include INSTALL  
+ */
 
 /**@defgroup BRANCHINGRULES Branching Rules 
  * @brief This page contains a list of all branching rule which are currently available.

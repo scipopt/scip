@@ -483,7 +483,7 @@ INPUT                  = . \
                          ../src/objscip \
                          ../src/tclique \
                          ../src/blockmemshell
-
+                         
 # This tag can be used to specify the character encoding of the source files that 
 # doxygen parses. Internally doxygen uses the UTF-8 encoding, which is also the default 
 # input encoding. Doxygen uses libiconv (or the iconv built into libc) for the transcoding. 
@@ -539,7 +539,8 @@ EXCLUDE_SYMBOLS        =
 # directories that contain example code fragments that are included (see 
 # the \include command).
 
-EXAMPLE_PATH           = inc/
+EXAMPLE_PATH           = inc/ \
+ 			 ../
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the 
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp 
