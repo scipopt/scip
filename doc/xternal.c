@@ -65,7 +65,7 @@
  * - \ref FAQ     "Frequently asked questions (FAQ)"
  * - \ref START   "How to start a new project"
  * - \ref DOC     "How to search the documentation for interface methods"
- * - \ref MAKE    "Makefiles"
+ * - \ref MAKE    "Makefiles / Installation information"
  * - \ref DEBUG   "Debugging"
  * - \ref TEST    "How to run automated tests with SCIP"
  * - \ref COUNTER "How to use SCIP to count feasible solution"
@@ -122,7 +122,13 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page MAKE Makefiles
+/**@page MAKE Makefiles / Installation information
+ *
+ * In this section we describe (few) features and use of the SCIP Makefile. We also give two examples for how to install
+ * SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The
+ * \ref EXAMPLE2 "second example" shows how to get CPLEX linked to SCIP without ZIMPL. This is followed by section with
+ * gives some hints what to do if the \ref COMPILERPROBLEMS "compilation threws some error". We give some commends on
+ * how to install SCIP under \ref WINDOWS "WINDOWS". And show \ref RUN "how to start SCIP".
  *
  * SCIP contains a makefile system, which allows the individual setting of several parameters. For
  * instance, the following settings are supported:
@@ -135,11 +141,13 @@
  *   installed separately from SCIP. The options are the following:
  *      - <code>clp</code>: COIN Clp LP-solver
  *      - <code>cpx</code>: CPLEX LP-solver
+ *      - <code>grb</code>: Gurobi LP-solver
  *      - <code>msk</code>: Mosek LP-solver
+ *      - <code>qso</code>: QSopt LP-solver
  *      - <code>spx</code>: SoPlex LP-solver (default)
  *      - <code>xprs</code>: XPress LP-solver
  *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
- *      .
+      .
  * - <code>LPSOPT=\<opt|dbg\></code> Chooses the optimized or debug version of the LP-solver. (currently only available
  *   for SoPlex and CLP)
  *
@@ -187,6 +195,196 @@
  * If your platform or compiler is not supported by SCIP you might try and copy one of the existing
  * makefile in the <code>make</code> directory and modify it. If you succeed, we are always
  * interested in including more Makefiles into the system.
+ *
+ *
+ * @section EXAMPLE1 Example 1 (defaults: SoPlex, with ZIMPL support):
+
+ * Typing "make" uses SoPlex as LP solver and includes support for the modeling language ZIMPL. You will be asked the
+ * following questions on the first call to "make" (example answers are already given):
+ *
+ * \code
+ * > make
+ * make[1]: Entering directory `scip-1.2'
+ *
+ * - Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
+ *
+ * * SCIP needs some softlinks to external programs, in particular, LP-solvers. 
+ * * Please insert the paths to the corresponding directories/libraries below.
+ * * The links will be installed in the 'lib' directory.
+ * * For more information and if you experience problems see the INSTALL file.
+ *
+ *   -> "spxinc" is the path to the SoPlex "src" directory, e.g., "../../soplex/src".
+ *   -> "libsoplex.*" is the path to the SoPlex library, e.g., "../../soplex/lib/libsoplex.linux.x86.gnu.opt.a"
+ *   -> "zimplinc" is a directory containing the path to the ZIMPL "src" directory, e.g., "../../zimpl/src".
+ *   -> "libzimpl.*" is the path to the ZIMPL library, e.g., "../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a"
+ * 
+ * - preparing missing soft-link "lib/spxinc":
+ * > Enter soft-link target file or directory for "lib/spxinc" (return if not needed):
+ * > ../../soplex/src/ 
+ * -> creating softlink "lib/spxinc" -> "../../soplex/src"
+ *
+ *
+ * - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.a":
+ * > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.a" (return if not needed):
+ * > ../../soplex/lib/libsoplex.linux.x86_64.gnu.opt
+ * -> creating softlink "lib/libsoplex.linux.x86_64.gnu.opt.a" -> "../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a"
+ *
+ *
+ * - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.so":
+ * * this soft-link is not necessarily needed since "lib/libsoplex.linux.x86_64.gnu.opt.a" already exists - press return to skip
+ * > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.so" (return if not needed):
+ * >
+ * * skipped creation of softlink "lib/libsoplex.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
+ *
+ *
+ * - preparing missing soft-link "lib/zimplinc/zimpl":
+ * > Enter soft-link target file or directory for "lib/zimplinc/zimpl" (return if not needed):
+ * ../../zimpl/src/
+ *  creating softlink "lib/zimplinc/zimpl" -> "../../zimpl/src"
+ * 
+ *
+ * - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.a":
+ * > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.a" (return if not needed):
+ * > ../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a
+ * -> creating softlink "lib/libzimpl.linux.x86_64.gnu.opt.a" -> "../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a"
+ * 
+ *
+ * - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.so":
+ * * this soft-link is not necessarily needed since "lib/libzimpl.linux.x86_64.gnu.opt.a" already exists - press return to skip
+ * > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.so" (return if not needed):
+ * >
+ * * skipped creation of softlink "lib/libzimpl.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
+ *
+ * ... 
+ *
+ * -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
+ * -> generating library lib/liblpispx-1.2.0.linux.x86_64.gnu.opt.a
+ * -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
+ * -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.spx
+ *
+ * \endcode
+ *
+ * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
+ *
+ * Typing "make LPS=cpx ZIMPL=false"  uses CPLEX as LP solver. You will be asked the following questions on
+ * the first call to "make" (example answers are already given):
+ *
+ * \code
+ * > make LPS=cpx ZIMPL=false
+ * make[1]: Entering directory `scip-1.2'
+ *
+ * - Current settings: LPS=cpx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
+ * 
+ * * SCIP needs some softlinks to external programs, in particular, LP-solvers.
+ * * Please insert the paths to the corresponding directories/libraries below.
+ * * The links will be installed in the 'lib' directory.
+ * * For more information and if you experience problems see the INSTALL file.
+ * 
+ *   -> "cpxinc" is the path to the CPLEX "include" directory, e.g., "<CPLEX-path>/include/ilcplex".
+ *   -> "libcplex.*" is the path to the CPLEX library, e.g., "<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a"
+ *
+ * - preparing missing soft-link "lib/cpxinc":
+ * > Enter soft-link target file or directory for "lib/cpxinc" (return if not needed):
+ * > ../../cplex121/include
+ * -> creating softlink "lib/cpxinc" -> "../../cplex121/include"
+ *
+ *
+ * - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.a":
+ * > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.a" (return if not needed):
+ * > ../../cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a
+ * -> creating softlink "lib/libcplex.linux.x86_64.gnu.a" -> "../../../../adm_cple/cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a"
+ *
+ *
+ * - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.so":
+ * > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.so" (return if not needed):
+ * >
+ * * skipped creation of softlink "lib/libcplex.linux.x86_64.gnu.so". Call "make links" if needed later.
+ *
+ * ... 
+ *
+ * -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
+ * -> generating library lib/liblpicpx-1.2.0.linux.x86_64.gnu.opt.a
+ * -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
+ * -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.cpx
+ *
+ * \endcode
+ *
+ * @section COMPILERPROBLEMS Compilation problems:
+ *
+ * - If the soft-link query script does not work on your machine, read step 2 in the INSTALL file for instructions on
+ * manually creating the soft-links.
+ *
+ * - If you get an error message of the type\n
+ * <code>make: *** No rule to make target `lib/???', needed by `obj/O.linux.x86.gnu.opt/lib/scip/???.o'.  Stop.</code>\n
+ * the corresponding soft-link was not created or points to a wrong location.  Check the soft-link targets in the "lib/"
+ * subdirectory. Try to delete all soft-links from the "lib/" directory\n and call "make links" to generate them
+ * again. If this still fails, read step 2 for instructions on manually\n creating the soft-links.
+ *
+ * - If you get an error message of the type\n
+ * <code>make: *** No rule to make target `make/make.?.?.?.?.?'.  Stop.</code>,\n
+ * the corresponding machine dependent makefile for your architecture and compiler is missing.\n Create one of the given
+ * name in the "make/" subdirectory. You may take\n "make/make.linux.x86.gnu.opt" or any other file in the make
+ * subdirectory as example.\n
+ *
+ * - The readline library seems to differ sligtly on different OS distributions. Some versions do not support the
+ * remove_history() call.  In this case, you have to either add "-DNO_REMOVE_HISTORY" to the FLAGS in the appropriate
+ * make/make.* file, or to compile with "make USRFLAGS=-DNO_REMOVE_HISTORY".  Make sure, the file "src/scip/dialog.c" is
+ * recompiled.  If this doesn't work either, disable the readline library with "make READLINE=false".
+ *
+ * - On some systems, the sigaction() method is not available. In this case, you have to either add "-DNO_SIGACTION" to
+ * the FLAGS in the appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_SIGACTION".  Make sure, the
+ * file "src/scip/interrupt.c" is recompiled.
+ *
+ * - On some systems, the rand_r() method is not available.  In this case, you have to either add "-DNO_RAND_R" to the
+ * FLAGS in the appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_RAND_R".  Make sure, the file
+ * "src/scip/misc.c" is recompiled.
+ *
+ * - On some systems, the strtok_r() method is not available.  In this case, you have to either add "-DNO_STRTOK_R" to the
+ * FLAGS in the appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_STRTOK_R".  Make sure, the file
+ * "src/scip/misc.c" is recompiled.
+ *
+ * - On some systems, the strerror_r() method is not available.  In this case, you have to either add "-DNO_STRERROR_R" to
+ * the FLAGS in the appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_STRERROR_R".  Make sure, the
+ * file "src/scip/misc.c" is recompiled.
+ *
+ * - On some systems, the option [-e] is not available for the read command.  You have to compile with READ=read.
+ *
+ * - If you encounter other compiler or linker errors, you should recompile with "make VERBOSE=true ..." in order to get
+ * the full compiler invocation. This might help to fix the corresponding machine dependent makefile in the make
+ * subdirectory.
+ *
+ * @section WINDOWS Remarks on Installing under Windows using MinGW
+ *
+ * To build your own windows binaries under windows we recommend using the MinGW-Compiler with MSYS from mingw.org .
+ *
+ * First install MSYS, then MinGW to the mingw folder inside the msys folder.
+ * Now you need to install the following packages to the mingw folder:
+ *   - zlib (or use ZLIB=false)
+ *   - pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
+ *
+ * (After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT
+ * to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.)
+ *
+ * You can download these additional packages from <a href="http://gnuwin32.sourceforge.net/packages.html">here</a> or
+ * compile the source on your own from their homepages.
+ *
+ * Second you need to copy the file sh.exe to bash.exe otherwise various scripts (including makefiles) will not work.
+ * Normally the unistd.h covers also the getopt-options, but for mingw you need to add the entry #include <getopt.h>
+ * into the /mingw/include/unistd.h after the other include-entries (if not present).
+ *
+ * At last there is one package you need to compile if you want to use ZIMPL and ZIMPL-support in SCIP (otherwise use
+ * ZIMPL=false as parameter with the make-call): the gmplib from gmplib.org The command "./configure --prefix=/mingw ;
+ * make ; make install" should succeed without problems and installs the gmplib to the mingw folder.
+ *
+ * Now "make READLINE=false" should be compiling without errors.  Please note that we do NOT support creating the
+ * doxygen documentation and readline-usage under windows.
+ *
+ *
+ * @section RUN How to run SCIP after successful compiling SCIP
+ *
+ * To run the program enter <code>bin/scip.\$(OSTYPE).\$(ARCH).\$(COMP).\$(OPT).\$(LPS)</code>
+ * (e.g. <code>bin/scip.linux.x86_64.gnu.opt.spx</code>) or just <code>bin/scip</code> for the last compiled version.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
