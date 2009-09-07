@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.39 2009/09/05 16:57:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.40 2009/09/07 19:47:58 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -1454,8 +1454,8 @@ SCIP_RETCODE presolveCreateQuadTerm(
    for (i = 0; i < consdata->n_linvar; ++i)
    {
       var = consdata->linvar[i];
-      *have_change |= (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE);
-      *have_change |= SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      *have_change = have_change || ((SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE));
+      *have_change = have_change || SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
       SCIP_CALL( presolveAddLinearTerm(scip, *terms, constant, consdata->lincoeff[i], var) );
    }
 
@@ -1530,8 +1530,8 @@ SCIP_RETCODE presolveCreateQuadTerm(
             }
             else
             { /* variable is not fixed */
-               *have_change |= (SCIPvarGetStatus(consdata->bilinvar2[j]) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(consdata->bilinvar2[j]) != SCIP_VARSTATUS_LOOSE);
-               *have_change |= SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->bilinvar2[j]), SCIPvarGetUbGlobal(consdata->bilinvar2[j]));
+               *have_change = have_change || ((SCIPvarGetStatus(consdata->bilinvar2[j]) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(consdata->bilinvar2[j]) != SCIP_VARSTATUS_LOOSE));
+               *have_change = have_change || SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->bilinvar2[j]), SCIPvarGetUbGlobal(consdata->bilinvar2[j]));
                SCIP_CALL( presolveAddBilinearTerm(scip, *terms, constant, coeff, var, consdata->bilinvar2[j]) );
             }
             break;
@@ -2303,8 +2303,8 @@ SCIP_RETCODE checkCurvature(
       consdata->is_concave = TRUE;
       for (i = 0; i < n; ++i)
       {
-         consdata->is_convex  &= !SCIPisNegative(scip, consdata->quadsqrcoeff[i]);
-         consdata->is_concave &= !SCIPisPositive(scip, consdata->quadsqrcoeff[i]);
+         consdata->is_convex  = consdata->is_convex  && !SCIPisNegative(scip, consdata->quadsqrcoeff[i]);
+         consdata->is_concave = consdata->is_concave && !SCIPisPositive(scip, consdata->quadsqrcoeff[i]);
       }
       return SCIP_OKAY;
    }
@@ -2338,8 +2338,8 @@ SCIP_RETCODE checkCurvature(
       }
       else
       {
-         consdata->is_convex  &= !SCIPisNegative(scip, consdata->quadsqrcoeff[i]);
-         consdata->is_concave &= !SCIPisPositive(scip, consdata->quadsqrcoeff[i]);
+         consdata->is_convex  = consdata->is_convex  && !SCIPisNegative(scip, consdata->quadsqrcoeff[i]);
+         consdata->is_concave = consdata->is_concave && !SCIPisPositive(scip, consdata->quadsqrcoeff[i]);
       }
    }
 
