@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.26 2009/09/05 18:27:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.27 2009/09/07 19:51:50 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -125,6 +125,8 @@ SCIP_RETCODE addLinearConstraints(
    
    SCIP_CALL( SCIPallocBufferArray(scip, &useconss, nconss) );
    
+   /* count the number of constraints and nonzeros to add to NLP
+    * constraints with only integer variables are not added to the NLP, since all its variables will be fixed later */
    nnz = 0;
    nuseconss = 0;
    for( i = 0; i < nconss; ++i )
@@ -142,7 +144,7 @@ SCIP_RETCODE addLinearConstraints(
    }
    
    if( !nuseconss )
-   {
+   {  /* no linear constraints to add to NLP, so we are done */
       SCIPfreeBufferArray(scip, &useconss);
       return SCIP_OKAY;
    }
@@ -150,11 +152,11 @@ SCIP_RETCODE addLinearConstraints(
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nuseconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nuseconss) );
    /* three arrays to store linear constraints matrix as sparse matrix */ 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowoffset, nuseconss+1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowoffset, nuseconss+1) ); /* array to hold start index of each row in the colindex and coeff arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &colindex, nnz) ); /* array to hold column indices of all linear constraints */
    SCIP_CALL( SCIPallocBufferArray(scip, &coeff, nnz) ); /* array to hold coefficients of all linear constraints */
    
-   j = 0;
+   j = 0; /* counter for number of nonzero elements passed so far */
    for( i = 0; i < nuseconss; ++i )
    {
       SCIP_VAR** vars;
@@ -169,18 +171,19 @@ SCIP_RETCODE addLinearConstraints(
 
       lhs[i] = SCIPgetLhsLinear(scip, useconss[i]);
       rhs[i] = SCIPgetRhsLinear(scip, useconss[i]);
-      rowoffset[i] = j;
+      rowoffset[i] = j; /* obviously, coefficients and colindices for constraint i will be stored beginning at position j */ 
 
       /* copy coefficients (vals) into long coeff array starting at position j */
       BMScopyMemoryArray(&coeff[j], vals, nvars);
 
+      /* fill column indices of variables (vars) in conss[i] with variable indices in NLP; and increase j */
       for( k = 0; k < nvars; ++k, ++j )
       {
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, vars[k]));
          colindex[j] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, vars[k]);
       }
    }
-   rowoffset[nuseconss] = nnz;
+   rowoffset[nuseconss] = nnz; /* the last+1'th row starts at position nnz ( == j) */
    assert(j == nnz);
    
    SCIP_CALL( SCIPnlpiAddConstraints(scip, heurdata->nlpi, nuseconss,
@@ -231,17 +234,18 @@ SCIP_RETCODE collectVarBoundConstraints(
       for( i = 0; i < nconss; ++i )
       {
          if( SCIPvarGetType(SCIPgetVbdvarVarbound(scip, conss[i])) > SCIP_VARTYPE_INTEGER )
+         {  /* will add constraint to NLP soon */
             nconss4nlp++;
+         }
          else
-         {
+         {  /* will handle constraint explicitely before solving NLP */
             SCIP_CALL( SCIPcaptureCons(scip, conss[i]) );
          }
       }
    }
-   else
+   else /* user wants us to add all varbound constraints to NLP */
       nconss4nlp = nconss;
 
-   
    if( nconss4nlp )
    {
       SCIP_Real*       lhs;
@@ -252,18 +256,20 @@ SCIP_RETCODE collectVarBoundConstraints(
       int              j;
       int              k;
 
+      /* number of and space for varbound constraints that are handled explicitely */
       heurdata->nvarbndconss = nconss - nconss4nlp;
       if( heurdata->nvarbndconss )
          SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->varbndconss, heurdata->nvarbndconss) );
 
+      /* memory to store those varbound constraints that are added to the NLP as linear constraint */
       SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss4nlp) );
       SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss4nlp) );
       SCIP_CALL( SCIPallocBufferArray(scip, &rowoffset, nconss4nlp + 1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &colindex, 2*nconss4nlp) );
       SCIP_CALL( SCIPallocBufferArray(scip, &coeff, 2*nconss4nlp) );
       
-      j = 0;
-      k = 0;
+      j = 0; /* the number of explicitely handled varbound constraints passed so far */
+      k = 0; /* the number of varbound constraints for the NLP passed so far */
       
       for( i = 0; i < nconss; ++i )
       {
@@ -280,12 +286,14 @@ SCIP_RETCODE collectVarBoundConstraints(
          /* varbound constraints: lhs <= x + c * y <= rhs */
          lhs[k] = SCIPgetLhsVarbound(scip, conss[i]);
          rhs[k] = SCIPgetRhsVarbound(scip, conss[i]);
-         rowoffset[k] = 2*k;
+         rowoffset[k] = 2*k; /* since for each varbound constraint we have 2 nonzeros (x and y) */
          
+         /* add x term to coefficient matrix */
          coeff[2*k] = 1.0;
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, SCIPgetVarVarbound(scip, conss[i])));
          colindex[2*k] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, SCIPgetVarVarbound(scip, conss[i]));
          
+         /* add c * y term to coefficient matrix */
          coeff[2*k+1] = SCIPgetVbdcoefVarbound(scip, conss[i]);
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, SCIPgetVbdvarVarbound(scip, conss[i])));
          colindex[2*k+1] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, SCIPgetVbdvarVarbound(scip, conss[i]));
@@ -293,7 +301,7 @@ SCIP_RETCODE collectVarBoundConstraints(
          ++k;
       }
 
-      rowoffset[k] = 2 * nconss4nlp;
+      rowoffset[k] = 2 * nconss4nlp; /* the last entry of rowoffset holds the number of nonzeros in the coefficients matrix */
       assert(j == heurdata->nvarbndconss);
       assert(k == nconss4nlp);
       
@@ -308,7 +316,7 @@ SCIP_RETCODE collectVarBoundConstraints(
       SCIPfreeBufferArray(scip, &lhs);
    }
    else
-   {
+   {  /* all varbound constraints are handled explicitely */
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->varbndconss, conss, nconss) );
       heurdata->nvarbndconss = nconss;
    }
@@ -331,6 +339,7 @@ SCIP_RETCODE addQuadraticConstraints(
    if( !SCIPconshdlrGetNConss(quadconshdlr) )
       return SCIP_OKAY;
 
+   /* let the constraint handler for quadratic constraints fill the NLP with its constraints */
    SCIP_CALL( SCIPconsInitNlpiQuadratic(scip, quadconshdlr, heurdata->nlpi, SCIPconshdlrGetNConss(quadconshdlr), 
          SCIPconshdlrGetConss(quadconshdlr), heurdata->var_scip2nlp) );
    
@@ -359,6 +368,7 @@ SCIP_RETCODE setupNLP(
    assert(heurdata->var_nlp2scip == NULL);
    assert(heurdata->var_scip2nlp == NULL);
 
+   /* create an instance of our NLP solver; so far we have only IPOPT */
 #ifdef WITH_IPOPT
    SCIP_CALL( SCIPcreateNlpSolverIpopt(scip, &heurdata->nlpi) );
 #else
@@ -367,13 +377,15 @@ SCIP_RETCODE setupNLP(
 #endif
    SCIP_CALL( SCIPnlpiInit(scip, heurdata->nlpi, "nlp") );
    
+   /* set some parameters of NLP solver */ 
    SCIP_CALL( SCIPnlpiSetIntPar(scip, heurdata->nlpi, SCIP_NLPPAR_VERBLEVEL, heurdata->nlpverblevel) );
    if( heurdata->nlptimelimit )
    {
       SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_TILIM, heurdata->nlptimelimit) );
    }
 
-   /* add variables to NLP solver; capture variables */
+   /* collect and capture variables, collect discrete variables, collect bounds
+    * assign variable indices to variables */
    heurdata->nvars = SCIPgetNVars(scip);
    heurdata->ndiscrvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
    SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->var_nlp2scip, SCIPgetVars(scip), heurdata->nvars) );
@@ -383,7 +395,7 @@ SCIP_RETCODE setupNLP(
    SCIP_CALL( SCIPallocBufferArray(scip, &varlb, heurdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varub, heurdata->nvars) );
    
-   cnt = 0; 
+   cnt = 0; /* counts number of discrete variables passed so far */
    for( i = 0; i < heurdata->nvars; ++i )
    {
       varlb[i] = SCIPvarGetLbGlobal(heurdata->var_nlp2scip[i]);
@@ -400,25 +412,28 @@ SCIP_RETCODE setupNLP(
       }
    }
    
+   /* add variables to NLP solver */
    SCIP_CALL( SCIPnlpiAddVars(scip, heurdata->nlpi, heurdata->nvars, varlb, varub, NULL, NULL) );
    
    SCIPfreeBufferArray(scip, &varub);
    SCIPfreeBufferArray(scip, &varlb);
-      
-   /* add (linear) objective to NLP solver */
+
+   /* collect objective coefficients for minimization objective */
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoeff, heurdata->nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &objvar, heurdata->nvars) );
 
-   cnt = 0;
+   cnt = 0; /* number of nonzeros in objective passed so far */
    for( i = 0; i < heurdata->nvars; ++i )
    {
       if( SCIPvarGetObj(heurdata->var_nlp2scip[i]) )
       {
+         /* NLPI understands only minimization problems, so we turn maximization problems into minimization problems */ 
          objcoeff[cnt] = SCIPvarGetObj(heurdata->var_nlp2scip[i]) * (int)SCIPgetObjsense(scip);
          objvar[cnt]   = i;
          ++cnt;
       }
    }
+   /* add (linear) objective to NLP solver */
    SCIP_CALL( SCIPnlpiSetObjective(scip, heurdata->nlpi, cnt, objvar, objcoeff, 0, NULL, NULL, NULL, NULL, NULL, NULL, 0.0) );
    
    SCIPfreeBufferArray(scip, &objvar);
@@ -448,7 +463,7 @@ SCIP_RETCODE setupNLP(
       else if( strcmp(SCIPconshdlrGetName(conshdlrs[i]), "logicor") == 0 || strcmp(SCIPconshdlrGetName(conshdlrs[i]), "setppc") == 0 
          || strcmp(SCIPconshdlrGetName(conshdlrs[i]), "knapsack") == 0 )
       {
-         /* skip because combinatorial part is fixed in NLP */ 
+         /* skip combinatorial constraints, since all their variables will be fixed when the NLP is solved */ 
          SCIPdebugMessage("skip adding logicor, setppc, and knapsack constraints to NLP\n"); 
       }
       else
@@ -456,9 +471,10 @@ SCIP_RETCODE setupNLP(
          /* @TODO any other constraints to consider here? */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "skip addition of %d constraints of type %s to NLP\n", 
             SCIPconshdlrGetNConss(conshdlrs[i]), SCIPconshdlrGetName(conshdlrs[i])); 
-      }      
+      }
    }
    
+   /* initialize data structure for NLP solve statistics */
    SCIP_CALL( SCIPnlpStatisticsCreate(scip, &heurdata->nlpstatistics) );
 
    return SCIP_OKAY;
@@ -504,20 +520,28 @@ SCIP_RETCODE applyVarBoundConstraints(
       assert(cons != NULL);
       assert(var != NULL);
 
-      /* integer variables have been fixed in heurExecNlp already, so we skip them here */
+      /* integer variables have been fixed in heurExecNlp already
+       * thus, we should not touch (and maybe unfix) these variables here
+       * further, we believe that the given startpoint satisfies the varbound constraints, so that the current fixation is feasible */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          continue;
       /* There Should be an assert here!!! ?????????????????????????? but that is difficult to implement; there are no SCIPnlpiGetVarLb/Ub functions */
 
+      /* check if we passed already a varbound constraint on variable var */ 
       idx = SCIPhashmapGetImage(varmap, var);
       if( idx == NULL )
       { 
          /* variable appeared first time */
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, var));
          varidx[varcnt] = (int)(size_t)SCIPhashmapGetImage(heurdata->var_scip2nlp, var);
+
+         /* this constraint can only be handled explicitely, if the Vbdvar is discrete, i.e., fixed for an NLP solve */
+         assert(SCIPvarGetType(SCIPgetVbdvarVarbound(scip, cons)) <= SCIP_VARTYPE_INTEGER);
+         
+         /* compute bounds on var determined by varbound constraint */
          varlb[varcnt] = SCIPgetLhsVarbound(scip, cons);
          varub[varcnt] = SCIPgetRhsVarbound(scip, cons);
-         
+       
          shift = SCIPgetVbdcoefVarbound(scip, cons) * SCIPgetSolVal(scip, heurdata->startcand, SCIPgetVbdvarVarbound(scip, cons));
          if( !SCIPisInfinity(scip, -varlb[varcnt]) )
             varlb[varcnt] -= shift;
@@ -529,6 +553,7 @@ SCIP_RETCODE applyVarBoundConstraints(
          if (SCIPvarGetUbGlobal(var) < varub[varcnt])
             varub[varcnt] = SCIPvarGetUbGlobal(var);
          
+         /* remember that a bound change for variable var is now stored at position varbnd */
          SCIP_CALL( SCIPhashmapInsert(varmap, var, (void*)(size_t)(varcnt+1)) );
          
          SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g\n",
@@ -544,19 +569,21 @@ SCIP_RETCODE applyVarBoundConstraints(
          SCIP_Real lhs;
          SCIP_Real rhs;
          int idx_;
-               
+
+         idx_ = ((int)(size_t)idx) - 1;
+         assert(idx_ < varcnt);
+
+         /* compute bounds on var determined by this varbound constraint */
          lhs = SCIPgetLhsVarbound(scip, cons);
          rhs = SCIPgetRhsVarbound(scip, cons);
-         idx_ = ((int)(size_t)idx) - 1;
-         
-         assert(idx_ < varcnt);
-         
+
          shift = SCIPgetVbdcoefVarbound(scip, cons) * SCIPgetSolVal(scip, heurdata->startcand, SCIPgetVbdvarVarbound(scip, cons));
          if( !SCIPisInfinity(scip, -lhs) )
             lhs -= shift;
          if( !SCIPisInfinity(scip,  rhs) )
             rhs -= shift;
-      
+
+         /* possibly tighten previously stored bound change on variable var with newly computed bounds */ 
          varlb[idx_] = MAX(varlb[idx_],lhs);
          varub[idx_] = MIN(varub[idx_],rhs);
    
@@ -567,6 +594,7 @@ SCIP_RETCODE applyVarBoundConstraints(
       }      
    }
    
+   /* apply bound changes on variables in varbound constraint to NLP */
    SCIP_CALL( SCIPnlpiChgVarBounds(scip, heurdata->nlpi, varcnt, varidx, varlb, varub) );
 
    SCIPhashmapFree(&varmap);   
@@ -655,12 +683,12 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    if( SCIPheurGetFreq(heur) < 0 )
       return SCIP_OKAY;
 
-   havenlp = FALSE;      
+   havenlp = FALSE;
 
    /* do not build NLP if there are no nonlinear continuous or impl. integer variables */
    if( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
-   {  
-      /* check if we have nonlinear continuous or impl. integer variables */
+   {
+      /* check if we have nonlinear continuous or impl. integer variables in the quadratic constraints */
       SCIP_CONSHDLR* conshdlr;
       
       conshdlr = SCIPfindConshdlr(scip, "quadratic");
@@ -690,7 +718,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    }
 
    if( havenlp )
-   {
+   { 
       SCIP_HEURDATA* heurdata;
 
       /* get heuristic's data */
@@ -702,7 +730,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
 #else
       SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
 #endif
-
    }
    else
    {
@@ -770,15 +797,17 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    
+   /* obviously, we did not do anything yet */
    *result = SCIP_DIDNOTRUN;
    
-   /* probably do not have continuous or implicit integer variables in nonlinear functions */
+   /* InitsolNlp decided that we do not need an NLP solver
+    * probably because we do not have nonlinear continuous or implicit integer variables */
    if( heurdata->nlpi == NULL )
       return SCIP_OKAY;
    /* Strange comment. Isn't that the case for MIP, too? ????????????????????? but there are no nonlinear functions in a MIP */
    
    if( heurdata->startcand == NULL )
-   {
+   {  /* if no start candidate is given, we consider the LP solution of the current node */
       /* only call heuristic if optimal LP solution is available */
       if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       {
@@ -794,20 +823,25 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       }
    }
 
+   /* compute the contingent on number of iterations that the NLP solver is allowed to use
+      we make it depending on the current number of processed nodes */  
    itercontingent = (SCIP_Longint)(heurdata->iterquot * SCIPgetNNodes(scip));
 
    /* weight by previous success of heuristic */
    itercontingent = (SCIP_Longint)(itercontingent * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   itercontingent += heurdata->iteroffset; 
+   /* add the fixed offset */
+   itercontingent += heurdata->iteroffset;
+   /* substract the number of iterations used so far */
    itercontingent -= heurdata->iterused;
 
    if( itercontingent < heurdata->itermin )
-   {
+   {  /* not enough iterations left to start NLP solver */
       SCIPdebugMessage("skip NLP heuristic; contingent=%"SCIP_LONGINT_FORMAT"; minimal number of iterations=%d; success ratio=%g\n", 
          itercontingent, heurdata->itermin, (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
       return SCIP_OKAY;
    }
 
+   /* enforce user given iteration limit, if given */
    if( heurdata->nlpiterlimit > 0 )
       itercontingent = MIN(itercontingent, heurdata->nlpiterlimit);
 
@@ -821,20 +855,26 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
          SCIPdebugMessage("skip NLP heuristic; only %g seconds time left\n", timelimit);
          return SCIP_OKAY;
       }
+      /* enforce user given time limit, if given */
       if( heurdata->nlptimelimit > 0 )
          timelimit = MIN(heurdata->nlptimelimit, timelimit);
 
       SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_TILIM, timelimit) );
    }
+   else if( heurdata->nlptimelimit > 0 )
+   {  /* enforce user given time limit */
+      SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_TILIM, heurdata->nlptimelimit) );
+   }
 
+   /* so far we have not found any solution, but now we are willing to search for one */
    *result = SCIP_DIDNOTFIND;
    
+   /* pass initial guess (=startcand, if not NULL; otherwise LP solution) to NLP solver */
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, heurdata->nvars) );
-
    SCIP_CALL( SCIPgetSolVals(scip, heurdata->startcand, heurdata->nvars, heurdata->var_nlp2scip, startpoint) );
    SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, startpoint) );
 
-   /* fix discrete variables */
+   /* fix discrete variables to values in startpoint */
    if( heurdata->ndiscrvars > 0 )
    { 
       SCIP_Real* discrfix;
@@ -859,23 +899,26 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
 
       SCIPfreeBufferArray(scip, &discrfix);
    }
+   /* apply those variable bound constraints that we can apply explicitely */
    SCIP_CALL( applyVarBoundConstraints(scip, heurdata) );
    
-   SCIPfreeBufferArray(scip, &startpoint);   
+   SCIPfreeBufferArray(scip, &startpoint);
 
    if( heurdata->startcand != NULL )
-      SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
+      SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) ); /* forget about startcand */
       
+   /* set iteration limit for NLP solver */
    SCIP_CALL( SCIPnlpiSetIntPar(scip, heurdata->nlpi, SCIP_NLPPAR_ITLIM, (int)itercontingent) );
    SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT" and timelimit %g\n", itercontingent, timelimit);
-   
+
+   /* let the NLP solver do its magic */
    SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
 
    SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d\n", 
       SCIPnlpiGetTermstat(scip, heurdata->nlpi), SCIPnlpiGetSolstat(scip, heurdata->nlpi));
    
    if( SCIPnlpiGetTermstat(scip, heurdata->nlpi) >= SCIP_NLPITERMSTAT_MEMERR )
-   {
+   {  /* oops, something did not went well at all */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, 
          "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  
          SCIPnlpiGetTermstat(scip, heurdata->nlpi));
@@ -890,12 +933,13 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics), SCIPnlpStatisticsGetTotalTime(heurdata->nlpstatistics));
 
    if( SCIPnlpiGetSolstat(scip, heurdata->nlpi) <= SCIP_NLPSOLSTAT_FEASIBLE )
-   {
+   {  /* NLP solver claims, it found a feasible (maybe even optimal) solution */
       SCIP_Real* primals;
       SCIP_SOL*  sol;
       SCIP_Bool  stored; 
       SCIP_Bool  feasible;
 
+      /* get solution from NLP solver and create a SCIP_SOL out of it */
       SCIP_CALL( SCIPnlpiGetSolution(scip, heurdata->nlpi, &primals) );
       assert(primals != NULL);
 
@@ -904,9 +948,8 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
 
       SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, &feasible) );
 
-      /* add solution */
       if( feasible )
-      { 
+      {  /* SCIP agrees that solution is feasible (yippi!), so we add it */ 
          SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
          if( stored )
          {
@@ -915,23 +958,25 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
          }
       }
       else if( heurdata->resolvetolfactor < 1.0 )
-      { 
+      {
          /* resolve with tighter tolerances */
          SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip));
          SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
 
+         /* set almost-feasible solution as starting point for NLP solver, if user allows us */
          if( !heurdata->resolvefromscratch )
          {
             SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, primals) );
          }
 
+         /* solve again */
          SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
          SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
          heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
 
          if( SCIPnlpiGetSolstat(scip, heurdata->nlpi) <= SCIP_NLPSOLSTAT_FEASIBLE )
          { 
-            /* still feasible, hope that SCIP accepts it now */
+            /* NLP solver claims feasible again, hope that SCIP accepts it now */
             SCIP_CALL( SCIPnlpiGetSolution(scip, heurdata->nlpi, &primals) );
             assert(primals != NULL);
 
@@ -1027,16 +1072,19 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    assert(solcand != NULL);
    assert(SCIPisPositive(scip, violation));
    
+   /* game is over already; no more interest in starting points */
    if( SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
       return SCIP_OKAY;
    
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    
-   /* probably have no continuous variables */
+   /* we do not have a NLP, so we also do not need a starting point */
    if( !heurdata->nlpi )
       return SCIP_OKAY;
    
+   /* if we have no point yet, or the new point has a lower constraint violation, or it has a better objective function value,
+    * then take the new point */
    if( heurdata->startcand == NULL || SCIPisGT(scip, heurdata->startcandviol, violation) ||
       SCIPisRelGT(scip, SCIPgetSolTransObj(scip, heurdata->startcand)*(int)SCIPgetObjsense(scip), SCIPgetSolTransObj(scip, solcand)*(int)SCIPgetObjsense(scip)) )
    {
