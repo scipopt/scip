@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.3 2009/09/04 13:47:09 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.4 2009/09/07 14:01:00 bzfheinz Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -28,8 +28,7 @@
 #include "scip/nlpi.h"
 #include "scip/struct_nlpi.h"
 
-SCIP_RETCODE
-SCIPnlpiCreate(
+SCIP_RETCODE SCIPnlpiCreate(
    SCIP*                           scip,                        /**< pointer to SCIP */
    SCIP_NLPI**                     nlpi,                        /**< pointer to NLP interface data structure */
    const char*                     name,                        /**< name of NLP interface */
@@ -104,13 +103,12 @@ SCIPnlpiCreate(
    (*nlpi) -> nlpidata             = nlpidata;
 
    return SCIP_OKAY;
-};
+}
 
-SCIP_RETCODE
-SCIPnlpiFree(
-   SCIP*       scip,
-   SCIP_NLPI** nlpi
-)
+SCIP_RETCODE SCIPnlpiFree(
+   SCIP*                 scip,
+   SCIP_NLPI**           nlpi
+   )
 {
    assert( nlpi && *nlpi && scip );
 
@@ -118,7 +116,7 @@ SCIPnlpiFree(
    SCIPfreeMemory( scip, nlpi );
 
    return SCIP_OKAY;
-};
+}
 
 
 /** initializes an NLP interface structure
