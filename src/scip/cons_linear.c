@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.336 2009/09/04 18:05:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.337 2009/09/07 15:13:05 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -222,13 +222,13 @@ typedef enum CipSense CIPSENSE;                   /**< enum type for constraint 
  */
 
 enum Proprule
-   {
-      PROPRULE_1_RHS        = 1,                /**< activity residuals of all other variables tighten bounds of single
-                                                 *   variable due to the right hand side of the inequality */
-      PROPRULE_1_LHS        = 2,                /**< activity residuals of all other variables tighten bounds of single
-                                                 *   variable due to the left hand side of the inequality */
-      PROPRULE_INVALID      = 0                 /**< propagation was applied without a specific propagation rule */
-   };
+{
+   PROPRULE_1_RHS        = 1,                /**< activity residuals of all other variables tighten bounds of single
+                                              *   variable due to the right hand side of the inequality */
+   PROPRULE_1_LHS        = 2,                /**< activity residuals of all other variables tighten bounds of single
+                                              *   variable due to the left hand side of the inequality */
+   PROPRULE_INVALID      = 0                 /**< propagation was applied without a specific propagation rule */
+};
 typedef enum Proprule PROPRULE;
 
 /** inference information */
