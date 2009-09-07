@@ -7,7 +7,7 @@ NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
 rm -f release/$NAME.tgz
-tar --no-recursion -cvzhf release/$NAME.tgz \
+tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
 --exclude="*cvs*" \
 --exclude="*~" \
