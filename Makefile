@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.305 2009/09/04 13:43:49 bzfheinz Exp $
+# $Id: Makefile,v 1.306 2009/09/07 10:14:04 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -176,19 +176,6 @@ SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 LPIINSTMSG	=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e.g., \"<CPLEX-path>/include/ilcplex\".\n"
 LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
-endif
-
-LPSOPTIONS	+=	cpx903
-ifeq ($(LPS),cpx903)
-FLAGS		+=	-I$(LIBDIR)/cpx903inc
-LPSLDFLAGS	=	$(LINKCC_l)cplex903.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
-LPILIBOBJ	=	scip/lpi_cpx903.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
-SOFTLINKS	+=	$(LIBDIR)/cpx903inc
-SOFTLINKS	+=	$(LIBDIR)/libcplex903.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/libcplex903.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-LPIINSTMSG	=	"  -> \"cpxinc\" is the path to the CPLEX 9.03 \"include\" directory, e.g., \"<CPLEX-9-path>/include/ilcplex\".\n"
-LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPLEX-9-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\""
 endif
 
 LPSOPTIONS	+=	xprs
