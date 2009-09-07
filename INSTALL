@@ -40,7 +40,7 @@ compilation settings:
              "dbg", "opt", or "prf"
 
 - $(LPS):    the LP solver to use
-             "spx", "spx132", "spx121", "clp", "cpx", "xprs", "msk"
+             "spx", "spx132", "spx121", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
 
 For example, if you want to install SCIP on a Linux system with a x86 processor
 using the gnu compiler in debug mode, and using Soplex version >= 1.4.0
@@ -69,6 +69,10 @@ Here is what you have to do to get SCIP running:
    - "LPS=xprs"        to use XPRESS as LP solver
    - "LPS=msk"         to use MOSEK as LP solver
    - "LPS=clp"         to use CLP as LP solver
+   - "LPS=grb"         to use Gurobi as LP solver
+   - "LPS=qso"         to use QSopt as LP solver
+   - "LPS=none"        to use no LP solver
+   
 
    - "COMP=gnu"        to use GNU c/c++ compiler (default)
    - other compilers are available (see make/ directory)
@@ -141,8 +145,10 @@ make[1]: Leaving directory `/sw/scip'
    Example 2 (CPLEX, no ZIMPL):
    ============================
 
-   Typing "make LPS=cpx ZIMPL=false" uses CPLEX as LP solver. You will be asked the following questions on
+   Typing "make LPS=cpx ZIMPL=false" uses CPLEX as LP solver. You will be
+   asked the following questions on
    the first call to "make" (example answers are already given):
+
 ---
 make[1]: Entering directory `/sw/scip'
 
@@ -288,7 +294,7 @@ make[1]: Leaving directory `/sw/scip'
        installed on your system.
 
 3. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
-   (e.g. "bin/scip.linux.x86.gnu.opt.spx")
+   (e.g. "bin/scip.linux.x86.gnu.opt.spx") or just "bin/scip" for the last compiled version
 
 4. To generate the documentation, you need to have doxygen installed, and
    enter "make doc"
