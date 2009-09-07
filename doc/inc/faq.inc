@@ -46,7 +46,7 @@
     <p class="a">
       Except if you want to use SCIP as a pure CP-Solver (see <a href="#Q18">here</a>), 
       you need an underlying LP-Solver which has first to be installed and linked to the libraries 
-      (see the <tt>INSTALL</tt>; file in the SCIP root directory). 
+      (see the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP root directory). 
       LP-solvers currently supported by SCIP are: 
     </p>
     <ul>
@@ -68,7 +68,7 @@
       An easy way is to use the SCIP-binaries and call SCIP from a shell. 
       For that, you just have to download one of the precompiled binaries from the 
       <a href="http://scip.zib.de/download.shtml">download section</a>, or the zipped source code and compile it 
-      with your favorite settings. This is described in detail in the <tt>INSTALL</tt> file in the SCIP main directory.
+      with your favorite settings. This is described in detail in the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP main directory.
     </p>
     <p class="a">
       Another way is to use SCIP as a solver integrated into your own program source code. 
@@ -106,7 +106,7 @@
        <a name="Q27">I have installation problems. What can I do?</a>
     </p>
     <p class="a">
-      Read the INSTALL file in the SCIP root directory. It contains hints of how to get around problems. You can also try
+      Read the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
       the binaries available on the <a href="http://scip.zib.de">SCIP page</a>.
     </p>
     <p class="a">
@@ -123,13 +123,13 @@
         <li>Readline (libreadline.a)</li>
     </ol>
     <p class="a">
-      If you do not have all of these libraries, read the <tt>INSTALL</tt> file in the ZIB Optimization
+      If you do not have all of these libraries, read the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the ZIB Optimization
       Suite directory.<br>
       As a summary, the call of <code>make ZIMPL=false ZLIB=false READLINE=false</code> should work on most systems.
     </p>
     <p class="a">
       If you have any problems while using an LP-solver different from SoPlex,
-      please read the SCIP <tt>INSTALL</tt> file first.                                                     
+      please read the SCIP <a href="INSTALL.html"><tt>INSTALL</tt></a> file first.                                                     
     </p>
     <p class="q">
       <a name="Q8">I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
