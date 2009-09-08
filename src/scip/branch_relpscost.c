@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.55 2009/08/03 14:39:56 bzfpfets Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.56 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -522,7 +522,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
          inititer = MIN(inititer, 500);
       }
       
-      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%d)\n",
+      SCIPdebugMessage("strong branching (reliable=%g, %d/%d cands, %d uninit, maxcands=%d, maxlookahead=%g, inititer=%d, iters:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", basic:%u)\n",
          reliable, ninitcands, nlpcands, nuninitcands, maxninitcands, maxlookahead, inititer, 
          SCIPgetNStrongbranchLPIterations(scip), maxnsblpiterations, SCIPisLPSolBasic(scip));
 
@@ -615,7 +615,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             else if( downinf && upinf )
             {
                /* both roundings are infeasible -> node is infeasible */
-               SCIPdebugMessage(" -> variable <%s> is infeasible in both directions (conflict: %d/%d)\n",
+               SCIPdebugMessage(" -> variable <%s> is infeasible in both directions (conflict: %u/%u)\n",
                   SCIPvarGetName(lpcands[c]), downconflict, upconflict);
                *result = SCIP_CUTOFF;
                break; /* terminate initialization loop, because node is infeasible */
@@ -623,7 +623,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
             else
             {
                /* rounding is infeasible in one direction -> round variable in other direction */
-               SCIPdebugMessage(" -> variable <%s> is infeasible in %s branch (conflict: %d/%d)\n",
+               SCIPdebugMessage(" -> variable <%s> is infeasible in %s branch (conflict: %u/%u)\n",
                   SCIPvarGetName(lpcands[c]), downinf ? "downward" : "upward", downconflict, upconflict);
                SCIP_CALL( addBdchg(scip, &bdchginds, &bdchgdowninfs, &nbdchgs, c, downinf) );
                if( maxbdchgs >= 0 && nbdchgs + nbdconflicts >= maxbdchgs )
@@ -755,7 +755,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       var = lpcands[bestcand];
 
       /* perform the branching */
-      SCIPdebugMessage(" -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%d, psc=%g/%g [%g])\n",
+      SCIPdebugMessage(" -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%u, psc=%g/%g [%g])\n",
          nlpcands, ninitcands, bestcand, SCIPvarGetName(var), lpcandssol[bestcand],
          bestsbdown, bestsbdown - lpobjval, bestsbup, bestsbup - lpobjval, bestisstrongbranch,
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand]) - lpcandssol[bestcand]),

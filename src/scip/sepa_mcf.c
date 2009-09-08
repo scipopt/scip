@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.121 2009/08/11 16:47:14 bzfraack Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.122 2009/09/08 20:41:30 bzfberth Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -2647,7 +2647,7 @@ SCIP_RETCODE getNodeSimilarityScore(
 
    }
 
-   SCIPdebugMessage(" -> node similarity: row <%s>: incompatible=%d overlap=%g rowlen=%d baserowlen=%d score=%g\n",
+   SCIPdebugMessage(" -> node similarity: row <%s>: incompatible=%u overlap=%g rowlen=%d baserowlen=%d score=%g\n",
                     SCIProwGetName(row), incompatible, overlap, rowlen, baserowlen, *score);
 
    /* free temporary memory */
@@ -2895,7 +2895,7 @@ SCIP_RETCODE extractNodes(
          assert(rownodeid[comr] == -1);
          assert(mcfdata->nnodes >= 1);
          /* assign flow row to current node */
-         SCIPdebugMessage(" -> assigning row %d <%s> of commodity %d to node %d [invert:%d]\n",
+         SCIPdebugMessage(" -> assigning row %d <%s> of commodity %d to node %d [invert:%u]\n",
                           comr, SCIProwGetName(rows[comr]), i, mcfdata->nnodes-1, bestinverted[i]);
          rownodeid[comr] = mcfdata->nnodes-1;
 
@@ -5911,11 +5911,11 @@ SCIP_RETCODE generateClusterCuts(
 
          if ( nodepartition == NULL )
          {
-            SCIPdebugMessage("generating single-node cuts for node %d (inverted: %d)\n", partition, inverted);
+            SCIPdebugMessage("generating single-node cuts for node %u (inverted: %u)\n", partition, inverted);
          }
          else
          {
-            SCIPdebugMessage("generating cluster cuts for partition 0x%x (inverted: %d)\n", partition, inverted);
+            SCIPdebugMessage("generating cluster cuts for partition 0x%x (inverted: %u)\n", partition, inverted);
          }
 
 #ifdef OUTPUTGRAPH

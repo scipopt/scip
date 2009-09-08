@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.95 2009/08/03 15:30:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.96 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2123,7 +2123,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    assert(boolarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
+   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %u\n", 
       (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
 
    if( val != FALSE )
@@ -3384,7 +3384,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
             scaleval *= 2.0;
       }
       scalable = (scaleval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%d\n", 
+      SCIPdebugMessage(" -> val=%g, scaleval=%g, val*scaleval=%g, scalable=%u\n", 
          val, scaleval, val*scaleval, scalable);
    }
    if( scalable )
@@ -3425,7 +3425,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
             twomultval *= 2.0;
       }
       twomult = (twomultval <= maxscale);
-      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%d\n",
+      SCIPdebugMessage(" -> val=%g, twomult=%g, val*twomult=%g, twomultable=%u\n",
          val, twomultval, val*twomultval, twomult);
    }
    if( twomult )
@@ -3461,7 +3461,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = ABS(nominator);
          scm = denominator;
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d first rational: val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%d\n",
+         SCIPdebugMessage(" -> c=%d first rational: val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
          break;
       }
@@ -3481,7 +3481,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d next rational : val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%d\n",
+         SCIPdebugMessage(" -> c=%d next rational : val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
       }
       else

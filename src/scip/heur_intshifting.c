@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.11 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.12 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   heur_intshifting.c
  * @ingroup PRIMALHEURISTICS
@@ -946,7 +946,7 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
 #endif
 
       SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage(" -> error=%d, status=%d\n", lperror, SCIPgetLPSolstat(scip));
+      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
       /* check if this is a feasible solution */
       if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )

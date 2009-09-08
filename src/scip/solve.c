@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.274 2009/09/04 09:46:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.275 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -766,7 +766,7 @@ SCIP_RETCODE primalHeuristics(
    depth = SCIPtreeGetFocusDepth(tree);
    lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
 
-   SCIPdebugMessage("calling primal heuristics in depth %d (timing: %d)\n", depth, heurtiming);
+   SCIPdebugMessage("calling primal heuristics in depth %d (timing: %u)\n", depth, heurtiming);
 
    /* call heuristics: it might happen that a diving heuristic renders the previously solved node LP invalid
     * such that additional calls to LP heuristics will fail; better abort the loop in this case
@@ -861,7 +861,7 @@ SCIP_RETCODE separationRoundLP(
    *lperror = FALSE;
    consadded = FALSE;
 
-   SCIPdebugMessage("calling separators on LP solution in depth %d (onlydelayed: %d)\n", actdepth, onlydelayed);
+   SCIPdebugMessage("calling separators on LP solution in depth %d (onlydelayed: %u)\n", actdepth, onlydelayed);
 
    /* sort separators by priority */
    SCIPsetSortSepas(set);
@@ -1011,7 +1011,7 @@ SCIP_RETCODE separationRoundLP(
       }
    }
 
-   SCIPdebugMessage(" -> separation round finished: delayed=%d, enoughcuts=%d, lpflushed=%d, cutoff=%d\n",
+   SCIPdebugMessage(" -> separation round finished: delayed=%u, enoughcuts=%u, lpflushed=%u, cutoff=%u\n",
       *delayed, *enoughcuts, lp->flushed, *cutoff);
 
    return SCIP_OKAY;
@@ -1048,7 +1048,7 @@ SCIP_RETCODE separationRoundSol(
    consadded = FALSE;
    root = (actdepth == 0);
 
-   SCIPdebugMessage("calling separators on primal solution in depth %d (onlydelayed: %d)\n", actdepth, onlydelayed);
+   SCIPdebugMessage("calling separators on primal solution in depth %d (onlydelayed: %u)\n", actdepth, onlydelayed);
 
    /* sort separators by priority */
    SCIPsetSortSepas(set);
@@ -1164,7 +1164,7 @@ SCIP_RETCODE separationRoundSol(
       }
    }
 
-   SCIPdebugMessage(" -> separation round finished: delayed=%d, enoughcuts=%d, cutoff=%d\n",
+   SCIPdebugMessage(" -> separation round finished: delayed=%u, enoughcuts=%u, cutoff=%u\n",
       *delayed, *enoughcuts, *cutoff);
 
    return SCIP_OKAY;
@@ -1743,7 +1743,7 @@ SCIP_RETCODE priceAndCutLoop(
          }
          assert(*cutoff || *lperror || (lp->flushed && lp->solved)); /* cutoff: LP may be unsolved due to bound changes */
 
-         SCIPdebugMessage("separation round %d/%d finished (%d/%d stall rounds): mustprice=%d, mustsepa=%d, delayedsepa=%d\n",
+         SCIPdebugMessage("separation round %d/%d finished (%d/%d stall rounds): mustprice=%u, mustsepa=%u, delayedsepa=%u\n",
             stat->nseparounds, maxseparounds, nsepastallrounds, maxnsepastallrounds, mustprice, mustsepa, delayedsepa);
 
          /* increase separation round counter */
@@ -2193,7 +2193,7 @@ SCIP_RETCODE enforceConstraints(
    /* deactivate the cut forcing of the constraint enforcement */
    SCIPsepastoreEndForceCuts(sepastore);
 
-   SCIPdebugMessage(" -> enforcing result: branched=%d, cutoff=%d, infeasible=%d, propagateagain=%d, solvelpagain=%d, resolved=%d\n",
+   SCIPdebugMessage(" -> enforcing result: branched=%u, cutoff=%u, infeasible=%u, propagateagain=%u, solvelpagain=%u, resolved=%u\n",
       *branched, *cutoff, *infeasible, *propagateagain, *solvelpagain, resolved);
 
    return SCIP_OKAY;
@@ -2857,7 +2857,7 @@ SCIP_RETCODE solveNode(
             && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)
             && set->nactivepricers == 0 );
 
-      SCIPdebugMessage("node solving iteration %d finished: cutoff=%d, propagateagain=%d, solverelaxagain=%d, solvelpagain=%d, nlperrors=%d, restart=%d\n",
+      SCIPdebugMessage("node solving iteration %d finished: cutoff=%u, propagateagain=%u, solverelaxagain=%u, solvelpagain=%u, nlperrors=%d, restart=%u\n",
          nloops, *cutoff, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
@@ -3251,7 +3251,7 @@ SCIP_RETCODE SCIPsolveCIP(
    }
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
-   SCIPdebugMessage("Problem solving finished (restart=%d)\n", *restart);
+   SCIPdebugMessage("Problem solving finished (restart=%u)\n", *restart);
 
    /* if the current node is the only remaining node, and if its lower bound exceeds the upper bound, we have
     * to delete it manually in order to get to the SOLVED stage instead of thinking, that only the gap limit

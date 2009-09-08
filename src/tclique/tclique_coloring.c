@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.6 2009/04/06 13:07:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.7 2009/09/08 20:41:31 bzfberth Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -359,7 +359,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
       assert(range > 0);
       iscolored[nodeVindex] = TRUE;	
 
-      debugMessage("%d. node choosen: vindex=%d, vertex=%d, satdeg=%d, range=%d, growclique=%d, weight=%d)\n",
+      debugMessage("%d. node choosen: vindex=%d, vertex=%d, satdeg=%d, range=%d, growclique=%u, weight=%d)\n",
          i+2, nodeVindex, node, gsd[nodeVindex].satdeg, range, growclique, weightcurrentclique);
 
       /* set apriori bound: apbound(v_i) = satdeg(v_i) + weight(v_i) */

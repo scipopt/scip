@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.179 2009/09/04 18:08:43 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.180 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -596,7 +596,7 @@ SCIP_RETCODE checkCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("checking knapsack constraint <%s> for feasibility of solution %p (lprows=%d)\n",
+   SCIPdebugMessage("checking knapsack constraint <%s> for feasibility of solution %p (lprows=%u)\n",
       SCIPconsGetName(cons), (void*)sol, checklprows);
 
    *violated = FALSE;
@@ -4117,7 +4117,7 @@ SCIP_RETCODE tightenWeights(
                {
                   int k;
 
-                  SCIPdebugMessage(" -> change capacity from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT" (forceclique:%d)\n",
+                  SCIPdebugMessage(" -> change capacity from %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT" (forceclique:%u)\n",
                      consdata->capacity, newcapacity, forceclique);
                   consdata->capacity = newcapacity;
                   (*nchgsides)++;

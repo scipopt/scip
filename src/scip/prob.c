@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.105 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.106 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1169,7 +1169,7 @@ SCIP_RETCODE SCIPprobScaleObj(
       SCIP_CALL( SCIPcalcIntegralScalar(objvals, nints, -SCIPsetEpsilon(set), +SCIPsetEpsilon(set), OBJSCALE_MAXDNOM, OBJSCALE_MAXSCALE,
          &intscalar, &success) );
 
-      SCIPdebugMessage("integral objective scalar: success=%d, intscalar=%g\n", success, intscalar);
+      SCIPdebugMessage("integral objective scalar: success=%u, intscalar=%g\n", success, intscalar);
 
       if( success )
       {

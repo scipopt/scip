@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_probing.c,v 1.54 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: presol_probing.c,v 1.55 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   presol_probing.c
  * @ingroup PRESOLVERS
@@ -217,7 +217,7 @@ SCIP_RETCODE applyProbing(
    assert(SCIPvarGetLbLocal(vars[probingpos]) < 0.5);
    assert(SCIPvarGetUbLocal(vars[probingpos]) > 0.5);
 
-   SCIPdebugMessage("applying probing on variable <%s> == %d (nlocks=%d/%d, impls=%d/%d, clqs=%d/%d)\n",
+   SCIPdebugMessage("applying probing on variable <%s> == %u (nlocks=%d/%d, impls=%d/%d, clqs=%d/%d)\n",
       SCIPvarGetName(vars[probingpos]), probingdir,
       SCIPvarGetNLocksDown(vars[probingpos]), SCIPvarGetNLocksUp(vars[probingpos]),
       SCIPvarGetNImpls(vars[probingpos], FALSE), SCIPvarGetNImpls(vars[probingpos], TRUE),

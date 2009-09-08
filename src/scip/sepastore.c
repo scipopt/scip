@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepastore.c,v 1.62 2009/04/06 13:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepastore.c,v 1.63 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   sepastore.c
  * @brief  methods for storing separated cuts
@@ -281,7 +281,7 @@ SCIP_RETCODE sepastoreAddCut(
       assert(!SCIPsetIsInfinity(set, cutscore));
    }
 
-   SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%d, len=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
+   SCIPdebugMessage("adding cut <%s> to separation storage of size %d (forcecut=%u, len=%d, efficacy=%g, objparallelism=%g, score=%g)\n",
       SCIProwGetName(cut), sepastore->ncuts, forcecut, SCIProwGetNNonz(cut), cutefficacy, cutobjparallelism, cutscore);
    /*SCIPdebug(SCIProwPrint(cut, NULL));*/
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.338 2009/09/08 17:36:23 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.339 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4273,7 +4273,7 @@ SCIP_RETCODE checkCons(
    else
       activity = consdataGetActivity(scip, consdata, sol);
    
-   SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%d, rowinlp=%d, sol=%p, hascurrentnodelp=%d)\n",
+   SCIPdebugMessage("  consdata activity=%.15g (lhs=%.15g, rhs=%.15g, row=%p, checklprows=%u, rowinlp=%u, sol=%p, hascurrentnodelp=%u)\n",
          activity, consdata->lhs, consdata->rhs, (void*)consdata->row, checklprows,
          consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
          consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
@@ -5489,7 +5489,7 @@ SCIP_RETCODE convertLongEquality(
          scalars[v] = -consdata->vals[v]/slackcoef;
          SCIPdebugPrintf(" %+.15g<%s>", scalars[v], SCIPvarGetName(vars[v]));
       }
-      SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d, removescons=%d\n",
+      SCIPdebugPrintf(" %+.15g, bounds of <%s>: [%.15g,%.15g], nlocks=%d, maxnlocks=%d, removescons=%u\n",
          aggrconst, SCIPvarGetName(slackvar), SCIPvarGetLbGlobal(slackvar), SCIPvarGetUbGlobal(slackvar),
          bestnlocks, bestremovescons ? maxnlocksremove : maxnlocksstay, bestremovescons);
 
@@ -10446,7 +10446,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
 
    SCIPdebugMessage("upgrading linear constraint <%s> (%d upgrade methods):\n",
       SCIPconsGetName(cons), conshdlrdata->nlinconsupgrades);
-   SCIPdebugMessage(" +bin=%d -bin=%d +int=%d -int=%d +impl=%d -impl=%d +cont=%d -cont=%d +1=%d -1=%d +I=%d -I=%d +F=%d -F=%d possum=%.15g negsum=%.15g integral=%d\n",
+   SCIPdebugMessage(" +bin=%d -bin=%d +int=%d -int=%d +impl=%d -impl=%d +cont=%d -cont=%d +1=%d -1=%d +I=%d -I=%d +F=%d -F=%d possum=%.15g negsum=%.15g integral=%u\n",
       nposbin, nnegbin, nposint, nnegint, nposimpl, nnegimpl, nposcont, nnegcont,
       ncoeffspone, ncoeffsnone, ncoeffspint, ncoeffsnint, ncoeffspfrac, ncoeffsnfrac,
       poscoeffsum, negcoeffsum, integral);

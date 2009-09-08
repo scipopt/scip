@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xor.c,v 1.74 2009/08/03 16:13:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_xor.c,v 1.75 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   cons_xor.c
  * @ingroup CONSHDLRS 
@@ -1253,7 +1253,7 @@ SCIP_RETCODE propagateCons(
    {
       assert(watchedvar1 != -1);
       
-      SCIPdebugMessage("constraint <%s>: only one unfixed variable -> fix <%s> to %d\n",
+      SCIPdebugMessage("constraint <%s>: only one unfixed variable -> fix <%s> to %u\n",
          SCIPconsGetName(cons), SCIPvarGetName(vars[watchedvar1]), odd);
       SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], odd, cons, (int)PROPRULE_1, &infeasible, &tightened) );
       assert(!infeasible);
@@ -1496,7 +1496,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       consdata1 = SCIPconsGetData(cons1);
       assert(consdata1 != NULL);
 
-      SCIPdebugMessage("preprocess xor constraint pair <%s>[chg:%d] and <%s>[chg:%d]\n",
+      SCIPdebugMessage("preprocess xor constraint pair <%s>[chg:%u] and <%s>[chg:%u]\n",
          SCIPconsGetName(cons0), cons0changed, SCIPconsGetName(cons1), consdata1->changed);
 
       /* if both constraints were not changed since last round, we can ignore the pair */
@@ -1632,7 +1632,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_Bool fixed;
 
             /* only one additional variable in cons0: fix this variable according to the parity */
-            SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %d == <%s>\n",
+            SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar0));
             SCIPdebug(SCIPprintCons(scip, cons0, NULL));
             SCIPdebug(SCIPprintCons(scip, cons1, NULL));
@@ -1648,7 +1648,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             int v;
 
             /* more than one additional variable in cons0: add cons1 to cons0, thus eliminating the equal variables */
-            SCIPdebugMessage("xor constraint <%s> is superset of <%s> with parity %d\n",
+            SCIPdebugMessage("xor constraint <%s> is superset of <%s> with parity %u\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
             SCIPdebug(SCIPprintCons(scip, cons0, NULL));
             SCIPdebug(SCIPprintCons(scip, cons1, NULL));
@@ -1671,7 +1671,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIP_Bool fixed;
 
             /* only one additional variable in cons1: fix this variable according to the parity */
-            SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %d == <%s>\n",
+            SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == <%s>\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar1));
             SCIPdebug(SCIPprintCons(scip, cons0, NULL));
             SCIPdebug(SCIPprintCons(scip, cons1, NULL));
@@ -1687,7 +1687,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             int v;
 
             /* more than one additional variable in cons1: add cons0 to cons1, thus eliminating the equal variables */
-            SCIPdebugMessage("xor constraint <%s> is subset of <%s> with parity %d\n",
+            SCIPdebugMessage("xor constraint <%s> is subset of <%s> with parity %u\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity);
             SCIPdebug(SCIPprintCons(scip, cons0, NULL));
             SCIPdebug(SCIPprintCons(scip, cons1, NULL));
@@ -1711,7 +1711,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          assert(!cons1hastwoothervars);
 
          /* sum of constraints is parity == singlevar0 xor singlevar1: aggregate variables and delete cons1 */
-         SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %d == xor(<%s>,<%s>)\n",
+         SCIPdebugMessage("xor constraints <%s> and <%s> yield sum %u == xor(<%s>,<%s>)\n",
             SCIPconsGetName(cons0), SCIPconsGetName(cons1), parity, SCIPvarGetName(singlevar0),
             SCIPvarGetName(singlevar1));
          if( !parity )
@@ -2095,7 +2095,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
          /* if only two variables are left, both have to be equal or opposite, depending on the rhs */
          if( consdata->nvars == 2 )
          {
-            SCIPdebugMessage("xor constraint <%s> has only two unfixed variables, rhs=%d\n",
+            SCIPdebugMessage("xor constraint <%s> has only two unfixed variables, rhs=%u\n",
                SCIPconsGetName(cons), consdata->rhs);
             
             assert(consdata->vars != NULL);

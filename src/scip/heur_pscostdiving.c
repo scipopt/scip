@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.54 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_pscostdiving.c,v 1.55 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   heur_pscostdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -496,7 +496,7 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
          if( bestcandroundup == !backtracked )
          {
             /* round variable up */
-            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
                SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
                lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
@@ -506,7 +506,7 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
          else
          {
             /* round variable down */
-            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%d/%d, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, round=%u/%u, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
                divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
                SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
                lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.39 2009/04/06 13:07:01 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.40 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -418,7 +418,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
-         SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
                
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )

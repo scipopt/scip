@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_cmir.c,v 1.89 2009/07/08 15:36:29 bzfgamra Exp $"
+#pragma ident "@(#) $Id: sepa_cmir.c,v 1.90 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   sepa_cmir.c
  * @ingroup SEPARATORS
@@ -378,7 +378,7 @@ SCIP_RETCODE tryDelta(
             maxweightrange, minfrac, maxfrac, rowweights, delta, mksetcoefs, mksetcoefsvalid, cutcoefs, &cutrhs, &cutact, 
             &success, &cutislocal) );
       assert(ALLOWLOCAL || !cutislocal);
-      SCIPdebugMessage("delta = %g  -> success: %d, cutact: %g, cutrhs: %g, vio: %g\n",
+      SCIPdebugMessage("delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
          delta, success, cutact, cutrhs, cutact - cutrhs);
                
       /* check if delta generates cut which is more violated */

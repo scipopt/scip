@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.33 2009/08/03 15:30:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.34 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -764,7 +764,7 @@ SCIP_RETCODE SCIPimplicsAdd(
    assert(conflict != NULL);
    assert(added != NULL);
 
-   SCIPdebugMessage("adding implication to implics %p [%d]: <%s> %s %g\n",
+   SCIPdebugMessage("adding implication to implics %p [%u]: <%s> %s %g\n",
       (void*)*implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", implbound);
 
    checkImplics(*implics, set);
@@ -948,7 +948,7 @@ SCIP_RETCODE SCIPimplicsDel(
    assert(*implics != NULL);
    assert(implvar != NULL);
 
-   SCIPdebugMessage("deleting implication from implics %p [%d]: <%s> %s x\n",
+   SCIPdebugMessage("deleting implication from implics %p [%u]: <%s> %s x\n",
       (void*)*implics, varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=");
 
    checkImplics(*implics, set);
@@ -1199,7 +1199,7 @@ SCIP_RETCODE SCIPcliqueAddVar(
    assert(doubleentry != NULL);
    assert(oppositeentry != NULL);
 
-   SCIPdebugMessage("adding variable <%s> == %d to clique %d\n", SCIPvarGetName(var), value, clique->id);
+   SCIPdebugMessage("adding variable <%s> == %u to clique %u\n", SCIPvarGetName(var), value, clique->id);
 
    *doubleentry = FALSE;
    *oppositeentry = FALSE;
@@ -1248,7 +1248,7 @@ SCIP_RETCODE SCIPcliqueDelVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
-   SCIPdebugMessage("deleting variable <%s> == %d from clique %d\n", SCIPvarGetName(var), value, clique->id);
+   SCIPdebugMessage("deleting variable <%s> == %u from clique %u\n", SCIPvarGetName(var), value, clique->id);
 
    /* find variable in clique */
    pos = SCIPcliqueSearchVar(clique, var, value);
@@ -1423,7 +1423,7 @@ SCIP_RETCODE SCIPcliquelistAdd(
    SCIP_CALL( cliquelistEnsureSize(*cliquelist, blkmem, set, value, (*cliquelist)->ncliques[value]+1) );
    assert((*cliquelist)->cliques[value] != NULL);
 
-   SCIPdebugMessage("adding clique %d to cliquelist %p value %d (length: %d)\n", 
+   SCIPdebugMessage("adding clique %u to cliquelist %p value %u (length: %d)\n", 
       clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
    
    /* insert clique into list, sorted by clique id */
@@ -1449,7 +1449,7 @@ SCIP_RETCODE SCIPcliquelistDel(
    assert(cliquelist != NULL);
    assert(*cliquelist != NULL);
 
-   SCIPdebugMessage("deleting clique %d from cliquelist %p value %d (length: %d)\n", 
+   SCIPdebugMessage("deleting clique %u from cliquelist %p value %u (length: %d)\n", 
       clique->id, (void*)*cliquelist, value, (*cliquelist)->ncliques[value]);
    
    pos = cliquesSearchClique((*cliquelist)->cliques[value], (*cliquelist)->ncliques[value], clique);
@@ -1546,7 +1546,7 @@ void SCIPcliquelistRemoveFromCliques(
             clique = cliquelist->cliques[value][i];
             assert(clique != NULL);
 
-            SCIPdebugMessage(" -> removing variable <%s> == %d from clique %d (size %d)\n",
+            SCIPdebugMessage(" -> removing variable <%s> == %d from clique %u (size %d)\n",
                SCIPvarGetName(var), value, clique->id, clique->nvars);
 
             /* binary search the position of the variable in the clique */

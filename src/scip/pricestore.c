@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.37 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.38 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    assert(set != NULL);
    assert(var != NULL);
 
-   SCIPdebugMessage("adding variable <%s> (lb=%g, ub=%g) to pricing storage (initiallp=%d)\n", 
+   SCIPdebugMessage("adding variable <%s> (lb=%g, ub=%g) to pricing storage (initiallp=%u)\n", 
       SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), pricestore->initiallp);
 
    if( pricestore->initiallp )

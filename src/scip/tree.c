@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.220 2009/09/04 14:36:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.221 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -952,7 +952,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    /* output node creation to VBC file */
    SCIP_CALL( SCIPvbcNewChild(stat->vbc, stat, *node) );
 
-   SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %d (prio: %g)\n",
+   SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %u (prio: %g)\n",
       SCIPnodeGetNumber(*node), (*node)->depth, nodeselprio);
 
    return SCIP_OKAY;
@@ -1258,7 +1258,7 @@ SCIP_RETCODE nodeRepropagate(
    if( *cutoff )
       stat->nrepropcutoffs++;
 
-   SCIPdebugMessage("repropagation %"SCIP_LONGINT_FORMAT" at depth %d changed %"SCIP_LONGINT_FORMAT" bounds (total reprop bound changes: %"SCIP_LONGINT_FORMAT"), cutoff: %d\n",
+   SCIPdebugMessage("repropagation %"SCIP_LONGINT_FORMAT" at depth %u changed %"SCIP_LONGINT_FORMAT" bounds (total reprop bound changes: %"SCIP_LONGINT_FORMAT"), cutoff: %u\n",
       stat->nreprops, node->depth, stat->nboundchgs - oldnboundchgs, stat->nrepropboundchgs, *cutoff);
 
    /* if a propagation marked with the reprop flag was successful, we want to repropagate the whole subtree */
@@ -1270,7 +1270,7 @@ SCIP_RETCODE nodeRepropagate(
    {
       treeNextRepropsubtreecount(tree);
       node->repropsubtreemark = tree->repropsubtreecount; /*lint !e732*/
-      SCIPdebugMessage("initial repropagation at depth %d changed %"SCIP_LONGINT_FORMAT" bounds -> repropagating subtree (new mark: %d)\n",
+      SCIPdebugMessage("initial repropagation at depth %u changed %"SCIP_LONGINT_FORMAT" bounds -> repropagating subtree (new mark: %d)\n",
          node->depth, stat->nboundchgs - oldnboundchgs, tree->repropsubtreecount);
       assert((int)(node->repropsubtreemark) == tree->repropsubtreecount); /* bitfield must be large enough */
    }
@@ -1331,7 +1331,7 @@ SCIP_RETCODE nodeActivate(
    assert(!SCIPtreeProbing(tree));
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("activate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d (reprop subtree mark: %d)\n",
+   SCIPdebugMessage("activate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* apply domain and constraint set changes */
@@ -1389,7 +1389,7 @@ SCIP_RETCODE nodeDeactivate(
    assert(node->active);
    assert(tree != NULL);
 
-   SCIPdebugMessage("deactivate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d  (reprop subtree mark: %d)\n",
+   SCIPdebugMessage("deactivate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d  (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* undo domain and constraint set changes */
@@ -1452,7 +1452,7 @@ SCIP_RETCODE SCIPnodeDelCons(
    assert(tree != NULL);
    assert(cons != NULL);
 
-   SCIPdebugMessage("disabling constraint <%s> at node at depth %d\n", cons->name, node->depth);
+   SCIPdebugMessage("disabling constraint <%s> at node at depth %u\n", cons->name, node->depth);
 
    /* add constraint disabling to the node's constraint set change data */
    SCIP_CALL( SCIPconssetchgAddDisabledCons(&node->conssetchg, blkmem, set, cons) );
@@ -1544,7 +1544,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    assert(node->active || (infercons == NULL && inferprop == NULL));
    assert((SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE || !probingchange);
 
-   SCIPdebugMessage("adding boundchange at node at depth %d to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
+   SCIPdebugMessage("adding boundchange at node at depth %u to variable <%s>: old bounds=[%g,%g], new %s bound: %g (infer%s=<%s>, inferinfo=%d)\n",
       node->depth, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), 
       boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper", newbound,
       infercons != NULL ? "cons" : "prop", 
@@ -1649,7 +1649,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       {
          /* the root should be repropagated due to the bound change */
          SCIPnodePropagateAgain(tree->root, set, stat, tree);
-         SCIPdebugMessage("marked root node to be repropagated due to global bound change <%s>:[%g,%g] -> [%g,%g] found in depth %d\n",
+         SCIPdebugMessage("marked root node to be repropagated due to global bound change <%s>:[%g,%g] -> [%g,%g] found in depth %u\n",
             SCIPvarGetName(var), oldlb, oldub, boundtype == SCIP_BOUNDTYPE_LOWER ? newbound : oldlb,
             boundtype == SCIP_BOUNDTYPE_LOWER ? oldub : newbound, node->depth);
       }
@@ -1774,7 +1774,7 @@ SCIP_RETCODE SCIPnodeAddHolechg(
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_PROBINGNODE
       || (SCIP_NODETYPE)node->nodetype == SCIP_NODETYPE_CHILD);
 
-   SCIPdebugMessage("adding holechange at node at depth %d: changed pointer at %p from %p to %p\n",
+   SCIPdebugMessage("adding holechange at node at depth %u: changed pointer at %p from %p to %p\n",
       node->depth, (void*)ptr, (void*)newlist, (void*)oldlist);
 
    stat->nholechgs++;
@@ -2348,7 +2348,7 @@ void treeFindSwitchForks(
    assert(lpfork == NULL || !lpfork->active || lpfork == fork);
    assert(lpstatefork == NULL || !lpstatefork->active || lpstatefork == fork);
    assert(subroot == NULL || !subroot->active || subroot == fork);
-   SCIPdebugMessage("find switch forks: forkdepth=%d\n", fork->depth);
+   SCIPdebugMessage("find switch forks: forkdepth=%u\n", fork->depth);
 
    /* if the common fork node is below the current cutoff depth, the cutoff node is an ancestor of the common fork
     * and thus an ancestor of the new focus node, s.t. the new node can also be cut off
@@ -3010,7 +3010,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       lp->primalfeasible = (tree->path[d]->domchg == NULL || tree->path[d]->domchg->domchgbound.nboundchgs == 0);
    }
 
-   SCIPdebugMessage("-> primalfeasible=%d, dualfeasible=%d\n", lp->primalfeasible, lp->dualfeasible);
+   SCIPdebugMessage("-> primalfeasible=%u, dualfeasible=%u\n", lp->primalfeasible, lp->dualfeasible);
 
    return SCIP_OKAY;
 }
@@ -3523,7 +3523,7 @@ SCIP_RETCODE SCIPnodeFocus(
     * thereby checking, if the new node can be cut off
     */
    treeFindSwitchForks(tree, *node, &fork, &lpfork, &lpstatefork, &subroot, cutoff);
-   SCIPdebugMessage("focus node: focusnodedepth=%d, forkdepth=%d, lpforkdepth=%d, lpstateforkdepth=%d, subrootdepth=%d, cutoff=%d\n",
+   SCIPdebugMessage("focus node: focusnodedepth=%u, forkdepth=%u, lpforkdepth=%u, lpstateforkdepth=%u, subrootdepth=%u, cutoff=%u\n",
       *node != NULL ? (*node)->depth : -1, fork != NULL ? fork->depth : -1,
       lpfork != NULL ? lpfork->depth : -1, lpstatefork != NULL ? lpstatefork->depth : -1,
       subroot != NULL ? subroot->depth : -1, *cutoff);
@@ -3573,7 +3573,7 @@ SCIP_RETCODE SCIPnodeFocus(
     */
    if( tree->focusnode != NULL && oldcutoffdepth <= (int)tree->focusnode->depth )
    {
-      SCIPdebugMessage("path to old focus node of depth %d was cut off at depth %d\n", 
+      SCIPdebugMessage("path to old focus node of depth %u was cut off at depth %d\n", 
          tree->focusnode->depth, oldcutoffdepth);
 
       /* delete the focus node's children by converting them to leaves with a cutoffbound of SCIP_REAL_MIN;
@@ -4642,7 +4642,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
 
-   SCIPdebugMessage("probing started in depth %d (LP flushed: %d, LP solved: %d, solstat: %d), probing root in depth %d\n",
+   SCIPdebugMessage("probing started in depth %d (LP flushed: %u, LP solved: %u, solstat: %d), probing root in depth %d\n",
       tree->pathlen-1, lp->flushed, lp->solved, SCIPlpGetSolstat(lp), tree->pathlen);
 
    /* inform LP about probing mode */
@@ -4974,7 +4974,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    /* inform LP about end of probing mode */
    SCIP_CALL( SCIPlpEndProbing(lp) );
 
-   SCIPdebugMessage("probing ended in depth %d (LP flushed: %d, solstat: %d)\n",
+   SCIPdebugMessage("probing ended in depth %d (LP flushed: %u, solstat: %d)\n",
       tree->pathlen-1, lp->flushed, SCIPlpGetSolstat(lp));
    
    return SCIP_OKAY;
@@ -5294,7 +5294,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetFocusNode
 #undef SCIPtreeGetFocusDepth
 #undef SCIPtreeHasFocusNodeLP
-#undef SCIPtreeSetFocusNodeLP
+#undef SCIPtreeSetFocusNodeLP 
 #undef SCIPtreeIsFocusNodeLPConstructed
 #undef SCIPtreeInRepropagation
 #undef SCIPtreeGetCurrentNode

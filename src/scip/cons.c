@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.188 2009/09/04 08:40:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.189 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1312,7 +1312,7 @@ SCIP_RETCODE conshdlrActivateCons(
    assert(cons->propconsspos == -1);
    assert(depth >= -1);
 
-   SCIPdebugMessage("activate constraint <%s> in constraint handler <%s> (depth %d, focus=%d)\n",
+   SCIPdebugMessage("activate constraint <%s> in constraint handler <%s> (depth %d, focus=%u)\n",
       cons->name, conshdlr->name, depth, focusnode);
 
    /* activate constraint, switch positions with first inactive constraint */
@@ -1477,7 +1477,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
          || cons->updatepropenable || cons->updatepropdisable
          || cons->updateobsolete || cons->updatefree);
 
-      SCIPdebugMessage(" -> constraint <%s>: insert=%d, activate=%d, deactivate=%d, enable=%d, disable=%d, sepaenable=%d, sepadisable=%d, propenable=%d, propdisable=%d, obsolete=%d, free=%d (consdata=%p)\n",
+      SCIPdebugMessage(" -> constraint <%s>: insert=%u, activate=%u, deactivate=%u, enable=%u, disable=%u, sepaenable=%u, sepadisable=%u, propenable=%u, propdisable=%u, obsolete=%u, free=%u (consdata=%p)\n",
          cons->name, cons->updateinsert, cons->updateactivate, cons->updatedeactivate, 
          cons->updateenable, cons->updatedisable,
          cons->updatesepaenable, cons->updatesepadisable, 

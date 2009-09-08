@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.80 2009/07/08 15:36:29 bzfgamra Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.81 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   sepa_gomory.c
  * @ingroup SEPARATORS
@@ -422,7 +422,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal) );
          assert(ALLOWLOCAL || !cutislocal);
-         SCIPdebugMessage(" -> success=%d: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
 
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )

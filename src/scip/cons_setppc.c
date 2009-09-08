@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.143 2009/09/05 14:09:24 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.144 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -1179,7 +1179,7 @@ SCIP_RETCODE processFixings(
                   SCIP_CALL( SCIPinferBinvarCons(scip, var, FALSE, cons, 0, &infeasible, &tightened) );
                   assert(!infeasible);
                   fixed = fixed || tightened;
-                  SCIPdebugMessage("   -> fixed <%s> to zero (tightened=%d)\n", SCIPvarGetName(var), tightened);
+                  SCIPdebugMessage("   -> fixed <%s> to zero (tightened=%u)\n", SCIPvarGetName(var), tightened);
                }
                else
                   fixedonefound = TRUE;

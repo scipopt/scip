@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.261 2009/09/04 09:46:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.262 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1064,7 +1064,7 @@ SCIP_RETCODE SCIPdomchgApply(
       if( *cutoff )
          break;
    }
-   SCIPdebugMessage(" -> %d bound changes\n", domchg->domchgbound.nboundchgs);
+   SCIPdebugMessage(" -> %u bound changes\n", domchg->domchgbound.nboundchgs);
 
    /* mark all bound changes after a cutoff redundant */
    for( ; i < (int)domchg->domchgbound.nboundchgs; ++i )
@@ -1111,7 +1111,7 @@ SCIP_RETCODE SCIPdomchgUndo(
    {
       SCIP_CALL( SCIPboundchgUndo(&domchg->domchgbound.boundchgs[i], blkmem, set, stat, lp, branchcand, eventqueue) );
    }
-   SCIPdebugMessage(" -> %d bound changes\n", domchg->domchgbound.nboundchgs);
+   SCIPdebugMessage(" -> %u bound changes\n", domchg->domchgbound.nboundchgs);
 
    return SCIP_OKAY;
 }
@@ -1147,7 +1147,7 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
       if( *cutoff )
          break;
    }
-   SCIPdebugMessage(" -> %d global bound changes\n", domchg->domchgbound.nboundchgs);
+   SCIPdebugMessage(" -> %u global bound changes\n", domchg->domchgbound.nboundchgs);
 
    /**@todo globally apply holelist changes - how can this be done without confusing pointer updates? */
 
@@ -1432,7 +1432,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             {
                if( implvar->vubs != NULL ) /* implvar may have been aggregated in the mean time */
                {
-                  SCIPdebugMessage("deleting variable bound: <%s> == %d  ==>  <%s> <= %g\n", 
+                  SCIPdebugMessage("deleting variable bound: <%s> == %u  ==>  <%s> <= %g\n", 
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vubs, blkmem, var, varfixing) );
@@ -1443,7 +1443,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
             {
                if( implvar->vlbs != NULL ) /* implvar may have been aggregated in the mean time */
                {
-                  SCIPdebugMessage("deleting variable bound: <%s> == %d  ==>  <%s> >= %g\n", 
+                  SCIPdebugMessage("deleting variable bound: <%s> == %u  ==>  <%s> >= %g\n", 
                      SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), 
                      SCIPimplicsGetBounds(var->implics, varfixing)[i]);
                   SCIP_CALL( SCIPvboundsDel(&implvar->vlbs, blkmem, var, !varfixing) );
@@ -2938,7 +2938,7 @@ SCIP_RETCODE SCIPvarFix(
    else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED )
    {
       *infeasible = !SCIPsetIsFeasEQ(set, fixedval, var->locdom.lb);
-      SCIPdebugMessage(" -> variable already fixed to %g (fixedval=%g): infeasible=%d\n", 
+      SCIPdebugMessage(" -> variable already fixed to %g (fixedval=%g): infeasible=%u\n", 
          var->locdom.lb, fixedval, *infeasible);
       return SCIP_OKAY;
    }
@@ -6546,7 +6546,7 @@ SCIP_RETCODE varAddImplic(
       assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
       /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
-      SCIPdebugMessage("adding implication: <%s> == %d  ==>  <%s> %s %g\n", 
+      SCIPdebugMessage("adding implication: <%s> == %u  ==>  <%s> %s %g\n", 
          SCIPvarGetName(var), varfixing,
          SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
       SCIP_CALL( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound,
@@ -6613,7 +6613,7 @@ SCIP_RETCODE varAddImplic(
             SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER);
 
          /* remove the original implication (which is now redundant due to the fixing of the implvar) */
-         SCIPdebugMessage(" -> deleting implication: <%s> == %d  ==>  <%s> %s %g\n", 
+         SCIPdebugMessage(" -> deleting implication: <%s> == %u  ==>  <%s> %s %g\n", 
             SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
             implbound);
          SCIP_CALL( SCIPimplicsDel(&var->implics, blkmem, set, varfixing, implvar, impltype) );
@@ -8050,7 +8050,7 @@ void varProcessChgBranchDirection(
 
    assert(var != NULL);
 
-   SCIPdebugMessage("process changing branch direction of <%s> from %d to %d\n", 
+   SCIPdebugMessage("process changing branch direction of <%s> from %u to %d\n", 
       var->name, var->branchdirection, branchdirection);
 
    if( branchdirection == (SCIP_BRANCHDIR)var->branchdirection )
@@ -8109,7 +8109,7 @@ void SCIPvarChgBranchDirection(
 
    assert(var != NULL);
 
-   SCIPdebugMessage("changing branch direction of <%s> from %d to %d\n", var->name, var->branchdirection, branchdirection);
+   SCIPdebugMessage("changing branch direction of <%s> from %u to %d\n", var->name, var->branchdirection, branchdirection);
 
    if( (SCIP_BRANCHDIR)var->branchdirection == branchdirection )
       return;

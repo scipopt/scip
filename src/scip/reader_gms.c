@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.25 2009/08/31 22:32:36 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.26 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -172,7 +172,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %zd\n", linebuffer, strlen(linebuffer));
+   SCIPdebugMessage("linebuffer <%s>, length = %u\n", linebuffer, strlen(linebuffer));
    
    if( (*linecnt) > GMS_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);

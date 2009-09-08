@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.25 2009/06/15 09:57:32 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.26 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -599,7 +599,7 @@ SCIP_RETCODE enforceSOS1(
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propSOS1(scip, cons, consdata, &cutoff, &nGen) );
-      SCIPdebugMessage("propagation in enforcing <%s> (cutoff: %d, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, nGen);
+      SCIPdebugMessage("propagation in enforcing <%s> (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, nGen);
       if ( cutoff )
       {
 	 *result = SCIP_CUTOFF;

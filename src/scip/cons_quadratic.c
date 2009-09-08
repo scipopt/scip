@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.41 2009/09/08 16:16:46 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.42 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3215,7 +3215,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
       assert(conss); /* for lint */
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-      SCIPdebugMessage("con %s violation: %g %g  convex: %d %d\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->is_convex, consdata->is_concave);
+      SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->is_convex, consdata->is_concave);
       
       if (!consdata->n_quadvar)
          continue;
@@ -3223,7 +3223,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
       if ((!SCIPisFeasPositive(scip, consdata->lhsviol) || consdata->is_concave) &&
           (!SCIPisFeasPositive(scip, consdata->rhsviol) || consdata->is_convex ))
          continue;
-      SCIPdebugMessage("con %s violation: %g %g  convex: %d %d\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->is_convex, consdata->is_concave);
+      SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->is_convex, consdata->is_concave);
       
       for (j = 0; j < consdata->n_quadvar; ++j)
       { /* square terms */
@@ -4953,7 +4953,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
    {
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-      SCIPdebugMessage("con %s violation: %g %g  convex: %d %d\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->is_convex, consdata->is_concave);
+      SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->is_convex, consdata->is_concave);
       
       if (!consdata->n_quadvar)
          continue;

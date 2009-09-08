@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.34 2009/07/28 17:00:17 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_simplerounding.c,v 1.35 2009/09/08 20:41:30 bzfberth Exp $"
 
 /**@file   heur_simplerounding.c
  * @ingroup PRIMALHEURISTICS
@@ -210,7 +210,7 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
       mayrounddown = SCIPvarMayRoundDown(var);
       mayroundup = SCIPvarMayRoundUp(var);
-      SCIPdebugMessage("simple rounding heuristic: var <%s>, val=%g, rounddown=%d, roundup=%d\n",
+      SCIPdebugMessage("simple rounding heuristic: var <%s>, val=%g, rounddown=%u, roundup=%u\n",
          SCIPvarGetName(var), oldsolval, mayrounddown, mayroundup);
 
       /* choose rounding direction */

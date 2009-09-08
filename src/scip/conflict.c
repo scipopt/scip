@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.148 2009/09/04 14:36:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.149 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -3250,7 +3250,7 @@ SCIP_RETCODE addCand(
    assert(*newbounds != NULL);
    assert(*proofactdeltas != NULL);
 
-   SCIPdebugMessage(" -> local <%s> %s %g, relax <%s> %s %g, proofcoef=%g, dpt=%d, resolve=%d, delta=%g, score=%g\n",
+   SCIPdebugMessage(" -> local <%s> %s %g, relax <%s> %s %g, proofcoef=%g, dpt=%d, resolve=%u, delta=%g, score=%g\n",
       SCIPvarGetName(var), proofcoef > 0.0 ? "<=" : ">=", oldbound,
       SCIPvarGetName(var), proofcoef > 0.0 ? "<=" : ">=", newbound,
       proofcoef, depth, resolvable, proofactdelta, score);
@@ -4197,7 +4197,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             (*iterations) += iter;
             stat->nconflictlps++;
             stat->nconflictlpiterations += iter;
-            SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %"SCIP_LONGINT_FORMAT") (infeasible:%d, objlim: %d, optimal:%d)\n",
+            SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %"SCIP_LONGINT_FORMAT") (infeasible:%u, objlim: %u, optimal:%u)\n",
                iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi),
                SCIPlpiIsOptimal(lpi));
             valid = (SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsDualFeasible(lpi));
@@ -4232,7 +4232,7 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
    }
    
-   SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %d, objlimexc: %d, optimal:%d) in depth %d (diving: %d)\n",
+   SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
       SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 #ifdef SCIP_DEBUG
    {
@@ -4456,7 +4456,7 @@ SCIP_RETCODE conflictAnalyzeLP(
          (*iterations) += iter;
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
-         SCIPdebugMessage(" -> resolved LP in %d iterations (total: %"SCIP_LONGINT_FORMAT") (infeasible:%d)\n",
+         SCIPdebugMessage(" -> resolved LP in %d iterations (total: %"SCIP_LONGINT_FORMAT") (infeasible:%u)\n",
             iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi));
 
          /* evaluate result */
@@ -4497,7 +4497,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             nloops, iter, nbdchgs - lastnbdchgs);
       }
 
-      SCIPdebugMessage("finished undoing bound changes after %d loops (valid=%d, nbdchgs: %d)\n",
+      SCIPdebugMessage("finished undoing bound changes after %d loops (valid=%u, nbdchgs: %d)\n",
          nloops, valid, nbdchgs);
 
       /* reset variables to local bounds */
@@ -4590,7 +4590,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    if( set->nactivepricers > 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("analyzing conflict on infeasible LP in depth %d (solstat: %d, objchanged: %d)\n",
+   SCIPdebugMessage("analyzing conflict on infeasible LP in depth %d (solstat: %d, objchanged: %u)\n",
       SCIPtreeGetCurrentDepth(tree), SCIPlpGetSolstat(lp), SCIPlpDivingObjChanged(lp));
 
    /* start timing */

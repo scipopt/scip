@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.25 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.26 2009/09/08 20:41:29 bzfberth Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -354,7 +354,7 @@ SCIP_RETCODE SCIPapplyRens(
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
    SCIP_CALL( createSubproblem(scip, subscip, subvars, minfixingrate, binarybounds, &success) );
-   SCIPdebugMessage("RENS subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
+   SCIPdebugMessage("RENS subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
 
    /* if the subproblem could not be created, free memory and return */
    if( !success )
@@ -414,7 +414,7 @@ SCIP_RETCODE SCIPapplyRens(
 
 
 
-   SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%d\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
+   SCIPdebugMessage("RENS presolved subproblem: %d vars, %d cons, success=%u\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), success);
 
 #if 0
    {
