@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.10 2009/04/06 13:07:08 bzfberth Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.11 2009/09/08 14:12:41 bzfpfets Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -206,13 +206,19 @@ void tcliqueFree(
 
    if( *tcliquegraph != NULL )
    {
-      BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
-      BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
-      BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
-      BMSfreeMemoryArray(&(*tcliquegraph)->weights);
-      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
-      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
-      BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
+      if ( (*tcliquegraph)->adjedges != NULL )
+      {
+	 BMSfreeMemoryArray(&(*tcliquegraph)->adjedges);
+	 BMSfreeMemoryArray(&(*tcliquegraph)->adjnodes);
+	 BMSfreeMemoryArray(&(*tcliquegraph)->degrees);
+	 BMSfreeMemoryArray(&(*tcliquegraph)->weights);
+      }
+      if ( (*tcliquegraph)->cacheddegrees )
+      {
+	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddegrees);
+	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cachedorigs);
+	 BMSfreeMemoryArrayNull(&(*tcliquegraph)->cacheddests);
+      }
       BMSfreeMemory(tcliquegraph);
    }
 }
