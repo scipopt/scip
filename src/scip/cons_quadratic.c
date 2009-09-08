@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.40 2009/09/07 19:47:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.41 2009/09/08 16:16:46 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5847,6 +5847,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
 
    if (n_linvar)
    {
+      assert(linvar != NULL);
       consdata->n_linvar = n_linvar;
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata->linvar,   linvar,   n_linvar) );
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata->lincoeff, lincoeff, n_linvar) );
@@ -5857,6 +5858,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
 
    if (n_quadvar)
    {
+      assert(quadvar != NULL);
       consdata->n_quadvar = n_quadvar;
       SCIP_CALL(    SCIPduplicateMemoryArray(scip, &consdata->quadvar,      quadvar,      n_quadvar) );
       if (quadlincoeff)
