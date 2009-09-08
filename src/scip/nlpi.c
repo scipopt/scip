@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.6 2009/09/08 17:00:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.7 2009/09/08 17:05:23 bzfviger Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -152,7 +152,9 @@ SCIP_DECL_NLPIINIT( SCIPnlpiInit )
    assert(nlpi != NULL);
    
    if( nlpi -> nlpiinit != NULL )
+   {
       SCIP_CALL( (*nlpi->nlpiinit)(scip, nlpi, name) );
+   }
 
    return SCIP_OKAY;
 }
