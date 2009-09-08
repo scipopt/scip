@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.13 2009/09/08 18:33:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.14 2009/09/08 19:35:59 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -430,7 +430,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       assert(quadrowidx != NULL);
       assert(quadind    != NULL);
       assert(quadval    != NULL);
-      if( (oracle->conquadlen != 0) && (oracle->ncons != 0) )
+      if( (oracle->conquadlen == NULL) && (oracle->ncons != 0) )
       {
          SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conquadlen, oracle->ncons + ncons) );
          SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conquadrow, oracle->ncons + ncons) );
@@ -450,7 +450,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       }
       for( i = 0; i < ncons; ++i )
       {
-         if( quadoffset[i] != NULL && nquadrows[i] != NULL )
+         if( quadoffset[i] != NULL && nquadrows[i] != 0 )
          {
             int j, k;
             assert(quadrowidx[i] != NULL);
