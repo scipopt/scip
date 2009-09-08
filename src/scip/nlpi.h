@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.3 2009/09/08 16:46:47 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.4 2009/09/08 17:00:08 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -68,7 +68,12 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
 );
 
-/** initializes an NLP interface structure */
+/** initializes an NLP interface structure
+ * 
+ * input:
+ *  - nlpi datastructure for solver interface
+ *  - name problem name
+ */
 SCIP_DECL_NLPIINIT( SCIPnlpiInit );
 
 /** frees NLPI user data */
@@ -79,7 +84,9 @@ SCIP_RETCODE SCIPnlpiFree(
 );
 
 /** add variables
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - nvars number of variables 
  *  - lb lower bounds of variables
@@ -92,7 +99,9 @@ SCIP_DECL_NLPIADDVARS( SCIPnlpiAddVars );
 /** add constraints 
  * linear coefficients: row(=constraint) oriented matrix
  * quadratic coefficiens: row oriented matrix for each constraint
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - ncons number of added constraints
  *  - linoffset start index of each constraints linear coefficients in linind and linval
@@ -102,178 +111,255 @@ SCIP_DECL_NLPIADDVARS( SCIPnlpiAddVars );
  *    may be NULL in case of no linear part
  *  - linval coefficient values
  *    may be NULL in case of no linear part
+ *  - nquadrows number of columns in matrix of quadratic part for each constraint
+ *    may be NULL in case of no quadratic part in any constraint
+ *  - quadrowidx indices of variables for which a quadratic part is specified
+ *    may be NULL in case of no quadratic part in any constraint
  *  - quadoffset start index of each rows quadratic coefficients in quadind[.] and quadval[.]
- *    quadoffset[.][nvars] gives length of quadind[.] and quadval[.]
+ *    indices are given w.r.t. quadrowidx., i.e., quadoffset[.][i] gives the start index of row quadrowidx[.][i] in quadval[.]
+ *    quadoffset[.][nquadrows[.]] gives length of quadind[.] and quadval[.]
  *    entry of array may be NULL in case of no quadratic part
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadind column indices
+ *  - quadind column indices w.r.t. quadrowidx, i.e., quadrowidx[quadind[.][i]] gives the index of the variable corresponding to entry i
  *    entry of array may be NULL in case of no quadratic part
  *    may be NULL in case of no quadratic part in any constraint
  *  - quadval coefficient values
  *    entry of array may be NULL in case of no quadratic part
  *    may be NULL in case of no quadratic part in any constraint
+ *  - exprvaridx indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
+ *    entry of array may be NULL in case of no expression tree
+ *    may be NULL in case of no expression tree in any constraint
  *  - exprtree expression tree for nonquadratic part of constraints
  *    entry of array may be NULL in case of no nonquadratic part
  *    may be NULL in case of no nonquadratic part in any constraint
+ *  - names of constraints, may be NULL or entries may be NULL
  */
 SCIP_DECL_NLPIADDCONSTRAINTS( SCIPnlpiAddConstraints );
 
-/** sets or overwrites objective, a minization problem is expected
+/** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - linind variable indices
  *    may be NULL in case of no linear part
  *  - linval coefficient values
  *    may be NULL in case of no linear part
+ *  - nquadcols number of columns in matrix of quadratic part
+ *  - quadcols indices of variables for which a quadratic part is specified
+ *    may be NULL in case of no quadratic part
  *  - quadoffset start index of each rows quadratic coefficients in quadind and quadval
- *    quadoffset[.][nvars] gives length of quadind and quadval
+ *    quadoffset[.][nquadcols] gives length of quadind and quadval
  *    may be NULL in case of no quadratic part
  *  - quadind column indices
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
+ *    may be NULL in case of no quadratic part
  *  - quadval coefficient values
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
+ *    may be NULL in case of no quadratic part
+ *  - exprvaridx indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
+ *    may be NULL in case of no expression tree
  *  - exprtree expression tree for nonquadratic part of constraints
- *    entry of array may be NULL in case of no nonquadratic part
- *    may be NULL in case of no nonquadratic part in any constraint
+ *    may be NULL in case of no nonquadratic part
  *  - objective values offset
  */
 SCIP_DECL_NLPISETOBJECTIVE( SCIPnlpiSetObjective );
 
 /** change variable bounds
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - number of variables to change bounds
- *  - indices of variables to change bounds
- *  - new lower bounds
- *  - new upper bounds
+ *  - nvars number of variables to change bounds
+ *  - indices indices of variables to change bounds
+ *  - lb new lower bounds
+ *  - ub new upper bounds
  */
 SCIP_DECL_NLPICHGVARBOUNDS( SCIPnlpiChgVarBounds );
 
 /** change constraint bounds
- * Input:
+ *
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - number of constraints to change bounds
- *  - indices of constraints to change bounds
- *  - new lower bounds
- *  - new upper bounds
+ *  - ncons number of constraints to change bounds
+ *  - indices indices of constraints to change bounds
+ *  - lb new lower bounds
+ *  - ub new upper bounds
  */
 SCIP_DECL_NLPICHGCONSBOUNDS( SCIPnlpiChgConsBounds );
 
 /** delete a set of variables
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - dstat input: deletion status of vars; 1 if row should be deleted, 0 if not
- *          output: new position of row, -1 if var was deleted
+ *  - dstat deletion status of vars; 1 if var should be deleted, 0 if not
+ * 
+ * output:
+ *  - dstat new position of var, -1 if var was deleted
  */
 SCIP_DECL_NLPIDELVARSET( SCIPnlpiDelVarSet );
 
 /** delete a set of constraints
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - dstat input: deletion status of rows; 1 if row should be deleted, 0 if not
- *          output: new position of row, -1 if row was deleted
+ *  - dstat deletion status of rows; 1 if row should be deleted, 0 if not
+ * 
+ * output:
+ *  - dstat new position of row, -1 if row was deleted
  */
 SCIP_DECL_NLPIDELCONSSET( SCIPnlpiDelConsSet );
 
 /** change one linear coefficient in a constraint or objective
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - cons   index of constraint or -1 for objective
+ *  - nvals number of values in linear constraint
  *  - varidx index of variable
  *  - value  new value for coefficient
- * Return: Error if coefficient did not exist before
+ * 
+ * return: Error if coefficient did not exist before
  */
 SCIP_DECL_NLPICHGLINEARCOEFS( SCIPnlpiChgLinearCoefs );
   
 /** change one coefficient in the quadratic part of a constraint or objective
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - cons index of constraint or -1 for objective
  *  - row row offset containing modified indices
- *  - col cols containint modified indices to the corresponding row offset
+ *  - col cols containing modified indices to the corresponding row offset
  *  - values coefficients corresponding to same indices as used when constraint/objective was constructed
- * Return: Error if coefficient did not exist before
+ * 
+ * return: Error if coefficient did not exist before
  */
 SCIP_DECL_NLPICHGQUADCOEFS( SCIPnlpiChgQuadCoefs );
 
 /** change a parameter constant in the nonlinear part
- * to discuss
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - cons index of constraint or -1 for objective
  *  - idx index of parameter
- * Return: Error if parameter does not exist
+ *  - value new value for nonlinear parameter
+ * 
+ * return: Error if parameter does not exist
  */
 SCIP_DECL_NLPICHGNONLINCOEF( SCIPnlpiChgNonlinCoef );
 
 /** sets initial guess for primal variables
- * Input:
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - values initial starting solution
  */
 SCIP_DECL_NLPISETINITIALGUESS( SCIPnlpiSetInitialGuess );
 
 /** tries to solve NLP
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  */
 SCIP_DECL_NLPISOLVE( SCIPnlpiSolve );
 
 /** gives solution status
+ * 
+ * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  Retrun: Solution Status
+ * 
+ * return: Solution Status
  */
 SCIP_DECL_NLPIGETSOLSTAT( SCIPnlpiGetSolstat );
 
 /** gives termination reason
- *  Input:
- *   - nlpi datastructure for solver interface
- *  Retrun: Termination Status
+ * 
+ * input:
+ *  - scip SCIP datastructure
+ *  - nlpi datastructure for solver interface
+ * 
+ * return: Termination Status
  */
 SCIP_DECL_NLPIGETTERMSTAT( SCIPnlpiGetTermstat );
 
 /** gives primal solution
- *  Input:
- *   - nlpi datastructure for solver interface
+ * 
+ * input:
+ *  - scip SCIP datastructure
+ *  - nlpi datastructure for solver interface
+ *  - primalvalues buffer to store pointer to primal values
+ * 
+ * output:
+ *  - primalvalues primal values of solution
  */
 SCIP_DECL_NLPIGETSOLUTION( SCIPnlpiGetSolution );
 
 /** gives solve statistics
- *  Input:
- *   - nlpi datastructure for solver interface
+ * 
+ * input:
+ *  - scip SCIP datastructure
+ *  - nlpi datastructure for solver interface
+ *  - statistics buffer to store statistics
+ * 
+ * output:
+ *  - statistics solve statistics
  */
 SCIP_DECL_NLPIGETSTATISTICS( SCIPnlpiGetStatistics );
 
 /** gives required size of a buffer to store a warmstart object
- *  Input:
- *   - nlpi datastructure for solver interface
- *   - size pointer to store required size for warmstart buffer
+ * 
+ *  input:
+ *  - scip SCIP datastructure
+ *  - nlpi datastructure for solver interface
+ *  - size pointer to store required size for warmstart buffer
+ * 
+ * output:
+ *  - size required size for warmstart buffer
  */
 SCIP_DECL_NLPIGETWARMSTARTSIZE( SCIPnlpiGetWarmstartSize );
 
 /** stores warmstart information in buffer
+ * 
  * required size of buffer should have been obtained by SCIPnlpiGetWarmstartSize before
- *  Input:
- *   - nlpi datastructure for solver interface
- *   - buffer to store warmstart information
+ * 
+ * input:
+ *  - scip SCIP datastructure
+ *  - nlpi datastructure for solver interface
+ *  - buffer memory to store warmstart information
+ * 
+ * output:
+ *  - buffer warmstart information in solver specific data structure
  */
 SCIP_DECL_NLPIGETWARMSTARTMEMO( SCIPnlpiGetWarmstartMemo );
 
 /** sets warmstart information in solver
+ * 
  * write warmstart to buffer
- *  Input:
- *   - nlpi datastructure for solver interface
- *   - buffer to store warmstart information
+ * 
+ * input:
+ *  - scip SCIP datastructure
+ *  - nlpi datastructure for solver interface
+ *  - buffer warmstart information
  */
 SCIP_DECL_NLPISETWARMSTARTMEMO( SCIPnlpiSetWarmstartMemo );
 
 /** gets pointer for NLP solver
+ * 
  *  to do dirty stuff
- *  Input:
- *   - nlpi datastructure for solver interface
- *  Return: void pointer to solve interface
+ * 
+ * input:
+ *  - scip SCIP datastructure
+ *  - nlpi datastructure for solver interface
+ *  
+ * return: void pointer to solver
  */
 SCIP_DECL_NLPIGETSOLVERPOINTER( SCIPnlpiGetSolverPointer );
 
@@ -281,50 +367,58 @@ SCIP_DECL_NLPIGETSOLVERPOINTER( SCIPnlpiGetSolverPointer );
 /**@{ */
 
 /** gets integer parameter of NLP
+ * 
  * input:
- * - nlpi  NLP interface structure
- * - type  parameter number
- * - ival  buffer to store the parameter value
-*/
+ *  - scip SCIP datastructure
+ *  - nlpi NLP interface structure
+ *  - type parameter number
+ *  - ival buffer to store the parameter value
+ * 
+ * output:
+ *  - ival parameter value
+ */
 SCIP_DECL_NLPIGETINTPAR( SCIPnlpiGetIntPar );
 
 /** sets integer parameter of NLP
+ * 
  * input:
- * - nlpi  NLP interface structure
- * - type  parameter number
- * - ival  parameter value
+ *  - scip SCIP datastructure
+ *  - nlpi NLP interface structure
+ *  - type parameter number
+ *  - ival parameter value
  */
 SCIP_DECL_NLPISETINTPAR( SCIPnlpiSetIntPar );
 
 /** gets floating point parameter of NLP
+ * 
  * input:
- * - nlpi  NLP interface structure
- * - type  parameter number
- * - dval  buffer to store the parameter value
-*/
+ *  - scip SCIP datastructure
+ *  - nlpi NLP interface structure
+ *  - type parameter number
+ *  - dval buffer to store the parameter value
+ * 
+ * output:
+ *  - dval parameter value
+ */
 SCIP_DECL_NLPIGETREALPAR( SCIPnlpiGetRealPar );
 
 /** sets floating point parameter of NLP
+ * 
  * input:
- * - nlpi  NLP interface structure
- * - type  parameter number
- * - dval  parameter value
+ *  - scip SCIP datastructure
+ *  - nlpi NLP interface structure
+ *  - type parameter number
+ *  - dval parameter value
  */
 SCIP_DECL_NLPISETREALPAR( SCIPnlpiSetRealPar );
 
 /** get nlpi data
- * input
- * - nlpi NLP interface structure
- * Return data of nlp interface
  */
 SCIP_NLPIDATA* SCIPnlpiGetNlpiData(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */
 );
 
-/** gets nlp solver name
- * input
- * - nlpi NLP interface structure
- * Return name of nlp interface
+/** gets NLP solver name
  */
 const char* SCIPnlpiGetName(
    SCIP_NLPI*            nlpi                /**< NLP interface structure */

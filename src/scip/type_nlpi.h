@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.8 2009/09/08 16:46:47 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.9 2009/09/08 17:00:08 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @brief  type definitions for specific NLP solvers interface
@@ -193,7 +193,6 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  */
 #define SCIP_DECL_NLPICHGVARBOUNDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int nvars, const int* indices, \
    const SCIP_Real* lb, const SCIP_Real* ub)
-
 
 /** change constraint bounds
  *
@@ -398,7 +397,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  * 
  * output:
  *  - ival parameter value
-*/
+ */
 #define SCIP_DECL_NLPIGETINTPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPARAM type, int* ival)
 
 /** sets integer parameter of NLP
@@ -412,6 +411,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
 #define SCIP_DECL_NLPISETINTPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPARAM type, int ival)
 
 /** gets floating point parameter of NLP
+ * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi NLP interface structure
