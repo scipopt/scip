@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.c,v 1.4 2009/09/07 14:01:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nlpi.c,v 1.5 2009/09/08 16:46:47 bzfviger Exp $"
 
 /**@file   nlpi.c
  * @brief  methods for handling nlp interface
@@ -28,6 +28,7 @@
 #include "scip/nlpi.h"
 #include "scip/struct_nlpi.h"
 
+/** creates an NLP solver interface */
 SCIP_RETCODE SCIPnlpiCreate(
    SCIP*                           scip,                        /**< pointer to SCIP */
    SCIP_NLPI**                     nlpi,                        /**< pointer to NLP interface data structure */
@@ -63,15 +64,34 @@ SCIP_RETCODE SCIPnlpiCreate(
    SCIP_NLPIDATA*                  nlpidata                     /**< NLP interface local data */
 )
 {  /*lint --e{715}*/
-   assert( scip && nlpi );
+   assert(scip != NULL);
+   assert(nlpi != NULL);
 
-   assert( nlpiinit && nlpifree && nlpiaddvars && nlpiaddconstraints && nlpisetobjective );
-   assert( nlpichgvarbounds && nlpichgconsbounds && nlpidelconsset && nlpichglinearcoefs );
-   assert( nlpichgquadcoefs && nlpichgnonlincoef && nlpisetinitialguess && nlpisolve  );
-   assert( nlpigetsolstat && nlpigettermstat && nlpigetsolution && nlpigetstatistics );
-   assert( nlpigetwarmstartsize && nlpigetwarmstartmemo && nlpisetwarmstartmemo);
-   assert( nlpigetsolverpointer && nlpigetintpar && nlpisetintpar && nlpigetrealpar );
-   assert( nlpisetrealpar );
+   assert(nlpiinit             != NULL);
+   assert(nlpifree             != NULL);
+   assert(nlpiaddvars          != NULL);
+   assert(nlpiaddconstraints   != NULL);
+   assert(nlpisetobjective     != NULL);
+   assert(nlpichgvarbounds     != NULL);
+   assert(nlpichgconsbounds    != NULL);
+   assert(nlpidelconsset       != NULL);
+   assert(nlpichglinearcoefs   != NULL);
+   assert(nlpichgquadcoefs     != NULL);
+   assert(nlpichgnonlincoef    != NULL);
+   assert(nlpisetinitialguess  != NULL);
+   assert(nlpisolve            != NULL);
+   assert(nlpigetsolstat       != NULL);
+   assert(nlpigettermstat      != NULL);
+   assert(nlpigetsolution      != NULL);
+   assert(nlpigetstatistics    != NULL);
+   assert(nlpigetwarmstartsize != NULL);
+   assert(nlpigetwarmstartmemo != NULL);
+   assert(nlpisetwarmstartmemo != NULL);
+   assert(nlpigetsolverpointer != NULL);
+   assert(nlpigetintpar        != NULL);
+   assert(nlpisetintpar        != NULL);
+   assert(nlpigetrealpar       != NULL);
+   assert(nlpisetrealpar       != NULL);
 
    SCIP_CALL( SCIPallocMemory( scip, nlpi ) );
    (*nlpi) -> nlpiinit             = nlpiinit;
@@ -105,14 +125,17 @@ SCIP_RETCODE SCIPnlpiCreate(
    return SCIP_OKAY;
 }
 
+/** frees NLPI user data */
 SCIP_RETCODE SCIPnlpiFree(
-   SCIP*                 scip,
-   SCIP_NLPI**           nlpi
+   SCIP*                 scip,               /**< pointer to SCIP */
+   SCIP_NLPI**           nlpi                /**< pointer to NLPI data structure */
    )
 {
-   assert( nlpi && *nlpi && scip );
+   assert(nlpi  != NULL);
+   assert(*nlpi != NULL);
+   assert(scip  != NULL);
 
-   SCIP_CALL( ( *( (*nlpi) -> nlpifree ) )( scip, ( ( *nlpi ) -> nlpidata ) ) );
+   SCIP_CALL( (*(*nlpi)->nlpifree)(scip, (*nlpi)->nlpidata) );
    SCIPfreeMemory( scip, nlpi );
 
    return SCIP_OKAY;
@@ -126,10 +149,10 @@ SCIP_RETCODE SCIPnlpiFree(
  */
 SCIP_DECL_NLPIINIT( SCIPnlpiInit )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   if( nlpi -> nlpiinit )
-      SCIP_CALL( ( *( nlpi  -> nlpiinit ) )( scip, nlpi, name  ) );
+   if( nlpi -> nlpiinit != NULL )
+      SCIP_CALL( (*nlpi->nlpiinit)(scip, nlpi, name) );
 
    return SCIP_OKAY;
 }
@@ -145,9 +168,9 @@ SCIP_DECL_NLPIINIT( SCIPnlpiInit )
  */
 SCIP_DECL_NLPIADDVARS( SCIPnlpiAddVars )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpiaddvars ) ) ( scip, nlpi, nvars, lb, ub, type, varnames ) );
+   SCIP_CALL( (*nlpi->nlpiaddvars)(scip, nlpi, nvars, lb, ub, type, varnames) );
    
    return SCIP_OKAY;
 }
@@ -181,9 +204,9 @@ SCIP_DECL_NLPIADDVARS( SCIPnlpiAddVars )
  */
 SCIP_DECL_NLPIADDCONSTRAINTS( SCIPnlpiAddConstraints )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpiaddconstraints ) ) ( scip, nlpi, ncons, lhs, rhs, linoffset, linind, linval,
+   SCIP_CALL( (*nlpi->nlpiaddconstraints)(scip, nlpi, ncons, lhs, rhs, linoffset, linind, linval,
       nquadrows, quadrowidx, quadoffset, quadind, quadval, exprvaridx, exprtree, names) );
    
    return SCIP_OKAY;
@@ -215,10 +238,10 @@ SCIP_DECL_NLPIADDCONSTRAINTS( SCIPnlpiAddConstraints )
  */
 SCIP_DECL_NLPISETOBJECTIVE( SCIPnlpiSetObjective )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpisetobjective ) )( scip, nlpi, nlin, linind, linval, nquadcols, quadcols, 
-      quadoffset, quadind, quadval, exprvaridx, exprtree, constant ) );
+   SCIP_CALL( (*nlpi->nlpisetobjective)(scip, nlpi, nlin, linind, linval, nquadcols, quadcols, 
+      quadoffset, quadind, quadval, exprvaridx, exprtree, constant) );
    
    return SCIP_OKAY;
 }
@@ -233,9 +256,9 @@ SCIP_DECL_NLPISETOBJECTIVE( SCIPnlpiSetObjective )
  */
 SCIP_DECL_NLPICHGVARBOUNDS( SCIPnlpiChgVarBounds )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpichgvarbounds ) )( scip, nlpi, nvars, indices, lb, ub ) );
+   SCIP_CALL( (*nlpi->nlpichgvarbounds)(scip, nlpi, nvars, indices, lb, ub) );
    
    return SCIP_OKAY;
 }
@@ -250,9 +273,9 @@ SCIP_DECL_NLPICHGVARBOUNDS( SCIPnlpiChgVarBounds )
  */
 SCIP_DECL_NLPICHGCONSBOUNDS( SCIPnlpiChgConsBounds )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpichgconsbounds ) )( scip, nlpi, ncons, indices, lb, ub ) );
+   SCIP_CALL( (*nlpi->nlpichgconsbounds)(scip, nlpi, ncons, indices, lb, ub) );
    
    return SCIP_OKAY;
 }
@@ -265,9 +288,9 @@ SCIP_DECL_NLPICHGCONSBOUNDS( SCIPnlpiChgConsBounds )
  */
 SCIP_DECL_NLPIDELVARSET( SCIPnlpiDelVarSet )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpidelvarset ) )( scip, nlpi, dstat ) );
+   SCIP_CALL( (*nlpi->nlpidelvarset)(scip, nlpi, dstat) );
    
    return SCIP_OKAY;
 }
@@ -280,9 +303,9 @@ SCIP_DECL_NLPIDELVARSET( SCIPnlpiDelVarSet )
  */
 SCIP_DECL_NLPIDELCONSSET( SCIPnlpiDelConsSet )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpidelconsset ) )( scip, nlpi, dstat ) );
+   SCIP_CALL( (*nlpi->nlpidelconsset)(scip, nlpi, dstat) );
    
    return SCIP_OKAY;
 }
@@ -297,9 +320,9 @@ SCIP_DECL_NLPIDELCONSSET( SCIPnlpiDelConsSet )
  */
 SCIP_DECL_NLPICHGLINEARCOEFS( SCIPnlpiChgLinearCoefs )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpichglinearcoefs ) )( scip, nlpi, cons, nvals, varidx, value ) );
+   SCIP_CALL( (*nlpi->nlpichglinearcoefs)(scip, nlpi, cons, nvals, varidx, value) );
    
    return SCIP_OKAY;
 }
@@ -315,9 +338,9 @@ SCIP_DECL_NLPICHGLINEARCOEFS( SCIPnlpiChgLinearCoefs )
  */
 SCIP_DECL_NLPICHGQUADCOEFS( SCIPnlpiChgQuadCoefs )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpichgquadcoefs ) )( scip, nlpi, cons, nentries, row, col, value ) );
+   SCIP_CALL( (*nlpi->nlpichgquadcoefs)(scip, nlpi, cons, nentries, row, col, value) );
    
    return SCIP_OKAY;
 }
@@ -333,9 +356,9 @@ SCIP_DECL_NLPICHGQUADCOEFS( SCIPnlpiChgQuadCoefs )
  */
 SCIP_DECL_NLPICHGNONLINCOEF( SCIPnlpiChgNonlinCoef )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpichgnonlincoef ) )( scip, nlpi, cons, idx, value ) );
+   SCIP_CALL( (*nlpi->nlpichgnonlincoef)(scip, nlpi, cons, idx, value) );
    
    return SCIP_OKAY;
 }
@@ -347,9 +370,9 @@ SCIP_DECL_NLPICHGNONLINCOEF( SCIPnlpiChgNonlinCoef )
  */
 SCIP_DECL_NLPISETINITIALGUESS( SCIPnlpiSetInitialGuess )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpisetinitialguess ) )( scip, nlpi, values ) );
+   SCIP_CALL( (*nlpi->nlpisetinitialguess)(scip, nlpi, values) );
    
    return SCIP_OKAY;
 }
@@ -359,9 +382,9 @@ SCIP_DECL_NLPISETINITIALGUESS( SCIPnlpiSetInitialGuess )
  */
 SCIP_DECL_NLPISOLVE( SCIPnlpiSolve )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi  -> nlpisolve ) )( scip, nlpi ) );
+   SCIP_CALL( (*nlpi->nlpisolve)(scip, nlpi) );
    
    return SCIP_OKAY;
 }
@@ -372,9 +395,9 @@ SCIP_DECL_NLPISOLVE( SCIPnlpiSolve )
  */
 SCIP_DECL_NLPIGETSOLSTAT( SCIPnlpiGetSolstat )
 {
-  assert( nlpi );
+  assert(nlpi != NULL);
   
-  return ( *( nlpi -> nlpigetsolstat ) )( scip, nlpi );
+  return (*nlpi->nlpigetsolstat)(scip, nlpi);
 }
 
 /** gives termination reason
@@ -384,9 +407,9 @@ SCIP_DECL_NLPIGETSOLSTAT( SCIPnlpiGetSolstat )
  */
 SCIP_DECL_NLPIGETTERMSTAT( SCIPnlpiGetTermstat )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   return ( *( nlpi -> nlpigettermstat ) )( scip, nlpi );
+   return (*nlpi->nlpigettermstat)(scip, nlpi);
 }
 
 /** gives primal solution
@@ -396,9 +419,9 @@ SCIP_DECL_NLPIGETTERMSTAT( SCIPnlpiGetTermstat )
  */
 SCIP_DECL_NLPIGETSOLUTION( SCIPnlpiGetSolution )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *(nlpi -> nlpigetsolution ) )( scip, nlpi, primalvalues ) );
+   SCIP_CALL( (*nlpi->nlpigetsolution)(scip, nlpi, primalvalues) );
    
    return SCIP_OKAY;
 }
@@ -410,9 +433,9 @@ SCIP_DECL_NLPIGETSOLUTION( SCIPnlpiGetSolution )
  */
 SCIP_DECL_NLPIGETSTATISTICS( SCIPnlpiGetStatistics )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *(nlpi -> nlpigetstatistics ) )( scip, nlpi, statistics ) );
+   SCIP_CALL( (*nlpi->nlpigetstatistics)(scip, nlpi, statistics) );
    
    return SCIP_OKAY;
 }
@@ -424,9 +447,9 @@ SCIP_DECL_NLPIGETSTATISTICS( SCIPnlpiGetStatistics )
  */
 SCIP_DECL_NLPIGETWARMSTARTSIZE( SCIPnlpiGetWarmstartSize )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( (*(nlpi -> nlpigetwarmstartsize ))( scip, nlpi , size ) );
+   SCIP_CALL( (*nlpi->nlpigetwarmstartsize)(scip, nlpi, size) );
    
    return SCIP_OKAY;
 }
@@ -439,9 +462,9 @@ SCIP_DECL_NLPIGETWARMSTARTSIZE( SCIPnlpiGetWarmstartSize )
  */
 SCIP_DECL_NLPIGETWARMSTARTMEMO( SCIPnlpiGetWarmstartMemo )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( (*( nlpi -> nlpigetwarmstartmemo ) )( scip, nlpi , buffer ) );
+   SCIP_CALL( (*nlpi->nlpigetwarmstartmemo)(scip, nlpi, buffer) );
    
    return SCIP_OKAY;
 }
@@ -454,9 +477,9 @@ SCIP_DECL_NLPIGETWARMSTARTMEMO( SCIPnlpiGetWarmstartMemo )
  */
 SCIP_DECL_NLPISETWARMSTARTMEMO( SCIPnlpiSetWarmstartMemo )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( (*(nlpi -> nlpisetwarmstartmemo ))( scip, nlpi, buffer ) );
+   SCIP_CALL( (*nlpi->nlpisetwarmstartmemo)(scip, nlpi, buffer) );
    
    return SCIP_OKAY;
 }
@@ -469,9 +492,9 @@ SCIP_DECL_NLPISETWARMSTARTMEMO( SCIPnlpiSetWarmstartMemo )
  */
 SCIP_DECL_NLPIGETSOLVERPOINTER( SCIPnlpiGetSolverPointer )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   return ( *(nlpi -> nlpigetsolverpointer ) )( scip, nlpi );
+   return (*nlpi->nlpigetsolverpointer)(scip, nlpi);
 }
 
 /**@name Parameter Methods */
@@ -485,9 +508,9 @@ SCIP_DECL_NLPIGETSOLVERPOINTER( SCIPnlpiGetSolverPointer )
 */
 SCIP_DECL_NLPIGETINTPAR( SCIPnlpiGetIntPar )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *(nlpi -> nlpigetintpar ) )( scip, nlpi, type, ival ) );
+   SCIP_CALL( (*nlpi->nlpigetintpar)(scip, nlpi, type, ival) );
    
    return SCIP_OKAY;
 }
@@ -500,9 +523,9 @@ SCIP_DECL_NLPIGETINTPAR( SCIPnlpiGetIntPar )
  */
 SCIP_DECL_NLPISETINTPAR( SCIPnlpiSetIntPar )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( (*( nlpi -> nlpisetintpar ) )( scip, nlpi, type, ival ) );
+   SCIP_CALL( (*nlpi->nlpisetintpar)(scip, nlpi, type, ival) );
    
    return SCIP_OKAY;
 }
@@ -516,9 +539,9 @@ SCIP_DECL_NLPISETINTPAR( SCIPnlpiSetIntPar )
 */
 SCIP_DECL_NLPIGETREALPAR( SCIPnlpiGetRealPar )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpigetrealpar ) )( scip, nlpi, type, dval ) );
+   SCIP_CALL( (*nlpi->nlpigetrealpar)(scip, nlpi, type, dval) );
    
    return SCIP_OKAY;
 }
@@ -531,9 +554,9 @@ SCIP_DECL_NLPIGETREALPAR( SCIPnlpiGetRealPar )
  */
 SCIP_DECL_NLPISETREALPAR( SCIPnlpiSetRealPar )
 {
-   assert( nlpi );
+   assert(nlpi != NULL);
    
-   SCIP_CALL( ( *( nlpi -> nlpisetrealpar ) )( scip, nlpi, type, dval ) );
+   SCIP_CALL( (*nlpi->nlpisetrealpar)(scip, nlpi, type, dval) );
    
    return SCIP_OKAY;
 }
@@ -543,14 +566,13 @@ SCIP_DECL_NLPISETREALPAR( SCIPnlpiSetRealPar )
  * - nlpi NLP interface structure
  * Return data of nlp interface
  */
-SCIP_NLPIDATA*
-SCIPnlpiGetNlpiData(
-   SCIP_NLPI *nlpi
+SCIP_NLPIDATA* SCIPnlpiGetNlpiData(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
 )
 {
-   assert(nlpi);
+   assert(nlpi != NULL);
    
-   return nlpi -> nlpidata;
+   return nlpi->nlpidata;
 }
 
 /** gets nlp solver name
@@ -558,21 +580,20 @@ SCIPnlpiGetNlpiData(
  * - nlpi NLP interface structure
  * Return data of nlp interface
  */
-const char*
-SCIPnlpiGetName(
-   SCIP_NLPI*  nlpi   /**< NLP interface structure */
+const char* SCIPnlpiGetName(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
 )
 {
-   assert(nlpi);
+   assert(nlpi != NULL);
    
-   return nlpi -> name;
+   return nlpi->name;
 }
 
 /** Creates an NLP statistics structure.
  */
 SCIP_RETCODE SCIPnlpStatisticsCreate(
-   SCIP*                scip,        /**< SCIP data structure */
-   SCIP_NLPSTATISTICS** statistics   /**< pointer where to store NLP statistics structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
 )
 {
    assert(scip != NULL);
@@ -590,8 +611,8 @@ SCIP_RETCODE SCIPnlpStatisticsCreate(
 /** Frees an NLP statistics structure.
  */
 void SCIPnlpStatisticsFree(
-   SCIP*                scip,        /**< SCIP data structure */
-   SCIP_NLPSTATISTICS** statistics   /**< pointer where to store NLP statistics structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
 )
 {
    assert(scip != NULL);
@@ -604,7 +625,7 @@ void SCIPnlpStatisticsFree(
 /** Gets the number of iterations from an NLP statistics structure.
  */
 int SCIPnlpStatisticsGetNIterations(
-   SCIP_NLPSTATISTICS* statistics   /**< NLP statistics structure */
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
 )
 {
    assert(statistics != NULL);
@@ -615,7 +636,7 @@ int SCIPnlpStatisticsGetNIterations(
 /** Gets the time from an NLP statistics structure.
  */
 SCIP_Real SCIPnlpStatisticsGetTotalTime(
-   SCIP_NLPSTATISTICS* statistics   /**< NLP statistics structure */
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
 )
 {
    assert(statistics != NULL);
@@ -626,8 +647,8 @@ SCIP_Real SCIPnlpStatisticsGetTotalTime(
 /** Sets the number of iterations in an NLP statistics structure.
  */
 void SCIPnlpStatisticsSetNIterations(
-   SCIP_NLPSTATISTICS* statistics,   /**< NLP statistics structure */
-   int                 niterations   /**< number of iterations to store */
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   int                   niterations         /**< number of iterations to store */
 )
 {
    assert(statistics != NULL);
@@ -637,8 +658,8 @@ void SCIPnlpStatisticsSetNIterations(
 /** Sets the total time in an NLP statistics structure.
  */
 void SCIPnlpStatisticsSetTotalTime(
-   SCIP_NLPSTATISTICS* statistics,   /**< NLP statistics structure */
-   SCIP_Real           totaltime     /**< solution time to store */
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   SCIP_Real             totaltime           /**< solution time to store */
 )
 {
    assert(statistics != NULL);

@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.2 2009/07/31 11:37:16 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.3 2009/09/08 16:46:47 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -74,8 +74,8 @@ SCIP_DECL_NLPIINIT( SCIPnlpiInit );
 /** frees NLPI user data */
 extern 
 SCIP_RETCODE SCIPnlpiFree(
-   SCIP*       scip,    /**< pointer to SCIP */
-   SCIP_NLPI** nlpi     /**< pointer to NLPI data structure */
+   SCIP*                 scip,               /**< pointer to SCIP */
+   SCIP_NLPI**           nlpi                /**< pointer to NLPI data structure */
 );
 
 /** add variables
@@ -317,9 +317,8 @@ SCIP_DECL_NLPISETREALPAR( SCIPnlpiSetRealPar );
  * - nlpi NLP interface structure
  * Return data of nlp interface
  */
-SCIP_NLPIDATA*
-SCIPnlpiGetNlpiData(
-   SCIP_NLPI*  nlpi   /**< NLP interface structure */
+SCIP_NLPIDATA* SCIPnlpiGetNlpiData(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
 );
 
 /** gets nlp solver name
@@ -327,49 +326,48 @@ SCIPnlpiGetNlpiData(
  * - nlpi NLP interface structure
  * Return name of nlp interface
  */
-const char*
-SCIPnlpiGetName(
-   SCIP_NLPI*  nlpi   /**< NLP interface structure */
+const char* SCIPnlpiGetName(
+   SCIP_NLPI*            nlpi                /**< NLP interface structure */
 );
 
 /** Creates an NLP statistics structure.
  */
 SCIP_RETCODE SCIPnlpStatisticsCreate(
-   SCIP*                scip,        /**< SCIP data structure */
-   SCIP_NLPSTATISTICS** statistics   /**< pointer where to store NLP statistics structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
 );
 
 /** Frees an NLP statistics structure.
  */
 void SCIPnlpStatisticsFree(
-   SCIP*                scip,        /**< SCIP data structure */
-   SCIP_NLPSTATISTICS** statistics   /**< pointer where to store NLP statistics structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPSTATISTICS**  statistics          /**< pointer where to store NLP statistics structure */
 );
 
 /** Gets the number of iterations from an NLP statistics structure.
  */
 int SCIPnlpStatisticsGetNIterations(
-   SCIP_NLPSTATISTICS* statistics   /**< NLP statistics structure */
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
 );
 
 /** Gets the total time from an NLP statistics structure.
  */
 SCIP_Real SCIPnlpStatisticsGetTotalTime(
-   SCIP_NLPSTATISTICS* statistics   /**< NLP statistics structure */
+   SCIP_NLPSTATISTICS*   statistics          /**< NLP statistics structure */
 );
 
 /** Sets the number of iterations in an NLP statistics structure.
  */
 void SCIPnlpStatisticsSetNIterations(
-   SCIP_NLPSTATISTICS* statistics,   /**< NLP statistics structure */
-   int                 niterations   /**< number of iterations to store */
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   int                   niterations         /**< number of iterations to store */
 );
 
 /** Sets the total time in an NLP statistics structure.
  */
 void SCIPnlpStatisticsSetTotalTime(
-   SCIP_NLPSTATISTICS* statistics,   /**< NLP statistics structure */
-   SCIP_Real           totaltime     /**< solution time to store */
+   SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
+   SCIP_Real             totaltime           /**< solution time to store */
 );
 
 #ifdef __cplusplus
