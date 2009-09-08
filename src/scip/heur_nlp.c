@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.27 2009/09/07 19:51:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.28 2009/09/08 17:36:23 bzfberth Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -712,7 +712,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
             for( j = 0; !havenlp && j < nquadvars; ++j )
                if( SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_CONTINUOUS )
                   havenlp = TRUE;
-            /* Are implicit integers really valid here? ???????????????? yes, why shouldn't they? */
          }
       }
    }
@@ -804,7 +803,6 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
     * probably because we do not have nonlinear continuous or implicit integer variables */
    if( heurdata->nlpi == NULL )
       return SCIP_OKAY;
-   /* Strange comment. Isn't that the case for MIP, too? ????????????????????? but there are no nonlinear functions in a MIP */
    
    if( heurdata->startcand == NULL )
    {  /* if no start candidate is given, we consider the LP solution of the current node */
