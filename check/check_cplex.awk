@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.38 2009/07/31 10:38:00 bzfheinz Exp $
+# $Id: check_cplex.awk,v 1.39 2009/09/09 16:49:19 bzfheinz Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -392,7 +392,7 @@ END {
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
-   printf("------------------+------+-------+------+----------------+----------------+------+-------+------+-------\n");
+   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
 
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
