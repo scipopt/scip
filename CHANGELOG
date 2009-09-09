@@ -78,6 +78,7 @@ features:
   added new functions to allow more operations on intervals, including solving quadratic interval equations
 - added new preprocessing step (mergeMultiples) in cons_setppc.c where equal variables are merged
 - can now run lexicographical dual algorithm (parameter lp/lexdualalgo)
+- the indicator constraint can now try to produce a feasible solution (via heur_trysol)
 
 performance improvements:
 - replaced some function calls in loop conditions
@@ -182,6 +183,7 @@ plugins:
 - added first version of an interface to NLP solvers (type_nlpi.h, struct_nlpi.h, nlpi.h, nlpi.c, nlpi_oracle.h, nlpi_oracle.c)
 - added first version of an interface to Ipopt (only QCP, no deletion of vars/cons allowed; nlpi_ipopt.(h|c))
 - added heuristic that performs a local search in an NLP (takes only linear and quadratic constraints into account so far)
+- added heuristic that gets a solution from other components and tries it (heur_trysol.?)
 
 parameters:
 - removed parameter <constraints/and/initiallp> since it is not needed anymore;
