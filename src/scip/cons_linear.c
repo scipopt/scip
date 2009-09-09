@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.339 2009/09/08 20:41:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.340 2009/09/09 10:30:42 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4748,21 +4748,26 @@ SCIP_RETCODE consdataTightenCoefs(
              *   rhs' := rhs - (ai - ai')*ui
              */
 
+            lval = consdata->lhs - minactivity;
+            rval = maxactivity - consdata->rhs;
+
             /* Try to avoid cancellation, if there are only two variables */
             if( consdata->nvars == 2 )
             {
                SCIP_Real otherval;         
                otherval = consdata->vals[1-i];
                
-               lval = consdata->lhs - val*lb;
-               lval -= otherval > 0.0 ? otherval*SCIPvarGetLbLocal(consdata->vars[1-i]) : otherval*SCIPvarGetUbLocal(consdata->vars[1-i]);
-               rval = val*ub - consdata->rhs; 
-               rval += otherval > 0.0 ? otherval*SCIPvarGetUbLocal(consdata->vars[1-i]) : otherval*SCIPvarGetLbLocal(consdata->vars[1-i]);
-            }
-            else
-            {
-               lval = consdata->lhs - minactivity;
-               rval = maxactivity - consdata->rhs;
+               if( !SCIPisInfinity(scip,-consdata->lhs) &&  consdata->minactivityneginf + consdata->minactivityneginf == 0 )
+               {
+                  lval = consdata->lhs - val*lb;
+                  lval -= otherval > 0.0 ? otherval*SCIPvarGetLbLocal(consdata->vars[1-i]) : otherval*SCIPvarGetUbLocal(consdata->vars[1-i]);
+               }
+                
+               if( !SCIPisInfinity(scip,consdata->rhs) &&  consdata->maxactivityneginf + consdata->maxactivityneginf == 0 )
+               {
+                  rval = val*ub - consdata->rhs; 
+                  rval += otherval > 0.0 ? otherval*SCIPvarGetUbLocal(consdata->vars[1-i]) : otherval*SCIPvarGetLbLocal(consdata->vars[1-i]);
+               }
             }
 
             /* Try to avoid cancellation in computation of lhs/rhs */
@@ -4844,24 +4849,28 @@ SCIP_RETCODE consdataTightenCoefs(
              *   rhs' := rhs - (ai - ai')*li
              */
 
+            lval = minactivity - consdata->lhs;
+            rval = consdata->rhs - maxactivity;
+               
             /* Try to avoid cancellation, if there are only two variables */
             if( consdata->nvars == 2 )
             {
                SCIP_Real otherval;             
                otherval = consdata->vals[1-i];
-               
-               lval = val*ub - consdata->lhs;
-               lval += otherval > 0.0 ? otherval*SCIPvarGetLbLocal(consdata->vars[1-i]) : otherval*SCIPvarGetUbLocal(consdata->vars[1-i]);
 
-               rval = consdata->rhs - val*lb; 
-               rval -= otherval > 0.0 ? otherval*SCIPvarGetUbLocal(consdata->vars[1-i]) : otherval*SCIPvarGetLbLocal(consdata->vars[1-i]);
-            }
-            else
-            {
-               lval = minactivity - consdata->lhs;
-               rval = consdata->rhs - maxactivity;
-            }
+               if( !SCIPisInfinity(scip,-consdata->lhs) &&  consdata->minactivityneginf + consdata->minactivityneginf == 0 )
+               {               
+                  lval = val*ub - consdata->lhs;
+                  lval += otherval > 0.0 ? otherval*SCIPvarGetLbLocal(consdata->vars[1-i]) : otherval*SCIPvarGetUbLocal(consdata->vars[1-i]);
+               }
 
+               if( !SCIPisInfinity(scip,consdata->rhs) &&  consdata->maxactivityneginf + consdata->maxactivityneginf == 0 )
+               {
+                  rval = consdata->rhs - val*lb; 
+                  rval -= otherval > 0.0 ? otherval*SCIPvarGetUbLocal(consdata->vars[1-i]) : otherval*SCIPvarGetLbLocal(consdata->vars[1-i]);
+               }
+            }
+            
             /* Try to avoid cancellation in computation of lhs/rhs */
             newval = MIN(lval, rval);
             newlhs = consdata->lhs - val*ub; 

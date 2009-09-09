@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.1 2009/09/03 12:38:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.2 2009/09/09 10:30:43 bzfberth Exp $"
 
 /**@file   heur_trivial.c
  * @ingroup PRIMALHEURISTICS
@@ -90,7 +90,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    /* if the problem is binary, we do not have to check the zero solution, since it is equal to the lower bound solution */
    zerovalid = (nvars != nbinvars);   
-   assert(vars != NULL);
+   assert(vars != NULL || nvars == 0);
 
    for( i = 0; i < nvars; i++ )
    {

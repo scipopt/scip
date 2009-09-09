@@ -170,6 +170,7 @@ fixed bugs:
 - fixed bug in reader_mps.c with respect to corrupted files
 - fixed bug in oneopt heuritic with start solution which has become infeasible due to global bound changes
 - increased the numerical stability of coefficient tightening for Big M formulations
+- fixed bug in coefficient tightening with infinite bounds
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza
