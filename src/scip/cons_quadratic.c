@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.43 2009/09/09 13:58:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.44 2009/09/09 14:11:20 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -1456,8 +1456,8 @@ SCIP_RETCODE presolveCreateQuadTerm(
    for( i = 0; i < consdata->n_linvar; ++i )
    {
       var = consdata->linvar[i];
-      *have_change = have_change || ((SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE));
-      *have_change = have_change || SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      *have_change = *have_change || ((SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE));
+      *have_change = *have_change || SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
       SCIP_CALL( presolveAddLinearTerm(scip, *terms, constant, consdata->lincoeff[i], var) );
    }
 
@@ -1532,8 +1532,8 @@ SCIP_RETCODE presolveCreateQuadTerm(
             }
             else
             { /* variable is not fixed */
-               *have_change = have_change || ((SCIPvarGetStatus(consdata->bilinvar2[j]) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(consdata->bilinvar2[j]) != SCIP_VARSTATUS_LOOSE));
-               *have_change = have_change || SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->bilinvar2[j]), SCIPvarGetUbGlobal(consdata->bilinvar2[j]));
+               *have_change = *have_change || ((SCIPvarGetStatus(consdata->bilinvar2[j]) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(consdata->bilinvar2[j]) != SCIP_VARSTATUS_LOOSE));
+               *have_change = *have_change || SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->bilinvar2[j]), SCIPvarGetUbGlobal(consdata->bilinvar2[j]));
                SCIP_CALL( presolveAddBilinearTerm(scip, *terms, constant, coeff, var, consdata->bilinvar2[j]) );
             }
             break;
@@ -2647,6 +2647,7 @@ SCIP_RETCODE computeViolations(
    
    for( c = 0; c < nconss; ++c )
    {
+      assert(conss != NULL); /* for lint */
       assert(conss[c] != NULL);
       
       SCIP_CALL( computeViolation(scip, conss[c], sol, do_scaling) );
@@ -4984,6 +4985,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
 
    for( c = 0; c < nconss; ++c )
    {
+      assert(conss != NULL); /* for lint */
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
       SCIPdebugMessage("con %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->is_convex, consdata->is_concave);
@@ -5538,6 +5540,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
 
    for( c = 0; c < nconss; ++c )
    {
+      assert(conss != NULL); /* for lint */
       SCIP_CALL( computeViolation(scip, conss[c], sol, conshdlrdata->do_scaling) );
       
       consdata = SCIPconsGetData(conss[c]);
