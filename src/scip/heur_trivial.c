@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.2 2009/09/09 10:30:43 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.3 2009/09/09 15:32:00 bzfviger Exp $"
 
 /**@file   heur_trivial.c
  * @ingroup PRIMALHEURISTICS
@@ -40,10 +40,12 @@
  * Data structures
  */
 
+#if 0 /* some compilers do not like empty structs */
 /** primal heuristic data */
 struct SCIP_HeurData
 {
 };
+#endif
 
 /*
  * Local methods
