@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.56 2009/09/08 20:41:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.57 2009/09/09 17:01:48 bzfwinkm Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -336,7 +336,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
       avgconflictscore = SCIPgetAvgConflictScore(scip);
       avgconflictscore = MAX(avgconflictscore, 0.1);
       avgconflengthscore = SCIPgetAvgConflictlengthScore(scip);
-      avgconflengthscore = MAX(avgconflictscore, 0.1);
+      avgconflengthscore = MAX(avgconflengthscore, 0.1);
       avginferencescore = SCIPgetAvgInferenceScore(scip);
       avginferencescore = MAX(avginferencescore, 0.1);
       avgcutoffscore = SCIPgetAvgCutoffScore(scip);
