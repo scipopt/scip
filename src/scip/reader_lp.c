@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.80 2009/09/08 20:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.81 2009/09/09 08:33:29 bzfpfets Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -2012,12 +2012,11 @@ void appendLine(
     *   sprintf(linebuffer, "%s%s", linebuffer, extension); 
     * because of overlapping memory areas in memcpy used in sprintf.
     */
-   //   len = (int)strlen(linebuffer);
    strncat(linebuffer, extension, LP_MAX_PRINTLEN - strlen(linebuffer));
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %u\n", linebuffer, strlen(linebuffer));
+   SCIPdebugMessage("linebuffer <%s>, length = %zu\n", linebuffer, strlen(linebuffer));
    
    if( (*linecnt) > LP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
