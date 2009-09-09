@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.326 2009/09/08 20:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.327 2009/09/09 15:29:43 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -4036,10 +4036,9 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
    assert(SCIPsetIsPositive(set, minval));
    assert(!SCIPsetIsInfinity(set, minval));
 
-   /* try, if row coefficients can be made integral by multiplying them with the reciprocal of the smallest coefficient and
-    * a power of 2
+   /* try, if row coefficients can be made integral by multiplying them with the reciprocal of the smallest coefficient
+    * and a power of 2
     */
-   scalable = TRUE;
    scaleval = 1.0/minval;
    scalable = (scaleval <= maxscale);
    for( c = 0; c < row->len && scalable; ++c )
@@ -4084,7 +4083,6 @@ SCIP_RETCODE SCIProwCalcIntegralScalar(
    }
 
    /* try, if row coefficients can be made integral by multiplying them by a power of 2 */
-   twomult = TRUE;
    twomultval = 1.0;
    twomult = (twomultval <= maxscale);
    for( c = 0; c < row->len && twomult; ++c )
@@ -12527,6 +12525,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
    assert(SCIPsetIsNegative(set, rayobjval));
 
    /* scale the ray, such that the resulting point has infinite objective value */
+   assert(rayobjval != 0.0);
    rayscale = -2*SCIPsetInfinity(set)/rayobjval;
 
    /* calculate the unbounded point: x' = x + rayscale * ray */
@@ -13831,7 +13830,6 @@ SCIP_RETCODE SCIPlpWriteMip(
 
    /* print variable bounds */
    SCIPmessageFPrintInfo(file,"\n\nBounds\n");
-   j = 0;
    for( i = 0; i < lp->ncols; ++i )
    {
       if( !SCIPsetIsInfinity(set,-lp->cols[i]->lb) || !SCIPsetIsInfinity(set,lp->cols[i]->ub) )

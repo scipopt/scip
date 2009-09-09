@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.101 2009/07/31 11:37:18 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.102 2009/09/09 15:29:43 bzfheinz Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -1183,7 +1183,7 @@ SCIP_Bool SCIPsetIsSumRelGE(
       (int)((num)*sizeof(**(ptr)))) )
 #define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
          (int)((num)*sizeof(**(ptr)))) )
-#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0*sizeof(**(ptr))) )
+#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) ) 
 #define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
 #define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
    ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )

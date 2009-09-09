@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.349 2009/09/04 15:40:17 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.350 2009/09/09 15:29:43 bzfheinz Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -6401,9 +6401,9 @@ void SCIPprintReal(
 #define SCIPduplicateBuffer(scip,ptr,source)    SCIPduplicateBufferSize(scip, (void**)(ptr), source, (int)sizeof(**(ptr)))
 #define SCIPduplicateBufferArray(scip,ptr,source,num) \
                                                      SCIPduplicateBufferSize(scip, (void**)(ptr), source, (num)*(int)sizeof(**(ptr)))
-#define SCIPfreeBuffer(scip,ptr)                SCIPfreeBufferSize(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
+#define SCIPfreeBuffer(scip,ptr)                SCIPfreeBufferSize(scip, (void**)(ptr), 0)
 #define SCIPfreeBufferNull(scip,ptr)            { if( *(ptr) != NULL ) SCIPfreeBuffer(scip, ptr); }
-#define SCIPfreeBufferArray(scip,ptr)           SCIPfreeBufferSize(scip, (void**)(ptr), 0*(int)sizeof(**(ptr)))
+#define SCIPfreeBufferArray(scip,ptr)           SCIPfreeBufferSize(scip, (void**)(ptr), 0)
 #define SCIPfreeBufferArrayNull(scip,ptr)       { if( *(ptr) != NULL ) SCIPfreeBufferArray(scip, ptr); }
 
 
