@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.45 2009/09/04 10:31:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.46 2009/09/09 17:42:57 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -184,6 +184,7 @@
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
+#include "scip/heur_trysol.h"
 #include <string.h>
 #include "scip/pub_misc.h"
 
@@ -209,11 +210,12 @@
 #define EVENTHDLR_DESC         "bound change event handler for indicator constraints"
 
 /* default values for parameters */
-#define BRANCHINDICATORS   TRUE
-#define GENLOGICOR         FALSE
-#define SEPAALTERNATIVELP  FALSE
-#define ADDCOUPLING        FALSE
-#define UPDATEBOUNDS       FALSE
+#define DEFAULT_BRANCHINDICATORS   TRUE
+#define DEFAULT_GENLOGICOR         FALSE
+#define DEFAULT_SEPAALTERNATIVELP  FALSE
+#define DEFAULT_ADDCOUPLING        FALSE
+#define DEFAULT_UPDATEBOUNDS       FALSE
+#define DEFAULT_TRYSOLUTIONS       FALSE
 
 /* maximal value for coupling inequalities */
 #define maxCouplingValue  1e4
@@ -253,7 +255,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool sepaAlternativeLP;     /**< Separate using the alternative LP? */
    SCIP_Bool addCoupling;           /**< whether the coupling inequalities should be added */
    SCIP_Bool updateBounds;          /**< whether the bounds of the original variables should be changed for separation */
+   SCIP_Bool trySolutions;          /**< Try to make solutions feasible by setting indicator variables? */
    SCIP_Bool implicationsAdded;     /**< whether implications have been added */
+   SCIP_HEUR* heurTrySol;           /**< trysol heuristic */
 };
 
 
@@ -2046,6 +2050,10 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    assert( conshdlrdata != NULL );
    assert( conshdlrdata->slackHash == NULL );
 
+   /* find trysol heuristic */
+   conshdlrdata->heurTrySol = SCIPfindHeur(scip, "trysol");
+   assert( conshdlrdata->heurTrySol != NULL );
+
    if ( conshdlrdata->sepaAlternativeLP )
    {
       /* generate hash for storing all slack variables (size is just a guess) */
@@ -2686,7 +2694,9 @@ static
 SCIP_DECL_CONSCHECK(consCheckIndicator)
 {  /*lint --e{715}*/
    int c;
-
+   SCIP_SOL* trysol = NULL;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+      
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
@@ -2695,12 +2705,24 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
 
    SCIPdebugMessage("Checking %d indicator constraints <%s>.\n", nconss, SCIPconshdlrGetName(conshdlr) );
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* copy solution if it makes sense */
+   if ( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && conshdlrdata->trySolutions )
+   {
+      assert( conshdlrdata->heurTrySol != NULL );
+      SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
+      SCIP_CALL( SCIPunlinkSol(scip, trysol) );
+      assert( trysol != NULL );
+   }
+
    /* check each constraint */
+   *result = SCIP_FEASIBLE;
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
 
-      *result = SCIP_DIDNOTFIND;
       assert( conss[c] != NULL );
       consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
@@ -2722,11 +2744,24 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
                SCIPvarGetName(consdata->slackvar), SCIPgetSolVal(scip, sol, consdata->slackvar));
          }
 
-	 return SCIP_OKAY;
+	 /* try to make solution feasible if it makes sense - otherwise exit */
+	 if ( trysol != NULL )
+	    SCIP_CALL( SCIPmakeIndicatorFeasible(scip, conss[c], trysol) );
+	 else
+	    return SCIP_OKAY;
       }
    }
-   *result = SCIP_FEASIBLE;
+   if ( trysol != NULL && *result == SCIP_INFEASIBLE )
+   {
+      SCIPpassSolToTrySol(scip, conshdlrdata->heurTrySol, trysol);
+      SCIP_CALL( SCIPfreeSol(scip, &trysol) );
 
+      return SCIP_OKAY;
+   }
+   if ( trysol != NULL )
+      SCIP_CALL( SCIPfreeSol(scip, &trysol) );
+
+   /* at this point we are feasible */
    SCIPdebugMessage("Indicator constraints are feasible.\n");
 
    return SCIP_OKAY;
@@ -3117,27 +3152,32 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/branchIndicators",
          "Branch on indicator constraints in enforcing?",
-         &conshdlrdata->branchIndicators, TRUE, BRANCHINDICATORS, NULL, NULL) );
+         &conshdlrdata->branchIndicators, TRUE, DEFAULT_BRANCHINDICATORS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/genLogicor",
          "Generate logicor constraints instead of cuts?",
-         &conshdlrdata->genLogicor, TRUE, GENLOGICOR, NULL, NULL) );
+         &conshdlrdata->genLogicor, TRUE, DEFAULT_GENLOGICOR, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/sepaAlternativeLP",
          "Separate using the alternative LP?",
-         &conshdlrdata->sepaAlternativeLP, TRUE, SEPAALTERNATIVELP, NULL, NULL) );
+         &conshdlrdata->sepaAlternativeLP, TRUE, DEFAULT_SEPAALTERNATIVELP, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/addCoupling",
          "add initial coupling inequalities",
-         &conshdlrdata->addCoupling, TRUE, ADDCOUPLING, NULL, NULL) );
+         &conshdlrdata->addCoupling, TRUE, DEFAULT_ADDCOUPLING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/updateBounds",
          "Update bounds of original variables for separation?",
-         &conshdlrdata->updateBounds, TRUE, UPDATEBOUNDS, NULL, NULL) );
+         &conshdlrdata->updateBounds, TRUE, DEFAULT_UPDATEBOUNDS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/indicator/trySolutions",
+         "Try to make solutions feasible by setting indicator variables?",
+         &conshdlrdata->trySolutions, TRUE, DEFAULT_TRYSOLUTIONS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
