@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.96 2009/09/08 20:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.97 2009/09/09 17:10:24 bzfgamra Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -428,8 +428,6 @@ SCIP_RETCODE SCIPhashtableCreate(
    void*                 userptr             /**< user pointer */
    )
 {
-   int i;
-
    assert(hashtable != NULL);
    assert(tablesize > 0);
    assert(hashgetkey != NULL);
@@ -445,9 +443,7 @@ SCIP_RETCODE SCIPhashtableCreate(
    (*hashtable)->hashkeyval = hashkeyval;
    (*hashtable)->userptr = userptr;
 
-   /* initialize hash lists */
-   for( i = 0; i < tablesize; ++i )
-      (*hashtable)->lists[i] = NULL;
+   BMSclearMemoryArray((*hashtable)->lists, tablesize);
 
    return SCIP_OKAY;
 }
@@ -458,16 +454,23 @@ void SCIPhashtableFree(
    )
 {
    int i;
+   SCIP_HASHTABLE* table;
+   BMS_BLKMEM* blkmem;
+   SCIP_HASHTABLELIST** lists;
 
    assert(hashtable != NULL);
    assert(*hashtable != NULL);
 
+   table = (*hashtable);
+   blkmem = table->blkmem;
+   lists = table->lists;
+
    /* free hash lists */
-   for( i = 0; i < (*hashtable)->nlists; ++i )
-      hashtablelistFree(&(*hashtable)->lists[i], (*hashtable)->blkmem);
+   for( i = table->nlists - 1; i >= 0; --i )
+      hashtablelistFree(&lists[i], blkmem);
 
    /* free main hast table data structure */
-   BMSfreeMemoryArray(&(*hashtable)->lists);
+   BMSfreeMemoryArray(&table->lists);
    BMSfreeMemory(hashtable);
 }
 
