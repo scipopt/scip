@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.25 2009/09/04 15:58:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.26 2009/09/09 13:29:00 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2120,7 +2120,8 @@ SCIP_RETCODE parseConstraint(
       
       token = SCIPstrtok(NULL, "_", &nexttoken);
    }
-   
+
+   assert(tokens[0] != NULL);
    SCIPdebugMessage("%s", tokens[0]);
    for( i = 1; i < ntokens; ++i )
    {
