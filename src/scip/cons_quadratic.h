@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.9 2009/09/03 18:48:43 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.10 2009/09/09 13:58:27 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -98,16 +98,16 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   n_linvar,           /**< number of linear terms (n) */
+   int                   nlinvar,            /**< number of linear terms (n) */
    SCIP_VAR**            linvar,             /**< variables in linear part (x_i) */ 
    SCIP_Real*            lincoeff,           /**< coefficients of variables in linear part (b_i) */ 
-   int                   n_quadvar,          /**< number of quadratic terms (m) */
+   int                   nquadvar,           /**< number of quadratic terms (m) */
    SCIP_VAR**            quadvar,            /**< variables in quadratic terms (y_j) */
    SCIP_Real*            quadlincoeff,       /**< linear coefficients of quadratic variables (b_j) */
    SCIP_Real*            quadsqrcoeff,       /**< coefficients of square terms of quadratic variables (a_j) */
    int*                  n_adjbilin,         /**< number of bilinear terms where the variable is involved */
    int**                 adjbilin,           /**< indices of bilinear terms in which variable is involved */
-   int                   n_bilin,            /**< number of bilinear terms (p) */
+   int                   nbilin,             /**< number of bilinear terms (p) */
    SCIP_VAR**            bilinvar1,          /**< first variable in bilinear term (v_k) */
    SCIP_VAR**            bilinvar2,          /**< second variable in bilinear term (w_k) */
    SCIP_Real*            bilincoeff,         /**< coefficient of bilinear term (c_k) */
@@ -242,12 +242,12 @@ SCIP_Real SCIPgetRhsQuadratic(
  */
 extern
 SCIP_RETCODE SCIPconsInitNlpiQuadratic(
-   SCIP*           scip,        /**< SCIP data structure */
-   SCIP_CONSHDLR*  conshdlr,    /**< constraint handler for quadratic constraints */
-   SCIP_NLPI*      nlpi,        /**< NLPI where to add constraints */
-   int             nconss,      /**< number of constraints */
-   SCIP_CONS**     conss,       /**< quadratic constraints */
-   SCIP_HASHMAP*   var_scip2nlp /**< mapping from SCIP variables to variable indices in NLPI */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for quadratic constraints */
+   SCIP_NLPI*            nlpi,               /**< NLPI where to add constraints */
+   int                   nconss,             /**< number of constraints */
+   SCIP_CONS**           conss,              /**< quadratic constraints */
+   SCIP_HASHMAP*         var_scip2nlp        /**< mapping from SCIP variables to variable indices in NLPI */
    );
 
 #ifdef __cplusplus
