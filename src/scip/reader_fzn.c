@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.28 2009/09/10 17:19:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.29 2009/09/10 19:11:39 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2045,6 +2045,19 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    return SCIP_OKAY;
 }
    
+/* function pointer array containing all function which can create a constraint */
+static CREATE_CONSTRAINT((*constypes[])) =  {
+   createCoercionOpCons,
+   createSetOpCons,
+   createLogicalOpCons,
+   createArrayOpCons,
+   createComparisonOpCons,
+};
+
+/** size of the function pointer array */
+static int nconstypes = 5;
+
+
 /** parse constraint expression */
 static
 SCIP_RETCODE parseConstraint(
@@ -2052,16 +2065,6 @@ SCIP_RETCODE parseConstraint(
    FZNINPUT*             fzninput            /**< FZN reading data */
    )
 {
-   /* function pointer array containing all function which can create a constraint */
-   CREATE_CONSTRAINT((*constypes[])) =  {
-      createCoercionOpCons,
-      createSetOpCons,
-      createLogicalOpCons,
-      createArrayOpCons,
-      createComparisonOpCons,
-   };
-   int nconstypes = 5;
-
    SCIP_VAR* var;
    char* tokens[4];
    char* token;
