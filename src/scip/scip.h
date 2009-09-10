@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.350 2009/09/09 15:29:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.351 2009/09/10 17:19:36 bzfberth Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -2793,8 +2793,6 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/* begin ????????????????????? */
-
 /** returns the variable's conflict length score */
 extern
 SCIP_Real SCIPgetVarConflictlengthScore(
@@ -2824,8 +2822,6 @@ SCIP_Real SCIPgetVarAvgConflictlengthCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
-
-/* end ????????????????????????? */
 
 /** returns the average number of inferences found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of inferences

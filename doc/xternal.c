@@ -4217,18 +4217,34 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page CHG3 Interface changes between SCIP 1.1 and SCIP 1.2
  *
- * - The most significant change in SCIP for C++ users is that all include files of SCIP
- *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
+ *
+ *  @section CHGCALLBACKS New and changed callbacks
  *
  * - The callback SCIP_DECL_PRICERREDCOST(x) in the \ref PRICER "pricers" has two new parameters: 
  *    - A <code>result</code> pointer determines whether the pricer guarantees that there exist no more variables. This allows for early branching.
  *    - A pointer for providing a lower bound. 
  *
- * - The \ref CONS "contraint handlers" have two new callback methods (see type_cons.h for more details).
+ * - The \ref CONS "constraint handlers" have two new callback methods (see type_cons.h for more details).
  *    - SCIP_DECL_CONSCOPY(x) - this method can be used to copy a constraint.
  *    - SCIP_DECL_CONSPARSE(x) - this method can be used to parse a constraint in CIP format.
  *
- * - SCIP now has "lazy bounds", which are usefull for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
+ *  @section CHGINTERFUNC New parameters in interface methods
+ *
+ * - SCIPcalcMIR() in scip.h has two new parameter "mksetcoefsvalid" and "sol". The parameter "mksetcoefsvalid" stores 
+ *   whether the coefficients of the mixed knapsack set ("mksetcoefs") computed in SCIPlpCalcMIR() are valid. If the mixed knapsack constraint obtained after aggregating LP rows 
+ *   is empty or contains too many nonzero elements the generation of the <b>c-MIR cut</b> is aborted in SCIPlpCalcMIR() and "mksetcoefs" is not valid. 
+ *   The input parameter "sol" can be used to separate a solution different from the LP solution.
+ *
+ * - SCIPgetVarClosestVlb() and SCIPgetVarClosestVub() in scip.h have a new parameter "sol". It can be used to obtain the <b>closest variable bound</b> w.r.t. a solution different from the LP solution.
+ *
+ *  @section MISCELLANEOUS Miscellaneous
+ *
+ * - A significant change for <b>C++ users</b> is that all include files of SCIP
+ *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
+ * 
+ */
+
+/* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
  *
  * - SCIP has rudimentary support to solve quadratic nonlinear integer programs - see cons_quadratic.c.
  *

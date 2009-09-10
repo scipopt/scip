@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.521 2009/09/04 15:40:17 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.522 2009/09/10 17:19:35 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8577,8 +8577,6 @@ SCIP_Real SCIPgetVarConflictScoreCurrentRun(
    return SCIPbranchGetScore(scip->set, var, downscore, upscore);
 }
 
-/* begin ????????????????????? */
-
 /** returns the variable's conflict length score */
 SCIP_Real SCIPgetVarConflictlengthScore(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8636,8 +8634,6 @@ SCIP_Real SCIPgetVarAvgConflictlengthCurrentRun(
 
    return SCIPvarGetAvgConflictlengthCurrentRun(var, dir);
 }
-
-/* end ????????????????????????? */
 
 /** returns the average number of inferences found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of inferences
@@ -14294,8 +14290,6 @@ SCIP_Real SCIPgetAvgInferencesCurrentRun(
    return SCIPhistoryGetAvgInferences(scip->stat->glbhistorycrun, dir);
 }
 
-/* begin ????????????????????????????????? */
-
 /** gets the average inference score value over all variables */
 SCIP_Real SCIPgetAvgConflictlengthScore(
    SCIP*                 scip                /**< SCIP data structure */
@@ -14327,8 +14321,6 @@ SCIP_Real SCIPgetAvgConflictlengthScoreCurrentRun(
 
    return SCIPbranchGetScore(scip->set, NULL, conflictlengthdown, conflictlengthup);
 }
-
-/* end ????????????????????????????????? */
 
 /** gets the average inference score value over all variables */
 SCIP_Real SCIPgetAvgInferenceScore(
