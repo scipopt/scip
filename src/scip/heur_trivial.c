@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.4 2009/09/10 10:01:35 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.5 2009/09/10 21:12:40 bzfheinz Exp $"
 
 /**@file   heur_trivial.c
  * @ingroup PRIMALHEURISTICS
@@ -90,7 +90,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, NULL, NULL, NULL) );
 
-   /* if the problem is binary, we do not have to check the zero solution, since it is equal to the lower bound solution */
+   /* if the problem is binary, we do not have to check the zero solution, since it is equal to the lower bound
+    * solution */
    zerovalid = (nvars != nbinvars);   
    assert(vars != NULL || nvars == 0);
 
@@ -98,7 +99,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
    {
       SCIP_Real lb;
       SCIP_Real ub;
-
+      
+      assert(vars != NULL); /* this assert is needed for flexelint */
+      
       lb = SCIPvarGetLbLocal(vars[i]);
       ub = SCIPvarGetUbLocal(vars[i]);
 
