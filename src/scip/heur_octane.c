@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.26 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.27 2009/09/10 10:01:35 bzfwinkm Exp $"
 
 /**@file   heur_octane.c
  * @ingroup PRIMALHEURISTICS
@@ -476,7 +476,7 @@ void generateNeighborFacets(
 
    /* facet (- - ... -) cannot be hit, because raydirection >= 0 */
    assert(minplus >= 0);
-
+   assert(q != 0.0);
    assert(SCIPisFeasEQ(scip, lambda[i], p/q));
    assert(lambda[i] >= 0.0);
 

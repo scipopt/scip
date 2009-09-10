@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.24 2009/07/31 10:16:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.25 2009/09/10 10:01:36 bzfwinkm Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -1065,8 +1065,8 @@ SCIP_Bool isIntegralScalar(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = floor(sval);
+   upval = ceil(sval);
 
    return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
 }
@@ -1091,8 +1091,8 @@ SCIP_Longint getIntegralVal(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = floor(sval);
+   upval = ceil(sval);
 
    if( SCIPrelDiff(sval, upval) >= mindelta )
       intval = (SCIP_Longint) upval;
@@ -2213,8 +2213,11 @@ SCIP_RETCODE cutGenerationHeuristic(
    /* delta found */
    if( SCIPisEfficacious(scip, bestefficacy) )
    {
-      SCIP_Real onedivbestdelta = 1.0 / bestdelta;
+      SCIP_Real onedivbestdelta;
       int i;
+
+      assert(bestdelta != 0.0);
+      onedivbestdelta = 1.0 / bestdelta;
 
       /* for best value of delta: get L1 subset of N1\C1 and L2 subset of N2\C2 by comparison */
       getL1L2(scip, ntransvars, transvarcoefs, transbinvarsolvals, transcontvarsolvals, transvarvubcoefs, 

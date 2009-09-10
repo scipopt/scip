@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.327 2009/09/09 15:29:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.328 2009/09/10 10:01:35 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -3279,8 +3279,8 @@ SCIP_Bool isIntegralScalar(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = floor(sval);
+   upval = ceil(sval);
    
    if( SCIPrelDiff(sval, downval) <= maxdelta )
    {
@@ -13851,9 +13851,7 @@ SCIP_RETCODE SCIPlpWriteMip(
       }
    }
    if( origobj && objoffset != 0.0 )
-   {   
       SCIPmessageFPrintInfo(file," objoffset = 1");
-   }
 
    /* print integer variables */
    SCIPmessageFPrintInfo(file,"\n\nGenerals\n ");

@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_coloring.c,v 1.7 2009/09/08 20:41:31 bzfberth Exp $"
+#pragma ident "@(#) $Id: tclique_coloring.c,v 1.8 2009/09/10 10:01:36 bzfwinkm Exp $"
 
 /**@file   tclique_coloring.c
  * @brief  coloring part of algorithm for maximum cliques
@@ -334,8 +334,6 @@ TCLIQUE_WEIGHT tcliqueColoring(
 
    /* set up data structures for the current clique */
    ALLOC_ABORT( BMSallocMemoryArray(&currentclique, nV) );
-   ncurrentclique = 0;
-   weightcurrentclique = 0;
    workclique = clique;
 
    /* add node to the current clique */ 

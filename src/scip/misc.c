@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.97 2009/09/09 17:10:24 bzfgamra Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.98 2009/09/10 10:01:36 bzfwinkm Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3084,38 +3084,59 @@ SCIP_Longint SCIPcalcGreComDiv(
    SCIP_Longint          val2                /**< second value of greatest common devisor calculation */
    )
 {
-   SCIP_Longint t;
-   SCIP_Longint gcd;
+   int t;
 
    assert(val1 > 0);
    assert(val2 > 0);
-
-   /* extract all prime factors 2 */
-   gcd = 1;
-   while( !(val1 & 1) && !(val2 & 1) )
+   
+   t = 0;
+   /* if val1 is even, divide it by 2 */
+   while( !(val1 & 1) )
    {
-      val1 /= 2;
-      val2 /= 2;
-      gcd *= 2;
-   }
-
-   t = val1 & 1 ? -val2 : val1;
-   do
-   {
-      while( !(t & 1) )
-         t /= 2;
-
-      if( t > 0 )
-         val1 = t;
+      val1 >>= 1;
+      
+      /* if val2 is even too, divide it by 2 and increase t(=number of e */
+      if( !(val2 & 1) )
+      {
+         val2 >>= 1;
+         ++t;
+      }
+      /* only val1 can be odd */
       else
-         val2 = -t;
-
-      t = val1 - val2;
+      {
+         /* while val1 is even, divide it by 2 */
+         while( !(val1 & 1) )
+            val1 >>= 1;
+         
+         break;
+      }
    }
-   while( t != 0 );
-   gcd *= val1;
+   /* while val2 is even, divide it by 2 */
+   while( !(val2 & 1) )
+      val2 >>= 1;
+   
+   /* val1 and val 2 are odd */
+   while (val1 != val2)
+      if (val1 > val2)
+      {
+         val1 -= val2;
+         /* val1 is now even, divide it by 2  */
+         do 
+         {
+            val1 >>= 1;
+         } while ( !(val1 & 1) );
+      }
+      else 
+      {
+         val2 -= val1;
+         /* val2 is now even, divide it by 2  */
+         do 
+         {
+            val2 >>= 1;
+         } while ( !(val2 & 1) );
+      }
 
-   return gcd;
+   return (val1 << t);
 }
 
 /** calculates the smallest common multiple of the two given values */
@@ -3181,7 +3202,7 @@ SCIP_Bool SCIPrealToRational(
       dnom = simplednoms[i];
       while( dnom <= maxdnom )
       {
-         nom = EPSFLOOR(val * dnom, 0.0);
+         nom = floor(val * dnom);
          ratval0 = nom/dnom;
          ratval1 = (nom+1.0)/dnom;
          if( mindelta <= val - ratval0 && val - ratval1 <= maxdelta )
@@ -3287,8 +3308,8 @@ SCIP_Bool isIntegralScalar(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = floor(sval);
+   upval = ceil(sval);
 
    return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
 }

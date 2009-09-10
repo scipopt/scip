@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.54 2009/09/04 09:28:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.55 2009/09/10 10:01:36 bzfwinkm Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -1899,9 +1899,6 @@ SCIP_RETCODE paramsetParse(
 
    assert(paramset != NULL);
    assert(line != NULL);
-
-   paramname = NULL;
-   paramvaluestr = NULL;
 
    /* find the start of the parameter name */
    while( *line == ' ' || *line == '\t' || *line == '\r' )

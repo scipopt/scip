@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.46 2009/09/09 17:42:57 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.47 2009/09/10 10:01:35 bzfwinkm Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -1774,7 +1774,7 @@ SCIP_RETCODE enforceIndicators(
    for (c = 0; c < nconss; ++c)
    {
       SCIP_Bool cutoff;
-      SCIP_Real valSlack = 0.0;
+      SCIP_Real valSlack;
       int cnt = 0;
 
       assert( conss[c] != NULL );
@@ -1903,7 +1903,7 @@ SCIP_RETCODE separateIISRounding(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;
    int rounds = 0;
-   SCIP_Real threshold = 0.0;
+   SCIP_Real threshold;
    SCIP_Bool* S;
    int nGenOld;
 
@@ -2322,8 +2322,8 @@ static
 SCIP_DECL_CONSPRESOL(consPresolIndicator)
 {  /*lint --e{715}*/
    int c;
-   int oldnfixedvars = 0;
-   int oldndelconss = 0;
+   int oldnfixedvars;
+   int oldndelconss;
    int removedvars = 0;
    SCIP_EVENTHDLR* eventhdlr;
 

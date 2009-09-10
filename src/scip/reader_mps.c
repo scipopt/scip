@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.114 2009/09/04 15:58:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.115 2009/09/10 10:01:36 bzfwinkm Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -397,14 +397,14 @@ void patchField(
 {
    int i;
 
-   while((beg <= end) && (buf[end] == BLANK))
+   while( (beg <= end) && (buf[end] == BLANK) )
       end--;
 
-   while((beg <= end) && (buf[beg] == BLANK))
+   while( (beg <= end) && (buf[beg] == BLANK) )
       beg++;
 
-   for(i = beg; i <= end; i++)
-      if (buf[i] == BLANK)
+   for( i = beg; i <= end; i++ )
+      if( buf[i] == BLANK )
          buf[i] = PATCH_CHAR;
 }
 
@@ -422,13 +422,10 @@ SCIP_Bool mpsinputReadLine(
    SCIP_Bool is_empty;
    char* nexttok;
 
-
-
    do
    {
       mpsi->f0 = mpsi->f1 = mpsi->f2 = mpsi->f3 = mpsi->f4 = mpsi->f5 = 0;
       is_marker = FALSE;
-      is_empty = FALSE;
 
       /* Read until we have a not comment line. */
       do
@@ -438,16 +435,16 @@ SCIP_Bool mpsinputReadLine(
             return FALSE;
          mpsi->lineno++;
       }
-      while(*mpsi->buf == '*');
+      while( *mpsi->buf == '*' );
 
       /* Normalize line */
       len = strlen(mpsi->buf);
 
-      for(i = 0; i < len; i++)
-         if ((mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r'))
+      for( i = 0; i < len; i++ )
+         if( (mpsi->buf[i] == '\t') || (mpsi->buf[i] == '\n') || (mpsi->buf[i] == '\r') )
             mpsi->buf[i] = BLANK;
 
-      if (len < 80)
+      if( len < 80 )
          clearFrom(mpsi->buf, len);
 
       SCIPdebugMessage("line %d: <%s>\n", mpsi->lineno, mpsi->buf);
@@ -455,7 +452,7 @@ SCIP_Bool mpsinputReadLine(
       assert(strlen(mpsi->buf) >= 80);
 
       /* Look for new section */
-      if (*mpsi->buf != BLANK)
+      if( *mpsi->buf != BLANK )
       {
          mpsi->f0 = SCIPstrtok(&mpsi->buf[0], " ", &nexttok);
 
@@ -467,12 +464,12 @@ SCIP_Bool mpsinputReadLine(
       }
 
       /* If we decide to use the new format we never revert this decision */
-      if (!mpsi->isnewformat)
+      if( !mpsi->isnewformat )
       {
          /* Test for fixed format comments */
-         if ((mpsi->buf[14] == '$') && (mpsi->buf[13] == ' '))
+         if( (mpsi->buf[14] == '$') && (mpsi->buf[13] == ' ') )
             clearFrom(mpsi->buf, 14);
-         else if ((mpsi->buf[39] == '$') && (mpsi->buf[38] == ' '))
+         else if( (mpsi->buf[39] == '$') && (mpsi->buf[38] == ' ') )
             clearFrom(mpsi->buf, 39);
 
          /* Test for fixed format */
@@ -488,7 +485,9 @@ SCIP_Bool mpsinputReadLine(
              * But are there also the non space where they
              * should be ?
              */
-            SCIP_Bool number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25])
+            SCIP_Bool number;
+            
+            number = isdigit(mpsi->buf[24]) || isdigit(mpsi->buf[25])
                || isdigit(mpsi->buf[26]) || isdigit(mpsi->buf[27])
                || isdigit(mpsi->buf[28]) || isdigit(mpsi->buf[29])
                || isdigit(mpsi->buf[30]) || isdigit(mpsi->buf[31])
@@ -498,7 +497,7 @@ SCIP_Bool mpsinputReadLine(
             /* len < 13 is handle ROW lines with embedded spaces
              * in the names correctly
              */
-            if (number || len < 13)
+            if( number || len < 13 )
             {
                /* We assume fixed format, so we patch possible embedded spaces. */
                patchField(mpsi->buf,  4, 12);
@@ -507,8 +506,8 @@ SCIP_Bool mpsinputReadLine(
             }
             else
             {
-               if (  mpsi->section == MPS_COLUMNS || mpsi->section == MPS_RHS
-                  || mpsi->section == MPS_RANGES  || mpsi->section == MPS_BOUNDS)
+               if( mpsi->section == MPS_COLUMNS || mpsi->section == MPS_RHS
+                  || mpsi->section == MPS_RANGES  || mpsi->section == MPS_BOUNDS )
                   mpsi->isnewformat = TRUE;
             }
          }
@@ -530,57 +529,57 @@ SCIP_Bool mpsinputReadLine(
        */
       do
       {
-         if (NULL == (mpsi->f1 = SCIPstrtok(s, " ", &nexttok)))
+         if( NULL == (mpsi->f1 = SCIPstrtok(s, " ", &nexttok)) )
             break;
 
-         if ((NULL == (mpsi->f2 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f2 == '$'))
+         if( (NULL == (mpsi->f2 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f2 == '$') )
          {
             mpsi->f2 = 0;
             break;
          }
-         if (!strcmp(mpsi->f2, "'MARKER'"))
+         if( !strcmp(mpsi->f2, "'MARKER'") )
             is_marker = TRUE;
 
-         if ((NULL == (mpsi->f3 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f3 == '$'))
+         if( (NULL == (mpsi->f3 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f3 == '$') )
          {
             mpsi->f3 = 0;
             break;
          }
-         if (is_marker)
+         if( is_marker )
          {
-            if (!strcmp(mpsi->f3, "'INTORG'"))
+            if( !strcmp(mpsi->f3, "'INTORG'") )
                mpsi->isinteger = TRUE;
-            else if (!strcmp(mpsi->f3, "'INTEND'"))
+            else if( !strcmp(mpsi->f3, "'INTEND'") )
                mpsi->isinteger = FALSE;
             else
                break; /* unknown marker */
          }
-         if (!strcmp(mpsi->f3, "'MARKER'"))
+         if( !strcmp(mpsi->f3, "'MARKER'") )
             is_marker = TRUE;
 
-         if ((NULL == (mpsi->f4 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f4 == '$'))
+         if( (NULL == (mpsi->f4 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f4 == '$') )
          {
             mpsi->f4 = 0;
             break;
          }
-         if (is_marker)
+         if( is_marker )
          {
-            if (!strcmp(mpsi->f4, "'INTORG'"))
+            if( !strcmp(mpsi->f4, "'INTORG'") )
                mpsi->isinteger = TRUE;
-            else if (!strcmp(mpsi->f4, "'INTEND'"))
+            else if( !strcmp(mpsi->f4, "'INTEND'") )
                mpsi->isinteger = FALSE;
             else
                break; /* unknown marker */
          }
-         if ((NULL == (mpsi->f5 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f5 == '$'))
+         if( (NULL == (mpsi->f5 = SCIPstrtok(NULL, " ", &nexttok))) || (*mpsi->f5 == '$') )
             mpsi->f5 = 0;
       }
-      while(FALSE);
+      while( FALSE );
 
       /* check for empty lines */
       is_empty = (mpsi->f0 == NULL && mpsi->f1 == NULL);
    }
-   while(is_marker || is_empty);
+   while( is_marker || is_empty );
 
    return TRUE;
 }
@@ -600,7 +599,7 @@ void mpsinputInsertName(
    mpsi->f4 = mpsi->f3;
    mpsi->f3 = mpsi->f2;
 
-   if (second)
+   if( second )
       mpsi->f2 = name;
    else
    {
@@ -620,7 +619,7 @@ SCIP_RETCODE readName(
    SCIPdebugMessage("read problem name\n");
 
    /* This has to be the Line with the NAME section. */
-   if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL || strcmp(mpsinputField0(mpsi), "NAME"))
+   if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL || strcmp(mpsinputField0(mpsi), "NAME") )
    {
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
@@ -630,21 +629,21 @@ SCIP_RETCODE readName(
    mpsinputSetProbname(mpsi, (mpsinputField1(mpsi) == 0) ? "_MPS_" : mpsinputField1(mpsi));
 
    /* This hat to be a new section */
-   if (!mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL))
+   if( !mpsinputReadLine(mpsi) || (mpsinputField0(mpsi) == NULL) )
    {
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
-   if (!strncmp(mpsinputField0(mpsi), "ROWS", 4))
+   if( !strncmp(mpsinputField0(mpsi), "ROWS", 4) )
       mpsinputSetSection(mpsi, MPS_ROWS);
-   else if (!strncmp(mpsinputField0(mpsi), "USERCUTS", 8))
+   else if( !strncmp(mpsinputField0(mpsi), "USERCUTS", 8) )
       mpsinputSetSection(mpsi, MPS_USERCUTS);
-   else if (!strncmp(mpsinputField0(mpsi), "LAZYCONS", 8))
+   else if( !strncmp(mpsinputField0(mpsi), "LAZYCONS", 8) )
       mpsinputSetSection(mpsi, MPS_LAZYCONS);
-   else if (!strncmp(mpsinputField0(mpsi), "OBJSEN", 6))
+   else if( !strncmp(mpsinputField0(mpsi), "OBJSEN", 6) )
       mpsinputSetSection(mpsi, MPS_OBJSEN);
-   else if (!strncmp(mpsinputField0(mpsi), "OBJNAME", 7))
+   else if( !strncmp(mpsinputField0(mpsi), "OBJNAME", 7) )
       mpsinputSetSection(mpsi, MPS_OBJNAME);
    else
    {
@@ -666,15 +665,15 @@ SCIP_RETCODE readObjsen(
    SCIPdebugMessage("read objective sense\n");
 
    /* This has to be the Line with MIN or MAX. */
-   if (!mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL))
+   if( !mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL) )
    {
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
-   if (!strncmp(mpsinputField1(mpsi), "MIN", 3))
+   if( !strncmp(mpsinputField1(mpsi), "MIN", 3) )
       mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MINIMIZE);
-   else if (!strncmp(mpsinputField1(mpsi), "MAX", 3))
+   else if( !strncmp(mpsinputField1(mpsi), "MAX", 3) )
       mpsinputSetObjsense(mpsi, SCIP_OBJSENSE_MAXIMIZE);
    else
    {
@@ -683,19 +682,19 @@ SCIP_RETCODE readObjsen(
    }
 
    /* Look for ROWS, USERCUTS, LAZYCONS, or OBJNAME Section */
-   if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
+   if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL )
    {
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
 
-   if (!strcmp(mpsinputField0(mpsi), "ROWS"))
+   if( !strcmp(mpsinputField0(mpsi), "ROWS") )
       mpsinputSetSection(mpsi, MPS_ROWS);
-   else if (!strcmp(mpsinputField0(mpsi), "USERCUTS"))
+   else if( !strcmp(mpsinputField0(mpsi), "USERCUTS") )
       mpsinputSetSection(mpsi, MPS_USERCUTS);
-   else if (!strcmp(mpsinputField0(mpsi), "LAZYCONS"))
+   else if( !strcmp(mpsinputField0(mpsi), "LAZYCONS") )
       mpsinputSetSection(mpsi, MPS_LAZYCONS);
-   else if (!strcmp(mpsinputField0(mpsi), "OBJNAME"))
+   else if( !strcmp(mpsinputField0(mpsi), "OBJNAME") )
       mpsinputSetSection(mpsi, MPS_OBJNAME);
    else
    {
@@ -717,7 +716,7 @@ SCIP_RETCODE readObjname(
    SCIPdebugMessage("read objective name\n");
    
    /* This has to be the Line with the name. */
-   if (!mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL)
+   if( !mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL )
    {
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
@@ -726,16 +725,16 @@ SCIP_RETCODE readObjname(
    mpsinputSetObjname(mpsi, mpsinputField1(mpsi));
 
    /* Look for ROWS, USERCUTS, or LAZYCONS Section */
-   if (!mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL)
+   if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL )
    {
       mpsinputSyntaxerror(mpsi);
       return SCIP_OKAY;
    }
-   if (!strcmp(mpsinputField0(mpsi), "ROWS"))
+   if( !strcmp(mpsinputField0(mpsi), "ROWS") )
       mpsinputSetSection(mpsi, MPS_ROWS);
-   else if (!strcmp(mpsinputField0(mpsi), "USERCUTS"))
+   else if( !strcmp(mpsinputField0(mpsi), "USERCUTS") )
       mpsinputSetSection(mpsi, MPS_USERCUTS);
-   else if (!strcmp(mpsinputField0(mpsi), "LAZYCONS"))
+   else if( !strcmp(mpsinputField0(mpsi), "LAZYCONS") )
       mpsinputSetSection(mpsi, MPS_LAZYCONS);
    else
       mpsinputSyntaxerror(mpsi);
@@ -753,17 +752,17 @@ SCIP_RETCODE readRows(
 
    SCIPdebugMessage("read rows\n");
 
-   while(mpsinputReadLine(mpsi))
+   while( mpsinputReadLine(mpsi) )
    {
-      if (mpsinputField0(mpsi) != NULL)
+      if( mpsinputField0(mpsi) != NULL )
       {
-         if (!strcmp(mpsinputField0(mpsi), "ROWS"))
+         if( !strcmp(mpsinputField0(mpsi), "ROWS") )
             mpsinputSetSection(mpsi, MPS_ROWS);
-         else if (!strcmp(mpsinputField0(mpsi), "USERCUTS"))
+         else if( !strcmp(mpsinputField0(mpsi), "USERCUTS") )
             mpsinputSetSection(mpsi, MPS_USERCUTS);
-         else if (!strcmp(mpsinputField0(mpsi), "LAZYCONS"))
+         else if( !strcmp(mpsinputField0(mpsi), "LAZYCONS") )
             mpsinputSetSection(mpsi, MPS_LAZYCONS);
-         else if (!strcmp(mpsinputField0(mpsi), "COLUMNS"))
+         else if( !strcmp(mpsinputField0(mpsi), "COLUMNS") )
             mpsinputSetSection(mpsi, MPS_COLUMNS);
          else
             mpsinputSyntaxerror(mpsi);
@@ -771,9 +770,9 @@ SCIP_RETCODE readRows(
          return SCIP_OKAY;
       }
 
-      if (*mpsinputField1(mpsi) == 'N')
+      if( *mpsinputField1(mpsi) == 'N' )
       {
-         if (*mpsinputObjname(mpsi) == '\0')
+         if( *mpsinputObjname(mpsi) == '\0' )
             mpsinputSetObjname(mpsi, mpsinputField2(mpsi));
          else
             mpsinputEntryIgnored(scip, mpsi, "row", mpsinputField2(mpsi), "objective function", "N", SCIP_VERBLEVEL_NORMAL);
@@ -851,11 +850,11 @@ SCIP_RETCODE readCols(
    SCIPdebugMessage("read columns\n");
 
    var = NULL;
-   while(mpsinputReadLine(mpsi))
+   while( mpsinputReadLine(mpsi) )
    {
-      if (mpsinputField0(mpsi) != 0)
+      if( mpsinputField0(mpsi) != 0 )
       {
-         if (strcmp(mpsinputField0(mpsi), "RHS"))
+         if( strcmp(mpsinputField0(mpsi), "RHS") )
             break;
 
          /* add the last variable to the problem */
@@ -869,11 +868,11 @@ SCIP_RETCODE readCols(
          mpsinputSetSection(mpsi, MPS_RHS);
          return SCIP_OKAY;
       }
-      if (mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL)
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
          break;
 
       /* new column? */
-      if (strcmp(colname, mpsinputField1(mpsi)))
+      if( strcmp(colname, mpsinputField1(mpsi)) )
       {
          SCIP_Bool dynamiccols;
 
@@ -906,7 +905,7 @@ SCIP_RETCODE readCols(
 
       val = atof(mpsinputField3(mpsi));
 
-      if (!strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)))
+      if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
       {
          SCIP_CALL( SCIPchgVarObj(scip, var, val) );
       }
@@ -920,13 +919,13 @@ SCIP_RETCODE readCols(
             SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
          }
       }
-      if (mpsinputField5(mpsi) != NULL)
+      if( mpsinputField5(mpsi) != NULL )
       {
          assert(mpsinputField4(mpsi) != NULL);
 
          val = atof(mpsinputField5(mpsi));
 
-         if (!strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)))
+         if( !strcmp(mpsinputField4(mpsi), mpsinputObjname(mpsi)) )
          {
             SCIP_CALL( SCIPchgVarObj(scip, var, val) );
          }
@@ -962,33 +961,33 @@ SCIP_RETCODE readRhs(
 
    SCIPdebugMessage("read right hand sides\n");
 
-   while(mpsinputReadLine(mpsi))
+   while( mpsinputReadLine(mpsi) )
    {
-      if (mpsinputField0(mpsi) != NULL)
+      if( mpsinputField0(mpsi) != NULL )
       {
-         if (!strcmp(mpsinputField0(mpsi), "RANGES"))
+         if( !strcmp(mpsinputField0(mpsi), "RANGES") )
             mpsinputSetSection(mpsi, MPS_RANGES);
-         else if (!strcmp(mpsinputField0(mpsi), "BOUNDS"))
+         else if( !strcmp(mpsinputField0(mpsi), "BOUNDS") )
             mpsinputSetSection(mpsi, MPS_BOUNDS);
-         else if (!strcmp(mpsinputField0(mpsi), "SOS"))
+         else if( !strcmp(mpsinputField0(mpsi), "SOS") )
             mpsinputSetSection(mpsi, MPS_SOS);
-         else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
+         else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
             break;
          return SCIP_OKAY;
       }
-      if ((mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
-         || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL))
+      if( (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
+         || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL) )
          mpsinputInsertName(mpsi, "_RHS_", FALSE);
 
-      if (mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL)
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
          break;
 
-      if (*rhsname == '\0')
+      if( *rhsname == '\0' )
          (void)strncpy(rhsname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
 
-      if (!strcmp(rhsname, mpsinputField1(mpsi)))
+      if( !strcmp(rhsname, mpsinputField1(mpsi)) )
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
@@ -1022,7 +1021,7 @@ SCIP_RETCODE readRhs(
             }
 	    SCIPdebugMessage("RHS <%s> lhs: %g  rhs: %g  val: <%22.12g>\n", mpsinputField2(mpsi), lhs, rhs, val);
          }
-         if (mpsinputField5(mpsi) != NULL)
+         if( mpsinputField5(mpsi) != NULL )
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
@@ -1079,28 +1078,28 @@ SCIP_RETCODE readRanges(
 
    SCIPdebugMessage("read ranges\n");
 
-   while(mpsinputReadLine(mpsi))
+   while( mpsinputReadLine(mpsi) )
    {
-      if (mpsinputField0(mpsi) != NULL)
+      if( mpsinputField0(mpsi) != NULL )
       {
-         if (!strcmp(mpsinputField0(mpsi), "BOUNDS"))
+         if( !strcmp(mpsinputField0(mpsi), "BOUNDS") )
             mpsinputSetSection(mpsi, MPS_BOUNDS);
-         else if (!strcmp(mpsinputField0(mpsi), "SOS"))
+         else if( !strcmp(mpsinputField0(mpsi), "SOS") )
             mpsinputSetSection(mpsi, MPS_SOS);
-         else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
+         else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
          else
             break;
          return SCIP_OKAY;
       }
-      if ((mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
-         || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL))
+      if( (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
+         || (mpsinputField4(mpsi) != NULL && mpsinputField5(mpsi) == NULL) )
          mpsinputInsertName(mpsi, "_RNG_", FALSE);
 
-      if (mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL)
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
          break;
 
-      if (*rngname == '\0')
+      if( *rngname == '\0' )
          (void)strncpy(rngname, mpsinputField1(mpsi), MPS_MAX_NAMELEN - 1);
 
       /* The rules are:
@@ -1112,7 +1111,7 @@ SCIP_RETCODE readRanges(
        *  E   -     rhs + range     rhs
        * ----------------------------------------
        */
-      if (!strcmp(rngname, mpsinputField1(mpsi)))
+      if( !strcmp(rngname, mpsinputField1(mpsi)) )
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
@@ -1148,7 +1147,7 @@ SCIP_RETCODE readRanges(
                }
             }
          }
-         if (mpsinputField5(mpsi) != NULL)
+         if( mpsinputField5(mpsi) != NULL )
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
@@ -1206,13 +1205,13 @@ SCIP_RETCODE readBounds(
 
    SCIPdebugMessage("read bounds\n");
 
-   while(mpsinputReadLine(mpsi))
+   while( mpsinputReadLine(mpsi) )
    {
-      if (mpsinputField0(mpsi) != 0)
+      if( mpsinputField0(mpsi) != 0 )
       {
-         if (!strcmp(mpsinputField0(mpsi), "SOS"))
+         if( !strcmp(mpsinputField0(mpsi), "SOS") )
             mpsinputSetSection(mpsi, MPS_SOS);
-         else if (!strcmp(mpsinputField0(mpsi), "ENDATA"))
+         else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
 	 else
 	    break;
@@ -1222,14 +1221,14 @@ SCIP_RETCODE readBounds(
       shifted = FALSE;
       
       /* Is the value field used ? */
-      if (  !strcmp(mpsinputField1(mpsi), "LO")  /* lower bound given in field 4 */
+      if( !strcmp(mpsinputField1(mpsi), "LO")  /* lower bound given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "UP")  /* upper bound given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "FX")  /* fixed value given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "LI")  /* CPLEX extension: lower bound of integer variable given in field 4 */
          || !strcmp(mpsinputField1(mpsi), "UI")  /* CPLEX extension: upper bound of integer variable given in field 4 */
-         || !strcmp(mpsinputField1(mpsi), "SC")) /* CPLEX extension: semi continuous variable */
+         || !strcmp(mpsinputField1(mpsi), "SC") )/* CPLEX extension: semi continuous variable */
       {
-         if (mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL)
+         if( mpsinputField3(mpsi) != NULL && mpsinputField4(mpsi) == NULL )
          {
             mpsinputInsertName(mpsi, "_BND_", TRUE);
             shifted = TRUE;
@@ -1244,9 +1243,9 @@ SCIP_RETCODE readBounds(
       else if( !strcmp(mpsinputField1(mpsi), "FR") /* free variable */
          || !strcmp(mpsinputField1(mpsi), "MI")    /* lower bound is minus infinity */
          || !strcmp(mpsinputField1(mpsi), "PL")    /* upper bound is plus infinity */
-         || !strcmp(mpsinputField1(mpsi), "BV"))   /* CPLEX extension: binary variable */
+         || !strcmp(mpsinputField1(mpsi), "BV") )  /* CPLEX extension: binary variable */
       {
-         if (mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL)
+         if( mpsinputField2(mpsi) != NULL && mpsinputField3(mpsi) == NULL )
          {
             mpsinputInsertName(mpsi, "_BND_", TRUE);
             shifted = TRUE;
@@ -1258,14 +1257,14 @@ SCIP_RETCODE readBounds(
          return SCIP_OKAY;
       }
 
-      if (mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL)
+      if( mpsinputField1(mpsi) == NULL || mpsinputField2(mpsi) == NULL || mpsinputField3(mpsi) == NULL )
          break;
 
-      if (*bndname == '\0')
+      if( *bndname == '\0' )
          (void)strncpy(bndname, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
 
       /* Only read the first Bound in section */
-      if (!strcmp(bndname, mpsinputField2(mpsi)))
+      if( !strcmp(bndname, mpsinputField2(mpsi)) )
       {
          var = SCIPfindVar(scip, mpsinputField3(mpsi));
          if( var == NULL )
@@ -1293,7 +1292,7 @@ SCIP_RETCODE readBounds(
                }
             }
 
-            switch(mpsinputField1(mpsi)[0])
+            switch( mpsinputField1(mpsi)[0] )
             {
             case 'L':
                if( mpsinputField1(mpsi)[1] == 'I' ) /* ILOG extension (Integer Bound) */
@@ -1310,7 +1309,7 @@ SCIP_RETCODE readBounds(
                SCIP_CALL( SCIPchgVarUb(scip, var, val) );
                break;
             case 'F':
-               if (mpsinputField1(mpsi)[1] == 'X')
+               if( mpsinputField1(mpsi)[1] == 'X' )
                {
                   SCIP_CALL( SCIPchgVarLb(scip, var, val) );
                   SCIP_CALL( SCIPchgVarUb(scip, var, val) );
@@ -1390,18 +1389,18 @@ SCIP_RETCODE readSOS(
    removable = FALSE;
 
    /* loop through section */
-   while ( mpsinputReadLine(mpsi) )
+   while( mpsinputReadLine(mpsi) )
    {
       int type = -1;
 
       /* check if next section is found */
-      if ( mpsinputField0(mpsi) != NULL )
+      if( mpsinputField0(mpsi) != NULL )
       {
-	 if ( ! strcmp(mpsinputField0(mpsi), "ENDATA") )
+	 if( ! strcmp(mpsinputField0(mpsi), "ENDATA") )
             mpsinputSetSection(mpsi, MPS_ENDATA);
 	 break;
       }
-      if ( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
+      if( mpsinputField1(mpsi) == NULL && mpsinputField2(mpsi) == NULL )
       {
 	 SCIPerrorMessage("empty data in a non-comment line.\n");
 	 mpsinputSyntaxerror(mpsi);
@@ -1409,16 +1408,16 @@ SCIP_RETCODE readSOS(
       }
 
       /* check for new SOS set */
-      if ( strcmp(mpsinputField1(mpsi), "S1") == 0 )
+      if( strcmp(mpsinputField1(mpsi), "S1") == 0 )
 	 type = 1;
-      if ( strcmp(mpsinputField1(mpsi), "S2") == 0 )
+      if( strcmp(mpsinputField1(mpsi), "S2") == 0 )
 	 type = 2;
 
       /* add last constraint and create a new one */
-      if ( type > 0 )
+      if( type > 0 )
       {
 	 assert( type == 1 || type == 2 );
-	 if ( cons != NULL )
+	 if( cons != NULL )
 	 {
 	    /* add last constraint */
 	    SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -1428,7 +1427,7 @@ SCIP_RETCODE readSOS(
 	 }
 
 	 /* check name */
-	 if ( mpsinputField2(mpsi) != NULL )
+	 if( mpsinputField2(mpsi) != NULL )
 	    (void)strncpy(name, mpsinputField2(mpsi), MPS_MAX_NAMELEN - 1);
 	 else
 	 {
@@ -1437,7 +1436,7 @@ SCIP_RETCODE readSOS(
 	 }
 
 	 /* create new SOS constraint */
-	 if ( type == 1 )
+	 if( type == 1 )
 	 {
 	    /* we do not know the name of the constraint */
 	    SCIP_CALL( SCIPcreateConsSOS1(scip, &cons, name, 0, NULL, NULL, initial, separate, enforce, check, propagate,
@@ -1456,11 +1455,11 @@ SCIP_RETCODE readSOS(
       else
       {
 	 /* otherwise we are in the section given variables */
-	 SCIP_VAR* var = NULL;
-	 SCIP_Real weight = 0.0;
+	 SCIP_VAR* var;
+	 SCIP_Real weight;
 	 char* endptr;
 
-	 if ( consType != 1 && consType != 2 )
+	 if( consType != 1 && consType != 2 )
 	 {
 	    SCIPerrorMessage("missing SOS type specification.\n");
 	    mpsinputSyntaxerror(mpsi);
@@ -1469,7 +1468,7 @@ SCIP_RETCODE readSOS(
 
 	 /* get variable */
 	 var = SCIPfindVar(scip, mpsinputField1(mpsi));
-	 if ( var == NULL )
+	 if( var == NULL )
 	 {
 	    /* ignore unkown variables - we would not know the type anyway */
             mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField1(mpsi), "SOS", name, SCIP_VERBLEVEL_NORMAL);
@@ -1478,7 +1477,7 @@ SCIP_RETCODE readSOS(
 	 {
 	    /* get weight */
 	    weight = strtod(mpsinputField2(mpsi), &endptr);
-	    if ( endptr == mpsinputField2(mpsi) || *endptr != '\0' )
+	    if( endptr == mpsinputField2(mpsi) || *endptr != '\0' )
 	    {
 	       SCIPerrorMessage("weight for variable <%s> not specified.\n", mpsinputField1(mpsi));
 	       mpsinputSyntaxerror(mpsi);
@@ -1496,9 +1495,9 @@ SCIP_RETCODE readSOS(
 	    SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
 	 }
 	 /* check other fields */
-	 if ( ( mpsinputField3(mpsi) != NULL && *mpsinputField3(mpsi) != '\0' ) ||
-            ( mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
-            ( mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
+	 if( (mpsinputField3(mpsi) != NULL && *mpsinputField3(mpsi) != '\0' ) ||
+            (mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
+            (mpsinputField5(mpsi) != NULL && *mpsinputField5(mpsi) != '\0' ) )
 	 {
 	    SCIPwarningMessage("ignoring data in fields 3-5 <%s> <%s> <%s>.\n",
                mpsinputField3(mpsi), mpsinputField4(mpsi), mpsinputField5(mpsi));
@@ -1506,7 +1505,7 @@ SCIP_RETCODE readSOS(
       }
    }
 
-   if ( cons != NULL )
+   if( cons != NULL )
    {
       /* add last constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
@@ -1549,7 +1548,7 @@ SCIP_RETCODE readMps(
    assert(filename != NULL);
 
    fp = SCIPfopen(filename, "r");
-   if (fp == NULL)
+   if( fp == NULL )
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       SCIPprintSysError(filename);
@@ -1562,41 +1561,41 @@ SCIP_RETCODE readMps(
 
    SCIP_CALL( SCIPcreateProb(scip, mpsi->probname, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-   if (mpsinputSection(mpsi) == MPS_OBJSEN)
+   if( mpsinputSection(mpsi) == MPS_OBJSEN )
    {
       SCIP_CALL( readObjsen(mpsi) );
    }
-   if (mpsinputSection(mpsi) == MPS_OBJNAME)
+   if( mpsinputSection(mpsi) == MPS_OBJNAME )
    {
       SCIP_CALL( readObjname(mpsi) );
    }
-   while (mpsinputSection(mpsi) == MPS_ROWS
+   while( mpsinputSection(mpsi) == MPS_ROWS
       || mpsinputSection(mpsi) == MPS_USERCUTS
-      || mpsinputSection(mpsi) == MPS_LAZYCONS)
+      || mpsinputSection(mpsi) == MPS_LAZYCONS )
    {
       SCIP_CALL( readRows(mpsi, scip) );
    }
-   if (mpsinputSection(mpsi) == MPS_COLUMNS)
+   if( mpsinputSection(mpsi) == MPS_COLUMNS )
    {
       SCIP_CALL( readCols(mpsi, scip) );
    }
-   if (mpsinputSection(mpsi) == MPS_RHS)
+   if( mpsinputSection(mpsi) == MPS_RHS )
    {
       SCIP_CALL( readRhs(mpsi, scip) );
    }
-   if (mpsinputSection(mpsi) == MPS_RANGES)
+   if( mpsinputSection(mpsi) == MPS_RANGES )
    {
       SCIP_CALL( readRanges(mpsi, scip) );
    }
-   if (mpsinputSection(mpsi) == MPS_BOUNDS)
+   if( mpsinputSection(mpsi) == MPS_BOUNDS )
    {
       SCIP_CALL( readBounds(mpsi, scip) );
    }
-   if (mpsinputSection(mpsi) == MPS_SOS)
+   if( mpsinputSection(mpsi) == MPS_SOS )
    {
       SCIP_CALL( readSOS(mpsi, scip) );
    }
-   if (mpsinputSection(mpsi) != MPS_ENDATA)
+   if( mpsinputSection(mpsi) != MPS_ENDATA )
       mpsinputSyntaxerror(mpsi);
 
    SCIPfclose(fp);
@@ -1737,7 +1736,7 @@ void printEntry(
    {
       (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", value);
 
-      if ( *recordcnt == 0 )
+      if( *recordcnt == 0 )
       {
          /* start new line with an empty first column and the variable name in the second column */
          printStart(scip, file, "", varname, (int) maxnamelen);
@@ -1747,7 +1746,7 @@ void printEntry(
       printRecord(scip, file, consname, valuestr, maxnamelen);
       (*recordcnt)++;
 
-      if ( *recordcnt == 2 )
+      if( *recordcnt == 2 )
       {
          /* each line can have at most two records */
          SCIPinfoMessage(scip, file, "\n");
@@ -1884,7 +1883,9 @@ SCIP_RETCODE getLinearCoeffs(
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
    
    if( vals != NULL )
+   {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+   }
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
@@ -1910,7 +1911,9 @@ SCIP_RETCODE getLinearCoeffs(
    else
    {
       for( v = 0; v < nactivevars; ++v )
+      {
          SCIP_CALL( SCIPvarGetOrigvarSum(&activevars[v], &activevals[v], &activeconstant) );
+      }
    }
 
    /* copy the (matrix) row into the sparse matrix */
@@ -1959,7 +1962,7 @@ SCIP_RETCODE collectAggregatedVars(
    assert( varAggregated != NULL );
 
    /* check variables */
-   for (v = 0; v < nvars; ++v)
+   for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
       status = SCIPvarGetStatus(var);
@@ -1971,7 +1974,7 @@ SCIP_RETCODE collectAggregatedVars(
             status == SCIP_VARSTATUS_MULTAGGR ||
             status == SCIP_VARSTATUS_NEGATED );
 
-	 if ( ! SCIPhashtableExists(varAggregated, (void*) var) )
+	 if( !SCIPhashtableExists(varAggregated, (void*) var) )
 	 {
             if( (*saggvars) <= (*naggvars) )
             {
@@ -2109,8 +2112,9 @@ SCIP_RETCODE checkConsnames(
          
          --c;
          for( ; c >= 0; --c)
+         {
             SCIPfreeBufferArray(scip, &((*consnames)[c]));
-         
+         }
          SCIPfreeBufferArray(scip, &consnames);
          SCIPfreeBufferArray(scip, &conss);
          
@@ -2200,14 +2204,14 @@ void printColumnSection(
       varname = (const char*) (size_t) SCIPhashmapGetImage(varnameHashmap, var);
 
       /* output all entries of the same variable */
-      do {
+      do{
          value = matrix->values[v];
          
          /* print record to file */
          printEntry( scip, file, varname, matrix->rows[v], value, &recordcnt, maxnamelen );
          v++;
       }
-      while (v < matrix->nentries && var == matrix->columns[v]);
+      while( v < matrix->nentries && var == matrix->columns[v] );
          
       if( recordcnt == 1 )
          SCIPinfoMessage(scip, file, "\n");
@@ -2377,7 +2381,7 @@ void printBoundSection(
    sectionName = FALSE;
 
    /* output the active variables */
-   for (v = 0; v < nvars; ++v)
+   for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
       assert( var != NULL );
@@ -2415,7 +2419,7 @@ void printBoundSection(
       }
 
       /* take care of free variables */
-      if ( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
+      if( SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
       {
          if( !sectionName )
          {
@@ -2431,7 +2435,7 @@ void printBoundSection(
       }
 
       /* take care of fixed variables */
-      if ( SCIPisEQ(scip, lb, ub) )
+      if( SCIPisEQ(scip, lb, ub) )
       {
          if( !sectionName )
          {
@@ -2448,7 +2452,7 @@ void printBoundSection(
       }
 
       /* print lower bound */
-      if ( SCIPisInfinity(scip, -lb) )
+      if( SCIPisInfinity(scip, -lb) )
       {
          if( !sectionName )
          {
@@ -2464,7 +2468,7 @@ void printBoundSection(
       }
       else
       {
-         if ( SCIPisZero(scip, lb) )
+         if( SCIPisZero(scip, lb) )
          {
             lb = 0.0;
          }
@@ -2514,7 +2518,7 @@ void printBoundSection(
    }
    
    /* output aggregated variables as 'free' */
-   for (v = 0; v < naggvars; ++v)
+   for( v = 0; v < naggvars; ++v )
    {
       if( !sectionName )
       {
@@ -2599,8 +2603,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    SCIP_CONS** consSOS1;
    SCIP_CONS** consSOS2;
-   int nConsSOS1 = 0;
-   int nConsSOS2 = 0;
+   int nConsSOS1;
+   int nConsSOS2;
 
    SCIP_HASHMAP* varnameHashmap;           /* hash map from SCIP_VAR* to variable name */
    SPARSEMATRIX* matrix;
@@ -2616,8 +2620,8 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    SCIP_Real* vals;
    SCIP_Longint* weights;
 
-   SCIP_Bool needRANGES = FALSE;
-   unsigned int maxnamelen = 0;
+   SCIP_Bool needRANGES;
+   unsigned int maxnamelen;
 
    SCIP_Bool error;
 
@@ -2626,7 +2630,11 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    assert(scip != NULL);
    assert(result != NULL);
    
+   needRANGES = FALSE;
+   maxnamelen = 0;
    nrelconss = -1;
+   nConsSOS1 = 0;
+   nConsSOS2 = 0;
 
    /* check if the constraint names are too long and build the constraint names */
    SCIP_CALL( checkConsnames(scip, conss, nconss, &relconss, &nrelconss, transformed, &maxnamelen, &consnames, &error) );
@@ -2765,7 +2773,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       else if( strcmp(conshdlrname, "setppc") == 0 )
       {
          /* print row entry */
-         switch ( SCIPgetTypeSetppc(scip, cons) )
+         switch( SCIPgetTypeSetppc(scip, cons) )
          {
          case SCIP_SETPPCTYPE_PARTITIONING :
             printRowType(scip, file, 1.0, 1.0, consname);
@@ -2854,7 +2862,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             SCIPfreeBufferArray(scip, &consvars);
          }
       }
-      else if ( strcmp(conshdlrname, "SOS1") == 0 )
+      else if( strcmp(conshdlrname, "SOS1") == 0 )
       {
 	 /* store constraint */
 	 consSOS1[nConsSOS1++] = cons;
@@ -2869,7 +2877,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
          SCIP_CALL( collectAggregatedVars(scip, consvars, nconsvars, &aggvars, &naggvars, &saggvars, varAggregatedHash) );
       }
-      else if ( strcmp(conshdlrname, "SOS2") == 0 )
+      else if( strcmp(conshdlrname, "SOS2") == 0 )
       {
 	 /* store constraint */
 	 consSOS2[nConsSOS2++] = cons;
@@ -2907,7 +2915,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( SCIPreallocBufferArray(scip, &varnames, nvars + naggvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 1) );
 
-      for (c = 0; c < naggvars; ++c )
+      for( c = 0; c < naggvars; ++c )
       {
 	 size_t l;
 
@@ -2962,18 +2970,16 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* output RHS section */
    printRhsSection(scip, file, conss, nconss, consnames, rhss, transformed, maxnamelen);
    
+   /* output RANGES section */
    if( needRANGES )
-   {
-      /* output RANGES section */
       printRangeSection(scip, file, conss, nconss, consnames, transformed, maxnamelen);
-   }
-   
+      
    /* output BOUNDS section */
    printBoundSection(scip, file, vars, nvars, aggvars, naggvars, transformed, varnames, maxnamelen);
 
 
    /* print SOS section */
-   if ( nConsSOS1 > 0 || nConsSOS2 > 0 )
+   if( nConsSOS1 > 0 || nConsSOS2 > 0 )
    {
       SCIP_Real* sosweights;
 
@@ -2983,7 +2989,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
 
       /* first output SOS1 constraints */
-      for (c = 0; c < nConsSOS1; ++c)
+      for( c = 0; c < nConsSOS1; ++c )
       {
 	 cons = consSOS1[c];
 	 consvars = SCIPgetVarsSOS1(scip, cons);
@@ -2994,7 +3000,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          printStart(scip, file, "S1", namestr, -1);
 	 SCIPinfoMessage(scip, file, "\n");
 
-	 for (v = 0; v < nconsvars; ++v)
+	 for( v = 0; v < nconsvars; ++v )
 	 {
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
@@ -3002,7 +3008,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             
             printStart(scip, file, "", varname, (int) maxnamelen);
             
-	    if ( sosweights != NULL )
+	    if( sosweights != NULL )
                (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", sosweights[v]);
 	    else
                (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d ", v);
@@ -3023,7 +3029,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
          printStart(scip, file, "S2", namestr, -1);
 	 SCIPinfoMessage(scip, file, "\n");
 
-	 for (v = 0; v < nconsvars; ++v)
+	 for( v = 0; v < nconsvars; ++v )
 	 {
             /* get variable name */
             assert ( SCIPhashmapExists(varnameHashmap, consvars[v]) );
@@ -3031,7 +3037,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
             printStart(scip, file, "", varname, (int) maxnamelen);
 
-	    if ( sosweights != NULL )
+	    if( sosweights != NULL )
                (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25.15g", sosweights[v]);
 	    else
                (void) SCIPsnprintf(valuestr, MPS_MAX_VALUELEN, "%25d ", v);
@@ -3044,7 +3050,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    /* free variable and constraint name array */
    for( v = 0; v < nvars + naggvars; ++v )
+   {
       SCIPfreeBufferArray(scip, &varnames[v]);
+   }
    SCIPfreeBufferArray(scip, &varnames);
 
    for( c = 0; c < nconss + naggvars; ++c )

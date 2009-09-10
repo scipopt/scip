@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.3 2009/09/09 15:32:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.4 2009/09/10 10:01:35 bzfwinkm Exp $"
 
 /**@file   heur_trivial.c
  * @ingroup PRIMALHEURISTICS
@@ -149,10 +149,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    if( success )
    {
-#ifdef SCIP_DEBUG
       SCIPdebugMessage("found feasible lower bound solution:\n");
-      SCIPprintSol(scip, lbsol, NULL, FALSE);
-#endif
+      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, lbsol, NULL, FALSE) ) );
+
       *result = SCIP_FOUNDSOL;
    }
 
@@ -161,10 +160,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    if( success )
    {
-#ifdef SCIP_DEBUG
       SCIPdebugMessage("found feasible upper bound solution:\n");
-      SCIPprintSol(scip, ubsol, NULL, FALSE);
-#endif
+      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, ubsol, NULL, FALSE) ) );
+
       *result = SCIP_FOUNDSOL;
    }
 
@@ -175,10 +173,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       
       if( success )
       {
-#ifdef SCIP_DEBUG
          SCIPdebugMessage("found feasible zero solution:\n");
-         SCIPprintSol(scip, zerosol, NULL, FALSE);
-#endif
+         SCIPdebug( SCIP_CALL( SCIPprintSol(scip, zerosol, NULL, FALSE) ) );
+
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -192,10 +189,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    if( success )
    {
-#ifdef SCIP_DEBUG
       SCIPdebugMessage("found feasible lock solution:\n");
-      SCIPprintSol(scip, locksol, NULL, FALSE);
-#endif
+      SCIPdebug( SCIP_CALL( SCIPprintSol(scip, locksol, NULL, FALSE) ) );
+
       *result = SCIP_FOUNDSOL;
    }
 

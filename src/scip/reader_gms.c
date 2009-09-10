@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.27 2009/09/09 08:33:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.28 2009/09/10 10:01:36 bzfwinkm Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -105,7 +105,9 @@ SCIP_RETCODE getActiveVariables(
    else
    {
       for( v = 0; v < *nvars; ++v )
+      {
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
+      }
    }
    return SCIP_OKAY;
 }
@@ -275,7 +277,9 @@ SCIP_RETCODE printActiveVariables(
       /* duplicate variable and value array */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars) );
       if( vals != NULL )
+      {
          SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars) );
+      }
       else
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
@@ -501,7 +505,9 @@ SCIP_RETCODE printLinearCons(
       /* duplicate variable and value array */
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars) );
       if( vals != NULL )
+      {
          SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars) );
+      }
       else
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );
@@ -602,11 +608,14 @@ SCIP_RETCODE printQuadraticRow(
 
    /* print linear terms */
    if( nlinvars > 0 )
+   {
       SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", nlinvars, linvars, lincoeffs, transformed) );
-
+   }
    /* print quadratic terms */
    if( nquadvars > 0 )
+   {
       SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", nquadvars, quadvars, quadlincoeffs, transformed) );
+   }
 
    for( t = 0; t < nquadvars; ++t )
    {
@@ -699,28 +708,28 @@ SCIP_RETCODE printQuadraticCons(
       assert( !SCIPisInfinity(scip, rhs) );
 
       /* print equality constraint */
-      printQuadraticRow(scip, file, rowname, "", "=e=",
+      SCIP_CALL( printQuadraticRow(scip, file, rowname, "", "=e=",
          nlinvars, linvars, lincoeffs,
          nquadvars, quadvars, quadlincoeffs, quadsqrcoeffs,
-         nbilinterms, bilinvars1, bilinvars2, bilincoeffs, rhs, transformed);
+            nbilinterms, bilinvars1, bilinvars2, bilincoeffs, rhs, transformed) );
    }
    else
    {
       if( !SCIPisInfinity(scip, -lhs) )
       {
          /* print inequality ">=" */
-         printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
+         SCIP_CALL( printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, rhs) ? "" : "_lhs", "=g=",
             nlinvars, linvars, lincoeffs,
             nquadvars, quadvars, quadlincoeffs, quadsqrcoeffs,
-            nbilinterms, bilinvars1, bilinvars2, bilincoeffs, lhs, transformed);
+               nbilinterms, bilinvars1, bilinvars2, bilincoeffs, lhs, transformed) );
       }
       if( !SCIPisInfinity(scip, rhs) )
       {
          /* print inequality "<=" */
-         printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
+         SCIP_CALL( printQuadraticRow(scip, file, rowname, SCIPisInfinity(scip, -lhs) ? "" : "_rhs", "=l=",
             nlinvars, linvars, lincoeffs,
             nquadvars, quadvars, quadlincoeffs, quadsqrcoeffs,
-            nbilinterms, bilinvars1, bilinvars2, bilincoeffs, rhs, transformed);
+               nbilinterms, bilinvars1, bilinvars2, bilincoeffs, rhs, transformed) );
       }
    }
    

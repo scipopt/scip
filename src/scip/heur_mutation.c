@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_mutation.c,v 1.27 2009/04/06 13:06:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_mutation.c,v 1.28 2009/09/10 10:01:35 bzfwinkm Exp $"
 
 /**@file   heur_mutation.c
  * @ingroup PRIMALHEURISTICS
@@ -567,7 +567,7 @@ SCIP_RETCODE SCIPincludeHeurMutation(
    
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/mutation/minfixingrate",
          "percentage of integer variables that have to be fixed ",
-         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0+SCIPsumepsilon(scip), 1.0-SCIPsumepsilon(scip), NULL, NULL) );
+         &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, SCIPsumepsilon(scip), 1.0-SCIPsumepsilon(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/mutation/minimprove",
          "factor by which Mutation should at least improve the incumbent",

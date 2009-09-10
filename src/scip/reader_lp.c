@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.81 2009/09/09 08:33:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.82 2009/09/10 10:01:36 bzfwinkm Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -1607,7 +1607,6 @@ SCIP_RETCODE readSos(
    {
       int type = -1;
       SCIP_CONS* cons;
-      SCIP_Bool nextSection = FALSE;
 
       /* check if we reached a new section */
       if ( isNewSection(lpinput) )
@@ -1698,7 +1697,7 @@ SCIP_RETCODE readSos(
       }
 
       /* parse elements of SOS constraint */
-      while ( getNextToken(lpinput) && ! nextSection )
+      while ( getNextToken(lpinput) )
       {
 	 SCIP_VAR* var;
 	 SCIP_Real weight;
@@ -1706,7 +1705,6 @@ SCIP_RETCODE readSos(
 	 /* check if we reached a new section */
 	 if ( isNewSection(lpinput) )
 	 {
-	    nextSection = TRUE;
 	    break;
 	 }
 
@@ -2599,7 +2597,7 @@ SCIP_RETCODE SCIPwriteLp(
    if ( transformed )
    {
       SCIP_CONS** consInd;
-      int nConsInd = 0;
+      int nConsInd;
       
       consInd = SCIPconshdlrGetConss(conshdlr);
       nConsInd = SCIPconshdlrGetNConss(conshdlr);

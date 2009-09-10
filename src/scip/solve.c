@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.275 2009/09/08 20:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.276 2009/09/10 10:01:36 bzfwinkm Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2429,7 +2429,6 @@ SCIP_RETCODE solveNode(
    /* if diving produced an LP error, switch back to non-LP node */
    if( lp->resolvelperror )
    {
-      focusnodehaslp = FALSE;
       SCIPtreeSetFocusNodeLP(tree, FALSE);
    }
 
