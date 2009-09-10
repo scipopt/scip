@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.221 2009/09/08 20:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.222 2009/09/10 13:47:15 bzfwolte Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1385,9 +1385,12 @@ SCIP_RETCODE nodeDeactivate(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
 {
+   SCIP_Bool freeNode;
+
    assert(node != NULL);
    assert(node->active);
    assert(tree != NULL);
+   assert(SCIPnodeGetType(node) != SCIP_NODETYPE_FOCUSNODE);
 
    SCIPdebugMessage("deactivate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d  (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
@@ -1402,6 +1405,40 @@ SCIP_RETCODE nodeDeactivate(
    /* count number of deactivated nodes (ignoring probing switches) */
    if( !SCIPtreeProbing(tree) )
       stat->ndeactivatednodes++;
+
+   /* free node if it is a deadend node, i.e., has no children */
+   freeNode = FALSE;
+   switch( SCIPnodeGetType(node) )   
+   {
+   case SCIP_NODETYPE_FOCUSNODE:
+   case SCIP_NODETYPE_PROBINGNODE:
+   case SCIP_NODETYPE_SIBLING:
+   case SCIP_NODETYPE_CHILD:
+   case SCIP_NODETYPE_LEAF:
+   case SCIP_NODETYPE_DEADEND:
+   case SCIP_NODETYPE_REFOCUSNODE:
+      freeNode = FALSE;
+      break;
+   case SCIP_NODETYPE_JUNCTION:
+      freeNode = (node->data.junction.nchildren == 0); 
+      break;
+   case SCIP_NODETYPE_PSEUDOFORK:
+      freeNode = (node->data.pseudofork->nchildren == 0); 
+      break;
+   case SCIP_NODETYPE_FORK:
+      freeNode = (node->data.fork->nchildren == 0); 
+      break;
+   case SCIP_NODETYPE_SUBROOT:
+      freeNode = (node->data.subroot->nchildren == 0); 
+      break;
+   default:
+      SCIPerrorMessage("unknown node type %d\n", SCIPnodeGetType(node));
+      return SCIP_INVALIDDATA;
+   }
+   if( freeNode ) 
+   {
+      SCIP_CALL( SCIPnodeFree(&node, blkmem, set, tree, lp) );
+   }
 
    return SCIP_OKAY;
 }

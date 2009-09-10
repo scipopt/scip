@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.25 2009/09/10 10:01:36 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_flowcover.c,v 1.26 2009/09/10 13:47:15 bzfwolte Exp $"
 
 /**@file   sepa_flowcover.c
  * @ingroup SEPARATORS
@@ -71,6 +71,7 @@
 #define MAXDYNPROGSPACE         1000000 
 
 #define MAXAGGRLEN(nvars)          (0.1*(nvars)+1000) /**< maximal length of base inequality */
+#define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
 
 
 
@@ -208,6 +209,12 @@ SCIP_RETCODE getClosestVlb(
          if( !meetscriteria )
             continue;
 
+         /* for numerical reasons, ignore variable bounds with large absolute coefficient and 
+          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation 
+          */
+         if( REALABS(vlbcoefs[i]) > MAXABSVBCOEF || SCIPisInfinity(scip, REALABS(val2)) )
+            continue;
+
          vlbsol = (vlbcoefs[i] * varsolvals[probidxbinvar]) + vlbconsts[i];
          if( SCIPisGT(scip, vlbsol, *closestvlb) )
          {
@@ -321,6 +328,12 @@ SCIP_RETCODE getClosestVub(
          if( !meetscriteria )
             continue;
         
+         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
+          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation 
+          */
+         if( REALABS(vubcoefs[i]) > MAXABSVBCOEF || SCIPisInfinity(scip, REALABS(val2)) )
+            continue;
+
          vubsol = vubcoefs[i] * varsolvals[probidxbinvar] + vubconsts[i];
          if( SCIPisLT(scip, vubsol, *closestvub) )
          {

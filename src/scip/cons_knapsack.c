@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.180 2009/09/08 20:41:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.181 2009/09/10 13:47:15 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -73,6 +73,7 @@
 #define DEFAULT_DISAGGREGATION     TRUE /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
 #define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify knapsacks */
 
+#define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for knapsack relaxation */
 
 
 
@@ -2257,8 +2258,9 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          bestlbtype = -1;
          for( j = 0; j < nvlb; j++ )
          {
-            /* use only vlb with binary variable z */
-            if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvlb[j]) )
+            /* use only numerical stable vlb with binary variable z */
+            if( SCIPvarGetType(zvlb[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvlb[j]) 
+               && REALABS(bvlb[j]) <= MAXABSVBCOEF )
             {
                SCIP_Real vlbsol;
 
@@ -2287,6 +2289,10 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             assert(0 <= SCIPvarGetProbindex(zvlb[bestlbtype]) && SCIPvarGetProbindex(zvlb[bestlbtype]) < nbinvars);
             rhs -= valscale * knapvals[i] * dvlb[bestlbtype];
             binvals[SCIPvarGetProbindex(zvlb[bestlbtype])] += valscale * knapvals[i] * bvlb[bestlbtype];
+
+            if( SCIPisInfinity(scip, REALABS(binvals[SCIPvarGetProbindex(zvlb[bestlbtype])])) )
+               goto TERMINATE;
+
             if( !noknapsackconshdlr )
             {
                assert(tmpindices != NULL);
@@ -2323,8 +2329,9 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
          bestubtype = -1;
          for( j = 0; j < nvub; j++ )
          {
-            /* use only vub with active binary variable z */
-            if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvub[j])  )
+            /* use only numerical stable vub with active binary variable z */
+            if( SCIPvarGetType(zvub[j]) == SCIP_VARTYPE_BINARY && SCIPvarIsActive(zvub[j]) 
+               && REALABS(bvub[j]) <= MAXABSVBCOEF )
             {
                SCIP_Real vubsol;
 
@@ -2353,6 +2360,10 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
             assert(0 <= SCIPvarGetProbindex(zvub[bestubtype]) && SCIPvarGetProbindex(zvub[bestubtype]) < nbinvars);
             rhs -= valscale * knapvals[i] * dvub[bestubtype];
             binvals[SCIPvarGetProbindex(zvub[bestubtype])] += valscale * knapvals[i] * bvub[bestubtype];
+
+            if( SCIPisInfinity(scip, REALABS(binvals[SCIPvarGetProbindex(zvub[bestubtype])])) )
+               goto TERMINATE;
+
             if( !noknapsackconshdlr )
             {
                assert(tmpindices != NULL);

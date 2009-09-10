@@ -173,6 +173,11 @@ fixed bugs:
 - fixed bug in oneopt heuritic with start solution which has become infeasible due to global bound changes
 - increased the numerical stability of coefficient tightening for Big M formulations
 - fixed bug in coefficient tightening with infinite bounds
+- removed memory leak in connection with freeing branch and bound nodes: focusnode was not freed if both children could be cut off due to bounding
+- fixed bug in solve.c: in case lowerbound >= upperbound, SCIPsolveIsStopped() returned SCIP_STATUS_GAPLIMIT
+- fixed bug in var.c, cons_knapsack.c, and sepa_flowcover.c: variable bounds corresponding to implication are not generated if coefficient is large,
+  variable bounds with large coefficients are ignored for construction of knapsack and snf relaxations
+- fixed bug in sepa_impliedbound.c concerning redundant implications    
 
 plugins:
 - added interface to QSopt due to Daniel Espinoza

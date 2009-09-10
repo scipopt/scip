@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.262 2009/09/08 20:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.263 2009/09/10 13:47:15 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -43,6 +43,7 @@
 
 #define MAXIMPLSCLOSURE 100  /**< maximal number of descendants of implied variable for building closure
                               *   in implication graph */
+#define MAXABSVBCOEF    1e+5 /**< maximal absolute coefficient in variable bounds added due to implications */
 
 /*
  * hole, holelist, and domain methods
@@ -6646,18 +6647,25 @@ SCIP_RETCODE varAddImplic(
        *   x == 1 -> y <= b  <->  y <= (b - ub)*x + ub
        *   x == 0 -> y >= b  <->  y >= (lb - b)*x + b
        *   x == 1 -> y >= b  <->  y >= (b - lb)*x + lb
+       * for numerical reasons, ignore variable bounds with large absolute coefficient
        */
       lb = SCIPvarGetLbGlobal(implvar);
       ub = SCIPvarGetUbGlobal(implvar);
       if( impltype == SCIP_BOUNDTYPE_UPPER )
       {
-         SCIP_CALL( varAddVbound(implvar, blkmem, set, eventqueue, SCIP_BOUNDTYPE_UPPER, var,
-               varfixing ? implbound - ub : ub - implbound, varfixing ? ub : implbound) );
+         if( REALABS(implbound - ub) <= MAXABSVBCOEF ) 
+         {
+            SCIP_CALL( varAddVbound(implvar, blkmem, set, eventqueue, SCIP_BOUNDTYPE_UPPER, var,
+                  varfixing ? implbound - ub : ub - implbound, varfixing ? ub : implbound) );
+         }
       }
       else
       {
-         SCIP_CALL( varAddVbound(implvar, blkmem, set, eventqueue, SCIP_BOUNDTYPE_LOWER, var,
-               varfixing ? implbound - lb : lb - implbound, varfixing ? lb : implbound) );
+         if( REALABS(implbound - lb) <= MAXABSVBCOEF ) 
+         {
+            SCIP_CALL( varAddVbound(implvar, blkmem, set, eventqueue, SCIP_BOUNDTYPE_LOWER, var,
+                  varfixing ? implbound - lb : lb - implbound, varfixing ? lb : implbound) );
+         }
       }
    }
 

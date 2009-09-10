@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.25 2009/07/19 12:40:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.26 2009/09/10 13:47:15 bzfwolte Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS
@@ -214,11 +214,12 @@ SCIP_RETCODE separateCuts(
          
             /* implication x == 0 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
-            assert(SCIPisLE(scip, implbounds[j], ub));
- 
-            /* add cut if violated */
-            SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
-                  implbounds[j], ncuts) );
+            if( SCIPisLE(scip, implbounds[j], ub) )
+            {
+               /* add cut if violated */
+               SCIP_CALL( addCut(scip, sol, 1.0, implvars[j], solval, (implbounds[j] - ub), fracvars[i], fracvals[i],
+                     implbounds[j], ncuts) );
+            }
          }
          else
          {
@@ -226,11 +227,14 @@ SCIP_RETCODE separateCuts(
 
             /* implication x == 0 -> y >= p */
             lb = SCIPvarGetLbGlobal(implvars[j]);
-            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, implbounds[j], lb));
- 
-            /* add cut if violated */
-            SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
-                  -implbounds[j], ncuts) );
+            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
+            
+            if( SCIPisGE(scip, implbounds[j], lb) )
+            { 
+               /* add cut if violated */
+               SCIP_CALL( addCut(scip, sol, -1.0, implvars[j], solval, (lb - implbounds[j]), fracvars[i], fracvals[i],
+                     -implbounds[j], ncuts) );
+            }
          }
       }
    }
