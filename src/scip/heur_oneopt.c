@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.25 2009/09/08 20:41:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.26 2009/09/10 13:33:02 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -47,9 +47,9 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int       lastsolindex;
-   SCIP_Bool weightedobj;
-   SCIP_Bool duringroot;
+   int       lastsolindex;                   /**< index of the last solution for which oneopt was performed */
+   SCIP_Bool weightedobj;                    /**< should the objective be weighted with the potential shifting value when sorting the shifting candidates? */
+   SCIP_Bool duringroot;                     /**< should the heuristic be called before and during the root node? */
 };
 
 
@@ -106,6 +106,7 @@ SCIP_Real calcShiftVal(
    colrows = SCIPcolGetRows(col);
    colvals = SCIPcolGetVals(col);
    ncolrows = SCIPcolGetNLPNonz(col);
+
    assert(ncolrows == 0 || (colrows != NULL && colvals != NULL));
 
    /* find minimal shift value, st. all rows stay valid */
@@ -238,9 +239,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
    assert(heurdata != NULL);
    heurdata->lastsolindex = -1;
 
-   /* if the heuristic is called at the root node, we may want to be called directly after the initial root LP solve */
+   /* if the heuristic is called at the root node, we may want to be called during the cut-and-price loop and even before the first LP solve */
    if( heurdata->duringroot && SCIPheurGetFreqofs(heur) == 0 )
-      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFORENODE);
 
    return SCIP_OKAY;
 }
@@ -287,10 +288,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    *result = SCIP_DELAYED;
 
-   /* we need an LP */
-   if( SCIPgetNLPRows(scip) == 0 )
-      return SCIP_OKAY;
-
    /* we only want to process each solution once */
    bestsol = SCIPgetBestSol(scip);
    if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
@@ -311,11 +308,20 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    /* we need to be able to start diving from current node in order to resolve the LP
     * with continuous or implicit integer variables
     */
-   if( nvars > nintvars )
-   {
-      if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+   if( nvars > nintvars && ( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL ) )
 	 return SCIP_OKAY;
+
+   if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPhasCurrentNodeLP(scip) )
+   {
+      SCIP_Bool cutoff;
+      cutoff = FALSE;
+      SCIP_CALL( SCIPconstructLP(scip,&cutoff) );
+      SCIP_CALL( SCIPflushLP(scip) );       
    }
+
+   /* we need an LP */
+   if( SCIPgetNLPRows(scip) == 0 )
+      return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -537,10 +543,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    return SCIP_OKAY;
 }
 
-
-
-
-
 /*
  * primal heuristic specific interface methods
  */
@@ -569,7 +571,7 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
          &heurdata->weightedobj, TRUE, DEFAULT_WEIGHTEDOBJ, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/duringroot",
-         "should the heuristic be called during the root node?",
+         "should the heuristic be called before and during the root node?",
          &heurdata->duringroot, TRUE, DEFAULT_DURINGROOT, NULL, NULL) );
 
    return SCIP_OKAY;
