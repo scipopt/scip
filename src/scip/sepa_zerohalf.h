@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.h,v 1.4 2009/07/31 11:37:18 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.h,v 1.5 2009/09/10 10:03:53 bzfwinkm Exp $"
 
 /**@file   sepa_zerohalf.h
  * @brief  {0,1/2}-cuts separator
