@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.340 2009/09/09 10:30:42 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.341 2009/09/10 09:57:54 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -600,7 +600,6 @@ static
 SCIP_Bool isValueChar(
    char                  c,                  /**< input character */
    char                  nextc,              /**< next input character */
-   SCIP_Bool             firstchar,          /**< is the given character the first char of the token? */
    SCIP_Bool*            hasdot              /**< pointer to update the dot flag */
    )
 {
@@ -644,7 +643,7 @@ SCIP_Bool getNextToken(
 
    /* check if the token is a value */
    hasdot = FALSE;
-   if( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], TRUE, &hasdot) )
+   if( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot) )
    {
       /* read value token */
       tokenlen = 0;
@@ -656,7 +655,7 @@ SCIP_Bool getNextToken(
          tokenlen++;
          tokenizer->strpos++;
       }
-      while( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], FALSE, &hasdot) );
+      while( isValueChar(buf[tokenizer->strpos], buf[tokenizer->strpos+1], &hasdot) );
    }
    else
    {
@@ -1268,8 +1267,8 @@ void consdataUpdateChgLb(
          }
          consdata->lastmaxactivity = consdata->maxactivity;
       }      
-      assert(SCIPisLE(scip, -SCIPinfinity(scip), consdata->minactivity) && SCIPisLE(scip, consdata->minactivity, SCIPinfinity(scip)));
-      assert(SCIPisLE(scip, -SCIPinfinity(scip), consdata->maxactivity) && SCIPisLE(scip, consdata->maxactivity, SCIPinfinity(scip)));
+      assert(!SCIPisInfinity(scip, -consdata->minactivity) && !SCIPisInfinity(scip, consdata->minactivity));
+      assert(!SCIPisInfinity(scip, -consdata->maxactivity) && !SCIPisInfinity(scip, consdata->maxactivity));
    }
 }
 
@@ -1417,8 +1416,8 @@ void consdataUpdateChgUb(
          consdata->lastminactivity = consdata->minactivity;
       }
       
-      assert(SCIPisLE(scip, -SCIPinfinity(scip), consdata->minactivity) && SCIPisLE(scip, consdata->minactivity, SCIPinfinity(scip)));
-      assert(SCIPisLE(scip, -SCIPinfinity(scip), consdata->maxactivity) && SCIPisLE(scip, consdata->maxactivity, SCIPinfinity(scip)));
+      assert(!SCIPisInfinity(scip, -consdata->minactivity) && !SCIPisInfinity(scip, consdata->minactivity));
+      assert(!SCIPisInfinity(scip, -consdata->maxactivity) && !SCIPisInfinity(scip, consdata->maxactivity));
    }
 }
 
@@ -7782,8 +7781,6 @@ SCIP_RETCODE fullDualPresolve(
             {
                minresactivity = -SCIPinfinity(scip);
                maxresactivity =  SCIPinfinity(scip);
-               isminsettoinfinity = TRUE;
-               ismaxsettoinfinity = TRUE;
             }
             else
             {
