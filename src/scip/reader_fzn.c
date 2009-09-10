@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.26 2009/09/09 13:29:00 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.27 2009/09/10 15:38:15 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1982,7 +1982,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       size = 10;
       nvars = 0;
       nvals = 0;
-
+      sidevalue = SCIP_INVALID;
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
       
@@ -2018,6 +2018,8 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    
       if( !hasError(fzninput) )
       {
+         assert(sidevalue != SCIP_INVALID);
+
          /* compute left and right side */
          computeLinearConsSides(scip, fzninput, ftokens[2], sidevalue, &lhs, &rhs);
          

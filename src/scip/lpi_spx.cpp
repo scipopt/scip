@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.92 2009/07/31 11:37:15 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.93 2009/09/10 15:38:15 bzfberth Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -2725,6 +2725,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
    nrows = lpi->spx->nRows();
    ncols = lpi->spx->nCols();
+   buf = NULL;
 
    /* get (or calculate) the row in B^-1 */
    if( binvrow == NULL )
@@ -2734,10 +2735,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
       binv = buf;
    }
    else
-   {
-      buf = NULL;
       binv = const_cast<SCIP_Real*>(binvrow);
-   }
+
    assert(binv != NULL);
 
    /* calculate the scalar product of the row in B^-1 and A */
