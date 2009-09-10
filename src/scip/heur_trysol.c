@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.3 2009/09/10 10:02:01 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.4 2009/09/10 22:44:24 bzfwinkm Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
@@ -171,7 +171,6 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
 
 
 /** pass solution to trysol heuristic */
-extern
 SCIP_RETCODE SCIPpassSolToTrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< trysol heuristic */

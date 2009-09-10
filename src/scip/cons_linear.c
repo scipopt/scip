@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.341 2009/09/10 09:57:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.342 2009/09/10 22:44:24 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4982,8 +4982,6 @@ SCIP_RETCODE consdataTightenCoefs(
          var = consdata->vars[i];
 
          /* get coefficient and variable's bounds */
-         lb = SCIPvarGetLbLocal(var);
-         ub = SCIPvarGetUbLocal(var);
          val = consdata->vals[i];
          assert(!SCIPisZero(scip, val));
          
