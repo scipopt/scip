@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.85 2009/09/08 20:41:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.86 2009/09/10 20:53:01 bzfheinz Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -863,6 +863,8 @@ SCIP_RETCODE applyFixings(
          else
          {
             SCIP_Real lhs;
+            
+            assert(varscalar != 0.0);
 
             /* lhs := (rhs - varconstant) / varscalar
              * rhs := (lhs - varconstant) / varscalar

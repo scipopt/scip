@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.48 2009/09/10 20:45:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.49 2009/09/10 20:53:01 bzfheinz Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2753,7 +2753,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    }
    if ( trysol != NULL && *result == SCIP_INFEASIBLE )
    {
-      SCIP_CALL( SCIPpassSolToTrySol(scip, conshdlrdata->heurTrySol, trysol);
+      SCIP_CALL( SCIPpassSolToTrySol(scip, conshdlrdata->heurTrySol, trysol) );
       SCIP_CALL( SCIPfreeSol(scip, &trysol) );
 
       return SCIP_OKAY;
