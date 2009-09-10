@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.h,v 1.25 2009/07/31 11:37:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objreader.h,v 1.26 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objreader.h
  * @brief  C++ wrapper for file readers
@@ -35,6 +35,8 @@ namespace scip
 class ObjReader
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the file reader */
    char* scip_name_;
    
@@ -62,6 +64,7 @@ public:
    /** destructor */
    virtual ~ObjReader()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
       SCIPfreeMemoryArray(scip, &scip_extension_);

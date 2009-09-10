@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdisp.h,v 1.6 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objdisp.h,v 1.7 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objdisp.h
  * @brief  C++ wrapper for display column
@@ -35,6 +35,8 @@ namespace scip
 class ObjDisp
 {
 public:
+   /*lint --e{1540}*/
+   
    /** name of the display column */
    char* scip_name_;
    
@@ -82,6 +84,7 @@ public:
    /** destructor */
    virtual ~ObjDisp()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
       SCIPfreeMemoryArray(scip, &scip_header_);

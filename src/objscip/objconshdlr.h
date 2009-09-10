@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.58 2009/09/02 10:30:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.59 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -37,6 +37,7 @@ namespace scip
 class ObjConshdlr
 {
 public:
+   /*lint --e{1540}*/
    /** name of the constraint handler */
    char* scip_name_;
    
@@ -114,6 +115,7 @@ public:
    /** destructor */
    virtual ~ObjConshdlr()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

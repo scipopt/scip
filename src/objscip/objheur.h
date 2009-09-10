@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.33 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.34 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -35,6 +35,8 @@ namespace scip
 class ObjHeur
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the primal heuristic */
    char* scip_name_;
    
@@ -87,6 +89,7 @@ public:
    /** destructor */
    virtual ~ObjHeur()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

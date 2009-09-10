@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.h,v 1.6 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objdialog.h,v 1.7 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objdialog.h
  * @brief  C++ wrapper for dialogs
@@ -35,6 +35,8 @@ namespace scip
 class ObjDialog
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the dialog */
    char* scip_name_;
    
@@ -61,6 +63,7 @@ public:
    /** destructor */
    virtual ~ObjDialog()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

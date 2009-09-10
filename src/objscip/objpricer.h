@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.30 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.31 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -35,6 +35,8 @@ namespace scip
 class ObjPricer
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the variable pricer */
    char* scip_name_;
    
@@ -73,6 +75,7 @@ public:
    /** destructor */
    virtual ~ObjPricer()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

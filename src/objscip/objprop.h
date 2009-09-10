@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.h,v 1.21 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objprop.h,v 1.22 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objprop.h
  * @brief  C++ wrapper for propagators
@@ -35,6 +35,8 @@ namespace scip
 class ObjProp
 {
 public:
+   /*lint --e{1540}*/
+   
    /** name of the propagator */
    char* scip_name_;
    
@@ -71,6 +73,7 @@ public:
    /** destructor */
    virtual ~ObjProp()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

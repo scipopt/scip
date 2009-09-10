@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.30 2009/07/31 11:37:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.31 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -35,6 +35,8 @@ namespace scip
 class ObjSepa
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the cut separator */
    char* scip_name_;
    
@@ -79,6 +81,7 @@ public:
    /** destructor */
    virtual ~ObjSepa()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

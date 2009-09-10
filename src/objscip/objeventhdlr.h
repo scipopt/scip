@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.h,v 1.15 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.h,v 1.16 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objeventhdlr.h
  * @brief  C++ wrapper for event handlers
@@ -35,6 +35,8 @@ namespace scip
 class ObjEventhdlr
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the event handler */
    char* scip_name_;
    
@@ -56,6 +58,7 @@ public:
    /** destructor */
    virtual ~ObjEventhdlr()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

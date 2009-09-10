@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.31 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.32 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -37,6 +37,8 @@ namespace scip
 class ObjBranchrule
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the branching rule */
    char* scip_name_;
    
@@ -78,6 +80,7 @@ public:
    /** destructor */
    virtual ~ObjBranchrule()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

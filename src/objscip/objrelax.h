@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.23 2009/07/31 11:37:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.24 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -35,6 +35,8 @@ namespace scip
 class ObjRelax
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the relaxator */
    char* scip_name_;
    
@@ -66,6 +68,7 @@ public:
    /** destructor */
    virtual ~ObjRelax()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }

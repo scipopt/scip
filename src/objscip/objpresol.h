@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.h,v 1.27 2009/07/31 11:37:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: objpresol.h,v 1.28 2009/09/10 18:11:43 bzfberth Exp $"
 
 /**@file   objpresol.h
  * @brief  C++ wrapper for presolvers
@@ -35,6 +35,8 @@ namespace scip
 class ObjPresol
 {
 public:
+   /*lint --e{1540}*/
+
    /** name of the presolver */
    char* scip_name_;
    
@@ -71,6 +73,7 @@ public:
    /** destructor */
    virtual ~ObjPresol()
    {
+      /*lint --e{64}*/
       SCIPfreeMemoryArray(scip, &scip_name_);
       SCIPfreeMemoryArray(scip, &scip_desc_);
    }
