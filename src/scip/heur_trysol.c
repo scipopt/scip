@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.2 2009/09/09 17:39:45 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.3 2009/09/10 10:02:01 bzfpfets Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
@@ -128,10 +128,14 @@ SCIP_DECL_HEUREXEC(heurExecTrysol)
       return SCIP_OKAY;
 
    SCIPdebugMessage("exec method of trysol primal heuristic.\n");
+   *result = SCIP_DIDNOTFIND;
 
    /* try solution and free it - check everything, because we are not sure */
    SCIP_CALL( SCIPtrySolFree(scip, &heurdata->sol, TRUE, TRUE, TRUE, &stored) );
    assert( heurdata->sol == NULL );
+
+   if ( stored )
+      *result = SCIP_FOUNDSOL;
 
    return SCIP_OKAY;
 }
