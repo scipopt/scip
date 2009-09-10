@@ -79,6 +79,7 @@ features:
 - added new preprocessing step (mergeMultiples) in cons_setppc.c where equal variables are merged
 - can now run lexicographical dual algorithm (parameter lp/lexdualalgo)
 - the indicator constraint can now try to produce a feasible solution (via heur_trysol)
+- added new version of zerohalf cuts from Manuel Kutschka
 
 performance improvements:
 - replaced some function calls in loop conditions
