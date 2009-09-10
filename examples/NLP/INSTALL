@@ -36,7 +36,7 @@ compilation settings:
              "dbg", "opt", or "prf"
 
 - $(LPS):    the LP solver to use
-             "spx", "spx121", "clp", "cpx"
+             "spx", "clp", "cpx"
 
 For example, if you want to compile the TSP example on a Linux system with a x86 processor
 using the gnu compiler in debug mode, and using Soplex version >= 1.3.0
@@ -63,7 +63,6 @@ running:
    - "OPT=dbg"       to use debug compilation mode
    - "OPT=prf"       to use performance analysis compilation mode
    - "LPS=spx"       to use SOPLEX Version >= 1.3.0 as LP solver (default)
-   - "LPS=spx121"    to use SOPLEX Version <= 1.2.1 as LP solver
    - "LPS=cpx"       to use CPLEX as LP solver
    - "LPS=clp"       to use CLP as LP solver
    - "COMP=gnu"      to use GNU c/c++ compiler (default)
