@@ -202,7 +202,7 @@ parameters:
 - new parameter <constraints/countsols/sollimit> in cons_countsols.c, counting stops, if the given number of solutions were found (-1: no limit)  
 - new parameter <constraints/xor/presolusehashing> in cons_xor.c, should pairwise presolving use hashing?, default TRUE
 - new parameter <branching/relpscost/advanced/conflenscore>, default value 0.001
-- new parameter <heuristics/oneopt/duringroot>, default value FALSE
+- new parameter <heuristics/oneopt/duringroot>, default value TRUE
 - display character of oneopt heuristic changed to 'b'
 
 SCIP version 1.1.0

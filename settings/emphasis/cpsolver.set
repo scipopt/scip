@@ -142,6 +142,42 @@ display/headerfreq = 15
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 display/lpinfo = FALSE
 
+# maximal time in seconds to run
+# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
+limits/time = 1e+20
+
+# maximal number of nodes to process (-1: no limit)
+# [type: longint, range: [-1,9223372036854775807], default: -1]
+limits/nodes = -1
+
+# solving stops, if the given number of nodes was processed since the last improvement of the primal solution value (-1: no limit)
+# [type: longint, range: [-1,9223372036854775807], default: -1]
+limits/stallnodes = -1
+
+# maximal memory usage in MB; reported memory usage is lower than real memory usage!
+# [type: real, range: [0,1.79769313486232e+308], default: 1e+20]
+limits/memory = 1e+20
+
+# solving stops, if the relative gap = |(primalbound - dualbound)/dualbound| is below the given value
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+limits/gap = 0
+
+# solving stops, if the absolute gap = |primalbound - dualbound| is below the given value
+# [type: real, range: [0,1.79769313486232e+308], default: 0]
+limits/absgap = 0
+
+# solving stops, if the given number of solutions were found (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+limits/solutions = -1
+
+# solving stops, if the given number of solution improvements were found (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+limits/bestsol = -1
+
+# maximal number of solutions to store in the solution storage
+# [type: int, range: [1,2147483647], default: 100]
+limits/maxsol = 100
+
 # frequency for solving LP at the nodes (-1: never; 0: only root LP)
 # [type: int, range: [-1,2147483647], default: 1]
 lp/solvefreq = -1
@@ -205,6 +241,22 @@ lp/scaling = TRUE
 # should presolving of LP solver be used?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 lp/presolving = TRUE
+
+# should the lexicographic dual alogrithm be used?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+lp/lexdualalgo = FALSE
+
+# should the lexicographic dual algorithm be applied only at the root node
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+lp/lexdualrootonly = TRUE
+
+# maximum number of rounds in the  lexicographic dual algorithm (-1: unbounded)
+# [type: int, range: [-1,2147483647], default: 2]
+lp/lexdualmaxrounds = 2
+
+# choose fractional basic variables in lexicographic dual algorithm?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+lp/lexdualbasic = FALSE
 
 # fraction of maximal memory usage resulting in switch to memory saving mode
 # [type: real, range: [0,1], default: 0.8]
@@ -507,8 +559,8 @@ constraints/linear/simplifyinequalities = FALSE
 constraints/linear/dualpresolving = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 0]
-constraints/and/sepafreq = 0
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/and/sepafreq = 1
 
 # frequency for propagating domains (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -535,12 +587,24 @@ constraints/and/delayprop = FALSE
 constraints/and/delaypresol = FALSE
 
 # should pairwise constraint comparison be performed in presolving?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/and/presolpairwise = FALSE
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/and/presolpairwise = TRUE
+
+# should hash table be used for detecting redundant constraints in advance
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/and/presolusehashing = TRUE
 
 # should the "and" constraint get linearized and removed (in presolving)?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/and/linearize = FALSE
+
+# should cuts be separated during LP enforcing?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/and/enforcecuts = TRUE
+
+# should an aggregated linearization be used?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/and/aggrlinearization = FALSE
 
 # priority of conflict handler <bounddisjunction>
 # [type: int, range: [-2147483648,2147483647], default: -3000000]
@@ -646,6 +710,10 @@ constraints/countsols/active = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/countsols/collect = FALSE
 
+# counting stops, if the given number of solutions were found (-1: no limit)
+# [type: longint, range: [-1,9223372036854775807], default: -1]
+constraints/countsols/sollimit = -1
+
 # display activation status of display column <sols> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 0]
 display/sols/active = 0
@@ -653,6 +721,58 @@ display/sols/active = 0
 # display activation status of display column <feasST> (0: off, 1: auto, 2:on)
 # [type: int, range: [0,2], default: 0]
 display/feasST/active = 0
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+constraints/indicator/sepafreq = 10
+
+# frequency for propagating domains (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/indicator/propfreq = 1
+
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/indicator/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/indicator/maxprerounds = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/delayprop = FALSE
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/delaypresol = FALSE
+
+# Branch on indicator constraints in enforcing?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/indicator/branchIndicators = TRUE
+
+# Generate logicor constraints instead of cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/genLogicor = FALSE
+
+# Separate using the alternative LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/sepaAlternativeLP = FALSE
+
+# add initial coupling inequalities
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/addCoupling = FALSE
+
+# Update bounds of original variables for separation?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/indicator/updateBounds = FALSE
+
+# Try to make solutions feasible by setting indicator variables?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/indicator/trySolutions = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -746,6 +866,10 @@ constraints/knapsack/maxnumcardlift = -1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/knapsack/disaggregation = TRUE
 
+# should presolving try to simplify knapsacks
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/knapsack/simplifyinequalities = FALSE
+
 # priority of conflict handler <logicor>
 # [type: int, range: [-2147483648,2147483647], default: 800000]
 conflict/logicor/priority = 800000
@@ -817,6 +941,74 @@ constraints/or/delayprop = FALSE
 # should presolving method be delayed, if other presolvers found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 constraints/or/delaypresol = FALSE
+
+# frequency for separating cuts (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 2]
+constraints/quadratic/sepafreq = 2
+
+# frequency for propagating domains (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 10]
+constraints/quadratic/propfreq = 10
+
+# frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)
+# [type: int, range: [-1,2147483647], default: 100]
+constraints/quadratic/eagerfreq = 100
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/quadratic/maxprerounds = -1
+
+# should separation method be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/quadratic/delaysepa = FALSE
+
+# should propagation method be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/quadratic/delayprop = FALSE
+
+# should presolving method be delayed, if other presolvers found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/quadratic/delaypresol = FALSE
+
+# whether a square of a binary variables should be replaced by the binary variable
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/quadratic/replacesqrbinary = TRUE
+
+# max. length of linear term which when multiplied with a binary variables is replaced by an auxiliary variable and a linear reformulation (0 to turn off)
+# [type: int, range: [0,2147483647], default: 2147483647]
+constraints/quadratic/replacebinaryprod = 2147483647
+
+# whether quadratic constraints consisting of several quadratic blocks should be disaggregated in several constraints
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/quadratic/disaggregate = TRUE
+
+# minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy
+# [type: real, range: [0,1e+20], default: 0.0001]
+constraints/quadratic/minefficacy = 0.0001
+
+# whether a quadratic constraint should be scaled w.r.t. the current gradient norm when checking for feasibility
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/quadratic/scaling = TRUE
+
+# whether a propagation should be used that is faster in case of bilinear term, but also less efficient
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/quadratic/fastpropagate = TRUE
+
+# a default bound to impose on unbounded variables in quadratic terms (-defaultbound is used for missing lower bounds)
+# [type: real, range: [0,1e+20], default: 1e+20]
+constraints/quadratic/defaultbound = 1e+20
+
+# maximal range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation
+# [type: real, range: [0,1e+20], default: 10000000000]
+constraints/quadratic/cutmaxrange = 10000000000
+
+# strategy to use for selecting branching variable: b: rb-int-br, r: rb-int-br-rev, i: rb-inf
+# [type: char, range: {bri}, default: r]
+constraints/quadratic/strategy = r
+
+# minimal fractional distance of branching point to variable bounds; a value of 0.5 leads to branching always in the middle of a bounded domain
+# [type: real, range: [0.0001,0.5], default: 0.2]
+constraints/quadratic/mindistbrpointtobound = 0.2
 
 # priority of conflict handler <setppc>
 # [type: int, range: [-2147483648,2147483647], default: 700000]
@@ -995,8 +1187,24 @@ constraints/xor/delayprop = FALSE
 constraints/xor/delaypresol = FALSE
 
 # should pairwise constraint comparison be performed in presolving?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/xor/presolpairwise = TRUE
+
+# should hash table be used for detecting redundant constraints in advance
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+constraints/xor/presolusehashing = TRUE
+
+# should model constraints be subject to aging?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+reading/cipreader/dynamicconss = TRUE
+
+# should columns be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
-constraints/xor/presolpairwise = FALSE
+reading/cipreader/dynamiccols = FALSE
+
+# should rows be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/cipreader/dynamicrows = FALSE
 
 # should model constraints be subject to aging?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1009,6 +1217,14 @@ reading/cnfreader/dynamiccols = FALSE
 # should rows be added and removed dynamically to the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 reading/cnfreader/dynamicrows = FALSE
+
+# are integer variables free by default (depending on GAMS version)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/gmsreader/freeints = FALSE
+
+# shall characters '#', '*', '+', '/', and '-' in variable and constraint names be replaced by '_'?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/gmsreader/replaceforbiddenchars = FALSE
 
 # should model constraints be subject to aging?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1046,17 +1262,21 @@ reading/opbreader/dynamiccols = FALSE
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 reading/opbreader/dynamicrows = FALSE
 
-# should the non linear constraint be separated during LP processing?
+# should the nonlinear constraint be separated during LP processing?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 reading/opbreader/nlcseparate = TRUE
 
-# should the constraint be propagated during node processing?
+# should the nonlinear constraint be propagated during node processing?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 reading/opbreader/nlcpropagate = TRUE
 
-# should the non linear constraints be removable?
+# should the nonlinear constraints be removable?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 reading/opbreader/nlcremovable = TRUE
+
+# use '*' between coefficients and variables by writing to problem?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/opbreader/multisymbol = FALSE
 
 # should the coloring values be relativ or absolute
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1402,6 +1622,10 @@ branching/relpscost/maxbounddist = 1
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0.01]
 branching/relpscost/conflictweight = 0.01
 
+# weight in score calculations for conflict length score
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0]
+branching/relpscost/conflictlengthweight = 0
+
 # weight in score calculations for inference score
 # [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 0.0001]
 branching/relpscost/inferenceweight = 0.0001
@@ -1551,8 +1775,8 @@ heuristics/coefdiving/maxdiveavgquotnosol = 0
 heuristics/coefdiving/backtrack = TRUE
 
 # priority of heuristic <crossover>
-# [type: int, range: [-536870912,536870911], default: -1011000]
-heuristics/crossover/priority = -1011000
+# [type: int, range: [-536870912,536870911], default: -1104000]
+heuristics/crossover/priority = -1104000
 
 # frequency for calling primal heuristic <crossover> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 30]
@@ -1647,7 +1871,7 @@ heuristics/dins/maxnodes = 5000
 heuristics/dins/minimprove = 0.01
 
 # number of nodes without incumbent change that heuristic should wait
-# [type: longint, range: [0,2147483647], default: 0]
+# [type: longint, range: [0,9223372036854775807], default: 0]
 heuristics/dins/nwaitingnodes = 0
 
 # priority of heuristic <feaspump>
@@ -1704,7 +1928,7 @@ heuristics/feaspump/perturbfreq = 100
 
 # should the feasibility pump be called at root node before cut separation?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
-heuristics/feaspump/beforecuts = FALSE
+heuristics/feaspump/beforecuts = TRUE
 
 # priority of heuristic <fixandinfer>
 # [type: int, range: [-536870912,536870911], default: -500000]
@@ -1947,8 +2171,8 @@ heuristics/linesearchdiving/maxdiveavgquotnosol = 0
 heuristics/linesearchdiving/backtrack = TRUE
 
 # priority of heuristic <localbranching>
-# [type: int, range: [-536870912,536870911], default: -1010000]
-heuristics/localbranching/priority = -1010000
+# [type: int, range: [-536870912,536870911], default: -1102000]
+heuristics/localbranching/priority = -1102000
 
 # frequency for calling primal heuristic <localbranching> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -1991,8 +2215,8 @@ heuristics/localbranching/nwaitingnodes = 200
 heuristics/localbranching/minimprove = 0.01
 
 # priority of heuristic <mutation>
-# [type: int, range: [-536870912,536870911], default: -1020000]
-heuristics/mutation/priority = -1020000
+# [type: int, range: [-536870912,536870911], default: -1103000]
+heuristics/mutation/priority = -1103000
 
 # frequency for calling primal heuristic <mutation> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -2033,6 +2257,58 @@ heuristics/mutation/minfixingrate = 0.8
 # factor by which Mutation should at least improve the incumbent
 # [type: real, range: [0,1], default: 0.01]
 heuristics/mutation/minimprove = 0.01
+
+# priority of heuristic <nlp>
+# [type: int, range: [-536870912,536870911], default: -2000000]
+heuristics/nlp/priority = -2000000
+
+# frequency for calling primal heuristic <nlp> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/nlp/freq = 10
+
+# frequency offset for calling primal heuristic <nlp>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/nlp/freqofs = 0
+
+# maximal depth level to call primal heuristic <nlp> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/nlp/maxdepth = -1
+
+# verbosity level of NLP solver
+# [type: int, range: [0,2], default: 0]
+heuristics/nlp/nlpverblevel = 0
+
+# iteration limit of NLP solver; 0 to use solver default
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/nlp/nlpiterlimit = 0
+
+# time limit of NLP solver; 0 to use solver default
+# [type: real, range: [0,1e+20], default: 0]
+heuristics/nlp/nlptimelimit = 0
+
+# if SCIP does not accept a solution which the NLP solver thinks is feasible, the feasibility tolerance is reduced by this factor and the NLP resolved (set to 1. to turn off resolve
+# [type: real, range: [0,1], default: 0.01]
+heuristics/nlp/resolvetolfactor = 0.01
+
+# whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/nlp/resolvefromscratch = TRUE
+
+# number of iterations added to the contingent of the total number of iterations
+# [type: int, range: [0,2147483647], default: 500]
+heuristics/nlp/iteroffset = 500
+
+# contingent of NLP iterations in relation to the number of nodes in SCIP
+# [type: real, range: [0,1e+20], default: 0.1]
+heuristics/nlp/iterquotient = 0.1
+
+# contingent of NLP iterations in relation to the number of nodes in SCIP
+# [type: int, range: [0,2147483647], default: 300]
+heuristics/nlp/itermin = 300
+
+# whether variable bound constraints should be handled explicitly before solving NLP instead of adding them to the NLP
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/nlp/varboundexplicit = TRUE
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1004000]
@@ -2146,6 +2422,10 @@ heuristics/oneopt/maxdepth = -1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/oneopt/weightedobj = TRUE
 
+# should the heuristic be called before and during the root node?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/oneopt/duringroot = TRUE
+
 # priority of heuristic <pscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1002000]
 heuristics/pscostdiving/priority = -1002000
@@ -2243,8 +2523,8 @@ heuristics/rens/nodesquot = 0.1
 heuristics/rens/minimprove = 0.01
 
 # priority of heuristic <rins>
-# [type: int, range: [-536870912,536870911], default: -1009000]
-heuristics/rins/priority = -1009000
+# [type: int, range: [-536870912,536870911], default: -1101000]
+heuristics/rins/priority = -1101000
 
 # frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -2377,6 +2657,38 @@ heuristics/simplerounding/freqofs = 0
 # maximal depth level to call primal heuristic <simplerounding> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/simplerounding/maxdepth = -1
+
+# priority of heuristic <trivial>
+# [type: int, range: [-536870912,536870911], default: 1000]
+heuristics/trivial/priority = 1000
+
+# frequency for calling primal heuristic <trivial> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 0]
+heuristics/trivial/freq = 0
+
+# frequency offset for calling primal heuristic <trivial>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/trivial/freqofs = 0
+
+# maximal depth level to call primal heuristic <trivial> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/trivial/maxdepth = -1
+
+# priority of heuristic <trysol>
+# [type: int, range: [-536870912,536870911], default: -3000000]
+heuristics/trysol/priority = -3000000
+
+# frequency for calling primal heuristic <trysol> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 1]
+heuristics/trysol/freq = 1
+
+# frequency offset for calling primal heuristic <trysol>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/trysol/freqofs = 0
+
+# maximal depth level to call primal heuristic <trysol> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/trysol/maxdepth = -1
 
 # priority of heuristic <veclendiving>
 # [type: int, range: [-536870912,536870911], default: -1003100]
@@ -2771,8 +3083,8 @@ separating/intobj/delay = FALSE
 separating/mcf/priority = -10000
 
 # frequency for calling separator <mcf> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/mcf/freq = -1
+# [type: int, range: [-1,2147483647], default: 0]
+separating/mcf/freq = 0
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <mcf> (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 0]
@@ -2782,21 +3094,17 @@ separating/mcf/maxbounddist = 0
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/mcf/delay = FALSE
 
-# number of clusters to generate in the shrunken network
-# [type: int, range: [2,32], default: 6]
-separating/mcf/nclusters = 6
+# number of clusters to generate in the shrunken network -- default separation
+# [type: int, range: [2,32], default: 5]
+separating/mcf/nclusters = 5
 
 # maximal valid range max(|weights|)/min(|weights|) of row weights
 # [type: real, range: [1,1.79769313486232e+308], default: 1000000]
 separating/mcf/maxweightrange = 1000000
 
-# maximal number of different deltas to try (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/mcf/maxtestdelta = -1
-
-# model type of network (0: auto, 1:directed, 2:undirected)
-# [type: int, range: [0,2], default: 0]
-separating/mcf/modeltype = 0
+# maximal number of different deltas to try (-1: unlimited)  -- default separation
+# [type: int, range: [-1,2147483647], default: 20]
+separating/mcf/maxtestdelta = 20
 
 # should negative values also be tested in scaling?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -2809,6 +3117,42 @@ separating/mcf/fixintegralrhs = TRUE
 # should generated cuts be removed from the LP if they are no longer tight?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/mcf/dynamiccuts = TRUE
+
+# model type of network (0: auto, 1:directed, 2:undirected)
+# [type: int, range: [0,2], default: 0]
+separating/mcf/modeltype = 0
+
+# maximal number of mcf cuts separated per separation round
+# [type: int, range: [-1,2147483647], default: 100]
+separating/mcf/maxsepacuts = 100
+
+# maximal number of mcf cuts separated per separation round in the root node  -- default separation
+# [type: int, range: [-1,2147483647], default: 200]
+separating/mcf/maxsepacutsroot = 200
+
+# maximum inconsistency ratio for separation at all
+# [type: real, range: [0,1.79769313486232e+308], default: 0.02]
+separating/mcf/maxinconsistencyratio = 0.02
+
+# maximum inconsistency ratio of arcs not to be deleted
+# [type: real, range: [0,1.79769313486232e+308], default: 0.5]
+separating/mcf/maxarcinconsistencyratio = 0.5
+
+# should we separate only if the cuts shores are connected?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/checkcutshoreconnectivity = TRUE
+
+# should we separate inequalities based on single-node cuts?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/separatesinglenodecuts = TRUE
+
+# should we separate flowcutset inequalities on the network cuts?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/separateflowcutset = TRUE
+
+# should we separate knapsack cover inequalities on the network cuts?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/mcf/separateknapsack = TRUE
 
 # priority of separator <redcost>
 # [type: int, range: [-536870912,536870911], default: 10000000]
@@ -2945,8 +3289,8 @@ separating/zerohalf/onlyorigrows = FALSE
 separating/zerohalf/usezhcutpool = TRUE
 
 # should problem be decomposed into subproblems (if possible) before applying preprocessing?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/zerohalf/preprocessing/decomposeproblem = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/preprocessing/decomposeproblem = FALSE
 
 # value of delta parameter used in preprocessing method 'd'
 # [type: real, range: [0,1], default: 0.5]
@@ -2954,8 +3298,8 @@ separating/zerohalf/preprocessing/delta = 0.5
 
 # preprocessing methods and ordering:
    #                      'd' columns with small LP solution,
-   #                      'G' modified Gaussian elimination,
-   #                      'i' identical columns,
+    #                      'G' modified Gaussian elimination,
+     #                      'i' identical columns,
    #                      'I' identical rows,
    #                      'L' large slack rows,
    #                      'M' large slack rows (minslack),
@@ -2966,8 +3310,8 @@ separating/zerohalf/preprocessing/delta = 0.5
    #                      'C' fast {'z','s'},
    #                      'R' fast {'Z','L','I'}
    #                      
-   #                      '-' no preprocessing
-   #                     
+                         #                      '-' no preprocessing
+     #                     
 # [type: string, default: "CXRGXIM"]
 separating/zerohalf/preprocessing/ppmethods = "CXRGXIM"
 
