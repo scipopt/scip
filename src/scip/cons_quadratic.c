@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.46 2009/09/11 17:13:22 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.47 2009/09/11 18:43:40 bzfwinkm Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -94,11 +94,11 @@ struct SCIP_ConsData
    SCIP_VAR**            bilinvars2;         /**< array with second variables in bilinear term */
    SCIP_Real*            bilincoefs;         /**< array with coefficients of bilinear term */
 
-   unsigned int          isconvex:1;         /**< whether quadratic function is convex */
-   unsigned int          isconcave:1;        /**< whether quadratic function is concave */
-   unsigned int          isremovedfixings:1; /**< whether we have removed fixed/aggr/multiaggr variables */
-   unsigned int          ispropagated:1;     /**< whether the constraint was propagated with respect to the current bounds */
-   unsigned int          ispresolved:1;      /**< whether we have checked for possibilities of upgrading or implicit integer variables */
+   unsigned int          isconvex:1;         /**< is quadratic function is convex ? */
+   unsigned int          isconcave:1;        /**< is quadratic function is concave ? */
+   unsigned int          isremovedfixings:1; /**< did we removed fixed/aggr/multiaggr variables ? */
+   unsigned int          ispropagated:1;     /**< was the constraint propagated with respect to the current bounds ? */
+   unsigned int          ispresolved:1;      /**< did we checked for possibilities of upgrading or implicit integer variables ? */
 
    SCIP_Real             lhsviol;            /**< violation of lower bound by current solution (used temporarily inside constraint handler) */
    SCIP_Real             rhsviol;            /**< violation of lower bound by current solution (used temporarily inside constraint handler) */
@@ -143,12 +143,12 @@ struct VarInfeasibility
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_Bool             replacesqrbinary;          /**< whether squares of binary variables are replaced by the variable itself */
+   SCIP_Bool             replacesqrbinary;          /**< were squares of binary variables replaced by the variable itself ? */
    int                   replacebinaryprodlength;   /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
-   SCIP_Bool             disaggregation;            /**< whether we should disaggregate block separable quadratic constraints */
+   SCIP_Bool             disaggregation;            /**< should we disaggregate block separable quadratic constraints ? */
    SCIP_Real             mincutefficacy;            /**< minimal efficacy of a cut in order to add it to relaxation */
-   SCIP_Bool             doscaling;                 /**< whether constraints should be scaled in the feasibility check */
-   SCIP_Bool             fastpropagate;             /**< whether a faster but maybe less effective propagation should be used */
+   SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
+   SCIP_Bool             fastpropagate;             /**< should a faster but maybe less effective propagation be used ? */
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
 
@@ -614,7 +614,7 @@ void F77_FUNC(dsyev,DSYEV)(
 static
 SCIP_RETCODE LapackDsyev(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             computeeigenvectors,/**< whether also eigenvectors should be computed */
+   SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
    int                   N,                  /**< dimension */
    SCIP_Real*            a,                  /**< matrix data on input (size N*N); eigenvectors on output if computeeigenvectors == TRUE */
    SCIP_Real*            w                   /**< buffer to store eigenvalues (size N) */
@@ -1491,9 +1491,9 @@ SCIP_RETCODE presolveCreateQuadTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HASHMAP**        terms,              /**< storage for PRESOLVEQUADTERM's */
    SCIP_Real*            constant,           /**< storage for constant */
-   SCIP_Bool*            havechange,         /**< whether a change in the function has been identified (variables fixed, aggregated,...) */
+   SCIP_Bool*            havechange,         /**< was a change in the function has been identified (variables fixed, aggregated,...) ? */
    SCIP_CONS*            cons,               /**< constraint */
-   SCIP_Bool             replacesqrbinary    /**< whether to replace squares of binary variables */
+   SCIP_Bool             replacesqrbinary    /**< should we replace squares of binary variables ? */
    )
 {
    SCIP_CONSDATA*     consdata;
@@ -2338,7 +2338,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
    return SCIP_OKAY;
 }
 
-/** checks whether a quadratic constraint is convex and/or concave */
+/** checks a quadratic constraint for convexity and/or concavity */
 static
 SCIP_RETCODE checkCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2640,7 +2640,7 @@ SCIP_RETCODE computeViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Bool             doscaling           /**< whether we should scale the violation by the gradient of the quadratic function */ 
+   SCIP_Bool             doscaling           /**< should we scale the violation by the gradient of the quadratic function ? */ 
    )
 {  /*lint --e{666}*/
    SCIP_CONSDATA* consdata;
@@ -2713,7 +2713,7 @@ SCIP_RETCODE computeViolations(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
-   SCIP_Bool             doscaling,          /**< whether to do scaling when computing violation */
+   SCIP_Bool             doscaling,          /**< are we scaling when computing violation ? */
    SCIP_CONS**           maxviolcon          /**< buffer to store constraint with largest violation, or NULL if solution is feasible */
    )
 {
@@ -3227,7 +3227,7 @@ SCIP_RETCODE separatePoint(
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_RESULT*          result,             /**< result of separation */
-   SCIP_Bool             addweakcuts         /**< whether also weak (only slightly violated) cuts should be added in a nonconvex constraint */
+   SCIP_Bool             addweakcuts         /**< should also weak (only slightly violated) cuts be added in a nonconvex constraint ? */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
