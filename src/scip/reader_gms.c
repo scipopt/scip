@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.29 2009/09/10 21:39:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.30 2009/09/11 15:18:33 bzfgamra Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1307,11 +1307,11 @@ SCIP_RETCODE SCIPwriteGms(
       else if( strcmp(conshdlrname, "quadratic") == 0 )
       {
          SCIP_CALL( printQuadraticCons(scip, file, consname,
-               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoeffLinearVarsQuadratic(scip, cons),
-               SCIPgetNQuadVarsQuadratic(scip, cons), SCIPgetQuadVarsQuadratic(scip, cons), SCIPgetLinearCoeffQuadVarsQuadratic(scip, cons),
-               SCIPgetSqrCoeffQuadVarsQuadratic(scip, cons),
-               SCIPgetNBilinTermQuadratic(scip, cons), SCIPgetBilinVar1Quadratic(scip, cons), SCIPgetBilinVar2Quadratic(scip, cons),
-               SCIPgetBilinCoeffQuadratic(scip, cons),
+               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+               SCIPgetNQuadVarsQuadratic(scip, cons), SCIPgetQuadVarsQuadratic(scip, cons), SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons),
+               SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons),
+               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinVars1Quadratic(scip, cons), SCIPgetBilinVars2Quadratic(scip, cons),
+               SCIPgetBilinCoefsQuadratic(scip, cons),
                SCIPgetLhsQuadratic(scip, cons),  SCIPgetRhsQuadratic(scip, cons), transformed) );
 
          nlcons = TRUE;

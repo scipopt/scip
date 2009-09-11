@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.342 2009/09/10 22:44:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.343 2009/09/11 15:18:33 bzfgamra Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -4676,7 +4676,7 @@ SCIP_RETCODE tightenSides(
  *  A deviation of only one from their bound makes the lhs/rhs feasible (i.e., redundant), even if all other 
  *  variables are set to their "worst" bound. If all variables which are not surely non-redundant cannot make 
  *  the lhs/rhs redundant, even if they are set to their "best" bound, they can be removed from the constraint.
- *  E.g., for binary variables and an inequality x_1 +x_2 +10y_1 +10y_2 \ge 5, setting either of the y_i to one 
+ *  E.g., for binary variables and an inequality x_1 +x_2 +10y_1 +10y_2 >= 5, setting either of the y_i to one 
  *  suffices to fulfill the inequality, whereas the x_i do not contribute to feasibility and can be removed.
  */
 static

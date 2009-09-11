@@ -3,6 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -11,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.15 2009/09/11 12:58:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.16 2009/09/11 15:18:33 bzfgamra Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -30,138 +31,139 @@
 struct SCIP_NlpiOracle
 {
    int                   nvars;              /**< number of variables */
-   SCIP_Real*            varlb;              /**< variable lower bounds */
-   SCIP_Real*            varub;              /**< variable upper bounds */
-   char**                varname;            /**< variable names */
+   SCIP_Real*            varlbs;             /**< array with variable lower bounds */
+   SCIP_Real*            varubs;             /**< array with variable upper bounds */
+   char**                varnames;           /**< array with variable names */
    
-   int                   ncons;              /**< number of constraints */
-   SCIP_Real*            conlhs;             /**<  left-hand side of constraints */
-   SCIP_Real*            conrhs;             /**< right-hand side of constraints */
-   int*                  conlinoffset;       /**< start index of each constraints linear coefficients in linind and linval (length: ncons + 1, linoffset[ncons] gives length of linind and linval) */
-   int*                  conlinind;          /**< variable indices in linear part */
-   SCIP_Real*            conlinval;          /**< variable coefficients in linear part */ 
-   int*                  conquadlen;         /**< quadlen[.] gives length of quadratic part, or 0 if no quadratic part in this constraint */
-   int**                 conquadrow;         /**< quadrow[.] gives row    indices for quadratic part, or NULL if no quadratic part in this constraint */
-   int**                 conquadcol;         /**< quadcol[.] gives column indices for quadratic part, or NULL if no quadratic part in this constraint */
-   SCIP_Real**           conquadval;         /**< quadval[.] gives coefficients in quadratic part, or NULL if no quadratic part in this constraint */
-   int**                 conexprvaridx;      /**< exprvaridx[.] gives indices of variables from expression in NLP, or NULL if no nonquadratic part in this constraint */
-   SCIP_EXPRTREE**       conexprtree;        /**< exprtree[.] gives nonquadratic part, or NULL if no nonquadratic part in this constraint */
-   char**                conname;            /**< constraint names */
+   int                   nconss;             /**< number of constraints */
+   SCIP_Real*            conslhss;           /**< array with left-hand sides of constraints */
+   SCIP_Real*            consrhss;           /**< array with right-hand sides of constraints */
+   int*                  conslinoffsets;     /**< array with start index of each constraints linear coefficients in lininds and linvals 
+                                              *   (length: nconss + 1, linoffsets[nconss] gives length of lininds and linvals) */
+   int*                  conslininds;        /**< array with variable indices in linear part */
+   SCIP_Real*            conslinvals;        /**< array with variable coefficients in linear part */ 
+   int*                  consquadlens;       /**< quadlens[.] gives length of quadratic part, or 0 if no quadratic part in this constraint */
+   int**                 consquadrows;       /**< quadrows[.] gives row indices for quadratic part, or NULL if no quadratic part in this constraint */
+   int**                 consquadcols;       /**< quadcols[.] gives column indices for quadratic part, or NULL if no quadratic part in this constraint */
+   SCIP_Real**           consquadvals;       /**< quadvals[.] gives coefficients in quadratic part, or NULL if no quadratic part in this constraint */
+   int**                 consexprvaridxs;    /**< exprvaridx[.] gives indices of variables from expression in NLP, or NULL if no nonquadratic part in this constraint */
+   SCIP_EXPRTREE**       consexprtrees;      /**< exprtrees[.] gives nonquadratic part, or NULL if no nonquadratic part in this constraint */
+   char**                consnames;          /**< array with constraint names */
 
    SCIP_Real             objconstant;        /**< constant part of objective */
    int                   objnlin;            /**< number of linear variable coefficients in objective */ 
-   int*                  objlinind;          /**< indices of linear variables in objective, or NULL if no linear part */
-   SCIP_Real*            objlinval;          /**< coefficients of linear variables in objective, or NULL if no linear part */
+   int*                  objlinidxs;         /**< array with indices of linear variables in objective, or NULL if no linear part */
+   SCIP_Real*            objlinvals;         /**< array with coefficients of linear variables in objective, or NULL if no linear part */
    int                   objquadlen;         /**< length of quadratic part of objective, or 0 if no quadratic part in objective */
-   int*                  objquadrow;         /**< row    indices in quadratic part of objective, or NULL if no quadratic part in objective */
-   int*                  objquadcol;         /**< column indices in quadratic part in objective, or NULL if no quadratic part in objective */ 
-   SCIP_Real*            objquadval;         /**< coefficients in quadratic part in objective, or NULL if no quadratic part in objective */
-   int*                  objexprvaridx;      /**< exprvaridx[.] gives indices of variables from expression in NLP, or NULL if no nonquadratic part in objective */
+   int*                  objquadrows;        /**< array with row indices in quadratic part of objective, or NULL if no quadratic part in objective */
+   int*                  objquadcols;        /**< array with column indices in quadratic part in objective, or NULL if no quadratic part in objective */ 
+   SCIP_Real*            objquadvals;        /**< array with coefficients in quadratic part in objective, or NULL if no quadratic part in objective */
+   int*                  objexprvaridxs;     /**< exprvaridxs[.] gives indices of variables from expression in NLP, or NULL if no nonquadratic part in objective */
    SCIP_EXPRTREE*        objexprtree;        /**< expression tree of nonquadratic part in objective, or NULL if no nonquadratic part in objective */
 
-   int*                  jacoffset;          /**< rowwise jacobi sparsity pattern: constraint offsets in jaccol */
-   int*                  jaccol;             /**< rowwise jacobi sparsity pattern: indices of variables appearing in constraints */
+   int*                  jacoffsets;         /**< rowwise jacobi sparsity pattern: constraint offsets in jaccols */
+   int*                  jaccols;            /**< rowwise jacobi sparsity pattern: indices of variables appearing in constraints */
    
-   int*                  heslagoffset;       /**< rowwise sparsity pattern of hessian matrix of Lagrangian: row offsets in laghescol */
-   int*                  heslagcol;          /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
+   int*                  heslagoffsets;      /**< rowwise sparsity pattern of hessian matrix of Lagrangian: row offsets in laghescol */
+   int*                  heslagcols;         /**< rowwise sparsity pattern of hessian matrix of Lagrangian: column indices; sorted for each row */
    
-   int*                  vardegree;          /**< maximal degree of variable over objective and all constraints */
+   int*                  vardegrees;         /**< array with maximal degree of variable over objective and all constraints */
 };
 
 /** Invalidates the sparsity pattern of the Jacobian.
- * Should be called when constraints are added or deleted.
+ *  Should be called when constraints are added or deleted.
  */
 static
 void SCIPnlpiOracleInvalidateJacobiSparsity(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle              /**< pointer to store NLPIORACLE data structure */
-)
+   )
 {
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
-   if( oracle->jacoffset == NULL )
+   if( oracle->jacoffsets == NULL )
    { /* nothing to do */
-      assert(oracle->jaccol == NULL);
+      assert(oracle->jaccols == NULL);
       return;
    }
    
-   assert(oracle->jaccol != NULL);
-   SCIPfreeMemoryArray(scip, &oracle->jacoffset);
-   SCIPfreeMemoryArray(scip, &oracle->jaccol);
+   assert(oracle->jaccols != NULL);
+   SCIPfreeMemoryArray(scip, &oracle->jacoffsets);
+   SCIPfreeMemoryArray(scip, &oracle->jaccols);
 }
 
 /** Invalidates the sparsity pattern of the Hessian of the Lagragian.
- * Should be called when the objective is set or constraints are added or deleted.
+ *  Should be called when the objective is set or constraints are added or deleted.
  */
 static
 void SCIPnlpiOracleInvalidateHessianLagSparsity(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle              /**< pointer to store NLPIORACLE data structure */
-)
+   )
 {
    assert(scip   != NULL);
    assert(oracle != NULL);
    
-   if( oracle->heslagoffset == NULL )
+   if( oracle->heslagoffsets == NULL )
    { /* nothing to do */
-      assert(oracle->heslagcol == NULL);
+      assert(oracle->heslagcols == NULL);
       return;
    }
    
-   assert(oracle->heslagcol != NULL);
-   SCIPfreeMemoryArray(scip, &oracle->heslagoffset);
-   SCIPfreeMemoryArray(scip, &oracle->heslagcol);
+   assert(oracle->heslagcols != NULL);
+   SCIPfreeMemoryArray(scip, &oracle->heslagoffsets);
+   SCIPfreeMemoryArray(scip, &oracle->heslagcols);
 }
 
 /** creates an NLPIORACLE data structure */
 SCIP_RETCODE SCIPnlpiOracleCreate(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE**     oracle              /**< pointer to store NLPIORACLE data structure */
-)
+   )
 {
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    SCIP_CALL( SCIPallocMemory(scip, oracle) );
    
-   (*oracle)->nvars         = 0;
-   (*oracle)->varlb         = NULL;
-   (*oracle)->varub         = NULL;
-   (*oracle)->varname       = NULL;
+   (*oracle)->nvars = 0;
+   (*oracle)->varlbs = NULL;
+   (*oracle)->varubs = NULL;
+   (*oracle)->varnames = NULL;
 
-   (*oracle)->ncons         = 0;
-   (*oracle)->conlhs        = NULL;
-   (*oracle)->conrhs        = NULL;
-   (*oracle)->conlinoffset  = NULL;
-   (*oracle)->conlinind     = NULL;
-   (*oracle)->conlinval     = NULL;
-   (*oracle)->conquadlen    = NULL;
-   (*oracle)->conquadrow    = NULL;
-   (*oracle)->conquadcol    = NULL;
-   (*oracle)->conquadval    = NULL;
-   (*oracle)->conexprvaridx = NULL;
-   (*oracle)->conexprtree   = NULL;
-   (*oracle)->conname       = NULL;
+   (*oracle)->nconss = 0;
+   (*oracle)->conslhss = NULL;
+   (*oracle)->consrhss = NULL;
+   (*oracle)->conslinoffsets = NULL;
+   (*oracle)->conslininds = NULL;
+   (*oracle)->conslinvals = NULL;
+   (*oracle)->consquadlens = NULL;
+   (*oracle)->consquadrows = NULL;
+   (*oracle)->consquadcols = NULL;
+   (*oracle)->consquadvals = NULL;
+   (*oracle)->consexprvaridxs = NULL;
+   (*oracle)->consexprtrees = NULL;
+   (*oracle)->consnames = NULL;
 
-   (*oracle)->objconstant   = 0.0;
-   (*oracle)->objnlin       = 0;
-   (*oracle)->objlinind     = NULL;
-   (*oracle)->objlinval     = NULL;
-   (*oracle)->objquadlen    = 0;
-   (*oracle)->objquadrow    = NULL;
-   (*oracle)->objquadcol    = NULL;
-   (*oracle)->objquadval    = NULL;
-   (*oracle)->objexprvaridx = NULL;
-   (*oracle)->objexprtree   = NULL;
+   (*oracle)->objconstant = 0.0;
+   (*oracle)->objnlin = 0;
+   (*oracle)->objlinidxs = NULL;
+   (*oracle)->objlinvals = NULL;
+   (*oracle)->objquadlen = 0;
+   (*oracle)->objquadrows = NULL;
+   (*oracle)->objquadcols = NULL;
+   (*oracle)->objquadvals = NULL;
+   (*oracle)->objexprvaridxs = NULL;
+   (*oracle)->objexprtree = NULL;
    
-   (*oracle)->jacoffset     = NULL;
-   (*oracle)->jaccol        = NULL;
+   (*oracle)->jacoffsets = NULL;
+   (*oracle)->jaccols = NULL;
    
-   (*oracle)->heslagoffset  = NULL;
-   (*oracle)->heslagcol     = NULL;
+   (*oracle)->heslagoffsets = NULL;
+   (*oracle)->heslagcols = NULL;
    
-   (*oracle)->vardegree     = NULL;
+   (*oracle)->vardegrees = NULL;
    
    return SCIP_OKAY;
 }
@@ -170,9 +172,10 @@ SCIP_RETCODE SCIPnlpiOracleCreate(
 SCIP_RETCODE SCIPnlpiOracleInit(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle              /**< NLPIORACLE data structure */
-)
+   )
 {  /*lint --e{715}*/
    assert(scip != NULL);
+   assert(oracle != NULL);
 
    return SCIP_OKAY;
 }
@@ -181,83 +184,84 @@ SCIP_RETCODE SCIPnlpiOracleInit(
 SCIP_RETCODE SCIPnlpiOracleFree(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE**     oracle              /**< pointer to NLPIORACLE data structure */
-)
+   )
 {
    int i;
-   assert(scip    != NULL);
-   assert(oracle  != NULL);
+
+   assert(scip != NULL);
+   assert(oracle != NULL);
    assert(*oracle != NULL);
    
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->varlb);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->varub);
-   if( (*oracle)->varname != NULL )
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->varlbs);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->varubs);
+   if( (*oracle)->varnames != NULL )
    {
       for( i = 0; i < (*oracle)->nvars; ++i )
       {
-        SCIPfreeMemoryArrayNull(scip, &(*oracle)->varname[i]);
+        SCIPfreeMemoryArrayNull(scip, &(*oracle)->varnames[i]);
       }
-      SCIPfreeMemoryArray(scip, &(*oracle)->varname);
+      SCIPfreeMemoryArray(scip, &(*oracle)->varnames);
    }
    
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conlhs);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conrhs);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conlinoffset);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conlinind);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conlinval);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conslhss);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->consrhss);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conslinoffsets);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conslininds);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->conslinvals);
    
-   if( (*oracle)->conquadlen != NULL )
+   if( (*oracle)->consquadlens != NULL )
    {
-      assert((*oracle)->conquadrow != NULL);
-      assert((*oracle)->conquadcol != NULL);
-      assert((*oracle)->conquadval != NULL);
-      for( i = 0; i < (*oracle)->ncons; ++i )
+      assert((*oracle)->consquadrows != NULL);
+      assert((*oracle)->consquadcols != NULL);
+      assert((*oracle)->consquadvals != NULL);
+      for( i = 0; i < (*oracle)->nconss; ++i )
       {
-         SCIPfreeMemoryArrayNull(scip, &(*oracle)->conquadrow[i]);
-         SCIPfreeMemoryArrayNull(scip, &(*oracle)->conquadcol[i]);
-         SCIPfreeMemoryArrayNull(scip, &(*oracle)->conquadval[i]);
+         SCIPfreeMemoryArrayNull(scip, &(*oracle)->consquadrows[i]);
+         SCIPfreeMemoryArrayNull(scip, &(*oracle)->consquadcols[i]);
+         SCIPfreeMemoryArrayNull(scip, &(*oracle)->consquadvals[i]);
       }
-      SCIPfreeMemoryArray(scip, &(*oracle)->conquadlen);
-      SCIPfreeMemoryArray(scip, &(*oracle)->conquadrow);
-      SCIPfreeMemoryArray(scip, &(*oracle)->conquadcol);
-      SCIPfreeMemoryArray(scip, &(*oracle)->conquadval);
+      SCIPfreeMemoryArray(scip, &(*oracle)->consquadlens);
+      SCIPfreeMemoryArray(scip, &(*oracle)->consquadrows);
+      SCIPfreeMemoryArray(scip, &(*oracle)->consquadcols);
+      SCIPfreeMemoryArray(scip, &(*oracle)->consquadvals);
    }
    
-   if( (*oracle)->conexprtree != NULL )
+   if( (*oracle)->consexprtrees != NULL )
    {
-      for( i = 0; i < (*oracle)->ncons; ++i )
+      for( i = 0; i < (*oracle)->nconss; ++i )
       {
-         if( (*oracle)->conexprtree[i] != NULL )
+         if( (*oracle)->consexprtrees[i] != NULL )
          {
-            SCIPfreeMemoryArrayNull(scip, &(*oracle)->conexprvaridx[i]);
+            SCIPfreeMemoryArrayNull(scip, &(*oracle)->consexprvaridxs[i]);
          }
       }
-      SCIPfreeMemoryArray(scip, &(*oracle)->conexprtree);
-      SCIPfreeMemoryArray(scip, &(*oracle)->conexprvaridx);
+      SCIPfreeMemoryArray(scip, &(*oracle)->consexprtrees);
+      SCIPfreeMemoryArray(scip, &(*oracle)->consexprvaridxs);
    }
    
-   if( (*oracle)->conname != NULL )
+   if( (*oracle)->consnames != NULL )
    {
-      for( i = 0; i < (*oracle)->ncons; ++i )
+      for( i = 0; i < (*oracle)->nconss; ++i )
       {
-         SCIPfreeMemoryArrayNull(scip, &(*oracle)->conname[i]);
+         SCIPfreeMemoryArrayNull(scip, &(*oracle)->consnames[i]);
       }
-      SCIPfreeMemoryArray(scip, &(*oracle)->conexprtree);
+      SCIPfreeMemoryArray(scip, &(*oracle)->consexprtrees);
    }
    
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objlinind);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objlinval);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadrow);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadcol);
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadval);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objlinidxs);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objlinvals);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadrows);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadcols);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->objquadvals);
    if( (*oracle)->objexprtree != NULL )
    {
-      SCIPfreeMemoryArray(scip, &(*oracle)->objexprvaridx);
+      SCIPfreeMemoryArray(scip, &(*oracle)->objexprvaridxs);
    }
 
    SCIPnlpiOracleInvalidateJacobiSparsity(scip, *oracle);
    SCIPnlpiOracleInvalidateHessianLagSparsity(scip, *oracle);
    
-   SCIPfreeMemoryArrayNull(scip, &(*oracle)->vardegree);
+   SCIPfreeMemoryArrayNull(scip, &(*oracle)->vardegrees);
 
    SCIPfreeMemory(scip, oracle);
    
@@ -269,13 +273,14 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nvars,              /**< number of variables to add */
-   const SCIP_Real*      lb,                 /**< lower bounds of new variables, or NULL if all -infty */
-   const SCIP_Real*      ub,                 /**< upper bounds of new variables, or NULL if all +infty */
-   const char**          varnames            /**< names of new variables, or NULL if no names should be stored */
-)
+   const SCIP_Real*      lbs,                /**< array with lower bounds of new variables, or NULL if all -infinity */
+   const SCIP_Real*      ubs,                /**< array with upper bounds of new variables, or NULL if all +infinity */
+   const char**          varnames            /**< array with names of new variables, or NULL if no names should be stored */
+   )
 {
    int i;
-   assert(scip   != NULL);
+
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    if( nvars == 0 )
@@ -283,58 +288,63 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    
    assert(nvars > 0);
    
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->varlb, oracle->nvars + nvars) );
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->varub, oracle->nvars + nvars) );
+   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->varlbs, oracle->nvars + nvars) );
+   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->varubs, oracle->nvars + nvars) );
    
-   if( lb != NULL )
-      BMScopyMemoryArray(&(oracle->varlb[oracle->nvars]), lb, nvars);
+   if( lbs != NULL )
+      BMScopyMemoryArray(&(oracle->varlbs[oracle->nvars]), lbs, nvars);
+
    else
       for( i = 0; i < nvars; ++i )
-         oracle->varlb[oracle->nvars+i] = -SCIPinfinity(scip);
+         oracle->varlbs[oracle->nvars+i] = -SCIPinfinity(scip);
    
-   if( ub != NULL )
-      BMScopyMemoryArray(oracle->varub + oracle->nvars, ub, nvars);
-   else
-      for( i = 0; i < nvars; ++i )
-         oracle->varub[oracle->nvars+i] =  SCIPinfinity(scip);
-   
-   if( oracle->varname != NULL )
+   if( ubs != NULL )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->varname, oracle->nvars + nvars) );
+      BMScopyMemoryArray(oracle->varubs + oracle->nvars, ubs, nvars);
+   }
+   else
+      for( i = 0; i < nvars; ++i )
+         oracle->varubs[oracle->nvars+i] =  SCIPinfinity(scip);
+   
+   if( oracle->varnames != NULL )
+   {
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->varnames, oracle->nvars + nvars) );
       if( varnames != NULL )
       {
          for( i = 0; i < nvars; ++i )
          {
             if( varnames[i] != NULL )
-               SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->varname[oracle->nvars+i], varnames[i], strlen(varnames[i])+1) );
+            {
+               SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->varnames[oracle->nvars+i], varnames[i], strlen(varnames[i])+1) );
+            }
             else
-               oracle->varname[oracle->nvars+i] = NULL;
+               oracle->varnames[oracle->nvars+i] = NULL;
          }
       }
       else
       {
-         BMSclearMemoryArray(oracle->varname + oracle->nvars, nvars);
+         BMSclearMemoryArray(oracle->varnames + oracle->nvars, nvars);
       }
    }
    else if( varnames != NULL )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->varname, oracle->nvars + nvars) );
-      BMSclearMemoryArray(oracle->varname, oracle->nvars);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->varnames, oracle->nvars + nvars) );
+      BMSclearMemoryArray(oracle->varnames, oracle->nvars);
       for( i = 0; i < nvars; ++i )
       {
          if( varnames[i] != NULL )
          {
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->varname[oracle->nvars+i], varnames[i], strlen(varnames[i])+1) );
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->varnames[oracle->nvars+i], varnames[i], strlen(varnames[i])+1) );
          }
          else
-            oracle->varname[oracle->nvars+i] = NULL;
+            oracle->varnames[oracle->nvars+i] = NULL;
       }
    }
    
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->vardegree, oracle->nvars + nvars) );
-   BMSclearMemoryArray(oracle->vardegree + oracle->nvars, nvars);
+   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->vardegrees, oracle->nvars + nvars) );
+   BMSclearMemoryArray(oracle->vardegrees + oracle->nvars, nvars);
 
-   /* @TODO update sparsity pattern by extending heslagoffset */
+   /* @TODO update sparsity pattern by extending heslagoffsets */
    SCIPnlpiOracleInvalidateHessianLagSparsity(scip, oracle);
 
    oracle->nvars += nvars;
@@ -344,226 +354,243 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
 
 /** adds constraints 
  * 
- * linear coefficients: row(=constraint) oriented matrix;
- * quadratic coefficiens: row oriented matrix for each constraint
+ *  linear coefficients: row(=constraint) oriented matrix;
+ *  quadratic coefficiens: row oriented matrix for each constraint
  */
 SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   ncons,              /**< number of constraints to add */
-   const SCIP_Real*      lhs,                /**<  left-hand side of constraints, or NULL if all -infty */
-   const SCIP_Real*      rhs,                /**< right-hand side of constraints, or NULL if all +infty */
-   const int*            linoffset,          /**< start index of each constraints linear coefficients in linind and linval (length: ncons + 1, linoffset[ncons] gives length of linind and linval), or NULL if no linear part */
-   const int*            linind,             /**< variable indices in linear part, or NULL if no linear part */
-   const SCIP_Real*      linval,             /**< variable coefficients in linear part, of NULL if no linear part */ 
-   const int*            nquadrows,          /**< NULL if no quadratic parts, otherwise nquadrows[.] gives the number of columns in the matrix of the quadratic part, or 0 if no quadratic part in this constraint */
-   int* const*           quadrowidx,         /**< NULL if no quadratic parts, otherwise quadrowidx[.] gives the indices of variables for which a quadratic part is specified, or NULL if no quadratic part in this constraint */
-   int* const*           quadoffset,         /**< NULL if no quadratic parts, otherwise quadoffset[.] gives start index of each rows quadratic coefficients in quadind[.] and quadval[.] (quadoffset[.][nvars] gives length of quadind[.] and quadval[.]), or NULL if no quadratic part in this constraint */
-   int* const*           quadind,            /**< NULL if no quadratic parts, otherwise quadind[.] gives column indices for quadratic part, or NULL if no quadratic part in this constraint */
-   SCIP_Real* const*     quadval,            /**< NULL if no quadratic parts, otherwise quadval[.] gives coefficients in quadratic part, or NULL if no quadratic part in this constraint */
-   int* const*           exprvaridx,         /**< NULL if no nonquadratic parts, otherwise epxrvaridx[.] maps variable indices in expression tree to indices in nlp */
-   SCIP_EXPRTREE* const* exprtree,           /**< NULL if no nonquadratic parts, otherwise exprtree[.] gives nonquadratic part, or NULL if no nonquadratic part in this constraint */
-   const char**          connames            /**< names of new constraints, or NULL if no names should be stored */
+   int                   nconss,             /**< number of constraints to add */
+   const SCIP_Real*      lhss,               /**< array with left-hand sides of constraints, or NULL if all -infinity */
+   const SCIP_Real*      rhss,               /**< array with right-hand sides of constraints, or NULL if all +infinity */
+   const int*            linoffsets,         /**< array with start indices of each constraints linear coefficients in linind and linval 
+                                              *   (length: nconss + 1, linoffset[nconss] gives length of linind and linval), or NULL if no linear part */
+   const int*            lininds,            /**< array with variable indices in linear part, or NULL if no linear part */
+   const SCIP_Real*      linvals,            /**< array with variable coefficients in linear part, of NULL if no linear part */ 
+   const int*            nquadrows,          /**< NULL if no quadratic parts, otherwise nquadrows[.] gives the number of columns in the matrix 
+                                              *   of the quadratic part, or 0 if no quadratic part in this constraint */
+   int* const*           quadrowidxs,        /**< NULL if no quadratic parts, otherwise quadrowidx[.] gives the indices of variables 
+                                              *   for which a quadratic part is specified, or NULL if no quadratic part in this constraint */
+   int* const*           quadoffsets,        /**< NULL if no quadratic parts, otherwise quadoffsets[.] gives start index of each rows quadratic coefficients 
+                                              *   in quadidxs[.] and quadvals[.] (quadoffsets[.][nvars] gives length of quadidxs[.] and quadvals[.]), 
+                                              *   or NULL if no quadratic part in this constraint */
+   int* const*           quadidxs,           /**< NULL if no quadratic parts, otherwise quadidxs[.] gives column indices for quadratic part, 
+                                              *   or NULL if no quadratic part in this constraint */
+   SCIP_Real* const*     quadvals,           /**< NULL if no quadratic parts, otherwise quadvals[.] gives coefficients in quadratic part, 
+                                              *   or NULL if no quadratic part in this constraint */
+   int* const*           exprvaridxs,        /**< NULL if no nonquadratic parts, otherwise epxrvaridxs[.] maps variable indices in expression tree to indices in nlp */
+   SCIP_EXPRTREE* const* exprtrees,          /**< NULL if no nonquadratic parts, otherwise exprtrees[.] gives nonquadratic part, 
+                                              *   or NULL if no nonquadratic part in this constraint */
+   const char**          consnames           /**< names of new constraints, or NULL if no names should be stored */
    )
 {  /*lint --e{715}*/
-   int        i, oldnnz;
-   SCIP_Bool  addednlcon = FALSE;  /* whether a nonlinear constraint was added */
-   
-   assert(scip   != NULL);
+   SCIP_Bool addednlcon;  /* whether a nonlinear constraint was added */
+   int i;
+   int oldnnz;   
+
+   assert(scip != NULL);
    assert(oracle != NULL);
    
-   if( ncons == 0 )
+   if( nconss == 0 )
       return SCIP_OKAY;
    
-   assert(ncons > 0);
+   assert(nconss > 0);
+
+   addednlcon = FALSE;
 
    SCIPnlpiOracleInvalidateJacobiSparsity(scip, oracle); /* @TODO we could also update (extend) the sparsity pattern */
 
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conlhs, oracle->ncons + ncons) );
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conrhs, oracle->ncons + ncons) );
+   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conslhss, oracle->nconss + nconss) );
+   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consrhss, oracle->nconss + nconss) );
 
-   if( lhs != NULL )
+   if( lhss != NULL )
    {
-      BMScopyMemoryArray(oracle->conlhs + oracle->ncons, lhs, ncons);
+      BMScopyMemoryArray(oracle->conslhss + oracle->nconss, lhss, nconss);
    }
    else
-      for( i = 0; i < ncons; ++i )
-         oracle->conlhs[oracle->ncons+i] = -SCIPinfinity(scip);
+      for( i = 0; i < nconss; ++i )
+         oracle->conslhss[oracle->nconss+i] = -SCIPinfinity(scip);
    
-   if( rhs != NULL )
+   if( rhss != NULL )
    {
-     BMScopyMemoryArray(oracle->conrhs + oracle->ncons, rhs, ncons);
+     BMScopyMemoryArray(oracle->consrhss + oracle->nconss, rhss, nconss);
    }
    else
-      for( i = 0; i < ncons; ++i )
-         oracle->conrhs[oracle->ncons+i] =  SCIPinfinity(scip);
+      for( i = 0; i < nconss; ++i )
+         oracle->consrhss[oracle->nconss+i] =  SCIPinfinity(scip);
 
    /* old number of nonzeros */
-   oldnnz = oracle->ncons != 0 ? oracle->conlinoffset[oracle->ncons] : 0;
+   oldnnz = (oracle->nconss != 0 ? oracle->conslinoffsets[oracle->nconss] : 0);
 
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conlinoffset, oracle->ncons + ncons + 1) );
-   if( linoffset != NULL )
+   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conslinoffsets, oracle->nconss + nconss + 1) );
+   if( linoffsets != NULL )
    {
-      assert(linind != NULL);
-      assert(linval != NULL);
+      assert(lininds != NULL);
+      assert(linvals != NULL);
       
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conlinind, oldnnz + linoffset[ncons]) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conlinval, oldnnz + linoffset[ncons]) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conslininds, oldnnz + linoffsets[nconss]) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conslinvals, oldnnz + linoffsets[nconss]) );
    
-      for( i = 0; i <= ncons; ++i )
-         oracle->conlinoffset[oracle->ncons + i] = oldnnz + linoffset[i];
-      BMScopyMemoryArray(oracle->conlinind + oldnnz, linind, linoffset[ncons]);
-      BMScopyMemoryArray(oracle->conlinval + oldnnz, linval, linoffset[ncons]);
+      for( i = 0; i <= nconss; ++i )
+         oracle->conslinoffsets[oracle->nconss + i] = oldnnz + linoffsets[i];
+      BMScopyMemoryArray(oracle->conslininds + oldnnz, lininds, linoffsets[nconss]);
+      BMScopyMemoryArray(oracle->conslinvals + oldnnz, linvals, linoffsets[nconss]);
       
-      for( i = 0; i < linoffset[ncons]; ++i )
-         oracle->vardegree[linind[i]] = MAX(1, oracle->vardegree[linind[i]]);
+      for( i = 0; i < linoffsets[nconss]; ++i )
+         oracle->vardegrees[lininds[i]] = MAX(1, oracle->vardegrees[lininds[i]]);
    }
-   else if( oracle->conlinoffset != NULL )
+   else if( oracle->conslinoffsets != NULL )
    {
-      for( i = 0; i <= ncons; ++i )
-         oracle->conlinoffset[oracle->ncons + i] = oldnnz;
+      for( i = 0; i <= nconss; ++i )
+         oracle->conslinoffsets[oracle->nconss + i] = oldnnz;
    }
    
-   if( quadoffset != NULL )
+   if( quadoffsets != NULL )
    {
-      assert(nquadrows  != NULL);
-      assert(quadrowidx != NULL);
-      assert(quadind    != NULL);
-      assert(quadval    != NULL);
-      if( (oracle->conquadlen == NULL) && (oracle->ncons != 0) )
+      assert(nquadrows != NULL);
+      assert(quadrowidxs != NULL);
+      assert(quadidxs != NULL);
+      assert(quadvals != NULL);
+      if( (oracle->consquadlens == NULL) && (oracle->nconss != 0) )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conquadlen, oracle->ncons + ncons) );
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conquadrow, oracle->ncons + ncons) );
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conquadcol, oracle->ncons + ncons) );
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conquadval, oracle->ncons + ncons) );
-         BMSclearMemoryArray(oracle->conquadlen, oracle->ncons);
-         BMSclearMemoryArray(oracle->conquadrow, oracle->ncons);
-         BMSclearMemoryArray(oracle->conquadcol, oracle->ncons);
-         BMSclearMemoryArray(oracle->conquadval, oracle->ncons);
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadlens, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadrows, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadcols, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadvals, oracle->nconss + nconss) );
+         BMSclearMemoryArray(oracle->consquadlens, oracle->nconss);
+         BMSclearMemoryArray(oracle->consquadrows, oracle->nconss);
+         BMSclearMemoryArray(oracle->consquadcols, oracle->nconss);
+         BMSclearMemoryArray(oracle->consquadvals, oracle->nconss);
       }
       else
       {
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conquadlen, oracle->ncons + ncons) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conquadrow, oracle->ncons + ncons) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conquadcol, oracle->ncons + ncons) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conquadval, oracle->ncons + ncons) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadlens, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadrows, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadcols, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadvals, oracle->nconss + nconss) );
       }
-      for( i = 0; i < ncons; ++i )
+      for( i = 0; i < nconss; ++i )
       {
-         if( quadoffset[i] != NULL && nquadrows[i] != 0 )
+         if( quadoffsets[i] != NULL && nquadrows[i] != 0 )
          {
-            int j, k;
-            assert(quadrowidx[i] != NULL);
-            assert(quadind[i]    != NULL);
-            assert(quadval[i]    != NULL);
-            oracle->conquadlen[oracle->ncons + i] = quadoffset[i][nquadrows[i]];
-            SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conquadrow[oracle->ncons + i], quadoffset[i][nquadrows[i]]) );
-            SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conquadcol[oracle->ncons + i], quadoffset[i][nquadrows[i]]) );
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conquadval[oracle->ncons + i], quadval[i], quadoffset[i][nquadrows[i]]) );
+            int j;
+            int k;
+
+            assert(quadrowidxs[i] != NULL);
+            assert(quadidxs[i]    != NULL);
+            assert(quadvals[i]    != NULL);
+            oracle->consquadlens[oracle->nconss + i] = quadoffsets[i][nquadrows[i]];
+            SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadrows[oracle->nconss + i], quadoffsets[i][nquadrows[i]]) );
+            SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadcols[oracle->nconss + i], quadoffsets[i][nquadrows[i]]) );
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->consquadvals[oracle->nconss + i], quadvals[i], quadoffsets[i][nquadrows[i]]) );
             
-            k = quadoffset[i][0];
+            k = quadoffsets[i][0];
             for( j = 0; j < nquadrows[i]; ++j )
             {
-               if( quadoffset[i][j] == quadoffset[i][j+1] )
+               if( quadoffsets[i][j] == quadoffsets[i][j+1] )
                   continue;
-               for( ; k < quadoffset[i][j+1]; ++k )
+               for( ; k < quadoffsets[i][j+1]; ++k )
                {
-                  assert(quadind[i][k] < nquadrows[i]);
-                  if( quadrowidx[i][j] > quadrowidx[i][quadind[i][k]] )
+                  assert(quadidxs[i][k] < nquadrows[i]);
+                  if( quadrowidxs[i][j] > quadrowidxs[i][quadidxs[i][k]] )
                   {
-                     oracle->conquadrow[oracle->ncons + i][k] = quadrowidx[i][j];
-                     oracle->conquadcol[oracle->ncons + i][k] = quadrowidx[i][quadind[i][k]];
+                     oracle->consquadrows[oracle->nconss + i][k] = quadrowidxs[i][j];
+                     oracle->consquadcols[oracle->nconss + i][k] = quadrowidxs[i][quadidxs[i][k]];
                   }
                   else
                   {
-                     oracle->conquadrow[oracle->ncons + i][k] = quadrowidx[i][quadind[i][k]];
-                     oracle->conquadcol[oracle->ncons + i][k] = quadrowidx[i][j];
+                     oracle->consquadrows[oracle->nconss + i][k] = quadrowidxs[i][quadidxs[i][k]];
+                     oracle->consquadcols[oracle->nconss + i][k] = quadrowidxs[i][j];
                   }
-                  oracle->vardegree[quadrowidx[i][quadind[i][k]]] = MAX(2, oracle->vardegree[quadrowidx[i][quadind[i][k]]]);
+                  oracle->vardegrees[quadrowidxs[i][quadidxs[i][k]]] = MAX(2, oracle->vardegrees[quadrowidxs[i][quadidxs[i][k]]]);
                }
-               oracle->vardegree[quadrowidx[i][j]] = MAX(2, oracle->vardegree[quadrowidx[i][j]]);
+               oracle->vardegrees[quadrowidxs[i][j]] = MAX(2, oracle->vardegrees[quadrowidxs[i][j]]);
             }
-            assert(k == oracle->conquadlen[oracle->ncons + i]);
+            assert(k == oracle->consquadlens[oracle->nconss + i]);
             
             addednlcon = TRUE;
          }
          else
          {
-            oracle->conquadlen[oracle->ncons + i] = 0;
-            oracle->conquadrow[oracle->ncons + i] = NULL;
-            oracle->conquadcol[oracle->ncons + i] = NULL;
-            oracle->conquadval[oracle->ncons + i] = NULL;
+            oracle->consquadlens[oracle->nconss + i] = 0;
+            oracle->consquadrows[oracle->nconss + i] = NULL;
+            oracle->consquadcols[oracle->nconss + i] = NULL;
+            oracle->consquadvals[oracle->nconss + i] = NULL;
          }
       }
    }
-   else if( oracle->conquadlen != NULL )
+   else if( oracle->consquadlens != NULL )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conquadlen, oracle->ncons + ncons) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conquadrow, oracle->ncons + ncons) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conquadcol, oracle->ncons + ncons) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conquadval, oracle->ncons + ncons) );
-      BMSclearMemoryArray(oracle->conquadlen + oracle->ncons, ncons);
-      BMSclearMemoryArray(oracle->conquadrow + oracle->ncons, ncons);
-      BMSclearMemoryArray(oracle->conquadcol + oracle->ncons, ncons);
-      BMSclearMemoryArray(oracle->conquadval + oracle->ncons, ncons);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadlens, oracle->nconss + nconss) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadrows, oracle->nconss + nconss) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadcols, oracle->nconss + nconss) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadvals, oracle->nconss + nconss) );
+      BMSclearMemoryArray(oracle->consquadlens + oracle->nconss, nconss);
+      BMSclearMemoryArray(oracle->consquadrows + oracle->nconss, nconss);
+      BMSclearMemoryArray(oracle->consquadcols + oracle->nconss, nconss);
+      BMSclearMemoryArray(oracle->consquadvals + oracle->nconss, nconss);
    }
    
-   if( exprtree != NULL )
+   if( exprtrees != NULL )
    {
-      if( oracle->conexprtree == NULL && oracle->ncons != 0 )
+      if( oracle->consexprtrees == NULL && oracle->nconss != 0 )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conexprtree,   oracle->ncons + ncons) );
-         BMSclearMemoryArray(oracle->conexprtree,   oracle->ncons);
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conexprvaridx, oracle->ncons + ncons) );
-         BMSclearMemoryArray(oracle->conexprvaridx, oracle->ncons);
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consexprtrees,   oracle->nconss + nconss) );
+         BMSclearMemoryArray(oracle->consexprtrees,   oracle->nconss);
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consexprvaridxs, oracle->nconss + nconss) );
+         BMSclearMemoryArray(oracle->consexprvaridxs, oracle->nconss);
       }
       else
       {
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprtree,   oracle->ncons + ncons) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprvaridx, oracle->ncons + ncons) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consexprtrees,   oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consexprvaridxs, oracle->nconss + nconss) );
       }
-      for( i = 0; i < ncons; ++i )
-         if( exprtree[i] != NULL )
+      for( i = 0; i < nconss; ++i )
+         if( exprtrees[i] != NULL )
          {
             SCIPerrorMessage("nonquadratic functions not supported in NLPI yet.\n");
             return SCIP_ERROR;
          }
          else
          {
-            oracle->conexprtree[oracle->ncons + i]   = NULL;
-            oracle->conexprvaridx[oracle->ncons + i] = NULL;
+            oracle->consexprtrees[oracle->nconss + i] = NULL;
+            oracle->consexprvaridxs[oracle->nconss + i] = NULL;
          }
    }
-   else if( oracle->conexprtree != NULL )
+   else if( oracle->consexprtrees != NULL )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprtree,   oracle->ncons + ncons) );
-      BMSclearMemoryArray(oracle->conexprtree   + oracle->ncons, ncons);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conexprvaridx, oracle->ncons + ncons) );
-      BMSclearMemoryArray(oracle->conexprvaridx + oracle->ncons, ncons);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consexprtrees,   oracle->nconss + nconss) );
+      BMSclearMemoryArray(oracle->consexprtrees   + oracle->nconss, nconss);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consexprvaridxs, oracle->nconss + nconss) );
+      BMSclearMemoryArray(oracle->consexprvaridxs + oracle->nconss, nconss);
    }
 
-   if( connames != NULL )
+   if( consnames != NULL )
    {
-      if( oracle->conname == NULL && oracle->ncons != 0 )
+      if( oracle->consnames == NULL && oracle->nconss != 0 )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conname, oracle->ncons + ncons) );
-         BMSclearMemoryArray(oracle->conname, oracle->ncons);
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consnames, oracle->nconss + nconss) );
+         BMSclearMemoryArray(oracle->consnames, oracle->nconss);
       }
       else
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conname, oracle->ncons + ncons) );
-      for( i = 0; i < ncons; ++i )
-         if( connames[i] != NULL )
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conname[oracle->ncons + i], connames[i], sizeof(connames[i])+1) );
+      {
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consnames, oracle->nconss + nconss) );
+      }
+      for( i = 0; i < nconss; ++i )
+         if( consnames[i] != NULL )
+         {
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->consnames[oracle->nconss + i], consnames[i], sizeof(consnames[i])+1) );
+         }
          else
-            oracle->conname[oracle->ncons + i] = NULL;
+            oracle->consnames[oracle->nconss + i] = NULL;
    }
-   else if( oracle->conname != NULL )
+   else if( oracle->consnames != NULL )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conname, oracle->ncons + ncons) );
-      BMSclearMemoryArray(oracle->conname + oracle->ncons, ncons);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consnames, oracle->nconss + nconss) );
+      BMSclearMemoryArray(oracle->consnames + oracle->nconss, nconss);
    }
    
-   oracle->ncons += ncons;
+   oracle->nconss += nconss;
 
    if( addednlcon == TRUE )
       SCIPnlpiOracleInvalidateHessianLagSparsity(scip, oracle);
@@ -580,30 +607,31 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real       constant,           /**< constant part of objective */
    int                   nlin,               /**< number of linear variable coefficients */ 
-   const int*            linind,             /**< indices of linear variables, or NULL if no linear part */
-   const SCIP_Real*      linval,             /**< coefficients of linear variables, or NULL if no linear part */
+   const int*            lininds,            /**< indices of linear variables, or NULL if no linear part */
+   const SCIP_Real*      linvals,            /**< coefficients of linear variables, or NULL if no linear part */
    int                   nquadrows,          /**< number of columns in the matrix of the quadratic part */
-   const int*            quadrowidx,         /**< indices of variables appearing in quadratic part, or NULL if no quadratic part */
-   const int*            quadoffset,         /**< start index of each rows quadratic coefficients in quadind and quadval (quadoffset[.][nvars] gives length of quadind and quadval), or NULL if no quadratic part */
-   const int*            quadind,            /**< column indices in quadratic part, or NULL if no quadratic part */ 
-   const SCIP_Real*      quadval,            /**< coefficients in quadratic part, or NULL if no quadratic part */
-   const int*            exprvaridx,         /**< maps variable indices in expression tree to indices in nlp, or NULL if no nonquadratic part */
+   const int*            quadrowidxs,        /**< indices of variables appearing in quadratic part, or NULL if no quadratic part */
+   const int*            quadoffsets,        /**< start index of each rows quadratic coefficients in quadidxs and quadvals 
+                                              *   (quadoffsets[.][nvars] gives length of quadidxs and quadvals), or NULL if no quadratic part */
+   const int*            quadidxs,           /**< column indices in quadratic part, or NULL if no quadratic part */ 
+   const SCIP_Real*      quadvals,           /**< coefficients in quadratic part, or NULL if no quadratic part */
+   const int*            exprvaridxs,        /**< maps variable indices in expression tree to indices in nlp, or NULL if no nonquadratic part */
    const SCIP_EXPRTREE*  exprtree            /**< expression tree of nonquadratic part, or NULL if no nonquadratic part */
-)
+   )
 {  /*lint --e{715}*/
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    /* clear previous objective */
-   SCIPfreeMemoryArrayNull(scip, &oracle->objlinind);
-   SCIPfreeMemoryArrayNull(scip, &oracle->objlinval);
-   SCIPfreeMemoryArrayNull(scip, &oracle->objquadrow);
-   SCIPfreeMemoryArrayNull(scip, &oracle->objquadcol);
-   SCIPfreeMemoryArrayNull(scip, &oracle->objquadval);
+   SCIPfreeMemoryArrayNull(scip, &oracle->objlinidxs);
+   SCIPfreeMemoryArrayNull(scip, &oracle->objlinvals);
+   SCIPfreeMemoryArrayNull(scip, &oracle->objquadrows);
+   SCIPfreeMemoryArrayNull(scip, &oracle->objquadcols);
+   SCIPfreeMemoryArrayNull(scip, &oracle->objquadvals);
    if( oracle->objexprtree != NULL )
    {
-      SCIPfreeMemoryArray(scip, &oracle->objexprvaridx);
-      /* @TODO this does not clear the vardegree's */
+      SCIPfreeMemoryArray(scip, &oracle->objexprvaridxs);
+      /* @TODO this does not clear the vardegrees's */
    }
    
    if( nquadrows != 0 || oracle->objquadlen != 0 || exprtree != NULL || oracle->objexprtree != NULL )
@@ -614,48 +642,52 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
    if( nlin != 0 )
    {
       int i;
-      assert(linind != NULL);
-      assert(linval != NULL);
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objlinind, linind, nlin) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objlinval, linval, nlin) );
+
+      assert(lininds != NULL);
+      assert(linvals != NULL);
+
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objlinidxs, lininds, nlin) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objlinvals, linvals, nlin) );
       oracle->objnlin = nlin;
       for( i = 0; i < nlin; ++i )
-         oracle->vardegree[linind[i]] = MAX(1, oracle->vardegree[linind[i]]);
+         oracle->vardegrees[lininds[i]] = MAX(1, oracle->vardegrees[lininds[i]]);
    }
    
-   if( nquadrows != 0 && quadoffset != NULL )
+   if( nquadrows != 0 && quadoffsets != NULL )
    {
-      int j, k;
-      assert(quadrowidx != NULL);
-      assert(quadind    != NULL);
-      assert(quadval    != NULL);
+      int j;
+      int k;
+
+      assert(quadrowidxs != NULL);
+      assert(quadidxs != NULL);
+      assert(quadvals != NULL);
       
-      oracle->objquadlen = quadoffset[nquadrows];
-      SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->objquadrow, oracle->objquadlen) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->objquadcol, oracle->objquadlen) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objquadval, quadval, oracle->objquadlen) );
+      oracle->objquadlen = quadoffsets[nquadrows];
+      SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->objquadrows, oracle->objquadlen) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->objquadcols, oracle->objquadlen) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->objquadvals, quadvals, oracle->objquadlen) );
       
-      k = quadoffset[0];
+      k = quadoffsets[0];
       for( j = 0; j < nquadrows; ++j )
       {
-         if( quadoffset[j] == quadoffset[j+1] )
+         if( quadoffsets[j] == quadoffsets[j+1] )
             continue;
-         for( ; k < quadoffset[j+1]; ++k )
+         for( ; k < quadoffsets[j+1]; ++k )
          {
-            assert(quadind[k] < nquadrows);
-            if( quadrowidx[j] > quadrowidx[quadind[k]] )
+            assert(quadidxs[k] < nquadrows);
+            if( quadrowidxs[j] > quadrowidxs[quadidxs[k]] )
             {
-               oracle->objquadrow[k] = quadrowidx[j];
-               oracle->objquadcol[k] = quadrowidx[quadind[k]];
+               oracle->objquadrows[k] = quadrowidxs[j];
+               oracle->objquadcols[k] = quadrowidxs[quadidxs[k]];
             }
             else
             {
-               oracle->objquadrow[k] = quadrowidx[quadind[k]];
-               oracle->objquadcol[k] = quadrowidx[j];
+               oracle->objquadrows[k] = quadrowidxs[quadidxs[k]];
+               oracle->objquadcols[k] = quadrowidxs[j];
             }
-            oracle->vardegree[quadrowidx[quadind[k]]] = MAX(2, oracle->vardegree[quadrowidx[quadind[k]]]);
+            oracle->vardegrees[quadrowidxs[quadidxs[k]]] = MAX(2, oracle->vardegrees[quadrowidxs[quadidxs[k]]]);
          }
-         oracle->vardegree[quadrowidx[j]] = MAX(2, oracle->vardegree[quadrowidx[j]]);
+         oracle->vardegrees[quadrowidxs[j]] = MAX(2, oracle->vardegrees[quadrowidxs[j]]);
       }
       assert(k == oracle->objquadlen);
    }
@@ -677,29 +709,29 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int             nvars,              /**< number of variables to change bounds */
    const int*            indices,            /**< indices of variables to change bounds */
-   const SCIP_Real*      lb,                 /**< new lower bounds, or NULL if all should be -infty */
-   const SCIP_Real*      ub                  /**< new upper bounds, or NULL if all should be +infty */
-)
+   const SCIP_Real*      lbs,                /**< new lower bounds, or NULL if all should be -infty */
+   const SCIP_Real*      ubs                 /**< new upper bounds, or NULL if all should be +infty */
+   )
 {
    int i;
 
-   assert(scip    != NULL);
-   assert(oracle  != NULL);
+   assert(scip != NULL);
+   assert(oracle != NULL);
    assert(indices != NULL || nvars == 0);
    
    for( i = 0; i < nvars; ++i )
    {
-      assert(indices    != NULL); /* for lint */
+      assert(indices != NULL);
       assert(indices[i] >= 0);
-      assert(indices[i] <  oracle->nvars);
+      assert(indices[i] < oracle->nvars);
       
-      oracle->varlb[indices[i]] = lb != NULL ? lb[i] : -SCIPinfinity(scip);
-      oracle->varub[indices[i]] = ub != NULL ? ub[i] :  SCIPinfinity(scip);
+      oracle->varlbs[indices[i]] = (lbs != NULL ? lbs[i] : -SCIPinfinity(scip));
+      oracle->varubs[indices[i]] = (ubs != NULL ? ubs[i] : SCIPinfinity(scip));
       
-      if( oracle->varlb[indices[i]] > oracle->varub[indices[i]] )
+      if( oracle->varlbs[indices[i]] > oracle->varubs[indices[i]] )
       { /* inconsistent bounds; let's assume it's due to rounding and make them equal */
-         assert(SCIPisLE(scip, oracle->varlb[indices[i]], oracle->varub[indices[i]]) == TRUE);
-         oracle->varlb[indices[i]] = oracle->varub[indices[i]];
+         assert(SCIPisLE(scip, oracle->varlbs[indices[i]], oracle->varubs[indices[i]]) == TRUE);
+         oracle->varlbs[indices[i]] = oracle->varubs[indices[i]];
       }
    }
    
@@ -710,26 +742,26 @@ SCIP_RETCODE SCIPnlpiOracleChgVarBounds(
 SCIP_RETCODE SCIPnlpiOracleChgConsBounds(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int             ncons,              /**< number of constraints to change bounds */
+   const int             nconss,             /**< number of constraints to change bounds */
    const int*            indices,            /**< indices of constraints to change bounds */
-   const SCIP_Real*      lhs,                /**< new  left-hand sides, or NULL if all should be -infty */
-   const SCIP_Real*      rhs                 /**< new right-hand sides, or NULL if all should be +infty */
-)
+   const SCIP_Real*      lhss,               /**< new left-hand sides, or NULL if all should be -infty */
+   const SCIP_Real*      rhss                /**< new right-hand sides, or NULL if all should be +infty */
+   )
 {
    int i;
    
-   assert(scip    != NULL);
-   assert(oracle  != NULL);
-   assert(indices != NULL || ncons == 0);
+   assert(scip != NULL);
+   assert(oracle != NULL);
+   assert(indices != NULL || nconss == 0);
    
-   for( i = 0; i < ncons; ++i )
+   for( i = 0; i < nconss; ++i )
    {
-      assert(indices    != NULL); /* for lint */
+      assert(indices != NULL);
       assert(indices[i] >= 0);
-      assert(indices[i] <  oracle->ncons);
+      assert(indices[i] < oracle->nconss);
       
-      oracle->conlhs[indices[i]] = lhs != NULL ? lhs[i] : -SCIPinfinity(scip);
-      oracle->conrhs[indices[i]] = rhs != NULL ? rhs[i] :  SCIPinfinity(scip);
+      oracle->conslhss[indices[i]] = (lhss != NULL ? lhss[i] : -SCIPinfinity(scip));
+      oracle->consrhss[indices[i]] = (rhss != NULL ? rhss[i] : SCIPinfinity(scip));
    }
    
    return SCIP_OKAY;
@@ -739,10 +771,11 @@ SCIP_RETCODE SCIPnlpiOracleChgConsBounds(
 SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int*                  delstat             /**< deletion status of vars in input (1 if var should be deleted, 0 if not); new position of var in output (-1 if var was deleted) */
-)
+   int*                  delstats            /**< deletion status of vars in input (1 if var should be deleted, 0 if not); 
+                                              *   new position of var in output (-1 if var was deleted) */
+   )
 {  /*lint --e{715}*/
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    /* TODO */
@@ -755,10 +788,11 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
 SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int*                  delstat             /**< deletion status of rows in input (1 if row should be deleted, 0 if not); new position of row in output (-1 if row was deleted) */
-)
+   int*                  delstats            /**< array with deletion status of rows in input (1 if row should be deleted, 0 if not); 
+                                              *   new position of row in output (-1 if row was deleted) */
+   )
 {  /*lint --e{715}*/
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
 
    SCIPnlpiOracleInvalidateJacobiSparsity(scip, oracle);
@@ -771,18 +805,18 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
 }
 
 /** changes linear coefficients in one constraint or objective
- * @return error if coefficient did not exist before
+ *  @return error if coefficient did not exist before
  */
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   cons,               /**< index of constraint where linear coefficients should be changed, or -1 for objective */
+   int                   considx,            /**< index of constraint where linear coefficients should be changed, or -1 for objective */
    int                   nentries,           /**< number of coefficients to change */
-   const int*            varidx,             /**< indices of variables which coefficients should be changed */
-   const SCIP_Real*      newcoeff            /**< new coefficients of variables */
-)
+   const int*            varidxs,            /**< array with indices of variables which coefficients should be changed */
+   const SCIP_Real*      newcoeffs           /**< array with new coefficients of variables */
+   )
 {  /*lint --e{715}*/
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    /* @TODO */
@@ -792,19 +826,19 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
 }
   
 /** changes coefficients in the quadratic part of one constraint or objective
- * @return error if coefficient did not exist before
+ *  @return error if coefficient did not exist before
  */
 SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   cons,               /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
+   int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
    const int             nentries,           /**< number of coefficients to change */
    const int*            rowoffset,          /**< row offset containing modified indices */
    const int*            colidx,             /**< columns containint modified indices to the corresponding row offset */
    SCIP_Real*            newcoeff            /**< new quadratic coefficients */ 
-)
+   )
 {  /*lint --e{715}*/
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    /* @TODO */
@@ -816,7 +850,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
 /** gives the current number of variables */
 int SCIPnlpiOracleGetNVars(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-)
+   )
 {
    assert(oracle != NULL);
    
@@ -826,99 +860,99 @@ int SCIPnlpiOracleGetNVars(
 /** gives the current number of constraints */
 int SCIPnlpiOracleGetNConstraints(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-)
+   )
 {
    assert(oracle != NULL);
    
-   return oracle->ncons;
+   return oracle->nconss;
 }
 
 /** gives the variables lower bounds */
-const SCIP_Real* SCIPnlpiOracleGetVarLb(
+const SCIP_Real* SCIPnlpiOracleGetVarLbs(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-)
+   )
 {
    assert(oracle != NULL);
    
-   return oracle->varlb;
+   return oracle->varlbs;
 }
 
 /** gives the variables upper bounds */
-const SCIP_Real* SCIPnlpiOracleGetVarUb(
+const SCIP_Real* SCIPnlpiOracleGetVarUbs(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-)
+   )
 {
    assert(oracle != NULL);
    
-   return oracle->varub;
+   return oracle->varubs;
 }
 
 /** Gives maximum degree of a variable w.r.t. objective and all constraints.
- * The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
+ *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
  */ 
 int SCIPnlpiOracleGetVarDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   varidx
-)
+   )
 {
    assert(oracle != NULL);
    assert(varidx >= 0);
    assert(varidx < oracle->nvars);
    
-   return oracle->vardegree[varidx];
+   return oracle->vardegrees[varidx];
 }
 
 /** Gives maximum degree of all variables w.r.t. objective and all constraints.
- * The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
+ *  The degree of a variable is the degree of the summand where it appears in, and is infinity for nonpolynomial terms.
  */ 
-int* SCIPnlpiOracleGetVarsDegree(
+int* SCIPnlpiOracleGetVarDegrees(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-)
+   )
 {
    assert(oracle != NULL);
 
-   return oracle->vardegree;
+   return oracle->vardegrees;
 }
 
 /** gives the constraints left-hand sides */
-const SCIP_Real* SCIPnlpiOracleGetConstraintsLhs(
+const SCIP_Real* SCIPnlpiOracleGetConstraintLhss(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-)
+   )
 {
    assert(oracle != NULL);
    
-   return oracle->conlhs;
+   return oracle->conslhss;
 }
 
 /** gives the constraints right-hand sides */
-const SCIP_Real* SCIPnlpiOracleGetConstraintsRhs(
+const SCIP_Real* SCIPnlpiOracleGetConstraintRhss(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
-)
+   )
 {
    assert(oracle != NULL);
    
-   return oracle->conrhs;
+   return oracle->consrhss;
 }
 
 /** Gives maximum degree of a constraints.
- * The degree of a constraint is the maximal degree of all summands which appear in it, and is infinity for nonpolynomial terms.
+ *  The degree of a constraint is the maximal degree of all summands which appear in it, and is infinity for nonpolynomial terms.
  */ 
 int SCIPnlpiOracleGetConstraintDegree(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   int                   conidx              /**< index of constraint for which the degree is requested */
-)
+   int                   considx             /**< index of constraint for which the degree is requested */
+   )
 {
    assert(oracle != NULL);
-   assert(conidx >= 0);
-   assert(conidx < oracle->ncons);
+   assert(considx >= 0);
+   assert(considx < oracle->nconss);
    
-   if( oracle->conexprtree && oracle->conexprtree[conidx] )
+   if( oracle->consexprtrees && oracle->consexprtrees[considx] )
       return INT_MAX;  /* @TODO something more clever, e.g., use exprtreeGetMaxDegree*/
    
-   if( oracle->conquadlen && oracle->conquadlen[conidx] )
+   if( oracle->consquadlens && oracle->consquadlens[considx] )
       return 2;
 
-   if( oracle->conlinoffset && oracle->conlinoffset[conidx] )
+   if( oracle->conslinoffsets && oracle->conslinoffsets[considx] )
       return 1;
 
    return 0;
@@ -930,44 +964,44 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionValue(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nlin,               /**< length of linear part */
-   const int*            linind,             /**< indices of linear variables */
-   const SCIP_Real*      linval,             /**< coefficients of linear variables */
+   const int*            lininds,            /**< indices of linear variables */
+   const SCIP_Real*      linvals,            /**< coefficients of linear variables */
    int                   quadlen,            /**< length of quadratic part matrix */
-   int*                  quadrow,            /**< indices of    rows in quadratic part matrix */
-   int*                  quadcol,            /**< indices of columns in quadratic part matrix */
-   SCIP_Real*            quadval,            /**< coefficients in quadratic part matrix */
-   int*                  exprvaridx,         /**< indices of variables in nonquadratic part */
+   int*                  quadrows,           /**< indices of rows in quadratic part matrix */
+   int*                  quadcols,           /**< indices of columns in quadratic part matrix */
+   SCIP_Real*            quadvals,           /**< coefficients in quadratic part matrix */
+   int*                  exprvaridxs,        /**< indices of variables in nonquadratic part */
    SCIP_EXPRTREE*        exprtree,           /**< nonquadratic part */
    const SCIP_Real*      x,                  /**< the point where to evaluate */
-   SCIP_Real*            val                 /**< buffer to store function value */
-)
+   SCIP_Real*            val                 /**< pointer to store function value */
+   )
 {  /*lint --e{715}*/
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
-   assert(x      != NULL || oracle->nvars == 0);
-   assert(val    != NULL);
+   assert(x != NULL || oracle->nvars == 0);
+   assert(val != NULL);
    
    *val = 0.0;
    
    if( nlin != 0 )
    {
-      assert(linind != NULL);
-      assert(linval != NULL);
-      assert(x != NULL); /* for lint */
+      assert(lininds != NULL);
+      assert(linvals != NULL);
+      assert(x != NULL);
       
-      for( ; nlin; --nlin, ++linind, ++linval )
-         *val += *linval * x[*linind]; 
+      for( ; nlin > 0; --nlin, ++lininds, ++linvals )
+         *val += *linvals * x[*lininds]; 
    }
    
    if( quadlen != 0 )
    {
-      assert(quadrow != NULL);
-      assert(quadcol != NULL);
-      assert(quadval != NULL);
-      assert(x       != NULL); /* for lint */
+      assert(quadrows != NULL);
+      assert(quadcols != NULL);
+      assert(quadvals != NULL);
+      assert(x != NULL);
       
-      for( ; quadlen; --quadlen, ++quadrow, ++quadcol, ++quadval )
-         *val += *quadval * x[*quadrow] * x[*quadcol];
+      for( ; quadlen > 0; --quadlen, ++quadrows, ++quadcols, ++quadvals )
+         *val += *quadvals * x[*quadrows] * x[*quadcols];
    }
    
    if( exprtree != NULL )
@@ -985,57 +1019,57 @@ SCIP_RETCODE SCIPnlpiOracleEvalFunctionGradient(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   nlin,               /**< length of linear part */
-   const int*            linind,             /**< indices of linear variables */
-   const SCIP_Real*      linval,             /**< coefficients of linear variables */
+   const int*            lininds,            /**< indices of linear variables */
+   const SCIP_Real*      linvals,            /**< coefficients of linear variables */
    int                   quadlen,            /**< length of quadratic part matrix */
-   int*                  quadrow,            /**< indices of    rows in quadratic part matrix */
-   int*                  quadcol,            /**< indices of columns in quadratic part matrix */
-   SCIP_Real*            quadval,            /**< coefficients in quadratic part matrix */
-   int*                  exprvaridx,         /**< indices of variables in nonquadratic part */
+   int*                  quadrows,           /**< indices of rows in quadratic part matrix */
+   int*                  quadcols,           /**< indices of columns in quadratic part matrix */
+   SCIP_Real*            quadvals,           /**< coefficients in quadratic part matrix */
+   int*                  exprvaridxs,        /**< indices of variables in nonquadratic part */
    SCIP_EXPRTREE*        exprtree,           /**< nonquadratic part */
    const SCIP_Real*      x,                  /**< the point where to evaluate */
-   SCIP_Bool             new_x,              /**< indicates whether the function has not been evaluated for this point before */
-   SCIP_Real*            val,                /**< buffer to store function value */
-   SCIP_Real*            grad                /**< buffer to store function gradient */
-)
+   SCIP_Bool             newx,               /**< indicates whether the function has not been evaluated for this point before */
+   SCIP_Real*            val,                /**< pointer to store function value */
+   SCIP_Real*            grad                /**< pointer to store function gradient */
+   )
 {  /*lint --e{715}*/
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
-   assert(x      != NULL || oracle->nvars == 0);
-   assert(val    != NULL);
-   assert(grad   != NULL);
+   assert(x != NULL || oracle->nvars == 0);
+   assert(val != NULL);
+   assert(grad != NULL);
    
    *val = 0.0;
    BMSclearMemoryArray(grad, oracle->nvars);
    
    if( nlin != 0 )
    {
-      assert(linind != NULL);
-      assert(linval != NULL);
-      assert(x      != NULL); /* for lint */
+      assert(lininds != NULL);
+      assert(linvals != NULL);
+      assert(x != NULL);
       
-      for( ; nlin; --nlin, ++linind, ++linval )
+      for( ; nlin > 0; --nlin, ++lininds, ++linvals )
       {
-         *val += *linval * x[*linind];
-         assert(grad[*linind] == 0.0);   /* we do not like duplicate indices */
-         grad[*linind] = *linval;
+         *val += *linvals * x[*lininds];
+         assert(grad[*lininds] == 0.0);   /* we do not like duplicate indices */
+         grad[*lininds] = *linvals;
       }
    }
    
    if( quadlen != 0 )
    {
       SCIP_Real tmp;
-      assert(quadrow != NULL);
-      assert(quadcol != NULL);
-      assert(quadval != NULL);
-      assert(x       != NULL); /* for lint */
+      assert(quadrows != NULL);
+      assert(quadcols != NULL);
+      assert(quadvals != NULL);
+      assert(x != NULL);
       
-      for( ; quadlen; --quadlen, ++quadrow, ++quadcol, ++quadval )
+      for( ; quadlen > 0; --quadlen, ++quadrows, ++quadcols, ++quadvals )
       {
-         tmp = *quadval * x[*quadrow];
-         *val += tmp * x[*quadcol];
-         grad[*quadcol] += tmp;
-         grad[*quadrow] += *quadval * x[*quadcol];
+         tmp = *quadvals * x[*quadrows];
+         *val += tmp * x[*quadcols];
+         grad[*quadcols] += tmp;
+         grad[*quadrows] += *quadvals * x[*quadcols];
       }
    }
    
@@ -1053,16 +1087,16 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Real*            objval              /**< pointer to buffer to store objective value */  
-)
+   SCIP_Real*            objval              /**< pointer to store objective value */  
+   )
 {
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    SCIP_CALL( SCIPnlpiOracleEvalFunctionValue(scip, oracle,
-      oracle->objnlin, oracle->objlinind, oracle->objlinval,
-      oracle->objquadlen, oracle->objquadrow, oracle->objquadcol, oracle->objquadval,
-      oracle->objexprvaridx, oracle->objexprtree,
+      oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
+      oracle->objquadlen, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals,
+      oracle->objexprvaridxs, oracle->objexprtree,
       x, objval) );
    
    *objval += oracle->objconstant;
@@ -1074,27 +1108,27 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintValue(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int             conidx,             /**< index of constraint to evaluate */
+   const int             considx,            /**< index of constraint to evaluate */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Real*            conval              /**< pointer to buffer to store constraint value */  
-)
+   SCIP_Real*            conval              /**< pointer to store constraint value */  
+   )
 {
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
-   assert(x      != NULL || oracle->nvars == 0);
+   assert(x != NULL || oracle->nvars == 0);
    assert(conval != NULL);
    
    SCIP_CALL( SCIPnlpiOracleEvalFunctionValue(scip, oracle,
-      oracle->conlinoffset != NULL ? (oracle->conlinoffset[conidx+1] - oracle->conlinoffset[conidx]) : 0,
-      oracle->conlinoffset != NULL ? &oracle->conlinind[oracle->conlinoffset[conidx]] : NULL,
-      oracle->conlinoffset != NULL ? &oracle->conlinval[oracle->conlinoffset[conidx]] : NULL,
-      oracle->conquadlen   != NULL ? oracle->conquadlen[conidx]    : 0,
-      oracle->conquadlen   != NULL ? oracle->conquadrow[conidx]    : NULL,
-      oracle->conquadlen   != NULL ? oracle->conquadcol[conidx]    : NULL,
-      oracle->conquadlen   != NULL ? oracle->conquadval[conidx]    : NULL,
-      oracle->conexprtree  != NULL ? oracle->conexprvaridx[conidx] : NULL,
-      oracle->conexprtree  != NULL ? oracle->conexprtree[conidx]   : NULL,
-      x, conval) );
+         (oracle->conslinoffsets != NULL ? (oracle->conslinoffsets[considx+1] - oracle->conslinoffsets[considx]) : 0),
+         (oracle->conslinoffsets != NULL ? &oracle->conslininds[oracle->conslinoffsets[considx]] : NULL),
+         (oracle->conslinoffsets != NULL ? &oracle->conslinvals[oracle->conslinoffsets[considx]] : NULL),
+         (oracle->consquadlens != NULL ? oracle->consquadlens[considx] : 0),
+         (oracle->consquadlens != NULL ? oracle->consquadrows[considx] : NULL),
+         (oracle->consquadlens != NULL ? oracle->consquadcols[considx] : NULL),
+         (oracle->consquadlens != NULL ? oracle->consquadvals[considx] : NULL),
+         (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[considx] : NULL),
+         (oracle->consexprtrees != NULL ? oracle->consexprtrees[considx] : NULL),
+         x, conval) );
    
    return SCIP_OKAY;
 }
@@ -1105,16 +1139,16 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
    SCIP_Real*            convals             /**< buffer to store constraint values */  
-)
+   )
 {
    int i;
    
-   assert(scip    != NULL);
-   assert(oracle  != NULL);
-   assert(x       != NULL || oracle->nvars == 0);
+   assert(scip != NULL);
+   assert(oracle != NULL);
+   assert(x != NULL || oracle->nvars == 0);
    assert(convals != NULL);
 
-   for( i = 0; i < oracle->ncons; ++i )
+   for( i = 0; i < oracle->nconss; ++i )
    {
       SCIP_CALL( SCIPnlpiOracleEvalConstraintValue(scip, oracle, i, x, &convals[i]) );
    }
@@ -1127,19 +1161,19 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             new_x,              /**< indicates whether the function has not been evaluated for this point before */
-   SCIP_Real*            objval,             /**< pointer to buffer to store objective value */
-   SCIP_Real*            objgrad             /**< pointer to buffer to store (dense) objective gradient */  
-)
+   SCIP_Bool             newx,               /**< indicates whether the function has not been evaluated for this point before */
+   SCIP_Real*            objval,             /**< pointer to store objective value */
+   SCIP_Real*            objgrad             /**< pointer to store (dense) objective gradient */  
+   )
 {
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    SCIP_CALL( SCIPnlpiOracleEvalFunctionGradient(scip, oracle,
-      oracle->objnlin, oracle->objlinind, oracle->objlinval,
-      oracle->objquadlen, oracle->objquadrow, oracle->objquadcol, oracle->objquadval,
-      oracle->objexprvaridx, oracle->objexprtree,
-      x, new_x, objval, objgrad) );
+      oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
+      oracle->objquadlen, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals,
+      oracle->objexprvaridxs, oracle->objexprtree,
+      x, newx, objval, objgrad) );
    
    *objval += oracle->objconstant;
    
@@ -1150,92 +1184,95 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
-   const int             conidx,             /**< index of constraint to compute gradient for */
+   const int             considx,            /**< index of constraint to compute gradient for */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             new_x,              /**< indicates whether the function has not been evaluated for this point before */ 
-   SCIP_Real*            conval,             /**< pointer to buffer to store constraint value */
-   SCIP_Real*            congrad             /**< pointer to buffer to store (dense) constraint gradient */  
-)
+   SCIP_Bool             newx,               /**< indicates whether the function has not been evaluated for this point before */ 
+   SCIP_Real*            conval,             /**< pointer to store constraint value */
+   SCIP_Real*            congrad             /**< pointer to store (dense) constraint gradient */  
+   )
 {
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
-   assert(x      != NULL || oracle->nvars == 0);
+   assert(x != NULL || oracle->nvars == 0);
    assert(conval != NULL);
    
    SCIP_CALL( SCIPnlpiOracleEvalFunctionGradient(scip, oracle,
-      oracle->conlinoffset != NULL ? (oracle->conlinoffset[conidx+1] - oracle->conlinoffset[conidx]) : 0,
-      oracle->conlinoffset != NULL ? &oracle->conlinind[oracle->conlinoffset[conidx]] : NULL,
-      oracle->conlinoffset != NULL ? &oracle->conlinval[oracle->conlinoffset[conidx]] : NULL,
-      oracle->conquadlen   != NULL ? oracle->conquadlen[conidx]    : 0,
-      oracle->conquadlen   != NULL ? oracle->conquadrow[conidx]    : NULL,
-      oracle->conquadlen   != NULL ? oracle->conquadcol[conidx]    : NULL,
-      oracle->conquadlen   != NULL ? oracle->conquadval[conidx]    : NULL,
-      oracle->conexprtree  != NULL ? oracle->conexprvaridx[conidx] : NULL,
-      oracle->conexprtree  != NULL ? oracle->conexprtree[conidx]   : NULL,
-      x, new_x, conval, congrad) );
+         (oracle->conslinoffsets != NULL ? (oracle->conslinoffsets[considx+1] - oracle->conslinoffsets[considx]) : 0),
+         (oracle->conslinoffsets != NULL ? &oracle->conslininds[oracle->conslinoffsets[considx]] : NULL),
+         (oracle->conslinoffsets != NULL ? &oracle->conslinvals[oracle->conslinoffsets[considx]] : NULL),
+         (oracle->consquadlens != NULL ? oracle->consquadlens[considx] : 0),
+         (oracle->consquadlens != NULL ? oracle->consquadrows[considx] : NULL),
+         (oracle->consquadlens != NULL ? oracle->consquadcols[considx] : NULL),
+         (oracle->consquadlens != NULL ? oracle->consquadvals[considx] : NULL),
+         (oracle->consexprtrees != NULL ? oracle->consexprvaridxs[considx] : NULL),
+         (oracle->consexprtrees != NULL ? oracle->consexprtrees[considx] : NULL),
+         x, newx, conval, congrad) );
    
    return SCIP_OKAY;
 }
 
 /** Gets sparsity pattern (rowwise) of Jacobian matrix.
  * 
- * Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
- * Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary. 
+ *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
+ *  Adding or deleting constraints destroys the sparsity structure and make another call to this function necessary. 
  */
 SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, offset[ncons] gives length of col, can be NULL */
-)
+   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, offset[nconss] gives length of col, can be NULL */
+   )
 {
-   int nnz, maxnnz, i, j;
    SCIP_Bool* nzflag;
+   int nnz;
+   int maxnnz;
+   int i;
+   int j;
    
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    
-   if( oracle->jacoffset != NULL )
+   if( oracle->jacoffsets != NULL )
    {
-      assert(oracle->jaccol != NULL);
+      assert(oracle->jaccols != NULL);
       if( offset != NULL )
-         *offset = oracle->jacoffset;
-      if( col    != NULL )
-         *col    = oracle->jaccol;
+         *offset = oracle->jacoffsets;
+      if( col != NULL )
+         *col = oracle->jaccols;
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->jacoffset, oracle->ncons + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->jacoffsets, oracle->nconss + 1) );
 
-   maxnnz = MIN(oracle->nvars, 10) * oracle->ncons;  /* initial guess */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->jaccol, maxnnz) );
+   maxnnz = MIN(oracle->nvars, 10) * oracle->nconss;  /* initial guess */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->jaccols, maxnnz) );
    
    if( maxnnz == 0 )
    {  /* no variables */
-      BMSclearMemoryArray(oracle->jacoffset, oracle->ncons + 1);
+      BMSclearMemoryArray(oracle->jacoffsets, oracle->nconss + 1);
       if( offset != NULL )
-         *offset = oracle->jacoffset;
-      if( col    != NULL )
-         *col    = oracle->jaccol;
+         *offset = oracle->jacoffsets;
+      if( col != NULL )
+         *col = oracle->jaccols;
       return SCIP_OKAY;
    }
    nnz = 0;
    
    SCIP_CALL( SCIPallocBufferArray(scip, &nzflag, oracle->nvars) );
 
-   for( i = 0; i < oracle->ncons; ++i )
+   for( i = 0; i < oracle->nconss; ++i )
    {
-      oracle->jacoffset[i] = nnz;
+      oracle->jacoffsets[i] = nnz;
       
-      if( oracle->conlinoffset != NULL && (oracle->conquadlen == NULL || oracle->conquadlen[i] == 0) && (oracle->conexprtree == NULL || oracle->conexprtree[i] == NULL) )
-      { /* linear constraint: since we just want to copy the conlinval at EvalJacobian, we need to copy conlinind here too (it can be unsorted, and sorting would confuse ChgLinearCoef later) */
-         int nz = oracle->conlinoffset[i+1] - oracle->conlinoffset[i];
+      if( oracle->conslinoffsets != NULL && (oracle->consquadlens == NULL || oracle->consquadlens[i] == 0) && (oracle->consexprtrees == NULL || oracle->consexprtrees[i] == NULL) )
+      { /* linear constraint: since we just want to copy the conslinvals at EvalJacobian, we need to copy conslininds here too (it can be unsorted, and sorting would confuse ChgLinearCoef later) */
+         int nz = oracle->conslinoffsets[i+1] - oracle->conslinoffsets[i];
          if( nnz + nz > maxnnz )
          {
            maxnnz *= 2;
-           SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->jaccol, maxnnz) );
+           SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->jaccols, maxnnz) );
          }
-         BMScopyMemoryArray(&oracle->jaccol[nnz], &oracle->conlinind[oracle->conlinoffset[i]], nz);
+         BMScopyMemoryArray(&oracle->jaccols[nnz], &oracle->conslininds[oracle->conslinoffsets[i]], nz);
          nnz += nz;
          continue;
       }
@@ -1243,36 +1280,36 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       /* check which variables appear in constraint i */
       BMSclearMemoryArray(nzflag, oracle->nvars);
       
-      if( oracle->conlinoffset != NULL )
+      if( oracle->conslinoffsets != NULL )
       {
-         assert(oracle->conlinind);
-         for( j = oracle->conlinoffset[i]; j < oracle->conlinoffset[i+1]; ++j )
-            nzflag[oracle->conlinind[j]] = TRUE;
+         assert(oracle->conslininds);
+         for( j = oracle->conslinoffsets[i]; j < oracle->conslinoffsets[i+1]; ++j )
+            nzflag[oracle->conslininds[j]] = TRUE;
       }
       
-      if( oracle->conquadlen != NULL && oracle->conquadlen[i] != 0 )
+      if( oracle->consquadlens != NULL && oracle->consquadlens[i] != 0 )
       {
-         assert(oracle->conquadrow    != NULL );
-         assert(oracle->conquadrow[i] != NULL );
-         assert(oracle->conquadcol    != NULL );
-         assert(oracle->conquadcol[i] != NULL );
-         for( j = 0; j < oracle->conquadlen[i]; ++j )
+         assert(oracle->consquadrows != NULL );
+         assert(oracle->consquadrows[i] != NULL );
+         assert(oracle->consquadcols != NULL );
+         assert(oracle->consquadcols[i] != NULL );
+         for( j = 0; j < oracle->consquadlens[i]; ++j )
          {
-            nzflag[oracle->conquadrow[i][j]] = TRUE;
-            nzflag[oracle->conquadcol[i][j]] = TRUE;
+            nzflag[oracle->consquadrows[i][j]] = TRUE;
+            nzflag[oracle->consquadcols[i][j]] = TRUE;
          }
       }
       
-      if( oracle->conexprtree != NULL && oracle->conexprtree[i] != NULL )
+      if( oracle->consexprtrees != NULL && oracle->consexprtrees[i] != NULL )
       {
-         assert(oracle->conexprvaridx    != NULL );
-         assert(oracle->conexprvaridx[i] != NULL );
+         assert(oracle->consexprvaridxs != NULL );
+         assert(oracle->consexprvaridxs[i] != NULL );
          
          SCIPerrorMessage("expression tree support not available\n");
          return SCIP_ERROR;
       }
       
-      /* store variables indices in jaccol */
+      /* store variables indices in jaccols */
       for( j = 0; j < oracle->nvars; ++j )
       {
          if( nzflag[j] == FALSE )
@@ -1281,80 +1318,84 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          if( nnz >= maxnnz )
          {
             maxnnz *= 2;
-            SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->jaccol, maxnnz) );
+            SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->jaccols, maxnnz) );
          }
          
-         oracle->jaccol[nnz] = j;
+         oracle->jaccols[nnz] = j;
          ++nnz;
       }
    }
    
-   oracle->jacoffset[oracle->ncons] = nnz;
+   oracle->jacoffsets[oracle->nconss] = nnz;
    
    if( nnz < maxnnz )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->jaccol, nnz) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->jaccols, nnz) );
    }
    
    SCIPfreeBufferArray(scip, &nzflag);
 
    if( offset != NULL )
-      *offset = oracle->jacoffset;
-   if( col    != NULL )
-      *col    = oracle->jaccol;
+      *offset = oracle->jacoffsets;
+   if( col != NULL )
+      *col = oracle->jaccols;
 
    return SCIP_OKAY;
 }
 
 /** Evaluates the Jacobi matrix in a given point.
  * 
- * The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
- * The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
+ *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
+ *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
  */
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             new_x,              /**< indicates whether some function has not been evaluated for this point before */
-   SCIP_Real*            convals,            /**< pointer to buffer to store constraint values, can be NULL */ 
-   SCIP_Real*            jacobi              /**< pointer to buffer to store sparse jacobian values */  
-)
+   SCIP_Bool             newx,               /**< indicates whether some function has not been evaluated for this point before */
+   SCIP_Real*            convals,            /**< pointer to store constraint values, can be NULL */ 
+   SCIP_Real*            jacobi              /**< pointer to store sparse jacobian values */  
+   )
 {
    SCIP_Real* grad;
-   int i, j, k, l;
    SCIP_Real dummy;
+   int i;
+   int j;
+   int k;
+   int l;
    
-   assert(scip   != NULL);
+   assert(scip != NULL);
    assert(oracle != NULL);
    assert(jacobi != NULL);
    
-   assert(oracle->jacoffset != NULL);
-   assert(oracle->jaccol    != NULL);
+   assert(oracle->jacoffsets != NULL);
+   assert(oracle->jaccols != NULL);
    
    SCIP_CALL( SCIPallocBufferArray(scip, &grad, oracle->nvars) );
    
-   j = oracle->jacoffset[0];
+   j = oracle->jacoffsets[0];
    k = 0;
-   for( i = 0; i < oracle->ncons; ++i )
+   for( i = 0; i < oracle->nconss; ++i )
    {
-      if( oracle->conlinoffset != NULL && (oracle->conquadlen == NULL || oracle->conquadlen[i] == 0) && (oracle->conexprtree == NULL || oracle->conexprtree[i] == NULL) )
+      if( oracle->conslinoffsets != NULL && (oracle->consquadlens == NULL || oracle->consquadlens[i] == 0) && (oracle->consexprtrees == NULL || oracle->consexprtrees[i] == NULL) )
       { /* linear constraints should be easy */
-         l = oracle->jacoffset[i+1] - j;
-         assert(l == oracle->conlinoffset[i+1] - oracle->conlinoffset[i]);
-         BMScopyMemoryArray(&jacobi[k], &oracle->conlinval[oracle->conlinoffset[i]], l);
-         j += l; k += l;
+         l = oracle->jacoffsets[i+1] - j;
+         assert(l == oracle->conslinoffsets[i+1] - oracle->conslinoffsets[i]);
+         BMScopyMemoryArray(&jacobi[k], &oracle->conslinvals[oracle->conslinoffsets[i]], l);
+         j += l; 
+         k += l;
       }
       else
       { /* @TODO do this sparse too */
-         SCIP_RETCODE retcode = SCIPnlpiOracleEvalConstraintGradient(scip, oracle, i, x, new_x, convals ? &convals[i] : &dummy, grad);
+         SCIP_RETCODE retcode = SCIPnlpiOracleEvalConstraintGradient(scip, oracle, i, x, newx, (convals ? &convals[i] : &dummy), grad);
          if( retcode != SCIP_OKAY )
          {
             SCIPfreeBufferArray(scip, &grad);
             return retcode;
          }
       
-         for( ; j < oracle->jacoffset[i+1]; ++j, ++k )
-            jacobi[k] = grad[oracle->jaccol[j]];
+         for( ; j < oracle->jacoffsets[i+1]; ++j, ++k )
+            jacobi[k] = grad[oracle->jaccols[j]];
       }
    }
    
@@ -1372,17 +1413,18 @@ void SCIPnlpiOracleHessLagSparsitySetNzFlagForQuad(
    int*                  rowidx,             /**< row indices */
    int*                  colidx,             /**< column indices */
    int                   length              /**< length of quadratic part */
-)
+   )
 {
    int i;
-   assert(scip    != NULL);
-   assert(nzflag  != NULL);
-   assert(nzcount != NULL);
-   assert(rowidx  != NULL);
-   assert(colidx  != NULL);
-   assert(length  >= 0);
 
-   for( ; length; --length, ++rowidx, ++colidx )
+   assert(scip != NULL);
+   assert(nzflag != NULL);
+   assert(nzcount != NULL);
+   assert(rowidx != NULL);
+   assert(colidx != NULL);
+   assert(length >= 0);
+
+   for( ; length > 0; --length, ++rowidx, ++colidx )
    {
       assert(*colidx <= *rowidx);
       
@@ -1390,42 +1432,45 @@ void SCIPnlpiOracleHessLagSparsitySetNzFlagForQuad(
       if( nzflag[i] == FALSE )
       {
          nzflag[i] = TRUE;
-         ++*nzcount;
+         ++(*nzcount);
       }
    }
 }
 
 /** Gets sparsity pattern of the Hessian matrix of the Lagrangian.
  * 
- * Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
- * Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
- * Only elements of the lower left triangle and the diagonal are counted.
+ *  Note that internal data is returned in *offset and *col, thus the user does not need to allocate memory there.
+ *  Adding or deleting variables, objective, or constraints may destroy the sparsity structure and make another call to this function necessary.
+ *  Only elements of the lower left triangle and the diagonal are counted.
  */
 SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const int**           offset,             /**< pointer to store pointer that stores the offsets to each rows sparsity pattern in col, can be NULL */
-   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, offset[ncons] gives length of col, can be NULL */
-)
+   const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, offset[nconss] gives length of col, can be NULL */
+   )
 {
-   int nnz, i, j, cnt;
    SCIP_Bool* nzflag;
    SCIP_Bool* nz;
+   int nnz;
+   int i;
+   int j;
+   int cnt;
    
-   assert(scip   != NULL);
+   assert(scip  != NULL);
    assert(oracle != NULL);
    
-   if( oracle->heslagoffset != NULL )
+   if( oracle->heslagoffsets != NULL )
    {
-      assert(oracle->heslagcol != NULL);
+      assert(oracle->heslagcols != NULL);
       if( offset != NULL )
-         *offset = oracle->heslagoffset;
+         *offset = oracle->heslagoffsets;
       if( col != NULL )
-         *col    = oracle->heslagcol;
+         *col = oracle->heslagcols;
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->heslagoffset, oracle->nvars + 1) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->heslagoffsets, oracle->nvars + 1) );
    nnz = 0;
    
    /* @TODO should be improved */
@@ -1433,7 +1478,7 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    BMSclearMemoryArray(nzflag, (oracle->nvars * (oracle->nvars + 1)) / 2);
    
    if( oracle->objquadlen != 0 )
-      SCIPnlpiOracleHessLagSparsitySetNzFlagForQuad(scip, nzflag, &nnz, oracle->objquadrow, oracle->objquadcol, oracle->objquadlen);
+      SCIPnlpiOracleHessLagSparsitySetNzFlagForQuad(scip, nzflag, &nnz, oracle->objquadrows, oracle->objquadcols, oracle->objquadlen);
 
    if( oracle->objexprtree != NULL )
    {
@@ -1441,42 +1486,42 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
       return SCIP_ERROR;
    }
 
-   for( i = 0; i < oracle->ncons; ++i )
+   for( i = 0; i < oracle->nconss; ++i )
    {
-      if( oracle->conquadlen != NULL && oracle->conquadlen[i] != 0 )
-         SCIPnlpiOracleHessLagSparsitySetNzFlagForQuad(scip, nzflag, &nnz, oracle->conquadrow[i], oracle->conquadcol[i], oracle->conquadlen[i]);
+      if( oracle->consquadlens != NULL && oracle->consquadlens[i] != 0 )
+         SCIPnlpiOracleHessLagSparsitySetNzFlagForQuad(scip, nzflag, &nnz, oracle->consquadrows[i], oracle->consquadcols[i], oracle->consquadlens[i]);
       
-      if( oracle->conexprtree != NULL && oracle->conexprtree[i] != NULL )
+      if( oracle->consexprtrees != NULL && oracle->consexprtrees[i] != NULL )
       {
          SCIPerrorMessage("expression tree support not available\n");
          return SCIP_ERROR;
       }
    }
    
-   SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->heslagcol, nnz) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->heslagcols, nnz) );
    
    /* set hessian sparsity from nzflag */
    cnt = 0;
    nz = nzflag;
    for( i = 0; i < oracle->nvars; ++i )
    {
-      oracle->heslagoffset[i] = cnt;
+      oracle->heslagoffsets[i] = cnt;
       for( j = 0; j <= i; ++j, ++nz )
          if( *nz == TRUE )
          {
             assert(cnt < nnz);
-            oracle->heslagcol[cnt++] = j;
+            oracle->heslagcols[cnt++] = j;
          }
    }
-   oracle->heslagoffset[oracle->nvars] = cnt;
+   oracle->heslagoffsets[oracle->nvars] = cnt;
    assert(cnt == nnz);
    
    SCIPfreeBufferArray(scip, &nzflag);
    
    if( offset != NULL )
-      *offset = oracle->heslagoffset;
-   if( col    != NULL )
-      *col    = oracle->heslagcol;
+      *offset = oracle->heslagoffsets;
+   if( col != NULL )
+      *col = oracle->heslagcols;
 
    return SCIP_OKAY;
 }
@@ -1486,25 +1531,26 @@ static
 SCIP_RETCODE SCIPnlpiOracleHessLagAddQuad(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_Real             weight,             /**< weight of quadratic part */
-   int*                  rowidx,             /**< row    indices in matrix of quadratic part */
+   int*                  rowidx,             /**< row indices in matrix of quadratic part */
    int*                  colidx,             /**< column indices in matrix of quadratic part */
    SCIP_Real*            coeff,              /**< coefficients in matrix of quadratic part */
    int                   length,             /**< number of coefficients */
    int*                  hesoffset,          /**< row offsets in sparse matrix that is to be filled */ 
    int*                  hescol,             /**< column indices in sparse matrix that is to be filled */
    SCIP_Real*            values              /**< buffer for values of sparse matrix that is to be filled */
-)
+   )
 {
    int idx;
-   assert(scip      != NULL);
-   assert(rowidx    != NULL);
-   assert(colidx    != NULL);
-   assert(length    >= 0);
-   assert(hesoffset != NULL);
-   assert(hescol    != NULL);
-   assert(values    != NULL);
 
-   for( ; length; --length, ++rowidx, ++colidx, ++coeff )
+   assert(scip != NULL);
+   assert(rowidx != NULL);
+   assert(colidx != NULL);
+   assert(length >= 0);
+   assert(hesoffset != NULL);
+   assert(hescol != NULL);
+   assert(values != NULL);
+
+   for( ; length > 0; --length, ++rowidx, ++colidx, ++coeff )
    {
       assert(*colidx <= *rowidx);
       if( !SCIPsortedvecFindInt(&hescol[hesoffset[*rowidx]], *colidx, hesoffset[*rowidx+1] - hesoffset[*rowidx], &idx) )
@@ -1520,70 +1566,73 @@ SCIP_RETCODE SCIPnlpiOracleHessLagAddQuad(
 
 /** Evaluates the Hessian matrix of the Lagrangian in a given point.
  * 
- * The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
- * The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
- * Only elements of the lower left triangle and the diagonal are computed.
+ *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
+ *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
+ *  Only elements of the lower left triangle and the diagonal are computed.
  */
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    const SCIP_Real*      x,                  /**< point where to evaluate */
-   SCIP_Bool             new_x,              /**< indicates whether some function has not been evaluated for this point before */
+   SCIP_Bool             newx,               /**< indicates whether some function has not been evaluated for this point before */
    SCIP_Real             objfactor,          /**< weight for objective function */
    const SCIP_Real*      lambda,             /**< weights (Lagrangian multipliers) for the constraints */ 
-   SCIP_Real*            hessian             /**< pointer to buffer to store sparse hessian values */  
-)
+   SCIP_Real*            hessian             /**< pointer to store sparse hessian values */  
+   )
 {  /*lint --e{715}*/
    int i;
-   assert(scip    != NULL);
-   assert(oracle  != NULL);
-   assert(x       != NULL);
-   assert(lambda  != NULL);
+
+   assert(scip != NULL);
+   assert(oracle != NULL);
+   assert(x != NULL);
+   assert(lambda != NULL);
    assert(hessian != NULL);
 
-   assert(oracle->heslagoffset != NULL);
-   assert(oracle->heslagcol    != NULL);
+   assert(oracle->heslagoffsets != NULL);
+   assert(oracle->heslagcols != NULL);
    
-   for( i = oracle->heslagoffset[oracle->nvars]-1; i >= 0; --i )
+   for( i = oracle->heslagoffsets[oracle->nvars] - 1; i >= 0; --i )
       hessian[i] = 0.0;
    
    if( objfactor != 0.0 )
    {
       if( oracle->objquadlen != 0 )
       {
-         assert(oracle->objquadrow != NULL);
-         assert(oracle->objquadcol != NULL);
-         assert(oracle->objquadval != NULL);
-         SCIP_CALL( SCIPnlpiOracleHessLagAddQuad(scip, objfactor, oracle->objquadrow, oracle->objquadcol, oracle->objquadval, oracle->objquadlen, oracle->heslagoffset, oracle->heslagcol, hessian) );
+         assert(oracle->objquadrows != NULL);
+         assert(oracle->objquadcols != NULL);
+         assert(oracle->objquadvals != NULL);
+         SCIP_CALL( SCIPnlpiOracleHessLagAddQuad(scip, objfactor, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals, 
+               oracle->objquadlen, oracle->heslagoffsets, oracle->heslagcols, hessian) );
       }
       
       if( oracle->objexprtree != NULL )
       {
-         assert(oracle->objexprvaridx != NULL );
+         assert(oracle->objexprvaridxs != NULL );
          SCIPerrorMessage("expression tree support not available\n");
          return SCIP_ERROR;
       }
    }
    
-   for( i = 0; i < oracle->ncons; ++i )
+   for( i = 0; i < oracle->nconss; ++i )
    {
       if( lambda[i] == 0.0 )
          continue;
-      if( oracle->conquadlen != NULL && oracle->conquadlen[i] != 0 )
+      if( oracle->consquadlens != NULL && oracle->consquadlens[i] != 0 )
       {
-         assert(oracle->conquadrow    != NULL);
-         assert(oracle->conquadrow[i] != NULL);
-         assert(oracle->conquadcol    != NULL);
-         assert(oracle->conquadcol[i] != NULL);
-         assert(oracle->conquadval    != NULL);
-         assert(oracle->conquadval[i] != NULL);
-         SCIP_CALL( SCIPnlpiOracleHessLagAddQuad(scip, lambda[i], oracle->conquadrow[i], oracle->conquadcol[i], oracle->conquadval[i], oracle->conquadlen[i], oracle->heslagoffset, oracle->heslagcol, hessian) );
+         assert(oracle->consquadrows != NULL);
+         assert(oracle->consquadrows[i] != NULL);
+         assert(oracle->consquadcols != NULL);
+         assert(oracle->consquadcols[i] != NULL);
+         assert(oracle->consquadvals != NULL);
+         assert(oracle->consquadvals[i] != NULL);
+         SCIP_CALL( SCIPnlpiOracleHessLagAddQuad(scip, lambda[i], oracle->consquadrows[i], oracle->consquadcols[i], oracle->consquadvals[i], 
+               oracle->consquadlens[i], oracle->heslagoffsets, oracle->heslagcols, hessian) );
       }
       
-      if( oracle->conexprtree != NULL && oracle->conexprtree[i] != NULL )
+      if( oracle->consexprtrees != NULL && oracle->consexprtrees[i] != NULL )
       {
-         assert(oracle->conexprvaridx    != NULL);
-         assert(oracle->conexprvaridx[i] != NULL);
+         assert(oracle->consexprvaridxs != NULL);
+         assert(oracle->consexprvaridxs[i] != NULL);
          SCIPerrorMessage("expression tree support not available\n");
          return SCIP_ERROR;
       }
@@ -1599,27 +1648,29 @@ SCIP_RETCODE SCIPnlpiOraclePrintFunction(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    FILE*                 file,               /**< file to print to, has to be not NULL */
    int                   nlin,               /**< length of linear part */
-   const int*            linind,             /**< indices of linear variables */
-   const SCIP_Real*      linval,             /**< coefficients of linear variables */
-   int                   quadlen,            /**< number of indices  in quadratic part matrix */
-   int*                  quadrow,            /**< indices of rows    in quadratic part matrix */
-   int*                  quadcol,            /**< indices of columns in quadratic part matrix */
-   SCIP_Real*            quadval,            /**< coefficients in quadratic part matrix */
+   const int*            lininds,            /**< indices of linear variables */
+   const SCIP_Real*      linvals,            /**< coefficients of linear variables */
+   int                   quadlen,            /**< number of indices in quadratic part matrix */
+   int*                  quadrows,            /**< indices of rows in quadratic part matrix */
+   int*                  quadcols,            /**< indices of columns in quadratic part matrix */
+   SCIP_Real*            quadvals,            /**< coefficients in quadratic part matrix */
    SCIP_EXPRTREE*        exprtree            /**< nonquadratic part */
-)
+   )
 {  /*lint --e{715}*/
-   int i, j;
-   assert(scip   != NULL);
+   int i;
+   int j;
+
+   assert(scip != NULL);
    assert(oracle != NULL);
-   assert(file   != NULL);
+   assert(file != NULL);
    
    for( i = 0; i < nlin; ++i )
    {
-      fprintf(file, "%+g*", linval[i]);
-      if( oracle->varname != NULL && oracle->varname[linind[i]] != NULL )
-         fprintf(file, oracle->varname[linind[i]]);
+      SCIPmessageFPrintInfo(file, "%+g*", linvals[i]);
+      if( oracle->varnames != NULL && oracle->varnames[lininds[i]] != NULL )
+         SCIPmessageFPrintInfo(file, oracle->varnames[lininds[i]]);
       else
-         fprintf(file, "x%d", linind[i]);
+         SCIPmessageFPrintInfo(file, "x%d", lininds[i]);
    }
    
    if( quadlen != 0 )
@@ -1627,16 +1678,16 @@ SCIP_RETCODE SCIPnlpiOraclePrintFunction(
       j = 0;
       for( i = 0; i < quadlen; ++i )
       {
-         fprintf(file, "%+g*", quadval[j]);
-         if( oracle->varname != NULL && oracle->varname[quadrow[i]] != NULL )
-            fprintf(file, oracle->varname[quadrow[i]]);
+         SCIPmessageFPrintInfo(file, "%+g*", quadvals[j]);
+         if( oracle->varnames != NULL && oracle->varnames[quadrows[i]] != NULL )
+            SCIPmessageFPrintInfo(file, oracle->varnames[quadrows[i]]);
          else
-            fprintf(file, "x%d", quadrow[i]);
-         fprintf(file, "*");
-         if( oracle->varname != NULL && oracle->varname[quadcol[i]] != NULL )
-            fprintf(file, oracle->varname[quadcol[i]]);
+            SCIPmessageFPrintInfo(file, "x%d", quadrows[i]);
+         SCIPmessageFPrintInfo(file, "*");
+         if( oracle->varnames != NULL && oracle->varnames[quadcols[i]] != NULL )
+            SCIPmessageFPrintInfo(file, oracle->varnames[quadcols[i]]);
          else
-            fprintf(file, "x%d", quadcol[i]);
+            SCIPmessageFPrintInfo(file, "x%d", quadcols[i]);
       }
    }
       
@@ -1648,63 +1699,64 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblem(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    FILE*                 file                /**< file to print to, or NULL for standard output */
-)
+   )
 {  /*lint --e{777} */
    int i;
-   assert(scip   != NULL);
+
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    if( file == NULL )
       file = stdout;
    
-   fprintf(file, "NLPI Oracle: %d variables and %d constraints\n", oracle->nvars, oracle->ncons);
+   SCIPmessageFPrintInfo(file, "NLPI Oracle: %d variables and %d constraints\n", oracle->nvars, oracle->nconss);
    for( i = 0; i < oracle->nvars; ++i )
    {
-      if( oracle->varname != NULL && oracle->varname[i] != NULL )
-         fprintf(file, "%10s", oracle->varname[i]);
+      if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
+         SCIPmessageFPrintInfo(file, "%10s", oracle->varnames[i]);
       else
-         fprintf(file, "x%09d", i);
-      fprintf(file, ": [%8g, %8g]\n", oracle->varlb[i], oracle->varub[i]);
+         SCIPmessageFPrintInfo(file, "x%09d", i);
+      SCIPmessageFPrintInfo(file, ": [%8g, %8g]\n", oracle->varlbs[i], oracle->varubs[i]);
    }
    
-   fprintf(file, "objective: ");
+   SCIPmessageFPrintInfo(file, "objective: ");
    SCIP_CALL( SCIPnlpiOraclePrintFunction(scip, oracle, file,
-      oracle->objnlin, oracle->objlinind, oracle->objlinval,
-      oracle->objquadlen, oracle->objquadrow, oracle->objquadcol, oracle->objquadval,
+      oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
+      oracle->objquadlen, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals,
       oracle->objexprtree) );
    if( oracle->objconstant != 0.0 )
-      fprintf(file, "%+g", oracle->objconstant);
-   fprintf(file, "\n");
+      SCIPmessageFPrintInfo(file, "%+g", oracle->objconstant);
+   SCIPmessageFPrintInfo(file, "\n");
    
-   for( i = 0; i < oracle->ncons; ++i )
+   for( i = 0; i < oracle->nconss; ++i )
    {
-      if( oracle->conname != NULL && oracle->conname[i] != NULL )
-         fprintf(file, "%10s", oracle->conname[i]);
+      if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
+         SCIPmessageFPrintInfo(file, "%10s", oracle->consnames[i]);
       else
-         fprintf(file, "con%07d", i);
+         SCIPmessageFPrintInfo(file, "con%07d", i);
       
-      fprintf(file, ": ");
-      if( !SCIPisInfinity(scip, -oracle->conlhs[i]) && !SCIPisInfinity(scip, oracle->conrhs[i]) && oracle->conlhs[i] != oracle->conrhs[i] )
-         fprintf(file, "%g <= ", oracle->conlhs[i]);
+      SCIPmessageFPrintInfo(file, ": ");
+      if( !SCIPisInfinity(scip, -oracle->conslhss[i]) && !SCIPisInfinity(scip, oracle->consrhss[i]) && oracle->conslhss[i] != oracle->consrhss[i] )
+         SCIPmessageFPrintInfo(file, "%g <= ", oracle->conslhss[i]);
       
       SCIP_CALL( SCIPnlpiOraclePrintFunction(scip, oracle, file,
-         oracle->conlinoffset != NULL ? (oracle->conlinoffset[i+1] - oracle->conlinoffset[i]) : 0,
-         oracle->conlinoffset != NULL ? &oracle->conlinind[oracle->conlinoffset[i]] : NULL,
-         oracle->conlinoffset != NULL ? &oracle->conlinval[oracle->conlinoffset[i]] : NULL,
-         oracle->conquadlen   != NULL ? oracle->conquadlen[i]  : 0,
-         oracle->conquadlen   != NULL ? oracle->conquadrow[i]  : NULL,
-         oracle->conquadlen   != NULL ? oracle->conquadcol[i]  : NULL,
-         oracle->conquadlen   != NULL ? oracle->conquadval[i]  : NULL,
-         oracle->conexprtree  != NULL ? oracle->conexprtree[i] : NULL) );
+            (oracle->conslinoffsets != NULL ? (oracle->conslinoffsets[i+1] - oracle->conslinoffsets[i]) : 0),
+            (oracle->conslinoffsets != NULL ? &oracle->conslininds[oracle->conslinoffsets[i]] : NULL),
+            (oracle->conslinoffsets != NULL ? &oracle->conslinvals[oracle->conslinoffsets[i]] : NULL),
+            (oracle->consquadlens != NULL ? oracle->consquadlens[i] : 0),
+            (oracle->consquadlens != NULL ? oracle->consquadrows[i] : NULL),
+            (oracle->consquadlens != NULL ? oracle->consquadcols[i] : NULL),
+            (oracle->consquadlens != NULL ? oracle->consquadvals[i] : NULL),
+            (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
       
-      if( oracle->conlhs[i] == oracle->conrhs[i] )
-         fprintf(file, " = %g", oracle->conrhs[i]);
-      else if( !SCIPisInfinity(scip, oracle->conrhs[i]) )
-         fprintf(file, " <= %g", oracle->conrhs[i]);
-      else if( !SCIPisInfinity(scip, -oracle->conlhs[i]) )
-         fprintf(file, " >= %g", oracle->conlhs[i]);
+      if( oracle->conslhss[i] == oracle->consrhss[i] )
+         SCIPmessageFPrintInfo(file, " = %g", oracle->consrhss[i]);
+      else if( !SCIPisInfinity(scip, oracle->consrhss[i]) )
+         SCIPmessageFPrintInfo(file, " <= %g", oracle->consrhss[i]);
+      else if( !SCIPisInfinity(scip, -oracle->conslhss[i]) )
+         SCIPmessageFPrintInfo(file, " >= %g", oracle->conslhss[i]);
       
-      fprintf(file, "\n");
+      SCIPmessageFPrintInfo(file, "\n");
    }
 
    return SCIP_OKAY;
@@ -1716,148 +1768,149 @@ SCIP_RETCODE SCIPnlpiOraclePrintProblemGams(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    SCIP_Real*            initval,            /**< starting point values for variables or NULL */
    FILE*                 file                /**< file to print to, or NULL for standard output */
-)
+   )
 {  /*lint --e{777} */
    int i;
-   assert(scip   != NULL);
+
+   assert(scip != NULL);
    assert(oracle != NULL);
    
    if( file == NULL )
       file = stdout;
    
-   fprintf(file, "$offlisting\n");
-   fprintf(file, "* NLPI Oracle Problem\n");
-   fprintf(file, "Variables ");
+   SCIPmessageFPrintInfo(file, "$offlisting\n");
+   SCIPmessageFPrintInfo(file, "* NLPI Oracle Problem\n");
+   SCIPmessageFPrintInfo(file, "Variables ");
    for( i = 0; i < oracle->nvars; ++i )
    {
-      if( oracle->varname != NULL && oracle->varname[i] != NULL )
-         fprintf(file, "%s, ", oracle->varname[i]);
+      if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
+         SCIPmessageFPrintInfo(file, "%s, ", oracle->varnames[i]);
       else
-         fprintf(file, "x%d, ", i);
+         SCIPmessageFPrintInfo(file, "x%d, ", i);
    }
-   fprintf(file, "OBJVAR;\n\n");
+   SCIPmessageFPrintInfo(file, "OBJVAR;\n\n");
    for( i = 0; i < oracle->nvars; ++i )
    {
-      if( oracle->varlb[i] == oracle->varub[i] )
+      if( oracle->varlbs[i] == oracle->varubs[i] )
       {
-         if( oracle->varname != NULL && oracle->varname[i] != NULL )
-            fprintf(file, "%s", oracle->varname[i]);
+         if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
+            SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
          else
-            fprintf(file, "x%d", i);
-         fprintf(file, ".fx = %g;\t", oracle->varlb[i]);
+            SCIPmessageFPrintInfo(file, "x%d", i);
+         SCIPmessageFPrintInfo(file, ".fx = %g;\t", oracle->varlbs[i]);
       }
       else
       {
-         if( !SCIPisInfinity(scip, -oracle->varlb[i]) )
+         if( !SCIPisInfinity(scip, -oracle->varlbs[i]) )
          {
-            if( oracle->varname != NULL && oracle->varname[i] != NULL )
-               fprintf(file, "%s", oracle->varname[i]);
+            if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
+               SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
             else
-               fprintf(file, "x%d", i);
-            fprintf(file, ".lo = %g;\t", oracle->varlb[i]);
+               SCIPmessageFPrintInfo(file, "x%d", i);
+            SCIPmessageFPrintInfo(file, ".lo = %g;\t", oracle->varlbs[i]);
          }
-         if( !SCIPisInfinity(scip, oracle->varub[i]) )
+         if( !SCIPisInfinity(scip, oracle->varubs[i]) )
          {
-            if( oracle->varname != NULL && oracle->varname[i] != NULL )
-               fprintf(file, "%s", oracle->varname[i]);
+            if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
+               SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
             else
-               fprintf(file, "x%d", i);
-            fprintf(file, ".up = %g;\t", oracle->varub[i]);
+               SCIPmessageFPrintInfo(file, "x%d", i);
+            SCIPmessageFPrintInfo(file, ".up = %g;\t", oracle->varubs[i]);
          }
       }
       if( initval != NULL )
       {
-         if( oracle->varname != NULL && oracle->varname[i] != NULL )
-            fprintf(file, "%s", oracle->varname[i]);
+         if( oracle->varnames != NULL && oracle->varnames[i] != NULL )
+            SCIPmessageFPrintInfo(file, "%s", oracle->varnames[i]);
          else
-            fprintf(file, "x%d", i);
-         fprintf(file, ".l = %g;\t", initval[i]);
+            SCIPmessageFPrintInfo(file, "x%d", i);
+         SCIPmessageFPrintInfo(file, ".l = %g;\t", initval[i]);
       }
-      fprintf(file, "\n");
+      SCIPmessageFPrintInfo(file, "\n");
    }
-   fprintf(file, "\n");
+   SCIPmessageFPrintInfo(file, "\n");
    
-   fprintf(file, "Equations ");
-   for( i = 0; i < oracle->ncons; ++i )
+   SCIPmessageFPrintInfo(file, "Equations ");
+   for( i = 0; i < oracle->nconss; ++i )
    {
-      if( oracle->conname != NULL && oracle->conname[i] != NULL )
-         fprintf(file, "%s, ", oracle->conname[i]);
+      if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
+         SCIPmessageFPrintInfo(file, "%s, ", oracle->consnames[i]);
       else
-         fprintf(file, "e%d, ", i);
+         SCIPmessageFPrintInfo(file, "e%d, ", i);
 
-      if( !SCIPisInfinity(scip, -oracle->conlhs[i]) && !SCIPisInfinity(scip, oracle->conrhs[i]) && oracle->conlhs[i] != oracle->conrhs[i] )
+      if( !SCIPisInfinity(scip, -oracle->conslhss[i]) && !SCIPisInfinity(scip, oracle->consrhss[i]) && oracle->conslhss[i] != oracle->consrhss[i] )
       { /* ranged row: add second constraint */
-         if( oracle->conname != NULL && oracle->conname[i] != NULL )
-            fprintf(file, "%s_RNG, ", oracle->conname[i]);
+         if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
+            SCIPmessageFPrintInfo(file, "%s_RNG, ", oracle->consnames[i]);
          else
-            fprintf(file, "e%d_RNG, ", i);
+            SCIPmessageFPrintInfo(file, "e%d_RNG, ", i);
       }
    }
-   fprintf(file, "OBJ;\n\n");
+   SCIPmessageFPrintInfo(file, "OBJ;\n\n");
    
-   fprintf(file, "OBJ.. OBJVAR =E= ");
+   SCIPmessageFPrintInfo(file, "OBJ.. OBJVAR =E= ");
    SCIP_CALL( SCIPnlpiOraclePrintFunction(scip, oracle, file,
-      oracle->objnlin, oracle->objlinind, oracle->objlinval,
-      oracle->objquadlen, oracle->objquadrow, oracle->objquadcol, oracle->objquadval,
+      oracle->objnlin, oracle->objlinidxs, oracle->objlinvals,
+      oracle->objquadlen, oracle->objquadrows, oracle->objquadcols, oracle->objquadvals,
       oracle->objexprtree) );
    if( oracle->objconstant != 0.0 )
-      fprintf(file, "%+g", oracle->objconstant);
-   fprintf(file, ";\n");
+      SCIPmessageFPrintInfo(file, "%+g", oracle->objconstant);
+   SCIPmessageFPrintInfo(file, ";\n");
    
-   for( i = 0; i < oracle->ncons; ++i )
+   for( i = 0; i < oracle->nconss; ++i )
    {
-      if( oracle->conname != NULL && oracle->conname[i] != NULL )
-         fprintf(file, "%s", oracle->conname[i]);
+      if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
+         SCIPmessageFPrintInfo(file, "%s", oracle->consnames[i]);
       else
-         fprintf(file, "e%d", i);
-      fprintf(file, ".. ");
+         SCIPmessageFPrintInfo(file, "e%d", i);
+      SCIPmessageFPrintInfo(file, ".. ");
       
       SCIP_CALL( SCIPnlpiOraclePrintFunction(scip, oracle, file,
-         oracle->conlinoffset != NULL ? (oracle->conlinoffset[i+1] - oracle->conlinoffset[i]) : 0,
-         oracle->conlinoffset != NULL ? &oracle->conlinind[oracle->conlinoffset[i]] : NULL,
-         oracle->conlinoffset != NULL ? &oracle->conlinval[oracle->conlinoffset[i]] : NULL,
-         oracle->conquadlen   != NULL ? oracle->conquadlen[i]  : 0,
-         oracle->conquadlen   != NULL ? oracle->conquadrow[i]  : NULL,
-         oracle->conquadlen   != NULL ? oracle->conquadcol[i]  : NULL,
-         oracle->conquadlen   != NULL ? oracle->conquadval[i]  : NULL,
-         oracle->conexprtree  != NULL ? oracle->conexprtree[i] : NULL) );
+            (oracle->conslinoffsets != NULL ? (oracle->conslinoffsets[i+1] - oracle->conslinoffsets[i]) : 0),
+            (oracle->conslinoffsets != NULL ? &oracle->conslininds[oracle->conslinoffsets[i]] : NULL),
+            (oracle->conslinoffsets != NULL ? &oracle->conslinvals[oracle->conslinoffsets[i]] : NULL),
+            (oracle->consquadlens != NULL ? oracle->consquadlens[i] : 0),
+            (oracle->consquadlens != NULL ? oracle->consquadrows[i] : NULL),
+            (oracle->consquadlens != NULL ? oracle->consquadcols[i] : NULL),
+            (oracle->consquadlens != NULL ? oracle->consquadvals[i] : NULL),
+            (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
 
-      if( oracle->conlhs[i] == oracle->conrhs[i] )
-         fprintf(file, " =E= %g", oracle->conrhs[i]);
-      else if( !SCIPisInfinity(scip, oracle->conrhs[i]) )
-         fprintf(file, " =L= %g", oracle->conrhs[i]);
-      else if( !SCIPisInfinity(scip, -oracle->conlhs[i]) )
-         fprintf(file, " =G= %g", oracle->conlhs[i]);
+      if( oracle->conslhss[i] == oracle->consrhss[i] )
+         SCIPmessageFPrintInfo(file, " =E= %g", oracle->consrhss[i]);
+      else if( !SCIPisInfinity(scip, oracle->consrhss[i]) )
+         SCIPmessageFPrintInfo(file, " =L= %g", oracle->consrhss[i]);
+      else if( !SCIPisInfinity(scip, -oracle->conslhss[i]) )
+         SCIPmessageFPrintInfo(file, " =G= %g", oracle->conslhss[i]);
       else
-         fprintf(file, " =N= 0");
-      fprintf(file, ";\n");
+         SCIPmessageFPrintInfo(file, " =N= 0");
+      SCIPmessageFPrintInfo(file, ";\n");
 
-      if( !SCIPisInfinity(scip, -oracle->conlhs[i]) && !SCIPisInfinity(scip, oracle->conrhs[i]) && oracle->conlhs[i] != oracle->conrhs[i] )
+      if( !SCIPisInfinity(scip, -oracle->conslhss[i]) && !SCIPisInfinity(scip, oracle->consrhss[i]) && oracle->conslhss[i] != oracle->consrhss[i] )
       {
-         if( oracle->conname != NULL && oracle->conname[i] != NULL )
-            fprintf(file, "%s", oracle->conname[i]);
+         if( oracle->consnames != NULL && oracle->consnames[i] != NULL )
+            SCIPmessageFPrintInfo(file, "%s", oracle->consnames[i]);
          else
-            fprintf(file, "e%d", i);
-         fprintf(file, "_RNG.. ");
+            SCIPmessageFPrintInfo(file, "e%d", i);
+         SCIPmessageFPrintInfo(file, "_RNG.. ");
         
          SCIP_CALL( SCIPnlpiOraclePrintFunction(scip, oracle, file,
-            oracle->conlinoffset != NULL ? (oracle->conlinoffset[i+1] - oracle->conlinoffset[i]) : 0,
-            oracle->conlinoffset != NULL ? &oracle->conlinind[oracle->conlinoffset[i]] : NULL,
-            oracle->conlinoffset != NULL ? &oracle->conlinval[oracle->conlinoffset[i]] : NULL,
-            oracle->conquadlen   != NULL ? oracle->conquadlen[i]  : 0,
-            oracle->conquadlen   != NULL ? oracle->conquadrow[i]  : NULL,
-            oracle->conquadlen   != NULL ? oracle->conquadcol[i]  : NULL,
-            oracle->conquadlen   != NULL ? oracle->conquadval[i]  : NULL,
-            oracle->conexprtree  != NULL ? oracle->conexprtree[i] : NULL) );
+               (oracle->conslinoffsets != NULL ? (oracle->conslinoffsets[i+1] - oracle->conslinoffsets[i]) : 0),
+               (oracle->conslinoffsets != NULL ? &oracle->conslininds[oracle->conslinoffsets[i]] : NULL),
+               (oracle->conslinoffsets != NULL ? &oracle->conslinvals[oracle->conslinoffsets[i]] : NULL),
+               (oracle->consquadlens != NULL ? oracle->consquadlens[i] : 0),
+               (oracle->consquadlens != NULL ? oracle->consquadrows[i] : NULL),
+               (oracle->consquadlens != NULL ? oracle->consquadcols[i] : NULL),
+               (oracle->consquadlens != NULL ? oracle->consquadvals[i] : NULL),
+               (oracle->consexprtrees != NULL ? oracle->consexprtrees[i] : NULL)) );
          
-         fprintf(file, " =G= %g;\n", oracle->conlhs[i]);
+         SCIPmessageFPrintInfo(file, " =G= %g;\n", oracle->conslhss[i]);
       }
    }
    
-   fprintf(file, "Model m / all /;\n");
-   fprintf(file, "option limrow = 0;\n");
-   fprintf(file, "option limcol = 0;\n");
-   fprintf(file, "Solve m minimizing OBJVAR using NLP;\n");
+   SCIPmessageFPrintInfo(file, "Model m / all /;\n");
+   SCIPmessageFPrintInfo(file, "option limrow = 0;\n");
+   SCIPmessageFPrintInfo(file, "option limcol = 0;\n");
+   SCIPmessageFPrintInfo(file, "Solve m minimizing OBJVAR using NLP;\n");
 
    return SCIP_OKAY;
 }
