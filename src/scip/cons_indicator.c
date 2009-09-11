@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.50 2009/09/10 22:44:24 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.51 2009/09/11 09:28:22 bzfpfets Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -215,7 +215,7 @@
 #define DEFAULT_SEPAALTERNATIVELP  FALSE
 #define DEFAULT_ADDCOUPLING        FALSE
 #define DEFAULT_UPDATEBOUNDS       FALSE
-#define DEFAULT_TRYSOLUTIONS       FALSE
+#define DEFAULT_TRYSOLUTIONS       TRUE
 
 /* maximal value for coupling inequalities */
 #define maxCouplingValue  1e4
@@ -444,7 +444,7 @@ SCIP_RETCODE checkIIS(
 	    SCIP_CALL( SCIPlpiAddCols(lp, nNewVars, obj, lb, ub, colnames, 0, NULL, NULL, NULL) );
 
 	    for (v = nNewVars - 1; v >= 0; --v)
-            {
+	    {
 	       SCIPfreeBufferArray(scip, &(colnames[v]));
             }
 	    SCIPfreeBufferArray(scip, &colnames);
@@ -2811,7 +2811,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    }
    if ( trysol != NULL && *result == SCIP_INFEASIBLE )
    {
-      SCIP_CALL( SCIPpassSolToTrySol(scip, conshdlrdata->heurTrySol, trysol) );
+      SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->heurTrySol, trysol) );
       SCIP_CALL( SCIPfreeSol(scip, &trysol) );
 
       return SCIP_OKAY;
