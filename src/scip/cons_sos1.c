@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.27 2009/09/10 10:01:35 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.28 2009/09/11 09:42:13 bzfpfets Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -1455,22 +1455,20 @@ SCIP_DECL_CONSCHECK(consCheckSOS1)
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                *result = SCIP_INFEASIBLE;
 
-               if( printreason )
+               if ( printreason )
                {
+		  int l;
+
                   SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
                   SCIPinfoMessage(scip, NULL, "violation: ");
-                  cnt = 0;
 
-                  for( j = 0; j < consdata->nVars && cnt < 2; ++j )
+                  for (l = 0; l < consdata->nVars; ++l)
                   {
                      /* if variable is nonzero */
-                     if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->Vars[j])) )
+                     if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->Vars[l])) )
                      {
                         SCIPinfoMessage(scip, NULL, "<%s> = %.15g ",
-                           SCIPvarGetName(consdata->Vars[j]), SCIPgetSolVal(scip, sol, consdata->Vars[j]));
-                        if( cnt == 0 )
-                           SCIPinfoMessage(scip, NULL, "and ");
-                        cnt++;
+                           SCIPvarGetName(consdata->Vars[l]), SCIPgetSolVal(scip, sol, consdata->Vars[l]));
                      }
                   }
                   SCIPinfoMessage(scip, NULL, "\n");
