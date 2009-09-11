@@ -107,7 +107,7 @@ constraints/linear/maxcardbounddist = 0
 constraints/linear/separateall = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 0]
+# [type: int, range: [-1,2147483647], default: 1]
 constraints/and/sepafreq = 0
 
 # should separation method be delayed, if other separators found cuts?
@@ -551,7 +551,7 @@ separating/intobj/delay = FALSE
 separating/mcf/priority = -10000
 
 # frequency for calling separator <mcf> (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: -1]
+# [type: int, range: [-1,2147483647], default: 0]
 separating/mcf/freq = -1
 
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <mcf> (0.0: only on current best node, 1.0: on all nodes)
@@ -562,25 +562,21 @@ separating/mcf/maxbounddist = 0
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 separating/mcf/delay = FALSE
 
-# number of clusters to generate in the shrunken network
-# [type: int, range: [2,32], default: 6]
-separating/mcf/nclusters = 6
+# number of clusters to generate in the shrunken network -- default separation
+# [type: int, range: [2,32], default: 5]
+separating/mcf/nclusters = 5
 
 # maximal valid range max(|weights|)/min(|weights|) of row weights
 # [type: real, range: [1,1.79769313486232e+308], default: 1000000]
 separating/mcf/maxweightrange = 1000000
 
-# maximal number of different deltas to try (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-separating/mcf/maxtestdelta = -1
+# maximal number of different deltas to try (-1: unlimited) -- default separation
+# [type: int, range: [-1,2147483647], default: 20]
+separating/mcf/maxtestdelta = 20
 
 # model type of network (0: auto, 1:directed, 2:undirected)
 # [type: int, range: [0,2], default: 0]
 separating/mcf/modeltype = 0
-
-# type of flow variables in the network (0: auto, 1:continuous/integer, 2:binary)
-# [type: int, range: [0,2], default: 0]
-separating/mcf/flowtype = 0
 
 # should negative values also be tested in scaling?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -729,8 +725,8 @@ separating/zerohalf/onlyorigrows = FALSE
 separating/zerohalf/usezhcutpool = TRUE
 
 # should problem be decomposed into subproblems (if possible) before applying preprocessing?
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-separating/zerohalf/preprocessing/decomposeproblem = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/zerohalf/preprocessing/decomposeproblem = FALSE
 
 # value of delta parameter used in preprocessing method 'd'
 # [type: real, range: [0,1], default: 0.5]
