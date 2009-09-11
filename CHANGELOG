@@ -47,6 +47,8 @@ interface:
 - added SCIPsortPtrPtrLongInt() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added detectRedundantConstraints() in cons_xor.c and necessary hash-functions for fast pairwise presolving
 - added function SCIPvarCompareActiveAndNegated and SCIPvarCompActiveAndNegated in pub_var.h for comparing variables negated, active or fixed the same way 
+- heavily revised mosek interface
+
 
 features:
 - new trivial heuristic: tries zero solution, lower and upper bound solution and some variable lock based fixing
