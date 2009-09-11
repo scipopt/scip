@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.28 2009/09/08 17:36:23 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.29 2009/09/11 08:46:39 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -522,10 +522,10 @@ SCIP_RETCODE applyVarBoundConstraints(
 
       /* integer variables have been fixed in heurExecNlp already
        * thus, we should not touch (and maybe unfix) these variables here
-       * further, we believe that the given startpoint satisfies the varbound constraints, so that the current fixation is feasible */
+       * further, we believe that the given startpoint satisfies the varbound constraints, so that the current fixation is feasible 
+       * @todo however, as Timo suggests, an assert would be nice here; unfortunately, this is not trivial to implement since there are no SCIPnlpiGetVarLb/Ub functions */
       if( SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
          continue;
-      /* There Should be an assert here!!! ?????????????????????????? but that is difficult to implement; there are no SCIPnlpiGetVarLb/Ub functions */
 
       /* check if we passed already a varbound constraint on variable var */ 
       idx = SCIPhashmapGetImage(varmap, var);
@@ -980,8 +980,8 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
 
             SCIP_CALL( SCIPsetSolVals(scip, sol, heurdata->nvars, heurdata->var_nlp2scip, primals) );
 
-            /* ???????? What is this call good for? The value of feasible is not used! to print the infeasibilities to stdout */
 #ifdef SCIP_DEBUG
+            /* print the infeasibilities to stdout */
             SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
 #endif
             SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, &stored) );
