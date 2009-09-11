@@ -103,8 +103,8 @@ heuristics/coefdiving/maxdiveavgquotnosol = 0
 heuristics/coefdiving/backtrack = TRUE
 
 # priority of heuristic <crossover>
-# [type: int, range: [-536870912,536870911], default: -1011000]
-heuristics/crossover/priority = -1011000
+# [type: int, range: [-536870912,536870911], default: -1104000]
+heuristics/crossover/priority = -1104000
 
 # frequency for calling primal heuristic <crossover> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: 30]
@@ -199,7 +199,7 @@ heuristics/dins/maxnodes = 5000
 heuristics/dins/minimprove = 0.01
 
 # number of nodes without incumbent change that heuristic should wait
-# [type: longint, range: [0,2147483647], default: 0]
+# [type: longint, range: [0,9223372036854775807], default: 0]
 heuristics/dins/nwaitingnodes = 0
 
 # priority of heuristic <feaspump>
@@ -499,8 +499,8 @@ heuristics/linesearchdiving/maxdiveavgquotnosol = 0
 heuristics/linesearchdiving/backtrack = TRUE
 
 # priority of heuristic <localbranching>
-# [type: int, range: [-536870912,536870911], default: -1010000]
-heuristics/localbranching/priority = -1010000
+# [type: int, range: [-536870912,536870911], default: -1102000]
+heuristics/localbranching/priority = -1102000
 
 # frequency for calling primal heuristic <localbranching> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -543,8 +543,8 @@ heuristics/localbranching/nwaitingnodes = 200
 heuristics/localbranching/minimprove = 0.01
 
 # priority of heuristic <mutation>
-# [type: int, range: [-536870912,536870911], default: -1020000]
-heuristics/mutation/priority = -1020000
+# [type: int, range: [-536870912,536870911], default: -1103000]
+heuristics/mutation/priority = -1103000
 
 # frequency for calling primal heuristic <mutation> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -585,6 +585,58 @@ heuristics/mutation/minfixingrate = 0.8
 # factor by which Mutation should at least improve the incumbent
 # [type: real, range: [0,1], default: 0.01]
 heuristics/mutation/minimprove = 0.01
+
+# priority of heuristic <nlp>
+# [type: int, range: [-536870912,536870911], default: -2000000]
+heuristics/nlp/priority = -2000000
+
+# frequency for calling primal heuristic <nlp> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 10]
+heuristics/nlp/freq = 10
+
+# frequency offset for calling primal heuristic <nlp>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/nlp/freqofs = 0
+
+# maximal depth level to call primal heuristic <nlp> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/nlp/maxdepth = -1
+
+# verbosity level of NLP solver
+# [type: int, range: [0,2], default: 0]
+heuristics/nlp/nlpverblevel = 0
+
+# iteration limit of NLP solver; 0 to use solver default
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/nlp/nlpiterlimit = 0
+
+# time limit of NLP solver; 0 to use solver default
+# [type: real, range: [0,1e+20], default: 0]
+heuristics/nlp/nlptimelimit = 0
+
+# if SCIP does not accept a solution which the NLP solver thinks is feasible, the feasibility tolerance is reduced by this factor and the NLP resolved (set to 1. to turn off resolve
+# [type: real, range: [0,1], default: 0.01]
+heuristics/nlp/resolvetolfactor = 0.01
+
+# whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/nlp/resolvefromscratch = TRUE
+
+# number of iterations added to the contingent of the total number of iterations
+# [type: int, range: [0,2147483647], default: 500]
+heuristics/nlp/iteroffset = 500
+
+# contingent of NLP iterations in relation to the number of nodes in SCIP
+# [type: real, range: [0,1e+20], default: 0.1]
+heuristics/nlp/iterquotient = 0.1
+
+# contingent of NLP iterations in relation to the number of nodes in SCIP
+# [type: int, range: [0,2147483647], default: 300]
+heuristics/nlp/itermin = 300
+
+# whether variable bound constraints should be handled explicitly before solving NLP instead of adding them to the NLP
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/nlp/varboundexplicit = TRUE
 
 # priority of heuristic <objpscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1004000]
@@ -698,6 +750,10 @@ heuristics/oneopt/maxdepth = -1
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/oneopt/weightedobj = TRUE
 
+# should the heuristic be called before and during the root node?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/oneopt/duringroot = TRUE
+
 # priority of heuristic <pscostdiving>
 # [type: int, range: [-536870912,536870911], default: -1002000]
 heuristics/pscostdiving/priority = -1002000
@@ -795,8 +851,8 @@ heuristics/rens/nodesquot = 0.1
 heuristics/rens/minimprove = 0.01
 
 # priority of heuristic <rins>
-# [type: int, range: [-536870912,536870911], default: -1009000]
-heuristics/rins/priority = -1009000
+# [type: int, range: [-536870912,536870911], default: -1101000]
+heuristics/rins/priority = -1101000
 
 # frequency for calling primal heuristic <rins> (-1: never, 0: only at depth freqofs)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -929,6 +985,38 @@ heuristics/simplerounding/freqofs = 0
 # maximal depth level to call primal heuristic <simplerounding> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/simplerounding/maxdepth = -1
+
+# priority of heuristic <trivial>
+# [type: int, range: [-536870912,536870911], default: 1000]
+heuristics/trivial/priority = 1000
+
+# frequency for calling primal heuristic <trivial> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 0]
+heuristics/trivial/freq = -1
+
+# frequency offset for calling primal heuristic <trivial>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/trivial/freqofs = 0
+
+# maximal depth level to call primal heuristic <trivial> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/trivial/maxdepth = -1
+
+# priority of heuristic <trysol>
+# [type: int, range: [-536870912,536870911], default: -3000000]
+heuristics/trysol/priority = -3000000
+
+# frequency for calling primal heuristic <trysol> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 1]
+heuristics/trysol/freq = -1
+
+# frequency offset for calling primal heuristic <trysol>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/trysol/freqofs = 0
+
+# maximal depth level to call primal heuristic <trysol> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/trysol/maxdepth = -1
 
 # priority of heuristic <veclendiving>
 # [type: int, range: [-536870912,536870911], default: -1003100]
