@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: probdata_lop.c,v 1.7 2008/09/29 19:49:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: probdata_lop.c,v 1.8 2009/09/11 14:58:47 bzfwanie Exp $"
 
 #include "probdata_lop.h"
 
@@ -300,8 +300,8 @@ SCIP_RETCODE LOPevalSolution(
       printf("No solution found.\n");
    else
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &outDegree, n) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &indices, n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &outDegree, n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &indices, n) );
 
       /* compute out-degree */
       for (i = 0; i < n; ++i)
@@ -331,8 +331,8 @@ SCIP_RETCODE LOPevalSolution(
 	 printf("%d ", indices[i]);
       printf("\n");
 
-      SCIPfreeMemoryArray(scip, &outDegree);
-      SCIPfreeMemoryArray(scip, &indices);
+      SCIPfreeBufferArray(scip, &indices);
+      SCIPfreeBufferArray(scip, &outDegree);
    }
 
    return SCIP_OKAY;
