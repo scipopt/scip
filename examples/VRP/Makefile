@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.9 2008/10/20 19:47:16 bzfpfets Exp $
+# $Id: Makefile,v 1.10 2009/09/11 18:50:03 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ vehicle routing example using SCIP for branch-and-price
@@ -70,7 +70,7 @@ lint:		$(MAINSRC)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) lint/$(MAINNAME).lnt +os\(lint.out\) -u -zero \
+			$(LINT) $(SCIPDIR)/lint/scip.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
