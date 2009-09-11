@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.277 2009/09/10 13:47:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.278 2009/09/11 10:44:54 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -981,15 +981,13 @@ SCIP_RETCODE separationRoundLP(
    /* process the constraints that were added during this separation round */
    while( consadded )
    {
+      assert(!onlydelayed);
       consadded = FALSE;
 
       for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*lperror) && !(*enoughcuts) && lp->flushed && lp->solved
               && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
            ++i )
       {
-	 if( onlydelayed && !SCIPconshdlrWasLPSeparationDelayed(set->conshdlrs_sepa[i]) )
-	    continue;
-
 	 SCIPdebugMessage(" -> executing separation of constraint handler <%s> with priority %d\n",
             SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]));
 	 SCIP_CALL( SCIPconshdlrSeparateLP(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed,
@@ -1006,15 +1004,6 @@ SCIP_RETCODE separationRoundLP(
 
          /* make sure the LP is solved (after adding bound changes, LP has to be flushed and resolved) */
          SCIP_CALL( separationRoundResolveLP(blkmem, set, stat, prob, lp, cutoff, lperror, mustsepa, mustprice) );
-
-	 /* if we work off the delayed separators, we stop immediately if a cut was found */
-	 if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
-	 {
-            SCIPdebugMessage(" -> delayed constraint handler <%s> found a cut\n",
-               SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
-	    *delayed = TRUE;
-	    return SCIP_OKAY;
-	 }
       }
    }
 
@@ -1143,15 +1132,12 @@ SCIP_RETCODE separationRoundSol(
    /* process the constraints that were added during this separation round */
    while( consadded )
    {
+      assert(!onlydelayed);
       consadded = FALSE;
 
       for( i = 0; i < set->nconshdlrs && !(*cutoff) && !(*enoughcuts) && !SCIPsolveIsStopped(set, stat, FALSE); ++i )
       {
-	 if( onlydelayed && !SCIPconshdlrWasSolSeparationDelayed(set->conshdlrs_sepa[i]) )
-	    continue;
-
-	 SCIP_CALL( SCIPconshdlrSeparateSol(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, sol, actdepth, onlydelayed,
-					    &result) );
+	 SCIP_CALL( SCIPconshdlrSeparateSol(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, sol, actdepth, onlydelayed, &result) );
 	 *cutoff = *cutoff || (result == SCIP_CUTOFF);
 	 consadded = consadded || (result == SCIP_CONSADDED);
 	 *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root));
@@ -1161,13 +1147,6 @@ SCIP_RETCODE separationRoundSol(
             SCIPdebugMessage(" -> constraint handler <%s> detected cutoff in separation\n",
                SCIPconshdlrGetName(set->conshdlrs_sepa[i]));
          }
-
-	 /* if we work off the delayed separators, we stop immediately if a cut was found */
-	 if( onlydelayed && (result == SCIP_CONSADDED || result == SCIP_REDUCEDDOM || result == SCIP_SEPARATED) )
-	 {
-	    *delayed = TRUE;
-	    return SCIP_OKAY;
-	 }
       }
    }
 
