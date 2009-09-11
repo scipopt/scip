@@ -365,8 +365,7 @@
  * After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT
  * to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.
  *
- * You can download these additional packages from 
- * <a href="http://gnuwin32.sourceforge.net/packages.html">here</a> 
+ * You can download these additional packages from <a href="http://gnuwin32.sourceforge.net/packages.html">here</a> 
  * or compile the source on your own from their homepages.
  *
  * Second you need to copy the file sh.exe to bash.exe otherwise various scripts (including makefiles) will not work.
@@ -4218,7 +4217,7 @@
 /**@page CHG3 Interface changes between SCIP 1.1 and SCIP 1.2
  *
  *
- *  @section CHGCALLBACKS New and changed callbacks
+ * @section CHGCALLBACKS New and changed callbacks
  *
  * - The callback SCIP_DECL_PRICERREDCOST(x) in the \ref PRICER "pricers" has two new parameters: 
  *    - A <code>result</code> pointer determines whether the pricer guarantees that there exist no more variables. This allows for early branching.
@@ -4242,6 +4241,7 @@
  * - A significant change for <b>C++ users</b> is that all include files of SCIP
  *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
  * 
+ * For further release notes we refer the \ref RELEASENOTES "release notes page".
  */
 
 /* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
@@ -4288,6 +4288,15 @@
 
 /**@page INSTALL Installation information
  * \include INSTALL  
+ */
+
+/**@page RELEASENOTES Release Notes
+ *
+ * @section SCIP Release Notes 1.2
+ * \include SCIP-release-notes-1.2
+ *
+ * @section SCIP Release Notes 1.1
+ * \include SCIP-release-notes-1.1
  */
 
 /**@defgroup BRANCHINGRULES Branching Rules 
