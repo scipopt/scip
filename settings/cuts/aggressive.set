@@ -107,8 +107,8 @@ constraints/linear/maxcardbounddist = 0
 constraints/linear/separateall = TRUE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 0]
-constraints/and/sepafreq = 0
+# [type: int, range: [-1,2147483647], default: 1]
+constraints/and/sepafreq = 1
 
 # should separation method be delayed, if other separators found cuts?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
