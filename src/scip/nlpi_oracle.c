@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.14 2009/09/08 19:35:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.15 2009/09/11 12:58:53 bzfberth Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -287,7 +287,7 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->varub, oracle->nvars + nvars) );
    
    if( lb != NULL )
-      BMScopyMemoryArray(oracle->varlb + oracle->nvars, lb, nvars);
+      BMScopyMemoryArray(&(oracle->varlb[oracle->nvars]), lb, nvars);
    else
       for( i = 0; i < nvars; ++i )
          oracle->varlb[oracle->nvars+i] = -SCIPinfinity(scip);

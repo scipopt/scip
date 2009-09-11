@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: message.c,v 1.39 2009/09/09 17:48:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: message.c,v 1.40 2009/09/11 12:58:53 bzfberth Exp $"
 
 /**@file   message.c
  * @brief  message output methods
@@ -365,8 +365,9 @@ void SCIPmessagePrintError(
    int n;
 
    va_start(ap, formatstr); /*lint !e826*/
-
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap); /*lint !e718 !e746*/
+   va_end(ap);
+
    if( n < 0 )
       msg[SCIP_MAXSTRLEN-1] = '\0';
    else if( n >= SCIP_MAXSTRLEN )
@@ -388,7 +389,6 @@ void SCIPmessagePrintError(
    }   
 
    messagePrintError(msg);
-   va_end(ap);
 }
 
 /** prints the header with source file location for an error message */
@@ -498,7 +498,10 @@ void SCIPmessageVFPrintDialog(
       int m;
 
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+      {
+         va_end(aq);
          return;
+      }
 
       m = vsnprintf(bigmsg, n+1, formatstr, aq);
       assert(m == n);
@@ -569,7 +572,10 @@ void SCIPmessageVFPrintInfo(
       int m;
 
       if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+      {
+         va_end(aq);
          return;
+      }
 
       m = vsnprintf(bigmsg, n+1, formatstr, aq);
       assert(m == n);
@@ -654,7 +660,10 @@ void SCIPmessageVFPrintVerbInfo(
          int m;
          
          if( BMSallocMemorySize(&bigmsg, n+1) == NULL )
+         {
+            va_end(aq);
             return;
+         }
          
          m = vsnprintf(bigmsg, n+1, formatstr, aq);
          assert(m == n);
