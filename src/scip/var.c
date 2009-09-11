@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.263 2009/09/10 13:47:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.264 2009/09/11 14:39:52 bzfberth Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1888,14 +1888,14 @@ SCIP_RETCODE varParse(
    assert(cnt == 1);
    
    /* get global bound */
-   token = SCIPstrtok(NULL, "[", &saveptr);
+   (void) SCIPstrtok(NULL, "[", &saveptr);
    token = SCIPstrtok(NULL, ",", &saveptr);
    parseValue(set, token, lb);
    token = SCIPstrtok(NULL, "]", &saveptr);
    parseValue(set, token, ub);
 
    /* get local bound */
-   token = SCIPstrtok(NULL, "[", &saveptr);
+   (void) SCIPstrtok(NULL, "[", &saveptr);
    token = SCIPstrtok(NULL, ",", &saveptr);
    if( local )
       parseValue(set, token, lb);

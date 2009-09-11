@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.82 2009/09/10 10:01:36 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.83 2009/09/11 14:39:52 bzfberth Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEReaders 
@@ -84,7 +84,7 @@ typedef enum LpSense LPSENSE;
 struct LpInput
 {
    SCIP_FILE*           file;
-   char                 linebuf[LP_MAX_LINELEN];
+   char                 linebuf[LP_MAX_LINELEN+1];
    char                 probname[LP_MAX_LINELEN];
    char                 objname[LP_MAX_LINELEN];
    char*                token;

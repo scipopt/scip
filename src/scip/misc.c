@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.98 2009/09/10 10:01:36 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.99 2009/09/11 14:39:51 bzfberth Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1235,6 +1235,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       {
          for( i = 0; i < realarray->minusedidx - newfirstidx; ++i )
             newvals[i] = 0.0;
+
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &realarray->vals[realarray->minusedidx - realarray->firstidx],
             realarray->maxusedidx - realarray->minusedidx + 1);

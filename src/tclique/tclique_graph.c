@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.11 2009/09/08 14:12:41 bzfpfets Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.12 2009/09/11 14:39:52 bzfberth Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -575,7 +575,14 @@ TCLIQUE_Bool tcliqueLoadFile(
    fscanf(file, "%s", probname);
    fscanf(file, "%d", &(*tcliquegraph)->nnodes);
    fscanf(file, "%d", &(*tcliquegraph)->nedges);
-   
+   if( (*tcliquegraph)->nnodes < 0 || (*tcliquegraph)->nedges < 0 )
+   {
+      infoMessage("\nInvalid number of %s (%d) in file: %s", (*tcliquegraph)->nnodes < 0 ? "nodes" : "edges", 
+         (*tcliquegraph)->nnodes < 0 ? (*tcliquegraph)->nnodes : (*tcliquegraph)->nedges, filename);
+      fclose(file);
+      return FALSE;
+   }    
+
    /* set data structures for tclique */
    ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->weights, (*tcliquegraph)->nnodes) );
    ALLOC_FALSE( BMSallocMemoryArray(&(*tcliquegraph)->degrees, (*tcliquegraph)->nnodes) );
@@ -596,6 +603,12 @@ TCLIQUE_Bool tcliqueLoadFile(
    {
       /* read edge (node1, node2) */
       fscanf(file, "%d%d", &node1, &node2);
+      if( node1 < 0 || node2 < 0 )
+      {
+         infoMessage("\nInvalid node index (%d) in file: %s", node1 < 0 ? node1 : node2, filename);
+         fclose(file);
+         return FALSE;
+      } 
       
       /* (node1, node2) is the first adjacent edge of node1 */
       if( node1 != currentnode )

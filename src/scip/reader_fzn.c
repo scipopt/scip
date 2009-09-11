@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.29 2009/09/10 19:11:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.30 2009/09/11 14:39:52 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -103,7 +103,7 @@ struct FznInput
    SCIP_HASHTABLE*      varHashtable;
    SCIP_HASHTABLE*      constantHashtable;
    FZNCONSTANT**        constants;
-   char                 linebuf[FZN_BUFFERLEN];
+   char                 linebuf[FZN_BUFFERLEN+1];
    char*                token;
    char*                pushedtokens[FZN_MAX_PUSHEDTOKENS];
    int                  npushedtokens;

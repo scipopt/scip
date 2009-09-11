@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.38 2009/09/04 15:58:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.39 2009/09/11 14:39:52 bzfberth Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -120,7 +120,7 @@ typedef struct ConsAndData CONSANDDATA;
 struct OpbInput
 {
    SCIP_FILE*           file;
-   char                 linebuf[OPB_MAX_LINELEN];
+   char                 linebuf[OPB_MAX_LINELEN+1];
    char*                token;
    char*                tokenbuf;
    char*                pushedtokens[OPB_MAX_PUSHEDTOKENS];
