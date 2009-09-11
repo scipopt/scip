@@ -3,6 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -11,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.9 2009/09/08 17:00:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.10 2009/09/11 16:02:48 bzfwinkm Exp $"
 
 /**@file   type_nlpi.h
  * @brief  type definitions for specific NLP solvers interface
@@ -53,7 +54,7 @@ typedef enum SCIP_NlpParam SCIP_NLPIPARAM;  /**< NLP solver parameter */
 enum SCIP_NlpSolStat
 {
    SCIP_NLPSOLSTAT_GLOBOPT        = 0,    /**< solved to global optimality */
-   SCIP_NLPSOLSTAT_LOCOPT         = 1,    /**< solved to local  optimality */
+   SCIP_NLPSOLSTAT_LOCOPT         = 1,    /**< solved to local optimality */
    SCIP_NLPSOLSTAT_FEASIBLE       = 2,    /**< feasible solution found */
    SCIP_NLPSOLSTAT_LOCINFEASIBLE  = 3,    /**< solution found is local infeasible */
    SCIP_NLPSOLSTAT_GLOBINFEASIBLE = 4,    /**< problem is proven infeasible */
@@ -81,6 +82,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
 /** initializes an NLP interface structure
  * 
  * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - name problem name
  */
@@ -100,13 +102,13 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - nvars number of variables 
- *  - lb lower bounds of variables
- *  - ub upper bounds of variables
- *  - type types of variables, saying NULL means all are continuous
+ *  - lbs lower bounds of variables
+ *  - ubs upper bounds of variables
+ *  - types types of variables, saying NULL means all are continuous
  *  - varnames names of variables, can be NULL
  */
-#define SCIP_DECL_NLPIADDVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int nvars, const SCIP_Real* lb, \
-   const SCIP_Real* ub, SCIP_VARTYPE* type, const char** varnames)
+#define SCIP_DECL_NLPIADDVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int nvars, const SCIP_Real* lbs, \
+   const SCIP_Real* ubs, SCIP_VARTYPE* types, const char** varnames)
 
 /** add constraints 
  * linear coefficients: row(=constraint) oriented matrix
@@ -116,40 +118,42 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - ncons number of added constraints
- *  - linoffset start index of each constraints linear coefficients in linind and linval
- *    length: ncons + 1, linoffset[ncons] gives length of linind and linval
+ *  - lhss left hand sides of constraints
+ *  - rhss right hand sides of constraints
+ *  - linoffsets start index of each constraints linear coefficients in lininds and linvals
+ *    length: ncons + 1, linoffsets[ncons] gives length of lininds and linvals
  *    may be NULL in case of no linear part
- *  - linind variable indices
+ *  - lininds variable indices
  *    may be NULL in case of no linear part
- *  - linval coefficient values
+ *  - linvals coefficient values
  *    may be NULL in case of no linear part
  *  - nquadrows number of columns in matrix of quadratic part for each constraint
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadrowidx indices of variables for which a quadratic part is specified
+ *  - quadrowidxs indices of variables for which a quadratic part is specified
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadoffset start index of each rows quadratic coefficients in quadind[.] and quadval[.]
- *    indices are given w.r.t. quadrowidx., i.e., quadoffset[.][i] gives the start index of row quadrowidx[.][i] in quadval[.]
- *    quadoffset[.][nquadrows[.]] gives length of quadind[.] and quadval[.]
+ *  - quadoffsets start index of each rows quadratic coefficients in quadinds[.] and quadvals[.]
+ *    indices are given w.r.t. quadrowidxs., i.e., quadoffsets[.][i] gives the start index of row quadrowidxs[.][i] in quadvals[.]
+ *    quadoffsets[.][nquadrows[.]] gives length of quadinds[.] and quadvals[.]
  *    entry of array may be NULL in case of no quadratic part
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadind column indices w.r.t. quadrowidx, i.e., quadrowidx[quadind[.][i]] gives the index of the variable corresponding to entry i
+ *  - quadinds column indices w.r.t. quadrowidxs, i.e., quadrowidxs[quadinds[.][i]] gives the index of the variable corresponding
+ *    to entry i, entry of array may be NULL in case of no quadratic part
+ *    may be NULL in case of no quadratic part in any constraint
+ *  - quadvals coefficient values
  *    entry of array may be NULL in case of no quadratic part
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadval coefficient values
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - exprvaridx indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
+ *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    entry of array may be NULL in case of no expression tree
  *    may be NULL in case of no expression tree in any constraint
- *  - exprtree expression tree for nonquadratic part of constraints
+ *  - exprtrees expression tree for nonquadratic part of constraints
  *    entry of array may be NULL in case of no nonquadratic part
  *    may be NULL in case of no nonquadratic part in any constraint
  *  - names of constraints, may be NULL or entries may be NULL
  */
-#define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int ncons, const SCIP_Real* lhs, \
-   const SCIP_Real* rhs, const int* linoffset, const int* linind, const SCIP_Real* linval, const int* nquadrows, \
-   int* const* quadrowidx, int* const* quadoffset, int* const* quadind, SCIP_Real* const* quadval, \
-   int* const* exprvaridx, SCIP_EXPRTREE* const* exprtree, const char** names)
+#define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int ncons, const SCIP_Real* lhss, \
+   const SCIP_Real* rhss, const int* linoffsets, const int* lininds, const SCIP_Real* linvals, const int* nquadrows, \
+   int* const* quadrowidxs, int* const* quadoffsets, int* const* quadinds, SCIP_Real* const* quadvals, \
+   int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
 
 /** sets or overwrites objective, a minimization problem is expected
  *  May change sparsity pattern.
@@ -157,29 +161,30 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - linind variable indices
+ *  - nlins number of linear variables
+ *  - lininds variable indices
  *    may be NULL in case of no linear part
- *  - linval coefficient values
+ *  - linvals coefficient values
  *    may be NULL in case of no linear part
  *  - nquadcols number of columns in matrix of quadratic part
  *  - quadcols indices of variables for which a quadratic part is specified
  *    may be NULL in case of no quadratic part
- *  - quadoffset start index of each rows quadratic coefficients in quadind and quadval
- *    quadoffset[.][nquadcols] gives length of quadind and quadval
+ *  - quadoffsets start index of each rows quadratic coefficients in quadinds and quadvals
+ *    quadoffsets[.][nquadcols] gives length of quadinds and quadvals
  *    may be NULL in case of no quadratic part
- *  - quadind column indices
+ *  - quadinds column indices
  *    may be NULL in case of no quadratic part
- *  - quadval coefficient values
+ *  - quadvals coefficient values
  *    may be NULL in case of no quadratic part
- *  - exprvaridx indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
+ *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    may be NULL in case of no expression tree
- *  - exprtree expression tree for nonquadratic part of constraints
+ *  - exprtree expression tree for nonquadratic part of objective function
  *    may be NULL in case of no nonquadratic part
- *  - objective values offset
+ *  - constant objective value offset
  */
-#define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int nlin, const int* linind, \
-   const SCIP_Real* linval, int nquadcols, const int* quadcols, const int* quadoffset, const int* quadind, \
-   const SCIP_Real* quadval, const int* exprvaridx, const SCIP_EXPRTREE* exprtree, const SCIP_Real constant)
+#define SCIP_DECL_NLPISETOBJECTIVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int nlins, const int* lininds, \
+   const SCIP_Real* linvals, int nquadcols, const int* quadcols, const int* quadoffsets, const int* quadinds, \
+   const SCIP_Real* quadvals, const int* exprvaridxs, const SCIP_EXPRTREE* exprtree, const SCIP_Real constant)
 
 /** change variable bounds
  * 
@@ -188,11 +193,11 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  *  - nlpi datastructure for solver interface
  *  - nvars number of variables to change bounds
  *  - indices indices of variables to change bounds
- *  - lb new lower bounds
- *  - ub new upper bounds
+ *  - lbs new lower bounds
+ *  - ubs new upper bounds
  */
 #define SCIP_DECL_NLPICHGVARBOUNDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int nvars, const int* indices, \
-   const SCIP_Real* lb, const SCIP_Real* ub)
+   const SCIP_Real* lbs, const SCIP_Real* ubs)
 
 /** change constraint bounds
  *
@@ -201,78 +206,80 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  *  - nlpi datastructure for solver interface
  *  - ncons number of constraints to change bounds
  *  - indices indices of constraints to change bounds
- *  - lb new lower bounds
- *  - ub new upper bounds
+ *  - lbs new lower bounds
+ *  - ubs new upper bounds
  */
 #define SCIP_DECL_NLPICHGCONSBOUNDS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int ncons, const int* indices, \
-   const SCIP_Real* lb, const SCIP_Real* ub)
+   const SCIP_Real* lbs, const SCIP_Real* ubs)
 
 /** delete a set of variables
  * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - dstat deletion status of vars; 1 if var should be deleted, 0 if not
+ *  - dstats deletion status of vars; 1 if var should be deleted, 0 if not
  * 
  * output:
- *  - dstat new position of var, -1 if var was deleted
+ *  - dstats new position of var, -1 if var was deleted
  */
-#define SCIP_DECL_NLPIDELVARSET(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int* dstat)
+#define SCIP_DECL_NLPIDELVARSET(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int* dstats)
 
 /** delete a set of constraints
  * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - dstat deletion status of rows; 1 if row should be deleted, 0 if not
+ *  - dstats deletion status of rows; 1 if row should be deleted, 0 if not
  * 
  * output:
- *  - dstat new position of row, -1 if row was deleted
+ *  - dstats new position of row, -1 if row was deleted
  */
-#define SCIP_DECL_NLPIDELCONSSET(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int* dstat)
+#define SCIP_DECL_NLPIDELCONSSET(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int* dstats)
 
 /** change one linear coefficient in a constraint or objective
  * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - cons   index of constraint or -1 for objective
+ *  - idx index of constraint or -1 for objective
  *  - nvals number of values in linear constraint
- *  - varidx index of variable
- *  - value  new value for coefficient
+ *  - varidxs indices of variable
+ *  - vals new values for coefficient
  * 
  * return: Error if coefficient did not exist before
  */
-#define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int cons, int nvals, \
-   const int *varidx, const SCIP_Real *value)
+#define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int idx, int nvals, \
+   const int* varidxs, const SCIP_Real* vals)
 
 /** change one coefficient in the quadratic part of a constraint or objective
  * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - cons index of constraint or -1 for objective
- *  - row row offset containing modified indices
- *  - col cols containing modified indices to the corresponding row offset
+ *  - idx index of constraint or -1 for objective
+ *  - nentries number of values in quadratic constraint
+ *  - rows row offset containing modified indices
+ *  - cols cols containing modified indices to the corresponding row offset
  *  - values coefficients corresponding to same indices as used when constraint/objective was constructed
  * 
  * return: Error if coefficient did not exist before
  */
-#define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int cons, const int nentries, \
-   const int* row, const int* col, SCIP_Real* value)
+#define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int idx, const int nentries, \
+   const int* rows, const int* cols, SCIP_Real* values)
 
-/** change a parameter constant in the nonlinear part
+/** change one coefficient in the nonlinear part
  * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - cons index of constraint or -1 for objective
- *  - idx index of parameter
+ *  - idxcons index of constraint or -1 for objective
+ *  - idxparam index of parameter
  *  - value new value for nonlinear parameter
  * 
  * return: Error if parameter does not exist
  */
-#define SCIP_DECL_NLPICHGNONLINCOEF(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int cons, const int idx, SCIP_Real value)
+#define SCIP_DECL_NLPICHGNONLINCOEF(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int idxcons, const int idxparam, \
+   SCIP_Real value)
 
 /** sets initial guess for primal variables
  * 
@@ -316,7 +323,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - primalvalues buffer to store pointer to primal values
+ *  - primalvalues pointer to store primal values
  * 
  * output:
  *  - primalvalues primal values of solution
@@ -328,7 +335,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - statistics buffer to store statistics
+ *  - statistics pointer to store statistics
  * 
  * output:
  *  - statistics solve statistics
@@ -393,7 +400,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  *  - scip SCIP datastructure
  *  - nlpi NLP interface structure
  *  - type parameter number
- *  - ival buffer to store the parameter value
+ *  - ival pointer to store the parameter value
  * 
  * output:
  *  - ival parameter value
@@ -416,7 +423,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  *  - scip SCIP datastructure
  *  - nlpi NLP interface structure
  *  - type parameter number
- *  - dval buffer to store the parameter value
+ *  - dval pointer to store the parameter value
  * 
  * output:
  *  - dval parameter value

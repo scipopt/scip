@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.8 2009/09/08 19:43:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.9 2009/09/11 16:02:48 bzfwinkm Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -196,9 +196,12 @@ public:
       bool               new_x,              /**< whether some function evaluation method has been called for this point before */
       Index              m,                  /**< number of constraints */
       Index              nele_jac,           /**< number of nonzero entries in jacobian */ 
-      Index*             iRow,               /**< buffer to store row indices of nonzero jacobian entries, or NULL if values are requested */
-      Index*             jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values are requested */                  
-      Number*            values              /**< buffer to store values of nonzero jacobian entries, or NULL if structure is requested */
+      Index*             iRow,               /**< buffer to store row indices of nonzero jacobian entries, or NULL if values 
+                                              * are requested */
+      Index*             jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values
+                                              * are requested */                  
+      Number*            values              /**< buffer to store values of nonzero jacobian entries, or NULL if structure is
+                                              * requested */
    );
 
    /** Method to return:
@@ -214,8 +217,10 @@ public:
       const Number*      lambda,             /**< weights for constraint functions */ 
       bool               new_lambda,         /**< whether the hessian has been evaluated for these values of lambda before */
       Index              nele_hess,          /**< number of nonzero entries in hessian */
-      Index*             iRow,               /**< buffer to store row indices of nonzero hessian entries, or NULL if values are requested */
-      Index*             jCol,               /**< buffer to store column indices of nonzero hessian entries, or NULL if values are requested */                  
+      Index*             iRow,               /**< buffer to store row indices of nonzero hessian entries, or NULL if values
+                                              * are requested */
+      Index*             jCol,               /**< buffer to store column indices of nonzero hessian entries, or NULL if values
+                                              * are requested */                  
       Number*            values              /**< buffer to store values of nonzero hessian entries, or NULL if structure is requested */
    );
    
@@ -239,8 +244,7 @@ public:
       IpoptCalculatedQuantities* ip_cq       /**< pointer to current calculated quantities */
    );
 
-   /** This method is called when the algorithm is complete so the TNLP can store/write the solution.
-    */
+   /** This method is called when the algorithm is complete so the TNLP can store/write the solution. */
    void finalize_solution(
       SolverReturn       status,             /**< solve and solution status */ 
       Index              n,                  /**< number of variables */ 
@@ -277,16 +281,19 @@ void SCIPnlpiIpoptInvalidateSolution(
 /** initializes an NLP interface structure
  * 
  * input:
+ *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - name problem name
  */
 static
-SCIP_DECL_NLPIINIT( nlpiInitIpopt )
+SCIP_DECL_NLPIINIT(nlpiInitIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
    
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
 
    assert(data->oracle == NULL);
@@ -348,7 +355,7 @@ SCIP_DECL_NLPIINIT( nlpiInitIpopt )
  *  - data nlpi data of solver interface
  */
 static
-SCIP_DECL_NLPIFREE( nlpiFreeIpopt )
+SCIP_DECL_NLPIFREE(nlpiFreeIpopt)
 {
    assert(scip != NULL);
    assert(data != NULL);
@@ -372,22 +379,24 @@ SCIP_DECL_NLPIFREE( nlpiFreeIpopt )
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - nvars number of variables 
- *  - lb lower bounds of variables
- *  - ub upper bounds of variables
- *  - type types of variables, saying NULL means all are continuous
+ *  - lbs lower bounds of variables
+ *  - ubs upper bounds of variables
+ *  - types types of variables, saying NULL means all are continuous
  *  - varnames names of variables, can be NULL
  */
 static
-SCIP_DECL_NLPIADDVARS( nlpiAddVarsIpopt )
+SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
    
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
    
-   SCIP_CALL( SCIPnlpiOracleAddVars(scip, data->oracle, nvars, lb, ub, varnames) );
+   SCIP_CALL( SCIPnlpiOracleAddVars(scip, data->oracle, nvars, lbs, ubs, varnames) );
    
    data->firstrun = TRUE;
    SCIPfreeMemoryArrayNull(scip, &data->initguess);
@@ -404,51 +413,55 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsIpopt )
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - ncons number of added constraints
- *  - linoffset start index of each constraints linear coefficients in linind and linval
- *    length: ncons + 1, linoffset[ncons] gives length of linind and linval
+ *  - lhss left hand sides of constraints
+ *  - rhss right hand sides of constraints
+ *  - linoffsets start index of each constraints linear coefficients in lininds and linvals
+ *    length: ncons + 1, linoffsets[ncons] gives length of lininds and linvals
  *    may be NULL in case of no linear part
- *  - linind variable indices
+ *  - lininds variable indices
  *    may be NULL in case of no linear part
- *  - linval coefficient values
+ *  - linvals coefficient values
  *    may be NULL in case of no linear part
  *  - nquadrows number of columns in matrix of quadratic part for each constraint
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadrowidx indices of variables for which a quadratic part is specified
+ *  - quadrowidxs indices of variables for which a quadratic part is specified
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadoffset start index of each rows quadratic coefficients in quadind[.] and quadval[.]
- *    indices are given w.r.t. quadrowidx., i.e., quadoffset[.][i] gives the start index of row quadrowidx[.][i] in quadval[.]
- *    quadoffset[.][nquadrows[.]] gives length of quadind[.] and quadval[.]
+ *  - quadoffsets start index of each rows quadratic coefficients in quadinds[.] and quadvals[.]
+ *    indices are given w.r.t. quadrowidxs., i.e., quadoffsets[.][i] gives the start index of row quadrowidxs[.][i] in quadvals[.]
+ *    quadoffsets[.][nquadrows[.]] gives length of quadinds[.] and quadvals[.]
  *    entry of array may be NULL in case of no quadratic part
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadind column indices w.r.t. quadrowidx, i.e., quadrowidx[quadind[.][i]] gives the index of the variable corresponding to entry i
+ *  - quadinds column indices w.r.t. quadrowidxs, i.e., quadrowidxs[quadinds[.][i]] gives the index of the variable corresponding
+ *    to entry i, entry of array may be NULL in case of no quadratic part
+ *    may be NULL in case of no quadratic part in any constraint
+ *  - quadvals coefficient values
  *    entry of array may be NULL in case of no quadratic part
  *    may be NULL in case of no quadratic part in any constraint
- *  - quadval coefficient values
- *    entry of array may be NULL in case of no quadratic part
- *    may be NULL in case of no quadratic part in any constraint
- *  - exprvaridx indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
+ *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    entry of array may be NULL in case of no expression tree
  *    may be NULL in case of no expression tree in any constraint
- *  - exprtree expression tree for nonquadratic part of constraints
+ *  - exprtrees expression tree for nonquadratic part of constraints
  *    entry of array may be NULL in case of no nonquadratic part
  *    may be NULL in case of no nonquadratic part in any constraint
  *  - names of constraints, may be NULL or entries may be NULL
  */
 static
-SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsIpopt )
+SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
    
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
  
    SCIP_CALL( SCIPnlpiOracleAddConstraints(scip, data->oracle,
-      ncons, lhs, rhs,
-      linoffset, linind, linval,
-      nquadrows, quadrowidx, quadoffset, quadind, quadval,
-      exprvaridx, exprtree, names) );
+      ncons, lhss, rhss,
+      linoffsets, lininds, linvals,
+      nquadrows, quadrowidxs, quadoffsets, quadinds, quadvals,
+      exprvaridxs, exprtrees, names) );
 
    data->firstrun = TRUE;
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
@@ -462,40 +475,44 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsIpopt )
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - linind variable indices
+ *  - nlins number of linear variables
+ *  - lininds variable indices
  *    may be NULL in case of no linear part
- *  - linval coefficient values
+ *  - linvals coefficient values
  *    may be NULL in case of no linear part
  *  - nquadcols number of columns in matrix of quadratic part
  *  - quadcols indices of variables for which a quadratic part is specified
  *    may be NULL in case of no quadratic part
- *  - quadoffset start index of each rows quadratic coefficients in quadind and quadval
- *    quadoffset[.][nquadcols] gives length of quadind and quadval
+ *  - quadoffsets start index of each rows quadratic coefficients in quadinds and quadvals
+ *    quadoffsets[.][nquadcols] gives length of quadinds and quadvals
  *    may be NULL in case of no quadratic part
- *  - quadind column indices
+ *  - quadinds column indices
  *    may be NULL in case of no quadratic part
- *  - quadval coefficient values
+ *  - quadvals coefficient values
  *    may be NULL in case of no quadratic part
- *  - exprvaridx indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
+ *  - exprvaridxs indices of variables in expression tree, maps variable indices in expression tree to indices in nlp
  *    may be NULL in case of no expression tree
- *  - exprtree expression tree for nonquadratic part of constraints
+ *  - exprtree expression tree for nonquadratic part of objective function
  *    may be NULL in case of no nonquadratic part
- *  - objective values offset
+ *  - constant objective value offset
  */
 static
-SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveIpopt )
+SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
    
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
+
    assert(data != NULL);
    assert(data->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleSetObjective(scip, data->oracle,
-      constant, nlin, linind, linval,
-      nquadcols, quadcols, quadoffset, quadind, quadval,
-      exprvaridx, exprtree) );
+      constant, nlins, lininds, linvals,
+      nquadcols, quadcols, quadoffsets, quadinds, quadvals,
+      exprvaridxs, exprtree) );
 
    data->firstrun = TRUE;
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
@@ -510,20 +527,22 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveIpopt )
  *  - nlpi datastructure for solver interface
  *  - nvars number of variables to change bounds
  *  - indices indices of variables to change bounds
- *  - lb new lower bounds
- *  - ub new upper bounds
+ *  - lbs new lower bounds
+ *  - ubs new upper bounds
  */
 static
-SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsIpopt )
+SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
     
-   SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, data->oracle, nvars, indices, lb, ub) );
+   SCIP_CALL( SCIPnlpiOracleChgVarBounds(scip, data->oracle, nvars, indices, lbs, ubs) );
 
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
 
@@ -537,20 +556,22 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsIpopt )
  *  - nlpi datastructure for solver interface
  *  - ncons number of constraints to change bounds
  *  - indices indices of constraints to change bounds
- *  - lb new lower bounds
- *  - ub new upper bounds
+ *  - lbs new lower bounds
+ *  - ubs new upper bounds
  */
 static
-SCIP_DECL_NLPICHGCONSBOUNDS( nlpiChgConsBoundsIpopt )
+SCIP_DECL_NLPICHGCONSBOUNDS(nlpiChgConsBoundsIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
       
-   SCIP_CALL( SCIPnlpiOracleChgConsBounds(scip, data->oracle, ncons, indices, lb, ub) );
+   SCIP_CALL( SCIPnlpiOracleChgConsBounds(scip, data->oracle, ncons, indices, lbs, ubs) );
    
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
 
@@ -562,22 +583,24 @@ SCIP_DECL_NLPICHGCONSBOUNDS( nlpiChgConsBoundsIpopt )
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - dstat deletion status of vars; 1 if var should be deleted, 0 if not
+ *  - dstats deletion status of vars; 1 if var should be deleted, 0 if not
  * 
  * output:
- *  - dstat new position of var, -1 if var was deleted
+ *  - dstats new position of var, -1 if var was deleted
  */
 static
-SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetIpopt )
+SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
    
-   SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, data->oracle, dstat) );
+   SCIP_CALL( SCIPnlpiOracleDelVarSet(scip, data->oracle, dstats) );
 
    data->firstrun = TRUE;
    SCIPfreeMemoryArrayNull(scip, &data->initguess); // @TODO keep initguess for remaining variables 
@@ -592,22 +615,24 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetIpopt )
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - dstat deletion status of rows; 1 if row should be deleted, 0 if not
+ *  - dstats deletion status of rows; 1 if row should be deleted, 0 if not
  * 
  * output:
- *  - dstat new position of row, -1 if row was deleted
+ *  - dstats new position of row, -1 if row was deleted
  */
 static
-SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetIpopt )
+SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
    
-   SCIP_CALL( SCIPnlpiOracleDelConsSet(scip, data->oracle, dstat) );
+   SCIP_CALL( SCIPnlpiOracleDelConsSet(scip, data->oracle, dstats) );
 
    data->firstrun = TRUE;
 
@@ -621,24 +646,26 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetIpopt )
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - cons   index of constraint or -1 for objective
+ *  - idx index of constraint or -1 for objective
  *  - nvals number of values in linear constraint
- *  - varidx index of variable
- *  - value  new value for coefficient
- * 
+ *  - varidxs indices of variable
+ *  - vals new values for coefficient
+ *
  * return: Error if coefficient did not exist before
  */
 static
-SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsIpopt )
+SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
    
-   SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, data->oracle, cons, nvals, varidx, value) );
+   SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(scip, data->oracle, idx, nvals, varidxs, vals) );
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
 
    return SCIP_OKAY;
@@ -649,42 +676,45 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsIpopt )
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - cons index of constraint or -1 for objective
- *  - row row offset containing modified indices
- *  - col cols containing modified indices to the corresponding row offset
+ *  - idx index of constraint or -1 for objective
+ *  - nentries number of values in quadratic constraint
+ *  - rows row offset containing modified indices
+ *  - cols cols containing modified indices to the corresponding row offset
  *  - values coefficients corresponding to same indices as used when constraint/objective was constructed
- * 
+ *
  * return: Error if coefficient did not exist before
  */
 static
-SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsIpopt )
+SCIP_DECL_NLPICHGQUADCOEFS(nlpiChgQuadraticCoefsIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
    
-   SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(scip, data->oracle, cons, nentries, row, col, value) );
+   SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(scip, data->oracle, idx, nentries, rows, cols, values) );
    SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
 
    return SCIP_OKAY;
 }
 
-/** change a parameter constant in the nonlinear part
+/** change one coefficient in the nonlinear part
  * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - cons index of constraint or -1 for objective
- *  - idx index of parameter
+ *  - considx index of constraint or -1 for objective
+ *  - paramidx index of parameter
  *  - value new value for nonlinear parameter
  * 
  * return: Error if parameter does not exist
  */
 static
-SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefIpopt )
+SCIP_DECL_NLPICHGNONLINCOEF(nlpiChgNonlinCoefIpopt)
 {
    assert(scip != NULL);
    assert(nlpi != NULL);
@@ -708,12 +738,14 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefIpopt )
  *  - values initial starting solution
  */
 static
-SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessIpopt )
+SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
 
@@ -736,12 +768,15 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessIpopt )
  *  - nlpi datastructure for solver interface
  */
 static
-SCIP_DECL_NLPISOLVE( nlpiSolveIpopt )
+SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 {
+   SCIP_NLPIDATA* data;
+   ApplicationReturnStatus status;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(data->oracle != NULL);
 
@@ -758,9 +793,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveIpopt )
    data->lastniter = -1;
    data->lasttime  = -1.0;
    
-   ApplicationReturnStatus status;
    try
    {
+      SmartPtr<SolveStatistics> stats;
+
       if( data->firstrun )
          status = data->ipopt->OptimizeTNLP(GetRawPtr(data->nlp));
       else
@@ -786,7 +822,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveIpopt )
          default: ;
       }
 
-      SmartPtr<SolveStatistics> stats = data->ipopt->Statistics();
+      stats = data->ipopt->Statistics();
       if( IsValid(stats) )
       {
          data->lastniter = stats->IterationCount();
@@ -813,12 +849,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveIpopt )
  * return: Solution Status
  */
 static
-SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatIpopt )
+SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatIpopt)
 {
+   SCIP_NLPIDATA* data;
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
 
    return data->lastsolstat;
@@ -833,12 +870,13 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatIpopt )
  * return: Termination Status
  */
 static
-SCIP_DECL_NLPIGETTERMSTAT( nlpiGetSoltermIpopt )
+SCIP_DECL_NLPIGETTERMSTAT(nlpiGetSoltermIpopt)
 {
+   SCIP_NLPIDATA* data;
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
 
    return data->lasttermstat;
@@ -849,19 +887,21 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetSoltermIpopt )
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - primalvalues buffer to store pointer to primal values
+ *  - primalvalues pointer to store primal values
  * 
  * output:
  *  - primalvalues primal values of solution
  */
 static
-SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionIpopt )
+SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
    assert(primalvalues != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    
    *primalvalues = data->lastsol;
@@ -874,18 +914,20 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionIpopt )
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
- *  - statistics buffer to store statistics
+ *  - statistics pointer to store statistics
  * 
  * output:
  *  - statistics solve statistics
  */
 static
-SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsIpopt )
+SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
 
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
 
    SCIPnlpStatisticsSetNIterations(statistics, data->lastniter);
@@ -905,7 +947,7 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsIpopt )
  *  - size required size for warmstart buffer
  */
 static
-SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstatSizeIpopt )
+SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstatSizeIpopt)
 {
    SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -925,7 +967,7 @@ SCIP_DECL_NLPIGETWARMSTARTSIZE( nlpiGetWarmstatSizeIpopt )
  *  - buffer warmstart information in solver specific data structure
  */
 static
-SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstatMemoIpopt )
+SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstatMemoIpopt)
 {
    SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -942,7 +984,7 @@ SCIP_DECL_NLPIGETWARMSTARTMEMO( nlpiGetWarmstatMemoIpopt )
  *  - buffer warmstart information
  */
 static
-SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstatMemoIpopt )
+SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstatMemoIpopt)
 {
    SCIPerrorMessage("method of Ipopt nonlinear solver is not implemented\n");
    SCIPABORT();
@@ -960,12 +1002,14 @@ SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstatMemoIpopt )
  * return: void pointer to solver
  */
 static
-SCIP_DECL_NLPIGETSOLVERPOINTER( nlpiGetSolverPointerIpopt )
+SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
 
    return GetRawPtr(data->ipopt);
@@ -977,19 +1021,20 @@ SCIP_DECL_NLPIGETSOLVERPOINTER( nlpiGetSolverPointerIpopt )
  *  - scip SCIP datastructure
  *  - nlpi NLP interface structure
  *  - type parameter number
- *  - ival buffer to store the parameter value
+ *  - ival pointer to store the parameter value
  * 
  * output:
  *  - ival parameter value
  */
 static
-SCIP_DECL_NLPIGETINTPAR( nlpiGetIntparIpopt )
+SCIP_DECL_NLPIGETINTPAR(nlpiGetIntparIpopt)
 {
+   SCIP_NLPIDATA* data;
    assert(scip != NULL);
    assert(nlpi != NULL);
    assert(ival != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(IsValid(data->ipopt));
 
@@ -1070,12 +1115,14 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntparIpopt )
  *  - ival parameter value
  */
 static
-SCIP_DECL_NLPISETINTPAR( nlpiSetIntparIpopt )
+SCIP_DECL_NLPISETINTPAR(nlpiSetIntparIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
 
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(IsValid(data->ipopt));
 
@@ -1175,19 +1222,21 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntparIpopt )
  *  - scip SCIP datastructure
  *  - nlpi NLP interface structure
  *  - type parameter number
- *  - dval buffer to store the parameter value
+ *  - dval pointer to store the parameter value
  * 
  * output:
  *  - dval parameter value
  */
 static
-SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParIpopt )
+SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
    assert(dval != NULL);
     
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(IsValid(data->ipopt));
 
@@ -1260,12 +1309,14 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParIpopt )
  *  - dval parameter value
  */
 static
-SCIP_DECL_NLPISETREALPAR( nlpiSetRealparIpopt )
+SCIP_DECL_NLPISETREALPAR(nlpiSetRealparIpopt)
 {
+   SCIP_NLPIDATA* data;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
 
-   SCIP_NLPIDATA* data = SCIPnlpiGetNlpiData(nlpi);
+   data = SCIPnlpiGetNlpiData(nlpi);
    assert(data != NULL);
    assert(IsValid(data->ipopt));
 
@@ -1363,12 +1414,13 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealparIpopt )
 SCIP_RETCODE SCIPcreateNlpSolverIpopt(
    SCIP*                 scip,               /**< central scip datastructure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
-)
+   )
 {
+   SCIP_NlpiData* nlpidata;
+
    assert(scip != NULL);
    assert(nlpi != NULL);
    
-   SCIP_NlpiData* nlpidata;
    try
    {
       nlpidata = new SCIP_NlpiData();
@@ -1381,7 +1433,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
       return SCIP_NOMEMORY;
    }
   
-   SCIP_CALL( SCIPnlpiCreate( scip, nlpi,
+   SCIP_CALL( SCIPnlpiCreate(scip, nlpi,
       NLPI_NAME, NLPI_DESC, NLPI_PRIORITY,
       nlpiInitIpopt, nlpiAddVarsIpopt, nlpiAddConstraintsIpopt, nlpiSetObjectiveIpopt, 
       nlpiChgVarBoundsIpopt, nlpiChgConsBoundsIpopt, nlpiDelVarSetIpopt, nlpiDelConstraintSetIpopt,
@@ -1391,7 +1443,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
       nlpiGetWarmstatSizeIpopt, nlpiGetWarmstatMemoIpopt,
       nlpiSetWarmstatMemoIpopt, nlpiGetSolverPointerIpopt, nlpiGetIntparIpopt,
       nlpiSetIntparIpopt, nlpiGetRealParIpopt,
-      nlpiSetRealparIpopt, nlpiFreeIpopt, nlpidata ) );
+      nlpiSetRealparIpopt, nlpiFreeIpopt, nlpidata) );
 
    return SCIP_OKAY;
 }
@@ -1404,17 +1456,19 @@ bool ScipNLP::get_nlp_info(
    Index&             nnz_jac_g,          /**< place to store number of nonzeros in jacobian */
    Index&             nnz_h_lag,          /**< place to store number of nonzeros in hessian */
    IndexStyleEnum&    index_style         /**< place to store used index style (0-based or 1-based) */
-)
+   )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   const int* offset;
+   SCIP_RETCODE retcode;
+
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
    
    n = SCIPnlpiOracleGetNVars(nlpidata->oracle);
    m = SCIPnlpiOracleGetNConstraints(nlpidata->oracle);
    
-   const int* offset;
-   SCIP_RETCODE retcode = SCIPnlpiOracleGetJacobianSparsity(scip, nlpidata->oracle, &offset, NULL);
+   retcode = SCIPnlpiOracleGetJacobianSparsity(scip, nlpidata->oracle, &offset, NULL);
    if( retcode != SCIP_OKAY )
       return false;
    assert(offset != NULL);
@@ -1439,17 +1493,17 @@ bool ScipNLP::get_bounds_info(
    Index              m,                  /**< number of constraints */
    Number*            g_l,                /**< buffer to store lower bounds on constraints */
    Number*            g_u                 /**< buffer to store lower bounds on constraints */
-)
+   )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
    assert(m == SCIPnlpiOracleGetNConstraints(nlpidata->oracle));
    
-   assert(SCIPnlpiOracleGetVarLb(nlpidata->oracle)          != NULL);
-   assert(SCIPnlpiOracleGetVarUb(nlpidata->oracle)          != NULL);
+   assert(SCIPnlpiOracleGetVarLb(nlpidata->oracle) != NULL);
+   assert(SCIPnlpiOracleGetVarUb(nlpidata->oracle) != NULL);
    assert(SCIPnlpiOracleGetConstraintsLhs(nlpidata->oracle) != NULL);
    assert(SCIPnlpiOracleGetConstraintsRhs(nlpidata->oracle) != NULL);
    
@@ -1472,7 +1526,7 @@ bool ScipNLP::get_starting_point(
    Index              m,                  /**< number of constraints */
    bool               init_lambda,        /**< whether initial values for dual values of constraints are required */
    Number*            lambda              /**< buffer to store dual values of constraints */
-)
+   )
 {
    assert(scip != NULL);
    assert(nlpidata != NULL);
@@ -1503,16 +1557,16 @@ bool ScipNLP::get_starting_point(
 bool ScipNLP::get_variables_linearity(
    Index              n,                  /**< number of variables */ 
    LinearityType*     var_types           /**< buffer to store linearity types of variables */
-)
+   )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
 
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
    
    for( int i = 0; i < n; ++i )
-      var_types[i] = SCIPnlpiOracleGetVarDegree(nlpidata->oracle, i) <= 1 ? LINEAR : NON_LINEAR;
+      var_types[i] = (SCIPnlpiOracleGetVarDegree(nlpidata->oracle, i) <= 1 ? LINEAR : NON_LINEAR);
    
    return true;
 }
@@ -1521,16 +1575,18 @@ bool ScipNLP::get_variables_linearity(
 bool ScipNLP::get_constraints_linearity(
    Index              m,                  /**< number of constraints */
    LinearityType*     const_types         /**< buffer to store linearity types of constraints */
-)
+   )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   int i;
+
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
 
    assert(m == SCIPnlpiOracleGetNConstraints(nlpidata->oracle));
    
-   for( int i = 0; i < m; ++i )
-      const_types[i] = SCIPnlpiOracleGetConstraintDegree(nlpidata->oracle, i) <= 1 ? LINEAR : NON_LINEAR;
+   for( i = 0; i < m; ++i )
+      const_types[i] = (SCIPnlpiOracleGetConstraintDegree(nlpidata->oracle, i) <= 1 ? LINEAR : NON_LINEAR);
    
    return true;
 }
@@ -1541,17 +1597,15 @@ bool ScipNLP::eval_f(
    const Number*      x,                  /**< point to evaluate */ 
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Number&            obj_value           /**< place to store objective function value */
-)
+   )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
 
-   SCIP_RETCODE retcode = SCIPnlpiOracleEvalObjectiveValue(scip, nlpidata->oracle, x, &obj_value);
-
-   return retcode == SCIP_OKAY ? true : false;
+   return (SCIPnlpiOracleEvalObjectiveValue(scip, nlpidata->oracle, x, &obj_value) == SCIP_OKAY ? true : false);
 }
 
 /** Method to return the gradient of the objective */
@@ -1560,18 +1614,17 @@ bool ScipNLP::eval_grad_f(
    const Number*      x,                  /**< point to evaluate */ 
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Number*            grad_f              /**< buffer to store objective gradient */
-)
+   )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   SCIP_Real dummy;
+
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
 
-   SCIP_Real dummy;
-   SCIP_RETCODE retcode = SCIPnlpiOracleEvalObjectiveGradient(scip, nlpidata->oracle, x, TRUE, &dummy, grad_f);
-
-   return retcode == SCIP_OKAY ? true : false;
+   return (SCIPnlpiOracleEvalObjectiveGradient(scip, nlpidata->oracle, x, TRUE, &dummy, grad_f) == SCIP_OKAY ? true : false);
 }
 
 /** Method to return the constraint residuals */
@@ -1581,17 +1634,15 @@ bool ScipNLP::eval_g(
    bool               new_x,              /**< whether some function evaluation method has been called for this point before */
    Index              m,                  /**< number of constraints */
    Number*            g                   /**< buffer to store constraint function values */
-)
+   )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
 
-   SCIP_RETCODE retcode = SCIPnlpiOracleEvalConstraintValues(scip, nlpidata->oracle, x, g);
-
-   return retcode == SCIP_OKAY ? true : false;
+   return (SCIPnlpiOracleEvalConstraintValues(scip, nlpidata->oracle, x, g) == SCIP_OKAY ? true : false);
 }
 
 /** Method to return:
@@ -1607,10 +1658,10 @@ bool ScipNLP::eval_jac_g(
    Index*             iRow,               /**< buffer to store row indices of nonzero jacobian entries, or NULL if values are requested */
    Index*             jCol,               /**< buffer to store column indices of nonzero jacobian entries, or NULL if values are requested */                  
    Number*            values              /**< buffer to store values of nonzero jacobian entries, or NULL if structure is requested */
-)
+   )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
@@ -1618,19 +1669,21 @@ bool ScipNLP::eval_jac_g(
    
    if( values == NULL )
    { /* Ipopt wants to know sparsity structure */
+      const int* jacoffset;
+      const int* jaccol;
+      int j;
+      int i;
+
       assert(iRow != NULL);
       assert(jCol != NULL);
       
-      const int* jacoffset;
-      const int* jaccol;
-      SCIP_RETCODE retcode = SCIPnlpiOracleGetJacobianSparsity(scip, nlpidata->oracle, &jacoffset, &jaccol);
-      if( retcode != SCIP_OKAY )
+      if( SCIPnlpiOracleGetJacobianSparsity(scip, nlpidata->oracle, &jacoffset, &jaccol) != SCIP_OKAY )
          return false;
       
       assert(jacoffset[0] == 0);
       assert(jacoffset[m] == nele_jac);
-      int j = jacoffset[0];
-      for( int i = 0; i < m; ++i )
+      j = jacoffset[0];
+      for( i = 0; i < m; ++i )
          for( ; j < jacoffset[i+1]; ++j )
             iRow[j] = i;
       
@@ -1638,8 +1691,7 @@ bool ScipNLP::eval_jac_g(
    }
    else
    {
-      SCIP_RETCODE retcode = SCIPnlpiOracleEvalJacobian(scip, nlpidata->oracle, x, TRUE, NULL, values);
-      if( retcode != SCIP_OKAY )
+      if( SCIPnlpiOracleEvalJacobian(scip, nlpidata->oracle, x, TRUE, NULL, values) != SCIP_OKAY )
          return false;
    }
 
@@ -1664,8 +1716,8 @@ bool ScipNLP::eval_h(
    Number*            values              /**< buffer to store values of nonzero hessian entries, or NULL if structure is requested */
 )
 {
-   assert(scip             != NULL);
-   assert(nlpidata         != NULL);
+   assert(scip != NULL);
+   assert(nlpidata != NULL);
    assert(nlpidata->oracle != NULL);
    
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
@@ -1673,19 +1725,21 @@ bool ScipNLP::eval_h(
    
    if( values == NULL )
    { /* Ipopt wants to know sparsity structure */
+      const int* heslagoffset;
+      const int* heslagcol;
+      int j;
+      int i;
+
       assert(iRow != NULL);
       assert(jCol != NULL);
      
-      const int* heslagoffset;
-      const int* heslagcol;
-      SCIP_RETCODE retcode = SCIPnlpiOracleGetHessianLagSparsity(scip, nlpidata->oracle, &heslagoffset, &heslagcol);
-      if( retcode != SCIP_OKAY )
+      if( SCIPnlpiOracleGetHessianLagSparsity(scip, nlpidata->oracle, &heslagoffset, &heslagcol) != SCIP_OKAY )
          return false;
      
       assert(heslagoffset[0] == 0);
       assert(heslagoffset[n] == nele_hess);
-      int j = heslagoffset[0];
-      for( int i = 0; i < n; ++i )
+      j = heslagoffset[0];
+      for( i = 0; i < n; ++i )
          for( ; j < heslagoffset[i+1]; ++j )
             iRow[j] = i;
      
@@ -1693,8 +1747,7 @@ bool ScipNLP::eval_h(
    }
    else
    {
-      SCIP_RETCODE retcode = SCIPnlpiOracleEvalHessianLag(scip, nlpidata->oracle, x, TRUE, obj_factor, lambda, values);
-      if( retcode != SCIP_OKAY )
+      if( SCIPnlpiOracleEvalHessianLag(scip, nlpidata->oracle, x, TRUE, obj_factor, lambda, values) != SCIP_OKAY )
          return false;
    }
    
@@ -1723,7 +1776,7 @@ bool ScipNLP::intermediate_callback(
 {
    assert(scip != NULL);
    
-   return SCIPpressedCtrlC(scip) == FALSE;
+   return (SCIPpressedCtrlC(scip) == FALSE);
 }
 
 /** This method is called when the algorithm is complete so the TNLP can store/write the solution.
@@ -1822,7 +1875,9 @@ void ScipNLP::finalize_solution(
    {
       if( nlpidata->lastsol == NULL )
       {
-         SCIP_RETCODE retcode = SCIPduplicateMemoryArray(scip, &nlpidata->lastsol, x, n);
+         SCIP_RETCODE retcode;
+
+         retcode = SCIPduplicateMemoryArray(scip, &nlpidata->lastsol, x, n);
          if( retcode != SCIP_OKAY )
          {
             nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -1837,8 +1892,11 @@ void ScipNLP::finalize_solution(
       
       if( check_feasibility && cq != NULL )
       {
-         Number constrviol = cq->curr_constraint_violation();
+         Number constrviol;
          Number constrvioltol;
+
+         constrviol = cq->curr_constraint_violation();
+
          nlpidata->ipopt->Options()->GetNumericValue("constr_viol_tol", constrvioltol, "");
          if( constrviol <= constrvioltol )
          {

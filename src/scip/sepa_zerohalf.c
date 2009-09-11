@@ -3682,7 +3682,7 @@ SCIP_RETCODE preprocessColumns(
                         nunprocessedcols++;
                      }
 
-               BMSmoveMemoryArray(mod2data->rowsind + r, mod2data->rowsind + r + 1,
+               BMSmoveMemoryArray(&((mod2data->rowsind)[r]), &((mod2data->rowsind)[r + 1]),
                   mod2data->nrowsind - r - 1); 
 
                mod2data->nrowsind--;
@@ -6497,7 +6497,7 @@ SCIP_RETCODE process(
 
    if( sepadata->nsepamethods == -1 )
    {
-      sepadata->nsepamethods = strlen(sepadata->sepamethods);
+      sepadata->nsepamethods = (int) strlen(sepadata->sepamethods);
       if( sepadata->nsepamethods > 0 && sepadata->sepamethods[0] == '-' )
          sepadata->nsepamethods = 0;    
    }

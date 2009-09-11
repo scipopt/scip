@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.30 2009/09/11 14:39:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.31 2009/09/11 16:02:48 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2127,7 +2127,7 @@ SCIP_RETCODE parseConstraint(
       token = SCIPstrtok(NULL, "_", &nexttoken);
    }
 
-   assert(tokens[0] != NULL);
+   assert(token == NULL || tokens[0] != NULL);
    SCIPdebugMessage("%s", tokens[0]);
    for( i = 1; i < ntokens; ++i )
    {
@@ -2151,9 +2151,11 @@ SCIP_RETCODE parseConstraint(
    }
    
    /* free memory */
-   for( i = 0; i < ntokens; ++i )
+   for( i = ntokens - 1; i >= 0 ; --i )
+   {
       SCIPfreeBufferArray(scip, &tokens[i]);
-   
+   }
+
    /* check for the closing parenthesis */
    if( !hasError(fzninput) && ( !getNextToken(fzninput) || !isChar(fzninput->token, ')')) )
       syntaxError(scip, fzninput, "expected token <)>");

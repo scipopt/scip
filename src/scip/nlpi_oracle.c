@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.16 2009/09/11 15:18:33 bzfgamra Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.17 2009/09/11 16:02:48 bzfwinkm Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -292,15 +292,16 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
    SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->varubs, oracle->nvars + nvars) );
    
    if( lbs != NULL )
-      BMScopyMemoryArray(&(oracle->varlbs[oracle->nvars]), lbs, nvars);
-
+   {
+      BMScopyMemoryArray(&((oracle->varlbs)[oracle->nvars]), lbs, nvars);
+   }
    else
       for( i = 0; i < nvars; ++i )
          oracle->varlbs[oracle->nvars+i] = -SCIPinfinity(scip);
    
    if( ubs != NULL )
    {
-      BMScopyMemoryArray(oracle->varubs + oracle->nvars, ubs, nvars);
+      BMScopyMemoryArray(&((oracle->varubs)[oracle->nvars]), ubs, nvars);
    }
    else
       for( i = 0; i < nvars; ++i )
@@ -315,7 +316,7 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
          {
             if( varnames[i] != NULL )
             {
-               SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->varnames[oracle->nvars+i], varnames[i], strlen(varnames[i])+1) );
+               SCIP_CALL( SCIPduplicateMemoryArray(scip, &((oracle->varnames)[oracle->nvars+i]), varnames[i], strlen(varnames[i])+1) );
             }
             else
                oracle->varnames[oracle->nvars+i] = NULL;
@@ -323,26 +324,26 @@ SCIP_RETCODE SCIPnlpiOracleAddVars(
       }
       else
       {
-         BMSclearMemoryArray(oracle->varnames + oracle->nvars, nvars);
+         BMSclearMemoryArray(&((oracle->varnames)[oracle->nvars]), nvars);
       }
    }
    else if( varnames != NULL )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->varnames, oracle->nvars + nvars) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->varnames), oracle->nvars + nvars) );
       BMSclearMemoryArray(oracle->varnames, oracle->nvars);
       for( i = 0; i < nvars; ++i )
       {
          if( varnames[i] != NULL )
          {
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->varnames[oracle->nvars+i], varnames[i], strlen(varnames[i])+1) );
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &((oracle->varnames)[oracle->nvars+i]), varnames[i], strlen(varnames[i])+1) );
          }
          else
             oracle->varnames[oracle->nvars+i] = NULL;
       }
    }
    
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->vardegrees, oracle->nvars + nvars) );
-   BMSclearMemoryArray(oracle->vardegrees + oracle->nvars, nvars);
+   SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->vardegrees), oracle->nvars + nvars) );
+   BMSclearMemoryArray(&((oracle->vardegrees)[oracle->nvars]), nvars);
 
    /* @TODO update sparsity pattern by extending heslagoffsets */
    SCIPnlpiOracleInvalidateHessianLagSparsity(scip, oracle);
@@ -405,7 +406,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
 
    if( lhss != NULL )
    {
-      BMScopyMemoryArray(oracle->conslhss + oracle->nconss, lhss, nconss);
+      BMScopyMemoryArray(&((oracle->conslhss)[oracle->nconss]), lhss, nconss);
    }
    else
       for( i = 0; i < nconss; ++i )
@@ -413,7 +414,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    
    if( rhss != NULL )
    {
-     BMScopyMemoryArray(oracle->consrhss + oracle->nconss, rhss, nconss);
+      BMScopyMemoryArray(&((oracle->consrhss)[oracle->nconss]), rhss, nconss);
    }
    else
       for( i = 0; i < nconss; ++i )
@@ -422,19 +423,19 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    /* old number of nonzeros */
    oldnnz = (oracle->nconss != 0 ? oracle->conslinoffsets[oracle->nconss] : 0);
 
-   SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conslinoffsets, oracle->nconss + nconss + 1) );
+   SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->conslinoffsets), oracle->nconss + nconss + 1) );
    if( linoffsets != NULL )
    {
       assert(lininds != NULL);
       assert(linvals != NULL);
       
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conslininds, oldnnz + linoffsets[nconss]) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->conslinvals, oldnnz + linoffsets[nconss]) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->conslininds), oldnnz + linoffsets[nconss]) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->conslinvals), oldnnz + linoffsets[nconss]) );
    
       for( i = 0; i <= nconss; ++i )
          oracle->conslinoffsets[oracle->nconss + i] = oldnnz + linoffsets[i];
-      BMScopyMemoryArray(oracle->conslininds + oldnnz, lininds, linoffsets[nconss]);
-      BMScopyMemoryArray(oracle->conslinvals + oldnnz, linvals, linoffsets[nconss]);
+      BMScopyMemoryArray(&((oracle->conslininds)[oldnnz]), lininds, linoffsets[nconss]);
+      BMScopyMemoryArray(&((oracle->conslinvals)[oldnnz]), linvals, linoffsets[nconss]);
       
       for( i = 0; i < linoffsets[nconss]; ++i )
          oracle->vardegrees[lininds[i]] = MAX(1, oracle->vardegrees[lininds[i]]);
@@ -453,10 +454,10 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       assert(quadvals != NULL);
       if( (oracle->consquadlens == NULL) && (oracle->nconss != 0) )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadlens, oracle->nconss + nconss) );
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadrows, oracle->nconss + nconss) );
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadcols, oracle->nconss + nconss) );
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadvals, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consquadlens), oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consquadrows), oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consquadcols), oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consquadvals), oracle->nconss + nconss) );
          BMSclearMemoryArray(oracle->consquadlens, oracle->nconss);
          BMSclearMemoryArray(oracle->consquadrows, oracle->nconss);
          BMSclearMemoryArray(oracle->consquadcols, oracle->nconss);
@@ -464,10 +465,10 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       }
       else
       {
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadlens, oracle->nconss + nconss) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadrows, oracle->nconss + nconss) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadcols, oracle->nconss + nconss) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadvals, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consquadlens), oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consquadrows), oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consquadcols), oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consquadvals), oracle->nconss + nconss) );
       }
       for( i = 0; i < nconss; ++i )
       {
@@ -477,12 +478,12 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             int k;
 
             assert(quadrowidxs[i] != NULL);
-            assert(quadidxs[i]    != NULL);
-            assert(quadvals[i]    != NULL);
+            assert(quadidxs[i] != NULL);
+            assert(quadvals[i] != NULL);
             oracle->consquadlens[oracle->nconss + i] = quadoffsets[i][nquadrows[i]];
-            SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadrows[oracle->nconss + i], quadoffsets[i][nquadrows[i]]) );
-            SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consquadcols[oracle->nconss + i], quadoffsets[i][nquadrows[i]]) );
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->consquadvals[oracle->nconss + i], quadvals[i], quadoffsets[i][nquadrows[i]]) );
+            SCIP_CALL( SCIPallocMemoryArray(scip, &((oracle->consquadrows)[oracle->nconss + i]), quadoffsets[i][nquadrows[i]]) );
+            SCIP_CALL( SCIPallocMemoryArray(scip, &((oracle->consquadcols)[oracle->nconss + i]), quadoffsets[i][nquadrows[i]]) );
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &((oracle->consquadvals)[oracle->nconss + i]), quadvals[i], quadoffsets[i][nquadrows[i]]) );
             
             k = quadoffsets[i][0];
             for( j = 0; j < nquadrows[i]; ++j )
@@ -521,29 +522,29 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    }
    else if( oracle->consquadlens != NULL )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadlens, oracle->nconss + nconss) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadrows, oracle->nconss + nconss) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadcols, oracle->nconss + nconss) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consquadvals, oracle->nconss + nconss) );
-      BMSclearMemoryArray(oracle->consquadlens + oracle->nconss, nconss);
-      BMSclearMemoryArray(oracle->consquadrows + oracle->nconss, nconss);
-      BMSclearMemoryArray(oracle->consquadcols + oracle->nconss, nconss);
-      BMSclearMemoryArray(oracle->consquadvals + oracle->nconss, nconss);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consquadlens), oracle->nconss + nconss) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consquadrows), oracle->nconss + nconss) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consquadcols), oracle->nconss + nconss) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consquadvals), oracle->nconss + nconss) );
+      BMSclearMemoryArray(&((oracle->consquadlens)[oracle->nconss]), nconss);
+      BMSclearMemoryArray(&((oracle->consquadrows)[oracle->nconss]), nconss);
+      BMSclearMemoryArray(&((oracle->consquadcols)[oracle->nconss]), nconss);
+      BMSclearMemoryArray(&((oracle->consquadvals)[oracle->nconss]), nconss);
    }
    
    if( exprtrees != NULL )
    {
       if( oracle->consexprtrees == NULL && oracle->nconss != 0 )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consexprtrees,   oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consexprtrees),   oracle->nconss + nconss) );
          BMSclearMemoryArray(oracle->consexprtrees,   oracle->nconss);
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consexprvaridxs, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consexprvaridxs), oracle->nconss + nconss) );
          BMSclearMemoryArray(oracle->consexprvaridxs, oracle->nconss);
       }
       else
       {
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consexprtrees,   oracle->nconss + nconss) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consexprvaridxs, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consexprtrees),   oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consexprvaridxs), oracle->nconss + nconss) );
       }
       for( i = 0; i < nconss; ++i )
          if( exprtrees[i] != NULL )
@@ -559,35 +560,35 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    }
    else if( oracle->consexprtrees != NULL )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consexprtrees,   oracle->nconss + nconss) );
-      BMSclearMemoryArray(oracle->consexprtrees   + oracle->nconss, nconss);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consexprvaridxs, oracle->nconss + nconss) );
-      BMSclearMemoryArray(oracle->consexprvaridxs + oracle->nconss, nconss);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consexprtrees),   oracle->nconss + nconss) );
+      BMSclearMemoryArray(&((oracle->consexprtrees)[oracle->nconss]), nconss);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consexprvaridxs), oracle->nconss + nconss) );
+      BMSclearMemoryArray(&((oracle->consexprvaridxs)[oracle->nconss]), nconss);
    }
 
    if( consnames != NULL )
    {
       if( oracle->consnames == NULL && oracle->nconss != 0 )
       {
-         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->consnames, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consnames), oracle->nconss + nconss) );
          BMSclearMemoryArray(oracle->consnames, oracle->nconss);
       }
       else
       {
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consnames, oracle->nconss + nconss) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consnames), oracle->nconss + nconss) );
       }
       for( i = 0; i < nconss; ++i )
          if( consnames[i] != NULL )
          {
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->consnames[oracle->nconss + i], consnames[i], sizeof(consnames[i])+1) );
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &((oracle->consnames)[oracle->nconss + i]), consnames[i], strlen(consnames[i])+1) );
          }
          else
             oracle->consnames[oracle->nconss + i] = NULL;
    }
    else if( oracle->consnames != NULL )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->consnames, oracle->nconss + nconss) );
-      BMSclearMemoryArray(oracle->consnames + oracle->nconss, nconss);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(oracle->consnames), oracle->nconss + nconss) );
+      BMSclearMemoryArray(&((oracle->consnames)[oracle->nconss]), nconss);
    }
    
    oracle->nconss += nconss;

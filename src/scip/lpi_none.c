@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_none.c,v 1.6 2009/06/19 14:54:26 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_none.c,v 1.7 2009/09/11 16:02:47 bzfwinkm Exp $"
 
 /**@file   lpi_none.c
  * @ingroup LPIS
@@ -24,7 +24,6 @@
 
 #include <assert.h>
 
-#include "scip/bitencode.h"
 #include "scip/lpi.h"
 #include "scip/message.h"
 
@@ -91,7 +90,7 @@ SCIP_RETCODE SCIPlpiCreate(
 {
    assert(lpi != NULL);
    SCIPdebugMessage("SCIPlpiCreate()\n");
-   SCIPdebugMessage("Not that there is no LP solver linked to the binary\n");
+   SCIPdebugMessage("Note that there is no LP solver linked to the binary\n");
 
    return SCIP_OKAY;
 }
