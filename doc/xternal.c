@@ -4292,10 +4292,8 @@
 
 /**@page RELEASENOTES Release Notes
  *
- * @section SCIP Release Notes 1.2
  * \include SCIP-release-notes-1.2
  *
- * @section SCIP Release Notes 1.1
  * \include SCIP-release-notes-1.1
  */
 
