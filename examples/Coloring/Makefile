@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.4 2008/10/20 19:47:16 bzfpfets Exp $
+# $Id: Makefile,v 1.5 2009/09/11 18:43:48 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C Coloring example using SCIP as a callable library
@@ -79,7 +79,7 @@ lint:		$(MAINSRC)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) lint/$(MAINNAME).lnt +os\(lint.out\) -u -zero \
+			$(LINT) $(SCIPDIR)/lint/scip.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
