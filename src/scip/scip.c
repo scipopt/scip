@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.522 2009/09/10 17:19:35 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.523 2009/09/11 16:34:48 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2705,7 +2705,7 @@ SCIP_RETCODE writeProblem(
       {
          SCIPwarningMessage("currently it is not possible to write files with any compression\n");
 	 BMSfreeMemoryArray(&tmpfilename);
-         fclose(file);
+         (void) fclose(file);
          return SCIP_FILECREATEERROR;
       }
       
@@ -2716,19 +2716,22 @@ SCIP_RETCODE writeProblem(
    }
    
    if( transformed )
-   {
       retcode = SCIPprintTransProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
-   }
    else
-   {
       retcode =  SCIPprintOrigProblem(scip, file, extension != NULL ? extension : fileextension, genericnames);
-   }
 
    if( filename != NULL &&  filename[0] != '\0' )
    {
+      int success;
       assert(file != NULL);
       BMSfreeMemoryArray(&tmpfilename);
-      fclose(file);
+
+      success = fclose(file);
+      if( success != 0 )
+      {
+         SCIPerrorMessage("An error occured while closing file <%s>\n", filename);
+         return SCIP_FILECREATEERROR;
+      }         
    }
 
    /* check for write errors */

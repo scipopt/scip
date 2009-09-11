@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.31 2009/09/11 16:02:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.32 2009/09/11 16:34:48 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -728,8 +728,13 @@ void parseArrayIndex(
       /* identifier has to be one of a constant */
       constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, fzninput->token);
 
-      assert(constant->type == FZN_INT);
-      *idx = (int) constant->value;
+      if( constant == NULL )
+         syntaxError(scip, fzninput, "unknown index name");
+      else
+      {
+         assert(constant->type == FZN_INT);
+         *idx = (int) constant->value;
+      }
    }
    else if( isValue(fzninput->token, &value) )
    {
@@ -737,9 +742,7 @@ void parseArrayIndex(
       *idx = (int) value;
    }
    else
-   {
       syntaxError(scip, fzninput, "expecting array index expression");
-   }
 }
 
 /** unroll assignment if it is an array access one */
@@ -1640,7 +1643,10 @@ void parseValue(
       /* identifier has to be one of a constant */
       constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
       
-      (*value) = constant->value;
+      if( constant == NULL )
+         syntaxError(scip, fzninput, "unknown constant name");
+      else
+         (*value) = constant->value;
    }
    else
       syntaxError(scip, fzninput, "expected constant expression");

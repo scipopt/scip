@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.27 2009/09/11 13:13:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.28 2009/09/11 16:34:48 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -29,7 +29,7 @@
 
 #define HEUR_NAME             "oneopt"
 #define HEUR_DESC             "1-opt heuristic which tries to improve setting of single integer variables"
-#define HEUR_DISPCHAR         'k'
+#define HEUR_DISPCHAR         'b'
 #define HEUR_PRIORITY         -20000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: Heur2opt.h,v 1.11 2008/09/29 19:49:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: Heur2opt.h,v 1.12 2009/09/11 16:34:48 bzfberth Exp $"
 
 /**@file   Heur2opt.h
  * @brief  2-Optimum - combinatorial improvement heuristic for TSP
@@ -42,7 +42,7 @@ namespace tsp
       /** default constructor */
       Heur2opt(
       )
-         : ObjHeur("2opt", "2-Opt heuristic for TSPs", 't',-1000000, 1, 0, -1, SCIP_HEURTIMING_AFTERNODE),
+         : ObjHeur("2opt", "2-Opt heuristic for TSPs", 'K',-1000000, 1, 0, -1, SCIP_HEURTIMING_AFTERNODE),
            graph_(0)
       {
       }
