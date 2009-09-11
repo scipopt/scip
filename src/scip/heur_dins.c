@@ -134,13 +134,19 @@ SCIP_RETCODE createReboundedVariables(
       /* if the solution values differ by 0.5 or more, the variable is rebounded, otherwise it is just copied */
       if( REALABS(lpsol-mipsol) >= 0.5 )
       {
+         SCIP_Real range; 
          /* get the bounds for each variable */
          lb = SCIPvarGetLbGlobal(vars[i]);
          ub = SCIPvarGetUbGlobal(vars[i]);
 
+         /* create a equally sized range around lpsol for general integers: bounds are lpsol +- (mipsol-lpsol) */
+         range = 2*lpsol-mipsol;
+
          if( mipsol >= lpsol )
          {
-            lb = MAX( lb, SCIPfeasCeil( scip, lpsol-(mipsol-lpsol) ) );
+            range = SCIPfeasCeil(scip, range);
+            lb = MAX(lb, range);
+
             /* when the bound new upper bound is equal to the current MIP solution, we set both bounds to the integral bound (without eps) */
             if( SCIPisFeasEQ(scip, mipsol, lb) )
                ub = lb;
@@ -148,8 +154,10 @@ SCIP_RETCODE createReboundedVariables(
                ub = mipsol;
          }
          else
-         {
-            ub = MIN( ub, SCIPfeasFloor( scip, lpsol-(mipsol-lpsol) ) );
+         {      
+            range = SCIPfeasFloor(scip,range);
+            ub = MIN(ub, range);
+
             /* when the bound new upper bound is equal to the current MIP solution, we set both bounds to the integral bound (without eps) */
             if( SCIPisFeasEQ(scip, mipsol, ub) )
                lb = ub;
@@ -164,9 +172,8 @@ SCIP_RETCODE createReboundedVariables(
       }
       else
       {
-         /* hard fixing for general integer variables */
-         /* with abs(mipsol-lpsol)<0.5 */
-         /* create variable fixed to mipsol value */
+         /* hard fixing for general integer variables with abs(mipsol-lpsol) < 0.5:
+          * create variable fixed to mipsol value */
          SCIP_CALL( SCIPcreateVar( subscip, &subvars[i], SCIPvarGetName(vars[i]), mipsol, mipsol, 
                SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), 
                SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL ) );
