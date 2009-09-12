@@ -1,9 +1,24 @@
-/**@file   lpi_msk.c
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/*                                                                           */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
+/*                                                                           */
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.13 2009/09/12 10:18:33 bzfheinz Exp $"
+
+/**@file   lpi_cpx.c
  * @ingroup LPIS
- * @brief  MOSEK SCIP interface
+ * @brief  LP interface for MOSEK
  * @author Bo Jensen
- * @note Heavily revised in feb. 2007 by Bo Jensen bo.jensen@mosek.com
- */  
+ */
 
 #include <assert.h>
 
