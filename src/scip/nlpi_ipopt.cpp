@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.9 2009/09/11 16:02:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.10 2009/09/13 14:37:06 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -1502,15 +1502,15 @@ bool ScipNLP::get_bounds_info(
    assert(n == SCIPnlpiOracleGetNVars(nlpidata->oracle));
    assert(m == SCIPnlpiOracleGetNConstraints(nlpidata->oracle));
    
-   assert(SCIPnlpiOracleGetVarLb(nlpidata->oracle) != NULL);
-   assert(SCIPnlpiOracleGetVarUb(nlpidata->oracle) != NULL);
-   assert(SCIPnlpiOracleGetConstraintsLhs(nlpidata->oracle) != NULL);
-   assert(SCIPnlpiOracleGetConstraintsRhs(nlpidata->oracle) != NULL);
+   assert(SCIPnlpiOracleGetVarLbs(nlpidata->oracle) != NULL);
+   assert(SCIPnlpiOracleGetVarUbs(nlpidata->oracle) != NULL);
+   assert(SCIPnlpiOracleGetConstraintLhss(nlpidata->oracle) != NULL);
+   assert(SCIPnlpiOracleGetConstraintRhss(nlpidata->oracle) != NULL);
    
-   BMScopyMemoryArray(x_l, SCIPnlpiOracleGetVarLb(nlpidata->oracle), n);
-   BMScopyMemoryArray(x_u, SCIPnlpiOracleGetVarUb(nlpidata->oracle), n);
-   BMScopyMemoryArray(g_l, SCIPnlpiOracleGetConstraintsLhs(nlpidata->oracle), m);
-   BMScopyMemoryArray(g_u, SCIPnlpiOracleGetConstraintsRhs(nlpidata->oracle), m);
+   BMScopyMemoryArray(x_l, SCIPnlpiOracleGetVarLbs(nlpidata->oracle), n);
+   BMScopyMemoryArray(x_u, SCIPnlpiOracleGetVarUbs(nlpidata->oracle), n);
+   BMScopyMemoryArray(g_l, SCIPnlpiOracleGetConstraintLhss(nlpidata->oracle), m);
+   BMScopyMemoryArray(g_u, SCIPnlpiOracleGetConstraintRhss(nlpidata->oracle), m);
 
    return true;
 }
