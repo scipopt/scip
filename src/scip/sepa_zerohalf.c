@@ -1778,13 +1778,6 @@ void findClosestLb(
   
   )
 {
-   assert(lpdata != NULL);
-   assert(bestlbsol != NULL);
-   assert(bestlbtype != NULL);
-   assert(bestzvlb != NULL);
-   assert(bestbvlb != NULL);
-   assert(bestdvlb != NULL);
-
    SCIP_VAR* var;
    SCIP_VAR** zvlb;
    SCIP_Real* bvlb;
@@ -1792,6 +1785,13 @@ void findClosestLb(
    int collppos;
    int nvlb;
    int j;
+
+   assert(lpdata != NULL);
+   assert(bestlbsol != NULL);
+   assert(bestlbtype != NULL);
+   assert(bestzvlb != NULL);
+   assert(bestbvlb != NULL);
+   assert(bestdvlb != NULL);
 
 
    collppos = SCIPcolGetLPPos(col);
@@ -1873,13 +1873,6 @@ void findClosestUb(
 
   )
 {
-   assert(lpdata != NULL);
-   assert(bestubsol != NULL);
-   assert(bestubtype != NULL);
-   assert(bestzvub != NULL);
-   assert(bestbvub != NULL);
-   assert(bestdvub != NULL);
-
    SCIP_VAR* var;
    SCIP_VAR** zvub;
    SCIP_Real* bvub;
@@ -1888,6 +1881,12 @@ void findClosestUb(
    int nvub;
    int j;
 
+   assert(lpdata != NULL);
+   assert(bestubsol != NULL);
+   assert(bestubtype != NULL);
+   assert(bestzvub != NULL);
+   assert(bestbvub != NULL);
+   assert(bestdvub != NULL);
 
    collppos = SCIPcolGetLPPos(col);
    var = SCIPcolGetVar(col);
