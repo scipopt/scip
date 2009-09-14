@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.21 2009/09/14 07:21:39 bzfheinz Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 // #define SCIP_DEBUG
