@@ -32,11 +32,13 @@
  * @author   Tobias Achterberg
  * @author   Timo Berthold
  * @author   Gerald Gamrath
+ * @author   Ambros Gleixner
  * @author   Stefan Heinz
  * @author   Thorsten Koch
  * @author   Alexander Martin
  * @author   Marc Pfetsch
  * @author   Christian Raack
+ * @author   Stefan Vigerske
  * @author   Robert Waniek
  * @author   Michael Winkler
  * @author   Kati Wolter
@@ -55,7 +57,7 @@
  * persons listed above contributed or are currently contributing to SCIP.
  *
  * SCIP is developed together with <a href="http://www.math.tu-bs.de/mo/">TU Braunschweig</a> and <a
- * href="http://www.opt.tu-darmstadt.de/">TU Darmstadt</a> and has approx. 220.000 lines of C code. See the web
+ * href="http://www.opt.tu-darmstadt.de/">TU Darmstadt</a> and has approx. 250.000 lines of C code. See the web
  * site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
  *
  * This documentation provides extensive information about SCIP.
