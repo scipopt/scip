@@ -86,9 +86,10 @@
  *
  * <b>Changes between different versions of SCIP</b>
  *
- * - \ref CHG1    "Changes between version 0.9 and 1.0"
- * - \ref CHG2    "Changes between version 1.0 and 1.1"
- * - \ref CHG3    "Changes between version 1.1 and 1.2"
+ * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG3         "Interface changes between version 1.1 and 1.2"
+ * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
+ * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
  */
 
@@ -4236,7 +4237,7 @@
  * - A significant change for <b>C++ users</b> is that all include files of SCIP
  *   automatically detect C++ mode, i.e., no <code>extern "C"</code> is needed anymore.
  * 
- * For further release notes we refer the \ref RELEASENOTES "release notes page".
+ * For further release notes we refer the \ref RELEASENOTES "Release notes".
  */
 
 /* - SCIP now has "lazy bounds", which are useful for column generation - see @ref PRICER_REMARKS "pricer remarks" for an explanation.
@@ -4289,11 +4290,11 @@
  * \include INSTALL  
  */
 
-/**@page RELEASENOTES Release Notes
+/**@page RELEASENOTES Release notes
  *
- * \include SCIP-release-notes-1.2
+ * \verbinclude SCIP-release-notes-1.2
  *
- * \include SCIP-release-notes-1.1
+ * \verbinclude SCIP-release-notes-1.1
  */
 
 /**@defgroup BRANCHINGRULES Branching Rules 
