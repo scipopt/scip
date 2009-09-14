@@ -50,11 +50,13 @@
       LP-solvers currently supported by SCIP are: 
     </p>
     <ul>
-      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
-      <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
-      <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
       <li><a href="http://www.coin-or.org/Clp/">CLP</a></li>
+      <li><a href="http://www.dashoptimization.com/home/products/products_optimizer.html">Dash XPress-MP</a></li>
+      <li><a href="http://www.gurobi.com/">Gurobi</a></li>
+      <li><a href="http://www.ilog.com/products/cplex/">ILOG CPLEX</a></li>
       <li><a href="http://www.mosek.com/">Mosek</a></li>
+      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a></li>
+      <li><a href="http://soplex.zib.de/">SoPlex</a></li>
     </ul>
     <p class="a">
       We also provide some <a href="http://scip.zib.de/download.shtml">precompiled binaries</a>. Besides that,
@@ -123,7 +125,7 @@
         <li>Readline (libreadline.a)</li>
     </ol>
     <p class="a">
-      If you do not have all of these libraries, read the <a href="INSTALL.html"><tt>INSTALL</tt></a> file in the ZIB Optimization
+      If you do not have all of these libraries, read the <tt>INSTALL</tt> file in the ZIB Optimization
       Suite directory.<br>
       As a summary, the call of <code>make ZIMPL=false ZLIB=false READLINE=false</code> should work on most systems.
     </p>
@@ -136,16 +138,19 @@
 	Do you have a general hint on that?</a>
     </p>
     <p class="a">
-      Maybe the parameters of a function in SCIP changed. Relevant changes between version 0.9 to 1.0 can be
-      found <a href="http://scip.zib.de/doc/html/CHG1.html">here</a> and the ones between version 1.0 and 1.1
-      are listed <a href="http://scip.zib.de/doc/html/CHG1.html">here</a>.
+      Maybe the parameters of a function in SCIP changed. Relevant changes between version are listed below.
     </p>
+    <ul>
+        <li> <a href="http://scip.zib.de/doc/html/CHG1.html">Interface changes between SCIP 0.9 and SCIP 1.0</a></li>
+        <li> <a href="http://scip.zib.de/doc/html/CHG2.html">Interface changes between SCIP 1.0 and SCIP 1.1</a></li>
+        <li> <a href="http://scip.zib.de/doc/html/CHG3.html">Interface changes between SCIP 1.1 and SCIP 1.2</a></li>
+    </ul>
     <p class="q">
       <a name="Q18">Can I use SCIP as a pure CP-Solver?</a>
     </p>
     <p class="a">
       Yes. There is a setting-file "settings/emphasis/cpsolver.set". 
-      Furthermore, you can compile SCIP without any LP-Solver by &quot;make LPS=none&quot;.
+      Furthermore, you can compile SCIP without any LP-Solver by <code>make LPS=none</code>.
     </p>    
     <p class="q">
        <a name="Q19">How can I use the SCIP makefiles?</a>
