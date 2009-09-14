@@ -100,7 +100,7 @@
 	    </tr>
 	</table>
 
-        <h3><a name="contributers">Contributors</a></h3>
+        <h3><a name="contributors">Contributors</a></h3>
 
     	<table class="desc">
             <tr>
