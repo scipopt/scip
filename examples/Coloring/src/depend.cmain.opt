@@ -40,8 +40,7 @@ $(OBJDIR)/reader_col.o: src/reader_col.c src/reader_col.h ../../src/scip/scip.h 
   ../../src/scip/set.h ../../src/scip/buffer.h \
   ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
   ../../src/scip/tree.h ../../src/tclique/tclique.h \
-  src/probdata_coloring.h ../../src/scip/cons_linear.h \
-  ../../src/scip/scip.h ../../src/scip/type_cons.h
+  src/probdata_coloring.h ../../src/scip/cons_linear.h
 $(OBJDIR)/reader_csol.o: src/reader_csol.c src/reader_csol.h ../../src/scip/scip.h \
   ../../src/scip/def.h ../../src/scip/type_retcode.h \
   ../../src/scip/message.h ../../src/scip/type_message.h \
@@ -84,8 +83,7 @@ $(OBJDIR)/reader_csol.o: src/reader_csol.c src/reader_csol.h ../../src/scip/scip
   ../../src/scip/set.h ../../src/scip/buffer.h \
   ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
   ../../src/scip/tree.h src/reader_col.h ../../src/tclique/tclique.h \
-  src/probdata_coloring.h ../../src/scip/cons_linear.h \
-  ../../src/scip/scip.h ../../src/scip/type_cons.h
+  src/probdata_coloring.h ../../src/scip/cons_linear.h
 $(OBJDIR)/probdata_coloring.o: src/probdata_coloring.c src/probdata_coloring.h \
   ../../src/scip/scip.h ../../src/scip/def.h \
   ../../src/scip/type_retcode.h ../../src/scip/message.h \
@@ -129,8 +127,7 @@ $(OBJDIR)/probdata_coloring.o: src/probdata_coloring.c src/probdata_coloring.h \
   ../../src/scip/buffer.h ../../src/scip/type_buffer.h \
   ../../src/scip/struct_set.h ../../src/scip/tree.h \
   ../../src/tclique/tclique.h src/reader_col.h \
-  ../../src/scip/cons_linear.h ../../src/scip/scip.h \
-  ../../src/scip/type_cons.h
+  ../../src/scip/cons_linear.h
 $(OBJDIR)/pricer_coloring.o: src/pricer_coloring.c src/pricer_coloring.h \
   ../../src/scip/scip.h ../../src/scip/def.h \
   ../../src/scip/type_retcode.h ../../src/scip/message.h \
@@ -174,8 +171,7 @@ $(OBJDIR)/pricer_coloring.o: src/pricer_coloring.c src/pricer_coloring.h \
   ../../src/scip/buffer.h ../../src/scip/type_buffer.h \
   ../../src/scip/struct_set.h ../../src/scip/tree.h \
   src/probdata_coloring.h ../../src/tclique/tclique.h src/reader_col.h \
-  ../../src/scip/cons_linear.h ../../src/scip/scip.h \
-  ../../src/scip/type_cons.h src/cons_storeGraph.h
+  ../../src/scip/cons_linear.h src/cons_storeGraph.h
 $(OBJDIR)/cons_storeGraph.o: src/cons_storeGraph.c ../../src/scip/type_cons.h \
   ../../src/scip/def.h ../../src/scip/type_retcode.h \
   ../../src/scip/message.h ../../src/scip/type_message.h \
@@ -188,39 +184,38 @@ $(OBJDIR)/cons_storeGraph.o: src/cons_storeGraph.c ../../src/scip/type_cons.h \
   ../../src/scip/type_event.h ../../src/scip/type_lp.h \
   ../../src/scip/type_prob.h ../../src/scip/type_tree.h \
   ../../src/scip/type_branch.h ../../src/scip/type_conflict.h \
-  ../../src/scip/type_cons.h ../../src/scip/type_dialog.h \
-  ../../src/scip/type_disp.h ../../src/scip/type_heur.h \
-  ../../src/scip/type_nodesel.h ../../src/scip/type_presol.h \
-  ../../src/scip/type_pricer.h ../../src/scip/type_reader.h \
-  ../../src/scip/type_relax.h ../../src/scip/type_sepa.h \
-  ../../src/scip/type_prop.h ../../src/scip/pub_branch.h \
-  ../../src/scip/pub_conflict.h ../../src/scip/pub_cons.h \
-  ../../src/scip/struct_cons.h ../../src/scip/pub_cutpool.h \
-  ../../src/scip/type_cutpool.h ../../src/scip/pub_dialog.h \
-  ../../src/scip/pub_disp.h ../../src/scip/pub_event.h \
-  ../../src/scip/pub_fileio.h ../../src/scip/pub_heur.h \
-  ../../src/scip/pub_implics.h ../../src/scip/type_implics.h \
-  ../../src/scip/struct_implics.h ../../src/scip/pub_lp.h \
-  ../../src/scip/type_set.h ../../src/scip/type_stat.h \
-  ../../src/scip/type_lpi.h ../../src/scip/struct_lp.h \
-  ../../src/scip/pub_misc.h ../../src/scip/pub_nodesel.h \
-  ../../src/scip/pub_paramset.h ../../src/scip/pub_presol.h \
-  ../../src/scip/pub_pricer.h ../../src/scip/pub_reader.h \
-  ../../src/scip/pub_relax.h ../../src/scip/pub_sepa.h \
-  ../../src/scip/pub_prop.h ../../src/scip/pub_sol.h \
-  ../../src/scip/struct_sol.h ../../src/scip/pub_tree.h \
-  ../../src/scip/struct_tree.h ../../src/scip/pub_var.h \
-  ../../src/scip/type_history.h ../../src/scip/struct_var.h \
-  ../../src/scip/implics.h ../../src/scip/history.h \
-  ../../src/scip/struct_history.h ../../src/scip/lpi.h \
-  ../../src/scip/struct_scip.h ../../src/scip/type_interrupt.h \
-  ../../src/scip/type_mem.h ../../src/scip/type_primal.h \
-  ../../src/scip/type_pricestore.h ../../src/scip/type_sepastore.h \
-  ../../src/scip/set.h ../../src/scip/buffer.h \
-  ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
-  ../../src/scip/tree.h ../../src/tclique/tclique.h \
-  src/probdata_coloring.h src/reader_col.h ../../src/scip/cons_linear.h \
-  ../../src/scip/scip.h
+  ../../src/scip/type_dialog.h ../../src/scip/type_disp.h \
+  ../../src/scip/type_heur.h ../../src/scip/type_nodesel.h \
+  ../../src/scip/type_presol.h ../../src/scip/type_pricer.h \
+  ../../src/scip/type_reader.h ../../src/scip/type_relax.h \
+  ../../src/scip/type_sepa.h ../../src/scip/type_prop.h \
+  ../../src/scip/pub_branch.h ../../src/scip/pub_conflict.h \
+  ../../src/scip/pub_cons.h ../../src/scip/struct_cons.h \
+  ../../src/scip/pub_cutpool.h ../../src/scip/type_cutpool.h \
+  ../../src/scip/pub_dialog.h ../../src/scip/pub_disp.h \
+  ../../src/scip/pub_event.h ../../src/scip/pub_fileio.h \
+  ../../src/scip/pub_heur.h ../../src/scip/pub_implics.h \
+  ../../src/scip/type_implics.h ../../src/scip/struct_implics.h \
+  ../../src/scip/pub_lp.h ../../src/scip/type_set.h \
+  ../../src/scip/type_stat.h ../../src/scip/type_lpi.h \
+  ../../src/scip/struct_lp.h ../../src/scip/pub_misc.h \
+  ../../src/scip/pub_nodesel.h ../../src/scip/pub_paramset.h \
+  ../../src/scip/pub_presol.h ../../src/scip/pub_pricer.h \
+  ../../src/scip/pub_reader.h ../../src/scip/pub_relax.h \
+  ../../src/scip/pub_sepa.h ../../src/scip/pub_prop.h \
+  ../../src/scip/pub_sol.h ../../src/scip/struct_sol.h \
+  ../../src/scip/pub_tree.h ../../src/scip/struct_tree.h \
+  ../../src/scip/pub_var.h ../../src/scip/type_history.h \
+  ../../src/scip/struct_var.h ../../src/scip/implics.h \
+  ../../src/scip/history.h ../../src/scip/struct_history.h \
+  ../../src/scip/lpi.h ../../src/scip/struct_scip.h \
+  ../../src/scip/type_interrupt.h ../../src/scip/type_mem.h \
+  ../../src/scip/type_primal.h ../../src/scip/type_pricestore.h \
+  ../../src/scip/type_sepastore.h ../../src/scip/set.h \
+  ../../src/scip/buffer.h ../../src/scip/type_buffer.h \
+  ../../src/scip/struct_set.h ../../src/scip/tree.h \
+  ../../src/tclique/tclique.h src/probdata_coloring.h src/reader_col.h \
+  ../../src/scip/cons_linear.h
 $(OBJDIR)/branch_coloring.o: src/branch_coloring.c src/branch_coloring.h \
   ../../src/scip/scip.h ../../src/scip/def.h \
   ../../src/scip/type_retcode.h ../../src/scip/message.h \
@@ -264,8 +259,7 @@ $(OBJDIR)/branch_coloring.o: src/branch_coloring.c src/branch_coloring.h \
   ../../src/scip/buffer.h ../../src/scip/type_buffer.h \
   ../../src/scip/struct_set.h ../../src/scip/tree.h \
   src/probdata_coloring.h ../../src/tclique/tclique.h \
-  src/cons_storeGraph.h ../../src/scip/cons_linear.h \
-  ../../src/scip/scip.h
+  src/cons_storeGraph.h ../../src/scip/cons_linear.h
 $(OBJDIR)/branch_strongcoloring.o: src/branch_strongcoloring.c \
   src/branch_strongcoloring.h ../../src/scip/scip.h ../../src/scip/def.h \
   ../../src/scip/type_retcode.h ../../src/scip/message.h \
@@ -310,7 +304,7 @@ $(OBJDIR)/branch_strongcoloring.o: src/branch_strongcoloring.c \
   ../../src/scip/struct_set.h ../../src/scip/tree.h \
   src/probdata_coloring.h ../../src/tclique/tclique.h \
   src/cons_storeGraph.h ../../src/scip/cons_linear.h \
-  ../../src/scip/scip.h src/pricer_coloring.h
+  src/pricer_coloring.h
 $(OBJDIR)/heur_init.o: src/heur_init.c src/heur_init.h ../../src/scip/scip.h \
   ../../src/scip/def.h ../../src/scip/type_retcode.h \
   ../../src/scip/message.h ../../src/scip/type_message.h \
@@ -354,8 +348,7 @@ $(OBJDIR)/heur_init.o: src/heur_init.c src/heur_init.h ../../src/scip/scip.h \
   ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
   ../../src/scip/tree.h src/pricer_coloring.h src/probdata_coloring.h \
   ../../src/tclique/tclique.h src/reader_col.h \
-  ../../src/scip/cons_linear.h ../../src/scip/scip.h \
-  ../../src/scip/type_cons.h src/cons_storeGraph.h
+  ../../src/scip/cons_linear.h src/cons_storeGraph.h
 $(OBJDIR)/coloringplugins.o: src/coloringplugins.c src/coloringplugins.h \
   ../../src/scip/scip.h ../../src/scip/def.h \
   ../../src/scip/type_retcode.h ../../src/scip/message.h \
@@ -398,7 +391,7 @@ $(OBJDIR)/coloringplugins.o: src/coloringplugins.c src/coloringplugins.h \
   ../../src/scip/type_sepastore.h ../../src/scip/set.h \
   ../../src/scip/buffer.h ../../src/scip/type_buffer.h \
   ../../src/scip/struct_set.h ../../src/scip/tree.h \
-  ../../src/scip/branch_allfullstrong.h ../../src/scip/scip.h \
+  ../../src/scip/branch_allfullstrong.h \
   ../../src/scip/branch_fullstrong.h ../../src/scip/branch_inference.h \
   ../../src/scip/branch_mostinf.h ../../src/scip/branch_leastinf.h \
   ../../src/scip/branch_pscost.h ../../src/scip/branch_random.h \
@@ -435,11 +428,12 @@ $(OBJDIR)/coloringplugins.o: src/coloringplugins.c src/coloringplugins.h \
   ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gomory.h \
   ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
   ../../src/scip/sepa_mcf.h ../../src/scip/sepa_redcost.h \
-  ../../src/scip/sepa_strongcg.h ../../src/scip/scipshell.h \
-  src/cons_storeGraph.h ../../src/tclique/tclique.h src/branch_coloring.h \
+  ../../src/scip/sepa_strongcg.h ../../src/scip/sepa_zerohalf.h \
+  ../../src/scip/scipshell.h src/cons_storeGraph.h \
+  ../../src/tclique/tclique.h src/branch_coloring.h \
   src/probdata_coloring.h src/branch_strongcoloring.h src/reader_col.h \
-  ../../src/scip/type_cons.h src/reader_csol.h src/heur_init.h \
-  src/pricer_coloring.h ../../src/scip/debug.h
+  src/reader_csol.h src/heur_init.h src/pricer_coloring.h \
+  ../../src/scip/debug.h
 $(OBJDIR)/main.o: src/main.c src/reader_col.h ../../src/scip/scip.h \
   ../../src/scip/def.h ../../src/scip/type_retcode.h \
   ../../src/scip/message.h ../../src/scip/type_message.h \
@@ -483,7 +477,6 @@ $(OBJDIR)/main.o: src/main.c src/reader_col.h ../../src/scip/scip.h \
   ../../src/scip/type_buffer.h ../../src/scip/struct_set.h \
   ../../src/scip/tree.h ../../src/tclique/tclique.h \
   src/probdata_coloring.h ../../src/scip/cons_linear.h \
-  ../../src/scip/scip.h ../../src/scip/type_cons.h \
   ../../src/scip/scipdefplugins.h ../../src/scip/branch_allfullstrong.h \
   ../../src/scip/branch_fullstrong.h ../../src/scip/branch_inference.h \
   ../../src/scip/branch_mostinf.h ../../src/scip/branch_leastinf.h \
@@ -491,9 +484,10 @@ $(OBJDIR)/main.o: src/main.c src/reader_col.h ../../src/scip/scip.h \
   ../../src/scip/branch_relpscost.h ../../src/scip/cons_and.h \
   ../../src/scip/cons_bounddisjunction.h \
   ../../src/scip/cons_conjunction.h ../../src/scip/cons_countsols.h \
-  ../../src/scip/cons_integral.h ../../src/scip/cons_knapsack.h \
-  ../../src/scip/cons_linear.h ../../src/scip/cons_logicor.h \
-  ../../src/scip/cons_or.h ../../src/scip/cons_setppc.h \
+  ../../src/scip/cons_indicator.h ../../src/scip/cons_integral.h \
+  ../../src/scip/cons_knapsack.h ../../src/scip/cons_logicor.h \
+  ../../src/scip/cons_or.h ../../src/scip/cons_quadratic.h \
+  ../../src/scip/type_nlpi.h ../../src/scip/cons_setppc.h \
   ../../src/scip/cons_sos1.h ../../src/scip/cons_sos2.h \
   ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
   ../../src/scip/dialog_default.h ../../src/scip/disp_default.h \
@@ -504,67 +498,32 @@ $(OBJDIR)/main.o: src/main.c src/reader_col.h ../../src/scip/scip.h \
   ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
   ../../src/scip/heur_linesearchdiving.h \
   ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
-  ../../src/scip/heur_objpscostdiving.h ../../src/scip/heur_octane.h \
-  ../../src/scip/heur_oneopt.h ../../src/scip/heur_pscostdiving.h \
-  ../../src/scip/heur_rens.h ../../src/scip/heur_rins.h \
-  ../../src/scip/heur_rootsoldiving.h ../../src/scip/heur_rounding.h \
-  ../../src/scip/heur_shifting.h ../../src/scip/heur_simplerounding.h \
-  ../../src/scip/heur_veclendiving.h ../../src/scip/nodesel_bfs.h \
-  ../../src/scip/nodesel_dfs.h ../../src/scip/nodesel_estimate.h \
-  ../../src/scip/nodesel_hybridestim.h \
+  ../../src/scip/heur_nlp.h ../../src/scip/heur_objpscostdiving.h \
+  ../../src/scip/heur_octane.h ../../src/scip/heur_oneopt.h \
+  ../../src/scip/heur_pscostdiving.h ../../src/scip/heur_rens.h \
+  ../../src/scip/heur_rins.h ../../src/scip/heur_rootsoldiving.h \
+  ../../src/scip/heur_rounding.h ../../src/scip/heur_shifting.h \
+  ../../src/scip/heur_simplerounding.h ../../src/scip/heur_trivial.h \
+  ../../src/scip/heur_trysol.h ../../src/scip/heur_veclendiving.h \
+  ../../src/scip/nodesel_bfs.h ../../src/scip/nodesel_dfs.h \
+  ../../src/scip/nodesel_estimate.h ../../src/scip/nodesel_hybridestim.h \
   ../../src/scip/nodesel_restartdfs.h ../../src/scip/presol_boundshift.h \
   ../../src/scip/presol_dualfix.h ../../src/scip/presol_implics.h \
   ../../src/scip/presol_inttobinary.h ../../src/scip/presol_probing.h \
   ../../src/scip/presol_trivial.h ../../src/scip/prop_pseudoobj.h \
-  ../../src/scip/prop_rootredcost.h ../../src/scip/reader_cip.h \
-  ../../src/scip/reader_cnf.h ../../src/scip/reader_fix.h \
-  ../../src/scip/reader_ccg.h ../../src/scip/reader_lp.h \
-  ../../src/scip/reader_mps.h ../../src/scip/reader_opb.h \
-  ../../src/scip/reader_ppm.h ../../src/scip/reader_rlp.h \
-  ../../src/scip/reader_sol.h ../../src/scip/reader_zpl.h \
-  ../../src/scip/sepa_clique.h ../../src/scip/sepa_cmir.h \
-  ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gomory.h \
-  ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
-  ../../src/scip/sepa_mcf.h ../../src/scip/sepa_redcost.h \
-  ../../src/scip/sepa_strongcg.h ../../src/scip/sepa_zerohalf.h \
-  ../../src/scip/scipshell.h ../../src/scip/scipshell.h \
-  src/pricer_coloring.h src/branch_coloring.h src/cons_storeGraph.h \
-  src/coloringplugins.h ../../src/scip/branch_allfullstrong.h \
-  ../../src/scip/branch_fullstrong.h ../../src/scip/branch_inference.h \
-  ../../src/scip/branch_mostinf.h ../../src/scip/branch_leastinf.h \
-  ../../src/scip/branch_pscost.h ../../src/scip/branch_random.h \
-  ../../src/scip/branch_relpscost.h ../../src/scip/cons_and.h \
-  ../../src/scip/cons_bounddisjunction.h \
-  ../../src/scip/cons_conjunction.h ../../src/scip/cons_integral.h \
-  ../../src/scip/cons_knapsack.h ../../src/scip/cons_logicor.h \
-  ../../src/scip/cons_or.h ../../src/scip/cons_setppc.h \
-  ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
-  ../../src/scip/dialog_default.h ../../src/scip/disp_default.h \
-  ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_coefdiving.h \
-  ../../src/scip/heur_crossover.h ../../src/scip/heur_feaspump.h \
-  ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
-  ../../src/scip/heur_guideddiving.h ../../src/scip/heur_intdiving.h \
-  ../../src/scip/heur_intshifting.h \
-  ../../src/scip/heur_linesearchdiving.h \
-  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
-  ../../src/scip/heur_objpscostdiving.h ../../src/scip/heur_octane.h \
-  ../../src/scip/heur_oneopt.h ../../src/scip/heur_pscostdiving.h \
-  ../../src/scip/heur_rens.h ../../src/scip/heur_rins.h \
-  ../../src/scip/heur_rootsoldiving.h ../../src/scip/heur_rounding.h \
-  ../../src/scip/heur_shifting.h ../../src/scip/heur_simplerounding.h \
-  ../../src/scip/heur_veclendiving.h ../../src/scip/nodesel_bfs.h \
-  ../../src/scip/nodesel_dfs.h ../../src/scip/nodesel_estimate.h \
-  ../../src/scip/nodesel_hybridestim.h \
-  ../../src/scip/nodesel_restartdfs.h ../../src/scip/presol_dualfix.h \
-  ../../src/scip/presol_implics.h ../../src/scip/presol_inttobinary.h \
-  ../../src/scip/presol_probing.h ../../src/scip/presol_trivial.h \
-  ../../src/scip/prop_pseudoobj.h ../../src/scip/prop_rootredcost.h \
-  ../../src/scip/reader_cnf.h ../../src/scip/reader_fix.h \
+  ../../src/scip/prop_rootredcost.h ../../src/scip/reader_ccg.h \
+  ../../src/scip/reader_cip.h ../../src/scip/reader_cnf.h \
+  ../../src/scip/reader_fix.h ../../src/scip/reader_fzn.h \
+  ../../src/scip/def.h ../../src/scip/reader_gms.h \
   ../../src/scip/reader_lp.h ../../src/scip/reader_mps.h \
-  ../../src/scip/reader_sol.h ../../src/scip/reader_zpl.h \
-  ../../src/scip/sepa_clique.h ../../src/scip/sepa_cmir.h \
-  ../../src/scip/sepa_flowcover.h ../../src/scip/sepa_gomory.h \
-  ../../src/scip/sepa_impliedbounds.h ../../src/scip/sepa_intobj.h \
-  ../../src/scip/sepa_mcf.h ../../src/scip/sepa_redcost.h \
-  ../../src/scip/sepa_strongcg.h src/branch_strongcoloring.h \
-  src/reader_csol.h src/heur_init.h
+  ../../src/scip/reader_opb.h ../../src/scip/reader_ppm.h \
+  ../../src/scip/reader_rlp.h ../../src/scip/reader_sol.h \
+  ../../src/scip/reader_zpl.h ../../src/scip/sepa_clique.h \
+  ../../src/scip/sepa_cmir.h ../../src/scip/sepa_flowcover.h \
+  ../../src/scip/sepa_gomory.h ../../src/scip/sepa_impliedbounds.h \
+  ../../src/scip/sepa_intobj.h ../../src/scip/sepa_mcf.h \
+  ../../src/scip/sepa_redcost.h ../../src/scip/sepa_strongcg.h \
+  ../../src/scip/sepa_zerohalf.h ../../src/scip/scipshell.h \
+  src/pricer_coloring.h src/branch_coloring.h src/cons_storeGraph.h \
+  src/coloringplugins.h src/branch_strongcoloring.h src/reader_csol.h \
+  src/heur_init.h
