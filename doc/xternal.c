@@ -29,19 +29,12 @@
 
 /**@mainpage SCIP (Solving Constraint Integer Programs)
  * @version  1.2.0
- * @author   Tobias Achterberg
- * @author   Timo Berthold
- * @author   Gerald Gamrath
- * @author   Ambros Gleixner
- * @author   Stefan Heinz
- * @author   Thorsten Koch
- * @author   Alexander Martin
- * @author   Marc Pfetsch
- * @author   Christian Raack
- * @author   Stefan Vigerske
- * @author   Robert Waniek
- * @author   Michael Winkler
- * @author   Kati Wolter
+ *
+ * <b>SCIP Authors:</b>
+ * - \ref <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#zib">Currently involved people at ZIB</a>
+ * - \ref <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#programmers">Other programmers</a>
+ * - \ref <a class="el" href="http://scip.zib.de/doc/html/AUTHORS.html#contributers">Contributers</a>
+ *
  *
  * <b>What is SCIP?</b>
  *
@@ -129,7 +122,7 @@
  * In this section we describe (few) features and use of the SCIP Makefile. We also give two examples for how to install
  * SCIP. The \ref EXAMPLE1 "first example" illustrates the default installation. This means, with SoPleX and ZIMPL. The
  * \ref EXAMPLE2 "second example" shows how to get CPLEX linked to SCIP without ZIMPL. This is followed by section with
- * gives some hints what to do if the \ref COMPILERPROBLEMS "compilation threws some error". We give some commends on
+ * gives some hints what to do if the \ref COMPILERPROBLEMS "compilation threws some error". We give some comments on
  * how to install SCIP under \ref WINDOWS "WINDOWS". And show \ref RUN "how to start SCIP".
  *
  * SCIP contains a makefile system, which allows the individual setting of several parameters. For
@@ -4287,6 +4280,10 @@
  * \htmlinclude faq.inc  
  */
 
+
+/**@page AUTHORS SCIP Authors
+ * \htmlinclude authors.inc  
+ */
 
 /**@page INSTALL Installation information
  * \include INSTALL  
