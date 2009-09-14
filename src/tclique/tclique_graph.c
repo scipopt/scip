@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.12 2009/09/11 14:39:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.13 2009/09/14 16:27:42 bzfwolte Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -551,6 +551,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    int node2;
    int currentnode;
    int i;
+   int result;
    
    assert(tcliquegraph != NULL);
    assert(scaleval > 0.0);
@@ -572,9 +573,30 @@ TCLIQUE_Bool tcliqueLoadFile(
    }
  
    /* set name of problem, number of nodes and number of edges in graph */
-   fscanf(file, "%s", probname);
-   fscanf(file, "%d", &(*tcliquegraph)->nnodes);
-   fscanf(file, "%d", &(*tcliquegraph)->nedges);
+   result = fscanf(file, "%s", probname);
+   if( result == EOF )
+   {
+      infoMessage("\Error while reading probname in file %s", filename); 
+      fclose(file);
+      return FALSE;
+   }
+   
+   result = fscanf(file, "%d", &(*tcliquegraph)->nnodes);
+   if( result == EOF )
+   {
+      infoMessage("\Error while reading number of nodes in file %s", filename); 
+      fclose(file);
+      return FALSE;
+   }
+   
+   result = fscanf(file, "%d", &(*tcliquegraph)->nedges);
+   if( result == EOF )
+   {
+      infoMessage("\Error while reading number of edges in file %s", filename); 
+      fclose(file);
+      return FALSE;
+   }
+
    if( (*tcliquegraph)->nnodes < 0 || (*tcliquegraph)->nedges < 0 )
    {
       infoMessage("\nInvalid number of %s (%d) in file: %s", (*tcliquegraph)->nnodes < 0 ? "nodes" : "edges", 
@@ -592,7 +614,14 @@ TCLIQUE_Bool tcliqueLoadFile(
    /* set weights of all nodes (scaled!) */
    for( i = 0; i < (*tcliquegraph)->nnodes; i++ )
    {
-      fscanf(file, "%lf", &weight);
+      result = fscanf(file, "%lf", &weight);
+      if( result == EOF )
+      {
+         infoMessage("\Error while reading weights of nodes in file %s", filename); 
+         fclose(file);
+         return FALSE;
+      }
+
       (*tcliquegraph)->weights[i] = (TCLIQUE_WEIGHT)(weight * scaleval);
       assert((*tcliquegraph)->weights[i] >= 0);
    }
@@ -602,7 +631,14 @@ TCLIQUE_Bool tcliqueLoadFile(
    for( i = 0; i < (*tcliquegraph)->nedges; i++ )
    {
       /* read edge (node1, node2) */
-      fscanf(file, "%d%d", &node1, &node2);
+      result = fscanf(file, "%d%d", &node1, &node2);
+      if( result == EOF )
+      {
+         infoMessage("\Error while reading edges in file %s", filename); 
+         fclose(file);
+         return FALSE;
+      }
+
       if( node1 < 0 || node2 < 0 )
       {
          infoMessage("\nInvalid node index (%d) in file: %s", node1 < 0 ? node1 : node2, filename);
