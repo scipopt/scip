@@ -6,6 +6,10 @@ VERSION="1.2.0"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
+if test ! -e release
+then
+    mkdir release
+fi
 rm -f release/$NAME.tgz
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*CVS*" \
