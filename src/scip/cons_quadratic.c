@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.48 2009/09/16 15:39:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.49 2009/09/16 18:50:55 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -170,6 +170,18 @@ struct SCIP_ConshdlrData
    char                  strategy;                  /**< branching strategy */
    SCIP_Real             mindistbrpointtobound;     /**< minimal (fractional) distance of branching point to bound */
 #endif
+   
+   SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
+   int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
+   int                   nquadconsupgrades;         /**< number of quadratic constraint upgrade methods */
+};
+
+/** quadratic constraint update method */
+struct SCIP_QuadConsUpgrade
+{
+   SCIP_DECL_QUADCONSUPGD((*quadconsupgd));    /**< method to call for upgrading quadratic constraint */
+   int                     priority;           /**< priority of upgrading method */
+   SCIP_Bool               active;             /**< is upgrading enabled */
 };
 
 /*
@@ -2350,6 +2362,201 @@ SCIP_RETCODE presolveTryAddLinearReform(
    return SCIP_OKAY;
 }
 
+/** tries to automatically convert a quadratic constraint (or a part of it) into a more specific and more specialized constraint */
+static
+SCIP_RETCODE presolveUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler data structure */
+   SCIP_CONS*            cons,               /**< source constraint to try to convert */
+   SCIP_CONS**           upgdconslhs,        /**< pointer to store upgraded constraint for left  hand side, or NULL if not successful */
+   SCIP_CONS**           upgdconsrhs         /**< pointer to store upgraded constraint for right hand side, or NULL if not successful */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONS* localupgdconslhs;
+   SCIP_CONS* localupgdconsrhs;
+   SCIP_VAR* var;
+   SCIP_Real lincoef;
+   SCIP_Real quadcoef;
+   SCIP_Real lb;
+   SCIP_Real ub;
+   int nbinlin;
+   int nbinquad;
+   int nintlin;
+   int nintquad;
+   int nimpllin;
+   int nimplquad;
+   int ncontlin;
+   int ncontquad;
+   SCIP_Bool integral;
+   int i;
+
+   assert(upgdconslhs != NULL);
+   assert(upgdconsrhs != NULL);
+
+   *upgdconslhs = NULL;
+   *upgdconsrhs = NULL;
+
+   /* we cannot upgrade a modifiable linear constraint, since we don't know what additional coefficients to expect */
+   if( SCIPconsIsModifiable(cons) )
+      return SCIP_OKAY;
+
+   /* get constraint handler data and constraint data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   consdata     = SCIPconsGetData(cons);
+   assert(conshdlrdata != NULL);
+   assert(consdata     != NULL);
+
+   /*
+    * calculate some statistics on quadratic constraint
+    */
+
+   nbinlin   = 0;
+   nbinquad  = 0;
+   nintlin   = 0;
+   nintquad  = 0;
+   nimpllin  = 0;
+   nimplquad = 0;
+   ncontlin  = 0;
+   ncontquad = 0;
+   integral  = TRUE;
+   for( i = 0; i < consdata->nlinvars; ++i )
+   {
+      var = consdata->linvars[i];
+      lincoef = consdata->lincoefs[i];
+      lb  = SCIPvarGetLbLocal(var);
+      ub  = SCIPvarGetUbLocal(var);
+      assert(!SCIPisZero(scip, lincoef));
+
+      switch( SCIPvarGetType(var) )
+      {
+      case SCIP_VARTYPE_BINARY:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral = integral && SCIPisIntegral(scip, lincoef);
+         nbinlin++;
+         break;
+      case SCIP_VARTYPE_INTEGER:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral = integral && SCIPisIntegral(scip, lincoef);
+         nintlin++;
+         break;
+      case SCIP_VARTYPE_IMPLINT:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral = integral && SCIPisIntegral(scip, lincoef);
+         nimpllin++;
+         break;
+      case SCIP_VARTYPE_CONTINUOUS:
+         integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, lincoef * lb);
+         ncontlin++;
+         break;
+      default:
+         SCIPerrorMessage("unknown variable type\n");
+         return SCIP_INVALIDDATA;
+      }
+   }
+
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      var = consdata->quadvars[i];
+      lincoef  = consdata->quadlincoefs[i];
+      quadcoef = consdata->quadlincoefs[i];
+      lb  = SCIPvarGetLbLocal(var);
+      ub  = SCIPvarGetUbLocal(var);
+
+      switch( SCIPvarGetType(var) )
+      {
+      case SCIP_VARTYPE_BINARY:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral = integral && SCIPisIntegral(scip, lincoef) && SCIPisIntegral(scip, quadcoef);
+         nbinquad++;
+         break;
+      case SCIP_VARTYPE_INTEGER:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral = integral && SCIPisIntegral(scip, lincoef) && SCIPisIntegral(scip, quadcoef);
+         nintquad++;
+         break;
+      case SCIP_VARTYPE_IMPLINT:
+         if( !SCIPisZero(scip, lb) || !SCIPisZero(scip, ub) )
+            integral = integral && SCIPisIntegral(scip, lincoef) && SCIPisIntegral(scip, quadcoef);
+         nimplquad++;
+         break;
+      case SCIP_VARTYPE_CONTINUOUS:
+         integral = integral && SCIPisEQ(scip, lb, ub) && SCIPisIntegral(scip, lincoef * lb + quadcoef * lb * lb);
+         ncontquad++;
+         break;
+      default:
+         SCIPerrorMessage("unknown variable type\n");
+         return SCIP_INVALIDDATA;
+      }
+   }
+   
+   if( integral )
+   {
+      for( i = 0; i < consdata->nbilinterms && integral; ++i )
+      {
+         if( SCIPvarGetType(consdata->bilinvars1[i]) < SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(consdata->bilinvars2[i]) < SCIP_VARTYPE_CONTINUOUS )
+            integral = integral && SCIPisIntegral(scip, consdata->bilincoefs[i]);
+         else
+            integral = FALSE;
+      }
+   }
+
+   /*
+    * call the upgrading methods
+    */
+
+   SCIPdebugMessage("upgrading quadratic constraint <%s> (%d upgrade methods):\n",
+      SCIPconsGetName(cons), conshdlrdata->nquadconsupgrades);
+   SCIPdebugMessage(" binlin=%d binquad=%d intlin=%d intquad=%d impllin=%d implquad=%d contlin=%d contquad=%d integral=%u\n",
+      nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral);
+
+   /* try all upgrading methods in priority order in case the upgrading step is enable  */
+   for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
+   {
+      if( conshdlrdata->quadconsupgrades[i]->active )
+      {
+         localupgdconslhs = NULL;
+         localupgdconsrhs = NULL;
+         
+         SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
+            nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
+            &localupgdconslhs, &localupgdconsrhs) );
+
+         if( localupgdconslhs != NULL )
+         { /* got upgrade for left hand side */
+            assert(!SCIPisInfinity(scip, -consdata->lhs));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+            SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(SCIPconsGetHdlr(*upgdconslhs)));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconslhs, NULL) ) );
+            
+            *upgdconslhs  = localupgdconslhs;
+            consdata->lhs = -SCIPinfinity(scip);
+         }
+         
+         if( localupgdconsrhs != NULL )
+         { /* got upgrade for right hand side, but maybe same constraint as lhs */
+            assert(!SCIPisInfinity(scip,  consdata->rhs));
+            if (localupgdconslhs != localupgdconsrhs)
+            { /* upgrade for rhs is not the same constraint as for lhs */
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+               SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(SCIPconsGetHdlr(*upgdconsrhs)));
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconsrhs, NULL) ) );
+            }
+            
+            *upgdconsrhs  = localupgdconsrhs;
+            consdata->rhs = SCIPinfinity(scip);
+         }
+         
+         /* both sides of constraint have been upgraded, so we can stop here */
+         if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+            break;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** checks a quadratic constraint for convexity and/or concavity */
 static
 SCIP_RETCODE checkCurvature(
@@ -4457,12 +4664,20 @@ static
 SCIP_DECL_CONSFREE(consFreeQuadratic)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
+   int                i;
    
-   assert(scip != NULL);
+   assert(scip     != NULL);
    assert(conshdlr != NULL);
    
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+   
+   for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
+   {
+      assert(conshdlrdata->quadconsupgrades[i] != NULL);
+      SCIPfreeMemory(scip, &conshdlrdata->quadconsupgrades[i]);
+   }
+   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades);
    
    SCIPfreeMemory(scip, &conshdlrdata);
    
@@ -5143,19 +5358,23 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 {  /*lint --e{715,788}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-   int                c;
+   int                c, i;
    SCIP_Bool          havechange;
+   SCIP_Bool          keepnotpresolved;
    SCIP_HASHMAP*      terms;
    SCIP_Real          constant;
+   SCIP_CONS*         upgdconslhs;
+   SCIP_CONS*         upgdconsrhs;
    
-   assert(scip != NULL);
+   assert(scip     != NULL);
    assert(conshdlr != NULL);
-   assert(conss != NULL || nconss == 0);
-   assert(result != NULL);
+   assert(conss    != NULL || nconss == 0);
+   assert(result   != NULL);
    
    *result = SCIP_DIDNOTFIND;
+   keepnotpresolved = FALSE;
    
-   if( nrounds != 0 && nnewfixedvars == 0 && nnewupgdconss == 0 && nnewchgbds == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0)
+   if( nrounds > 1 && nnewfixedvars == 0 && nnewupgdconss == 0 && nnewchgbds == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 )
       return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5206,7 +5425,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          if( havechange || !consdata->ispresolved )
          {
             int ncomponents; /* number of quadratic blocks */
-            int i;
 
             if( SCIPhashmapIsEmpty(terms) )
             { /* all variables fixed or removed, constraint now constant */
@@ -5285,13 +5503,19 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                }
                SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
 
-               if( ncomponents == 1 || !conshdlrdata->disaggregation )
+               /* do disaggregation only if nothing had changed and we are not in the first round,
+                * so upgrade methods below have a chance to see the whole constraint
+                */  
+               if( ncomponents == 1 || !conshdlrdata->disaggregation || havechange || nrounds == 1)
                {
                   SCIP_CALL( consdataSetFunctionData(scip, consdata, terms, -1) );
                   if( !SCIPisInfinity(scip, -consdata->lhs) )
                      consdata->lhs -= constant;
                   if( !SCIPisInfinity(scip,  consdata->rhs) )
                      consdata->rhs -= constant;
+                  
+                  if( ncomponents > 1 && conshdlrdata->disaggregation )
+                     keepnotpresolved = TRUE;
                }
                else
                {
@@ -5315,6 +5539,47 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          presolveQuadTermFree(scip, &terms);
 
          consdata->isremovedfixings = TRUE;
+         
+         /** let other constraint handlers try upgrading cons to a more specific quadratic constraint
+          * since the locking of the linear variables changing if their is an upgrade, we unlock them all here (could be improved) 
+          */
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+         }
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgdconslhs, &upgdconsrhs) );
+         if( upgdconslhs != NULL || upgdconsrhs != NULL )
+         {
+            /* add the upgraded constraint(s) to the problem */
+            if( upgdconslhs != NULL && upgdconslhs != upgdconsrhs )
+            {
+               SCIP_CALL( SCIPaddCons(scip, upgdconslhs) );
+               SCIP_CALL( SCIPreleaseCons(scip, &upgdconslhs) );
+            }
+
+            if( upgdconsrhs != NULL )
+            {
+               SCIP_CALL( SCIPaddCons(scip, upgdconsrhs) );
+               SCIP_CALL( SCIPreleaseCons(scip, &upgdconsrhs) );
+            }
+
+            (*nupgdconss)++;
+            
+            /* delete upgraded constraint */
+            if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+               *result = SCIP_SUCCESS;
+               continue;
+            }
+            else
+               havechange = TRUE;
+         }
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+         }
       }
 
       if( !consdata->ispropagated )
@@ -5364,7 +5629,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          int       ncontvar;
          SCIP_VAR* candidate;
          SCIP_Bool fail;
-         int       i;
 
          fail = FALSE;
          candidate = NULL;
@@ -5397,7 +5661,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          }
       }
 
-      consdata->ispresolved = TRUE;
+      consdata->ispresolved = !keepnotpresolved;
    }
 
    return SCIP_OKAY;
@@ -5598,19 +5862,19 @@ SCIP_DECL_CONSPRINT(consPrintQuadratic)
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
    {
-      SCIPinfoMessage(scip, file, " == %.15g\n", consdata->rhs);
+      SCIPinfoMessage(scip, file, " == %.15g", consdata->rhs);
    }
    else if( !SCIPisInfinity(scip, consdata->rhs) )
    {
-      SCIPinfoMessage(scip, file, " <= %.15g\n", consdata->rhs);
+      SCIPinfoMessage(scip, file, " <= %.15g", consdata->rhs);
    }
    else if( !SCIPisInfinity(scip, -consdata->lhs) )
    {
-      SCIPinfoMessage(scip, file, " >= %.15g\n", consdata->lhs);
+      SCIPinfoMessage(scip, file, " >= %.15g", consdata->lhs);
    }
    else
    {
-      SCIPinfoMessage(scip, file, " [free]\n");
+      SCIPinfoMessage(scip, file, " [free]");
    }
 
    return SCIP_OKAY;
@@ -5875,6 +6139,69 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change to a quadratic constraint",
       NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME);
+
+   return SCIP_OKAY;
+}
+
+/** includes a quadratic constraint update method into the quadratic constraint handler */
+SCIP_RETCODE SCIPincludeQuadconsUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DECL_QUADCONSUPGD((*quadconsupgd)),  /**< method to call for upgrading quadratic constraint */
+   int                   priority,           /**< priority of upgrading method */
+   const char*           conshdlrname        /**< name of the constraint handler */
+   )
+{
+   SCIP_CONSHDLR*        conshdlr;
+   SCIP_CONSHDLRDATA*    conshdlrdata;
+   SCIP_QUADCONSUPGRADE* quadconsupgrade;
+   char                  paramname[SCIP_MAXSTRLEN];
+   char                  paramdesc[SCIP_MAXSTRLEN];
+   int                   i;
+   
+   assert(quadconsupgd != NULL);
+   assert(conshdlrname != NULL );
+
+   /* find the linear constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("quadratic constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* create a quadratic constraint upgrade data object */
+   SCIP_CALL( SCIPallocMemory(scip, &quadconsupgrade) );
+   quadconsupgrade->quadconsupgd = quadconsupgd;
+   quadconsupgrade->priority     = priority;
+   quadconsupgrade->active       = TRUE;
+
+   /* insert quadratic constraint update method into constraint handler data */
+   assert(conshdlrdata->nquadconsupgrades <= conshdlrdata->quadconsupgradessize);
+   if( conshdlrdata->nquadconsupgrades+1 > conshdlrdata->quadconsupgradessize )
+   {
+      int newsize;
+
+      newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nquadconsupgrades+1);
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->quadconsupgrades, newsize) );
+      conshdlrdata->quadconsupgradessize = newsize;
+   }
+   assert(conshdlrdata->nquadconsupgrades+1 <= conshdlrdata->quadconsupgradessize);
+   
+   for( i = conshdlrdata->nquadconsupgrades; i > 0 && conshdlrdata->quadconsupgrades[i-1]->priority < quadconsupgrade->priority; --i )
+      conshdlrdata->quadconsupgrades[i] = conshdlrdata->quadconsupgrades[i-1];
+   assert(0 <= i && i <= conshdlrdata->nquadconsupgrades);
+   conshdlrdata->quadconsupgrades[i] = quadconsupgrade;
+   conshdlrdata->nquadconsupgrades++;
+
+   /* adds parameter to turn on and off the upgrading step */
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/"CONSHDLR_NAME"/upgrade/%s", conshdlrname);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable quadratic upgrading for constraint handler <%s>", conshdlrname);
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         paramname, paramdesc,
+         &quadconsupgrade->active, FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
