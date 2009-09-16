@@ -4287,7 +4287,7 @@
  */
 
 /**@page INSTALL Installation information
- * \include INSTALL  
+ * \verbinclude INSTALL  
  */
 
 /**@page RELEASENOTES Release notes
