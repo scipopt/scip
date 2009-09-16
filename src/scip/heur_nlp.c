@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.30 2009/09/16 15:34:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.31 2009/09/16 19:54:06 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -370,7 +370,7 @@ SCIP_RETCODE addSOCConstraints(
    if (!SCIPconshdlrGetNConss(socconshdlr))
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPconsInitnlpiSOC(scip, socconshdlr, heurdata->nlpi, SCIPconshdlrGetNConss(socconshdlr), SCIPconshdlrGetConss(socconshdlr), heurdata->var_scip2nlp) );
+   SCIP_CALL( SCIPconsInitNlpiSOC(scip, socconshdlr, heurdata->nlpi, SCIPconshdlrGetNConss(socconshdlr), SCIPconshdlrGetConss(socconshdlr), heurdata->var_scip2nlp) );
    
    return SCIP_OKAY; 
 }
