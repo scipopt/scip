@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.31 2009/09/16 19:54:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.32 2009/09/16 20:33:48 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -37,9 +37,9 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_varbound.h"
 #include "scip/cons_quadratic.h"
+#include "scip/cons_soc.h"
 #ifdef WITH_SOC3
 #include "cons_soc3.h"
-#include "cons_soc.h"
 #endif
 #ifdef WITH_NL
 #include "cons_nl_C.h"
@@ -354,7 +354,6 @@ SCIP_RETCODE addQuadraticConstraints(
    return SCIP_OKAY;
 }
 
-#ifdef WITH_SOC3
 /** adds second order cone constraints to NLP */
 static
 SCIP_RETCODE addSOCConstraints(
@@ -375,6 +374,7 @@ SCIP_RETCODE addSOCConstraints(
    return SCIP_OKAY; 
 }
 
+#ifdef WITH_SOC3
 /** adds three dimensional second order cone constraints to NLP */
 static
 SCIP_RETCODE addSOC3Constraints(
@@ -538,11 +538,11 @@ SCIP_RETCODE setupNLP(
          /* skip combinatorial constraints, since all their variables will be fixed when the NLP is solved */ 
          SCIPdebugMessage("skip adding logicor, setppc, and knapsack constraints to NLP\n"); 
       }
-#ifdef WITH_SOC3
       else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "soc" ) == 0)
       {
          SCIP_CALL( addSOCConstraints (scip, heurdata, conshdlrs[i]) );
       }
+#ifdef WITH_SOC3
       else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "SOC3") == 0)
       {
          SCIP_CALL( addSOC3Constraints(scip, heurdata, conshdlrs[i]) );
@@ -803,14 +803,12 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
          }
       }
 
-#ifdef WITH_SOC3
       if (!havenlp)
       {
          conshdlr = SCIPfindConshdlr(scip, "soc");
          if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
             havenlp = TRUE;  /* @TODO check if some SOC constraint has a continuous variable */
       }
-#endif
 
 #ifdef WITH_NL
       if (!havenlp)

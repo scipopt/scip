@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.311 2009/09/16 15:21:51 bzfheinz Exp $
+# $Id: Makefile,v 1.312 2009/09/16 20:33:48 bzfviger Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -445,6 +445,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/cons_or.o \
 			scip/cons_quadratic.o \
 			scip/cons_setppc.o \
+			scip/cons_soc.o \
 			scip/cons_sos1.o \
 			scip/cons_sos2.o \
 			scip/cons_varbound.o \
