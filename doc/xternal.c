@@ -194,116 +194,116 @@
  *
  *
  * @section EXAMPLE1 Example 1 (defaults: SoPlex, with ZIMPL support):
-
+ *
  * Typing "make" uses SoPlex as LP solver and includes support for the modeling language ZIMPL. You will be asked the
  * following questions on the first call to "make" (example answers are already given):
  *
- * \code
- * > make
- * make[1]: Entering directory `scip-1.2'
- *
- * - Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
- *
- * * SCIP needs some softlinks to external programs, in particular, LP-solvers. 
- * * Please insert the paths to the corresponding directories/libraries below.
- * * The links will be installed in the 'lib' directory.
- * * For more information and if you experience problems see the INSTALL file.
- *
- *   -> "spxinc" is the path to the SoPlex "src" directory, e.g., "../../soplex/src".
- *   -> "libsoplex.*" is the path to the SoPlex library, e.g., "../../soplex/lib/libsoplex.linux.x86.gnu.opt.a"
- *   -> "zimplinc" is a directory containing the path to the ZIMPL "src" directory, e.g., "../../zimpl/src".
- *   -> "libzimpl.*" is the path to the ZIMPL library, e.g., "../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a"
- * 
- * - preparing missing soft-link "lib/spxinc":
- * > Enter soft-link target file or directory for "lib/spxinc" (return if not needed):
- * > ../../soplex/src/ 
- * -> creating softlink "lib/spxinc" -> "../../soplex/src"
- *
- *
- * - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.a":
- * > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.a" (return if not needed):
- * > ../../soplex/lib/libsoplex.linux.x86_64.gnu.opt
- * -> creating softlink "lib/libsoplex.linux.x86_64.gnu.opt.a" -> "../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a"
- *
- *
- * - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.so":
- * * this soft-link is not necessarily needed since "lib/libsoplex.linux.x86_64.gnu.opt.a" already exists - press return to skip
- * > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.so" (return if not needed):
- * >
- * * skipped creation of softlink "lib/libsoplex.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
- *
- *
- * - preparing missing soft-link "lib/zimplinc/zimpl":
- * > Enter soft-link target file or directory for "lib/zimplinc/zimpl" (return if not needed):
- * ../../zimpl/src/
- *  creating softlink "lib/zimplinc/zimpl" -> "../../zimpl/src"
- * 
- *
- * - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.a":
- * > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.a" (return if not needed):
- * > ../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a
- * -> creating softlink "lib/libzimpl.linux.x86_64.gnu.opt.a" -> "../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a"
- * 
- *
- * - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.so":
- * * this soft-link is not necessarily needed since "lib/libzimpl.linux.x86_64.gnu.opt.a" already exists - press return to skip
- * > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.so" (return if not needed):
- * >
- * * skipped creation of softlink "lib/libzimpl.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
- *
- * ... 
- *
- * -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
- * -> generating library lib/liblpispx-1.2.0.linux.x86_64.gnu.opt.a
- * -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
- * -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.spx
- *
- * \endcode
+ * \verbatim
+  > make
+  make[1]: Entering directory `scip-1.2'
+ 
+  - Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
+ 
+  * SCIP needs some softlinks to external programs, in particular, LP-solvers. 
+  * Please insert the paths to the corresponding directories/libraries below.
+  * The links will be installed in the 'lib' directory.
+  * For more information and if you experience problems see the INSTALL file.
+ 
+    -> "spxinc" is the path to the SoPlex "src" directory, e.g., "../../soplex/src".
+    -> "libsoplex.*" is the path to the SoPlex library, e.g., "../../soplex/lib/libsoplex.linux.x86.gnu.opt.a"
+    -> "zimplinc" is a directory containing the path to the ZIMPL "src" directory, e.g., "../../zimpl/src".
+    -> "libzimpl.*" is the path to the ZIMPL library, e.g., "../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a"
+  
+  - preparing missing soft-link "lib/spxinc":
+  > Enter soft-link target file or directory for "lib/spxinc" (return if not needed):
+  > ../../soplex/src/ 
+  -> creating softlink "lib/spxinc" -> "../../soplex/src"
+ 
+ 
+  - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.a":
+  > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.a" (return if not needed):
+  > ../../soplex/lib/libsoplex.linux.x86_64.gnu.opt
+  -> creating softlink "lib/libsoplex.linux.x86_64.gnu.opt.a" -> "../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a"
+ 
+ 
+  - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.so":
+  * this soft-link is not necessarily needed since "lib/libsoplex.linux.x86_64.gnu.opt.a" already exists - press return to skip
+  > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.so" (return if not needed):
+  >
+  * skipped creation of softlink "lib/libsoplex.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
+ 
+ 
+  - preparing missing soft-link "lib/zimplinc/zimpl":
+  > Enter soft-link target file or directory for "lib/zimplinc/zimpl" (return if not needed):
+  ../../zimpl/src/
+   creating softlink "lib/zimplinc/zimpl" -> "../../zimpl/src"
+  
+ 
+  - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.a":
+  > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.a" (return if not needed):
+  > ../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a
+  -> creating softlink "lib/libzimpl.linux.x86_64.gnu.opt.a" -> "../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a"
+  
+ 
+  - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.so":
+  * this soft-link is not necessarily needed since "lib/libzimpl.linux.x86_64.gnu.opt.a" already exists - press return to skip
+  > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.so" (return if not needed):
+  >
+  * skipped creation of softlink "lib/libzimpl.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
+ 
+  ... 
+ 
+  -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
+  -> generating library lib/liblpispx-1.2.0.linux.x86_64.gnu.opt.a
+  -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
+  -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.spx
+ 
+ * \endverbatim
  *
  * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
  *
  * Typing "make LPS=cpx ZIMPL=false"  uses CPLEX as LP solver. You will be asked the following questions on
  * the first call to "make" (example answers are already given):
  *
- * \code
- * > make LPS=cpx ZIMPL=false
- * make[1]: Entering directory `scip-1.2'
- *
- * - Current settings: LPS=cpx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
- * 
- * * SCIP needs some softlinks to external programs, in particular, LP-solvers.
- * * Please insert the paths to the corresponding directories/libraries below.
- * * The links will be installed in the 'lib' directory.
- * * For more information and if you experience problems see the INSTALL file.
- * 
- *   -> "cpxinc" is the path to the CPLEX "include" directory, e.g., "<CPLEX-path>/include/ilcplex".
- *   -> "libcplex.*" is the path to the CPLEX library, e.g., "<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a"
- *
- * - preparing missing soft-link "lib/cpxinc":
- * > Enter soft-link target file or directory for "lib/cpxinc" (return if not needed):
- * > ../../cplex121/include
- * -> creating softlink "lib/cpxinc" -> "../../cplex121/include"
- *
- *
- * - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.a":
- * > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.a" (return if not needed):
- * > ../../cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a
- * -> creating softlink "lib/libcplex.linux.x86_64.gnu.a" -> "../../../../adm_cple/cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a"
- *
- *
- * - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.so":
- * > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.so" (return if not needed):
- * >
- * * skipped creation of softlink "lib/libcplex.linux.x86_64.gnu.so". Call "make links" if needed later.
- *
- * ... 
- *
- * -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
- * -> generating library lib/liblpicpx-1.2.0.linux.x86_64.gnu.opt.a
- * -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
- * -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.cpx
- *
- * \endcode
+ * \verbatim
+  > make LPS=cpx ZIMPL=false
+  make[1]: Entering directory `scip-1.2'
+ 
+  - Current settings: LPS=cpx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
+  
+  * SCIP needs some softlinks to external programs, in particular, LP-solvers.
+  * Please insert the paths to the corresponding directories/libraries below.
+  * The links will be installed in the 'lib' directory.
+  * For more information and if you experience problems see the INSTALL file.
+  
+    -> "cpxinc" is the path to the CPLEX "include" directory, e.g., "<CPLEX-path>/include/ilcplex".
+    -> "libcplex.*" is the path to the CPLEX library, e.g., "<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a"
+ 
+  - preparing missing soft-link "lib/cpxinc":
+  > Enter soft-link target file or directory for "lib/cpxinc" (return if not needed):
+  > ../../cplex121/include
+  -> creating softlink "lib/cpxinc" -> "../../cplex121/include"
+ 
+ 
+  - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.a":
+  > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.a" (return if not needed):
+  > ../../cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a
+  -> creating softlink "lib/libcplex.linux.x86_64.gnu.a" -> "../../../../adm_cple/cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a"
+ 
+ 
+  - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.so":
+  > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.so" (return if not needed):
+  >
+  * skipped creation of softlink "lib/libcplex.linux.x86_64.gnu.so". Call "make links" if needed later.
+ 
+  ... 
+ 
+  -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
+  -> generating library lib/liblpicpx-1.2.0.linux.x86_64.gnu.opt.a
+  -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
+  -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.cpx
+ 
+ * \endverbatim
  *
  * @section COMPILERPROBLEMS Compilation problems:
  *
