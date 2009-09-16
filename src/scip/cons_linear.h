@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.h,v 1.59 2009/09/02 10:30:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.h,v 1.60 2009/09/16 15:56:41 bzfviger Exp $"
 
 /**@file   cons_linear.h
  * @brief  constraint handler for linear constraints
@@ -62,11 +62,6 @@ typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint u
  *  - negcoeffsum     : sum of all negative coefficients
  *  - integral        : TRUE iff constraints activity value is always integral
  *  - upgdcons        : pointer to store the upgraded constraint
- *  - upgraded        : pointer to store TRUE iff the constraint was upgraded
- *
- *  possible return values for *result:
- *    SCIP_DIDNOTFIND : the linear constraint data was not upgraded to a more specific constraint
- *    SCIP_SUCCESS    : the linear constraint data was upgraded to the more specific constraint stored in *upgdcons
  */
 #define SCIP_DECL_LINCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, int nvars, SCIP_VAR** vars, SCIP_Real* vals, SCIP_Real lhs, SCIP_Real rhs, \
             int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposcont, int nnegcont, \
