@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_default.c,v 1.98 2009/09/04 15:58:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_default.c,v 1.99 2009/09/18 10:06:14 bzfheinz Exp $"
 
 /**@file   dialog_default.c
  * @ingroup DIALOGS
@@ -628,6 +628,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayParameters)
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
+   SCIPdialogMessage(scip, NULL, "number of parameters = %d\n", SCIPgetNParams(scip));
    SCIPdialogMessage(scip, NULL, "non-default parameter settings:\n");
    SCIP_CALL( SCIPwriteParams(scip, NULL, FALSE, TRUE) );
    SCIPdialogMessage(scip, NULL, "\n");
