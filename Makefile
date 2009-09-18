@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.312 2009/09/16 20:33:48 bzfviger Exp $
+# $Id: Makefile,v 1.313 2009/09/18 13:24:47 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -90,6 +90,7 @@ LINT		=	flexelint
 DOXY		=	doxygen
 CPLEX		=	cplex
 CBC		=	cbc
+MOSEK           =       mosek
 
 SHELL		= 	bash
 READ		=	read -e
@@ -638,6 +639,11 @@ testcount:
 testcplex:		
 		cd check; \
 		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testmosek
+testmosek:		
+		cd check; \
+		$(SHELL) ./check_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcbc
 testcbc:		
