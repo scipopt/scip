@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.49 2009/09/16 18:50:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.50 2009/09/21 18:00:20 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -35,6 +35,7 @@
 
 
 #include <assert.h>
+#include <string.h> /* for strcmp */ 
 
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
@@ -174,6 +175,7 @@ struct SCIP_ConshdlrData
    SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
    int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
    int                   nquadconsupgrades;         /**< number of quadratic constraint upgrade methods */
+   SCIP_Bool             havesignpowerupgrade;      /**< is one of the quadconsupgrades an upgrade for signpower? FIXME: this is a HACK */
 };
 
 /** quadratic constraint update method */
@@ -2527,8 +2529,8 @@ SCIP_RETCODE presolveUpgrade(
          { /* got upgrade for left hand side */
             assert(!SCIPisInfinity(scip, -consdata->lhs));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-            SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(SCIPconsGetHdlr(*upgdconslhs)));
-            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconslhs, NULL) ) );
+            SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(SCIPconsGetHdlr(localupgdconslhs)));
+            SCIPdebug( SCIP_CALL( SCIPprintCons(scip, localupgdconslhs, NULL) ) );
             
             *upgdconslhs  = localupgdconslhs;
             consdata->lhs = -SCIPinfinity(scip);
@@ -2540,8 +2542,8 @@ SCIP_RETCODE presolveUpgrade(
             if (localupgdconslhs != localupgdconsrhs)
             { /* upgrade for rhs is not the same constraint as for lhs */
                SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-               SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(SCIPconsGetHdlr(*upgdconsrhs)));
-               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconsrhs, NULL) ) );
+               SCIPdebugMessage(" -> upgraded to constraint type <%s>\n", SCIPconshdlrGetName(SCIPconsGetHdlr(localupgdconsrhs)));
+               SCIPdebug( SCIP_CALL( SCIPprintCons(scip, localupgdconsrhs, NULL) ) );
             }
             
             *upgdconsrhs  = localupgdconsrhs;
@@ -4698,7 +4700,7 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
 
 #ifdef WITH_CONSBRANCHNL
    conshdlrdata->branchnl = SCIPfindConshdlr(scip, "branchnonlinear");
-   if (conshdlrdata->branchnl == NULL && nconss > 0)
+   if( conshdlrdata->branchnl == NULL && nconss > 0 )
    {
       SCIPerrorMessage("cannot find constraint handler for branching on nonlinear variables");
       return SCIP_PLUGINNOTFOUND;
@@ -5374,11 +5376,60 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    *result = SCIP_DIDNOTFIND;
    keepnotpresolved = FALSE;
    
-   if( nrounds > 1 && nnewfixedvars == 0 && nnewupgdconss == 0 && nnewchgbds == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 )
+   if( nrounds > 0 && nnewfixedvars == 0 && nnewupgdconss == 0 && nnewchgbds == 0 && nnewaggrvars == 0 && nnewchgvartypes == 0 )
       return SCIP_OKAY;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+   
+   /** FIXME: HACK for cons_signpower: call upgrade method before aggregated variables are replaced */
+   if( nrounds == 0 && conshdlrdata->havesignpowerupgrade )
+   {
+      havechange = FALSE;
+      for( c = 0; c < nconss; ++c )
+      {
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+         }
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgdconslhs, &upgdconsrhs) );
+         if( upgdconslhs != NULL || upgdconsrhs != NULL )
+         {
+            /* add the upgraded constraint(s) to the problem */
+            if( upgdconslhs != NULL && upgdconslhs != upgdconsrhs )
+            {
+               SCIP_CALL( SCIPaddCons(scip, upgdconslhs) );
+               SCIP_CALL( SCIPreleaseCons(scip, &upgdconslhs) );
+            }
+
+            if( upgdconsrhs != NULL )
+            {
+               SCIP_CALL( SCIPaddCons(scip, upgdconsrhs) );
+               SCIP_CALL( SCIPreleaseCons(scip, &upgdconsrhs) );
+            }
+
+            (*nupgdconss)++;
+            *result = SCIP_SUCCESS;
+            havechange = TRUE;
+
+            /* delete upgraded constraint */
+            if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+               continue;
+            }
+         }
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+         }
+      }
+      if( havechange )
+         return SCIP_OKAY;
+   }
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5541,7 +5592,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          consdata->isremovedfixings = TRUE;
          
          /** let other constraint handlers try upgrading cons to a more specific quadratic constraint
-          * since the locking of the linear variables changing if their is an upgrade, we unlock them all here (could be improved) 
+          * since the locking of the linear variables changes if their is an upgrade, we unlock them all here (could be improved)
           */
          for( i = 0; i < consdata->nlinvars; ++i )
          {
@@ -6202,6 +6253,9 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    SCIP_CALL( SCIPaddBoolParam(scip,
          paramname, paramdesc,
          &quadconsupgrade->active, FALSE, TRUE, NULL, NULL) );
+   
+   if( !conshdlrdata->havesignpowerupgrade && strcmp(conshdlrname, "signpower") == 0)
+      conshdlrdata->havesignpowerupgrade = TRUE;
 
    return SCIP_OKAY;
 }
@@ -6416,15 +6470,15 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
       if( nadjbilin != NULL )
       {
          SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata->nadjbilin,   nadjbilin,   nquadvars) );
-         SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata->adjbilin,     adjbilin,     nquadvars) );
+         SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata->adjbilin,     adjbilin,   nquadvars) );
       }
       else
       {
          assert(nbilinterms == 0);
          SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->nadjbilin, nquadvars) );
-         SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->adjbilin, nquadvars) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->adjbilin,  nquadvars) );
          BMSclearMemoryArray(consdata->nadjbilin, nquadvars);
-         BMSclearMemoryArray(consdata->adjbilin,   nquadvars);
+         BMSclearMemoryArray(consdata->adjbilin,  nquadvars);
       }
       for( i = 0; i < nquadvars; ++i )
       {
@@ -6432,7 +6486,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
          if( consdata->nadjbilin[i] != 0 )
          {
             assert(adjbilin[i] != NULL);
-            assert(nadjbilin != NULL);
+            assert(nadjbilin   != NULL);
             SCIP_CALL( SCIPduplicateMemoryArray(scip, &consdata->adjbilin[i], adjbilin[i], nadjbilin[i]) );
          }
          else
@@ -6625,6 +6679,34 @@ SCIP_Real* SCIPgetBilinCoefsQuadratic(
    assert(SCIPconsGetData(cons) != NULL);
    
    return SCIPconsGetData(cons)->bilincoefs;
+}
+
+/** Gets for each quadratic variable the number of bilinear terms in which the variable is involved in a quadratic constraint.
+ *  Length is given by SCIPgetNQuadVarsQuadratic
+ */
+int* SCIPgetNAdjBilinQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
+   
+   return SCIPconsGetData(cons)->nadjbilin;
+}
+
+/** Gets for each quadratic variable the indices of bilinear terms in which the variable is involved in a quadratic constraint.
+ *  Length is given by SCIPgetNQuadVarsQuadratic, length of each entry is given by SCIPgetNAdjBilinQuadratic.
+ */
+int** SCIPgetAdjBilinQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
+   
+   return SCIPconsGetData(cons)->adjbilin;
 }
 
 /** Gets the left hand side of a quadratic constraint.

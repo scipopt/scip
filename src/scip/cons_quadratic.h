@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.12 2009/09/16 18:50:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.13 2009/09/21 18:00:20 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -252,6 +252,24 @@ SCIP_VAR** SCIPgetBilinVars2Quadratic(
  */
 extern
 SCIP_Real* SCIPgetBilinCoefsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** Gets for each quadratic variable the number of bilinear terms in which the variable is involved in a quadratic constraint.
+ *  Length is given by SCIPgetNQuadVarsQuadratic
+ */
+extern
+int* SCIPgetNAdjBilinQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
+/** Gets for each quadratic variable the indices of bilinear terms in which the variable is involved in a quadratic constraint.
+ *  Length is given by SCIPgetNQuadVarsQuadratic, length of each entry is given by SCIPgetNAdjBilinQuadratic.
+ */
+extern
+int** SCIPgetAdjBilinQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
