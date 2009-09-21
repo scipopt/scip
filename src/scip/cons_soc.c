@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.1 2009/09/16 20:33:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.2 2009/09/21 13:58:06 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -1536,7 +1536,7 @@ SCIP_RETCODE branchOnRhsVariable(
    SCIP*          scip,       /**< SCIP data structure */
    SCIP_CONS**    conss,      /**< constraints */
    int            nconss,     /**< number of constraints */
-   SCIP_RESULT*   success     /**< buffer to store whether we found a branching variable and did a branching */ 
+   SCIP_Bool*     success     /**< buffer to store whether we found a branching variable and did a branching */ 
    )
 {
    SCIP_CONSDATA*   consdata;
@@ -2188,7 +2188,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_CONS*         maxviolcons;
-   SCIP_RESULT        success;
+   SCIP_Bool          success;
    SCIP_Bool          allow_weak_cuts;
    int                nbndchg;
    int                c;
