@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.50 2009/09/21 18:00:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.51 2009/09/21 18:45:57 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -599,7 +599,8 @@ SCIP_RETCODE updateVarInfeasibility(
 
 /** translate from one value of infinity to another
  * 
- *  if val is >= infty1, then give infty2, else give val */
+ *  if val is >= infty1, then give infty2, else give val
+ */
 #define infty2infty(infty1, infty2, val) (val >= infty1 ? infty2 : val)
 
 #ifndef WITH_LAPACK
@@ -3779,7 +3780,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
       if( tightened )
       {
          SCIPdebugMessage("tightened lower bound of linear variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetLbLocal(var));
-         ++nchgbds;
+         ++*nchgbds;
          *result = SCIP_REDUCEDDOM;
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
@@ -3798,7 +3799,7 @@ SCIP_RETCODE propagateBoundsLinearVar(
       if( tightened )
       {
          SCIPdebugMessage("tightened upper bound of linear variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetUbLocal(var));
-         ++nchgbds;
+         ++*nchgbds;
          *result = SCIP_REDUCEDDOM;
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
@@ -3883,7 +3884,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       if( tightened )
       {
          SCIPdebugMessage("tightened lower bound of quadratic variable %s in constraint %s to %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPvarGetLbLocal(var));
-         ++nchgbds;
+         ++*nchgbds;
          *result = SCIP_REDUCEDDOM;
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
@@ -3902,7 +3903,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       if( tightened )
       {
          SCIPdebugMessage("tightened upper bound of quadratic variable %s in constraint %s to %g -> %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), SCIPintervalGetSup(newrange), SCIPvarGetUbLocal(var));
-         ++nchgbds;
+         ++*nchgbds;
          *result = SCIP_REDUCEDDOM;
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
@@ -4151,9 +4152,9 @@ SCIP_RETCODE propagateBounds(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->linrange     || consdata->nlinvars  == 0);
-   assert(consdata->quadrangevar || consdata->nquadvars == 0);
-   assert(consdata->bilinrange   || consdata->nbilinterms   == 0);
+   assert(consdata->linrange     || consdata->nlinvars    == 0);
+   assert(consdata->quadrangevar || consdata->nquadvars   == 0);
+   assert(consdata->bilinrange   || consdata->nbilinterms == 0);
 
    *result = SCIP_DIDNOTRUN;
 
