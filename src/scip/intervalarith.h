@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.18 2009/09/03 03:25:41 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.19 2009/09/21 19:31:13 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -232,6 +232,18 @@ void SCIPintervalPower(
 /** stores operand1 to the power of the scalar operand2 in resultant */
 extern
 void SCIPintervalPowerScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** stores operand1 to the signed power of the scalar positive operand2 in resultant 
+ * 
+ * the signed power of x w.r.t. an exponent n >= 0 is given as sign(x) * abs(x)^n
+ * */
+extern
+void SCIPintervalSignPowerScalar(
    SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */

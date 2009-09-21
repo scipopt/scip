@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.28 2009/09/09 13:57:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.29 2009/09/21 19:31:13 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -146,6 +146,11 @@ ROUNDMODE getRoundingMode(
 #endif
 
 
+/** sign of a value (-1 or +1)
+ * 
+ * 0.0 has sign +1
+ */
+#define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
 
 /*
@@ -1211,6 +1216,89 @@ void SCIPintervalPowerScalar(
       }
    }
   
+   setRoundingMode(roundmode);
+}
+
+/** stores operand1 to the signed power of the scalar positive operand2 in resultant 
+ * 
+ * the signed power of x w.r.t. an exponent n >= 0 is given as sign(x) * abs(x)^n
+ * */
+extern
+void SCIPintervalSignPowerScalar(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand1,           /**< first operand of operation */
+   SCIP_Real             operand2            /**< second operand of operation */
+   )
+{
+   ROUNDMODE roundmode;
+
+   assert(resultant != NULL);
+   assert(operand1.inf <= operand1.sup);
+   assert(operand1.inf <  infinity);
+   assert(operand1.sup > -infinity);
+   assert(operand2     <  infinity);
+   assert(operand2     >= 0.0);
+   
+   if( operand2 == 0.0 )
+   { /* special case, since x^0 = 1 for x != 0, but 0^0 = 0 */
+      if( operand1.inf < 0.0 && operand1.sup > 0.0 )
+      { /* 0.0 inside the interval gives [-1,1] */
+         resultant->inf = -1.0;
+         resultant->sup =  1.0;
+      }
+      else if( operand1.inf < 0.0 && operand1.sup == 0.0 )
+      { /* 0.0 as right bound of interval gives [-1,0] */ 
+         resultant->inf = -1.0;
+         resultant->sup =  0.0;
+      }
+      else if( operand1.inf == 0.0 && operand1.sup > 0.0 )
+      { /* 0.0 as left bound of interval gives [0,1] */
+         resultant->inf =  0.0;
+         resultant->sup =  1.0;
+      }
+      else if( operand1.inf == 0.0 && operand1.sup == 0.0 )
+      { /* 0.0^0.0 gives 0 */
+         resultant->inf =  0.0;
+         resultant->sup =  0.0;
+      }
+      else if( operand1.inf > 0.0 )
+      { /* interval right of 0.0 gives [1,1] */
+         resultant->inf =  1.0;
+         resultant->sup =  1.0;
+      }
+      else
+      { /* last case left: interval is left of 0.0, which gives [-1,-1] */
+         assert(operand1.sup < 0.0);
+         resultant->inf = -1.0;
+         resultant->sup = -1.0;
+      }
+      
+      return;
+   }
+
+   roundmode = getRoundingMode();
+   
+   if( operand1.inf <= -infinity )
+   {
+      resultant->inf = -infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_DOWNWARDS);
+      resultant->inf = SIGN(operand1.inf) * pow(ABS(operand1.inf), operand2);
+   }
+
+   if( operand1.sup >=  infinity )
+   {
+      resultant->sup =  infinity;
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_UPWARDS);
+      resultant->sup = SIGN(operand1.sup) * pow(ABS(operand1.sup), operand2);
+   }
+   
    setRoundingMode(roundmode);
 }
 
