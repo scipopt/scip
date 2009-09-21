@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.49 2009/09/21 14:55:07 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.50 2009/09/21 15:47:35 bzfviger Exp $"
 
 /**@file   cons_xxx.c
  * @ingroup CONSHDLRS 
@@ -487,8 +487,8 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXxx)
       SCIP_CALL( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
             SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), 
+            SCIPconsIsStickingAtNode(cons)) );
    }
 
    return SCIP_OKAY;
