@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.61 2009/09/02 14:59:38 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.62 2009/09/21 10:22:27 bzfviger Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -956,26 +956,33 @@ SCIP_RETCODE SCIPlpiChgBounds(
       clp->setColumnBounds(ind[j], lb[j], ub[j]);
       if ( sol != 0 )
       {
-	 assert( colLower != 0 );
-	 assert( colUpper != 0 );
-	 int k = ind[j];
-	 switch ( clp->getColumnStatus(k) )
-	 {
-	 case ClpSimplex::isFree:
-	 case ClpSimplex::superBasic:
-	    sol[j] = 0.0;
-	    break;
-	 case ClpSimplex::atUpperBound:
-	    sol[k] = colUpper[k];
-	    assert( colUpper[k] == ub[j] );
-	    break;
-	 case ClpSimplex::isFixed:
-	 case ClpSimplex::atLowerBound:
-	    sol[k] = colLower[k];
-	    assert( colLower[k] == lb[j] );
-	    break;
-	 default:;
-	 }
+         if( clp->statusExists() )
+         {
+            assert( colLower != 0 );
+            assert( colUpper != 0 );
+            int k = ind[j];
+            switch ( clp->getColumnStatus(k) )
+            {
+               case ClpSimplex::isFree:
+               case ClpSimplex::superBasic:
+                  sol[j] = 0.0;
+                  break;
+               case ClpSimplex::atUpperBound:
+                  sol[k] = colUpper[k];
+                  assert( colUpper[k] == ub[j] );
+                  break;
+               case ClpSimplex::isFixed:
+               case ClpSimplex::atLowerBound:
+                  sol[k] = colLower[k];
+                  assert( colLower[k] == lb[j] );
+                  break;
+               default:;
+            }
+         }
+         else
+         { /* workaround: if there is no status, we assume something */
+            sol[j] = 0.0;
+         }
       }
    }
 
