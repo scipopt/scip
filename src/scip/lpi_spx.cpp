@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.93 2009/09/10 15:38:15 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.94 2009/09/21 21:45:26 bzfpfets Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -2910,8 +2910,10 @@ SCIP_RETCODE SCIPlpiFreeState(
    SCIPdebugMessage("calling SCIPlpiFreeState()\n");
 
    assert(lpi != NULL);
+   assert(lpistate != NULL);
 
-   lpistateFree(lpistate, blkmem);
+   if ( *lpistate != NULL )
+      lpistateFree(lpistate, blkmem);
 
    return SCIP_OKAY;
 }
