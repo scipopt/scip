@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.124 2009/04/06 13:06:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.125 2009/09/21 17:17:29 bzfwinkm Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -524,13 +524,24 @@ int getIntParam(SCIP_LPI* lpi, const int param)
 static
 double getDblParam(SCIP_LPI* lpi, const int param)
 {
+   SCIP_Real val;
    int i;
 
    assert(lpi != NULL);
 
    for( i = 0; i < NUMDBLPARAM; ++i )
+   {
       if( dblparam[i] == param )
-         return lpi->cpxparam.dblparval[i];
+      {
+	 val = lpi->cpxparam.dblparval[i];
+	 if( val >= CPX_INFBOUND )
+	    return CPX_INFBOUND;
+	 else if( val <= -CPX_INFBOUND )
+	    return -CPX_INFBOUND;
+	 else
+	    return val;
+      }
+   }
 
    SCIPerrorMessage("unknown CPLEX double parameter\n");
    SCIPABORT();
@@ -564,11 +575,16 @@ void setDblParam(SCIP_LPI* lpi, const int param, double parval)
 
    assert(lpi != NULL);
 
+   if( parval >= CPX_INFBOUND )
+      parval = 1e+75;
+   else if( parval <= -CPX_INFBOUND )
+      parval = -1e+75;
+
    for( i = 0; i < NUMDBLPARAM; ++i )
       if( dblparam[i] == param )
       {
-         lpi->cpxparam.dblparval[i] = parval;
-         return;
+	 lpi->cpxparam.dblparval[i] = parval;
+	 return;
       }
 
    SCIPerrorMessage("unknown CPLEX double parameter\n");

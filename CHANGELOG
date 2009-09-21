@@ -10,6 +10,7 @@ features:
 performance improvements:
 
 fixed bugs:
+- fixed bug concerning assert(!SCIPlpDivingObjChanged(lp)) which was caused by wrong infinity double parameters for cplex
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
