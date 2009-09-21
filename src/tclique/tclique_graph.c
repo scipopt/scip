@@ -12,7 +12,7 @@
 /*  along with TCLIQUE; see the file COPYING.                                */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tclique_graph.c,v 1.13 2009/09/14 16:27:42 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tclique_graph.c,v 1.14 2009/09/21 09:34:25 bzfviger Exp $"
 
 /**@file   tclique_graph.c
  * @brief  graph data part of algorithm for maximum cliques
@@ -576,7 +576,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    result = fscanf(file, "%s", probname);
    if( result == EOF )
    {
-      infoMessage("\Error while reading probname in file %s", filename); 
+      infoMessage("Error while reading probname in file %s", filename); 
       fclose(file);
       return FALSE;
    }
@@ -584,7 +584,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    result = fscanf(file, "%d", &(*tcliquegraph)->nnodes);
    if( result == EOF )
    {
-      infoMessage("\Error while reading number of nodes in file %s", filename); 
+      infoMessage("Error while reading number of nodes in file %s", filename); 
       fclose(file);
       return FALSE;
    }
@@ -592,7 +592,7 @@ TCLIQUE_Bool tcliqueLoadFile(
    result = fscanf(file, "%d", &(*tcliquegraph)->nedges);
    if( result == EOF )
    {
-      infoMessage("\Error while reading number of edges in file %s", filename); 
+      infoMessage("Error while reading number of edges in file %s", filename); 
       fclose(file);
       return FALSE;
    }
@@ -617,7 +617,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       result = fscanf(file, "%lf", &weight);
       if( result == EOF )
       {
-         infoMessage("\Error while reading weights of nodes in file %s", filename); 
+         infoMessage("Error while reading weights of nodes in file %s", filename); 
          fclose(file);
          return FALSE;
       }
@@ -634,7 +634,7 @@ TCLIQUE_Bool tcliqueLoadFile(
       result = fscanf(file, "%d%d", &node1, &node2);
       if( result == EOF )
       {
-         infoMessage("\Error while reading edges in file %s", filename); 
+         infoMessage("Error while reading edges in file %s", filename); 
          fclose(file);
          return FALSE;
       }
