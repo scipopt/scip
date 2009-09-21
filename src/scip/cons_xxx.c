@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.48 2009/07/14 11:12:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.49 2009/09/21 14:55:07 bzfviger Exp $"
 
 /**@file   cons_xxx.c
  * @ingroup CONSHDLRS 
@@ -530,7 +530,7 @@ SCIP_RETCODE SCIPincludeConshdlrXxx(
 
 #ifdef LINCONSUPGD_PRIORITY
    /* include the linear constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY) );
+   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
 #endif
 
    /* add xxx constraint handler parameters */
