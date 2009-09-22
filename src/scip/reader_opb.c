@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.39 2009/09/11 14:39:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.40 2009/09/22 16:44:14 bzfheinz Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -94,7 +94,6 @@
 #define OPB_MAX_LINELEN       65536  /**< size of the line buffer for reading or writing */
 #define OPB_MAX_PUSHEDTOKENS  2
 #define OPB_INIT_COEFSSIZE    8192
-#define TRYUSINGCOMMENTANDINFO       /**< should comments being read to use additional information about the number of and constraints */
 
 /** Section in OPB File */
 enum OpbExpType {
@@ -1201,17 +1200,13 @@ SCIP_RETCODE readConstraints(
    return SCIP_OKAY;
 }
 
-/** reads an OPB file */
+/** tries to read the first comment line which usually contains information about the max size of "and" products */
 static
-SCIP_RETCODE readOPBFile(
+SCIP_RETCODE getMaxAndConsDim(
    SCIP*                 scip,               /**< SCIP data structure */
-   OPBINPUT*             opbinput,           /**< OPB reading data */
-   const char*           filename            /**< name of the input file */
+   OPBINPUT*             opbinput            /**< OPB reading data */
    )
-{
-   int nNonlinearConss;
-
-#ifdef TRYUSINGCOMMENTANDINFO
+{   
    SCIP_Bool stop;
    char* commentstart;
    char* nproducts;
@@ -1220,30 +1215,14 @@ SCIP_RETCODE readOPBFile(
    stop = FALSE;
    commentstart = NULL;
    nproducts = NULL;
-#endif
 
-   assert(opbinput != NULL);
-
-   /* open file */
-   opbinput->file = SCIPfopen(filename, "r");
-   if( opbinput->file == NULL )
-   {
-      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
-      SCIPprintSysError(filename);
-      return SCIP_NOFILE;
-   }
-
-   /* reading additional information about the number of and constraints in comments to avoid reallocating "opbinput.andconss" */
-#ifdef TRYUSINGCOMMENTANDINFO
-   BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
-   
    do
    {   
       if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
       {
          assert(SCIPfeof( opbinput->file ) );
          opbinput->eof = TRUE;
-         goto TERMINATE;
+         return SCIP_OKAY;
       }
       
       /* read characters after comment symbol */
@@ -1291,16 +1270,48 @@ SCIP_RETCODE readOPBFile(
             break;
          }
       }
-   }while(commentstart != NULL && !stop);
+   }
+   while(commentstart != NULL && !stop);
 
    opbinput->linebuf[0] = '\0';
 
    /* reset filereader pointer to the beginning */
    SCIPfseek(opbinput->file, 0, SEEK_SET);
-#endif
 
+   return SCIP_OKAY;
+}
+
+/** reads an OPB file */
+static
+SCIP_RETCODE readOPBFile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   OPBINPUT*             opbinput,           /**< OPB reading data */
+   const char*           filename            /**< name of the input file */
+   )
+{
+   int nNonlinearConss;
+   int i;
+
+   assert(opbinput != NULL);
+   
+   /* open file */
+   opbinput->file = SCIPfopen(filename, "r");
+   if( opbinput->file == NULL )
+   {
+      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
+      SCIPprintSysError(filename);
+      return SCIP_NOFILE;
+   }
+   
+   /* tries to read the first comment line which usually contains information about the max size of "and" products */
+   SCIP_CALL( getMaxAndConsDim(scip, opbinput) );
+   
+   /* reading additional information about the number of and constraints in comments to avoid reallocating
+      "opbinput.andconss" */
+   BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
+   
    SCIP_CALL( SCIPallocMemoryArray(scip, &(opbinput->consanddata), opbinput->sconsanddata ) );
-
+   
    /* create problem */
    SCIP_CALL( SCIPcreateProb(scip, filename, NULL, NULL, NULL, NULL, NULL, NULL) );
 
@@ -1316,10 +1327,10 @@ SCIP_RETCODE readOPBFile(
       SCIPfreeMemoryArray(scip, &((opbinput->consanddata)[i]->vars) );
       SCIPfreeBlockMemory(scip, &(opbinput->consanddata)[i] );
    }
+
    /* free dynamically allocated memory */
    SCIPfreeMemoryArrayNull(scip, &(opbinput->consanddata) );
 
- TERMINATE:
    /* close file */
    SCIPfclose(opbinput->file);
 
