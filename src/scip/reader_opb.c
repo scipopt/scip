@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.40 2009/09/22 16:44:14 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.41 2009/09/22 17:18:10 bzfheinz Exp $"
+#define SCIP_DEBUG
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -392,7 +393,7 @@ SCIP_Bool getNextLine(
       {
          SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", OPB_MAX_LINELEN - 2);
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         SCIPdebugMessage("the buffer might be currented\n");
+         SCIPdebugMessage("the buffer might be corrupted\n");
       }
       else
       {
@@ -422,6 +423,8 @@ SCIP_Bool getNextLine(
          *(commentstart+1) = '\0'; /* we want to use lookahead of one char -> we need two \0 at the end */
       }
    }
+
+   SCIPdebugMessage("%s\n", opbinput->linebuf);
 
    return TRUE;
 }
@@ -1204,7 +1207,8 @@ SCIP_RETCODE readConstraints(
 static
 SCIP_RETCODE getMaxAndConsDim(
    SCIP*                 scip,               /**< SCIP data structure */
-   OPBINPUT*             opbinput            /**< OPB reading data */
+   OPBINPUT*             opbinput,           /**< OPB reading data */
+   const char*           filename            /**< name of the input file */
    )
 {   
    SCIP_Bool stop;
@@ -1221,8 +1225,7 @@ SCIP_RETCODE getMaxAndConsDim(
       if( SCIPfgets(opbinput->linebuf, sizeof(opbinput->linebuf), opbinput->file) == NULL )
       {
          assert(SCIPfeof( opbinput->file ) );
-         opbinput->eof = TRUE;
-         return SCIP_OKAY;
+         break;
       }
       
       /* read characters after comment symbol */
@@ -1275,8 +1278,13 @@ SCIP_RETCODE getMaxAndConsDim(
 
    opbinput->linebuf[0] = '\0';
 
+#if 0 /* following lines should be correct, but gzseek seems to not reseting status beeing at the end of file */
    /* reset filereader pointer to the beginning */
-   SCIPfseek(opbinput->file, 0, SEEK_SET);
+   (void) SCIPfseek(opbinput->file, 0, SEEK_SET);
+#else
+   SCIPfclose(opbinput->file);
+   opbinput->file = SCIPfopen(filename, "r");
+#endif
 
    return SCIP_OKAY;
 }
@@ -1304,8 +1312,8 @@ SCIP_RETCODE readOPBFile(
    }
    
    /* tries to read the first comment line which usually contains information about the max size of "and" products */
-   SCIP_CALL( getMaxAndConsDim(scip, opbinput) );
-   
+   SCIP_CALL( getMaxAndConsDim(scip, opbinput, filename) );
+
    /* reading additional information about the number of and constraints in comments to avoid reallocating
       "opbinput.andconss" */
    BMSclearMemoryArray(opbinput->linebuf, OPB_MAX_LINELEN);
