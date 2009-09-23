@@ -55,6 +55,7 @@
  *
  * <b>General Information</b>
  *
+ * - \ref PUBLICMETHODS "Which functions I am allowed to use?"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
  * - \ref START   "How to start a new project"
  * - \ref DOC     "How to search the documentation for interface methods"
@@ -62,6 +63,7 @@
  * - \ref DEBUG   "Debugging"
  * - \ref TEST    "How to run automated tests with SCIP"
  * - \ref COUNTER "How to use SCIP to count feasible solutions"
+ * - \ref PARAMETERS "List of all SCIP parameters"
  *
  * <b>Programming with SCIP</b>
  *
@@ -417,8 +419,9 @@
  *   The documentation of "scip.h" is grouped into several blocks, each dealing with methods for a specific kind of
  *   object.
  *   For example, all methods operating on variables are grouped together.
- * - The files "pub_<...>.h" contain methods that perform "easy" operations that only affect the corresponding
- *   objects.
+
+ * - The files \ref PUBLICMETHODS "pub_<...>.h" contain methods that perform "easy" operations that only 
+ *   affect the corresponding objects.
  *   Usually, with these methods you can access the data of the object.
  *   For example, in "pub_var.h" you find methods to get information about a variable.
  *
@@ -426,7 +429,7 @@
  * as well as methods for sorting, numerics, random numbers, string operations, and file operations.
  *
  * If you are looking for a description of a callback method of a plugin that you want to implement, you have to
- * look at the corresponding "type_<...>.h".
+ * look at the corresponding \ref TYPEDEFINITONS "type_<...>.h".
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4295,6 +4298,21 @@
  * \verbinclude SCIP-release-notes-1.1
  */
 
+/**@defgroup PUBLICMETHODS Public Methods 
+ * @brief This page list headers which contain methods which can be used via the callable library.
+ *
+ * All the headers listed above include function which are allowed to call
+ * from the outside. Besides these functions it is also valid to call
+ * methods which are listed in on of the headers of the plugins such as cons_linear.h.
+ */
+
+/**@defgroup TYPEDEFINITONS Type Definitions
+ * @brief This page list headers which contain type definitions of callback methods.
+ *
+ * All headers above include the descriptions of callback methods of
+ * certain plugin. For more detail look at the corresponding header.
+ */
+
 /**@defgroup BRANCHINGRULES Branching Rules 
  * @brief This page contains a list of all branching rule which are currently available.
  */
@@ -4351,3 +4369,16 @@
  * @brief This page contains a list of all separators  which are currently available.
  */
 
+/**@page PARAMETERS Parameter List
+ *
+ * This page list all parameters of the current SCIP version. This list can be
+ * easiely generate be SCIP via the interactive shell using the following command:
+ *
+ * <code>SCIP&gt; set save &lt;file name&gt;</code>
+ *
+ * or via the function call:
+ *
+ * <code>SCIP_CALL( SCIPwriteParams(scip, &lt;file name&gt;, TRUE, FALSE) );</code>
+ *
+ * \verbinclude parameters.set
+ */
