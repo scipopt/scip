@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.32 2009/09/16 20:33:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.33 2009/09/23 12:37:01 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -44,6 +44,9 @@
 #ifdef WITH_NL
 #include "cons_nl_C.h"
 #include "expression.h"
+#endif
+#ifdef WITH_SIGNPOWER
+#include "cons_signpower.h"
 #endif
 
 #define HEUR_NAME             "nlp"
@@ -418,6 +421,28 @@ SCIP_RETCODE addNonlinearConstraints(
 }
 #endif
 
+#ifdef WITH_NL
+/** adds nonlinear constraints to NLP */
+static
+SCIP_RETCODE addSignpowerConstraints(
+   SCIP*          scip,          /**< SCIP data structure */
+   SCIP_HEURDATA* heurdata,      /**< heuristic data structure */
+   SCIP_CONSHDLR* sgnpowconshdlr /**< constraint handler for signpower constraints */
+   )
+{
+   assert(scip           != NULL);
+   assert(heurdata       != NULL);
+   assert(sgnpowconshdlr != NULL);
+
+   if (!SCIPconshdlrGetNConss(sgnpowconshdlr))
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPconsInitNlpiSignpower(scip, sgnpowconshdlr, heurdata->nlpi, SCIPconshdlrGetNConss(sgnpowconshdlr), SCIPconshdlrGetConss(sgnpowconshdlr), heurdata->var_scip2nlp) );
+
+   return SCIP_OKAY;
+}
+#endif
+
 /** sets up NLP from constraints in SCIP */
 static
 SCIP_RETCODE setupNLP(
@@ -552,6 +577,12 @@ SCIP_RETCODE setupNLP(
       else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "nonlinear" ) == 0)
       {
          SCIP_CALL( addNonlinearConstraints (scip, heurdata, conshdlrs[i]) );
+      }
+#endif
+#ifdef WITH_SIGNPOWER
+      else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "signpower" ) == 0)
+      {
+         SCIP_CALL( addSignpowerConstraints (scip, heurdata, conshdlrs[i]) );
       }
 #endif
       else
@@ -832,7 +863,28 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
          }
       }
 #endif
-   
+
+#ifdef WITH_SIGNPOWER
+      if (!havenlp)
+      {
+         conshdlr = SCIPfindConshdlr(scip, "signpower");
+         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
+         {
+            SCIP_CONS*     cons;
+            SCIP_VAR*      x;
+            int            i;
+            for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
+            {
+               cons     = SCIPconshdlrGetConss(conshdlr)[i];
+               x        = SCIPgetNonlinearVarSignpower(scip, cons);
+               if( x == NULL )
+                  continue;
+               if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
+                  havenlp = TRUE;
+            }
+         }
+      }
+#endif
    }
 
    if( havenlp )
