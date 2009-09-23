@@ -4305,15 +4305,15 @@
  * functions it is also valid to call methods that are listed in on of the headers of the (default) plugins, e.g.,
  * cons_linear.h.
  *
- * If you are locking for an information of an object of SCIP, such as the name of a constraint, you should first search
- * the corresponding "pub_<...>.h" header. In case of a constraint pub_cons.h. If you need some information about the
- * problem, you should start searching in scip.h.
+ * If you are locking for information about a particular object of SCIP, such as a variable or a constraint, you should first search
+ * the corresponding "pub_<...>.h" header. E.g., in case of a constraint pub_cons.h. If you need some information about the
+ * overall problem, you should start searching in scip.h.
  *
  * Since there is a huge amount of methods in scip.h, these methods are grouped into different categories. These
  * categories are:
  *
  * - Memory Management 
- * - Miscellaneos Methods
+ * - Miscellaneous Methods
  * - General SCIP Methods
  * - Message Output Methods
  * - Parameter Methods
