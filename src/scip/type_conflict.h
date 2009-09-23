@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.24 2009/09/23 08:54:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.25 2009/09/23 20:33:41 bzfheinz Exp $"
 
 /**@file   type_conflict.h
- * @ingroup TYPEDEFINITONS
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for conflict analysis
  * @author Tobias Achterberg
  */

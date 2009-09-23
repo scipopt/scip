@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nodesel.h,v 1.18 2009/09/23 08:54:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_nodesel.h,v 1.19 2009/09/23 20:33:41 bzfheinz Exp $"
 
 /**@file   type_nodesel.h
- * @ingroup TYPEDEFINITONS
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for node selectors
  * @author Tobias Achterberg
  */

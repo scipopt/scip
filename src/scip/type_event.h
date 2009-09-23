@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.28 2009/09/23 08:54:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.29 2009/09/23 20:33:41 bzfheinz Exp $"
 
 /**@file   type_event.h
- * @ingroup TYPEDEFINITONS
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for managing events
  * @author Tobias Achterberg
  */

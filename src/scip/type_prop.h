@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prop.h,v 1.16 2009/09/23 08:54:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_prop.h,v 1.17 2009/09/23 20:33:41 bzfheinz Exp $"
 
 /**@file   type_prop.h
- * @ingroup TYPEDEFINITONS
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for propagators
  * @author Tobias Achterberg
  */

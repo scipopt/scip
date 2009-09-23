@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.23 2009/09/23 08:54:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.24 2009/09/23 20:33:41 bzfheinz Exp $"
 
 /**@file   type_heur.h
- * @ingroup TYPEDEFINITONS
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for primal heuristics
  * @author Tobias Achterberg
  */

@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.11 2009/09/23 08:54:57 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.12 2009/09/23 20:33:41 bzfheinz Exp $"
 
 /**@file   type_nlpi.h
- * @ingroup TYPEDEFINITONS
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for specific NLP solvers interface
  * @author Stefan Vigerske
  * @author Thorsten Gellermann

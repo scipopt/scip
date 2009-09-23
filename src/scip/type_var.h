@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_var.h,v 1.24 2009/09/23 08:54:58 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_var.h,v 1.25 2009/09/23 20:33:42 bzfheinz Exp $"
 
 /**@file   type_var.h
- * @ingroup TYPEDEFINITONS
+ * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for problem variables
  * @author Tobias Achterberg
  */
