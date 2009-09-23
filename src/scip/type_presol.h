@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.18 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.19 2009/09/23 08:54:58 bzfheinz Exp $"
 
 /**@file   type_presol.h
+ * @ingroup TYPEDEFINITONS
  * @brief  type definitions for presolvers
  * @author Tobias Achterberg
  */

@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_paramset.h,v 1.14 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_paramset.h,v 1.15 2009/09/23 08:54:57 bzfheinz Exp $"
 
 /**@file   type_paramset.h
+ * @ingroup TYPEDEFINITONS
  * @brief  type definitions for handling parameter settings
  * @author Tobias Achterberg
  */

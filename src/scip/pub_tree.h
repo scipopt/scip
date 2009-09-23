@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_tree.h,v 1.27 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_tree.h,v 1.28 2009/09/23 08:54:54 bzfheinz Exp $"
 
 /**@file   pub_tree.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for branch and bound tree
  * @author Tobias Achterberg
  */

@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.16 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.17 2009/09/23 08:54:53 bzfheinz Exp $"
 
 /**@file   pub_paramset.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for handling parameter settings
  * @author Tobias Achterberg
  */

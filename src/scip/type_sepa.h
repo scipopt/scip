@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sepa.h,v 1.21 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_sepa.h,v 1.22 2009/09/23 08:54:58 bzfheinz Exp $"
 
 /**@file   type_sepa.h
+ * @ingroup TYPEDEFINITONS
  * @brief  type definitions for separators
  * @author Tobias Achterberg
  */

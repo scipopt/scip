@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.351 2009/09/10 17:19:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.352 2009/09/23 08:54:55 bzfheinz Exp $"
 
 /**@file   scip.h
+ * @ingroup PUBLICMETHODS
  * @brief  SCIP callable library
  * @author Tobias Achterberg
  * @author Timo Berthold

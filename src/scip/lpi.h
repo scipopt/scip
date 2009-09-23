@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi.h,v 1.68 2009/07/31 11:37:15 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lpi.h,v 1.69 2009/09/23 08:54:50 bzfheinz Exp $"
 
 /**@file   lpi.h
+ * @ingroup PUBLICMETHODS
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
  */

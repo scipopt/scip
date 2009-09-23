@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.56 2009/08/03 15:30:46 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.57 2009/09/23 08:54:52 bzfheinz Exp $"
 
 /**@file   pub_misc.h
+ * @ingroup PUBLICMETHODS
  * @brief  public miscellaneous methods
  * @author Tobias Achterberg
  */

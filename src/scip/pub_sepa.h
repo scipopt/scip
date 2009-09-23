@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_sepa.h,v 1.20 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_sepa.h,v 1.21 2009/09/23 08:54:53 bzfheinz Exp $"
 
 /**@file   pub_sepa.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for separators
  * @author Tobias Achterberg
  */

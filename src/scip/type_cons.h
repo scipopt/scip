@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.51 2009/09/02 15:46:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.52 2009/09/23 08:54:56 bzfheinz Exp $"
 
 /**@file   type_cons.h
+ * @ingroup TYPEDEFINITONS
  * @brief  type definitions for constraints and constraint handlers
  * @author Tobias Achterberg
  */

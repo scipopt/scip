@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.21 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.22 2009/09/23 08:54:56 bzfheinz Exp $"
 
 /**@file   type_branch.h
+ * @ingroup TYPEDEFINITONS
  * @brief  type definitions for branching rules
  * @author Tobias Achterberg
  */

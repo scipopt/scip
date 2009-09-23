@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_pricer.h,v 1.16 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_pricer.h,v 1.17 2009/09/23 08:54:53 bzfheinz Exp $"
 
 /**@file   pub_pricer.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for variable pricers
  * @author Tobias Achterberg
  */

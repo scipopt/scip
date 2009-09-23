@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_fileio.h,v 1.7 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_fileio.h,v 1.8 2009/09/23 08:54:52 bzfheinz Exp $"
 
 /**@file   pub_fileio.h
+ * @ingroup PUBLICMETHODS
  * @brief  wrapper functions to map file i/o to standard or zlib file i/o
  * @author Tobias Achterberg
  */

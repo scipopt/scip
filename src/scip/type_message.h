@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_message.h,v 1.8 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_message.h,v 1.9 2009/09/23 08:54:57 bzfheinz Exp $"
 
 /**@file   type_message.h
+ * @ingroup TYPEDEFINITONS
  * @brief  type definitions for message output methods
  * @author Tobias Achterberg
  */

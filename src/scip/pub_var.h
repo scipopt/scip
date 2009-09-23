@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_var.h,v 1.76 2009/08/17 18:27:13 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_var.h,v 1.77 2009/09/23 08:54:54 bzfheinz Exp $"
 
 /**@file   pub_var.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for problem variables
  * @author Tobias Achterberg
  */

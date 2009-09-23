@@ -12,9 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_cons.h,v 1.38 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_cons.h,v 1.39 2009/09/23 08:54:51 bzfheinz Exp $"
 
 /**@file   pub_cons.h
+ * @ingroup PUBLICMETHODS
  * @brief  public methods for managing constraints
  * @author Tobias Achterberg
  */
