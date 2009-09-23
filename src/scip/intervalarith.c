@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.30 2009/09/23 12:36:10 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.31 2009/09/23 14:13:40 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1283,20 +1283,30 @@ void SCIPintervalSignPowerScalar(
    {
       resultant->inf = -infinity;
    }
-   else
+   else if( operand1.inf > 0.0 )
    {
       setRoundingMode(SCIP_ROUND_DOWNWARDS);
-      resultant->inf = SIGN(operand1.inf) * pow(ABS(operand1.inf), operand2);
+      resultant->inf =  pow( operand1.inf, operand2);
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of pow! */
+      resultant->inf = -pow(-operand1.inf, operand2);
    }
 
    if( operand1.sup >=  infinity )
    {
       resultant->sup =  infinity;
    }
-   else
+   else if( operand1.sup > 0.0 )
    {
       setRoundingMode(SCIP_ROUND_UPWARDS);
-      resultant->sup = SIGN(operand1.sup) * pow(ABS(operand1.sup), operand2);
+      resultant->sup =  pow( operand1.sup, operand2);
+   }
+   else
+   {
+      setRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of pow! */
+      resultant->sup = -pow(-operand1.sup, operand2);
    }
    
    setRoundingMode(roundmode);
