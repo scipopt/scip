@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.51 2009/09/21 18:45:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.52 2009/09/23 17:11:59 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3035,7 +3035,7 @@ SCIP_RETCODE addQuadRange(
 
 /** checks by interval analysis whether a violated constraint is infeasible
  * 
- *  If lbviol and ubviol is below feasibility tolerance, the check is skipped.
+ *  If lhsviol and rhsviol is below feasibility tolerance, the check is skipped.
  * 
  *  If isfeasible is set to false, then constraint is infeasible w.r.t. current local bounds.
  * 
@@ -5289,7 +5289,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
        return SCIP_OKAY;
    }
    
-   /* we are not feasible and the whole node is not infeasible
+   /* we are not feasible and we cannot proof that the whole node is infeasible
     * -> collect variables for branching
     */
 
