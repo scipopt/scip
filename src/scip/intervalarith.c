@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.29 2009/09/21 19:31:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.30 2009/09/23 12:36:10 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1414,6 +1414,57 @@ void SCIPintervalMax(
 
    resultant->inf = MAX(operand1.inf, operand2.inf);
    resultant->sup = MAX(operand1.sup, operand2.sup);
+}
+
+/** stores absolute value of operand in resultant */
+void SCIPintervalAbs(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   assert(resultant != NULL);
+   assert(operand.inf <= operand.sup);
+   
+   if( operand.inf <= 0.0 && operand.sup >= 0.0)
+   {
+      resultant->inf = 0.0;
+      resultant->sup = MAX(-operand.inf, operand.sup);
+   }
+   else if( operand.inf > 0.0 )
+   {
+      *resultant = operand;
+   }
+   else
+   {
+      resultant->inf = -operand.sup;
+      resultant->sup = -operand.inf;
+   }
+}
+
+/** stores sign of operand in resultant */
+void SCIPintervalSign(
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   assert(resultant != NULL);
+   assert(operand.inf <= operand.sup);
+
+   if( operand.sup < 0.0 )
+   {
+      resultant->inf = -1.0;
+      resultant->sup = -1.0;
+   }
+   else if( operand.inf >= 0.0 )
+   {
+      resultant->inf =  1.0;
+      resultant->sup =  1.0;
+   }
+   else
+   {
+      resultant->inf = -1.0;
+      resultant->sup =  1.0;
+   }
 }
 
 /** computes exact upper bound on \f$ a x^2 + b x \f$ for x in [xlb, xub], b an interval, and a scalar
