@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.94 2009/09/21 21:45:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_spx.cpp,v 1.95 2009/09/23 13:18:55 bzfheinz Exp $"
 
 /**@file   lpi_spx.cpp
  * @ingroup LPIS
@@ -2420,8 +2420,8 @@ SCIP_RETCODE SCIPlpiSetBase(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(cstat != NULL);
-   assert(rstat != NULL);
+   assert(cstat != NULL || lpi->spx->nCols() == 0);
+   assert(rstat != NULL || lpi->spx->nRows() == 0);
 
    invalidateSolution(lpi);
 
