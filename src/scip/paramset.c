@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.55 2009/09/10 10:01:36 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.56 2009/09/23 08:38:40 bzfheinz Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2080,6 +2080,19 @@ SCIP_RETCODE SCIPparamsetWrite(
    else
       file = NULL;
 
+   if( comments )
+   {
+      /* display the SCIP version as comment in the first line */
+      if( SCIP_SUBVERSION == 0 )
+         SCIPmessageFPrintInfo(file, "# SCIP version %d.%d.%d\n", 
+            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10);
+      else
+         SCIPmessageFPrintInfo(file, "# SCIP version %d.%d.%d.%d\n", 
+            SCIP_VERSION/100, (SCIP_VERSION/10) % 10, SCIP_VERSION % 10, SCIP_SUBVERSION);
+      
+      SCIPmessageFPrintInfo(file, "\n");
+   }
+   
    /* write the parameters to the file */
    for( i = 0; i < paramset->nparams; ++i )
    {
