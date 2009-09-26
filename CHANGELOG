@@ -14,6 +14,7 @@ fixed bugs:
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
+- added packing/partitioning orbitope constraint handler for symmetry handling (cons_orbitope.h/c)
 
 parameters:
 
