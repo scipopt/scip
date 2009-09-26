@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.52 2009/09/23 17:11:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.53 2009/09/26 20:35:27 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3587,7 +3587,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
                gap = (xval-xlb)*(xub-xval)/(1+2*ABS(xval));
             assert(!SCIPisNegative(scip, gap));
 #ifdef WITH_CONSBRANCHNL
-            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvars[j], MAX(gap, 0.)) );
+            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvars[j], MAX(gap, 0.), SCIPinfinity(scip)) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->quadvars[j], MAX(gap, 0.0)) );
 #endif
@@ -3602,7 +3602,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
          {
 #ifdef WITH_CONSBRANCHNL
-            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], SCIPinfinity(scip)) );
+            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], SCIPinfinity(scip), SCIPinfinity(scip)) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars1[j], SCIPinfinity(scip)) );
 #endif
@@ -3615,7 +3615,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( SCIPisInfinity(scip, -ylb) || SCIPisInfinity(scip, yub) )
          {
 #ifdef WITH_CONSBRANCHNL
-            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], SCIPinfinity(scip)) );
+            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], SCIPinfinity(scip), SCIPinfinity(scip)) );
 #else
             SCIP_CALL(  updateVarInfeasibility(scip, conshdlr, consdata->bilinvars2[j], SCIPinfinity(scip)) );
 #endif
@@ -3658,7 +3658,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( !SCIPisEQ(scip, xlb, xub) )
          {
 #ifdef WITH_CONSBRANCHNL
-            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], gap) );
+            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], gap, SCIPinfinity(scip)) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars1[j], gap) );
 #endif
@@ -3667,7 +3667,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( !SCIPisEQ(scip, ylb, yub) )
          {
 #ifdef WITH_CONSBRANCHNL
-            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], gap) );
+            SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], gap, SCIPinfinity(scip)) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars2[j], gap) );
 #endif
@@ -3727,7 +3727,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert(conshdlrdata           != NULL);
       assert(conshdlrdata->branchnl != NULL);
-      SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, *brvar, brvarval) );
+      SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, *brvar, brvarval, SCIPinfinity(scip)) );
 #else
       SCIP_CALL( updateVarInfeasibility(scip, conshdlr, *brvar, brvarval) );
 #endif
@@ -5312,7 +5312,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
          if( !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvars[i]), SCIPvarGetUbLocal(consdata->quadvars[i])) )
          {
 #ifdef WITH_CONSBRANCHNL
-            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol) );
+            SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol, SCIPinfinity(scip)) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol) );
 #endif
@@ -6256,6 +6256,9 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
          &quadconsupgrade->active, FALSE, TRUE, NULL, NULL) );
    
    if( !conshdlrdata->havesignpowerupgrade && strcmp(conshdlrname, "signpower") == 0)
+      conshdlrdata->havesignpowerupgrade = TRUE;
+
+   if( !conshdlrdata->havesignpowerupgrade && strcmp(conshdlrname, "pressureloss") == 0)
       conshdlrdata->havesignpowerupgrade = TRUE;
 
    return SCIP_OKAY;
