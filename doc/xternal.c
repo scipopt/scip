@@ -195,7 +195,7 @@
  *
  * @section EXAMPLE1 Example 1 (defaults: SoPlex, with ZIMPL support):
  *
- * Typing "make" uses SoPlex as LP solver and includes support for the modeling language ZIMPL. You will be asked the
+ * Typing <code>make</code> uses SoPlex as LP solver and includes support for the modeling language ZIMPL. You will be asked the
  * following questions on the first call to "make" (example answers are already given):
  *
  * \verbatim
@@ -262,7 +262,7 @@
  *
  * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
  *
- * Typing "make LPS=cpx ZIMPL=false"  uses CPLEX as LP solver. You will be asked the following questions on
+ * Typing <code>make LPS=cpx ZIMPL=false</code>  uses CPLEX as LP solver. You will be asked the following questions on
  * the first call to "make" (example answers are already given):
  *
  * \verbatim
@@ -322,58 +322,68 @@
  * name in the "make/" subdirectory. You may take\n "make/make.linux.x86.gnu.opt" or any other file in the make
  * subdirectory as example.\n
  *
- * - The readline library seems to differ sligtly on different OS distributions. Some versions do not support the
- * remove_history() call.  In this case, you have to either add "-DNO_REMOVE_HISTORY" to the FLAGS in the appropriate
- * make/make.* file, or to compile with "make USRFLAGS=-DNO_REMOVE_HISTORY".  Make sure, the file "src/scip/dialog.c" is
- * recompiled.  If this doesn't work either, disable the readline library with "make READLINE=false".
+ * - The readline library seems to differ sligtly on different OS distributions. Some versions do
+ * not support the <code>remove_history()</code> call.  In this case, you have to either add
+ * <code>-DNO_REMOVE_HISTORY</code> to the FLAGS in the appropriate "make/make.*" file, or to
+ * compile with <code>make USRFLAGS=-DNO_REMOVE_HISTORY</code>.  Make sure, the file
+ * "src/scip/dialog.c" is recompiled.  If this doesn't work either, disable the readline library
+ * with <code>make READLINE=false</code>.
  *
- * - On some systems, the sigaction() method is not available. In this case, you have to either add "-DNO_SIGACTION" to
- * the FLAGS in the appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_SIGACTION".  Make sure, the
- * file "src/scip/interrupt.c" is recompiled.
+ * - On some systems, the <code>sigaction()</code> method is not available. In this case, you have
+ * to either add <code>-DNO_SIGACTION</code> to the FLAGS in the appropriate "make/make.*" file, or
+ * to compile with <code>make USRFLAGS=-DNO_SIGACTION</code>.  Make sure, the file
+ * "src/scip/interrupt.c" is recompiled.
  *
- * - On some systems, the rand_r() method is not available.  In this case, you have to either add "-DNO_RAND_R" to the
- * FLAGS in the appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_RAND_R".  Make sure, the file
+ * - On some systems, the <code>rand_r()</code> method is not available.  In this case, you have to either add
+ * <code>-DNO_RAND_R</code> to the FLAGS in the appropriate "make/make.*" file, or to compile with
+ * <code>make USRFLAGS=-DNO_RAND_R</code>.  Make sure, the file "src/scip/misc.c" is recompiled.
+ *
+ * - On some systems, the <code>strtok_r()</code> method is not available.  In this case, you have
+ * to either add <code>-DNO_STRTOK_R</code> to the FLAGS in the appropriate make/make.* file, or to
+ * compile with <code>make USRFLAGS=-DNO_STRTOK_R</code>.  Make sure, the file "src/scip/misc.c" is
+ * recompiled.
+ *
+ * - On some systems, the <code>strerror_r()</code> method is not available.  In this case, you have
+ * to either add <code>-DNO_STRERROR_R</code> to the FLAGS in the appropriate "make/make.*" file, or
+ * to compile with <code>make USRFLAGS=-DNO_STRERROR_R</code>.  Make sure, the file
  * "src/scip/misc.c" is recompiled.
- *
- * - On some systems, the strtok_r() method is not available.  In this case, you have to either add "-DNO_STRTOK_R" to the
- * FLAGS in the appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_STRTOK_R".  Make sure, the file
- * "src/scip/misc.c" is recompiled.
- *
- * - On some systems, the strerror_r() method is not available.  In this case, you have to either add "-DNO_STRERROR_R" to
- * the FLAGS in the appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_STRERROR_R".  Make sure, the
- * file "src/scip/misc.c" is recompiled.
  *
  * - On some systems, the option [-e] is not available for the read command.  You have to compile with READ=read.
  *
- * - If you encounter other compiler or linker errors, you should recompile with "make VERBOSE=true ..." in order to get
- * the full compiler invocation. This might help to fix the corresponding machine dependent makefile in the make
- * subdirectory.
+ * - If you encounter other compiler or linker errors, you should recompile with <code>make
+ * VERBOSE=true ...</code> in order to get the full compiler invocation. This might help to fix the
+ * corresponding machine dependent makefile in the make subdirectory.
  *
  * @section WINDOWS Remarks on Installing under Windows using MinGW
  *
- * To build your own windows binaries under windows we recommend using the MinGW-Compiler with MSYS from mingw.org .
+ * To build your own windows binaries under windows we recommend using the MinGW-Compiler with MSYS
+ * from <a href="http://www.mingw.org">www.mingw.org</a> .
  *
  * First install MSYS, then MinGW to the mingw folder inside the msys folder.
  * Now you need to install the following packages to the mingw folder:
  * - zlib (or use ZLIB=false)
  * - pcre (here suffices the pcre7.0-lib.zip (or equivalent) to be extracted into the mingw-folder)
  *
- * After calling "make clean" in the ZIMPL folder you will also need flex and bison to remake ZIMPL. We recommend NOT
- * to use "make clean" inside the ZIMPL-folder if you do not have these packages installed.
+ * After calling <code>make clean</code> in the ZIMPL folder you will also need flex and bison to
+ * remake ZIMPL. We recommend NOT to use <code>"make clean"</code> inside the ZIMPL-folder if you do
+ * not have these packages installed.
  *
  * You can download these additional packages from <a href="http://gnuwin32.sourceforge.net/packages.html">here</a> 
  * or compile the source on your own from their homepages.
  *
- * Second you need to copy the file sh.exe to bash.exe otherwise various scripts (including makefiles) will not work.
- * Normally the unistd.h covers also the getopt-options, but for mingw you need to add the entry #include <getopt.h>
- * into the /mingw/include/unistd.h after the other include-entries (if not present).
+ * Second you need to copy the file <code>sh.exe</code> to <code>bash.exe</code> otherwise various
+ * scripts (including makefiles) will not work.  Normally <code>unistd.h</code> covers also the
+ * getopt-options, but for mingw you need to add the entry <code>\#include <getopt.h></code> into
+ * "/mingw/include/unistd.h" after the other include-entries (if not present).
  *
- * At last there is one package you need to compile if you want to use ZIMPL and ZIMPL-support in SCIP (otherwise use
- * ZIMPL=false as parameter with the make-call): the gmplib from gmplib.org The command "./configure --prefix=/mingw ;
- * make ; make install" should succeed without problems and installs the gmplib to the mingw folder.
+ * Finally, there is one package you need to compile if you want to use ZIMPL and ZIMPL-support in
+ * SCIP (otherwise use <code>ZIMPL=false</code> as parameter with the make-call): the
+ * <code>gmplib</code> from <a href="http://www.gmplib.org">gmplib.org</a>. The command
+ * <code>./configure --prefix=/mingw ; make ; make install</code> should succeed without problems
+ * and installs the gmplib to the mingw folder.
  *
- * Now "make READLINE=false" should be compiling without errors.  Please note that we do NOT support creating the
- * doxygen documentation and readline-usage under windows.
+ * Now <code>make READLINE=false</code> should be compiling without errors.  Please note that we
+ * do NOT support creating the doxygen documentation and readline-usage under windows.
  *
  *
  * @section RUN How to run SCIP after successful compiling SCIP
