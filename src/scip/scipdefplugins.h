@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.35 2009/09/16 20:33:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.36 2009/09/26 11:31:44 bzfpfets Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -48,6 +48,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_or.h"
+#include "scip/cons_orbitope.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_sos1.h"

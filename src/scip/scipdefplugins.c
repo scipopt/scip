@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.87 2009/09/16 20:33:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.88 2009/09/26 11:31:44 bzfpfets Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -41,6 +41,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
    SCIP_CALL( SCIPincludeConshdlrLogicor(scip) );
    SCIP_CALL( SCIPincludeConshdlrOr(scip) );
+   SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
    SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
    SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
    SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
