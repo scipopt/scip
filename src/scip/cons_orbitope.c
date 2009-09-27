@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.1 2009/09/26 11:31:20 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.2 2009/09/27 13:07:31 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -127,21 +127,21 @@ SCIP_RETCODE consdataFree(
    q = (*consdata)->nblocks;
    for (i = 0; i < p; ++i)
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->cases[i], q);
-      SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars[i], q);
-      SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->weights[i], q);
-      SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vals[i], q);
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases[i]), q);
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars[i]), q);
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights[i]), q);
+      SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals[i]), q);
    }
 
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->cases, p);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vars, p);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->weights, p);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vals, p);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->cases), p);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vars), p);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights), p);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals), p);
 
    if ( (*consdata)->tmpvals != NULL )
    {
-      SCIPfreeBlockMemoryArray(scip, &(*consdata)->tmpvals, p + q);
-      SCIPfreeBlockMemoryArray(scip, &(*consdata)->tmpvars, p + q);
+      SCIPfreeBlockMemoryArray(scip, &((*consdata)->tmpvals), p + q);
+      SCIPfreeBlockMemoryArray(scip, &((*consdata)->tmpvars), p + q);
    }
 
    SCIPfreeBlockMemory(scip, consdata);
@@ -711,6 +711,8 @@ SCIP_RETCODE propagateCons(
 
    assert( scip != NULL );
    assert( cons != NULL );
+   assert( infeasible != NULL );
+   assert( nfixedvars != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -730,7 +732,7 @@ SCIP_RETCODE propagateCons(
    /* fix upper right triangle if still necessary */
    if ( ! consdata->isTriangleFixed )
    {
-      assert( *nfixedvars = 0 ); /* to make sure count below is correct */
+      assert( *nfixedvars == 0 ); /* to make sure count below is correct */
       for (i = 0; i < nblocks; ++i)
       {
 	 for (j = i+1; j < nblocks; ++j)
@@ -951,7 +953,7 @@ SCIP_RETCODE resolvePropagation(
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
    SCIP_RESULT*          result              /**< pointer to store the result of the propagation conflict resolving call */
    )
-{
+{  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_Real** vals;
    SCIP_Real** weights;
@@ -1700,10 +1702,6 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
    {
       SCIP_CONSDATA* consdata;
       SCIP_VAR*** vars;
-      int i;
-      int j;
-      int nspcons;
-      int nblocks;
 
       /* get data of constraint */
       assert( conss[c] != 0 );
@@ -1714,11 +1712,13 @@ SCIP_DECL_CONSPRESOL(consPresolOrbitope)
       /* fix upper right triangle if still necessary */
       if ( ! consdata->isTriangleFixed )
       {
-	 assert( consdata->nspcons > 0 );
+	 int i;
+	 int j;
+	 int nblocks;
+
 	 assert( consdata->nblocks > 0 );
 	 assert( consdata->vars != NULL );
 
-	 nspcons = consdata->nspcons;
 	 nblocks = consdata->nblocks;
 	 vars = consdata->vars;
 
@@ -1851,6 +1851,10 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
    assert( consdata->nblocks > 0 );
    assert( consdata->vars != NULL );
 
+   nspcons = consdata->nspcons;
+   nblocks = consdata->nblocks;
+   vars = consdata->vars;
+
    SCIPdebugMessage("Printing method for oribitope constraint handler\n");
 
    if ( consdata->ispart )
@@ -1980,7 +1984,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
 	    else
 	    {
 	       /* all variables in a row should have the same objective */
-	       assert( SCIPisEQ(scip, obj, SCIPvarGetObj(vars[i][j])) );
+	       assert( SCIPisEQ(scip, obj, SCIPvarGetObj(vars[i][j])) );    /*lint --e{644}*/
 	    }
 	 }
       }
