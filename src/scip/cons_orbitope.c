@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.3 2009/09/27 13:19:29 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.4 2009/09/27 13:47:31 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -138,11 +138,8 @@ SCIP_RETCODE consdataFree(
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->weights), p);
    SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->vals), p);
 
-   if ( (*consdata)->tmpvals != NULL )
-   {
-      SCIPfreeBlockMemoryArray(scip, &((*consdata)->tmpvals), p + q);
-      SCIPfreeBlockMemoryArray(scip, &((*consdata)->tmpvars), p + q);
-   }
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->tmpvals), p + q);
+   SCIPfreeBlockMemoryArrayNull(scip, &((*consdata)->tmpvars), p + q);
 
    SCIPfreeBlockMemory(scip, consdata);
 
