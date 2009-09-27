@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.2 2009/09/27 13:07:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.3 2009/09/27 13:19:29 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -1984,7 +1984,7 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
 	    else
 	    {
 	       /* all variables in a row should have the same objective */
-	       assert( SCIPisEQ(scip, obj, SCIPvarGetObj(vars[i][j])) );    /*lint --e{644}*/
+	       assert( SCIPisEQ(scip, obj, SCIPvarGetObj(vars[i][j])) );    /*lint !e644*/
 	    }
 	 }
       }
