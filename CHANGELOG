@@ -11,6 +11,7 @@ performance improvements:
 
 fixed bugs:
 - fixed bug concerning assert(!SCIPlpDivingObjChanged(lp)) which was caused by wrong infinity double parameters for cplex
+- fixed bug in reader_zpl.c which appeared using the parameter "reading/zplreader/parameters" 
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
@@ -30,7 +31,7 @@ interface:
   of a variable; This might has the consequences that the bounds of the corresponding variable is  not in LP. This is the case if the 
   lazy lower or upper bound is greater or less than the local lower or upper bound, respectively 
 - new method SCIPvarGetLbLazy() and SCIPvarGetUbLazy() in pub_var.h; These methods return the lazy lower or upper bound, respectively
-- new methods SCIPgetNFixedonesSetppc() and SCIPgetNFixedzerosSetppc() in cons_setppc.{h,c}; these methods returns current (local) 
+- new methods SCIPgetNFixedonesSetppc() and SCIPgetNFixedzerosSetppc() in cons_setppc.{h,c}; these methods returns curr[5~ent (local) 
   number of variables fixed to one/zero in the given setppc constraint
 - new methods SCIPprintNodeRootPath() in scip.h This method prints all branching decisions on variables from the root to the given node
 - new methods SCIPnodeGetParentBranchings(), SCIPnodeGetAncestorBranchings(), SCIPnodeGetAncestorBranchingPath(); These methods return

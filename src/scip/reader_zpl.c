@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.46 2009/09/04 15:58:24 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.47 2009/09/27 21:31:45 bzfheinz Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -44,25 +44,16 @@
 #include "zimpl/ratlptypes.h"
 #include "zimpl/mme.h"
 #include "zimpl/xlpglue.h"
+#include "zimpl/zimpllib.h"
 
 /** ZIMPL_VERSION is defined by ZIMPL version 3.00 and higher. ZIMPL 3.00 made same changes in the interface to SCIP. */
 #if (ZIMPL_VERSION >= 300)
 #include "zimpl/mono.h"
 #endif
 
-extern
-Bool zpl_read(const char* filename);
-extern
-Bool zpl_read_with_args(int argc, char** argv);
-
-
-
 #define READER_NAME             "zplreader"
 #define READER_DESC             "file reader for ZIMPL model files"
 #define READER_EXTENSION        "zpl"
-
-
-
 
 /*
  * LP construction interface of ZIMPL
@@ -1009,7 +1000,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( strcmp(paramstr, "-") == 0 )
    {
       /* call ZIMPL parser without arguments */
-      if( !zpl_read(filename) )
+      if( !zpl_read(filename, TRUE) )
          readerror_ = TRUE;
    }
    else
@@ -1093,7 +1084,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
 
       /* call ZIMPL parser with arguments */
-      if( !zpl_read_with_args(argc, argv) )
+      if( !zpl_read_with_args(argv, argc, TRUE) )
          readerror_ = TRUE;
 
       /* free argument memory */
