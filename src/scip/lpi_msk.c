@@ -12,9 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_msk.c,v 1.13 2009/09/12 10:18:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_msk.c,v 1.14 2009/10/11 11:23:55 bzfheinz Exp $"
 
-/**@file   lpi_cpx.c
+/**@file   lpi_msk.c
  * @ingroup LPIS
  * @brief  LP interface for MOSEK
  * @author Bo Jensen
@@ -3750,7 +3750,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    /*lint --e{641}*/
    static int pricing[7] = {
       MSK_SIM_SELECTION_SE,
-      MSK_SIM_SELECTION_FREE,
+      MSK_SIM_SELECTION_SE,
       MSK_SIM_SELECTION_FULL,
       MSK_SIM_SELECTION_PARTIAL,
       MSK_SIM_SELECTION_SE,
