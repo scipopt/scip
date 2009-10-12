@@ -12,6 +12,7 @@ performance improvements:
 fixed bugs:
 - fixed bug concerning assert(!SCIPlpDivingObjChanged(lp)) which was caused by wrong infinity double parameters for cplex
 - fixed bug in reader_zpl.c which appeared using the parameter "reading/zplreader/parameters" 
+- fixed bug in trivial heuristic: the locking solution might have falsely initialized some values to zero
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

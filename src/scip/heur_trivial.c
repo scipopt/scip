@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.5 2009/09/10 21:12:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.6 2009/10/12 17:18:36 bzfberth Exp $"
 
 /**@file   heur_trivial.c
  * @ingroup PRIMALHEURISTICS
@@ -128,11 +128,11 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       /* set variables to the bound with fewer locks, if tie choose an average value */
       if( SCIPvarGetNLocksDown(vars[i]) >  SCIPvarGetNLocksUp(vars[i]) )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, lbsol, vars[i], ub) );
+         SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], ub) );
       }
       else if( SCIPvarGetNLocksDown(vars[i]) <  SCIPvarGetNLocksUp(vars[i]) )
       {
-         SCIP_CALL( SCIPsetSolVal(scip, lbsol, vars[i], lb) );
+         SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], lb) );
       }      
       else
       {
@@ -142,6 +142,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
          /* if a tie occurs, roughly every third integer variable will be rounded up */
          if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS )
             solval = i % 3 == 0 ? SCIPceil(scip,solval) : SCIPfloor(scip,solval);
+
+         assert(SCIPisFeasLE(scip,SCIPvarGetLbLocal(vars[i]),solval) && SCIPisFeasLE(scip,solval,SCIPvarGetLbLocal(vars[i])));
          
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], solval) );
       }
