@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.6 2009/10/12 17:18:36 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.7 2009/10/14 14:46:52 bzfwolte Exp $"
 
 /**@file   heur_trivial.c
  * @ingroup PRIMALHEURISTICS
@@ -143,7 +143,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
          if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS )
             solval = i % 3 == 0 ? SCIPceil(scip,solval) : SCIPfloor(scip,solval);
 
-         assert(SCIPisFeasLE(scip,SCIPvarGetLbLocal(vars[i]),solval) && SCIPisFeasLE(scip,solval,SCIPvarGetLbLocal(vars[i])));
+         assert(SCIPisFeasLE(scip,SCIPvarGetLbLocal(vars[i]),solval) && SCIPisFeasLE(scip,solval,SCIPvarGetUbLocal(vars[i])));
          
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], solval) );
       }
