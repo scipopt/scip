@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.18 2009/09/23 20:33:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.19 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   type_relax.h
  * @ingroup TYPEDEFINITIONS
@@ -35,6 +35,7 @@ extern "C" {
 #endif
 
 typedef struct SCIP_Relax SCIP_RELAX;             /**< relaxator */
+typedef struct SCIP_Relaxation SCIP_RELAXATION;   /**< relaxator */
 typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator data */
 
 /** destructor of relaxator to free user data (called when SCIP is exiting)
@@ -105,7 +106,7 @@ typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator
  *                      planes); however, it is able to continue the solving in order to improve the dual bound
  *  - SCIP_DIDNOTRUN  : the relaxator was skipped
  */
-#define SCIP_DECL_RELAXEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax, SCIP_RESULT* result)
+#define SCIP_DECL_RELAXEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_RELAX* relax, SCIP_Real* lowerbound, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

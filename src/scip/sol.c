@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.c,v 1.89 2009/04/06 13:07:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: sol.c,v 1.90 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   sol.c
  * @brief  methods for storing primal CIP solutions
@@ -30,6 +30,7 @@
 #include "scip/clock.h"
 #include "scip/misc.h"
 #include "scip/lp.h"
+#include "scip/relax.h"
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/sol.h"
@@ -137,6 +138,9 @@ SCIP_Real solGetArrayVal(
       case SCIP_SOLORIGIN_LPSOL:
          return SCIPvarGetLPSol(var);
 
+      case SCIP_SOLORIGIN_RELAXSOL:
+         return SCIPvarGetRelaxSolTransVar(var);
+
       case SCIP_SOLORIGIN_PSEUDOSOL:
          return SCIPvarGetPseudoSol(var);
 
@@ -186,6 +190,14 @@ SCIP_RETCODE solUnlinkVar(
 
    case SCIP_SOLORIGIN_LPSOL:
       solval = SCIPvarGetLPSol(var);
+      if( !SCIPsetIsZero(set, solval) )
+      {
+         SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
+      }
+      return SCIP_OKAY;
+
+   case SCIP_SOLORIGIN_RELAXSOL:
+      solval = SCIPvarGetRelaxSolTransVar(var);
       if( !SCIPsetIsZero(set, solval) )
       {
          SCIP_CALL( solSetArrayVal(sol, set, var, solval) );
@@ -347,6 +359,28 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    return SCIP_OKAY;
 }
 
+/** creates primal CIP solution, initialized to the current relaxation solution */
+SCIP_RETCODE SCIPsolCreateRelaxSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(relaxation != NULL);
+   assert(SCIPrelaxationIsSolValid(relaxation));
+
+   SCIP_CALL( SCIPsolCreate(sol, blkmem, set, stat, primal, tree, heur) );
+   SCIP_CALL( SCIPsolLinkRelaxSol(*sol, set, stat, tree, relaxation) );
+
+   return SCIP_OKAY;
+}
+
 /** creates primal CIP solution, initialized to the current pseudo solution */
 SCIP_RETCODE SCIPsolCreatePseudoSol(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
@@ -494,7 +528,37 @@ SCIP_RETCODE SCIPsolLinkLPSol(
       sol->obj = SCIPlpGetObjval(lp, set);
    }
    sol->solorigin = SCIP_SOLORIGIN_LPSOL;
-   solStamp(sol, stat, tree,TRUE);
+   solStamp(sol, stat, tree, TRUE);
+
+   SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
+
+   return SCIP_OKAY;
+}
+
+/** copies current relaxation solution into CIP solution by linking */
+SCIP_RETCODE SCIPsolLinkRelaxSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(sol != NULL);
+   assert(stat != NULL);
+   assert(tree != NULL);
+   assert(relaxation != NULL);
+   assert(SCIPrelaxationIsSolValid(relaxation));
+
+   SCIPdebugMessage("linking solution to relaxation\n");
+
+   /* clear the old solution arrays */
+   SCIP_CALL( solClearArrays(sol) );
+
+   /* the objective value in the columns is correct, s.t. the LP's objective value is also correct */
+   sol->obj = SCIPrelaxationGetSolObj(relaxation);
+   sol->solorigin = SCIP_SOLORIGIN_RELAXSOL;
+   solStamp(sol, stat, tree, TRUE);
 
    SCIPdebugMessage(" -> objective value: %g\n", sol->obj);
 

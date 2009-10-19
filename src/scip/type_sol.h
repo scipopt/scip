@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_sol.h,v 1.17 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: type_sol.h,v 1.18 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   type_sol.h
  * @brief  type definitions for storing primal CIP solutions
@@ -34,8 +34,9 @@ enum SCIP_SolOrigin
    SCIP_SOLORIGIN_ORIGINAL  = 0,        /**< solution describes original variables; non-chached elements are zero */
    SCIP_SOLORIGIN_ZERO      = 1,        /**< all non-cached elements in solution are equal to zero */
    SCIP_SOLORIGIN_LPSOL     = 2,        /**< all non-cached elements in solution are equal to current LP solution */
-   SCIP_SOLORIGIN_PSEUDOSOL = 3,        /**< all non-cached elements in solution are equal to current pseudo solution */
-   SCIP_SOLORIGIN_UNKNOWN   = 4         /**< all non-cached elements in solution are unknown; they have to be treated
+   SCIP_SOLORIGIN_RELAXSOL  = 3,        /**< all non-cached elements in solution are equal to current relaxation solution */
+   SCIP_SOLORIGIN_PSEUDOSOL = 4,        /**< all non-cached elements in solution are equal to current pseudo solution */
+   SCIP_SOLORIGIN_UNKNOWN   = 5         /**< all non-cached elements in solution are unknown; they have to be treated
                                          *   as being an arbitrary value in the variable's bounds
                                          */
 };

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.51 2009/07/31 11:37:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.52 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -199,6 +199,7 @@ struct SCIP_Var
    SCIP_Real             branchfactor;       /**< factor to weigh variable's branching score with */
    SCIP_Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
    SCIP_Real             rootredcost;        /**< reduced costs of variable in root node, or SCIP_INVALID */
+   SCIP_Real             relaxsol;           /**< primal solution of variable in current relaxation solution, or SCIP_INVALID */
    SCIP_Real             primsolavg;         /**< weighted average of all values of variable in primal feasible solutions */
    SCIP_Real             conflictlb;         /**< maximal lower bound of variable in the current conflict */
    SCIP_Real             conflictub;         /**< minimal upper bound of variable in the current conflict */

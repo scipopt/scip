@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.524 2009/10/05 09:39:28 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.525 2009/10/19 16:00:08 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4278,6 +4278,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPeventqueueCreate(&scip->eventqueue) );
    SCIP_CALL( SCIPbranchcandCreate(&scip->branchcand) );
    SCIP_CALL( SCIPlpCreate(&scip->lp, scip->set, scip->stat, SCIPprobGetName(scip->origprob)) );
+   SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation) );
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
    SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
    SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->mem->solvemem, scip->set) );
@@ -5063,6 +5064,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->solvemem) );
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->solvemem) );
+   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->solvemem, scip->set) );
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
    SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->solvemem, scip->set) );
@@ -5299,8 +5301,8 @@ SCIP_RETCODE SCIPsolve(
 
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->solvemem, scip->set, scip->stat, scip->mem, scip->transprob,
-               scip->primal, scip->tree, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool,
-               scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &restart) );
+               scip->primal, scip->tree, scip->lp, scip->relaxation, scip->pricestore, scip->sepastore, 
+               scip->cutpool, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, &restart) );
 
          /* detect, whether problem is solved */
          if( SCIPtreeGetNNodes(scip->tree) == 0 && SCIPtreeGetCurrentNode(scip->tree) == NULL )
@@ -5975,6 +5977,207 @@ SCIP_RETCODE SCIPgetVarSols(
 
    return SCIP_OKAY;
 }
+
+/** sets the value of the given variable in the global relaxation solution;
+ *  this solution can be filled by the relaxators and can be used by heuristics and for separation;
+ *  You can use SCIPclearRelaxSolVals() before to set all values to zero, initially;
+ *  after setting all solution values, you have to call SCIPmarkRelaxSolValid() 
+ *  to inform SCIP that the stored solution is valid
+ */
+SCIP_RETCODE SCIPsetRelaxSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to set value for */
+   SCIP_Real             val                 /**< solution value of variable */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxSolVal", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPvarSetRelaxSol(var, scip->set, scip->relaxation, val, TRUE);
+
+   if( val != 0.0 )
+      SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
+   SCIPrelaxationSetSolValid(scip->relaxation, FALSE);
+
+   return SCIP_OKAY;
+}
+
+/** sets the solution value of all variables in the global relaxation solution to zero */
+SCIP_RETCODE SCIPclearRelaxSolVals(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPclearRelaxSolVals", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* the relaxation solution is already cleared */
+   if( SCIPrelaxationIsSolZero(scip->relaxation) )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   for( v = 0; v < nvars; v++ )
+      SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, 0.0, FALSE);
+
+   SCIPrelaxationSetSolObj(scip->relaxation, 0.0);
+   SCIPrelaxationSetSolZero(scip->relaxation, TRUE);
+
+   return SCIP_OKAY;
+}
+
+/** sets the values of the given variables in the global relaxation solution;
+ *  this solution can be filled by the relaxators and can be used by heuristics and for separation;
+ *  the solution is automatically cleared, s.t. all other variables get value 0.0
+ */
+SCIP_RETCODE SCIPsetRelaxSolVals(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables to set relaxator solution value for */
+   SCIP_VAR**            vars,               /**< array with variables to set value for */
+   SCIP_Real*            vals                /**< array with solution values of variables */
+   )
+{
+   int v;
+
+   assert(scip != NULL);
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxSolVals", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+
+   for( v = 0; v < nvars; v++ )
+      SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, vals[v], TRUE);
+
+   SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
+   SCIPrelaxationSetSolValid(scip->relaxation, TRUE); 
+
+   return SCIP_OKAY;
+}
+
+/** sets the values of the variables in the global relaxation solution to the values 
+ *  in the given primal solution; the relaxation solution can be filled by the relaxators 
+ *  and might be used by heuristics and for separation
+ */
+SCIP_RETCODE SCIPsetRelaxSolValsSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal relaxation solution */ 
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real* vals;
+   int nvars;
+   int v;
+
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetRelaxSolValsSol", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   /* alloc buffer array for solution values of the variables and get the values */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+   SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, vals) );
+
+   SCIP_CALL( SCIPclearRelaxSolVals(scip) );
+
+   for( v = 0; v < nvars; v++ )
+      SCIPvarSetRelaxSol(vars[v], scip->set, scip->relaxation, vals[v], FALSE);
+
+   SCIPrelaxationSetSolObj(scip->relaxation, SCIPsolGetObj(sol, scip->set, scip->transprob));
+
+   SCIPrelaxationSetSolZero(scip->relaxation, FALSE);
+   SCIPrelaxationSetSolValid(scip->relaxation, TRUE);
+
+   SCIPfreeBufferArray(scip, &vals);
+
+   return SCIP_OKAY;
+}
+
+/** returns whether the relaxation solution is valid */
+SCIP_Bool SCIPisRelaxSolValid(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisRelaxSolValid", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPrelaxationIsSolValid(scip->relaxation);
+}
+
+/** informs SCIP, that the relaxation solution is valid */
+SCIP_RETCODE SCIPmarkRelaxSolValid(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPmarkRelaxSolValid", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPrelaxationSetSolValid(scip->relaxation, TRUE);
+
+   return SCIP_OKAY;
+}
+
+/** informs SCIP, that the relaxation solution is invalid */
+SCIP_RETCODE SCIPmarkRelaxSolInvalid(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPmarkRelaxSolInvalid", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPrelaxationSetSolValid(scip->relaxation, FALSE);
+
+   return SCIP_OKAY;
+}
+
+/** gets the relaxation solution value of the given variable */
+SCIP_Real SCIPgetRelaxSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRelaxSolVal", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPrelaxationIsSolValid(scip->relaxation) )
+   {
+      SCIPerrorMessage("Relaxation Solution is not valid!\n");
+      SCIPABORT();
+   }
+
+   return SCIPvarGetRelaxSol(var, scip->set);
+}
+
+/** gets the relaxation solution objective value */
+SCIP_Real SCIPgetRelaxSolObj(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetRelaxSolObj", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPrelaxationIsSolValid(scip->relaxation) )
+   {
+      SCIPerrorMessage("Relaxation Solution is not valid!\n");
+      SCIPABORT();
+   }
+
+   return SCIPrelaxationGetSolObj(scip->relaxation);
+}
+
 
 /** gets strong branching information on COLUMN variable */
 SCIP_RETCODE SCIPgetVarStrongbranch(
@@ -11893,6 +12096,152 @@ int SCIPgetNPrioLPBranchCands(
    return npriolpcands;
 }
 
+/** gets branching candidates for  solution branching */
+/** gets branching candidates for relaxation solution branching along with solution values, scores, 
+ *  and number of branching candidates;
+ *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
+ *  list
+ */
+SCIP_RETCODE SCIPgetRelaxBranchCands(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           relaxcands,         /**< pointer to store the array of relax branching candidates, or NULL */
+   SCIP_Real**           relaxcandssol,      /**< pointer to store the array of relax candidate solution values, or NULL */
+   SCIP_Real**           relaxcandsscore,    /**< pointer to store the array of relax candidate scores, or NULL */
+   int*                  nrelaxcands,        /**< pointer to store the number of relax branching candidates, or NULL */
+   int*                  npriorelaxcands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriorelaxbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
+   int*                  npriorelaxints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
+   int*                  npriorelaximpls     /**< pointer to store the number of implicit integercandidates with maximal priority, 
+                                              *   or NULL */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPbranchcandGetRelaxCands(scip->branchcand, relaxcands, relaxcandssol, relaxcandsscore, nrelaxcands, 
+         npriorelaxcands, npriorelaxbins, npriorelaxints, npriorelaximpls) );
+
+   return SCIP_OKAY;
+}
+
+/** gets number of branching candidates for relaxation solution branching */
+int SCIPgetNRelaxBranchCands(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNRelaxCands(scip->branchcand);
+}
+
+/** gets number of branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPgetNPrioRelaxBranchCands(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioRelaxCands(scip->branchcand);
+}
+
+/** gets number of binary branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPgetNPrioRelaxBranchBins(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchBins", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioRelaxBins(scip->branchcand);
+}
+
+
+/** gets number of integer branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPgetNPrioRelaxBranchInts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchInts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioRelaxInts(scip->branchcand);
+}
+
+/** gets number of implicit integer branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPgetNPrioRelaxBranchImpls(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchImpls", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioRelaxImpls(scip->branchcand);
+}
+
+/** gets number of continuous branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPgetNPrioRelaxBranchConts(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPrioRelaxBranchConts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchcandGetNPrioRelaxConts(scip->branchcand);
+}
+
+/** insert variable, its score and its solution value into the relaxation branching candidate storage */
+SCIP_RETCODE SCIPaddRelaxBranchCand(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to insert */
+   SCIP_Real             score,              /**< score of relax candidate, e.g. infeasibility */
+   SCIP_Real             solval              /**< value of the variable in the relaxation's solution */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddRelaxBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPbranchcandAddRelaxCand(scip->branchcand, scip->set, var, score, solval) );
+   
+   return SCIP_OKAY;
+}
+
+/** removes all relax candidates from the storage for relaxation branching */
+void SCIPclearRelaxBranchCands(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPclearRelaxBranchCands", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIPbranchcandClearRelaxCands(scip->branchcand);
+}
+
+/** checks whether the given variable is contained in the candidate storage for relaxation branching */
+SCIP_Bool SCIPcontainsRelaxBranchCand(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to look for */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPcontainsRelaxBranchCand", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   return SCIPbranchcandContainsRelaxCand(scip->branchcand, var);
+}
+
+
+
 /** gets branching candidates for pseudo solution branching (nonfixed variables) along with the number of candidates */
 SCIP_RETCODE SCIPgetPseudoBranchCands(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12139,6 +12488,26 @@ SCIP_RETCODE SCIPcreateLPSol(
    return SCIP_OKAY;
 }
 
+/** creates a primal solution, initialized to the current relaxation solution */
+SCIP_RETCODE SCIPcreateRelaxSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreateRelaxSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPrelaxationIsSolValid(scip->relaxation) )
+   {
+      SCIPerrorMessage("relaxation solution is not valid\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolCreateRelaxSol(sol, scip->mem->solvemem, scip->set, scip->stat, scip->primal, scip->tree, scip->relaxation, heur) );
+
+   return SCIP_OKAY;
+}
+
 /** creates a primal solution, initialized to the current pseudo solution */
 SCIP_RETCODE SCIPcreatePseudoSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12254,6 +12623,25 @@ SCIP_RETCODE SCIPlinkLPSol(
    }
 
    SCIP_CALL( SCIPsolLinkLPSol(sol, scip->set, scip->stat, scip->tree, scip->lp) );
+
+   return SCIP_OKAY;
+}
+
+/** links a primal solution to the current relaxation solution */
+SCIP_RETCODE SCIPlinkRelaxSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPlinkRelaxSol", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPrelaxationIsSolValid(scip->relaxation) )
+   {
+      SCIPerrorMessage("relaxation solution is not valid\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsolLinkRelaxSol(sol, scip->set, scip->stat, scip->tree, scip->relaxation) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sol.h,v 1.57 2009/07/31 11:37:18 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sol.h,v 1.58 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   sol.h
  * @brief  internal methods for storing primal CIP solutions
@@ -93,6 +93,19 @@ SCIP_RETCODE SCIPsolCreateLPSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates primal CIP solution, initialized to the current relaxation solution */
+extern
+SCIP_RETCODE SCIPsolCreateRelaxSol(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates primal CIP solution, initialized to the current pseudo solution */
 extern
 SCIP_RETCODE SCIPsolCreatePseudoSol(
@@ -147,6 +160,16 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp                  /**< current LP data */
+   );
+
+/** copies current relaxation solution into CIP solution by linking */
+extern
+SCIP_RETCODE SCIPsolLinkRelaxSol(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
 /** copies current pseudo solution into CIP solution by linking */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.22 2009/04/06 13:06:59 bzfberth Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.23 2009/10/19 16:00:08 bzfgamra Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -237,6 +237,7 @@ SCIP_RETCODE SCIPrelaxExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
+   SCIP_Real*            lowerbound,         /**< pointer to lower bound computed by the relaxator */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -264,7 +265,7 @@ SCIP_RETCODE SCIPrelaxExec(
       SCIPclockStart(relax->relaxclock, set);
 
       /* call external relaxation method */
-      SCIP_CALL( relax->relaxexec(set->scip, relax, result) );
+      SCIP_CALL( relax->relaxexec(set->scip, relax, lowerbound, result) );
 
       /* stop timing */
       SCIPclockStop(relax->relaxclock, set);
@@ -420,3 +421,106 @@ void SCIPrelaxMarkUnsolved(
    relax->lastsolvednode = -1;
 }
 
+/* 
+ *  methods for the global relaxation data 
+ */
+
+/** creates global relaxation data */
+SCIP_RETCODE SCIPrelaxationCreate(
+   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+   SCIP_ALLOC( BMSallocMemory(relaxation) );
+   (*relaxation)->relaxsolobjval = 0.0;
+   (*relaxation)->relaxsolvalid = FALSE;
+   (*relaxation)->relaxsolzero = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** frees global relaxation data */
+SCIP_RETCODE SCIPrelaxationFree(
+   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+
+   BMSfreeMemory(relaxation);
+
+   return SCIP_OKAY;
+}
+
+/** sets the relaxsolzero flag in the relaxation data to the given value */
+void SCIPrelaxationSetSolZero(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Bool             iszero              /**< are all values of the relaxation solution set to zero? */
+   )
+{
+   assert(relaxation != NULL);
+
+   relaxation->relaxsolzero = iszero;
+}
+
+/** returns whether the global relaxation solution is cleared and all values are set to zero */
+SCIP_Bool SCIPrelaxationIsSolZero(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+
+   return relaxation->relaxsolzero;
+}
+
+/** sets the relaxsolvalid flag in the relaxation data to the given value */
+void SCIPrelaxationSetSolValid(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Bool             isvalid             /**< is the stored solution valid? */
+   )
+{
+   assert(relaxation != NULL);
+
+   relaxation->relaxsolvalid = isvalid;
+}
+
+/** returns whether the global relaxation solution is valid */
+SCIP_Bool SCIPrelaxationIsSolValid(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+
+   return relaxation->relaxsolvalid;
+}
+
+/** sets the objective value of the global relaxation solution */
+void SCIPrelaxationSetSolObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             obj                 /**< objective value */
+   )
+{
+   assert(relaxation != NULL);
+
+   relaxation->relaxsolobjval = obj;
+}
+
+/** returns the objective value of the global relaxation solution w.r.t. the transformed problem */
+SCIP_Real SCIPrelaxationGetSolObj(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+
+   return relaxation->relaxsolobjval;
+}
+
+/** adds the given value to the global relaxation solution's objective value */
+void SCIPrelaxationSolObjAdd(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             val                 /**< value to add to the objective value */
+   )
+{
+   assert(relaxation != NULL);
+
+   relaxation->relaxsolobjval += val;
+}

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.222 2009/09/10 13:47:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.223 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -5426,7 +5426,7 @@ void SCIPnodeGetParentBranchings(
    assert(branchvarssize >= 0);
   
    (*nbranchvars) = 0;
-   if( SCIPnodeGetDepth(node) == 0 )
+   if( SCIPnodeGetDepth(node) == 0 || node->domchg == NULL )
       return;
    nboundchgs = (int)node->domchg->domchgbound.nboundchgs;
    boundchgs = node->domchg->domchgbound.boundchgs;

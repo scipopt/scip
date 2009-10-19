@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.264 2009/09/11 14:39:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.265 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -33,6 +33,7 @@
 #include "scip/history.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/relax.h"
 #include "scip/var.h"
 #include "scip/implics.h"
 #include "scip/prob.h"
@@ -1661,6 +1662,7 @@ SCIP_RETCODE varCreate(
    (*var)->branchfactor = 1.0;
    (*var)->rootsol = 0.0;
    (*var)->rootredcost = SCIP_INVALID;
+   (*var)->relaxsol = 0.0;
    (*var)->primsolavg = 0.5 * (lb + ub);
    (*var)->conflictlb = SCIP_REAL_MIN;
    (*var)->conflictub = SCIP_REAL_MAX;
@@ -9097,6 +9099,139 @@ SCIP_Real SCIPvarGetRootRedcost(
       SCIPABORT();
       return SCIP_INVALID; /*lint !e527*/
    }
+}
+
+/** stores the solution value as relaxation solution in the problem variable */
+SCIP_RETCODE SCIPvarSetRelaxSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             solval,             /**< solution value in the current relaxation solution */
+   SCIP_Bool             updateobj           /**< should the objective value be updated? */
+   )
+{
+   assert(var != NULL);
+   assert(relaxation != NULL);
+
+   /* we want to store only values for non fixed variables (LOOSE or COLUMN); others have to be transformed */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      return SCIPvarSetRelaxSol(var->data.original.transvar, set, relaxation, solval, updateobj);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      if ( updateobj )
+         SCIPrelaxationSolObjAdd(relaxation, var->obj * (solval - var->relaxsol));
+      var->relaxsol = solval;
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_FIXED:
+      if( !SCIPsetIsEQ(set, solval, var->glbdom.lb) )
+      {
+         SCIPerrorMessage("cannot set relaxation solution value for variable <%s> fixed to %.15g to different value %.15g\n",
+            SCIPvarGetName(var), var->glbdom.lb, solval);
+         return SCIP_INVALIDDATA;
+      }
+      return SCIP_OKAY;
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
+      assert(!SCIPsetIsZero(set, var->data.aggregate.scalar));
+      return SCIPvarSetRelaxSol(var->data.aggregate.var, set, relaxation, (solval - var->data.aggregate.constant)/var->data.aggregate.scalar, updateobj);
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      SCIPerrorMessage("cannot set solution value for multiple aggregated variable\n");
+      return SCIP_INVALIDDATA;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarSetRelaxSol(var->negatedvar, set, relaxation, var->data.negate.constant - solval, updateobj);
+      
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      return SCIP_INVALIDDATA;
+   }
+}
+
+/** returns the solution value of the problem variable in the relaxation solution */
+SCIP_Real SCIPvarGetRelaxSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_Real solvalsum;
+   SCIP_Real solval;
+   int i;
+
+
+   assert(var != NULL);
+
+   /* only values for non fixed variables (LOOSE or COLUMN) are stored; others have to be transformed */
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      return SCIPvarGetRelaxSol(var->data.original.transvar, set);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+         return var->relaxsol;
+
+   case SCIP_VARSTATUS_FIXED:
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var));
+      assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var));
+      assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var));
+      return SCIPvarGetLbGlobal(var);
+
+   case SCIP_VARSTATUS_AGGREGATED: /* x = a*y + c  =>  y = (x-c)/a */
+      solval = SCIPvarGetRelaxSol(var->data.aggregate.var, set);
+      if( SCIPsetIsInfinity(set, solval) || SCIPsetIsInfinity(set, -solval) )
+      {
+         if( var->data.aggregate.scalar * solval > 0.0 )
+            return SCIPsetInfinity(set);
+         if( var->data.aggregate.scalar * solval < 0.0 )
+            return -SCIPsetInfinity(set);
+      }
+      return var->data.aggregate.scalar * solval + var->data.aggregate.constant;
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      solvalsum = var->data.multaggr.constant;
+      for( i = 0; i < var->data.multaggr.nvars; ++i )
+      {
+         solval = SCIPvarGetRelaxSol(var->data.multaggr.vars[i], set);
+         if( SCIPsetIsInfinity(set, solval) || SCIPsetIsInfinity(set, -solval) )
+         {
+            if( var->data.multaggr.scalars[i] * solval > 0.0 )
+               return SCIPsetInfinity(set);
+            if( var->data.multaggr.scalars[i] * solval < 0.0 )
+               return -SCIPsetInfinity(set);
+         }
+         solvalsum += var->data.multaggr.scalars[i] * solval;
+      }
+      return solvalsum;
+
+   case SCIP_VARSTATUS_NEGATED:
+      solval = SCIPvarGetRelaxSol(var->negatedvar, set);
+      if( SCIPsetIsInfinity(set, solval) )
+         return -SCIPsetInfinity(set);
+      if( SCIPsetIsInfinity(set, -solval) )
+         return SCIPsetInfinity(set);
+      return var->data.negate.constant - solval;
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
+/** returns the solution value of the transformed problem variable in the relaxation solution */
+SCIP_Real SCIPvarGetRelaxSolTransVar(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   return var->relaxsol;
 }
 
 /** returns a weighted average solution value of the variable in all feasible primal solutions found so far */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_relax.h,v 1.15 2009/07/31 11:37:18 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_relax.h,v 1.16 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   struct_relax.h
  * @brief  datastructures for relaxators
@@ -52,6 +52,15 @@ struct SCIP_Relax
    int                   freq;               /**< frequency for calling relaxator */
    SCIP_Bool             initialized;        /**< is relaxator initialized? */
 };
+
+/** relaxation information data */
+struct SCIP_Relaxation
+{
+   SCIP_Real             relaxsolobjval;
+   SCIP_Bool             relaxsolvalid;
+   SCIP_Bool             relaxsolzero;
+};
+
 
 #ifdef __cplusplus
 }

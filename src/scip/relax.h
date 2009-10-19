@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.18 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: relax.h,v 1.19 2009/10/19 16:00:08 bzfgamra Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators
@@ -99,6 +99,7 @@ SCIP_RETCODE SCIPrelaxExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    int                   depth,              /**< depth of current node */
+   SCIP_Real*            lowerbound,         /**< pointer to lower bound computed by the relaxator */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -115,6 +116,68 @@ extern
 SCIP_Bool SCIPrelaxIsSolved(
    SCIP_RELAX*           relax,              /**< relaxator */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
+   );
+
+/* 
+ *  methods for the global relaxation data 
+ */
+
+/** creates global relaxation data */
+extern
+SCIP_RETCODE SCIPrelaxationCreate(
+   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   );
+
+/** frees global relaxation data */
+extern
+SCIP_RETCODE SCIPrelaxationFree(
+   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   );
+
+/** sets the relaxsolzero flag in the relaxation data to the given value */
+extern
+void SCIPrelaxationSetSolZero(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Bool             iszero              /**< are all values of the relaxation solution set to zero? */
+   );
+
+/** returns whether the global relaxation solution is cleared and all values are set to zero */
+extern
+SCIP_Bool SCIPrelaxationIsSolZero(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   );
+
+/** sets the relaxsolvalid flag in the relaxation data to the given value */
+extern
+void SCIPrelaxationSetSolValid(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Bool             isvalid             /**< is the stored solution valid? */
+   );
+
+/** returns whether the global relaxation solution is valid */
+extern
+SCIP_Bool SCIPrelaxationIsSolValid(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   );
+
+/** sets the objective value of the global relaxation solution */
+extern
+void SCIPrelaxationSetSolObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             obj                 /**< objective value */
+   );
+
+/** returns the objective value of the global relaxation solution w.r.t. the transformed problem */
+extern
+SCIP_Real SCIPrelaxationGetSolObj(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   );
+
+/** adds the given value to the global relaxation solution's objective value */
+extern
+void SCIPrelaxationSolObjAdd(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             val                 /**< value to add to the objective value */
    );
 
 #ifdef __cplusplus

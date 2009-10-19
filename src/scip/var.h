@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.127 2009/09/04 08:40:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.128 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -952,6 +952,29 @@ void SCIPvarStoreRootSol(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
+   );
+
+/** returns the solution value of the problem variables in the relaxation solution */
+extern
+SCIP_Real SCIPvarGetRelaxSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** returns the solution value of the transformed problem variable in the relaxation solution */
+extern
+SCIP_Real SCIPvarGetRelaxSolTransVar(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** stores the solution value as relaxation solution in the problem variable */
+extern
+SCIP_RETCODE SCIPvarSetRelaxSol(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             solval,             /**< solution value in the current relaxation solution */
+   SCIP_Bool             updateobj           /**< should the objective value be updated? */
    );
 
 /** resolves variable to columns and adds them with the coefficient to the row */

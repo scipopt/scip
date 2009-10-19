@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.353 2009/09/23 20:47:05 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.354 2009/10/19 16:00:09 bzfgamra Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2078,6 +2078,74 @@ SCIP_RETCODE SCIPgetVarSols(
    int                   nvars,              /**< number of variables to get solution value for */
    SCIP_VAR**            vars,               /**< array with variables to get value for */
    SCIP_Real*            vals                /**< array to store solution values of variables */
+   );
+
+/** sets the relaxation solution value of all variables to zero */
+extern
+SCIP_RETCODE SCIPclearRelaxSolVals(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets the value of the given variable in the global relaxation solution;
+ *  this solution can be filled by the relaxators and can be used by heuristics and for separation;
+ *  You can use SCIPclearRelaxSolVals() to set all values to zero, initially;
+ *  after setting all solution values, you have to call SCIPmarkRelaxSolValid() 
+ *  to inform SCIP that the stored solution is valid
+ */
+extern
+SCIP_RETCODE SCIPsetRelaxSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to set value for */
+   SCIP_Real             val                 /**< solution value of variable */
+   );
+
+/** sets the relaxation solution value of the given variables and marks the relaxation solution to be valid
+ *  Attention: the values of all other variables are set to zero!
+ */
+extern
+SCIP_RETCODE SCIPsetRelaxSolVals(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nvars,              /**< number of variables to set relaxator solution value for */
+   SCIP_VAR**            vars,               /**< array with variables to set value for */
+   SCIP_Real*            vals                /**< array with solution values of variables */
+   );
+
+/** sets the relaxation solution values to the values in the given primal solution and marks the relaxation solution to be valid */
+extern
+SCIP_RETCODE SCIPsetRelaxSolValsSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal relaxation solution */ 
+   );
+
+/** returns whether the relaxation solution is valid */
+extern
+SCIP_Bool SCIPisRelaxSolValid(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** informs SCIP, that the relaxation solution is valid */
+extern
+SCIP_RETCODE SCIPmarkRelaxSolValid(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** informs SCIP, that the relaxation solution is invalid */
+extern
+SCIP_RETCODE SCIPmarkRelaxSolInvalid(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets the relaxation solution value of the given variable */
+extern
+SCIP_Real SCIPgetRelaxSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get value for */
+   );
+
+/** gets the relaxation solution objective value */
+extern
+SCIP_Real SCIPgetRelaxSolObj(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets strong branching information on COLUMN variable */
@@ -4443,6 +4511,85 @@ int SCIPgetNPrioLPBranchCands(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+
+/** gets branching candidates for  solution branching */
+/** gets branching candidates for relaxation solution branching along with solution values, scores, 
+ *  and number of branching candidates;
+ *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
+ *  list
+ */
+extern
+SCIP_RETCODE SCIPgetRelaxBranchCands(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           relaxcands,         /**< pointer to store the array of relax branching candidates, or NULL */
+   SCIP_Real**           relaxcandssol,      /**< pointer to store the array of relax candidate solution values, or NULL */
+   SCIP_Real**           relaxcandsscore,    /**< pointer to store the array of relax candidate scores, or NULL */
+   int*                  nrelaxcands,        /**< pointer to store the number of relax branching candidates, or NULL */
+   int*                  npriorelaxcands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriorelaxbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
+   int*                  npriorelaxints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
+   int*                  npriorelaximpls     /**< pointer to store the number of implicit integercandidates with maximal priority, 
+                                              *   or NULL */
+   );
+
+/** gets number of branching candidates for relaxation solution branching */
+extern
+int SCIPgetNRelaxBranchCands(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPgetNPrioRelaxBranchCands(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of binary branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPgetNPrioRelaxBranchBins(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of integer branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPgetNPrioRelaxBranchInts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of implicit integer branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPgetNPrioRelaxBranchImpls(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of continuous branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPgetNPrioRelaxBranchConts(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** insert variable, its score and its solution value into the relaxation branching candidate storage */
+extern
+SCIP_RETCODE SCIPaddRelaxBranchCand(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to insert */
+   SCIP_Real             score,              /**< score of relax candidate, e.g. infeasibility */
+   SCIP_Real             solval              /**< value of the variable in the relaxation's solution */
+   );
+
+/** removes all relax candidates from the storage for relaxation branching */
+extern
+void SCIPclearRelaxBranchCands(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** checks whether the given variable is contained in the candidate storage for relaxation branching */
+extern
+SCIP_Bool SCIPcontainsRelaxBranchCand(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to look for */
+   );
+
 /** gets branching candidates for pseudo solution branching (nonfixed variables) along with the number of candidates */
 extern
 SCIP_RETCODE SCIPgetPseudoBranchCands(
@@ -4591,6 +4738,14 @@ SCIP_RETCODE SCIPcreateLPSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates a primal solution, initialized to the current relaxation solution */
+extern
+SCIP_RETCODE SCIPcreateRelaxSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates a primal solution, initialized to the current pseudo solution */
 extern
 SCIP_RETCODE SCIPcreatePseudoSol(
@@ -4648,6 +4803,13 @@ SCIP_RETCODE SCIPfreeSol(
 /** links a primal solution to the current LP solution */
 extern
 SCIP_RETCODE SCIPlinkLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal solution */
+   );
+
+/** links a primal solution to the current relaxation solution */
+extern
+SCIP_RETCODE SCIPlinkRelaxSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< primal solution */
    );
