@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.53 2009/09/26 20:35:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.54 2009/10/19 11:18:26 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -2109,7 +2109,7 @@ SCIP_RETCODE presolveTryAddAND(
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
  * 
  *  For a product x*y, with y a binary variable and x a continous variable with finite bounds,
- *  an auxiliary variable z and the inequalities \f$ x^L * y \leq z \leq x^U * y \f$ and \f$ x - (1-y)*x^L \leq z \leq x - (1-y)*x^U \f$ are added.
+ *  an auxiliary variable z and the inequalities \f$ x^L * y \leq z \leq x^U * y \f$ and \f$ x - (1-y)*x^U \leq z \leq x - (1-y)*x^L \f$ are added.
  * 
  *  If x is a linear term consisting of more than one variable, it is split up in groups of linear terms of length at most maxnrvar.
  *  For each product of linear term of length at most maxnrvar with y, an auxiliary z and linear inequalities are added.
