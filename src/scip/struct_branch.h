@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.24 2009/07/31 11:37:18 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.25 2009/10/19 10:49:45 bzfgamra Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -39,12 +39,22 @@ struct SCIP_BranchCand
    SCIP_VAR**            lpcands;            /**< candidates for branching on LP solution (fractional integer variables) */
    SCIP_Real*            lpcandssol;         /**< solution values of LP candidates */
    SCIP_Real*            lpcandsfrac;        /**< fractionalities of LP candidates */
+   SCIP_VAR**            relaxcands;         /**< candidates for branching on relaxation solution */
+   SCIP_Real*            relaxcandsscore;    /**< scores of relaxation candidates, e.g. infeasibilities */
+   SCIP_Real*            relaxcandssol;      /**< values in relaxation solution of relaxation candidates */
    SCIP_VAR**            pseudocands;        /**< candidates for branching on pseudo solution (non-fixed integer variables) */
    int                   lpcandssize;        /**< number of available slots in lpcands array */
    int                   nlpcands;           /**< number of candidates for branching on LP solution */
    int                   npriolpcands;       /**< number of LP candidates with largest branch priority value */
    int                   npriolpbins;        /**< number of binary LP candidates with largest branch priority value */
    int                   lpmaxpriority;      /**< maximal branch priority of all LP candidates */
+   int                   relaxcandssize;     /**< number of available slots in relaxcands array */
+   int                   nrelaxcands;        /**< number of candidates for branching on relaxation solution */
+   int                   npriorelaxcands;    /**< number of relaxation candidates with largest branch priority value */
+   int                   npriorelaxbins;     /**< number of binary relaxation candidates with largest branch priority value */
+   int                   npriorelaxints;     /**< number of integer relaxation candidates with largest branch priority value */
+   int                   npriorelaximpls;    /**< number of implicit integer relaxation candidates with largest branch priority value */
+   int                   relaxmaxpriority;   /**< maximal branch priority of all relaxation candidates */
    int                   pseudocandssize;    /**< number of available slots in pseudocands array */
    int                   npseudocands;       /**< number of candidates for branching on pseudo solution */
    int                   npriopseudocands;   /**< number of pseudo candidates with largest branch priority value */
