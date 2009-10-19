@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.48 2009/07/31 11:37:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.49 2009/10/19 10:48:13 bzfgamra Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -72,6 +72,80 @@ SCIP_RETCODE SCIPbranchcandGetLPCands(
    SCIP_Real**           lpcandsfrac,        /**< pointer to store the array of LP candidate fractionalities, or NULL */
    int*                  nlpcands,           /**< pointer to store the number of LP branching candidates, or NULL */
    int*                  npriolpcands        /**< pointer to store the number of candidates with maximal priority, or NULL */
+   );
+
+/** gets branching candidates for relaxation solution branching */
+extern
+SCIP_RETCODE SCIPbranchcandGetRelaxCands(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_VAR***           relaxcands,         /**< pointer to store the array of relax branching candidates, or NULL */
+   SCIP_Real**           relaxcandssol,      /**< pointer to store the array of relax candidate solution values, or NULL */
+   SCIP_Real**           relaxcandsscore,    /**< pointer to store the array of relax candidate scores, or NULL */
+   int*                  nrelaxcands,        /**< pointer to store the number of relax branching candidates, or NULL */
+   int*                  npriorelaxcands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriorelaxbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
+   int*                  npriorelaxints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
+   int*                  npriorelaximpls     /**< pointer to store the number of implicit integercandidates with maximal priority, 
+                                              *   or NULL */
+   );
+
+/** gets number of branching candidates for relaxation solution branching */
+extern
+int SCIPbranchcandGetNRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of binary branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxBins(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of integer branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxInts(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of implicit integer branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxImpls(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** gets number of continuous branching candidates with maximal branch priority for relaxation solution branching */
+extern
+int SCIPbranchcandGetNPrioRelaxConts(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** insert variable, its score and its solution value into the relaxation branching candidate storage */
+extern
+SCIP_RETCODE SCIPbranchcandAddRelaxCand(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable to insert */
+   SCIP_Real             score,              /**< score of relax candidate, e.g. infeasibility */
+   SCIP_Real             solval              /**< value of the variable in the relaxation's solution */
+   );
+
+/** removes all relax candidates from the storage for relaxation branching */
+extern
+void SCIPbranchcandClearRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   );
+
+/** checks whether the given variable is contained in the candidate storage for relaxation branching */
+extern
+SCIP_Bool SCIPbranchcandContainsRelaxCand(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_VAR*             var                 /**< variable to look for */
    );
 
 /** gets branching candidates for pseudo solution branching (nonfixed variables) */

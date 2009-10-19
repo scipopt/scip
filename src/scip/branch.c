@@ -11,12 +11,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.82 2008/09/29 21:24:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.83 2009/10/19 10:48:13 bzfgamra Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
  * @author Tobias Achterberg
  * @author Timo Berthold
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -96,6 +97,31 @@ SCIP_RETCODE ensurePseudocandsSize(
    return SCIP_OKAY;
 }
 
+/** ensures, that relaxcands array can store at least num entries */
+static
+SCIP_RETCODE ensureRelaxcandsSize(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(branchcand->nrelaxcands <= branchcand->relaxcandssize);
+   
+   if( num > branchcand->relaxcandssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&branchcand->relaxcands, newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&branchcand->relaxcandsscore, newsize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&branchcand->relaxcandssol, newsize) );
+      branchcand->relaxcandssize = newsize;
+   }
+   assert(num <= branchcand->relaxcandssize);
+
+   return SCIP_OKAY;
+}
+
 
 
 /*
@@ -113,12 +139,22 @@ SCIP_RETCODE SCIPbranchcandCreate(
    (*branchcand)->lpcands = NULL;
    (*branchcand)->lpcandssol = NULL;
    (*branchcand)->lpcandsfrac = NULL;
+   (*branchcand)->relaxcands = NULL;
+   (*branchcand)->relaxcandssol = NULL;
+   (*branchcand)->relaxcandsscore = NULL;
    (*branchcand)->pseudocands = NULL;
    (*branchcand)->lpcandssize = 0;
    (*branchcand)->nlpcands = 0;
    (*branchcand)->npriolpcands = 0;
    (*branchcand)->npriolpbins = 0;
    (*branchcand)->lpmaxpriority = INT_MIN;
+   (*branchcand)->relaxcandssize = 0;
+   (*branchcand)->nrelaxcands = 0;
+   (*branchcand)->npriorelaxcands = 0;
+   (*branchcand)->npriorelaxbins = 0;
+   (*branchcand)->npriorelaxints = 0;
+   (*branchcand)->npriorelaximpls = 0;
+   (*branchcand)->relaxmaxpriority = INT_MIN;
    (*branchcand)->pseudocandssize = 0;
    (*branchcand)->npseudocands = 0;
    (*branchcand)->npriopseudocands = 0;
@@ -141,6 +177,9 @@ SCIP_RETCODE SCIPbranchcandFree(
    BMSfreeMemoryArrayNull(&(*branchcand)->lpcandssol);
    BMSfreeMemoryArrayNull(&(*branchcand)->lpcandsfrac);
    BMSfreeMemoryArrayNull(&(*branchcand)->pseudocands);
+   BMSfreeMemoryArrayNull(&(*branchcand)->relaxcands);
+   BMSfreeMemoryArrayNull(&(*branchcand)->relaxcandsscore);
+   BMSfreeMemoryArrayNull(&(*branchcand)->relaxcandssol);
    BMSfreeMemory(branchcand);
 
    return SCIP_OKAY;
@@ -320,6 +359,319 @@ SCIP_RETCODE SCIPbranchcandGetLPCands(
          : branchcand->npriolpcands);
 
    return SCIP_OKAY;
+}
+
+/** gets branching candidates for relaxation solution branching */
+SCIP_RETCODE SCIPbranchcandGetRelaxCands(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_VAR***           relaxcands,         /**< pointer to store the array of relax branching candidates, or NULL */
+   SCIP_Real**           relaxcandssol,      /**< pointer to store the array of relax candidate solution values, or NULL */
+   SCIP_Real**           relaxcandsscore,    /**< pointer to store the array of relax candidate scores, or NULL */
+   int*                  nrelaxcands,        /**< pointer to store the number of relax branching candidates, or NULL */
+   int*                  npriorelaxcands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
+   int*                  npriorelaxbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
+   int*                  npriorelaxints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
+   int*                  npriorelaximpls     /**< pointer to store the number of implicit integercandidates with maximal priority, 
+                                              *   or NULL */
+   )
+{
+
+   assert(branchcand != NULL);
+
+   /* assign return values */
+   if( relaxcands != NULL )
+      *relaxcands = branchcand->relaxcands;
+   if( relaxcandssol != NULL )
+      *relaxcandssol = branchcand->relaxcandssol;
+   if( relaxcandsscore != NULL )
+      *relaxcandsscore = branchcand->relaxcandsscore;
+   if( nrelaxcands != NULL )
+      *nrelaxcands = branchcand->nrelaxcands;
+   if( npriorelaxcands != NULL )
+      *npriorelaxcands = branchcand->npriorelaxcands;
+   if( npriorelaxbins != NULL )
+      *npriorelaxbins = branchcand->npriorelaxbins;
+   if( npriorelaxints != NULL )
+      *npriorelaxints = branchcand->npriorelaxints;
+   if( npriorelaximpls != NULL )
+      *npriorelaximpls = branchcand->npriorelaximpls;
+
+   return SCIP_OKAY;
+}
+
+/** gets number of branching candidates for relaxation solution branching */
+int SCIPbranchcandGetNRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->nrelaxcands;
+}
+
+/** gets number of branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPbranchcandGetNPrioRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriorelaxcands;
+}
+
+/** gets number of binary branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPbranchcandGetNPrioRelaxBins(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriorelaxbins;
+}
+
+/** gets number of integer branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPbranchcandGetNPrioRelaxInts(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriorelaxints;
+}
+
+/** gets number of implicit integer branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPbranchcandGetNPrioRelaxImpls(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriorelaximpls;
+}
+
+/** gets number of continuous branching candidates with maximal branch priority for relaxation solution branching */
+int SCIPbranchcandGetNPrioRelaxConts(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   return branchcand->npriorelaxcands - branchcand->npriorelaxbins - branchcand->npriorelaxints - branchcand->npriorelaximpls;
+}
+
+/** insert variable, its score and its solution value into the relaxation branching candidate storage */
+SCIP_RETCODE SCIPbranchcandAddRelaxCand(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable to insert */
+   SCIP_Real             score,              /**< score of relax candidate, e.g. infeasibility */
+   SCIP_Real             solval              /**< value of the variable in the relaxation's solution */
+   )
+{
+   SCIP_VARTYPE vartype;
+   int branchpriority;
+   int insertpos;
+
+   assert(branchcand != NULL);
+   assert(var != NULL);
+   assert(branchcand->npriorelaxcands <= branchcand->nrelaxcands);
+   assert(branchcand->nrelaxcands <= branchcand->relaxcandssize);
+
+   vartype = SCIPvarGetType(var);
+   branchpriority = SCIPvarGetBranchPriority(var);
+   insertpos = branchcand->nrelaxcands;
+
+   SCIP_CALL( ensureRelaxcandsSize(branchcand, set, branchcand->nrelaxcands+1) );
+
+   SCIPdebugMessage("inserting relax candidate <%s> of type %d and priority %d into candidate set (maxprio: %d), score = %g, solval = %g\n",
+      SCIPvarGetName(var), vartype, branchpriority, branchcand->relaxmaxpriority, score, solval);
+
+   /* insert the variable into relaxcands, making sure, that the highest priority candidates are at the front
+    * and ordered binaries, integers, implicit integers, continuous
+    */
+   if( branchpriority > branchcand->relaxmaxpriority )
+   {
+      /* candidate has higher priority than the current maximum:
+       * move it to the front and declare it to be the single best candidate
+       */
+      branchcand->relaxcands[insertpos] = branchcand->relaxcands[0];
+      branchcand->relaxcandsscore[insertpos] = branchcand->relaxcandsscore[0];
+      branchcand->relaxcandssol[insertpos] = branchcand->relaxcandssol[0];
+
+      insertpos = 0;
+
+      branchcand->npriorelaxcands = 1;
+      branchcand->npriorelaxbins = (vartype == SCIP_VARTYPE_BINARY ? 1 : 0);
+      branchcand->npriorelaxints = (vartype == SCIP_VARTYPE_INTEGER ? 1 : 0);
+      branchcand->npriorelaximpls = (vartype == SCIP_VARTYPE_IMPLINT ? 1 : 0);
+      branchcand->relaxmaxpriority = branchpriority;
+   }
+   else if( branchpriority == branchcand->relaxmaxpriority )
+   {
+      /* candidate has equal priority as the current maximum:
+       * move away the first non-maximal priority candidate, move the current candidate to the correct
+       * slot (binaries first, integers next, implicits next, continuous last) and increase the number 
+       * of maximal priority candidates
+       */
+      if( insertpos != branchcand->npriorelaxcands )
+      {
+         branchcand->relaxcands[insertpos] = branchcand->relaxcands[branchcand->npriorelaxcands];
+         branchcand->relaxcandsscore[insertpos] = branchcand->relaxcandsscore[branchcand->npriorelaxcands];
+         branchcand->relaxcandssol[insertpos] = branchcand->relaxcandssol[branchcand->npriorelaxcands];
+
+         insertpos = branchcand->npriorelaxcands;
+      }
+      branchcand->npriorelaxcands++;
+      if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER || vartype == SCIP_VARTYPE_IMPLINT )
+      {
+         if( insertpos != branchcand->npriorelaxbins + branchcand->npriorelaxints + branchcand->npriorelaximpls )
+         {
+            branchcand->relaxcands[insertpos] =
+               branchcand->relaxcands[branchcand->npriorelaxbins + branchcand->npriorelaxints + branchcand->npriorelaximpls];
+            branchcand->relaxcandsscore[insertpos] =
+               branchcand->relaxcandsscore[branchcand->npriorelaxbins + branchcand->npriorelaxints + branchcand->npriorelaximpls];
+            branchcand->relaxcandssol[insertpos] =
+               branchcand->relaxcandssol[branchcand->npriorelaxbins + branchcand->npriorelaxints + branchcand->npriorelaximpls];
+
+            insertpos = branchcand->npriorelaxbins + branchcand->npriorelaxints + branchcand->npriorelaximpls;
+         }
+         branchcand->npriorelaximpls++;
+
+
+         if( vartype == SCIP_VARTYPE_BINARY || vartype == SCIP_VARTYPE_INTEGER )
+         {
+            if( insertpos != branchcand->npriorelaxbins + branchcand->npriorelaxints )
+            {
+               branchcand->relaxcands[insertpos] = 
+                  branchcand->relaxcands[branchcand->npriorelaxbins + branchcand->npriorelaxints];
+               branchcand->relaxcandsscore[insertpos] = 
+                  branchcand->relaxcandsscore[branchcand->npriorelaxbins + branchcand->npriorelaxints];
+               branchcand->relaxcandssol[insertpos] = 
+                  branchcand->relaxcandssol[branchcand->npriorelaxbins + branchcand->npriorelaxints];
+
+               insertpos = branchcand->npriorelaxbins + branchcand->npriorelaxints;
+            }
+            branchcand->npriorelaxints++;
+            branchcand->npriorelaximpls--;
+         
+
+            if( vartype == SCIP_VARTYPE_BINARY )
+            {
+               if( insertpos != branchcand->npriorelaxbins )
+               {
+                  branchcand->relaxcands[insertpos] = branchcand->relaxcands[branchcand->npriorelaxbins];
+                  branchcand->relaxcandsscore[insertpos] = branchcand->relaxcandsscore[branchcand->npriorelaxbins];
+                  branchcand->relaxcandssol[insertpos] = branchcand->relaxcandssol[branchcand->npriorelaxbins];
+
+                  insertpos = branchcand->npriorelaxbins;
+               }
+               branchcand->npriorelaxbins++;
+               branchcand->npriorelaxints--;
+            }
+         }
+      }
+   }
+   branchcand->relaxcands[insertpos] = var;
+   branchcand->relaxcandsscore[insertpos] = score;
+   branchcand->relaxcandssol[insertpos] = solval;
+   branchcand->nrelaxcands++;
+
+   SCIPdebugMessage(" -> inserted at position %d (npriorelaxcands=%d)\n", insertpos, branchcand->npriorelaxcands);
+
+   assert(0 <= branchcand->npriorelaxcands && branchcand->npriorelaxcands <= branchcand->nrelaxcands);
+   assert(0 <= branchcand->npriorelaxbins && branchcand->npriorelaxbins <= branchcand->npriorelaxcands);
+   assert(0 <= branchcand->npriorelaxints && branchcand->npriorelaxints <= branchcand->npriorelaxcands);
+   assert(0 <= branchcand->npriorelaximpls && branchcand->npriorelaximpls <= branchcand->npriorelaxcands);
+
+   return SCIP_OKAY;
+}
+
+/** removes all relax candidates from the storage for relaxation branching */
+void SCIPbranchcandClearRelaxCands(
+   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   branchcand->nrelaxcands = 0;
+   branchcand->npriorelaxcands = 0;
+   branchcand->npriorelaxbins = 0;
+   branchcand->npriorelaxints = 0;
+   branchcand->npriorelaximpls = 0;
+}
+
+/** checks whether the given variable is contained in the candidate storage for relaxation branching */
+SCIP_Bool SCIPbranchcandContainsRelaxCand(
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_VAR*             var                 /**< variable to look for */
+   )
+{
+   SCIP_VARTYPE vartype;
+   int branchpriority;
+   int i;
+
+   assert(branchcand != NULL);
+   assert(var != NULL);
+   assert(branchcand->npriorelaxcands <= branchcand->nrelaxcands);
+   assert(branchcand->nrelaxcands <= branchcand->relaxcandssize);
+
+   vartype = SCIPvarGetType(var);
+   branchpriority = SCIPvarGetBranchPriority(var);
+
+   /* look for the variable in the relaxcands, using the fact, that the highest priority candidates are at the front
+    * and ordered binaries, integers, implicit integers, continuous
+    */
+   if( branchpriority > branchcand->relaxmaxpriority )
+   {
+      /* the branching priority of the variable is higher than the maximal priority contained in the array;
+       * the variable can thus not be contained */
+      return FALSE;
+   }
+   if( branchpriority == branchcand->relaxmaxpriority )
+   {
+      /* variable has equal priority as the current maximum:
+       * look for it in the correct slot (binaries first, integers next, implicits next, continuous last)
+       */
+      if( vartype == SCIP_VARTYPE_BINARY )
+      {
+         /* the variable is binary, look at the first branchcand->npriorelaxbins slots */
+         for( i = 0; i < branchcand->npriorelaxbins; i++ )
+            if( branchcand->relaxcands[i] == var )
+               return TRUE;
+         return FALSE;
+      }
+      if( vartype == SCIP_VARTYPE_INTEGER )
+      {
+         /* the variable is integer, look at the slots containing integers */
+         for( i = 0; i < branchcand->npriorelaxints; i++ )
+            if( branchcand->relaxcands[branchcand->npriorelaxbins + i] == var )
+               return TRUE;
+         return FALSE;
+      }
+      if( vartype == SCIP_VARTYPE_IMPLINT )
+      {
+         /* the variable is implicit integer, look at the slots containing implicit integers */
+         for( i = 0; i < branchcand->npriorelaximpls; i++ )
+            if( branchcand->relaxcands[branchcand->npriorelaxbins + branchcand->npriorelaxints + i] == var )
+               return TRUE;
+         return FALSE;
+      }
+      /* the variable is continuous, look at the slots containing continuous variables */
+      assert(vartype == SCIP_VARTYPE_CONTINUOUS);
+      for( i = branchcand->npriorelaxbins + branchcand->npriorelaxints + branchcand->npriorelaximpls; 
+           i < branchcand->npriorelaxcands; i++ )
+         if( branchcand->relaxcands[i] == var )
+            return TRUE;
+      return FALSE;
+   }
+   /* the branching priority of the variable is lower than the maximal priority contained in the array;
+    * look for the variable in the candidates which do not have maximal priority */
+   assert(branchpriority < branchcand->relaxmaxpriority);
+
+   for( i = branchcand->npriorelaxcands; i < branchcand->nrelaxcands; i++ )
+      if( branchcand->relaxcands[i] == var )
+         return TRUE;
+   return FALSE;
 }
 
 /** gets branching candidates for pseudo solution branching (nonfixed variables) */
