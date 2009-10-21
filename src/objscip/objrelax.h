@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.24 2009/09/10 18:11:43 bzfberth Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.25 2009/10/21 12:26:16 bzfgamra Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -148,6 +148,7 @@ public:
    virtual SCIP_RETCODE scip_exec(
       SCIP*              scip,               /**< SCIP data structure */
       SCIP_RELAX*        relax,              /**< the relaxator itself */
+      SCIP_Real*         lowerbound,         /**< pointer to store a lowerbound for the current node */
       SCIP_RESULT*       result              /**< pointer to store the result of the relaxation call */
       ) = 0;
 };

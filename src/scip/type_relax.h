@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_relax.h,v 1.19 2009/10/19 16:00:09 bzfgamra Exp $"
+#pragma ident "@(#) $Id: type_relax.h,v 1.20 2009/10/21 12:26:16 bzfgamra Exp $"
 
 /**@file   type_relax.h
  * @ingroup TYPEDEFINITIONS
@@ -92,6 +92,7 @@ typedef struct SCIP_RelaxData SCIP_RELAXDATA;     /**< locally defined relaxator
  *  input:
  *  - scip            : SCIP main data structure
  *  - relax           : the relaxator itself
+ *  - lowerbound      : pointer to store a lowerbound for the current node
  *  - result          : pointer to store the result of the relaxation call
  *
  *  possible return values for *result (if more than one applies, the first in the list should be used):

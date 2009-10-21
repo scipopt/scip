@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.15 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.16 2009/10/21 12:26:16 bzfgamra Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -152,7 +152,7 @@ SCIP_DECL_RELAXEXEC(relaxExecObj)
    assert(relaxdata->objrelax != NULL);
 
    /* call virtual method of relax object */
-   SCIP_CALL( relaxdata->objrelax->scip_exec(scip, relax, result) );
+   SCIP_CALL( relaxdata->objrelax->scip_exec(scip, relax, lowerbound, result) );
 
    return SCIP_OKAY;
 }
