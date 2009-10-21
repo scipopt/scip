@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.68 2009/04/06 13:07:00 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.69 2009/10/21 15:14:03 bzfgamra Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -196,6 +196,8 @@ SCIP_RETCODE SCIPsepaInit(
    sepa->ndomredsfound = 0;
    sepa->ncallsatnode = 0;
    sepa->ncutsfoundatnode = 0;
+   sepa->lpwasdelayed = FALSE;
+   sepa->solwasdelayed = FALSE;
 
    if( sepa->sepainit != NULL )
    {
