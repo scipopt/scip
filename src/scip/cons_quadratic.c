@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.54 2009/10/19 11:18:26 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.55 2009/10/22 16:06:05 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -48,6 +48,8 @@
 #ifdef WITH_CONSBRANCHNL
 #include "cons_branchnonlinear.h"
 #endif
+
+/* #define USE_RELAXBRANCH */
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
@@ -165,11 +167,13 @@ struct SCIP_ConshdlrData
 #ifdef WITH_CONSBRANCHNL
    SCIP_CONSHDLR*        branchnl;                  /**< constraint handler for branching on nonlinear variables */
 #else
+#ifndef USE_RELAXBRANCH
    SCIP_HASHMAP*         branchcand;                /**< branching candidates */
    VARINFEASIBILITY*     varinfeas;                 /**< list of variable infeasibilities */
    
    char                  strategy;                  /**< branching strategy */
    SCIP_Real             mindistbrpointtobound;     /**< minimal (fractional) distance of branching point to bound */
+#endif
 #endif
    
    SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
@@ -191,6 +195,7 @@ struct SCIP_QuadConsUpgrade
  */
 
 #ifndef WITH_CONSBRANCHNL
+#ifndef USE_RELAXBRANCH
 /** clears list of branching candidates */
 static
 SCIP_RETCODE clearBranchingCandidates(
@@ -595,6 +600,7 @@ SCIP_RETCODE updateVarInfeasibility(
    
    return SCIP_OKAY;
 }
+#endif
 #endif
 
 /** translate from one value of infinity to another
@@ -3589,7 +3595,11 @@ SCIP_RETCODE registerVariableInfeasibilities(
 #ifdef WITH_CONSBRANCHNL
             SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvars[j], MAX(gap, 0.), SCIPinfinity(scip)) );
 #else
+#ifdef USE_RELAXBRANCH
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvars[j], MAX(gap, 0.0), xval) );
+#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->quadvars[j], MAX(gap, 0.0)) );
+#endif
 #endif
             ++*nnotify;
          }
@@ -3604,7 +3614,11 @@ SCIP_RETCODE registerVariableInfeasibilities(
 #ifdef WITH_CONSBRANCHNL
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], SCIPinfinity(scip), SCIPinfinity(scip)) );
 #else
+#ifdef USE_RELAXBRANCH
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars1[j], SCIPinfinity(scip), SCIPgetSolVal(scip, NULL, consdata->bilinvars1[j])) );
+#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars1[j], SCIPinfinity(scip)) );
+#endif
 #endif
             ++*nnotify;
             continue;
@@ -3617,7 +3631,11 @@ SCIP_RETCODE registerVariableInfeasibilities(
 #ifdef WITH_CONSBRANCHNL
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], SCIPinfinity(scip), SCIPinfinity(scip)) );
 #else
+#ifdef USE_RELAXBRANCH
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars2[j], SCIPinfinity(scip), SCIPgetSolVal(scip, NULL, consdata->bilinvars2[j])) );
+#else
             SCIP_CALL(  updateVarInfeasibility(scip, conshdlr, consdata->bilinvars2[j], SCIPinfinity(scip)) );
+#endif
 #endif
             ++*nnotify;
             continue;
@@ -3660,7 +3678,11 @@ SCIP_RETCODE registerVariableInfeasibilities(
 #ifdef WITH_CONSBRANCHNL
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], gap, SCIPinfinity(scip)) );
 #else
+#ifdef USE_RELAXBRANCH
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars1[j], gap, xval) );
+#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars1[j], gap) );
+#endif
 #endif
             ++*nnotify;
          }
@@ -3669,7 +3691,11 @@ SCIP_RETCODE registerVariableInfeasibilities(
 #ifdef WITH_CONSBRANCHNL
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], gap, SCIPinfinity(scip)) );
 #else
+#ifdef USE_RELAXBRANCH
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars2[j], gap, yval) );
+#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars2[j], gap) );
+#endif
 #endif
             ++*nnotify;
          }
@@ -3729,7 +3755,11 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       assert(conshdlrdata->branchnl != NULL);
       SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, *brvar, brvarval, SCIPinfinity(scip)) );
 #else
+#ifdef USE_RELAXBRANCH
+      SCIP_CALL( SCIPaddRelaxBranchCand(scip, *brvar, brvarval, SCIPgetSolVal(scip, NULL, *brvar)) );
+#else
       SCIP_CALL( updateVarInfeasibility(scip, conshdlr, *brvar, brvarval) );
+#endif
 #endif
    }
    
@@ -4707,8 +4737,10 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
       return SCIP_PLUGINNOTFOUND;
    }
 #else
+#ifndef USE_RELAXBRANCH
    /* TODO: what is a good estimate for the hashmap size? should the constraint handler notify about the number of potential candidates? */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->branchcand, SCIPblkmem(scip), SCIPgetNVars(scip) ? SCIPgetNVars(scip) : 1) );
+#endif
 #endif
    
 #ifndef WITH_LAPACK
@@ -4737,9 +4769,11 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 #ifdef WITH_CONSBRANCHNL
    conshdlrdata->branchnl = NULL;
 #else
+#ifndef USE_RELAXBRANCH
    SCIP_CALL( clearBranchingCandidates(scip, conshdlr) );
    if( conshdlrdata->branchcand != NULL )
       SCIPhashmapFree(&conshdlrdata->branchcand);
+#endif
 #endif
    
    return SCIP_OKAY;
@@ -5248,8 +5282,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    }
 
 #ifndef WITH_CONSBRANCHNL
+#ifndef USE_RELAXBRANCH
    SCIP_CALL( enforceByBranching(scip, conshdlr, result) );
    assert(*result == SCIP_BRANCHED);
+#endif
 #endif
    
    return SCIP_OKAY;
@@ -5314,14 +5350,20 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
 #ifdef WITH_CONSBRANCHNL
             SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol, SCIPinfinity(scip)) );
 #else
+#ifdef USE_RELAXBRANCH
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol, SCIPgetSolVal(scip, NULL, consdata->quadvars[i])) );
+#else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol) );
+#endif
 #endif
          }
    }
 
 #ifndef WITH_CONSBRANCHNL
+#ifndef USE_RELAXBRANCH
    SCIP_CALL( enforceByBranching(scip, conshdlr, result) );
    assert(*result == SCIP_BRANCHED);
+#endif
 #endif
    
    return SCIP_OKAY;
@@ -6179,6 +6221,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->cutmaxrange, FALSE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
 #ifndef WITH_CONSBRANCHNL
+#ifndef USE_RELAXBRANCH
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/strategy",
          "strategy to use for selecting branching variable: b: rb-int-br, r: rb-int-br-rev, i: rb-inf",
          &conshdlrdata->strategy, FALSE, 'r', "bri", NULL, NULL) );
@@ -6186,6 +6229,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/mindistbrpointtobound",
          "minimal fractional distance of branching point to variable bounds; a value of 0.5 leads to branching always in the middle of a bounded domain",
          &conshdlrdata->mindistbrpointtobound, FALSE, 0.2, 0.0001, 0.5, NULL, NULL) );
+#endif
 #endif
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change to a quadratic constraint",
