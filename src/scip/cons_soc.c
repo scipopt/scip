@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.2 2009/09/21 13:58:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.3 2009/10/22 12:43:47 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -189,6 +189,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    return SCIP_OKAY;
 }
 
+#ifdef QUADCONSUPGD_PRIORITY
 /** tries to upgrade a quadratic constraint to a SOC constraint
  * @todo more general quadratic constraints then sums of squares might allow an upgrade to a SOC
  */
@@ -401,6 +402,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    
    return SCIP_OKAY;
 }
+#endif
 
 /** evaluates the left hand side of a SOC constraint */ 
 static
@@ -2735,8 +2737,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/branchfreq",   "frequency of branching on a node if only weak cuts could be added in enforcement; 0 to turn off",               &conshdlrdata->branchfreq,   TRUE,  0, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",      "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",                          &conshdlrdata->glineur,      FALSE, TRUE,          NULL, NULL) );
 
+#ifdef QUADCONSUPGD_PRIORITY
    /* notify function that upgrades quadratic constraint to SOC's */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+#endif
 
    return SCIP_OKAY;
 }
