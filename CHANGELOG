@@ -4,17 +4,17 @@ SCIP version NEXT
 interface:
 
 features:
-- constraint handler can now register their upgrade functions for quadratic constraints to the
-  constraint handler for quadratic constraints (similar to LINCONSUPGD)
+- constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
 - added branchcands for relaxator solution, that can be added by the relaxator and used by branching rules
 - added relaxsol to variables, s.t. a relaxator can store a solution on which branching or separation can be done
-- added relaxation structure to SCIP, that represents global relaxation information indepentent from a specific relaxator;
+- added relaxation structure to SCIP, it represents global relaxation information independent from a specific relaxator;
   at the moment, it contains information about the relaxation solution stored in the variables: objective value and validness
   
 
 performance improvements:
 
 fixed bugs:
+- fixed bug in lpi_clp.cpp: SCIPlpiChgBounds checks if the column status exists in Clp before using it
 - fixed bug concerning assert(!SCIPlpDivingObjChanged(lp)) which was caused by wrong infinity double parameters for cplex
 - fixed bug in reader_zpl.c which appeared using the parameter "reading/zplreader/parameters" 
 - fixed bug in trivial heuristic: the locking solution might have falsely initialized some values to zero
