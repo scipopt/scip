@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.34 2009/09/08 20:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.35 2009/10/27 17:02:46 bzfgamra Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -1770,7 +1770,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
    /* create hash table to test for multiple cliques */
    hashtablesize = SCIPcalcHashtableSize(10*cliquetable->ncliques);
-   hashtablesize = MAX(hashtablesize, SCIP_HASHSIZE_CLIQUES);
+   hashtablesize = MAX(hashtablesize, (set->misc_usesmalltables ? SCIP_HASHSIZE_CLIQUES_SMALL : SCIP_HASHSIZE_CLIQUES));
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashgetkeyClique, hashkeyeqClique, hashkeyvalClique, NULL) );
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: def.h,v 1.163 2009/09/16 15:21:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: def.h,v 1.164 2009/10/27 17:02:46 bzfgamra Exp $"
 
 /**@file   def.h
  * @brief  common defines and data types used in all packages of SCIP
@@ -163,11 +163,14 @@ extern "C" {
  * Memory settings
  */
 
-#define SCIP_HASHSIZE_NAMES      131101 /**< size of hash table in name tables */
-#define SCIP_HASHSIZE_CUTPOOLS   131101 /**< size of hash table in cut pools */
-#define SCIP_HASHSIZE_CLIQUES    131101 /**< size of hash table in clique tables */
-#define SCIP_HASHSIZE_PARAMS       4099 /**< size of hash table in parameter name tables */
-#define SCIP_HASHSIZE_VBC        131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
+#define SCIP_HASHSIZE_PARAMS         4099 /**< size of hash table in parameter name tables */
+#define SCIP_HASHSIZE_NAMES          131101 /**< size of hash table in name tables */
+#define SCIP_HASHSIZE_CUTPOOLS       131101 /**< size of hash table in cut pools */
+#define SCIP_HASHSIZE_CLIQUES        131101 /**< size of hash table in clique tables */
+#define SCIP_HASHSIZE_NAMES_SMALL    8011   /**< size of hash table in name tables for small problems */
+#define SCIP_HASHSIZE_CUTPOOLS_SMALL 8011   /**< size of hash table in cut pools for small problems */
+#define SCIP_HASHSIZE_CLIQUES_SMALL  8011   /**< size of hash table in clique tables for small problems */
+#define SCIP_HASHSIZE_VBC            131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
 
 /*#define BMS_NOBLOCKMEM*/
 

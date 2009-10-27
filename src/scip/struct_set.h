@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.82 2009/08/31 17:39:41 bzfpfets Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.83 2009/10/27 17:02:47 bzfgamra Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -218,6 +218,9 @@ struct SCIP_Set
    
    /* miscellaneous settings */
    SCIP_Bool             misc_catchctrlc;    /**< should the CTRL-C interrupt be caught by SCIP? */
+   SCIP_Bool             misc_usevartable;   /**< should a hashtable be used to map from variable names to variables? */
+   SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
+   SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
 
    /* node selection settings */

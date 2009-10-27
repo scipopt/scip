@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.64 2009/07/31 11:37:16 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.65 2009/10/27 17:02:46 bzfgamra Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -58,6 +58,7 @@ extern
 SCIP_RETCODE SCIPprobCreate(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< problem name */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */

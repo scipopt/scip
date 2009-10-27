@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.204 2009/08/31 17:38:48 bzfpfets Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.205 2009/10/27 17:02:47 bzfgamra Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -179,6 +179,9 @@
 /* Miscellaneous */
 
 #define SCIP_DEFAULT_MISC_CATCHCTRLC       TRUE /**< should the CTRL-C interrupt be caught by SCIP? */
+#define SCIP_DEFAULT_MISC_USEVARTABLE      TRUE /**< should a hashtable be used to map from variable names to variables? */
+#define SCIP_DEFAULT_MISC_USECONSTABLE     TRUE /**< should a hashtable be used to map from constraint names to constraints? */
+#define SCIP_DEFAULT_MISC_USESMALLTABLES  FALSE /**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
 #define SCIP_DEFAULT_MISC_EXACTSOLVE      FALSE /**< should the problem be solved exactly (with proven dual bounds)? */
 
 
@@ -794,6 +797,21 @@ SCIP_RETCODE SCIPsetCreate(
          "misc/catchctrlc",
          "should the CTRL-C interrupt be caught by SCIP?",
          &(*set)->misc_catchctrlc, FALSE, SCIP_DEFAULT_MISC_CATCHCTRLC,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/usevartable",
+         "should a hashtable be used to map from variable names to variables?",
+         &(*set)->misc_usevartable, FALSE, SCIP_DEFAULT_MISC_USEVARTABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/useconstable",
+         "should a hashtable be used to map from constraint names to constraints?",
+         &(*set)->misc_useconstable, FALSE, SCIP_DEFAULT_MISC_USECONSTABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "misc/usesmalltables",
+         "should smaller hashtables be used? yields better performance for small problems with about 100 variables",
+         &(*set)->misc_usesmalltables, FALSE, SCIP_DEFAULT_MISC_USESMALLTABLES,
          NULL, NULL) );
    /**@todo activate exactsolve parameter and finish implementation of solving MIPs exactly */
 #if 0

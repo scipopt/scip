@@ -24,6 +24,9 @@ plugins:
 - added packing/partitioning orbitope constraint handler for symmetry handling (cons_orbitope.h/c)
 
 parameters:
+- added parameter misc/usesmalltables which results in using smaller tables for names, cliques and cuts and improves the performace for smaller instances
+- added parameter misc/usevartable and misc/useconstable which turns on/off the usage of hashtables mapping from variable/constraint names to the 
+  variables/constraints; when turned off, SCIPfindVar() and SCIPfindCons() may not be used; the hashtables can be turned off for submips to improve the performance
 
 SCIP version 1.2.0
 ===============

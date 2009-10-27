@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.106 2009/09/08 20:41:30 bzfberth Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.107 2009/10/27 17:02:46 bzfgamra Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -184,6 +184,7 @@ SCIP_Bool varHasName(
 SCIP_RETCODE SCIPprobCreate(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name,               /**< problem name */
    SCIP_DECL_PROBDELORIG ((*probdelorig)),   /**< frees user data of original problem */
    SCIP_DECL_PROBTRANS   ((*probtrans)),     /**< creates user data of transformed problem by transforming original user data */
@@ -205,8 +206,14 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->probdeltrans = probdeltrans;
    (*prob)->probinitsol = probinitsol;
    (*prob)->probexitsol = probexitsol;
-   SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem, SCIP_HASHSIZE_NAMES,
-         SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
+   if( set->misc_usevartable )
+   {
+      SCIP_CALL( SCIPhashtableCreate(&(*prob)->varnames, blkmem, 
+            (set->misc_usesmalltables ? SCIP_HASHSIZE_NAMES_SMALL : SCIP_HASHSIZE_NAMES),
+            SCIPhashGetKeyVar, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
+   }
+   else
+      (*prob)->varnames = NULL;
    (*prob)->vars = NULL;
    (*prob)->varssize = 0;
    (*prob)->nvars = 0;
@@ -221,8 +228,14 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->deletedvars = NULL;
    (*prob)->deletedvarssize = 0;
    (*prob)->ndeletedvars = 0;
-   SCIP_CALL( SCIPhashtableCreate(&(*prob)->consnames, blkmem, SCIP_HASHSIZE_NAMES,
-         SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
+   if( set->misc_useconstable )
+   {
+      SCIP_CALL( SCIPhashtableCreate(&(*prob)->consnames, blkmem,
+            (set->misc_usesmalltables ? SCIP_HASHSIZE_NAMES_SMALL : SCIP_HASHSIZE_NAMES),
+            SCIPhashGetKeyCons, SCIPhashKeyEqString, SCIPhashKeyValString, NULL) );
+   }
+   else
+      (*prob)->consnames = NULL;
    (*prob)->conss = NULL;
    (*prob)->consssize = 0;
    (*prob)->nconss = 0;
@@ -315,9 +328,16 @@ SCIP_RETCODE SCIPprobFree(
    BMSfreeMemoryArrayNull(&(*prob)->deletedvars);
 
    /* free hash tables for names */
-   SCIPhashtableFree(&(*prob)->varnames);
-   SCIPhashtableFree(&(*prob)->consnames);
-
+   if( set->misc_usevartable )
+   {
+      assert((*prob)->varnames != NULL);
+      SCIPhashtableFree(&(*prob)->varnames);
+   }
+   if( set->misc_useconstable )
+   {
+      assert((*prob)->consnames != NULL);
+      SCIPhashtableFree(&(*prob)->consnames);
+   }
    BMSfreeMemoryArray(&(*prob)->name);
    BMSfreeMemory(prob);
    
@@ -353,7 +373,7 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* create target problem data (probdelorig and probtrans are not needed, probdata is set later) */
    (void) SCIPsnprintf(transname, SCIP_MAXSTRLEN, "t_%s", source->name);
-   SCIP_CALL( SCIPprobCreate(target, blkmem, transname, NULL, NULL, source->probdeltrans, 
+   SCIP_CALL( SCIPprobCreate(target, blkmem, set, transname, NULL, NULL, source->probdeltrans, 
                   source->probinitsol, source->probexitsol, NULL, TRUE) );
    SCIPprobSetObjsense(*target, source->objsense);
 
@@ -654,7 +674,7 @@ SCIP_RETCODE SCIPprobAddVar(
    probInsertVar(prob, var);
 
    /* add variable's name to the namespace */
-   if( varHasName(var) )
+   if( varHasName(var) && prob->varnames != NULL )
    {
       SCIP_CALL( SCIPhashtableInsert(prob->varnames, (void*)var) );
    }
@@ -760,7 +780,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          }
          
          /* remove variable's name from the namespace */
-         if( varHasName(var) )
+         if( varHasName(var) && prob->varnames != NULL )
          {
             assert(SCIPhashtableExists(prob->varnames, (void*)var));
             SCIP_CALL( SCIPhashtableRemove(prob->varnames, (void*)var) );
@@ -918,7 +938,7 @@ SCIP_RETCODE SCIPprobAddCons(
    SCIPconsCapture(cons);
 
    /* add constraint's name to the namespace */
-   if( consHasName(cons) )
+   if( consHasName(cons) && prob->consnames != NULL )
    {
       SCIP_CALL( SCIPhashtableInsert(prob->consnames, (void*)cons) );
    }
@@ -982,7 +1002,7 @@ SCIP_RETCODE SCIPprobDelCons(
    assert(!cons->enabled || cons->updatedeactivate);
 
    /* remove constraint's name from the namespace */
-   if( consHasName(cons) )
+   if( consHasName(cons) && prob->consnames != NULL )
    {
       assert(SCIPhashtableExists(prob->consnames, (void*)cons));
       SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
@@ -1453,6 +1473,12 @@ SCIP_VAR* SCIPprobFindVar(
    assert(prob != NULL);
    assert(name != NULL);
 
+   if( prob->varnames == NULL )
+   {
+      SCIPerrorMessage("Cannot find variable if parameter <misc/usevartable> is set to FALSE!\n");
+      SCIPABORT();
+   }
+
    return (SCIP_VAR*)(SCIPhashtableRetrieve(prob->varnames, (char*)name));
 }
 
@@ -1464,6 +1490,12 @@ SCIP_CONS* SCIPprobFindCons(
 {
    assert(prob != NULL);
    assert(name != NULL);
+
+   if( prob->varnames == NULL )
+   {
+      SCIPerrorMessage("Cannot find constraint if parameter <misc/useconstable> is set to FALSE!\n");
+      SCIPABORT();
+   }
 
    return (SCIP_CONS*)(SCIPhashtableRetrieve(prob->consnames, (char*)name));
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cutpool.c,v 1.58 2009/04/06 13:06:50 bzfberth Exp $"
+#pragma ident "@(#) $Id: cutpool.c,v 1.59 2009/10/27 17:02:46 bzfgamra Exp $"
 
 /**@file   cutpool.c
  * @brief  methods for storing cuts in a cut pool
@@ -253,6 +253,7 @@ int SCIPcutGetAge(
 SCIP_RETCODE SCIPcutpoolCreate(
    SCIP_CUTPOOL**        cutpool,            /**< pointer to store cut pool */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
    int                   agelimit,           /**< maximum age a cut can reach before it is deleted from the pool */
    SCIP_Bool             globalcutpool       /**< is this the global cut pool of SCIP? */
    )
@@ -264,7 +265,8 @@ SCIP_RETCODE SCIPcutpoolCreate(
 
    SCIP_CALL( SCIPclockCreate(&(*cutpool)->poolclock, SCIP_CLOCKTYPE_DEFAULT) );
 
-   SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, SCIP_HASHSIZE_CUTPOOLS,
+   SCIP_CALL( SCIPhashtableCreate(&(*cutpool)->hashtable, blkmem, 
+         (set->misc_usesmalltables ? SCIP_HASHSIZE_CUTPOOLS_SMALL : SCIP_HASHSIZE_CUTPOOLS),
          hashGetKeyCut, hashKeyEqCut, hashKeyValCut, NULL) );
 
    (*cutpool)->cuts = NULL;

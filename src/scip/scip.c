@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.525 2009/10/19 16:00:08 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.526 2009/10/27 17:02:46 bzfgamra Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -2586,7 +2586,7 @@ SCIP_RETCODE SCIPcreateProb(
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
    SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set) );
-   SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, name,
+   SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probdata, FALSE) );
 
    return SCIP_OKAY;
@@ -4929,7 +4929,7 @@ SCIP_RETCODE initSolve(
    /* init solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
-   SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set->sepa_cutagelimit, TRUE) );
+   SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->solvemem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp) );
 
    /* switch stage to SOLVING */
@@ -11226,7 +11226,7 @@ SCIP_RETCODE SCIPcreateCutpool(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateCutpool", FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPcutpoolCreate(cutpool, scip->mem->solvemem, agelimit, FALSE) );
+   SCIP_CALL( SCIPcutpoolCreate(cutpool, scip->mem->solvemem, scip->set, agelimit, FALSE) );
 
    return SCIP_OKAY;
 }
