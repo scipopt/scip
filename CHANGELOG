@@ -9,7 +9,7 @@ features:
 - added relaxsol to variables, s.t. a relaxator can store a solution on which branching or separation can be done
 - added relaxation structure to SCIP, it represents global relaxation information independent from a specific relaxator;
   at the moment, it contains information about the relaxation solution stored in the variables: objective value and validness
-  
+- the MPS reader can now read MIQPs where the quadratic objective function is specified by a QMATRIX or QUADOBJ section
 
 performance improvements:
 
