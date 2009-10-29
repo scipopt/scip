@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.57 2009/09/23 08:54:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.58 2009/10/29 16:14:16 bzfviger Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -491,7 +491,7 @@ void SCIPsortIntPtr(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of two joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order */
+/** sort of three joint arrays of ints/ints/Longints, sorted by first array in non-decreasing order */
 extern
 void SCIPsortIntIntLong(
    int*                  intarray1,          /**< int array to be sorted */
@@ -500,12 +500,21 @@ void SCIPsortIntIntLong(
    int                   len                 /**< length of arrays */
    );
 
-/** sort of two joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order */
+/** sort of three joint arrays of ints/ints/pointers, sorted by first array in non-decreasing order */
 extern
 void SCIPsortIntIntPtr(
    int*                  intarray1,          /**< int array to be sorted */
    int*                  intarray2,          /**< second int array to be permuted in the same way */
    void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of ints/pointers/reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortIntPtrReal(
+   int*                  intarray,           /**< int array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< real array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -1060,6 +1069,17 @@ void SCIPsortedvecInsertIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
    );
 
+/** insert a new element into three joint arrays of ints/pointers/Reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecInsertIntPtrReal(
+   int*                  intarray,           /**< int array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int                   keyval,             /**< key value of new element */
+   void*                 field1val,          /**< additional value of new element */
+   SCIP_Real             field2val,          /**< additional value of new element */
+   int*                  len                 /**< pointer to length of arrays (will be increased by 1) */
+   );
 
 /** insert a new element into four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
 extern
@@ -1651,6 +1671,15 @@ void SCIPsortedvecDelPosIntPtr(
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
 
+/** delete the element at the given position from three joint arrays of ints/pointers/Reals, sorted by first array in non-decreasing order */
+extern
+void SCIPsortedvecDelPosIntPtrReal(
+   int*                  intarray,           /**< int array to be sorted */
+   void**                ptrarray,           /**< pointer array to be permuted in the same way */
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be permuted in the same way */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
 
 /** delete the element at the given position from four joint arrays of ints/pointers/ints/Reals, sorted by first array in non-decreasing order */
 extern
