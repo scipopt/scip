@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.33 2009/09/23 12:37:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.34 2009/10/30 17:08:57 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1086,7 +1086,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d\n", 
       SCIPnlpiGetTermstat(scip, heurdata->nlpi), SCIPnlpiGetSolstat(scip, heurdata->nlpi));
    
-   if( SCIPnlpiGetTermstat(scip, heurdata->nlpi) >= SCIP_NLPITERMSTAT_MEMERR )
+   if( SCIPnlpiGetTermstat(scip, heurdata->nlpi) >= SCIP_NLPTERMSTAT_MEMERR )
    {  /* oops, something did not went well at all */
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, 
          "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  

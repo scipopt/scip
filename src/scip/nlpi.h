@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.5 2009/09/11 16:02:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.6 2009/10/30 17:08:58 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -254,7 +254,7 @@ SCIP_NLPSOLSTAT SCIPnlpiGetSolstat(
 
 /** gives termination reason; return: Termination Status */
 extern
-SCIP_NLPITERMSTAT SCIPnlpiGetTermstat(
+SCIP_NLPTERMSTAT SCIPnlpiGetTermstat(
    SCIP*                 scip,               /**< pointer to SCIP */              
    SCIP_NLPI*            nlpi                /**< pointer to NLPI datastructure */
 );
@@ -314,7 +314,7 @@ extern
 SCIP_RETCODE SCIPnlpiGetIntPar(
    SCIP*                 scip,               /**< pointer to SCIP */              
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPARAM        type,               /**< parameter number */
+   SCIP_NLPPARAM         type,               /**< parameter number */
    int*                  ival                /**< pointer to store the parameter value */
 );
 
@@ -323,7 +323,7 @@ extern
 SCIP_RETCODE SCIPnlpiSetIntPar(
    SCIP*                 scip,               /**< pointer to SCIP */              
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPARAM        type,               /**< parameter number */
+   SCIP_NLPPARAM         type,               /**< parameter number */
    int                   ival                /**< parameter value */
 );
 
@@ -332,7 +332,7 @@ extern
 SCIP_RETCODE SCIPnlpiGetRealPar(
    SCIP*                 scip,               /**< pointer to SCIP */              
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPARAM        type,               /**< parameter number */
+   SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real*            dval                /**< pointer to store the parameter value */
 );
 
@@ -341,7 +341,7 @@ extern
 SCIP_RETCODE SCIPnlpiSetRealPar(
    SCIP*                 scip,               /**< pointer to SCIP */              
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
-   SCIP_NLPIPARAM        type,               /**< parameter number */
+   SCIP_NLPPARAM         type,               /**< parameter number */
    SCIP_Real             dval                /**< parameter value */
 );
 

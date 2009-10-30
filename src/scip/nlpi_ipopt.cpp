@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.10 2009/09/13 14:37:06 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.11 2009/10/30 17:08:58 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -69,7 +69,7 @@ public:
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
    
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
-   SCIP_NLPITERMSTAT           lasttermstat; /**< termination status from last run */
+   SCIP_NLPTERMSTAT            lasttermstat; /**< termination status from last run */
    SCIP_Real*                  lastsol;      /**< solution from last run, if available */
    int                         lastniter;    /**< number of iterations in last run */
    SCIP_Real                   lasttime;     /**< time spend in last run */
@@ -77,7 +77,7 @@ public:
    SCIP_NlpiData()
    : oracle(NULL),
      firstrun(TRUE), initguess(NULL),
-     lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPITERMSTAT_OTHER), lastsol(NULL),
+     lastsolstat(SCIP_NLPSOLSTAT_UNKNOWN), lasttermstat(SCIP_NLPTERMSTAT_OTHER), lastsol(NULL),
      lastniter(-1), lasttime(-1.0)
    { }
 };
@@ -275,7 +275,7 @@ void SCIPnlpiIpoptInvalidateSolution(
    
    SCIPfreeMemoryArrayNull(scip, &data->lastsol);
    data->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-   data->lasttermstat = SCIP_NLPITERMSTAT_OTHER;
+   data->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
 }
 
 /** initializes an NLP interface structure
@@ -818,7 +818,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
             SCIPwarningMessage("Ipopt failed because of an invalid number in function or derivative value\n");
             SCIPnlpiIpoptInvalidateSolution(scip, nlpi);
             data->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-            data->lasttermstat = SCIP_NLPITERMSTAT_EVALERR;
+            data->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
          default: ;
       }
 
@@ -1808,26 +1808,26 @@ void ScipNLP::finalize_solution(
       case SUCCESS:
       case STOP_AT_ACCEPTABLE_POINT:
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_OKAY;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
          assert(x != NULL);
          break;
          
       case FEASIBLE_POINT_FOUND:
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_OKAY;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
          assert(x != NULL);
          break;
          
       case MAXITER_EXCEEDED:
          check_feasibility = true;
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_ITLIM;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
          break;
          
       case CPUTIME_EXCEEDED:
          check_feasibility = true;
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_TILIM;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
          break;
          
       case STOP_AT_TINY_STEP:
@@ -1835,39 +1835,39 @@ void ScipNLP::finalize_solution(
       case ERROR_IN_STEP_COMPUTATION:
          check_feasibility = true;
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_NUMERR;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
          break;
 
       case LOCAL_INFEASIBILITY:
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_OKAY;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
          break;
 
       case DIVERGING_ITERATES:
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_UOBJLIM;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_UOBJLIM;
          break;
 
       case INVALID_NUMBER_DETECTED:
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_EVALERR;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
          break;
 
       case USER_REQUESTED_STOP:
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_TILIM;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
          break;
 
       case TOO_FEW_DEGREES_OF_FREEDOM:
       case INTERNAL_ERROR:
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_OTHER;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
          break;
 
       default:
          SCIPerrorMessage("Ipopt returned with unknown solution status %d\n", status);
          nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-         nlpidata->lasttermstat = SCIP_NLPITERMSTAT_OTHER;
+         nlpidata->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
          break;
    }
 
@@ -1881,7 +1881,7 @@ void ScipNLP::finalize_solution(
          if( retcode != SCIP_OKAY )
          {
             nlpidata->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-            nlpidata->lasttermstat = retcode == SCIP_NOMEMORY ? SCIP_NLPITERMSTAT_MEMERR : SCIP_NLPITERMSTAT_OTHER;
+            nlpidata->lasttermstat = retcode == SCIP_NOMEMORY ? SCIP_NLPTERMSTAT_MEMERR : SCIP_NLPTERMSTAT_OTHER;
             return;
          }
       }

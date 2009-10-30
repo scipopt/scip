@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.12 2009/09/23 20:33:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.13 2009/10/30 17:08:58 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -49,7 +49,7 @@ enum SCIP_NlpParam
    SCIP_NLPPAR_ITLIM          =  6,      /**< NLP iteration limit (int) */
    SCIP_NLPPAR_TILIM          =  7       /**< NLP time limit (real) */
 };
-typedef enum SCIP_NlpParam SCIP_NLPIPARAM;  /**< NLP solver parameter */
+typedef enum SCIP_NlpParam SCIP_NLPPARAM;  /**< NLP solver parameter */
 
 /** NLP solution status */
 enum SCIP_NlpSolStat
@@ -65,20 +65,20 @@ enum SCIP_NlpSolStat
 typedef enum SCIP_NlpSolStat SCIP_NLPSOLSTAT;      /** NLP solution status */
 
 /** NLP solver termination status */
-enum SCIP_NlpiTermStat
+enum SCIP_NlpTermStat
 {
-   SCIP_NLPITERMSTAT_OKAY          = 0,    /**< terminated successfully */
-   SCIP_NLPITERMSTAT_TILIM         = 1,    /**< time limit exceeded */
-   SCIP_NLPITERMSTAT_ITLIM         = 2,    /**< iteration limit exceeded */
-   SCIP_NLPITERMSTAT_LOBJLIM       = 3,    /**< lower objective limit reached */
-   SCIP_NLPITERMSTAT_UOBJLIM       = 4,    /**< upper objective limit (= infinity) reached */
-   SCIP_NLPITERMSTAT_NUMERR        = 5,    /**< stopped on numerical error */
-   SCIP_NLPITERMSTAT_EVALERR       = 6,    /**< stopped on function evaluation error */
-   SCIP_NLPITERMSTAT_MEMERR        = 7,    /**< memory exceeded */
-   SCIP_NLPITERMSTAT_LICERR        = 8,    /**< licence error */
-   SCIP_NLPITERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
+   SCIP_NLPTERMSTAT_OKAY          = 0,    /**< terminated successfully */
+   SCIP_NLPTERMSTAT_TILIM         = 1,    /**< time limit exceeded */
+   SCIP_NLPTERMSTAT_ITLIM         = 2,    /**< iteration limit exceeded */
+   SCIP_NLPTERMSTAT_LOBJLIM       = 3,    /**< lower objective limit reached */
+   SCIP_NLPTERMSTAT_UOBJLIM       = 4,    /**< upper objective limit (= infinity) reached */
+   SCIP_NLPTERMSTAT_NUMERR        = 5,    /**< stopped on numerical error */
+   SCIP_NLPTERMSTAT_EVALERR       = 6,    /**< stopped on function evaluation error */
+   SCIP_NLPTERMSTAT_MEMERR        = 7,    /**< memory exceeded */
+   SCIP_NLPTERMSTAT_LICERR        = 8,    /**< licence error */
+   SCIP_NLPTERMSTAT_OTHER         = 9     /**< other error (= this should never happen) */
 };
-typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination status */
+typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination status */
 
 /** initializes an NLP interface structure
  * 
@@ -317,7 +317,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  * 
  * return: Termination Status
  */
-#define SCIP_DECL_NLPIGETTERMSTAT(x) SCIP_NLPITERMSTAT x (SCIP* scip, SCIP_NLPI* nlpi)
+#define SCIP_DECL_NLPIGETTERMSTAT(x) SCIP_NLPTERMSTAT x (SCIP* scip, SCIP_NLPI* nlpi)
 
 /** gives primal solution
  * 
@@ -406,7 +406,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  * output:
  *  - ival parameter value
  */
-#define SCIP_DECL_NLPIGETINTPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPARAM type, int* ival)
+#define SCIP_DECL_NLPIGETINTPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPPARAM type, int* ival)
 
 /** sets integer parameter of NLP
  * 
@@ -416,7 +416,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  *  - type parameter number
  *  - ival parameter value
  */
-#define SCIP_DECL_NLPISETINTPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPARAM type, int ival)
+#define SCIP_DECL_NLPISETINTPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPPARAM type, int ival)
 
 /** gets floating point parameter of NLP
  * 
@@ -429,7 +429,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  * output:
  *  - dval parameter value
  */
-#define SCIP_DECL_NLPIGETREALPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPARAM type, SCIP_Real* dval)
+#define SCIP_DECL_NLPIGETREALPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPPARAM type, SCIP_Real* dval)
 
 /** sets floating point parameter of NLP
  * 
@@ -439,7 +439,7 @@ typedef enum SCIP_NlpiTermStat SCIP_NLPITERMSTAT;  /** NLP solver termination st
  *  - type parameter number
  *  - dval parameter value
  */
-#define SCIP_DECL_NLPISETREALPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPIPARAM type, SCIP_Real dval)
+#define SCIP_DECL_NLPISETREALPAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, SCIP_NLPPARAM type, SCIP_Real dval)
 
 /**@} */
 #ifdef __cplusplus
