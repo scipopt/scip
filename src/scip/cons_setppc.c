@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.144 2009/09/08 20:41:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.145 2009/10/30 18:26:49 bzfpfets Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -2927,6 +2927,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    int oldnfixedvars;
+   int oldnaggrvars;
    int oldndelconss;
    int firstchange;
    int firstclique;
@@ -2942,6 +2943,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    *result = SCIP_DIDNOTFIND;
    oldnfixedvars = *nfixedvars;
    oldndelconss = *ndelconss;
+   oldnaggrvars = *naggrvars;
    cutoff = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -2966,7 +2968,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /*SCIPdebugMessage("presolving set partitioning / packing / covering constraint <%s>\n", SCIPconsGetName(cons));*/
 
       /* remove all variables that are fixed to zero */
-      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *nfixedvars > oldnfixedvars )
+      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || *naggrvars > oldnaggrvars || *nfixedvars > oldnfixedvars )
       {
          SCIP_CALL( applyFixings(scip, cons) );
       }
