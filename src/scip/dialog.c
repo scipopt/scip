@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.52 2009/09/04 15:58:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.53 2009/11/04 16:05:35 bzfviger Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -442,10 +442,13 @@ SCIP_RETCODE SCIPdialoghdlrGetWord(
 
       /* strip trailing spaces */
       len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
-      while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+      if( len > 0 )
       {
-         dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
-         len--;
+         while( isspace(dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+         {
+            dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
+            len--;
+         }
       }
 
       /* insert command in command history */
