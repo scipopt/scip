@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.205 2009/10/27 17:02:47 bzfgamra Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.206 2009/11/04 17:09:30 bzfgleix Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -849,7 +849,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/feastol",
-         "LP feasibility tolerance for constraints",
+         "feasibility tolerance for constraints",
          &(*set)->num_feastol, FALSE, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdFeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -2805,7 +2805,7 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
    return SCIP_OKAY;
 }
 
-/** sets LP feasibility tolerance */
+/** sets feasibility tolerance */
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             feastol             /**< new feasibility tolerance */
@@ -3443,7 +3443,7 @@ SCIP_Bool SCIPsetIsFeasNegative(
    return EPSN(val, set->num_feastol);
 }
 
-/** checks, if value is integral within the LP feasibility bounds */
+/** checks, if value is integral within the feasibility bounds */
 SCIP_Bool SCIPsetIsFeasIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to process */

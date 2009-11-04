@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.102 2009/09/09 15:29:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.103 2009/11/04 17:09:30 bzfgleix Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -611,7 +611,7 @@ SCIP_RETCODE SCIPsetSetVerbLevel(
    SCIP_VERBLEVEL        verblevel           /**< verbosity level for message output */
    );
 
-/** sets LP feasibility tolerance */
+/** sets feasibility tolerance */
 extern
 SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -956,7 +956,7 @@ SCIP_Bool SCIPsetIsFeasNegative(
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** checks, if value is integral within the LP feasibility bounds */
+/** checks, if value is integral within the feasibility bounds */
 extern
 SCIP_Bool SCIPsetIsFeasIntegral(
    SCIP_SET*             set,                /**< global SCIP settings */
