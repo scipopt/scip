@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.h,v 1.2 2009/11/03 16:53:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.h,v 1.3 2009/11/04 11:52:28 bzfgleix Exp $"
 
 /**@file   cons_soc.h
  * @brief  constraint handler for second order cone constraints
@@ -97,7 +97,7 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
 /** Gets the number of variables on the left hand side of a SOC constraint.
  */
 extern
-int SCIPgetNVarsSOC(
+int SCIPgetNLhsVarsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -105,7 +105,7 @@ int SCIPgetNVarsSOC(
 /** Gets the variables on the left hand side of a SOC constraint.
  */
 extern
-SCIP_VAR** SCIPgetVarsSOC(
+SCIP_VAR** SCIPgetLhsVarsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -113,7 +113,7 @@ SCIP_VAR** SCIPgetVarsSOC(
 /** Gets the coefficients of the variables on the left hand side of a SOC constraint, or NULL if all are equal to 1.0.
  */
 extern
-SCIP_Real* SCIPgetCoefsSOC(
+SCIP_Real* SCIPgetLhsCoefsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -121,7 +121,7 @@ SCIP_Real* SCIPgetCoefsSOC(
 /** Gets the offsets of the variables on the left hand side of a SOC constraint, or NULL if all are equal to 0.0.
  */
 extern
-SCIP_Real* SCIPgetOffsetsSOC(
+SCIP_Real* SCIPgetLhsOffsetsSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
@@ -129,7 +129,7 @@ SCIP_Real* SCIPgetOffsetsSOC(
 /** Gets the constant on the left hand side of a SOC constraint.
  */
 extern
-SCIP_Real SCIPgetConstantSOC(
+SCIP_Real SCIPgetLhsConstantSOC(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
