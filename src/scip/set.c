@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.206 2009/11/04 17:09:30 bzfgleix Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.207 2009/11/05 10:32:02 bzfgleix Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -854,7 +854,7 @@ SCIP_RETCODE SCIPsetCreate(
          paramChgdFeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
          "numerics/dualfeastol",
-         "LP feasibility tolerance for reduced costs",
+         "feasibility tolerance for reduced costs in LP solution",
          &(*set)->num_dualfeastol, FALSE, SCIP_DEFAULT_DUALFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdDualfeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, blkmem,
@@ -2818,7 +2818,7 @@ SCIP_RETCODE SCIPsetSetFeastol(
    return SCIP_OKAY;
 }
 
-/** sets LP feasibility tolerance for reduced costs */
+/** sets feasibility tolerance for reduced costs in LP solution */
 SCIP_RETCODE SCIPsetSetDualfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             dualfeastol         /**< new reduced costs feasibility tolerance */

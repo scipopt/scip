@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.103 2009/11/04 17:09:30 bzfgleix Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.104 2009/11/05 10:32:02 bzfgleix Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -618,7 +618,7 @@ SCIP_RETCODE SCIPsetSetFeastol(
    SCIP_Real             feastol             /**< new feasibility tolerance */
    );
 
-/** sets LP feasibility tolerance for reduced costs */
+/** sets feasibility tolerance for reduced costs in LP solution */
 extern
 SCIP_RETCODE SCIPsetSetDualfeastol(
    SCIP_SET*             set,                /**< global SCIP settings */
