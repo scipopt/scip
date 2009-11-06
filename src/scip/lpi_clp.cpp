@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.63 2009/09/21 21:45:26 bzfpfets Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.64 2009/11/06 19:23:18 bzfviger Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -61,7 +61,6 @@
 #include <ClpPrimalColumnSteepest.hpp>
 #include <ClpDualRowSteepest.hpp>
 #include <CoinIndexedVector.hpp>
-#include <ClpFactorization.hpp>
 #include <config_clp.h>
 
 #include <iostream>
