@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.344 2009/09/16 18:49:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.345 2009/11/06 15:15:20 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -5438,6 +5438,10 @@ SCIP_RETCODE convertLongEquality(
          }
       }
    }
+
+   /* do not multi aggregate binary variables */
+   if( bestslacktype == SCIP_VARTYPE_BINARY )
+      return SCIP_OKAY;
 
    /* if all coefficients and variables are integral, the right hand side must also be integral */
    if( coefsintegral && varsintegral && !SCIPisFeasIntegral(scip, consdata->rhs) )
