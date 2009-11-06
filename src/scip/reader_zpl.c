@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.47 2009/09/27 21:31:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.48 2009/11/06 12:04:37 bzfviger Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -193,117 +193,117 @@ Bool xlp_addcon_term(
       /* if the constraint gives an indicator constraint */
       if ( flags & LP_FLAG_CON_INDIC )
       {
-	 Bool lhsIndCons = FALSE;  /* generate lhs form for indicator constraints */
-	 Bool rhsIndCons = FALSE;  /* generate rhs form for indicator constraints */
+         Bool lhsIndCons = FALSE;  /* generate lhs form for indicator constraints */
+         Bool rhsIndCons = FALSE;  /* generate rhs form for indicator constraints */
 
-	 /* currently indicator constraints can only handle "<=" constraints */
-	 switch( type )
-	 {
-	 case CON_LHS:
-	    lhsIndCons = TRUE;
-	    break;
-	 case CON_RHS:
-	    rhsIndCons = TRUE;
-	    break;
-	 case CON_RANGE:
-	 case CON_EQUAL:
-	    lhsIndCons = TRUE;
-	    rhsIndCons = TRUE;
-	    break;
-	 case CON_FREE:
-	 default:
-	    SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
-	    readerror_ = TRUE;
-	    break;
-	 }
+         /* currently indicator constraints can only handle "<=" constraints */
+         switch( type )
+         {
+            case CON_LHS:
+               lhsIndCons = TRUE;
+               break;
+            case CON_RHS:
+               rhsIndCons = TRUE;
+               break;
+            case CON_RANGE:
+            case CON_EQUAL:
+               lhsIndCons = TRUE;
+               rhsIndCons = TRUE;
+               break;
+            case CON_FREE:
+            default:
+               SCIPwarningMessage("invalid constraint type <%d> in ZIMPL callback xlp_addcon()\n", type);
+               readerror_ = TRUE;
+               break;
+         }
 
-	 /* insert lhs form of indicator */
-	 if ( lhsIndCons )
-	 {
-	    SCIP_CALL_ABORT( SCIPcreateConsIndicator(scip_, &cons, name, NULL, 0, NULL, NULL, -sciplhs,
-		  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
-	    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-	    
-	    for (i = 0; i < term_get_elements(term); i++)
-	    {
-	       SCIP_VAR* scipvar;
-	       SCIP_Real scipval;
-	       const Mono* mono = term_get_element(term, i);
-	       MFun mfun;
+         /* insert lhs form of indicator */
+         if ( lhsIndCons )
+         {
+            SCIP_CALL_ABORT( SCIPcreateConsIndicator(scip_, &cons, name, NULL, 0, NULL, NULL, -sciplhs,
+               initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+            SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
-	       scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
-		
-	       /* check whether variable is the binary variable */
-	       mfun = mono_get_function(mono);
-	       if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
-	       {
-		  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
-		  SCIP_CALL( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
-	       }
-	       else
-	       {
-		  assert(!numb_equal(mono_get_coeff(mono), numb_zero()));
-		  assert(mono_is_linear(mono));
-      
-		  scipval = -numb_todbl(mono_get_coeff(mono));
-		  SCIP_CALL_ABORT( SCIPaddVarIndicator(scip_, cons, scipvar, scipval) );
-	       }
-	    }
-	 }
+            for (i = 0; i < term_get_elements(term); i++)
+            {
+               SCIP_VAR* scipvar;
+               SCIP_Real scipval;
+               const Mono* mono = term_get_element(term, i);
+               MFun mfun;
 
-	 /* insert rhs form of indicator */
-	 if ( rhsIndCons )
-	 {
-	    SCIP_CALL_ABORT( SCIPcreateConsIndicator(scip_, &cons, name, NULL, 0, NULL, NULL, sciprhs,
-		  initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
-	    SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-	    
-	    for (i = 0; i < term_get_elements(term); i++)
-	    {
-	       SCIP_VAR* scipvar;
-	       SCIP_Real scipval;
-	       const Mono* mono = term_get_element(term, i);
-	       MFun mfun;
+               scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
 
-	       scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
-		
-	       /* check whether variable is the binary variable */
-	       mfun = mono_get_function(mono);
-	       if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
-	       {
-		  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
-		  SCIP_CALL( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
-	       }
-	       else
-	       {
-		  assert(!numb_equal(mono_get_coeff(mono), numb_zero()));
-		  assert(mono_is_linear(mono));
-      
-		  scipval = numb_todbl(mono_get_coeff(mono));
-		  SCIP_CALL_ABORT( SCIPaddVarIndicator(scip_, cons, scipvar, scipval) );
-	       }
-	    }
-	 }
+               /* check whether variable is the binary variable */
+               mfun = mono_get_function(mono);
+               if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
+               {
+                  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
+                  SCIP_CALL( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
+               }
+               else
+               {
+                  assert(!numb_equal(mono_get_coeff(mono), numb_zero()));
+                  assert(mono_is_linear(mono));
+
+                  scipval = -numb_todbl(mono_get_coeff(mono));
+                  SCIP_CALL_ABORT( SCIPaddVarIndicator(scip_, cons, scipvar, scipval) );
+               }
+            }
+         }
+
+         /* insert rhs form of indicator */
+         if ( rhsIndCons )
+         {
+            SCIP_CALL_ABORT( SCIPcreateConsIndicator(scip_, &cons, name, NULL, 0, NULL, NULL, sciprhs,
+               initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+            SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
+
+            for (i = 0; i < term_get_elements(term); i++)
+            {
+               SCIP_VAR* scipvar;
+               SCIP_Real scipval;
+               const Mono* mono = term_get_element(term, i);
+               MFun mfun;
+
+               scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
+
+               /* check whether variable is the binary variable */
+               mfun = mono_get_function(mono);
+               if (mfun == MFUN_TRUE || mfun == MFUN_FALSE)
+               {
+                  scipvar = (SCIP_VAR*)mono_get_var(mono, 0);
+                  SCIP_CALL( SCIPsetBinaryVarIndicator(scip_, cons, scipvar) );
+               }
+               else
+               {
+                  assert(!numb_equal(mono_get_coeff(mono), numb_zero()));
+                  assert(mono_is_linear(mono));
+
+                  scipval = numb_todbl(mono_get_coeff(mono));
+                  SCIP_CALL_ABORT( SCIPaddVarIndicator(scip_, cons, scipvar, scipval) );
+               }
+            }
+         }
       }
       else
       {
-	 SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
-	       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-	 SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
-	 
-	 for (i = 0; i < term_get_elements(term); i++)
-	 {
-	    SCIP_VAR* scipvar;
-	    SCIP_Real scipval;
+         SCIP_CALL_ABORT( SCIPcreateConsLinear(scip_, &cons, name, 0, NULL, NULL, sciplhs, sciprhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+         SCIP_CALL_ABORT( SCIPaddCons(scip_, cons) );
 
-	    assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
-	    assert(mono_is_linear(term_get_element(term, i)));
-	    
-	    scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
-	    scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
-	    
-	    SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
-	 }
+         for (i = 0; i < term_get_elements(term); i++)
+         {
+            SCIP_VAR* scipvar;
+            SCIP_Real scipval;
+
+            assert(!numb_equal(mono_get_coeff(term_get_element(term, i)), numb_zero()));
+            assert(mono_is_linear(term_get_element(term, i)));
+
+            scipvar = (SCIP_VAR*)mono_get_var(term_get_element(term, i), 0);
+            scipval = numb_todbl(mono_get_coeff(term_get_element(term, i)));
+
+            SCIP_CALL_ABORT( SCIPaddCoefLinear(scip_, cons, scipvar, scipval) );
+         }
       }
    }
    else if (maxdegree == 2)
