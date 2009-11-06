@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.34 2009/10/30 17:08:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.35 2009/11/06 19:21:30 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1122,7 +1122,7 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
          SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
          if( stored )
          {
-            SCIPdebugMessage("SCIP stored solution\n");
+            SCIPdebugMessage("SCIP stored solution with value %g\n", SCIPgetSolOrigObj(scip, sol));
             *result = SCIP_FOUNDSOL;
          }
       }
