@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.526 2009/10/27 17:02:46 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.527 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -356,6 +356,7 @@ SCIP_RETCODE checkStage(
 #define checkStage(scip,method,init,problem,transforming,transformed,presolving,presolved,initsolve,solving,solved, \
    freesolve,freetrans) SCIP_OKAY
 #endif
+
 
 /** gets global primal bound (objective value of best solution or user objective limit) */
 static
@@ -2239,6 +2240,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   SCIP_DECL_BRANCHEXECREL((*branchexecrel)),/**< branching execution method for relaxation solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
@@ -2256,7 +2258,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
 
    SCIP_CALL( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth,
          maxbounddist, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
-         branchexeclp, branchexecps, branchruledata) );
+         branchexeclp, branchexecrel, branchexecps, branchruledata) );
    SCIP_CALL( SCIPsetIncludeBranchrule(scip->set, branchrule) );
 
    return SCIP_OKAY;
@@ -2836,6 +2838,150 @@ SCIP_RETCODE SCIPfreeProb(
 
    return SCIP_OKAY;
 }
+
+
+/** permutes parts of the problem data structure */
+SCIP_RETCODE SCIPpermuteProb(
+   SCIP*                 scip,              /**< SCIP data structure */
+   unsigned int          randseed,          /**< seed value for random generator */
+   SCIP_Bool             permuteconshdlrs,  /**< should the list of constraint handlers be permuted? */
+   SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
+   SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
+   SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
+   SCIP_Bool             permuteimplvars,   /**< should the list of implicit integer variables be permuted? */
+   SCIP_Bool             permutecontvars    /**< should the list of continuous integer variables be permuted? */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_CONSHDLR** conshdlrs;
+   int nconshdlrs;   
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int nvars;
+   int j;
+
+   assert(scip != NULL);
+   SCIP_CALL( checkStage(scip, "SCIPpermuteProb", FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, NULL) );
+      
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == nbinvars+nintvars+nimplvars+SCIPgetNContVars(scip));
+
+   conshdlrs = SCIPgetConshdlrs(scip);
+   nconshdlrs = SCIPgetNConshdlrs(scip);
+   assert(nconshdlrs == 0 || conshdlrs != NULL);
+
+   /* permute constraint handlers */
+   if( permuteconshdlrs )
+      SCIPpermuteArray((void**)conshdlrs, 0, nconshdlrs, &randseed);
+
+   /* for each constraint handler, permute its constraints */
+   if( permuteconss )
+   {
+      int i;
+         
+      /* loop over all constraint handlers */
+      for( i = 0; i < nconshdlrs; ++i )      
+      {
+         SCIP_CONS** conss;
+         int nconss;
+
+         conss = SCIPconshdlrGetConss(conshdlrs[i]);
+         nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+         assert(nconss == 0 || conss != NULL);
+
+         SCIPpermuteArray((void**)conss, 0, nconss, &randseed);
+
+         /* readjust the mapping of constraints to array positions */
+         for( j = 0; j < nconss; ++j )      
+            conss[j]->consspos = j;
+      }
+   }
+
+   /* permute binary variables */   
+   if( permutebinvars )
+   {
+      SCIPpermuteArray((void**)vars, 0, nbinvars, &randseed);
+      
+      /* readjust the mapping of variables to array positions */
+      for( j = 0; j < nbinvars; ++j )      
+         vars[j]->probindex = j;
+   }
+
+   /* permute general integer variables */
+   if( permuteintvars )
+   {
+      SCIPpermuteArray((void**)vars, nbinvars, nbinvars+nintvars, &randseed);
+
+      /* readjust the mapping of variables to array positions */
+      for( j = nbinvars; j < nbinvars+nintvars; ++j )      
+         vars[j]->probindex = j;
+   }
+
+   /* permute general integer variables */
+   if( permuteimplvars )
+   {
+      SCIPpermuteArray((void**)vars, nbinvars+nintvars, nbinvars+nintvars+nimplvars, &randseed);
+
+      /* readjust the mapping of variables to array positions */
+      for( j = nbinvars+nintvars; j < nbinvars+nintvars+nimplvars; ++j )      
+         vars[j]->probindex = j;
+   }
+
+   /* permute general integer variables */
+   if( permutecontvars )
+   {
+      SCIPpermuteArray((void**)vars, nbinvars+nintvars+nimplvars, nvars, &randseed);
+
+      /* readjust the mapping of variables to array positions */
+      for( j = nbinvars+nintvars+nimplvars; j < nvars; ++j )      
+         vars[j]->probindex = j;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates a random sequence of branching candidates with a unique priority */
+SCIP_RETCODE SCIPgenerateBranchingOrder(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   npriocands,         /**< number of branching candidates that should be predefined */
+   unsigned int          randseed            /**< seed value for random generator */
+   )
+{
+   SCIP_VAR** priocands;
+   SCIP_VAR** vars;
+   int ndiscvars;
+   int i;
+
+   SCIP_CALL( checkStage(scip, "SCIPgenerateBranchingOrder", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   vars = SCIPgetVars(scip);
+   ndiscvars = SCIPgetNBinVars(scip)+SCIPgetNIntVars(scip);
+   assert(ndiscvars == 0 || vars != NULL);
+
+   /* abort, if not enough discrete variables */
+   if( npriocands > ndiscvars)
+   {
+      SCIPerrorMessage("Cannot determine  %d priority candidates, if only %d discrete variables are present in the problem.\n", npriocands, ndiscvars);      
+      return SCIP_INVALIDDATA;
+   } 
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &priocands, npriocands) );
+
+   /* call random generator to get a subset of npriocands disjoint elements */
+   SCIP_CALL( SCIPgetRandomSubset((void*)vars, ndiscvars, (void*)priocands, npriocands, randseed) );
+
+   /* change the branching priority of the drawn variables */
+   for( i = 0; i < npriocands; ++i )
+      SCIPvarChgBranchPriority(priocands[i],i+1);
+
+   SCIPfreeBufferArray(scip, &priocands);
+
+   return SCIP_OKAY;   
+}
+
 
 /** gets user problem data */
 SCIP_PROBDATA* SCIPgetProbData(
@@ -4290,7 +4436,7 @@ SCIP_RETCODE SCIPtransformProb(
 
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
-
+  
    /* update upper bound and cutoff bound due to objective limit in primal data */
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob,
          scip->tree, scip->lp) );
@@ -4736,6 +4882,7 @@ SCIP_RETCODE presolve(
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
+   assert(scip->primal != NULL);
    assert(scip->set != NULL);
    assert(scip->stat != NULL);
    assert(scip->transprob != NULL);
@@ -4772,6 +4919,31 @@ SCIP_RETCODE presolve(
       }
    }
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
+   
+   /* call primal heuristics that are applicable before presolving */
+   if( scip->set->nheurs > 0 )
+   {
+      SCIP_Bool foundsol;
+
+      SCIPdebugMessage("calling primal heuristics before presolving\n");
+
+      /* call primal heuristics */
+      SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->primal, NULL, NULL, NULL, SCIP_HEURTIMING_BEFOREPRESOL, &foundsol) );
+
+      /* output a message, if a solution was found */
+      if( foundsol )
+      {
+         SCIP_SOL* sol;
+
+         assert(SCIPgetNSols(scip) > 0);         
+         sol = SCIPgetBestSol(scip);
+         assert(sol != NULL);           
+         assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID);           
+         
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "feasible solution found by %s heuristic, objective value %13.6e\n",
+            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+      }
+   }
 
    maxnrounds = scip->set->presol_maxrounds;
    if( maxnrounds == -1 )
@@ -5232,6 +5404,7 @@ SCIP_RETCODE SCIPpresolve(
    return SCIP_OKAY;
 }
 
+
 /** transforms, presolves, and solves problem */
 SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
@@ -5263,9 +5436,14 @@ SCIP_RETCODE SCIPsolve(
       {
          /* free the solving process data in order to restart */
          assert(scip->set->stage == SCIP_STAGE_SOLVING);
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-            "(run %d, node %lld) restarting after %d global fixings of integer variables\n",
-            scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
+         if( scip->stat->userrestart )
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+               "(run %d, node %lld) performing user restart\n",
+               scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
+         else
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
+               "(run %d, node %lld) restarting after %d global fixings of integer variables\n",
+               scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
          /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
           *  correctly */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
@@ -5273,7 +5451,8 @@ SCIP_RETCODE SCIPsolve(
          assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
       }
       restart = FALSE;
-
+      scip->stat->userrestart = FALSE;
+      
       switch( scip->set->stage )
       {
       case SCIP_STAGE_PROBLEM:
@@ -5490,6 +5669,18 @@ SCIP_RETCODE SCIPinterruptSolve(
 }
 
 
+/** restarts solving process as soon as possible (e.g., after the current node has been solved) */
+SCIP_RETCODE SCIPrestartSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPrestartSolve", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* set the userrestart flag */
+   scip->stat->userrestart = TRUE;
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -12379,7 +12570,8 @@ SCIP_RETCODE SCIPcreateChild(
    return SCIP_OKAY;
 }
 
-/** branches on a variable v; if solution value x' is fractional, two child nodes are created
+/** branches on a variable v using the current LP or pseudo solution;
+ *  if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')),
  *  if solution value is integral, the x' is equal to lower or upper bound of the branching
  *  variable and the bounds of v are finite, then two child nodes are created
@@ -12410,7 +12602,43 @@ SCIP_RETCODE SCIPbranchVar(
    }
 
    SCIP_CALL( SCIPtreeBranchVar(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand,
-         scip->eventqueue, var, downchild, eqchild, upchild) );
+         scip->eventqueue, var, SCIP_INVALID, downchild, eqchild, upchild) );
+
+   return SCIP_OKAY;
+}
+
+/** branches on a variable v using a given value x'; 
+ *  for continuous variables, x' must not be one of the bounds. Two child nodes (x <= x', x >= x') are created;
+ *  for integer variables, if solution value x' is fractional, two child nodes are created
+ *  (x <= floor(x'), x >= ceil(x')),
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching
+ *  variable and the bounds of v are finite, then two child nodes are created
+ *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
+ *  otherwise three child nodes are created
+ *  (x <= x'-1, x == x', x >= x'+1)
+ */
+SCIP_RETCODE SCIPbranchVarVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             val,                /**< value to branch on */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || (SCIPisFeasLT(scip, SCIPvarGetLbLocal(var), val) && SCIPisFeasLT(scip, val, SCIPvarGetUbLocal(var)) ) );
+
+   if( SCIPsetIsEQ(scip->set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+   {
+      SCIPerrorMessage("cannot branch on variable <%s> with fixed domain [%.15g,%.15g]\n",
+         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPtreeBranchVar(scip->tree, scip->mem->solvemem, scip->set, scip->stat, scip->lp, scip->branchcand,
+         scip->eventqueue, var, val, downchild, eqchild, upchild) );
 
    return SCIP_OKAY;
 }
@@ -12427,6 +12655,20 @@ SCIP_RETCODE SCIPbranchLP(
    SCIP_CALL( checkStage(scip, "SCIPbranchLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPbranchExecLP(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+         scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound, TRUE, result) );
+
+   return SCIP_OKAY;
+}
+
+/** calls branching rules to branch on a relaxation solution; if no relaxation branching candidates exist, the result is SCIP_DIDNOTRUN */
+SCIP_RETCODE SCIPbranchRelax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPbranchRelax", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPbranchExecRelax(scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
          scip->sepastore, scip->branchcand, scip->eventqueue, scip->primal->cutoffbound, TRUE, result) );
 
    return SCIP_OKAY;
@@ -13189,7 +13431,16 @@ SCIP_RETCODE SCIPaddSol(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddSol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* if the solution is added during presolving and it is not defined on original variables, 
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   {
+      SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
+   }
 
    SCIP_CALL( SCIPprimalAddSol(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree,
          scip->lp, scip->eventfilter, sol, stored) );
@@ -13204,7 +13455,16 @@ SCIP_RETCODE SCIPaddSolFree(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddSolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* if the solution is added during presolving and it is not defined on original variables, 
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+   {
+      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
+   }
 
    SCIP_CALL( SCIPprimalAddSolFree(scip->primal, scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree,
          scip->lp, scip->eventfilter, sol, stored) );
@@ -13239,7 +13499,16 @@ SCIP_RETCODE SCIPtrySol(
 {
    assert(stored != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* if the solution is added during presolving and it is not defined on original variables, 
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_ORIGINAL )
+   {
+      SCIP_CALL( SCIPsolUnlink(sol, scip->set, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(sol, scip->set, scip->stat, scip->origprob) );      
+   }
 
    if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
    {
@@ -13277,7 +13546,16 @@ SCIP_RETCODE SCIPtrySolFree(
    assert(stored != NULL);
    assert(sol != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* if the solution is added during presolving and it is not defined on original variables, 
+    * presolving operations will destroy its validity, so we retransform it to the original space
+    */
+   if( scip->set->stage == SCIP_STAGE_PRESOLVING && SCIPsolGetOrigin(*sol) != SCIP_SOLORIGIN_ORIGINAL )
+   {
+      SCIP_CALL( SCIPsolUnlink(*sol, scip->set, scip->transprob) );
+      SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob) );      
+   }
 
    if( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_ORIGINAL )
    {

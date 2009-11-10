@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.54 2009/10/19 16:00:09 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.55 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -84,6 +84,19 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
+   );
+
+/** calls primal heuristics */
+extern
+SCIP_RETCODE SCIPprimalHeuristics(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    );
 
 /** applies one round of separation on the given primal solution or on the LP solution */

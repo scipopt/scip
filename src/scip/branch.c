@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.83 2009/10/19 10:48:13 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.84 2009/11/10 07:38:02 bzfberth Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -42,8 +42,6 @@
 #include "scip/pub_misc.h"
 
 #include "scip/struct_branch.h"
-
-
 
 /*
  * memory growing methods for dynamically allocated arrays
@@ -1101,6 +1099,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   SCIP_DECL_BRANCHEXECREL((*branchexecrel)),/**< branching execution method for relaxation solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    )
@@ -1124,10 +1123,12 @@ SCIP_RETCODE SCIPbranchruleCreate(
    (*branchrule)->branchinitsol = branchinitsol;
    (*branchrule)->branchexitsol = branchexitsol;
    (*branchrule)->branchexeclp = branchexeclp;
+   (*branchrule)->branchexecrel = branchexecrel;
    (*branchrule)->branchexecps = branchexecps;
    (*branchrule)->branchruledata = branchruledata;
    SCIP_CALL( SCIPclockCreate(&(*branchrule)->branchclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*branchrule)->nlpcalls = 0;
+   (*branchrule)->nrelaxcalls = 0;
    (*branchrule)->npseudocalls = 0;
    (*branchrule)->ncutoffs = 0;
    (*branchrule)->ncutsfound = 0;
@@ -1199,6 +1200,7 @@ SCIP_RETCODE SCIPbranchruleInit(
    SCIPclockReset(branchrule->branchclock);
 
    branchrule->nlpcalls = 0;
+   branchrule->nrelaxcalls = 0;
    branchrule->npseudocalls = 0;
    branchrule->ncutoffs = 0;
    branchrule->ncutsfound = 0;
@@ -1367,6 +1369,100 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
       }
    }
 
+   return SCIP_OKAY;
+}
+
+/** executes branching rule for not completely fixed relaxation solution */
+SCIP_RETCODE SCIPbranchruleExecRelaxSol(
+   SCIP_BRANCHRULE*      branchrule,         /**< branching rule */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
+   SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   assert(branchrule != NULL);
+   assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->focusnode != NULL);
+   assert(tree->nchildren == 0);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+   if( branchrule->branchexecrel != NULL
+      && (branchrule->maxdepth == -1 || branchrule->maxdepth >= SCIPtreeGetCurrentDepth(tree)) )
+   {
+      SCIP_Real loclowerbound;
+      SCIP_Real glblowerbound;
+
+      loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
+      glblowerbound = SCIPtreeGetLowerbound(tree, set);
+      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
+      {
+         SCIP_Longint oldndomchgs;
+         SCIP_Longint oldnprobdomchgs;
+         int oldncuts;
+         int oldnactiveconss;
+
+         SCIPdebugMessage("executing LP branching rule <%s>\n", branchrule->name);
+
+         oldndomchgs = stat->nboundchgs + stat->nholechgs;
+         oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+         oldncuts = SCIPsepastoreGetNCuts(sepastore);
+         oldnactiveconss = stat->nactiveconss;
+
+         /* start timing */
+         SCIPclockStart(branchrule->branchclock, set);
+   
+         /* call external method */
+         SCIP_CALL( branchrule->branchexecrel(set->scip, branchrule, allowaddcons, result) );
+
+         /* stop timing */
+         SCIPclockStop(branchrule->branchclock, set);
+      
+         /* evaluate result */
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_BRANCHED
+            && *result != SCIP_DIDNOTRUN )
+         {
+            SCIPerrorMessage("branching rule <%s> returned invalid result code <%d> from LP solution branching\n",
+               branchrule->name, *result);
+            return SCIP_INVALIDRESULT;
+         }
+         if( *result == SCIP_CONSADDED && !allowaddcons )
+         {
+            SCIPerrorMessage("branching rule <%s> added a constraint in LP solution branching without permission\n",
+               branchrule->name);
+            return SCIP_INVALIDRESULT;
+         }
+
+         /* update statistics */
+         if( *result != SCIP_DIDNOTRUN )
+            branchrule->nrelaxcalls++;
+         if( *result == SCIP_CUTOFF )
+            branchrule->ncutoffs++;
+         if( *result != SCIP_BRANCHED )
+         {
+            assert(tree->nchildren == 0);
+
+            /* update domain reductions; therefore remove the domain
+             * reduction counts which were generated in probing mode */
+            branchrule->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+            branchrule->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+
+            branchrule->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
+            branchrule->nconssfound += stat->nactiveconss - oldnactiveconss; /*lint !e776*/
+         }
+         else
+            branchrule->nchildren += tree->nchildren;
+      }
+   }
    return SCIP_OKAY;
 }
 
@@ -1586,6 +1682,16 @@ SCIP_Longint SCIPbranchruleGetNLPCalls(
    assert(branchrule != NULL);
 
    return branchrule->nlpcalls;
+}
+
+/** gets the total number of times, the branching rule was called on a relaxation solution */
+SCIP_Longint SCIPbranchruleGetNRelaxCalls(
+   SCIP_BRANCHRULE*      branchrule          /**< branching rule */
+   )
+{
+   assert(branchrule != NULL);
+
+   return branchrule->nrelaxcalls;
 }
 
 /** gets the total number of times, the branching rule was called on a pseudo solution */
@@ -1833,7 +1939,105 @@ SCIP_RETCODE SCIPbranchExecLP(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, SCIP_INVALID, NULL, NULL, NULL) );
+
+      *result = SCIP_BRANCHED;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls branching rules to branch on a relaxation solution; if no relaxation branching candidates exist, the result is SCIP_DIDNOTRUN */
+SCIP_RETCODE SCIPbranchExecRelax(
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_Real             cutoffbound,        /**< global upper cutoff bound */
+   SCIP_Bool             allowaddcons,       /**< should adding constraints be allowed to avoid a branching? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   )
+{
+   int i;
+
+   assert(branchcand != NULL);
+   assert(result != NULL);
+   assert(0 <= branchcand->npriorelaxcands && branchcand->npriorelaxcands <= branchcand->nrelaxcands);
+   assert((branchcand->npriorelaxcands == 0) == (branchcand->nrelaxcands == 0));
+
+   *result = SCIP_DIDNOTRUN;
+
+   SCIPdebugMessage("branching on relaxation solution with %d branching candidates (%d of maximal priority)\n",
+      branchcand->nrelaxcands, branchcand->npriorelaxcands);
+
+   /* do nothing, if no relaxation candidates exist */
+   if( branchcand->nrelaxcands == 0 )
+      return SCIP_OKAY;
+
+   /* if there is a non-fixed variable with higher priority than the maximal priority of the fractional candidates,
+    * use pseudo solution branching instead
+    */
+   if( branchcand->pseudomaxpriority > branchcand->relaxmaxpriority )
+   {
+      /* @todo: adjust this, that also LP branching might be called, if lpmaxpriority != relaxmaxpriority.
+       * Therefor, it has to be clear which of both has the higher priority 
+       */
+      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue, cutoffbound, allowaddcons,
+            result) );
+      assert(*result != SCIP_DIDNOTRUN);
+      return SCIP_OKAY;
+   }
+
+   /* sort the branching rules by priority */
+   SCIPsetSortBranchrules(set);
+
+   /* try all branching rules until one succeeded to branch */
+   for( i = 0; i < set->nbranchrules && *result == SCIP_DIDNOTRUN; ++i )
+   {
+      SCIP_CALL( SCIPbranchruleExecRelaxSol(set->branchrules[i], set, stat, tree, sepastore, cutoffbound, allowaddcons, 
+            result) );
+   }
+
+   if( *result == SCIP_DIDNOTRUN )
+   {
+      SCIP_VAR* var;
+      SCIP_Real val;
+      SCIP_Real factor;
+      SCIP_Real bestfactor;
+      int priority;
+      int bestpriority;
+      int bestcand;
+
+      /* no branching method succeeded in choosing a branching: just branch on the first branching candidates with maximal
+       * priority, and out of these on the one with maximal branch factor
+       */
+      bestcand = -1;
+      bestpriority = INT_MIN;
+      bestfactor = SCIP_REAL_MIN;
+      for( i = 0; i < branchcand->nrelaxcands; ++i )
+      {
+         priority = SCIPvarGetBranchPriority(branchcand->relaxcands[i]);
+         factor = SCIPvarGetBranchFactor(branchcand->relaxcands[i]);
+         if( priority > bestpriority || (priority == bestpriority && factor > bestfactor) )
+         {
+            bestcand = i;
+            bestpriority = priority;
+            bestfactor = factor;
+         }
+      }
+      assert(0 <= bestcand && bestcand < branchcand->nrelaxcands);
+
+      var = branchcand->relaxcands[bestcand];
+      val = branchcand->relaxcandssol[bestcand];
+      assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+      assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
+      assert(SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
+
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, val, NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
    }
@@ -1909,7 +2113,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, SCIP_INVALID, NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
    }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.53 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.54 2009/11/10 07:38:02 bzfberth Exp $"
 
 /**@file   branch_fullstrong.c
  * @ingroup BRANCHINGRULES
@@ -359,6 +359,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 }
 
 
+/** branching execution method for fractional LP solutions */
+#define branchExecrelFullstrong NULL
+
+
 /** branching execution method for not completely fixed pseudo solutions */
 #define branchExecpsFullstrong NULL
 
@@ -385,7 +389,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeFullstrong, branchInitFullstrong, branchExitFullstrong, 
          branchInitsolFullstrong, branchExitsolFullstrong, 
-         branchExeclpFullstrong, branchExecpsFullstrong,
+         branchExeclpFullstrong, branchExecrelFullstrong, branchExecpsFullstrong,
          branchruledata) );
 
    /* fullstrong branching rule parameters */

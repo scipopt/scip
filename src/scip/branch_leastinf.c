@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_leastinf.c,v 1.27 2009/04/06 13:06:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_leastinf.c,v 1.28 2009/11/10 07:38:02 bzfberth Exp $"
 
 /**@file   branch_leastinf.c
  * @ingroup BRANCHINGRULES
@@ -123,6 +123,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLeastinf)
 }
 
 
+/** branching execution method for fractional LP solutions */
+#define branchExecrelLeastinf NULL
+
+
 /** branching execution method for not completely fixed pseudo solutions */
 #define branchExecpsLeastinf NULL
 
@@ -147,7 +151,7 @@ SCIP_RETCODE SCIPincludeBranchruleLeastinf(
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeLeastinf, branchInitLeastinf, branchExitLeastinf, branchInitsolLeastinf, branchExitsolLeastinf, 
-         branchExeclpLeastinf, branchExecpsLeastinf,
+         branchExeclpLeastinf, branchExecrelLeastinf, branchExecpsLeastinf,
          branchruledata) );
 
    return SCIP_OKAY;

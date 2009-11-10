@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.224 2009/11/06 15:15:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.225 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4426,13 +4426,13 @@ SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             val,                /**< value to branch on or SCIP_INVALID for branching on current LP/pseudo solution. A branching value is required for branching on continuous variables */
    SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
    SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    )
 {
    SCIP_NODE* node;
-   SCIP_Real solval;
    SCIP_Real priority;
    SCIP_Real estimate;
 
@@ -4466,20 +4466,32 @@ SCIP_RETCODE SCIPtreeBranchVar(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY
       || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER
-      || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
-   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
-   assert(SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
+      || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT
+      || (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS && val != SCIP_INVALID) );
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetLbLocal(var)));
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, SCIPvarGetUbLocal(var)));
    assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-   solval = SCIPvarGetSol(var, tree->focusnodehaslp);
-   assert(SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(var)));
-   assert(SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(var)));
+   /* if there was no explicit value given for branching, branch on current LP or pseudo solution value */
+   if( val == SCIP_INVALID )
+     val = SCIPvarGetSol(var, tree->focusnodehaslp);
+   assert(SCIPsetIsFeasGE(set, val, SCIPvarGetLbLocal(var)));
+   assert(SCIPsetIsFeasLE(set, val, SCIPvarGetUbLocal(var)));
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || 
+      (SCIPsetIsFeasLT(set, SCIPvarGetLbLocal(var), val) && SCIPsetIsFeasLT(set, val, SCIPvarGetUbLocal(var)) ) );
 
    downub = SCIP_INVALID;
    fixval = SCIP_INVALID;
    uplb = SCIP_INVALID;
    
-   if( SCIPsetIsFeasIntegral(set, solval) )
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      downub = val;
+      uplb = val;
+      SCIPdebugMessage("continuous branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
+         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+   }
+   else if( SCIPsetIsFeasIntegral(set, val) )
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -4488,7 +4500,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
       ub = SCIPvarGetUbLocal(var);
 
       if( !SCIPsetIsInfinity(set, lb) && !SCIPsetIsInfinity(set, ub) 
-	 && (SCIPsetIsFeasEQ(set, solval, lb) || SCIPsetIsFeasEQ(set, solval, ub)) )
+	 && (SCIPsetIsFeasEQ(set, val, lb) || SCIPsetIsFeasEQ(set, val, ub)) )
       {
          SCIP_Real center;
 
@@ -4497,7 +4509,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
           * is still feasible
           */
          center = (ub + lb) / 2.0;
-         if( solval <= center )
+         if( val <= center )
          {
             downub = SCIPsetFeasFloor(set, center);
             uplb = downub + 1.0;
@@ -4511,9 +4523,9 @@ SCIP_RETCODE SCIPtreeBranchVar(
       else
       {
          /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
-         assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, solval), SCIPsetFeasFloor(set, solval)));
+         assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), SCIPsetFeasFloor(set, val)));
          
-         fixval = solval;
+         fixval = val;
          
          /* create child node with x <= x'-1, if this would be feasible */
          if( SCIPsetIsFeasGE(set, fixval-1.0, lb) )
@@ -4524,16 +4536,16 @@ SCIP_RETCODE SCIPtreeBranchVar(
             uplb = fixval + 1.0;
       }
       SCIPdebugMessage("integral branch on variable <%s> with value %g, priority %d (current lower bound: %g)\n", 
-         SCIPvarGetName(var), solval, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+         SCIPvarGetName(var), val, SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
    else
    {
       /* create child nodes with x <= floor(x'), and x >= ceil(x') */
-      downub = SCIPsetFeasFloor(set, solval);
+      downub = SCIPsetFeasFloor(set, val);
       uplb = downub + 1.0;
-      assert( SCIPsetIsEQ(set, SCIPsetFeasCeil(set, solval), uplb) );
+      assert( SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), uplb) );
       SCIPdebugMessage("fractional branch on variable <%s> with value %g, root value %g, priority %d (current lower bound: %g)\n", 
-         SCIPvarGetName(var), solval, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
+         SCIPvarGetName(var), val, SCIPvarGetRootSol(var), SCIPvarGetBranchPriority(var), SCIPnodeGetLowerbound(tree->focusnode));
    }
    
    /* perform the branching;

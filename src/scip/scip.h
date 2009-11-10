@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.354 2009/10/19 16:00:09 bzfgamra Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.355 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -1116,6 +1116,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_DECL_BRANCHINITSOL((*branchinitsol)),/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol)),/**< solving process deinitialization method of branching rule */
    SCIP_DECL_BRANCHEXECLP((*branchexeclp)),  /**< branching execution method for fractional LP solutions */
+   SCIP_DECL_BRANCHEXECREL((*branchexecrel)),/**< branching execution method for relaxation solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps)),  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
    );
@@ -1351,6 +1352,26 @@ SCIP_RETCODE SCIPwriteTransProblem(
 extern
 SCIP_RETCODE SCIPfreeProb(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** permutes parts of the problem data structure */
+extern
+SCIP_RETCODE SCIPpermuteProb(
+   SCIP*                 scip,              /**< SCIP data structure */
+   unsigned int          randseed,          /**< seed value for random generator */
+   SCIP_Bool             permuteconshdlrs,  /**< should the list of constraint handlers be permuted? */
+   SCIP_Bool             permuteconss,      /**< should the list of constraints in each constraint handler be permuted? */
+   SCIP_Bool             permutebinvars,    /**< should the list of binary variables be permuted? */
+   SCIP_Bool             permuteintvars,    /**< should the list of integer variables be permuted? */
+   SCIP_Bool             permuteimplvars,   /**< should the list of implicit integer variables be permuted? */
+   SCIP_Bool             permutecontvars    /**< should the list of continuous integer variables be permuted? */
+   );
+
+/** creates a random sequence of branching candidates with a unique priority */
+SCIP_RETCODE SCIPgenerateBranchingOrder(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   npriocands,         /**< number of branching candidates that should be predefined */
+   unsigned int          randseed            /**< seed value for random generator */
    );
 
 /** gets user problem data */
@@ -1884,6 +1905,12 @@ SCIP_RETCODE SCIPfreeTransform(
 /** interrupts solving process as soon as possible (e.g., after the current node has been solved) */
 extern
 SCIP_RETCODE SCIPinterruptSolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** restarts solving process as soon as possible (e.g., after the current node has been solved) */
+extern
+SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -4676,7 +4703,8 @@ SCIP_RETCODE SCIPcreateChild(
    SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    );
 
-/** branches on a variable v; if solution value x' is fractional, two child nodes are created
+/** branches on a variable v using the current LP or pseudo solution;
+ *  if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')), 
  *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
  *  variable and the bounds of v are finite, then two child nodes are created
@@ -4693,12 +4721,39 @@ SCIP_RETCODE SCIPbranchVar(
    SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
    );
 
+/** branches on a variable v using a given value x'; 
+ *  for continuous variables, x' must not be one of the bounds. Two child nodes (x <= x', x >= x') are created;
+ *  for integer variables, if solution value x' is fractional, two child nodes are created
+ *  (x <= floor(x'), x >= ceil(x')),
+ *  if solution value is integral, the x' is equal to lower or upper bound of the branching
+ *  variable and the bounds of v are finite, then two child nodes are created
+ *  (x <= x", x >= x"+1 with x" = floor((lb + ub)/2)),
+ *  otherwise three child nodes are created
+ *  (x <= x'-1, x == x', x >= x'+1)
+ */
+extern
+SCIP_RETCODE SCIPbranchVarVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to branch on */
+   SCIP_Real             val,                /**< value to branch on */
+   SCIP_NODE**           downchild,          /**< pointer to return the left child with variable rounded down, or NULL */
+   SCIP_NODE**           eqchild,            /**< pointer to return the middle child with variable fixed, or NULL */
+   SCIP_NODE**           upchild             /**< pointer to return the right child with variable rounded up, or NULL */
+   );
+
 /** calls branching rules to branch on an LP solution; if no fractional variables exist, the result is SCIP_DIDNOTRUN;
  *  if the branch priority of an unfixed variable is larger than the maximal branch priority of the fractional
  *  variables, pseudo solution branching is applied on the unfixed variables with maximal branch priority
  */
 extern
 SCIP_RETCODE SCIPbranchLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
+   );
+
+/** calls branching rules to branch on a relaxation solution; if no relaxation branching candidates exist, the result is SCIP_DIDNOTRUN */
+extern
+SCIP_RETCODE SCIPbranchRelax(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the branching (s. branch.h) */
    );

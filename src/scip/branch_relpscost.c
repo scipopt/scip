@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.57 2009/09/09 17:01:48 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.58 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -794,6 +794,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 }
 
 
+/** branching execution method for fractional LP solutions */
+#define branchExecrelRelpscost NULL
+
+
 /** branching execution method for not completely fixed pseudo solutions */
 #define branchExecpsRelpscost NULL
 
@@ -818,7 +822,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, branchInitsolRelpscost, branchExitsolRelpscost, 
-         branchExeclpRelpscost, branchExecpsRelpscost,
+         branchExeclpRelpscost, branchExecrelRelpscost, branchExecpsRelpscost,
          branchruledata) );
 
    /* relpscost branching rule parameters */

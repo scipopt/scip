@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.24 2009/09/23 20:33:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.25 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   type_heur.h
  * @ingroup TYPEDEFINITIONS
@@ -34,18 +34,19 @@ extern "C" {
 #endif
 
 /** heurstics execution timing flags */
-#define SCIP_HEURTIMING_BEFORENODE        0x01 /**< call heuristic before the processing of the node starts */
-#define SCIP_HEURTIMING_DURINGLPLOOP      0x02 /**< call heuristic after each LP solving during cut-and-price loop */
-#define SCIP_HEURTIMING_AFTERLPLOOP       0x04 /**< call heuristic after the cut-and-price loop was finished */
-#define SCIP_HEURTIMING_AFTERLPNODE       0x08 /**< call heuristic after the processing of a node with solved LP was
-					        *   finished */
-#define SCIP_HEURTIMING_AFTERPSEUDONODE   0x10 /**< call heuristic after the processing of a node without solved LP was
-					        *   finished */
-#define SCIP_HEURTIMING_AFTERLPPLUNGE     0x20 /**< call heuristic after the processing of the last node in the current
-						*   plunge was finished, and only if the LP was solved for this node */
-#define SCIP_HEURTIMING_AFTERPSEUDOPLUNGE 0x40 /**< call heuristic after the processing of the last node in the current
-						*   plunge was finished, and only if the LP was not solved for this node */
-#define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x80 /**< call heuristic during pricing loop */
+#define SCIP_HEURTIMING_BEFORENODE        0x001 /**< call heuristic before the processing of the node starts */
+#define SCIP_HEURTIMING_DURINGLPLOOP      0x002 /**< call heuristic after each LP solving during cut-and-price loop */
+#define SCIP_HEURTIMING_AFTERLPLOOP       0x004 /**< call heuristic after the cut-and-price loop was finished */
+#define SCIP_HEURTIMING_AFTERLPNODE       0x008 /**< call heuristic after the processing of a node with solved LP was
+                                                 *   finished */
+#define SCIP_HEURTIMING_AFTERPSEUDONODE   0x010 /**< call heuristic after the processing of a node without solved LP was
+                                                 *   finished */
+#define SCIP_HEURTIMING_AFTERLPPLUNGE     0x020 /**< call heuristic after the processing of the last node in the current
+                                                 *   plunge was finished, and only if the LP was solved for this node */
+#define SCIP_HEURTIMING_AFTERPSEUDOPLUNGE 0x040 /**< call heuristic after the processing of the last node in the current
+                                                 *   plunge was finished, and only if the LP was not solved for this node */
+#define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x080 /**< call heuristic during pricing loop */
+#define SCIP_HEURTIMING_BEFOREPRESOL      0x100 /**< call heuristic before presolving   */
 
 typedef unsigned int SCIP_HEURTIMING;
 

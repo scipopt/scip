@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.81 2009/08/31 17:55:12 bzfpfets Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.82 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -68,6 +68,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->marked_ncolidx = 0;
    (*stat)->marked_nrowidx = 0;
    (*stat)->userinterrupt = FALSE;
+   (*stat)->userrestart = FALSE;
 
    SCIPstatReset(*stat);
 

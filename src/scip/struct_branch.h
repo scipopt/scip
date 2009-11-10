@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.25 2009/10/19 10:49:45 bzfgamra Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.26 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -71,6 +71,7 @@ struct SCIP_Branchrule
                                               *   compared to best node's dual bound for applying branching rule
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
    SCIP_Longint          nlpcalls;           /**< number of times, this branching rule was called on an LP solution */
+   SCIP_Longint          nrelaxcalls;        /**< number of times, this branching rule was called on a relaxation solution */
    SCIP_Longint          npseudocalls;       /**< number of times, this branching rule was called on a pseudo solution */
    SCIP_Longint          ncutoffs;           /**< number of cutoffs found so far by this branching rule */
    SCIP_Longint          ncutsfound;         /**< number of cutting planes found so far by this branching rule */
@@ -86,6 +87,7 @@ struct SCIP_Branchrule
    SCIP_DECL_BRANCHINITSOL((*branchinitsol));/**< solving process initialization method of branching rule */
    SCIP_DECL_BRANCHEXITSOL((*branchexitsol));/**< solving process deinitialization method of branching rule */
    SCIP_DECL_BRANCHEXECLP((*branchexeclp));  /**< branching execution method for fractional LP solutions */
+   SCIP_DECL_BRANCHEXECREL((*branchexecrel));/**< branching execution method for relaxation solutions */
    SCIP_DECL_BRANCHEXECPS((*branchexecps));  /**< branching execution method for not completely fixed pseudo solutions */
    SCIP_BRANCHRULEDATA*  branchruledata;     /**< branching rule data */
    SCIP_CLOCK*           branchclock;        /**< branching rule execution time */

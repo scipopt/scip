@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.70 2009/10/21 15:14:03 bzfgamra Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.71 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -302,13 +302,18 @@ SCIP_RETCODE SCIPheurExec(
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(primal != NULL);
-   assert(depth >= 0);
+   assert(depth >= 0 || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL);
    assert(ndelayedheurs != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
-   if( (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDONODE) == 0
+   if( (heur->timingmask & SCIP_HEURTIMING_BEFOREPRESOL) && heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
+   {
+      /* heuristic may be executed before presolving. Do so, if it was not disabled by setting the frequency to -1 */
+      execute = heur->freq >= 0; 
+   } 
+   else if( (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDONODE) == 0
       && (heurtiming == SCIP_HEURTIMING_AFTERLPNODE || heurtiming == SCIP_HEURTIMING_AFTERLPPLUNGE) )
    {
       /* heuristic was skipped on intermediate pseudo nodes: check, if a node matching the execution frequency lies

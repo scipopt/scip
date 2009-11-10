@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.22 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.23 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   branch_xxx.c
  * @ingroup BRANCHINGRULES
@@ -155,6 +155,21 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpXxx)
 #endif
 
 
+/** branching execution method for relaxation solutions */
+#if 0
+static
+SCIP_DECL_BRANCHEXECREL(branchExecrelXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define branchExecrelXxx NULL
+#endif
+
+
 /** branching execution method for not completely fixed pseudo solutions */
 #if 0
 static
@@ -193,7 +208,7 @@ SCIP_RETCODE SCIPincludeBranchruleXxx(
 	 BRANCHRULE_MAXBOUNDDIST,
          branchFreeXxx, branchInitXxx, branchExitXxx,
          branchInitsolXxx, branchExitsolXxx,
-         branchExeclpXxx, branchExecpsXxx,
+         branchExeclpXxx, branchExecrelXxx, branchExecpsXxx,
          branchruledata) );
 
    /* add xxx branching rule parameters */

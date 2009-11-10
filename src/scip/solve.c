@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.279 2009/10/19 16:00:09 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.280 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -698,14 +698,13 @@ SCIP_RETCODE solveNodeInitialLP(
 }
 
 /** calls primal heuristics */
-static
-SCIP_RETCODE primalHeuristics(
+SCIP_RETCODE SCIPprimalHeuristics(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL if called during presolving */
+   SCIP_LP*              lp,                 /**< LP data, or NULL if called during presolving */
+   SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left or called during presolving */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
    )
@@ -720,11 +719,11 @@ SCIP_RETCODE primalHeuristics(
 
    assert(set != NULL);
    assert(primal != NULL);
-   assert(tree != NULL);
-   assert(lp != NULL);
+   assert(tree != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL);
+   assert(lp != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL);
    assert(heurtiming == SCIP_HEURTIMING_BEFORENODE || heurtiming == SCIP_HEURTIMING_DURINGLPLOOP
       || heurtiming == SCIP_HEURTIMING_AFTERLPLOOP || heurtiming == SCIP_HEURTIMING_AFTERNODE
-      || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP
+      || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL
       || heurtiming == (SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE));
    assert(heurtiming != SCIP_HEURTIMING_AFTERNODE || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
    assert(foundsol != NULL);
@@ -770,18 +769,33 @@ SCIP_RETCODE primalHeuristics(
       }
    }
 
-   depth = SCIPtreeGetFocusDepth(tree);
-   lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
+   /* initialize the tree related data, if we are not in presolving */
+   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
+   {
+      depth = -1;
+      lpstateforkdepth = -1;
 
-   SCIPdebugMessage("calling primal heuristics in depth %d (timing: %u)\n", depth, heurtiming);
+      SCIPdebugMessage("calling primal heuristics before presolving\n");
+   }
+   else
+   {
+      depth = SCIPtreeGetFocusDepth(tree);
+      lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
+      
+      SCIPdebugMessage("calling primal heuristics in depth %d (timing: %u)\n", depth, heurtiming);
+   }
 
-   /* call heuristics: it might happen that a diving heuristic renders the previously solved node LP invalid
-    * such that additional calls to LP heuristics will fail; better abort the loop in this case
-    */
+   /* call heuristics */
    ndelayedheurs = 0;
    oldnbestsolsfound = primal->nbestsolsfound;
-   for( h = 0; h < set->nheurs && !lp->resolvelperror; ++h )
+   for( h = 0; h < set->nheurs; ++h )
    {
+      /* it might happen that a diving heuristic renders the previously solved node LP invalid
+       * such that additional calls to LP heuristics will fail; better abort the loop in this case
+       */      
+      if( heurtiming != SCIP_HEURTIMING_BEFOREPRESOL && lp->resolvelperror) 
+         break;
+
       SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
          SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
@@ -1278,7 +1292,7 @@ SCIP_RETCODE SCIPpriceLoop(
       }
 
       /* call primal heuristics which are callable during pricing */
-      SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGPRICINGLOOP, &foundsol) );
+      SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGPRICINGLOOP, &foundsol) );
 
       /* price problem variables */
       SCIPdebugMessage("problem variable pricing\n");
@@ -1557,7 +1571,7 @@ SCIP_RETCODE priceAndCutLoop(
          {
             SCIP_Bool foundsol;
 
-            SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
+            SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP, &foundsol) );
             *lperror = *lperror || lp->resolvelperror;
          }
       }
@@ -2435,7 +2449,7 @@ SCIP_RETCODE solveNode(
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
 
    /* call primal heuristics that should be applied before the node was solved */
-   SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, &foundsol) );
+   SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, &foundsol) );
    assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
    /* if diving produced an LP error, switch back to non-LP node */
@@ -2622,13 +2636,13 @@ SCIP_RETCODE solveNode(
       {
          if( actdepth == 0 && stat->nruns == 1 && nloops == 1 )
          {
-            SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL,
+            SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL,
                   SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, &foundsol) );
             *afternodeheur = TRUE; /* the AFTERNODE heuristics should node be called again after the node */
          }
          else
          {
-            SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
+            SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP, &foundsol) );
          }
          
 	 /* heuristics might have found a solution or set the cutoff bound such that the current node is cut off */
@@ -2745,15 +2759,27 @@ SCIP_RETCODE solveNode(
                   primal->cutoffbound, FALSE, &result) );
             assert(result != SCIP_DIDNOTRUN);
          }
-         else
+         else 
          {
-            /* branch on pseudo solution */
-            SCIPdebugMessage("infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
-               SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
-            SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue,
-                  primal->cutoffbound, TRUE, &result) );
-         }
+            if( SCIPbranchcandGetNRelaxCands(branchcand) > 0 )
+            {
+               /* branch on relaxation solution */
+               SCIPdebugMessage("infeasibility in depth %d was not resolved: branch on relaxation solution with %d pre-known branching candidates.\n",
+                  SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNRelaxCands(branchcand));
+               SCIP_CALL( SCIPbranchExecRelax(blkmem, set, stat, tree, lp, sepastore, branchcand, eventqueue,
+                     primal->cutoffbound, TRUE, &result) );
+            }
 
+            if( result == SCIP_DIDNOTRUN )
+            {
+               /* branch on pseudo solution */
+               SCIPdebugMessage("infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
+                  SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
+               SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, tree, lp, branchcand, eventqueue,
+                     primal->cutoffbound, TRUE, &result) );
+            }
+         }
+         
          switch( result )
          {
          case SCIP_CUTOFF:
@@ -2794,7 +2820,7 @@ SCIP_RETCODE solveNode(
             /* all integer variables in the infeasible solution are fixed,
              * - if no continuous variables exist and all variables are known, the infeasible pseudo solution is completely
              *   fixed, and the node can be cut off
-             * - if at least one continuous variable exist or we do not know all variables due to external pricers, we
+             * - if at least one continuous variable exists or we do not know all variables due to external pricers, we
              *   cannot resolve the infeasibility by branching -> solve LP (and maybe price in additional variables)
              */
             assert(tree->nchildren == 0);
@@ -2861,12 +2887,11 @@ SCIP_RETCODE solveNode(
       }
 
       /* check for immediate restart */
-      *restart = *restart
-         || (actdepth == 0
-            && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-            && stat->nrootintfixingsrun > set->presol_immrestartfac * (prob->nvars - prob->ncontvars)
-            && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)
-            && set->nactivepricers == 0 );
+      *restart = *restart 
+         || (actdepth == 0 && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
+            && (stat->userrestart 
+               || (stat->nrootintfixingsrun > set->presol_immrestartfac * (prob->nvars - prob->ncontvars)
+                  && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
       SCIPdebugMessage("node solving iteration %d finished: cutoff=%u, propagateagain=%u, solverelaxagain=%u, solvelpagain=%u, nlperrors=%d, restart=%u\n",
          nloops, *cutoff, propagateagain, solverelaxagain, solvelpagain, nlperrors, *restart);
@@ -2889,16 +2914,14 @@ SCIP_RETCODE solveNode(
    if( actdepth == 0 )
       restartfac = MIN(restartfac, set->presol_restartfac);
    *restart = *restart
-      || ((set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-         && stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars)
-         && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)
-         && set->nactivepricers == 0 );
+      || ((set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
+         && (stat->userrestart || 
+            (stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars)
+               && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars))) );
 
    /* remember root LP solution */
    if( actdepth == 0 && !(*cutoff) && !(*unbounded) )
-   {
       SCIPprobStoreRootSol(prob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
-   }
 
    /* check for cutoff */
    if( *cutoff )
@@ -3034,10 +3057,10 @@ SCIP_RETCODE SCIPsolveCIP(
    restartfac = set->presol_subrestartfac;
    if( SCIPtreeGetCurrentDepth(tree) == 0 )
       restartfac = MIN(restartfac, set->presol_restartfac);
-   *restart = (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
-      && stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars)
-      && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)
-      && set->nactivepricers == 0;
+   *restart = (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts) && set->nactivepricers == 0
+      && (stat->userrestart
+         || (stat->nrootintfixingsrun > restartfac * (prob->nvars - prob->ncontvars)
+            && (stat->nruns == 1 || prob->nvars <= (1.0-set->presol_restartminred) * stat->prevrunnvars)) );
 
    /* calculate the number of successful conflict analysis calls that should trigger a restart */
    if( set->conf_restartnum > 0 )
@@ -3229,7 +3252,7 @@ SCIP_RETCODE SCIPsolveCIP(
          nnodes = SCIPtreeGetNNodes(tree);
          if( !afternodeheur && (!cutoff || nnodes > 0) )
          {
-            SCIP_CALL( primalHeuristics(set, stat, primal, tree, lp, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
+            SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, lp, nextnode, SCIP_HEURTIMING_AFTERNODE, &foundsol) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
          }
 

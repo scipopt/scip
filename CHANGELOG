@@ -2,6 +2,16 @@ SCIP version NEXT
 ===============
 
 interface:
+- new method SCIPbranchruleGetNRelaxCalls() to get the total number of times, a particular branching rule was called on a relaxation solutions
+- new method SCIPpermuteArray() that randomly shuffles an array using the Fisher-Yates algorithm
+- new method SCIPgetRandomSubset() that draws a random subset of disjoint elements from a given set of disjoint elements
+- new method SCIPpermuteProb() that randomly permutes constraints and variables
+- new method SCIPgenerateBranchingOrder() that creates a random sequence of branching candidates
+- new method SCIPrestartSolve() that allows the user to manually restart the solving process
+- new method SCIPbranchRelax() to branch on a relaxation solution
+- new method SCIPbranchVarVal() to branch on an arbitrary value within the variable's bounds
+- new callback SCIP_DECL_BRANCHEXECRELAX(), togehter with new parameter in SCIPincludeBranchrule() for branching on a relaxation solution
+
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -9,7 +19,17 @@ features:
 - added relaxsol to variables, s.t. a relaxator can store a solution on which branching or separation can be done
 - added relaxation structure to SCIP, it represents global relaxation information independent from a specific relaxator;
   at the moment, it contains information about the relaxation solution stored in the variables: objective value and validness
+- SCIP can now branch on relaxation solutions that are either installed to the relaxsol field of the variables or 
+  added to the list of relaxation candidates, e.g., by constraint handlers. Branching on relaxation solutions is performed 
+  if the enforcement resulted in an unresolved infeasibility and there are no LP branching candidates, but before pseudo solution branching.
+- primal heuristics may now already be called before presolving, using the new timing point SCIP_HEURTIMING_BEFOREPRESOL. 
+  Note that solutions that solutions that are added before/during presolving, will be retransformed to the original space.
+- SCIP can branch on continuous variables. The branching value x' must not be one of the bounds. Two children (x <= x', x >= x') will be created.
+- SCIP may now be manually restarted
+- The solution behavior of SCIP can be diversified by randomly permuting constraints and variables or randomly determining 
+  a set of branching variables with a unique high priority
 - the MPS reader can now read MIQPs where the quadratic objective function is specified by a QMATRIX or QUADOBJ section
+
 
 performance improvements:
 

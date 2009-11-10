@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.58 2009/10/29 16:14:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.59 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -2264,6 +2264,31 @@ SCIP_Real SCIPgetRandomReal(
    );
 
 
+
+/*
+ * Permutations / Shuffling
+ */
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+extern
+void SCIPpermuteArray(
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end,                /**< length of the interval that should be subject to shuffling (array size for whole array) */
+   unsigned int*         randseed            /**< pointer to seed value for the random generator */
+   ); 
+
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+extern
+SCIP_RETCODE SCIPgetRandomSubset(
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems,          /**< number of elements that should be drawn and stored */
+   unsigned int          randseed            /**< seed value for random generator */
+   );
 
 
 /*

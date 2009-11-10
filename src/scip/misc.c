@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.100 2009/10/29 16:14:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.101 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3655,6 +3655,90 @@ SCIP_Real SCIPgetRandomReal(
    return minrandval + (maxrandval - minrandval)*(SCIP_Real)getRand(seedp)/(SCIP_Real)SCIP_RAND_MAX;
 }
 
+
+/*
+ * Permutations / Shuffling
+ */
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+void SCIPpermuteArray(
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
+   int                   end,                /**< length of the interval that should be subject to shuffling (array size for whole array) */
+   unsigned int*         randseed            /**< seed value for the random generator */
+   ) 
+{
+   /* loop backwards through all elements and always swap the current last element to a random position */
+   while( end > begin+1 ) 
+   {
+      int i;
+      void* tmp;
+      
+      end--;
+      
+      /* get a random position into which the last entry should be shuffled */
+      i = SCIPgetRandomInt(begin, end, randseed);
+
+      /* swap the last element and the random element */
+      tmp = array[i];
+      array[i] = array[end];
+      array[end] = tmp;
+   }
+}
+
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+SCIP_RETCODE SCIPgetRandomSubset(
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems,          /**< number of elements that should be drawn and stored */
+   unsigned int          randseed            /**< seed value for random generator */
+   )
+{
+   int i;
+   int j;
+
+   /* if both sets are of equal size, we just copy the array */
+   if( nelems == nsubelems)
+   {
+      BMScopyMemoryArray(subset,set,nelems);
+      return SCIP_OKAY;
+   }
+
+   /* abort, if size of subset is too big */
+   if( nsubelems > nelems )
+   {
+      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);      
+      return SCIP_INVALIDDATA;
+   }
+#ifndef NDEBUG
+   for( i = 0; i < nsubelems; i++ ) 
+      for( j = 0; j < i; j++ ) 
+         assert(set[i] != set[j]);
+#endif   
+
+   /* draw each element individually */
+   for( i = 0; i < nsubelems; i++ ) 
+   {
+      int r;
+
+      r = SCIPgetRandomInt(0, nelems-1, &randseed);
+      subset[i] = set[r];
+
+      /* if we get an element that we already had, we will draw again */
+      for( j = 0; j < i; j++ ) 
+      {
+         if( subset[i] == subset[j] ) 
+         {
+            i--;
+            break;
+         }
+      }
+   }
+   return SCIP_OKAY;
+}
 
 
 

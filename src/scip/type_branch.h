@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.23 2009/09/23 20:33:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.24 2009/11/10 07:38:03 bzfberth Exp $"
 
 /**@file   type_branch.h
  * @ingroup TYPEDEFINITIONS
@@ -103,6 +103,27 @@ typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method sp
  *  - SCIP_DIDNOTRUN  : the branching rule was skipped
  */
 #define SCIP_DECL_BRANCHEXECLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
+
+
+/** branching execution method for relaxation solutions
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
+ *  - allowaddcons    : is the branching rule allowed to add constraints to the current node in order to cut off the
+ *                      current solution instead of creating a branching?
+ *  - result          : pointer to store the result of the branching call
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the current node was detected to be infeasible
+ *  - SCIP_CONSADDED  : an additional constraint (e.g. a conflict constraint) was generated; this result code must not be
+ *                      returned, if allowaddcons is FALSE
+ *  - SCIP_REDUCEDDOM : a domain was reduced that rendered the current pseudo solution infeasible
+ *  - SCIP_BRANCHED   : branching was applied
+ *  - SCIP_DIDNOTRUN  : the branching rule was skipped
+ */
+#define SCIP_DECL_BRANCHEXECREL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule, SCIP_Bool allowaddcons, SCIP_RESULT* result)
+
 
 /** branching execution method for not completely fixed pseudo solutions
  *

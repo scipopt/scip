@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_random.c,v 1.5 2009/04/06 13:06:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_random.c,v 1.6 2009/11/10 07:38:02 bzfberth Exp $"
 
 /**@file   branch_random.c
  * @ingroup BRANCHINGRULES
@@ -128,6 +128,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRandom)
 }
 
 
+/** branching execution method for fractional LP solutions */
+#define branchExecrelRandom NULL
+
+
 /** branching execution method for not completely fixed pseudo solutions */
 static
 SCIP_DECL_BRANCHEXECPS(branchExecpsRandom)
@@ -188,7 +192,7 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
          branchFreeRandom, branchInitRandom, branchExitRandom, branchInitsolRandom, branchExitsolRandom, 
-         branchExeclpRandom, branchExecpsRandom,
+         branchExeclpRandom, branchExecrelRandom, branchExecpsRandom,
          branchruledata) );
 
    return SCIP_OKAY;

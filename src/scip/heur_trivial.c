@@ -12,7 +12,8 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.7 2009/10/14 14:46:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.8 2009/11/10 07:38:03 bzfberth Exp $"
+
 
 /**@file   heur_trivial.c
  * @ingroup PRIMALHEURISTICS
@@ -34,18 +35,7 @@
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-
-/*
- * Data structures
- */
-
-#if 0 /* some compilers do not like empty structs */
-/** primal heuristic data */
-struct SCIP_HeurData
-{
-};
-#endif
+#define HEUR_TIMING            SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_BEFORENODE
 
 /*
  * Local methods
@@ -76,6 +66,11 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
    SCIP_Bool success;
    SCIP_Bool zerovalid;
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( SCIPgetNRuns(scip) > 1 )
+      return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
    success = FALSE;
