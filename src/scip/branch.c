@@ -11,7 +11,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.84 2009/11/10 07:38:02 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.85 2009/11/12 18:53:54 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -2041,6 +2041,8 @@ SCIP_RETCODE SCIPbranchExecRelax(
 
       *result = SCIP_BRANCHED;
    }
+   
+   SCIPbranchcandClearRelaxCands(branchcand);
 
    return SCIP_OKAY;
 }
