@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.55 2009/10/22 16:06:05 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.56 2009/11/12 18:54:21 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -172,8 +172,8 @@ struct SCIP_ConshdlrData
    VARINFEASIBILITY*     varinfeas;                 /**< list of variable infeasibilities */
    
    char                  strategy;                  /**< branching strategy */
-   SCIP_Real             mindistbrpointtobound;     /**< minimal (fractional) distance of branching point to bound */
 #endif
+   SCIP_Real             mindistbrpointtobound;     /**< minimal (fractional) distance of branching point to bound */
 #endif
    
    SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
@@ -3522,6 +3522,80 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
+/** determines branching point for a variable */
+static
+SCIP_Real calculateBranchingPoint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             mindistbrpointtobound, /**< minimal (fractional) distance of branching point to variable bounds */
+   SCIP_VAR*             var                 /**< variable to compute branching point for */
+   )
+{
+   SCIP_Real branchpoint;
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   assert(scip != NULL);
+   assert(var  != NULL);
+   assert(mindistbrpointtobound >= 0.0);
+   assert(mindistbrpointtobound <= 0.5);
+     
+   branchpoint = SCIPgetVarSol(scip, var);
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+
+   if( SCIPisInfinity(scip, branchpoint) )
+   {
+      if( SCIPisPositive(scip, lb) )
+         branchpoint = lb + 1000;
+      else
+         branchpoint = 0.0;
+   }
+   else if( SCIPisInfinity(scip, -branchpoint) )
+   {
+      if( SCIPisNegative(scip, ub) )
+         branchpoint = ub - 1000;
+      else
+         branchpoint = 0.0;
+   }
+
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   {
+      if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
+      {
+         /* branch on value of LP solution
+          * if it is too close to the bounds, move more into the middle of the interval */
+         if( branchpoint < (1-mindistbrpointtobound) * lb + mindistbrpointtobound * ub )
+            branchpoint = (1-mindistbrpointtobound) * lb + mindistbrpointtobound * ub;
+         else if( branchpoint > mindistbrpointtobound * lb + (1-mindistbrpointtobound) * ub )
+            branchpoint = mindistbrpointtobound * lb + (1-mindistbrpointtobound) * ub;
+
+         /* for very tiny intervals we set it into the middle */
+         if( !SCIPisGT(scip, branchpoint, lb) || !SCIPisLT(scip, branchpoint, ub) )
+            branchpoint = (lb+ub) * 0.5;
+      }
+      else if( !SCIPisLT(scip, lb, branchpoint) )
+      {
+         assert(SCIPisInfinity(scip, ub));
+         branchpoint = lb + MAX(0.5*ABS(lb), 1000);
+      }
+      else if( !SCIPisGT(scip, ub, branchpoint) )
+      {
+         assert(SCIPisInfinity(scip, -lb));
+         branchpoint = ub - MAX(0.5*ABS(ub), 1000);
+      }
+   }
+   else
+   {
+      assert(ub - lb > 0.9);
+      if( branchpoint > ub )
+         branchpoint = ub - 0.5;
+      else if( branchpoint < lb )
+         branchpoint = lb + 0.5;
+   }
+   
+   return branchpoint;
+}
+
 /** computes the infeasibilities of variables from the convexification gaps in the constraints and notifies the branching rule about them
  */
 static
@@ -3596,7 +3670,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
             SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvars[j], MAX(gap, 0.), SCIPinfinity(scip)) );
 #else
 #ifdef USE_RELAXBRANCH
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvars[j], MAX(gap, 0.0), xval) );
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvars[j], MAX(gap, 0.0), calculateBranchingPoint(scip, conshdlrdata->mindistbrpointtobound, consdata->quadvars[j])) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->quadvars[j], MAX(gap, 0.0)) );
 #endif
@@ -3615,7 +3689,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], SCIPinfinity(scip), SCIPinfinity(scip)) );
 #else
 #ifdef USE_RELAXBRANCH
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars1[j], SCIPinfinity(scip), SCIPgetSolVal(scip, NULL, consdata->bilinvars1[j])) );
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars1[j], SCIPinfinity(scip), calculateBranchingPoint(scip, conshdlrdata->mindistbrpointtobound, consdata->bilinvars1[j])) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars1[j], SCIPinfinity(scip)) );
 #endif
@@ -3632,7 +3706,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], SCIPinfinity(scip), SCIPinfinity(scip)) );
 #else
 #ifdef USE_RELAXBRANCH
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars2[j], SCIPinfinity(scip), SCIPgetSolVal(scip, NULL, consdata->bilinvars2[j])) );
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars2[j], SCIPinfinity(scip), calculateBranchingPoint(scip, conshdlrdata->mindistbrpointtobound, consdata->bilinvars2[j])) );
 #else
             SCIP_CALL(  updateVarInfeasibility(scip, conshdlr, consdata->bilinvars2[j], SCIPinfinity(scip)) );
 #endif
@@ -3679,7 +3753,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], gap, SCIPinfinity(scip)) );
 #else
 #ifdef USE_RELAXBRANCH
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars1[j], gap, xval) );
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars1[j], gap, calculateBranchingPoint(scip, conshdlrdata->mindistbrpointtobound, consdata->bilinvars1[j])) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars1[j], gap) );
 #endif
@@ -3692,7 +3766,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], gap, SCIPinfinity(scip)) );
 #else
 #ifdef USE_RELAXBRANCH
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars2[j], gap, yval) );
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->bilinvars2[j], gap, calculateBranchingPoint(scip, conshdlrdata->mindistbrpointtobound, consdata->bilinvars2[j])) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->bilinvars2[j], gap) );
 #endif
@@ -3756,7 +3830,9 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, *brvar, brvarval, SCIPinfinity(scip)) );
 #else
 #ifdef USE_RELAXBRANCH
-      SCIP_CALL( SCIPaddRelaxBranchCand(scip, *brvar, brvarval, SCIPgetSolVal(scip, NULL, *brvar)) );
+      SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata           != NULL);
+      SCIP_CALL( SCIPaddRelaxBranchCand(scip, *brvar, brvarval, calculateBranchingPoint(scip, conshdlrdata->mindistbrpointtobound, *brvar)) );
 #else
       SCIP_CALL( updateVarInfeasibility(scip, conshdlr, *brvar, brvarval) );
 #endif
@@ -5351,7 +5427,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsQuadratic)
             SCIP_CALL( SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol, SCIPinfinity(scip)) );
 #else
 #ifdef USE_RELAXBRANCH
-            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol, SCIPgetSolVal(scip, NULL, consdata->quadvars[i])) );
+            SCIP_CALL( SCIPaddRelaxBranchCand(scip, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol, calculateBranchingPoint(scip, conshdlrdata->mindistbrpointtobound, consdata->quadvars[i])) );
 #else
             SCIP_CALL( updateVarInfeasibility(scip, conshdlr, consdata->quadvars[i], consdata->lhsviol + consdata->rhsviol) );
 #endif
@@ -6225,11 +6301,11 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/strategy",
          "strategy to use for selecting branching variable: b: rb-int-br, r: rb-int-br-rev, i: rb-inf",
          &conshdlrdata->strategy, FALSE, 'r', "bri", NULL, NULL) );
+#endif
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/mindistbrpointtobound",
          "minimal fractional distance of branching point to variable bounds; a value of 0.5 leads to branching always in the middle of a bounded domain",
          &conshdlrdata->mindistbrpointtobound, FALSE, 0.2, 0.0001, 0.5, NULL, NULL) );
-#endif
 #endif
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change to a quadratic constraint",
