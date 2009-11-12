@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.30 2009/09/11 15:18:33 bzfgamra Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.31 2009/11/12 19:58:47 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -64,7 +64,7 @@
  * Local methods (for writing)
  */
 
-static const char badchars[] = "#*+/-";
+static const char badchars[] = "#*+/-@";
 
 /** transforms given variables, scalars, and constant to the corresponding active variables, scalars, and constant */
 static
@@ -758,7 +758,7 @@ SCIP_RETCODE checkVarnames(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/replaceforbiddenchars", &replaceforbiddenchars) );
 
-   /* check if the variable names contain the symbols '#', '*', '+', '/', or '-' */
+   /* check if the variable names contain the symbols '#', '*', '+', '/', '-', or '@' */
    for( badchar = badchars; *badchar; ++badchar )
    {
       for( v = 0; v < nvars; ++v )
@@ -820,7 +820,7 @@ SCIP_RETCODE checkConsnames(
 
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/gmsreader/replaceforbiddenchars", &replaceforbiddenchars) );
 
-   /* check if the constraint names contain the symbol '#', '*', '+', '/', or '-' */
+   /* check if the constraint names contain the symbol '#', '*', '+', '/', '-', or '@' */
    for( badchar = badchars; *badchar; ++badchar )
    {
       for( c = 0; c < nconss; ++c )
