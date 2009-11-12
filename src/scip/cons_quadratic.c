@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.56 2009/11/12 18:54:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.57 2009/11/12 19:14:38 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3522,6 +3522,7 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
+#ifdef USE_RELAXBRANCH
 /** determines branching point for a variable */
 static
 SCIP_Real calculateBranchingPoint(
@@ -3595,6 +3596,7 @@ SCIP_Real calculateBranchingPoint(
    
    return branchpoint;
 }
+#endif
 
 /** computes the infeasibilities of variables from the convexification gaps in the constraints and notifies the branching rule about them
  */
