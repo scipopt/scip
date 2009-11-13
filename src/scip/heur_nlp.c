@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.36 2009/11/13 16:19:35 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.37 2009/11/13 17:10:43 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -762,24 +762,28 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
    SCIP_RESULT*          result,             /**< result data structure                                          */
-   SCIP_Real**           refpoint,           /**< reference point (possibly modified)                            */
+   SCIP_SOL*             refpoint,           /**< point to take fixation of discrete variables from, and startpoint for NLP solver; if NULL, then LP solution is used */
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver                                 */
-   SCIP_Real             timelimit           /**< time limit for NLP solver                                      */
+   SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
+   SCIP_Longint*         iterused            /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_Real* startpoint;
+   SCIP_Real*     startpoint;
 
    assert(scip != NULL);
    assert(heur != NULL);
-   assert(refpoint != NULL);
   
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   
+   if( iterused != NULL )
+      *iterused = 0;
 
-   startpoint = *refpoint;
-   assert(startpoint != NULL);
+   /* get starting values (=refpoint, if not NULL; otherwise LP solution) */
+   SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, heurdata->nvars) );
+   SCIP_CALL( SCIPgetSolVals(scip, refpoint, heurdata->nvars, heurdata->var_nlp2scip, startpoint) );
 
    /* fix discrete variables to values in startpoint */
    if( heurdata->ndiscrvars > 0 )
@@ -797,6 +801,7 @@ SCIP_RETCODE SCIPapplyNlpHeur(
          if( !SCIPisFeasIntegral(scip, discrfix[i]) )
          {
             SCIPdebugMessage("skip NLP heuristic because start candidate not integer feasible\n");
+            SCIPfreeBufferArray(scip, &startpoint);
             *result = SCIP_DIDNOTRUN;
             return SCIP_OKAY;
          }
@@ -827,6 +832,8 @@ SCIP_RETCODE SCIPapplyNlpHeur(
 
    /* pass initial guess to NLP solver */
    SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, startpoint) );
+   
+   SCIPfreeBufferArray(scip, &startpoint);
 
    /* let the NLP solver do its magic */
    SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT" and timelimit %g\n", itercontingent, timelimit);
@@ -846,8 +853,8 @@ SCIP_RETCODE SCIPapplyNlpHeur(
 
    SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
 
-   /* TODO: Is this fair if the method was called from outside, e.g. from the undercover heuristic ????????????????????? */
-   heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
+   if( iterused != NULL )
+      *iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
    SCIPdebugMessage("NLP solver used %d iterations and %g seconds\n", 
       SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics), SCIPnlpStatisticsGetTotalTime(heurdata->nlpstatistics));
 
@@ -891,7 +898,8 @@ SCIP_RETCODE SCIPapplyNlpHeur(
          /* solve again */
          SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
          SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
-         heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
+         if( iterused != NULL )
+            *iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
 
          if( SCIPnlpiGetSolstat(scip, heurdata->nlpi) <= SCIP_NLPSOLSTAT_FEASIBLE )
          { 
@@ -1130,9 +1138,9 @@ static
 SCIP_DECL_HEUREXEC(heurExecNlp)
 {  /*lint --e{666,715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_Real*     startpoint;
    SCIP_Longint   itercontingent;
    SCIP_Real      timelimit;
+   SCIP_Longint   iterused;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1212,17 +1220,12 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    /* so far we have not found any solution, but now we are willing to search for one */
    *result = SCIP_DIDNOTFIND;
 
-   /* pass reference point (=startcand, if not NULL; otherwise LP solution) */
-   SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, heurdata->nvars) );
-   SCIP_CALL( SCIPgetSolVals(scip, heurdata->startcand, heurdata->nvars, heurdata->var_nlp2scip, startpoint) );
-
-   SCIP_CALL( SCIPapplyNlpHeur(scip, heur, result, &startpoint, itercontingent, timelimit) );
+   SCIP_CALL( SCIPapplyNlpHeur(scip, heur, result, heurdata->startcand, itercontingent, timelimit, &iterused) );
+   heurdata->iterused += iterused;
    
    /* forget startcand */
    if( heurdata->startcand != NULL )
       SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
-      
-   SCIPfreeBufferArray(scip, &startpoint);
 
    return SCIP_OKAY;
 }
@@ -1314,7 +1317,7 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    assert(heurdata != NULL);
    
    /* we do not have a NLP, so we also do not need a starting point */
-   if( !heurdata->nlpi )
+   if( heurdata->nlpi == NULL )
       return SCIP_OKAY;
    
    /* if we have no point yet, or the new point has a lower constraint violation, or it has a better objective function value,
