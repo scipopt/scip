@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.35 2009/11/06 19:21:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.36 2009/11/13 16:19:35 bzfgleix Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -756,6 +756,180 @@ SCIP_RETCODE destroyNLP(
    return SCIP_OKAY;
 }
 
+
+/** main procedure of the NLP heuristic */
+SCIP_RETCODE SCIPapplyNlpHeur(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_RESULT*          result,             /**< result data structure                                          */
+   SCIP_Real**           refpoint,           /**< reference point (possibly modified)                            */
+   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver                                 */
+   SCIP_Real             timelimit           /**< time limit for NLP solver                                      */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+   SCIP_Real* startpoint;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(refpoint != NULL);
+  
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   startpoint = *refpoint;
+   assert(startpoint != NULL);
+
+   /* fix discrete variables to values in startpoint */
+   if( heurdata->ndiscrvars > 0 )
+   { 
+      SCIP_Real* discrfix;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &discrfix, heurdata->ndiscrvars) );
+
+      for( i = 0; i < heurdata->ndiscrvars; ++i )
+      {
+         discrfix[i] = startpoint[heurdata->discrvars[i]];
+
+         /* only apply to integer feasible points */
+         if( !SCIPisFeasIntegral(scip, discrfix[i]) )
+         {
+            SCIPdebugMessage("skip NLP heuristic because start candidate not integer feasible\n");
+            *result = SCIP_DIDNOTRUN;
+            return SCIP_OKAY;
+         }
+
+         /* round fractional variables to the nearest integer */
+         discrfix[i] = SCIPfrac(scip, discrfix[i]) > 0.5 ? SCIPceil(scip, discrfix[i]) : SCIPfloor(scip, discrfix[i]);
+
+         /* adjust value to the global bounds of the corresponding SCIP variable */
+         discrfix[i] = MAX(discrfix[i], SCIPvarGetLbGlobal(heurdata->var_nlp2scip[heurdata->discrvars[i]]));
+         discrfix[i] = MIN(discrfix[i], SCIPvarGetUbGlobal(heurdata->var_nlp2scip[heurdata->discrvars[i]]));
+
+         assert(discrfix[i] == SCIPfloor(scip, discrfix[i]));
+         assert(discrfix[i] == SCIPceil(scip, discrfix[i]));
+
+         startpoint[heurdata->discrvars[i]] = discrfix[i];
+      }
+      /* apply fixings */
+      SCIP_CALL( SCIPnlpiChgVarBounds(scip, heurdata->nlpi, heurdata->ndiscrvars, heurdata->discrvars, discrfix, discrfix) );
+
+      SCIPfreeBufferArray(scip, &discrfix);
+   }
+   /* apply those variable bound constraints that we can apply explicitely */
+   SCIP_CALL( applyVarBoundConstraints(scip, heurdata) );
+   
+   /* set time and iteration limit for NLP solver */
+   SCIP_CALL( SCIPnlpiSetIntPar(scip, heurdata->nlpi, SCIP_NLPPAR_ITLIM, (int)itercontingent) );
+   SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_TILIM, timelimit) );
+
+   /* pass initial guess to NLP solver */
+   SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, startpoint) );
+
+   /* let the NLP solver do its magic */
+   SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT" and timelimit %g\n", itercontingent, timelimit);
+   SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
+
+   SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d\n", 
+      SCIPnlpiGetTermstat(scip, heurdata->nlpi), SCIPnlpiGetSolstat(scip, heurdata->nlpi));
+   
+   if( SCIPnlpiGetTermstat(scip, heurdata->nlpi) >= SCIP_NLPTERMSTAT_MEMERR )
+   {  /* oops, something did not go well at all */
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, 
+         "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  
+         SCIPnlpiGetTermstat(scip, heurdata->nlpi));
+      SCIP_CALL( destroyNLP(scip, heurdata) );
+      return SCIP_OKAY;
+   }
+
+   SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
+
+   /* TODO: Is this fair if the method was called from outside, e.g. from the undercover heuristic ????????????????????? */
+   heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
+   SCIPdebugMessage("NLP solver used %d iterations and %g seconds\n", 
+      SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics), SCIPnlpStatisticsGetTotalTime(heurdata->nlpstatistics));
+
+   if( SCIPnlpiGetSolstat(scip, heurdata->nlpi) <= SCIP_NLPSOLSTAT_FEASIBLE )
+   {  /* NLP solver claims, it found a feasible (maybe even optimal) solution */
+      SCIP_Real* primals;
+      SCIP_SOL*  sol;
+      SCIP_Bool  stored;
+      SCIP_Bool  feasible;
+
+      /* get solution from NLP solver and create a SCIP_SOL out of it */
+      SCIP_CALL( SCIPnlpiGetSolution(scip, heurdata->nlpi, &primals) );
+      assert(primals != NULL);
+
+      SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
+      SCIP_CALL( SCIPsetSolVals(scip, sol, heurdata->nvars, heurdata->var_nlp2scip, primals) );
+
+      SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, &feasible) );
+
+      if( feasible )
+      {  /* SCIP agrees that solution is feasible (yippi!), so we add it */ 
+         SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
+         if( stored )
+         {
+            SCIPdebugMessage("SCIP stored solution with value %g\n", SCIPgetSolOrigObj(scip, sol));
+            *result = SCIP_FOUNDSOL;
+         }
+      }
+      else if( heurdata->resolvetolfactor < 1.0 )
+      {
+         /* resolve with tighter tolerances */
+         SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip));
+         SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
+
+         /* set almost-feasible solution as starting point for NLP solver, if user allows us */
+         if( !heurdata->resolvefromscratch )
+         {
+            SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, primals) );
+         }
+
+         /* solve again */
+         SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
+         SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
+         heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
+
+         if( SCIPnlpiGetSolstat(scip, heurdata->nlpi) <= SCIP_NLPSOLSTAT_FEASIBLE )
+         { 
+            /* NLP solver claims feasible again, hope that SCIP accepts it now */
+            SCIP_CALL( SCIPnlpiGetSolution(scip, heurdata->nlpi, &primals) );
+            assert(primals != NULL);
+
+            SCIP_CALL( SCIPsetSolVals(scip, sol, heurdata->nvars, heurdata->var_nlp2scip, primals) );
+
+#ifdef SCIP_DEBUG
+            /* print the infeasibilities to stdout */
+            SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
+#endif
+            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, &stored) );
+            if( stored )
+            {
+               SCIPdebugMessage("SCIP stored solution\n");
+               *result = SCIP_FOUNDSOL;
+            }
+            else
+            {
+               SCIPdebugMessage("NLP solver said feasible after tigthening tolerances, but SCIP still did not store solution\n");
+            }
+         }
+         
+         /* reset to original tolerance */
+         SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) );
+      }
+
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+   }
+   
+   /* TODO: reset time and iterlimit in nlp solver? */
+
+   return SCIP_OKAY;   
+}
+
+
 /*
  * Callback methods of primal heuristic
  */
@@ -1037,145 +1211,19 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
 
    /* so far we have not found any solution, but now we are willing to search for one */
    *result = SCIP_DIDNOTFIND;
-   
-   /* pass initial guess (=startcand, if not NULL; otherwise LP solution) to NLP solver */
+
+   /* pass reference point (=startcand, if not NULL; otherwise LP solution) */
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, heurdata->nvars) );
    SCIP_CALL( SCIPgetSolVals(scip, heurdata->startcand, heurdata->nvars, heurdata->var_nlp2scip, startpoint) );
-   SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, startpoint) );
 
-   /* fix discrete variables to values in startpoint */
-   if( heurdata->ndiscrvars > 0 )
-   { 
-      SCIP_Real* discrfix;
-      int i;
-      
-      SCIP_CALL( SCIPallocBufferArray(scip, &discrfix, heurdata->ndiscrvars) );
-
-      for( i = 0; i < heurdata->ndiscrvars; ++i )
-      {
-         discrfix[i] = startpoint[heurdata->discrvars[i]];
-
-         /* round fractional variables to the nearest integer */
-         if( !SCIPisIntegral(scip, discrfix[i]) )
-            discrfix[i] = SCIPfrac(scip, discrfix[i]) > 0.5 ? SCIPceil(scip, discrfix[i]) : SCIPfloor(scip, discrfix[i]);
-
-         /* adjust value to the global bounds of the corresponding SCIP variable */
-         discrfix[i] = MAX(discrfix[i], SCIPvarGetLbGlobal(heurdata->var_nlp2scip[heurdata->discrvars[i]]));
-         discrfix[i] = MIN(discrfix[i], SCIPvarGetUbGlobal(heurdata->var_nlp2scip[heurdata->discrvars[i]]));
-      }
-      /* apply fixings */
-      SCIP_CALL( SCIPnlpiChgVarBounds(scip, heurdata->nlpi, heurdata->ndiscrvars, heurdata->discrvars, discrfix, discrfix) );
-
-      SCIPfreeBufferArray(scip, &discrfix);
-   }
-   /* apply those variable bound constraints that we can apply explicitely */
-   SCIP_CALL( applyVarBoundConstraints(scip, heurdata) );
+   SCIP_CALL( SCIPapplyNlpHeur(scip, heur, result, &startpoint, itercontingent, timelimit) );
    
+   /* forget startcand */
+   if( heurdata->startcand != NULL )
+      SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
+      
    SCIPfreeBufferArray(scip, &startpoint);
 
-   if( heurdata->startcand != NULL )
-      SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) ); /* forget about startcand */
-      
-   /* set iteration limit for NLP solver */
-   SCIP_CALL( SCIPnlpiSetIntPar(scip, heurdata->nlpi, SCIP_NLPPAR_ITLIM, (int)itercontingent) );
-   SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT" and timelimit %g\n", itercontingent, timelimit);
-
-   /* let the NLP solver do its magic */
-   SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
-
-   SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d\n", 
-      SCIPnlpiGetTermstat(scip, heurdata->nlpi), SCIPnlpiGetSolstat(scip, heurdata->nlpi));
-   
-   if( SCIPnlpiGetTermstat(scip, heurdata->nlpi) >= SCIP_NLPTERMSTAT_MEMERR )
-   {  /* oops, something did not went well at all */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, 
-         "NLP solver returned with bad termination status %d. Will not run NLP heuristic again for this run.\n",  
-         SCIPnlpiGetTermstat(scip, heurdata->nlpi));
-      SCIP_CALL( destroyNLP(scip, heurdata) );
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
-
-   heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
-   SCIPdebugMessage("NLP solver used %d iterations and %g seconds\n", 
-      SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics), SCIPnlpStatisticsGetTotalTime(heurdata->nlpstatistics));
-
-   if( SCIPnlpiGetSolstat(scip, heurdata->nlpi) <= SCIP_NLPSOLSTAT_FEASIBLE )
-   {  /* NLP solver claims, it found a feasible (maybe even optimal) solution */
-      SCIP_Real* primals;
-      SCIP_SOL*  sol;
-      SCIP_Bool  stored; 
-      SCIP_Bool  feasible;
-
-      /* get solution from NLP solver and create a SCIP_SOL out of it */
-      SCIP_CALL( SCIPnlpiGetSolution(scip, heurdata->nlpi, &primals) );
-      assert(primals != NULL);
-
-      SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-      SCIP_CALL( SCIPsetSolVals(scip, sol, heurdata->nvars, heurdata->var_nlp2scip, primals) );
-
-      SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, &feasible) );
-
-      if( feasible )
-      {  /* SCIP agrees that solution is feasible (yippi!), so we add it */ 
-         SCIP_CALL( SCIPaddSol(scip, sol, &stored) );
-         if( stored )
-         {
-            SCIPdebugMessage("SCIP stored solution with value %g\n", SCIPgetSolOrigObj(scip, sol));
-            *result = SCIP_FOUNDSOL;
-         }
-      }
-      else if( heurdata->resolvetolfactor < 1.0 )
-      {
-         /* resolve with tighter tolerances */
-         SCIPdebugMessage("solution reported by NLP solver not feasible for SCIP, resolve with feasibility tolerance %g\n", heurdata->resolvetolfactor*SCIPfeastol(scip));
-         SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
-
-         /* set almost-feasible solution as starting point for NLP solver, if user allows us */
-         if( !heurdata->resolvefromscratch )
-         {
-            SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, primals) );
-         }
-
-         /* solve again */
-         SCIP_CALL( SCIPnlpiSolve(scip, heurdata->nlpi) );
-         SCIP_CALL( SCIPnlpiGetStatistics(scip, heurdata->nlpi, heurdata->nlpstatistics) );
-         heurdata->iterused += SCIPnlpStatisticsGetNIterations(heurdata->nlpstatistics);
-
-         if( SCIPnlpiGetSolstat(scip, heurdata->nlpi) <= SCIP_NLPSOLSTAT_FEASIBLE )
-         { 
-            /* NLP solver claims feasible again, hope that SCIP accepts it now */
-            SCIP_CALL( SCIPnlpiGetSolution(scip, heurdata->nlpi, &primals) );
-            assert(primals != NULL);
-
-            SCIP_CALL( SCIPsetSolVals(scip, sol, heurdata->nvars, heurdata->var_nlp2scip, primals) );
-
-#ifdef SCIP_DEBUG
-            /* print the infeasibilities to stdout */
-            SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
-#endif
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, &stored) );
-            if( stored )
-            {
-               SCIPdebugMessage("SCIP stored solution\n");
-               *result = SCIP_FOUNDSOL;
-            }
-            else
-            {
-               SCIPdebugMessage("NLP solver said feasible after tigthening tolerances, but SCIP still did not store solution\n");
-            }
-         }
-         
-         /* reset to original tolerance */
-         SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) );
-      }
-
-      SCIP_CALL( SCIPfreeSol(scip, &sol) );
-   }
-   
-   /* TODO reset time and iterlimit in nlp solver? */
-   
    return SCIP_OKAY;
 }
 
@@ -1201,24 +1249,41 @@ SCIP_RETCODE SCIPincludeHeurNlp(
          heurdata) );
 
    /* add Nlp primal heuristic parameters */
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpverblevel", "verbosity level of NLP solver", 
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpverblevel",
+         "verbosity level of NLP solver",
          &heurdata->nlpverblevel, FALSE, 0, 0, 2, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpiterlimit", "iteration limit of NLP solver; 0 to use solver default", 
+
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpiterlimit",
+         "iteration limit of NLP solver; 0 to use solver default",
          &heurdata->nlpiterlimit, FALSE, 0, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nlptimelimit", "time limit of NLP solver; 0 to use solver default", 
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nlptimelimit",
+         "time limit of NLP solver; 0 to use solver default",
          &heurdata->nlptimelimit, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor", "if SCIP does not accept a solution which the NLP solver thinks is feasible, the feasibility tolerance is reduced by this factor and the NLP resolved (set to 1. to turn off resolve", 
-         &heurdata->resolvetolfactor, FALSE, 0.01, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/resolvefromscratch", "whether a resolve of an NLP due to disagreement of feasibility should be from the original starting point or the infeasible solution", 
-         &heurdata->resolvefromscratch, FALSE, TRUE, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/iteroffset", "number of iterations added to the contingent of the total number of iterations", 
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor",
+         "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",
+         &heurdata->resolvetolfactor, TRUE, 0.01, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/resolvefromscratch",
+         "should the NLP resolve be started from the original starting point or the infeasible solution?",
+         &heurdata->resolvefromscratch, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/iteroffset",
+         "number of iterations added to the contingent of the total number of iterations",
          &heurdata->iteroffset, FALSE, 500, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/iterquotient", "contingent of NLP iterations in relation to the number of nodes in SCIP", 
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/iterquotient",
+         "contingent of NLP iterations in relation to the number of nodes in SCIP",
          &heurdata->iterquot,  FALSE, 0.1, 0.0, SCIPinfinity(scip), NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/itermin", "contingent of NLP iterations in relation to the number of nodes in SCIP", 
+
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/itermin",
+         "contingent of NLP iterations in relation to the number of nodes in SCIP",
          &heurdata->itermin,   FALSE, 300, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/varboundexplicit", "whether variable bound constraints should be handled explicitly before solving NLP instead of adding them to the NLP", 
-         &heurdata->varboundexplicit, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/varboundexplicit",
+         "should variable bound constraints be handled explicitly before solving the NLP instead of adding them to the NLP?",
+         &heurdata->varboundexplicit, TRUE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

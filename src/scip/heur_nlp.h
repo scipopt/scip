@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.h,v 1.4 2009/09/03 18:48:43 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_nlp.h,v 1.5 2009/11/13 16:19:35 bzfgleix Exp $"
 
 /**@file   heur_nlp.h
  * @brief  NLP local search primal heuristic
@@ -46,6 +46,17 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    SCIP_HEUR*            heur,               /**< NLP heuristic */
    SCIP_SOL*             solcand,            /**< solution candidate */
    SCIP_Real             violation           /**< constraint violation of solution candidate */
+   );
+
+/** main procedure of the NLP heuristic */
+extern
+SCIP_RETCODE SCIPapplyNlpHeur(
+   SCIP*                 scip,               /**< original SCIP data structure                                   */
+   SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
+   SCIP_RESULT*          result,             /**< result data structure                                          */
+   SCIP_Real**           refpoint,           /**< reference point                                                */
+   SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver                                 */
+   SCIP_Real             timelimit           /**< time limit for NLP solver                                      */
    );
 
 #ifdef __cplusplus
