@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.11 2009/10/30 17:08:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.12 2009/11/13 15:40:05 bzfgleix Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -20,6 +20,7 @@
  * @author  Stefan Vigerske
  *
  * @todo warm starts
+ * @todo delete initial guess when calling nlpiSetInitialGuessIpopt with NULL
  * @todo ScipJournal to redirect Ipopt output 
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
  */
