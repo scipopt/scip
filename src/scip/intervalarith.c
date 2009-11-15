@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.31 2009/09/23 14:13:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.32 2009/11/15 15:18:00 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1277,36 +1277,77 @@ void SCIPintervalSignPowerScalar(
       return;
    }
 
-   roundmode = getRoundingMode();
-   
-   if( operand1.inf <= -infinity )
-   {
-      resultant->inf = -infinity;
-   }
-   else if( operand1.inf > 0.0 )
-   {
-      setRoundingMode(SCIP_ROUND_DOWNWARDS);
-      resultant->inf =  pow( operand1.inf, operand2);
-   }
-   else
-   {
-      setRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of pow! */
-      resultant->inf = -pow(-operand1.inf, operand2);
+   if( operand2 == 1.0 )
+   { /* easy case that should run fast */
+      *resultant = operand1;
+      return;
    }
 
-   if( operand1.sup >=  infinity )
-   {
-      resultant->sup =  infinity;
-   }
-   else if( operand1.sup > 0.0 )
-   {
-      setRoundingMode(SCIP_ROUND_UPWARDS);
-      resultant->sup =  pow( operand1.sup, operand2);
+   roundmode = getRoundingMode();
+
+   if( operand2 == 2.0 )
+   { /* common case where pow can easily be avoided */
+      if( operand1.inf <= -infinity )
+      {
+         resultant->inf = -infinity;
+      }
+      else if( operand1.inf > 0.0 )
+      {
+         setRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf =  operand1.inf * operand1.inf;
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of multiplication! */
+         resultant->inf = -operand1.inf * operand1.inf;
+      }
+
+      if( operand1.sup >=  infinity )
+      {
+         resultant->sup =  infinity;
+      }
+      else if( operand1.sup > 0.0 )
+      {
+         setRoundingMode(SCIP_ROUND_UPWARDS);
+         resultant->sup =  operand1.sup * operand1.sup;
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of multiplication! */
+         resultant->sup = -operand1.sup * operand1.sup;
+      }
    }
    else
    {
-      setRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of pow! */
-      resultant->sup = -pow(-operand1.sup, operand2);
+      if( operand1.inf <= -infinity )
+      {
+         resultant->inf = -infinity;
+      }
+      else if( operand1.inf > 0.0 )
+      {
+         setRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf =  pow( operand1.inf, operand2);
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of pow! */
+         resultant->inf = -pow(-operand1.inf, operand2);
+      }
+
+      if( operand1.sup >=  infinity )
+      {
+         resultant->sup =  infinity;
+      }
+      else if( operand1.sup > 0.0 )
+      {
+         setRoundingMode(SCIP_ROUND_UPWARDS);
+         resultant->sup =  pow( operand1.sup, operand2);
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of pow! */
+         resultant->sup = -pow(-operand1.sup, operand2);
+      }
    }
    
    setRoundingMode(roundmode);
