@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.57 2009/11/12 19:14:38 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.58 2009/11/15 15:22:40 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -796,7 +796,7 @@ static
 SCIP_RETCODE dropVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
-   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */      
+   SCIP_CONS*            cons                /**< constraint for which to drop bound change events */
    )
 {
    SCIP_CONSDATA* consdata;
