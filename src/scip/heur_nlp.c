@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.37 2009/11/13 17:10:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.38 2009/11/16 02:45:13 bzfgleix Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -92,7 +92,7 @@ struct SCIP_HeurData
    SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
    int                   itermin;            /**< minimal number of iterations required to start local search */
                          
-   SCIP_Bool             varboundexplicit;  /**< whether variable bound constraints should be handled explicitly before solving an NLP instead of adding them as linear constraints to to the NLP */
+   SCIP_Bool             varboundexplicit;   /**< whether variable bound constraints should be handled explicitly before solving an NLP instead of adding them as linear constraints to to the NLP */
 };
 
 
@@ -777,6 +777,16 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* not initialized */
+   if( heurdata->nlpi == NULL )
+   {
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   assert(heurdata->nvars > 0);
+   assert(heurdata->var_nlp2scip != NULL);
    
    if( iterused != NULL )
       *iterused = 0;
