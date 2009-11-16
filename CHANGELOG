@@ -29,6 +29,7 @@ features:
 - The solution behavior of SCIP can be diversified by randomly permuting constraints and variables or randomly determining 
   a set of branching variables with a unique high priority
 - the MPS reader can now read MIQPs where the quadratic objective function is specified by a QMATRIX or QUADOBJ section
+- new undercover heuristic for MIQCPs: fixes variables such as to obtain a MIP and solves this
 
 
 performance improvements:
