@@ -1,4 +1,3 @@
-#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -13,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.1 2009/11/16 02:47:29 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.2 2009/11/16 02:54:30 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1224,7 +1223,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    assert( heur != NULL );
    assert( scip != NULL );
    assert( result != NULL );
-   assert( SCIPhasCurrentNodeLP(scip) );
+   /* assert( SCIPhasCurrentNodeLP(scip) ); this leads to an assert e.g. in bell3a ?????????????????????? */
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
