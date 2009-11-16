@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.h,v 1.3 2009/07/31 11:37:17 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_fzn.h,v 1.4 2009/11/16 22:24:53 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @brief  FlatZinc file reader
@@ -26,7 +26,6 @@
 #define __READER_FZN_H__
 
 
-#include "def.h"
 #include "scip/scip.h"
 
 #ifdef __cplusplus

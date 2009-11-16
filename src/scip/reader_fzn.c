@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.32 2009/09/11 16:34:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.33 2009/11/16 22:24:53 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -2050,6 +2050,52 @@ CREATE_CONSTRAINT(createComparisonOpCons)
 
    return SCIP_OKAY;
 }
+
+/** creates an alldifferent constraint */
+static
+CREATE_CONSTRAINT(createAlldifferentOpCons)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+#ifdef ALLDIFFERENT
+   SCIP_CONS* cons;
+#endif
+   int nvars;
+   int size;
+
+   assert(scip != NULL);
+   assert(fzninput != NULL);
+
+   /* check if the function identifier name is array operation */
+   if( !equalTokens(ftokens[0], "all") || !equalTokens(ftokens[1], "different") )
+      return SCIP_OKAY;
+   
+   size = 10;
+   nvars = 0;
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
+
+   SCIPdebugMessage("parse alldifferent expression\n");
+
+   /* pares variable array */
+   SCIP_CALL( parseVariableArrayAssignment(scip, fzninput, &vars, &nvars, size) );  
+
+#ifdef ALLDIFFERENT
+   /* create alldifferent constraint */
+   SCIP_CALL( SCIPcreateConsAlldifferent(scip, &cons, fname, nvars, vars, 
+         TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
+   
+   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+
+   /* add and release the constraint to the problem */
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   SCIPfreeBufferArray(scip, &vars);
+   
+   *created = TRUE;
+#endif
+   
+   return SCIP_OKAY;
+}
    
 /* function pointer array containing all function which can create a constraint */
 static CREATE_CONSTRAINT((*constypes[])) =  {
@@ -2058,10 +2104,11 @@ static CREATE_CONSTRAINT((*constypes[])) =  {
    createLogicalOpCons,
    createArrayOpCons,
    createComparisonOpCons,
+   createAlldifferentOpCons
 };
 
 /** size of the function pointer array */
-static int nconstypes = 5;
+static int nconstypes = 6;
 
 
 /** parse constraint expression */
