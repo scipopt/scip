@@ -1,3 +1,4 @@
+#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -12,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.58 2009/11/15 15:22:40 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.59 2009/11/16 10:08:24 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5503,8 +5504,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    
-   /** FIXME: HACK for cons_signpower: call upgrade method before aggregated variables are replaced */
-   if( nrounds == 0 && conshdlrdata->havesignpowerupgrade )
+   /** FIXME: HACK for cons_signpower and cons_soc: call upgrade method before aggregated variables are replaced or disaggregation took place */
+   if( nrounds == 0 /*&& conshdlrdata->havesignpowerupgrade*/ )
    {
       havechange = FALSE;
       for( c = 0; c < nconss; ++c )
