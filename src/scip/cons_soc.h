@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.h,v 1.3 2009/11/04 11:52:28 bzfgleix Exp $"
+#pragma ident "@(#) $Id: cons_soc.h,v 1.4 2009/11/16 21:39:32 bzfviger Exp $"
 
 /**@file   cons_soc.h
  * @brief  constraint handler for second order cone constraints
@@ -23,8 +23,8 @@
  * \f[
  *    \left\{ x \;:\; \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1}) \right\}.
  * \f]
- * Here, \f$x_{n+1} \geq -\beta_{n+1}, \alpha_{n+1}, \gamma \geq 0\f$.
- * 
+ * Here, \f$\gamma \geq 0\f$ and either \f$x_{n+1} \geq -\beta_{n+1}, \alpha_{n+1} \geq 0\f$ or
+ * \f$x_{n+1} \leq -\beta_{n+1}, \alpha_{n+1} \leq 0\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

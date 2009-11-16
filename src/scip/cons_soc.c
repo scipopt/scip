@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.5 2009/11/04 11:52:28 bzfgleix Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.6 2009/11/16 21:39:32 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -105,6 +105,73 @@ struct SCIP_ConshdlrData
 /*
  * Local methods
  */
+#if 0
+/* multiplies coefficient of lhs variable by a factor */
+static
+SCIP_RETCODE consdataMultCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   idx,                /**< index of lhs variable which coefficient should be multiplied */
+   SCIP_Real             factor              /**< factor with which we want to multiply the coefficient */
+   )
+{
+   assert(scip     != NULL);
+   assert(consdata != NULL);
+   assert(idx >= 0);
+   assert(idx < consdata->nvars);
+   assert(!SCIPisInfinity(scip, ABS(factor)));
+   
+   if( consdata->coefs == NULL )
+   {
+      int i;
+      
+      /* 1.0 and -1.0 are equivalent, and 1.0 is default if coefs is NULL */
+      if( factor == 1.0 || factor == -1.0 )
+         return SCIP_OKAY;
+      
+      SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->coefs, consdata->nvars) );
+      for( i = 0; i < consdata->nvars; ++i )
+         consdata->coefs[i] = 1.0;
+      consdata->coefs[idx] = ABS(factor);
+   }
+   else
+   {
+      consdata->coefs[idx] *= factor;
+   }
+   
+   return SCIP_OKAY;
+}
+
+/* sets offset of lhs variable to a new value */
+static
+SCIP_RETCODE consdataSetOffset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   idx,                /**< index of lhs variable which offset should be set */
+   SCIP_Real             newoffset           /**< new offset of variable */
+   )
+{
+   assert(scip     != NULL);
+   assert(consdata != NULL);
+   assert(idx >= 0);
+   assert(idx < consdata->nvars);
+   assert(!SCIPisInfinity(scip, ABS(newoffset)));
+   
+   if( consdata->offsets == NULL )
+   {
+      /* 0.0 is default */
+      if( SCIPisZero(scip, newoffset) )
+         return SCIP_OKAY;
+      
+      SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->offsets, consdata->nvars) );
+      BMSclearMemoryArray(&consdata->offsets, consdata->nvars);
+   }
+
+   consdata->offsets[idx] = newoffset;
+   
+   return SCIP_OKAY;
+}
+#endif
 
 /** catch variable events */
 static
@@ -783,6 +850,555 @@ SCIP_RETCODE separatePoint(
    return SCIP_OKAY;
 }
 
+#if 0
+/** removes fixed variables, replace aggregated and negated variables; does this once for each lhsvar and rhsvar
+ *
+ * takes care of capture/release and locks
+ */
+static
+SCIP_RETCODE presolveReplaceInactiveVariablesOnce(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool*            havechange          /**< indicates whether a variable was replaced in the constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR*      x;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   *havechange = FALSE;
+
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      x = consdata->vars[i];
+      if( x == NULL )
+         continue;
+      
+      assert(SCIPvarGetStatus(x) != SCIP_VARSTATUS_ORIGINAL);
+
+      switch( SCIPvarGetStatus(x) )
+      {
+         case SCIP_VARSTATUS_LOOSE:
+         case SCIP_VARSTATUS_COLUMN:
+         {
+            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(x), SCIPvarGetUbGlobal(x)) ) /* x is fixed */
+            {
+               SCIP_Real constant;
+
+               assert(!SCIPisInfinity(scip,  SCIPvarGetLbGlobal(x)));
+               assert(!SCIPisInfinity(scip, -SCIPvarGetUbGlobal(x)));
+
+               SCIPdebugMessage("remove lhs variable <%s> fixed to %g from <%s>\n", SCIPvarGetName(x), SCIPvarGetLbGlobal(x), SCIPconsGetName(cons));
+
+               constant = SCIPvarGetLbGlobal(x);
+               if( consdata->offsets )
+                  constant += consdata->offsets[i];
+               if( consdata->coefs )
+                  constant *= consdata->coefs[i];
+               consdata->constant += constant*constant;
+               
+               SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, TRUE) );
+               SCIP_CALL( SCIPreleaseVar(scip, &consdata->vars[i]) );
+
+               *havechange = TRUE;
+            }
+            break;
+         }
+         case SCIP_VARSTATUS_FIXED:
+         {
+            SCIP_Real constant;
+
+            assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(x), SCIPvarGetUbGlobal(x)));
+            assert(!SCIPisInfinity(scip,  SCIPvarGetLbGlobal(x)));
+            assert(!SCIPisInfinity(scip, -SCIPvarGetUbGlobal(x)));
+
+            SCIPdebugMessage("remove lhs variable <%s> fixed to %g from %s\n", SCIPvarGetName(x), SCIPvarGetLbGlobal(x), SCIPconsGetName(cons));
+
+            constant = SCIPvarGetLbGlobal(x);
+            if( consdata->offsets )
+               constant += consdata->offsets[i];
+            if( consdata->coefs )
+               constant *= consdata->coefs[i];
+            consdata->constant += constant*constant;
+            
+            SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPreleaseVar(scip, &consdata->vars[i]) );
+
+            *havechange = TRUE;
+            break;
+         }
+         case SCIP_VARSTATUS_AGGREGATED:
+         { /* x is replaced by scalar * aggrvar + constant
+              thus alpha(x+beta) becomes alpha*scalar(aggrvar + (constant + beta)/scalar) */
+            SCIP_Real newoffset;
+            assert(SCIPvarGetAggrScalar(x) != 0.0);
+            
+            SCIPdebugMessage("replaced aggregated lhs variable <%s> by %g%+g*<%s> in <%s>\n", SCIPvarGetName(x), SCIPvarGetAggrConstant(x), SCIPvarGetAggrScalar(x), SCIPvarGetName(SCIPvarGetAggrVar(x)), SCIPconsGetName(cons));
+            
+            SCIP_CALL( consdataMultCoef(scip, consdata, i, SCIPvarGetAggrScalar(x)) );
+            
+            newoffset  = consdata->offsets ? consdata->offsets[i] : 0.0;
+            newoffset += SCIPvarGetAggrConstant(x);
+            newoffset /= SCIPvarGetAggrScalar(x);
+            SCIP_CALL( consdataSetOffset(scip, consdata, i, newoffset) );
+
+            consdata->vars[i] = SCIPvarGetAggrVar(x);
+            SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[i]) );
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[i], cons, TRUE, TRUE) );
+
+            SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPreleaseVar(scip, &x) );
+            
+            if( SCIPvarIsActive(consdata->vars[i]) )
+               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->vars[i]) );
+
+            *havechange = TRUE;
+            break;
+         }
+         case SCIP_VARSTATUS_MULTAGGR:
+         { /* var is replaced by sum_i scalar_i * aggrvar_i + constant */
+            //TODO do something if SCIPvarGetMultaggrNVars(x) == 1
+            break;
+         }
+         case SCIP_VARSTATUS_NEGATED:
+         { /* var is replaced by constant - negvar */
+            SCIP_Real newoffset;
+            
+            SCIPdebugMessage("replaced negated lhs variable <%s> by %g-<%s> in <%s>\n", SCIPvarGetName(x), 
+               SCIPvarGetNegationConstant(x), SCIPvarGetName(SCIPvarGetNegationVar(x)), SCIPconsGetName(cons));
+            
+            newoffset  = consdata->offsets ? consdata->offsets[i] : 0.0;
+            newoffset += SCIPvarGetNegationConstant(x);
+            newoffset *= -1.0;
+            SCIP_CALL( consdataSetOffset(scip, consdata, i, newoffset) );
+
+            consdata->vars[i] = SCIPvarGetNegationVar(x);
+            SCIP_CALL( SCIPcaptureVar(scip, consdata->vars[i]) );
+            SCIP_CALL( SCIPlockVarCons(scip, consdata->vars[i], cons, TRUE, TRUE) );
+
+            SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, TRUE) );
+            SCIP_CALL( SCIPreleaseVar(scip, &x) );
+            
+            if( SCIPvarIsActive(consdata->vars[i]) )
+               SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->vars[i]) );
+            
+            *havechange = TRUE;
+            break;
+         }
+         case SCIP_VARSTATUS_ORIGINAL: /* for lint */
+         default:
+            SCIPerrorMessage("unexpected variable status: %d\n", SCIPvarGetStatus(x));
+            return SCIP_ERROR;
+      }
+   }
+   
+   x = consdata->rhsvar;
+   if( x == NULL )
+      return SCIP_OKAY;
+   assert(SCIPvarGetStatus(x) != SCIP_VARSTATUS_ORIGINAL);
+   switch( SCIPvarGetStatus(x) )
+   {
+      case SCIP_VARSTATUS_LOOSE:
+      case SCIP_VARSTATUS_COLUMN:
+      {
+         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(x), SCIPvarGetUbGlobal(x)) ) /* x is fixed */
+         {
+            assert(!SCIPisInfinity(scip,  SCIPvarGetLbGlobal(x)));
+            assert(!SCIPisInfinity(scip, -SCIPvarGetUbGlobal(x)));
+
+            SCIPdebugMessage("remove rhs variable <%s> fixed to %g from <%s>\n", SCIPvarGetName(x), SCIPvarGetLbGlobal(x), SCIPconsGetName(cons));
+            
+            consdata->rhsoffset += SCIPvarGetLbGlobal(x);
+            
+            SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, FALSE) );
+            consdata->rhsvar = NULL;
+            /* SCIP_CALL( SCIPreleaseVar(scip, &consdata->rhsvar) ); */
+
+            *havechange = TRUE;
+         }
+         break;
+      }
+      case SCIP_VARSTATUS_FIXED:
+      {
+         assert(SCIPisEQ(scip, SCIPvarGetLbGlobal(x), SCIPvarGetUbGlobal(x)));
+         assert(!SCIPisInfinity(scip,  SCIPvarGetLbGlobal(x)));
+         assert(!SCIPisInfinity(scip, -SCIPvarGetUbGlobal(x)));
+
+         SCIPdebugMessage("remove rhs variable <%s> fixed to %g from %s\n", SCIPvarGetName(x), SCIPvarGetLbGlobal(x), SCIPconsGetName(cons));
+
+         consdata->rhsoffset += SCIPvarGetLbGlobal(x);
+
+         SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, FALSE) );
+         consdata->rhsvar = NULL;
+         /* SCIP_CALL( SCIPreleaseVar(scip, &consdata->rhsvar) ); */
+
+         *havechange = TRUE;
+         break;
+      }
+      case SCIP_VARSTATUS_AGGREGATED:
+      { /* x is replaced by scalar * aggrvar + constant
+           thus alpha(x+beta) becomes alpha*scalar(aggrvar + (constant + beta)/scalar) */
+         assert(SCIPvarGetAggrScalar(x) != 0.0);
+         
+         SCIPdebugMessage("replaced aggregated rhs variable <%s> by %g%+g*<%s> in <%s>\n", SCIPvarGetName(x), SCIPvarGetAggrConstant(x), SCIPvarGetAggrScalar(x), SCIPvarGetName(SCIPvarGetAggrVar(x)), SCIPconsGetName(cons));
+         
+         consdata->rhscoeff *= SCIPvarGetAggrScalar(x);
+         consdata->rhsoffset = (consdata->rhsoffset + SCIPvarGetAggrConstant(x)) / SCIPvarGetAggrScalar(x);
+
+         consdata->rhsvar = SCIPvarGetAggrVar(x);
+         /* SCIP_CALL( SCIPcaptureVar(scip, consdata->rhsvar) ); */
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->rhsvar, cons, TRUE, FALSE) );
+
+         SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, FALSE) );
+         /* SCIP_CALL( SCIPreleaseVar(scip, &x) ); */
+         
+         if( SCIPvarIsActive(consdata->rhsvar) )
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->rhsvar) );
+
+         *havechange = TRUE;
+         break;
+      }
+      case SCIP_VARSTATUS_MULTAGGR:
+      { /* var is replaced by sum_i scalar_i * aggrvar_i + constant */
+         //TODO do something if SCIPvarGetMultaggrNVars(x) == 1
+         break;
+      }
+      case SCIP_VARSTATUS_NEGATED:
+      { /* var is replaced by constant - negvar */
+         SCIPdebugMessage("replaced negated rhs variable <%s> by %g-<%s> in <%s>\n", SCIPvarGetName(x), 
+            SCIPvarGetNegationConstant(x), SCIPvarGetName(SCIPvarGetNegationVar(x)), SCIPconsGetName(cons));
+         
+         consdata->rhscoeff *= -1.0;
+         consdata->rhsoffset = -(consdata->rhsoffset + SCIPvarGetNegationConstant(x));
+
+         consdata->rhsvar = SCIPvarGetNegationVar(x);
+         /* SCIP_CALL( SCIPcaptureVar(scip, consdata->rhsvar) ); */
+         SCIP_CALL( SCIPlockVarCons(scip, consdata->rhsvar, cons, TRUE, FALSE) );
+
+         SCIP_CALL( SCIPunlockVarCons(scip, x, cons, TRUE, FALSE) );
+         /* SCIP_CALL( SCIPreleaseVar(scip, &x) ); */
+         
+         if( SCIPvarIsActive(consdata->rhsvar) )
+            SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->rhsvar) );
+         
+         *havechange = TRUE;
+         break;
+      }
+      case SCIP_VARSTATUS_ORIGINAL: /* for lint */
+      default:
+         SCIPerrorMessage("unexpected variable status: %d\n", SCIPvarGetStatus(x));
+         return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** removes fixed variables, replace aggregated and negated variables
+ *
+ * repeats replacements until no further change is found;
+ * takes care of capture/release and locks, but not of variable events (assumes that var events are not catched yet) 
+ */
+static
+SCIP_RETCODE presolveReplaceInactiveVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler for signpower constraints */
+   SCIP_CONS*            cons,               /**< constraint */
+   int*                  ndelconss,          /**< counter for number of deleted constraints */
+   int*                  nupgdconss,         /**< counter for number of upgraded constraints */
+   int*                  nchgbds,            /**< counter for number of bound changes */
+   int*                  nfixedvars,         /**< counter for number of fixed variables */
+   SCIP_RESULT*          result              /**< to store result if we detect infeasibility or remove constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool      havechange;
+   int            i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   *result = SCIP_DIDNOTFIND;
+   
+   SCIPdebugMessage("before: ");
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   
+   SCIP_CALL( presolveReplaceInactiveVariablesOnce(scip, cons, &havechange) );
+   if( !havechange )
+   {
+      SCIPdebugMessage("no change\n");
+      return SCIP_OKAY;
+   }
+
+   do
+   {
+      SCIP_CALL( presolveReplaceInactiveVariablesOnce(scip, cons, &havechange) );
+   }
+   while( havechange == TRUE );
+
+   /* check if a variable has been removed; if so, close gaps in vars array */ 
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      /* forget about empty places at end of vars array */
+      while( consdata->nvars && consdata->vars[consdata->nvars-1] == NULL )
+         --consdata->nvars;
+      
+      /* all variables at index >= i have been removed */
+      if( i == consdata->nvars )
+         break;
+      
+      if( consdata->vars[i] != NULL )
+         continue;
+      
+      assert(consdata->nvars >= 1);
+      assert(consdata->vars[consdata->nvars-1] != NULL);
+
+      consdata->vars[i] = consdata->vars[consdata->nvars-1];
+      if( consdata->offsets )
+         consdata->offsets[i] = consdata->offsets[consdata->nvars-1];
+      if( consdata->coefs )
+         consdata->coefs[i]   = consdata->coefs[consdata->nvars-1];
+      
+      --consdata->nvars;
+   }
+   
+   if( consdata->nvars == 0 )
+   { /* all variables on left hand size have been removed, remaining constraint is sqrt(gamma) <= ... */
+      assert(!SCIPisNegative(scip, consdata->constant));
+      if( consdata->rhsvar == NULL )
+      { /* also rhsvar has been removed, remaining constraint is sqrt(gamma) <= rhscoeff * rhsoffset */
+         if( SCIPisFeasLE(scip, sqrt(consdata->constant), consdata->rhscoeff*consdata->rhsoffset) )
+         {
+            SCIPdebugMessage("remove redundant constraint <%s> after fixing all variables\n", SCIPconsGetName(cons));
+            *result = SCIP_SUCCESS;
+         }
+         else
+         {
+            SCIPdebugMessage("found problem infeasible after fixing all variables in <%s>\n", SCIPconsGetName(cons));
+            *result = SCIP_CUTOFF;
+         }
+      }
+      else if( consdata->rhscoeff > 0.0 )
+      { /* remaining constraint is sqrt(gamma) / rhscoeff - rhsoffset <= rhsvar */
+         SCIP_Bool infeas;
+         SCIP_Bool tightened;
+         SCIP_CALL( SCIPtightenVarLb(scip, consdata->rhsvar, sqrt(consdata->constant) / consdata->rhscoeff - consdata->rhsoffset, TRUE, &infeas, &tightened) );
+         if( infeas )
+         {
+            SCIPdebugMessage("found problem infeasible after fixing all lhs variables in <%s> and tightening lower bound of rhs var\n", SCIPconsGetName(cons));
+            *result = SCIP_CUTOFF;
+         }
+         else if( tightened )
+         {
+            SCIPdebugMessage("remove redundant constraint <%s> after fixing all lhs variables and tightening lower bound of rhs var\n", SCIPconsGetName(cons));
+            *result = SCIP_SUCCESS;
+            ++*nchgbds;
+         }
+         else
+         {
+            SCIPdebugMessage("remove redundant constraint <%s> after fixing all lhs variables\n", SCIPconsGetName(cons));
+         }
+      }
+      else
+      { /* remaining constraint is sqrt(gamma) / rhscoeff - rhsoffset >= rhsvar */
+         SCIP_Bool infeas;
+         SCIP_Bool tightened;
+         SCIP_CALL( SCIPtightenVarUb(scip, consdata->rhsvar, sqrt(consdata->constant) / consdata->rhscoeff - consdata->rhsoffset, TRUE, &infeas, &tightened) );
+         if( infeas )
+         {
+            SCIPdebugMessage("found problem infeasible after fixing all lhs variables in <%s> and tightening upper bound of rhs var\n", SCIPconsGetName(cons));
+            *result = SCIP_CUTOFF;
+         }
+         else
+         {
+            if( tightened )
+               ++*nchgbds;
+            SCIPdebugMessage("remove redundant constraint <%s> after fixing all lhs variables and tightening upper bound of rhs var\n", SCIPconsGetName(cons));
+            *result = SCIP_SUCCESS;
+         }
+      }
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      ++*ndelconss;
+      return SCIP_OKAY;
+   }
+   
+   if( consdata->rhsvar == NULL )
+   { /* constraint becomes sum_i (alpha_i*(x_i+beta_i))^2 <= (rhscoeff*rhsoffset)^2 - gamma */
+      if( consdata->nvars > 1 )
+      { /* upgrade to quadratic constraint */
+         SCIP_CONS* quadcons;
+         SCIP_Real* sqrcoefs;
+         SCIP_Real* lincoefs;
+         SCIP_Real  rhs;
+         
+         SCIP_CALL( SCIPallocBufferArray(scip, &sqrcoefs, consdata->nvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, consdata->nvars) );
+         rhs = consdata->rhscoeff * consdata->rhsoffset;
+         rhs = rhs*rhs - consdata->constant;
+         
+         for( i = 0; i < consdata->nvars; ++i )
+         {
+            sqrcoefs[i] = consdata->coefs ? (consdata->coefs[i]*consdata->coefs[i]) : 1.0;
+            if( consdata->offsets && consdata->offsets[i] )
+            {
+               lincoefs[i] = 2 * consdata->offsets[i] * sqrcoefs[i];
+               rhs -= sqrcoefs[i] * consdata->offsets[i]*consdata->offsets[i];
+            }
+            else
+               lincoefs[i] = 0.0;
+         }
+         
+         assert(!SCIPconsIsStickingAtNode(cons));
+         SCIP_CALL( SCIPcreateConsQuadratic2(scip, &quadcons, SCIPconsGetName(cons), 0, NULL, NULL,
+            consdata->nvars, consdata->vars, lincoefs, sqrcoefs, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), rhs,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+         SCIP_CALL( SCIPaddCons(scip, quadcons) );
+         SCIPdebugMessage("upgraded <%s> to quadratic constraint: ", SCIPconsGetName(cons));
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, quadcons, NULL) ) );
+         
+         SCIP_CALL( SCIPreleaseCons(scip, &quadcons) );
+         
+         SCIPfreeBufferArray(scip, &sqrcoefs);
+         SCIPfreeBufferArray(scip, &lincoefs);
+         
+         *result = SCIP_SUCCESS;
+         ++*nupgdconss;
+      }
+      else
+      { /* constraint is |alpha*(x+beta)| <= sqrt((rhscoeff*rhsoffset)^2 - gamma) -> propagate bounds */
+         SCIP_Bool infeas;
+         SCIP_Bool tightened;
+         SCIP_Real rhs;
+         assert(consdata->nvars == 1); /* case == 0 handled before */
+         rhs = consdata->rhscoeff * consdata->rhsoffset;
+         rhs = rhs*rhs;
+         if( SCIPisNegative(scip, rhs - consdata->constant) )
+         { /* take this as infeasible */
+            SCIPdebugMessage("found problem infeasible after fixing rhs and all except one lhs variables in <%s>\n", SCIPconsGetName(cons));
+            *result = SCIP_CUTOFF;
+         }
+         else 
+         {
+            rhs -= consdata->constant;
+            if( rhs < 0.0 )
+               rhs = 0.0;
+            else
+               rhs = sqrt(rhs);
+         
+            if( SCIPisZero(scip, rhs) )
+            { /* constraint is x = -beta */
+               SCIP_CALL( SCIPfixVar(scip, consdata->vars[0], consdata->offsets ? -consdata->offsets[0] : 0.0, &infeas, &tightened) );
+               if( infeas )
+               {
+                  SCIPdebugMessage("found problem infeasible after fixing rhs and all except one lhs variables and fixing remaining lhs var in <%s>\n", SCIPconsGetName(cons));
+                  *result = SCIP_CUTOFF;
+               }
+               else
+               {
+                  if( tightened )
+                     ++*nfixedvars;
+                  SCIPdebugMessage("remove redundant constraint <%s> after fixing rhs and all except one lhs variables and fixing remaining lhs var\n", SCIPconsGetName(cons));
+                  *result = SCIP_SUCCESS;
+               }
+            }
+            else
+            { /* constraint is -rhs/|alpha| - beta <= x <= rhs/|alpha| - beta */
+               if( consdata->coefs )
+                  rhs /= ABS(consdata->coefs[0]);
+               SCIP_CALL( SCIPtightenVarLb(scip, consdata->vars[0], -rhs - (consdata->offsets ? consdata->offsets[0] : 0.0), TRUE, &infeas, &tightened) );
+               if( infeas )
+               {
+                  SCIPdebugMessage("found problem infeasible after fixing rhs and all except one lhs variables and tightening lower bound of remaining lhs var in <%s>\n", SCIPconsGetName(cons));
+                  *result = SCIP_CUTOFF;
+               }
+               else
+               {
+                  if( tightened )
+                     ++*nchgbds;
+                  SCIP_CALL( SCIPtightenVarUb(scip, consdata->vars[0],  rhs - (consdata->offsets ? consdata->offsets[0] : 0.0), TRUE, &infeas, &tightened) );
+                  if( infeas )
+                  {
+                     SCIPdebugMessage("found problem infeasible after fixing rhs and all except one lhs variables and tightening upper bound of remaining lhs var in <%s>\n", SCIPconsGetName(cons));
+                     *result = SCIP_CUTOFF;
+                  }
+                  else if( tightened )
+                     ++*nchgbds;
+               }
+               if( !infeas )
+               {
+                  SCIPdebugMessage("remove redundant constraint <%s> after fixing rhs and all except one lhs variables and tightening bounds on remaining lhs var\n", SCIPconsGetName(cons));
+                  *result = SCIP_SUCCESS;
+               }
+            }
+         }
+         ++*ndelconss;
+      }
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      return SCIP_OKAY;
+   }
+   
+   if( consdata->nvars == 1 && SCIPisZero(scip, consdata->constant) )
+   { /* one variable on lhs left and no constant, constraint becomes |alpha*(x+beta)| <= ... -> upgrade to two linear constraints */
+      SCIP_CONS* lincons;
+      SCIP_VAR*  vars[2];
+      SCIP_Real  coefs[2];
+      SCIP_Real  rhs;
+      assert( consdata->rhsvar != NULL ); /* case == NULL has been handled before */
+      
+      vars[0] = consdata->vars[0];
+      vars[1] = consdata->rhsvar;
+      coefs[0] = consdata->coefs ? consdata->coefs[0] : 1.0;
+      coefs[1] = -consdata->rhscoeff;
+      rhs = consdata->rhscoeff * consdata->rhsoffset;
+      if( consdata->offsets )
+         rhs -= coefs[0] * consdata->offsets[0];
+      
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(cons), 2, vars, coefs, -SCIPinfinity(scip), rhs,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
+      SCIP_CALL( SCIPaddCons(scip, lincons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+      
+      coefs[0] = -coefs[0];
+      rhs = consdata->rhscoeff * consdata->rhsoffset;
+      if( consdata->offsets )
+         rhs += -coefs[0] * consdata->offsets[0];
+      
+      SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(cons), 2, vars, coefs, -SCIPinfinity(scip), rhs,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
+      SCIP_CALL( SCIPaddCons(scip, lincons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
+      SCIPdebugMessage("upgraded <%s> to two linear constraint\n", SCIPconsGetName(cons));
+      
+      *result = SCIP_SUCCESS;
+      ++*nupgdconss;
+      SCIP_CALL( SCIPdelCons(scip, cons) );
+      return SCIP_OKAY;
+   }
+   
+   SCIPdebugMessage("after: ");
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+
+   return SCIP_OKAY;
+}
+#endif
+
 /** adds the linear outer-approximation of Glineur et.al. for a SOC constraint of dimension 3
  * 
  * Input is the data for a constraint \f$\sqrt{constant + (\alpha_1(x_1+offset1))^2 + (\alpha_2(x_2+offset2))^2) \leq \alpha_3(x_3+offset3)}\f$.
@@ -1340,7 +1956,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
 
       SCIPsnprintf(name, 255, "%s_soc3", basename);
       if( nlhsvars == 3 )
-      { /* create new constraint alpha_2 (x_2+beta2)^2 + auxvar^2 <= rhscoeff * (rhsvar+rhsoffset)^2 */
+      { /* create new constraint alpha_2 (x_2+beta2)^2 + auxvar^2 <= (rhscoeff * (rhsvar+rhsoffset))^2 */
          SCIP_CALL( presolveCreateOuterApproxDim3(scip, origcons,
             lhsvars[2],                               auxvar1, rhsvar,
             lhscoefs   != NULL ? lhscoefs[2]   : 1.0, 1.0,     rhscoeff,
@@ -1348,7 +1964,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
             soc3_nr_auxvars, glineur, basename) );
       }
       else
-      { /* create new constraint auxvar^2 + sqrt(constant)^2 <= rhscoeff * (rhsvar+rhsoffset)^2 */
+      { /* create new constraint auxvar^2 + sqrt(constant)^2 <= (rhscoeff * (rhsvar+rhsoffset))^2 */
          SCIP_CALL( presolveCreateOuterApproxDim3(scip, origcons,
             auxvar1, NULL,           rhsvar,
             1.0,     1.0,            rhscoeff,
@@ -2386,6 +3002,9 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
    SCIP_CONSHDLRDATA*  conshdlrdata;
    SCIP_CONSDATA*      consdata;
    int                 c;
+#if 0
+   SCIP_RESULT         replaceresult;
+#endif
    SCIP_RESULT         propresult;
    
    assert(scip     != NULL);
@@ -2408,10 +3027,20 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
          SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets, consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c], conshdlrdata->nauxvars, conshdlrdata->glineur) );
          consdata->isapproxadded = TRUE;
       }
-
-      /* @todo remove fixed variables, replace aggregated and negated vars (if on lhs only?) */
-
-      /* @todo use varevents to recognize whether propagation might make sense */
+#if 0
+      SCIP_CALL( presolveReplaceInactiveVariables(scip, conshdlr, conss[c], ndelconss, nupgdconss, nchgbds, nfixedvars, &replaceresult) );
+      if( replaceresult == SCIP_CUTOFF )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      if( replaceresult == SCIP_SUCCESS )
+      { /* conss[c] was deleted */
+         *result = SCIP_SUCCESS;
+         continue;
+      }
+#endif
+      /* @todo use varevents to recognize whether propagation might make sense? */
       if( nnewfixedvars || nnewchgbds )
          consdata->ispropagated = FALSE;
       
@@ -2479,7 +3108,10 @@ SCIP_DECL_CONSLOCK(consLockSOC)
    }
 
    /* Rounding x_{n+1} up will not violate a solution. */
-   SCIP_CALL( SCIPaddVarLocks(scip, consdata->rhsvar, nlockspos, nlocksneg) );
+   if( consdata->rhsvar != NULL )
+   {
+      SCIP_CALL( SCIPaddVarLocks(scip, consdata->rhsvar, nlockspos, nlocksneg) );
+   }
 
    return SCIP_OKAY;
 }
@@ -2594,24 +3226,31 @@ SCIP_DECL_CONSPRINT(consPrintSOC)
    }
    
    SCIPinfoMessage(scip, file, ") <= ");
-   if( consdata->rhscoeff != 1.0 )
-      if( consdata->rhsoffset != 0.0 )
-      {
-         SCIPinfoMessage(scip, file, "%g * (<%s> + %g)\n", consdata->rhscoeff, SCIPvarGetName(consdata->rhsvar), consdata->rhsoffset);
-      }
+   if( consdata->rhsvar != NULL )
+   {
+      if( consdata->rhscoeff != 1.0 )
+         if( consdata->rhsoffset != 0.0 )
+         {
+            SCIPinfoMessage(scip, file, "%g * (<%s> + %g)\n", consdata->rhscoeff, SCIPvarGetName(consdata->rhsvar), consdata->rhsoffset);
+         }
+         else
+         {
+            SCIPinfoMessage(scip, file, "%g * <%s>\n", consdata->rhscoeff, SCIPvarGetName(consdata->rhsvar));
+         }
       else
-      {
-         SCIPinfoMessage(scip, file, "%g * <%s>\n", consdata->rhscoeff, SCIPvarGetName(consdata->rhsvar));
-      }
+         if( consdata->rhsoffset != 0.0 )
+         {
+            SCIPinfoMessage(scip, file, "<%s> + %g\n", SCIPvarGetName(consdata->rhsvar), consdata->rhsoffset);
+         }
+         else
+         {
+            SCIPinfoMessage(scip, file, "<%s>\n", SCIPvarGetName(consdata->rhsvar));
+         }
+   }
    else
-      if( consdata->rhsoffset != 0.0 )
-      {
-         SCIPinfoMessage(scip, file, "<%s> + %g\n", SCIPvarGetName(consdata->rhsvar), consdata->rhsoffset);
-      }
-      else
-      {
-         SCIPinfoMessage(scip, file, "<%s>\n", SCIPvarGetName(consdata->rhsvar));
-      }
+   {
+      SCIPinfoMessage(scip, file, "%g \n", consdata->rhscoeff*consdata->rhsoffset);
+   }
 
    return SCIP_OKAY;
 }
@@ -2803,9 +3442,18 @@ SCIP_RETCODE SCIPcreateConsSOC(
    assert(constant >= 0.0);
    assert(!SCIPisInfinity(scip, ABS(rhsoffset)));
    assert(!SCIPisInfinity(scip, constant));
-   assert(rhscoeff >= 0.0);
-   assert(!local || SCIPisGE(scip, SCIPvarGetLbLocal(rhsvar), -rhsoffset));
-   assert( local || SCIPisGE(scip, SCIPvarGetUbLocal(rhsvar), -rhsoffset));
+#ifndef NDEBUG
+   if( rhscoeff > 0.0 )
+   {
+      assert(!local || SCIPisGE(scip, SCIPvarGetLbLocal(rhsvar), -rhsoffset));
+      assert( local || SCIPisGE(scip, SCIPvarGetUbLocal(rhsvar), -rhsoffset));
+   }
+   else
+   {
+      assert(!local || SCIPisLE(scip, SCIPvarGetLbLocal(rhsvar), -rhsoffset));
+      assert( local || SCIPisLE(scip, SCIPvarGetUbLocal(rhsvar), -rhsoffset));
+   }
+#endif
 
    /* create constraint data */
    SCIP_CALL( SCIPallocMemory(scip, &consdata) );
