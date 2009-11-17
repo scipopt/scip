@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.2 2009/11/16 02:54:30 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.3 2009/11/17 19:16:08 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -319,7 +319,7 @@ SCIP_RETCODE createPpcProblem(
             /* if the term has zero coefficient in the original problem, it is already linear: nothing to do */
             nottofix = local && SCIPisFeasEQ(scip, SCIPvarGetLbLocal(soclhsvars[t]), SCIPvarGetUbLocal(soclhsvars[t]));
             nottofix = nottofix || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(soclhsvars[t]), SCIPvarGetUbGlobal(soclhsvars[t]));
-            nottofix = nottofix || SCIPisZero(scip, SCIPgetLhsCoefsSOC(scip, soccons)[t]);
+            nottofix = nottofix || (SCIPgetLhsCoefsSOC(scip, soccons) && SCIPisZero(scip, SCIPgetLhsCoefsSOC(scip, soccons)[t]));
 
             if( nottofix )
                continue;
@@ -349,8 +349,8 @@ SCIP_RETCODE createPpcProblem(
             SCIP_CALL( SCIPaddCons(ppcscip, ppccons) );
             SCIP_CALL( SCIPreleaseCons(ppcscip, &ppccons) );
 
-            for( i = 0; i < nvars; ++i )
-               conscounter[i] = SCIPceil(scip, conscounter[i]);
+            for( t = 0; t < nvars; ++t )
+               conscounter[t] = SCIPceil(scip, conscounter[t]);
          }
 
          SCIPfreeBufferArray(ppcscip, &ppcconsvars);
