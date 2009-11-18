@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.3 2009/11/17 19:16:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.4 2009/11/18 00:59:53 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -181,10 +181,18 @@ SCIP_RETCODE createPpcProblem(
          for( t = 0; t < SCIPgetNQuadVarsQuadratic(scip, quadcons); ++t )
          {
             SCIP_VAR* quadvar;
+            int probindex;
 
             quadvar = SCIPgetQuadVarsQuadratic(scip, quadcons)[t];
             assert( quadvar != NULL );
-            assert( SCIPvarGetProbindex(quadvar) != -1 );
+
+            /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+            probindex = SCIPvarGetProbindex(quadvar);
+            if( probindex == -1 )
+            {
+               SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(quadcons));
+               return SCIP_OKAY;
+            }
 
             /* if the variable is fixed in the original problem, the term is already linear: nothing to do */
             /* if the variable has zero coefficient in the original problem, the term is already linear: nothing to do */
@@ -199,14 +207,14 @@ SCIP_RETCODE createPpcProblem(
             if( nottofix )
                continue;
 
-            SCIP_CALL( SCIPfixVar(ppcscip, ppcvars[SCIPvarGetProbindex(quadvar)], 1.0, &infeas, &fixed) );
+            SCIP_CALL( SCIPfixVar(ppcscip, ppcvars[probindex], 1.0, &infeas, &fixed) );
             assert( !infeas );
             assert( fixed );
 
-            conscounter[SCIPvarGetProbindex(quadvar)] += 1.0/nterms;
-	    ++(termcounter[SCIPvarGetProbindex(quadvar)]);
+            conscounter[probindex] += 1.0/nterms;
+	    ++(termcounter[probindex]);
 
-            SCIPdebugMessage("undercover heuristic: fixing var %s in set covering problem to 1.\n", SCIPvarGetName(ppcvars[SCIPvarGetProbindex(quadvar)]));
+            SCIPdebugMessage("undercover heuristic: fixing var %s in set covering problem to 1.\n", SCIPvarGetName(ppcvars[probindex]));
          }
 
          /* create set covering constraints: fix at least one variable in each bilinear term */
@@ -216,13 +224,22 @@ SCIP_RETCODE createPpcProblem(
             SCIP_VAR* bilinvar2;
             SCIP_VAR* ppcconsvars[2];
             SCIP_CONS* ppccons;
+            int probindex1;
+            int probindex2;
 
             bilinvar1 = SCIPgetBilinVars1Quadratic(scip, quadcons)[t];
             bilinvar2 = SCIPgetBilinVars2Quadratic(scip, quadcons)[t];
             assert( bilinvar1 != NULL );
             assert( bilinvar2 != NULL );
-            assert( SCIPvarGetProbindex(bilinvar1) != -1 );
-            assert( SCIPvarGetProbindex(bilinvar2) != -1 );
+
+            /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+            probindex1 = SCIPvarGetProbindex(bilinvar1);
+            probindex2 = SCIPvarGetProbindex(bilinvar2);
+            if( probindex1 == -1 || probindex2 == -1 )
+            {
+               SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(quadcons));
+               return SCIP_OKAY;
+            }
 
             /* if one of the variables is fixed in the original problem, the term is already linear: nothing to do */
             /* if the term has zero coefficient in the original problem, it is already linear: nothing to do */
@@ -238,8 +255,8 @@ SCIP_RETCODE createPpcProblem(
             /* get name of the original constraint and add the string "_bilin.." */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_bilin%d", SCIPconsGetName(quadcons), t);
 
-            ppcconsvars[0] = ppcvars[SCIPvarGetProbindex(bilinvar1)];
-            ppcconsvars[1] = ppcvars[SCIPvarGetProbindex(bilinvar2)];
+            ppcconsvars[0] = ppcvars[probindex1];
+            ppcconsvars[1] = ppcvars[probindex2];
 
             SCIP_CALL( SCIPcreateConsSetcover(ppcscip, &ppccons, name, 2, ppcconsvars,
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
@@ -253,10 +270,10 @@ SCIP_RETCODE createPpcProblem(
             SCIP_CALL( SCIPaddCons(ppcscip, ppccons) );
             SCIP_CALL( SCIPreleaseCons(ppcscip, &ppccons) );
 
-            conscounter[SCIPvarGetProbindex(bilinvar1)] += 1.0/nterms;
-            conscounter[SCIPvarGetProbindex(bilinvar2)] += 1.0/nterms;
-            ++(termcounter[SCIPvarGetProbindex(bilinvar1)]);
-            ++(termcounter[SCIPvarGetProbindex(bilinvar2)]);
+            conscounter[probindex1] += 1.0/nterms;
+            conscounter[probindex2] += 1.0/nterms;
+            ++(termcounter[probindex1]);
+            ++(termcounter[probindex2]);
          }
 
          for( t = 0; t < nvars; ++t )
@@ -266,7 +283,7 @@ SCIP_RETCODE createPpcProblem(
 
    /* go through all SOC constraints in the original problem */
    conshdlr = SCIPfindConshdlr(scip, "soc");
-   if( conshdlr != NULL )
+   if( conshdlr != NULL && !onlyconvexify )
    {
       for( i = 0; i < SCIPconshdlrGetNConss(conshdlr); ++i )
       {
@@ -278,6 +295,7 @@ SCIP_RETCODE createPpcProblem(
 
          SCIP_Bool nottofix;
          int ntofix;
+         int probindex;
          int t;
 
          soccons = SCIPconshdlrGetConss(conshdlr)[i];
@@ -289,7 +307,14 @@ SCIP_RETCODE createPpcProblem(
          /* right hand side variable */
          socrhsvar = SCIPgetRhsVarSOC(scip, soccons);
          assert( socrhsvar != NULL );
-         assert( SCIPvarGetProbindex(socrhsvar) != -1 );
+
+         /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+         probindex = SCIPvarGetProbindex(socrhsvar);
+         if( probindex == -1 )
+         {
+            SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(soccons));
+            return SCIP_OKAY;
+         }
 
          /* if the variable is fixed in the original problem, the term is already linear: nothing to do */
          /* if the term has zero coefficient in the original problem, it is already linear: nothing to do */
@@ -299,11 +324,11 @@ SCIP_RETCODE createPpcProblem(
 
          if( !nottofix )
          {
-            SCIP_CALL( SCIPgetNegatedVar(ppcscip, ppcvars[SCIPvarGetProbindex(socrhsvar)], &ppcconsvars[ntofix]) );
+            SCIP_CALL( SCIPgetNegatedVar(ppcscip, ppcvars[probindex], &ppcconsvars[ntofix]) );
             ++ntofix;
 
-            conscounter[SCIPvarGetProbindex(socrhsvar)] += 1.0/nvars;
-            ++termcounter[SCIPvarGetProbindex(socrhsvar)];
+            conscounter[probindex] += 1.0/nvars;
+            ++termcounter[probindex];
          }
 
          /* left hand side variables */
@@ -313,22 +338,29 @@ SCIP_RETCODE createPpcProblem(
          for( t = 0; t < SCIPgetNLhsVarsSOC(scip, soccons); ++t )
          {
             assert( soclhsvars[t] != NULL );
-            assert( SCIPvarGetProbindex(soclhsvars[t]) != -1 );
+
+            /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+            probindex = SCIPvarGetProbindex(soclhsvars[t]);
+            if( probindex == -1 )
+            {
+               SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(soccons));
+               return SCIP_OKAY;
+            }
 
             /* if the variable is fixed in the original problem, the term is already linear: nothing to do */
             /* if the term has zero coefficient in the original problem, it is already linear: nothing to do */
             nottofix = local && SCIPisFeasEQ(scip, SCIPvarGetLbLocal(soclhsvars[t]), SCIPvarGetUbLocal(soclhsvars[t]));
             nottofix = nottofix || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(soclhsvars[t]), SCIPvarGetUbGlobal(soclhsvars[t]));
-            nottofix = nottofix || (SCIPgetLhsCoefsSOC(scip, soccons) && SCIPisZero(scip, SCIPgetLhsCoefsSOC(scip, soccons)[t]));
+            nottofix = nottofix || (SCIPgetLhsCoefsSOC(scip, soccons) != NULL && SCIPisZero(scip, SCIPgetLhsCoefsSOC(scip, soccons)[t]));
 
             if( nottofix )
                continue;
 
-            SCIP_CALL( SCIPgetNegatedVar(ppcscip, ppcvars[SCIPvarGetProbindex(soclhsvars[t])], &ppcconsvars[ntofix]) );
+            SCIP_CALL( SCIPgetNegatedVar(ppcscip, ppcvars[probindex], &ppcconsvars[ntofix]) );
             ++ntofix;
 
-            conscounter[SCIPvarGetProbindex(soclhsvars[t])] += 1.0/nvars;
-            ++termcounter[SCIPvarGetProbindex(soclhsvars[t])];
+            conscounter[probindex] += 1.0/nvars;
+            ++termcounter[probindex];
          }
 
          if( ntofix > 0 )
@@ -842,7 +874,7 @@ SCIP_RETCODE solveSubProblem(
    SCIPdebugMessage("undercover presolved subMIQCP: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
    /* check for nonlinear constraints */
-   if( checklinear )
+   if( SCIPgetStatus(subscip) != SCIP_STATUS_INFEASIBLE && checklinear )
    {
       SCIP_CONSHDLR* conshdlr;
 
@@ -850,7 +882,7 @@ SCIP_RETCODE solveSubProblem(
       *success = conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0;
 
       conshdlr = SCIPfindConshdlr(subscip, "soc");
-      *success = conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0;
+      *success = *success && (conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
 
       assert( *success );
       if( !(*success) )
