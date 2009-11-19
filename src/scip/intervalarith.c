@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.32 2009/11/15 15:18:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.33 2009/11/19 18:26:53 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1079,6 +1079,8 @@ void SCIPintervalPowerScalar(
       }
    }
 
+   SCIPwarningMessage("Warning: interval arithmetic for pow function is not rounding safe!\n");
+
    roundmode = getRoundingMode();
    
    if( operand1.inf >= 0.0 )
@@ -1115,7 +1117,7 @@ void SCIPintervalPowerScalar(
    else if( operand1.sup < 0.0 )
    {  /* more difficult case: x^n with x < 0; we now know, that n is integer */
       assert(op2isint);
-      if( (operand2 >= 0.0 && ceil(operand2/2) == operand2/2) || (operand2 <=0 && ceil(operand2/2) != operand2/2) )
+      if( (operand2 >= 0.0 && ceil(operand2/2) == operand2/2) || (operand2 <= 0.0 && ceil(operand2/2) != operand2/2) )
       {  /* x^n with (n>=0 and even) or (n<=0 and odd) -> x^n is mon. decreasing for x<0 */
          setRoundingMode(SCIP_ROUND_DOWNWARDS);
          resultant->inf = pow(operand1.sup, operand2);
@@ -1317,8 +1319,41 @@ void SCIPintervalSignPowerScalar(
          resultant->sup = -operand1.sup * operand1.sup;
       }
    }
+   else if( operand2 == 0.5 )
+   { /* another common case where pow can easily be avoided */
+      if( operand1.inf <= -infinity )
+      {
+         resultant->inf = -infinity;
+      }
+      else if( operand1.inf >= 0.0 )
+      {
+         setRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf =  sqrt(operand1.inf);
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_UPWARDS); /* need upwards since we negate result of multiplication! */
+         resultant->inf = -sqrt(-operand1.inf);
+      }
+
+      if( operand1.sup >=  infinity )
+      {
+         resultant->sup =  infinity;
+      }
+      else if( operand1.sup > 0.0 )
+      {
+         setRoundingMode(SCIP_ROUND_UPWARDS);
+         resultant->sup =  sqrt(operand1.sup);
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_DOWNWARDS); /* need downwards since we negate result of multiplication! */
+         resultant->sup = -sqrt(-operand1.sup);
+      }
+   }
    else
    {
+      SCIPwarningMessage("Warning: interval arithmetic for pow function is not rounding safe");
       if( operand1.inf <= -infinity )
       {
          resultant->inf = -infinity;
@@ -1353,6 +1388,86 @@ void SCIPintervalSignPowerScalar(
    setRoundingMode(roundmode);
 }
 
+/** computes the reciprocal of an interval
+ *
+ * if operand is 0.0, gives empty interval */
+extern
+void SCIPintervalReciprocal(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   ROUNDMODE roundmode;
+
+   assert(resultant != NULL);
+   assert(operand.inf <= operand.sup);
+   assert(operand.inf <  infinity);
+   assert(operand.sup > -infinity);
+
+   if( operand.inf == 0.0 && operand.sup == 0.0 )
+   { /* 1/0 = empty */
+      resultant->inf =  infinity;
+      resultant->sup = -infinity;
+      return;
+   }
+
+   roundmode = getRoundingMode();
+
+   if( operand.inf >= 0.0 )
+   {  /* 1/x with x >= 0 */
+      if( operand.sup >= infinity )
+      {
+         resultant->inf = 0.0;
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf = 1.0 / operand.sup;
+      }
+
+      if( operand.inf == 0.0 )
+      {
+         resultant->sup = infinity;
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_UPWARDS);
+         resultant->sup = 1.0 / operand.inf;
+      }
+
+      setRoundingMode(roundmode);
+   }
+   else if( operand.sup <= 0.0 )
+   {  /* 1/x with x <= 0 */
+      if( operand.sup == 0.0 )
+      {
+         resultant->inf = -infinity;
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_DOWNWARDS);
+         resultant->inf = 1.0 / operand.sup;
+      }
+
+      if( operand.inf <= -infinity )
+      {
+         resultant->sup = infinity;
+      }
+      else
+      {
+         setRoundingMode(SCIP_ROUND_UPWARDS);
+         resultant->sup = 1.0 / operand.inf;
+      }
+      setRoundingMode(roundmode);
+   }
+   else
+   {  /* 1/x with x in [-,+] is division by zero */
+      resultant->inf = -infinity;
+      resultant->sup =  infinity;
+   }
+}
+
 /** stores exponential of operand in resultant */
 void SCIPintervalExp(
    SCIP_Real             infinity,           /**< value for infinity */
@@ -1368,6 +1483,8 @@ void SCIPintervalExp(
    assert(operand.sup > -infinity);
   
    roundmode = getRoundingMode();
+
+   SCIPwarningMessage("Warning: interval arithmetic for exp function is not rounding safe");
 
    if( operand.inf <= -infinity )
    {
@@ -1413,6 +1530,8 @@ void SCIPintervalLog(
    }
   
    roundmode = getRoundingMode();
+
+   SCIPwarningMessage("Warning: interval arithmetic for log function is not rounding safe");
   
    if( operand.inf <= 0.0 )
    {

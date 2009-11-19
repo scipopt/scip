@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.h,v 1.20 2009/09/23 12:36:10 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.h,v 1.21 2009/11/19 18:26:53 bzfviger Exp $"
 
 /**@file   intervalarith.h
  * @brief  interval arithmetics for provable bounds
@@ -248,6 +248,16 @@ void SCIPintervalSignPowerScalar(
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_Real             operand2            /**< second operand of operation */
+   );
+
+/** computes the reciprocal of an interval
+ *
+ * if operand is 0.0, gives an empty interval as result */
+extern
+void SCIPintervalReciprocal(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
 /** stores exponential of operand in resultant */
