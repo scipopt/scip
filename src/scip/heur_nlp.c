@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.38 2009/11/16 02:45:13 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.39 2009/11/19 20:26:19 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -47,6 +47,9 @@
 #endif
 #ifdef WITH_SIGNPOWER
 #include "cons_signpower.h"
+#endif
+#ifdef WITH_UNIVARDEFINITE
+#include "cons_univardefinite.h"
 #endif
 
 #define HEUR_NAME             "nlp"
@@ -421,7 +424,7 @@ SCIP_RETCODE addNonlinearConstraints(
 }
 #endif
 
-#ifdef WITH_NL
+#ifdef WITH_SIGNPOWER
 /** adds nonlinear constraints to NLP */
 static
 SCIP_RETCODE addSignpowerConstraints(
@@ -438,6 +441,28 @@ SCIP_RETCODE addSignpowerConstraints(
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPconsInitNlpiSignpower(scip, sgnpowconshdlr, heurdata->nlpi, SCIPconshdlrGetNConss(sgnpowconshdlr), SCIPconshdlrGetConss(sgnpowconshdlr), heurdata->var_scip2nlp) );
+
+   return SCIP_OKAY;
+}
+#endif
+
+#ifdef WITH_UNIVARDEFINITE
+/** adds univariate definite constraints to NLP */
+static
+SCIP_RETCODE addUnivardefiniteConstraints(
+   SCIP*          scip,          /**< SCIP data structure */
+   SCIP_HEURDATA* heurdata,      /**< heuristic data structure */
+   SCIP_CONSHDLR* univardefiniteconshdlr    /**< constraint handler for univariate definite constraints */
+   )
+{
+   assert(scip        != NULL);
+   assert(heurdata    != NULL);
+   assert(univardefiniteconshdlr != NULL);
+
+   if (!SCIPconshdlrGetNConss(univardefiniteconshdlr))
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPconsInitNlpiUnivardefinite(scip, univardefiniteconshdlr, heurdata->nlpi, SCIPconshdlrGetNConss(univardefiniteconshdlr), SCIPconshdlrGetConss(univardefiniteconshdlr), heurdata->var_scip2nlp) );
 
    return SCIP_OKAY;
 }
@@ -583,6 +608,12 @@ SCIP_RETCODE setupNLP(
       else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "signpower" ) == 0)
       {
          SCIP_CALL( addSignpowerConstraints (scip, heurdata, conshdlrs[i]) );
+      }
+#endif
+#ifdef WITH_UNIVARDEFINITE
+      else if (strcmp(SCIPconshdlrGetName(conshdlrs[i]), "univardefinite" ) == 0)
+      {
+         SCIP_CALL( addUnivardefiniteConstraints (scip, heurdata, conshdlrs[i]) );
       }
 #endif
       else
@@ -1069,6 +1100,28 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
             {
                cons     = SCIPconshdlrGetConss(conshdlr)[i];
                x        = SCIPgetNonlinearVarSignpower(scip, cons);
+               if( x == NULL )
+                  continue;
+               if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
+                  havenlp = TRUE;
+            }
+         }
+      }
+#endif
+
+#ifdef WITH_UNIVARDEFINITE
+      if (!havenlp)
+      {
+         conshdlr = SCIPfindConshdlr(scip, "univardefinite");
+         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
+         {
+            SCIP_CONS*     cons;
+            SCIP_VAR*      x;
+            int            i;
+            for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
+            {
+               cons     = SCIPconshdlrGetConss(conshdlr)[i];
+               x        = SCIPgetNonlinearVarUnivardefinite(scip, cons);
                if( x == NULL )
                   continue;
                if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
