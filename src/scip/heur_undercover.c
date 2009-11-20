@@ -1,3 +1,4 @@
+#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -12,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.7 2009/11/20 15:09:44 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.8 2009/11/20 17:01:58 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -37,13 +38,13 @@
 #include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_soc.h"
-#include "scip/heur_nlp.h"
 #ifdef WITH_UNIVARDEFINITE
 #include "cons_univardefinite.h"
 #endif
 #ifdef WITH_CONSBRANCHNL
 #include "cons_branchnonlinear.h"
 #endif
+#include "scip/heur_nlp.h"
 
 #define HEUR_NAME             "undercover"
 #define HEUR_DESC             "solves a linearization of an MIQCP determined by a set covering approach"
@@ -207,8 +208,8 @@ SCIP_RETCODE createPpcProblem(
             nottofix = nottofix || SCIPisZero(scip, SCIPgetSqrCoefsQuadVarsQuadratic(scip, quadcons)[t]);
 
             /* if we want to convexify only and coefficient and bounds are accordingly: nothing to do */
-            nottofix = nottofix || (onlyconvexify && ( (SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, quadcons)) && SCIPgetSqrCoefsQuadVarsQuadratic(scip, quadcons)[t] >= 0) ));
-            nottofix = nottofix || (onlyconvexify && ( (SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, quadcons)) && SCIPgetSqrCoefsQuadVarsQuadratic(scip, quadcons)[t] <= 0) ));
+            nottofix = nottofix || (onlyconvexify && SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, quadcons)) && SCIPgetSqrCoefsQuadVarsQuadratic(scip, quadcons)[t] >= 0);
+            nottofix = nottofix || (onlyconvexify && SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, quadcons)) && SCIPgetSqrCoefsQuadVarsQuadratic(scip, quadcons)[t] <= 0);
 
             if( nottofix )
                continue;
@@ -394,6 +395,57 @@ SCIP_RETCODE createPpcProblem(
          SCIPfreeBufferArray(ppcscip, &ppcconsvars);
       }
    }
+
+#ifdef WITH_UNIVARDEFINITE
+   /* go through all "univariate definite" constraints in the original problem */
+   conshdlr = SCIPfindConshdlr(scip, "univardefinite");
+   if( conshdlr != NULL )
+   {
+      for( i = 0; i < SCIPconshdlrGetNConss(conshdlr); ++i )
+      {
+         SCIP_CONS* uvdcons;
+         SCIP_VAR* uvdvar;
+
+         SCIP_Bool infeas;
+         SCIP_Bool fixed;
+         SCIP_Bool nottofix;
+         int probindex;
+
+         uvdcons = SCIPconshdlrGetConss(conshdlr)[i];
+         assert( uvdcons != NULL );
+
+         uvdvar = SCIPgetNonlinearVarUnivardefinite(scip, uvdcons);
+         assert( uvdvar != NULL );
+
+         /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+         probindex = SCIPvarGetProbindex(uvdvar);
+         if( probindex == -1 || SCIPvarGetProbindex(SCIPgetLinearVarUnivardefinite(scip, uvdcons)) )
+         {
+            SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(uvdcons));
+            return SCIP_OKAY;
+         }
+
+         /* if the variable is fixed in the original problem, the term is already linear: nothing to do */
+         /* if the variable has zero coefficient in the original problem, the term is already linear: nothing to do */
+         nottofix = local && SCIPisFeasEQ(scip, SCIPvarGetLbLocal(uvdvar), SCIPvarGetUbLocal(uvdvar));
+         nottofix = nottofix || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(uvdvar), SCIPvarGetUbGlobal(uvdvar));
+         nottofix = nottofix || SCIPisZero(scip, SCIPgetCoefNonlinearUnivardefinite(scip, uvdcons));
+
+         /* if we want to convexify only and function and bounds are accordingly: nothing to do */
+         nottofix = nottofix || (onlyconvexify && SCIPisNonlinearFunctionConvexUnivardefinite(scip, uvdcons) && SCIPisInfinity(scip, -SCIPgetLhsUnivardefinite(scip, uvdcons)));
+         nottofix = nottofix || (onlyconvexify && !SCIPisNonlinearFunctionConvexUnivardefinite(scip, uvdcons) && SCIPisInfinity(scip, SCIPgetRhsUnivardefinite(scip, uvdcons)));
+
+         if( nottofix )
+            continue;
+
+         SCIP_CALL( SCIPfixVar(ppcscip, ppcvars[probindex], 1.0, &infeas, &fixed) );
+         assert( !infeas );
+         assert( fixed );
+
+         SCIPdebugMessage("undercover heuristic: fixing var %s in set covering problem to 1.\n", SCIPvarGetName(ppcvars[probindex]));
+      }
+   }
+#endif
 
    /* set obj value of ppc variables according to strat */
    conobjfac = objquot > 1.0 ? objquot : 1.0;
@@ -687,6 +739,44 @@ SCIP_RETCODE createSubProblem(
       }
    }
 
+#ifdef WITH_UNIVARDEFINITE
+   /* copy "univariate definite" constraints */
+   if( SCIPfindConshdlr(scip, "univardefinite") != NULL )
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONS* cons;
+      SCIP_CONS* conscopy;
+      SCIP_Bool succeed;
+      int c;
+
+      conshdlr = SCIPfindConshdlr(scip, "univardefinite");
+      assert( conshdlr != NULL );
+
+      SCIPdebugMessage("undercover heuristic attempting to copy %d %s constraints\n", SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetName(conshdlr));
+
+      for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
+      {
+         cons = SCIPconshdlrGetConss(conshdlr)[c];
+         assert( cons != NULL );
+
+         SCIP_CALL( SCIPcopyCons(subscip, &conscopy, NULL, conshdlr, scip, cons, varmap,
+             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+             SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+             FALSE, &succeed) );
+
+         if( succeed )
+         {
+            SCIP_CALL( SCIPaddCons(subscip, conscopy) );
+            SCIP_CALL( SCIPreleaseCons(subscip, &conscopy) );
+         }
+         else
+         {
+            SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(cons));
+         }
+      }
+   }
+#endif
+
    SCIPhashmapFree(&varmap);
 
    *success = TRUE;
@@ -889,6 +979,11 @@ SCIP_RETCODE solveSubProblem(
 
       conshdlr = SCIPfindConshdlr(subscip, "soc");
       *success = *success && (conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
+
+#ifdef WITH_UNIVARDEFINITE
+      conshdlr = SCIPfindConshdlr(subscip, "univardefinite");
+      *success = *success && (conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
+#endif
 
       assert( *success );
       if( !(*success) )
@@ -1247,6 +1342,12 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    conshdlr = SCIPfindConshdlr(scip, "soc");
    if( conshdlr != NULL && SCIPconshdlrGetNConss(conshdlr) > 0 )
       return SCIP_OKAY;
+
+#ifdef WITH_UNIVARDEFINITE
+   conshdlr = SCIPfindConshdlr(scip, "univardefinite");
+   if( conshdlr != NULL && SCIPconshdlrGetNConss(conshdlr) > 0 )
+      return SCIP_OKAY;
+#endif
 
    SCIPdebugMessage("undercover heuristic will not run for <%s> (no known nonlinear constraints present)\n", SCIPgetProbName(scip));
    heurdata->run = FALSE;
