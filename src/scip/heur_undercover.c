@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.6 2009/11/20 12:41:27 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.7 2009/11/20 15:09:44 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -54,10 +54,10 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 
-#define DEFAULT_MINNODES      500LL          /* minimum number of nodes to regard in the subproblem                   */
-#define DEFAULT_MAXNODES      5000LL         /* maximum number of nodes to regard in the subproblem                   */
+#define DEFAULT_MINNODES      (SCIP_Longint)500/* minimum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MAXNODES      (SCIP_Longint)5000/* maximum number of nodes to regard in the subproblem                */
 #define DEFAULT_MINIMPROVE    0.01           /* factor by which heuristic should at least improve the incumbent       */
-#define DEFAULT_NODESOFS      500LL          /* number of nodes added to the contingent of the total nodes            */
+#define DEFAULT_NODESOFS      (SCIP_Longint)500/* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
 #define DEFAULT_PPCOBJQUOT    1.0            /* additional penalty factor for fixing continuous variables             */
 #define DEFAULT_DOMRED        1.0            /* reduce domain of selected variables by this factor around LP value    */
