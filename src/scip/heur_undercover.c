@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.4 2009/11/18 00:59:53 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.5 2009/11/20 12:29:17 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -212,7 +212,7 @@ SCIP_RETCODE createPpcProblem(
             assert( fixed );
 
             conscounter[probindex] += 1.0/nterms;
-	    ++(termcounter[probindex]);
+            ++(termcounter[probindex]);
 
             SCIPdebugMessage("undercover heuristic: fixing var %s in set covering problem to 1.\n", SCIPvarGetName(ppcvars[probindex]));
          }
@@ -399,23 +399,23 @@ SCIP_RETCODE createPpcProblem(
       /* number of influenced nonlinear constraints */
       for( i = 0; i < nvars - ncontvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*conscounter[i]) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*conscounter[i]) );
       }
       for( ; i < nvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*conscounter[i]) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*conscounter[i]) );
       }
       break;
    case 'd':
       /* domain size */
       for( i = 0; i < nvars - ncontvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i],
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i],
                intobjfac*(local ? SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]) : SCIPvarGetUbGlobal(vars[i]) - SCIPvarGetLbGlobal(vars[i]))) );
       }
       for( ; i < nvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i],
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i],
                conobjfac*(local ? SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]) : SCIPvarGetUbGlobal(vars[i]) - SCIPvarGetLbGlobal(vars[i]))) );
       }
       break;
@@ -423,44 +423,44 @@ SCIP_RETCODE createPpcProblem(
       /* number of locks */
       for( i = 0; i < nvars - ncontvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*(SCIPvarGetNLocksDown(vars[i]) + SCIPvarGetNLocksUp(vars[i]) + 1.0)) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*(SCIPvarGetNLocksDown(vars[i]) + SCIPvarGetNLocksUp(vars[i]) + 1.0)) );
       }
       for( ; i < nvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*(SCIPvarGetNLocksDown(vars[i]) + SCIPvarGetNLocksUp(vars[i]) + 1.0)) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*(SCIPvarGetNLocksDown(vars[i]) + SCIPvarGetNLocksUp(vars[i]) + 1.0)) );
       }
       break;
    case 'm':
       /* min(up locks, down locks) */
       for( i = 0; i < nvars - ncontvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*(MIN(SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i])) + 1.0)) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*(MIN(SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i])) + 1.0)) );
       }
       for( ; i < nvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*(MIN(SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i])) + 1.0)) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*(MIN(SCIPvarGetNLocksDown(vars[i]), SCIPvarGetNLocksUp(vars[i])) + 1.0)) );
       }
       break;
    case 't':
       /* number of influenced nonlinear terms */
       for( i = 0; i < nvars - ncontvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*termcounter[i]) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac*termcounter[i]) );
       }
       for( ; i < nvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*termcounter[i]) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac*termcounter[i]) );
       }
       break;
    case 'u':
       /* unit penalties for variables of same type */
       for( i = 0; i < nvars - ncontvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], intobjfac) );
       }
       for( ; i < nvars; ++i )
       {
-	 SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac) );
+         SCIP_CALL( SCIPchgVarObj(ppcscip, ppcvars[i], conobjfac) );
       }
       break;
    default:
