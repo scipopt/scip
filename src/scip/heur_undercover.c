@@ -1,4 +1,3 @@
-#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -13,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.10 2009/11/20 17:14:14 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.11 2009/11/20 19:06:59 bzfpfets Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
