@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.5 2009/11/20 12:29:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.6 2009/11/20 12:41:27 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -30,7 +30,7 @@
 #include <string.h>
 
 
-#include "heur_undercover.h"
+#include "scip/heur_undercover.h"
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
@@ -38,6 +38,12 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_soc.h"
 #include "scip/heur_nlp.h"
+#ifdef WITH_UNIVARDEFINITE
+#include "cons_univardefinite.h"
+#endif
+#ifdef WITH_CONSBRANCHNL
+#include "cons_branchnonlinear.h"
+#endif
 
 #define HEUR_NAME             "undercover"
 #define HEUR_DESC             "solves a linearization of an MIQCP determined by a set covering approach"
@@ -1034,9 +1040,18 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    /* initializing subMIQCP */
    SCIP_CALL( SCIPcreate(&subscip) );
+
+#ifdef WITH_CONSBRANCHNL
+   SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(subscip) );
+#endif
+   
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
 
+#ifdef WITH_UNIVARDEFINITE
+   SCIP_CALL( SCIPincludeConshdlrUnivardefinite(subscip) );
+#endif
+   
    /* create subMIQCP */
    SCIPdebugMessage("undercover heuristic creating subMIQCP\n");
    success = FALSE;
