@@ -1,3 +1,4 @@
+#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -12,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.9 2009/11/20 17:02:28 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.10 2009/11/20 17:14:14 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -197,6 +198,8 @@ SCIP_RETCODE createPpcProblem(
             if( probindex == -1 )
             {
                SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(quadcons));
+               SCIPfreeBufferArray(scip, &termcounter);
+               SCIPfreeBufferArray(scip, &conscounter);
                return SCIP_OKAY;
             }
 
@@ -244,6 +247,8 @@ SCIP_RETCODE createPpcProblem(
             if( probindex1 == -1 || probindex2 == -1 )
             {
                SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(quadcons));
+               SCIPfreeBufferArray(scip, &termcounter);
+               SCIPfreeBufferArray(scip, &conscounter);
                return SCIP_OKAY;
             }
 
@@ -270,6 +275,8 @@ SCIP_RETCODE createPpcProblem(
             if( ppccons == NULL )
             {
                SCIPdebugMessage("failed to create set covering constraint %s: terminating undercover heuristic\n", name);
+               SCIPfreeBufferArray(scip, &termcounter);
+               SCIPfreeBufferArray(scip, &conscounter);
                return SCIP_OKAY;
             }
 
@@ -319,6 +326,9 @@ SCIP_RETCODE createPpcProblem(
          if( probindex == -1 )
          {
             SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(soccons));
+            SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+            SCIPfreeBufferArray(scip, &termcounter);
+            SCIPfreeBufferArray(scip, &conscounter);
             return SCIP_OKAY;
          }
 
@@ -350,6 +360,9 @@ SCIP_RETCODE createPpcProblem(
             if( probindex == -1 )
             {
                SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(soccons));
+               SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+               SCIPfreeBufferArray(scip, &termcounter);
+               SCIPfreeBufferArray(scip, &conscounter);
                return SCIP_OKAY;
             }
 
@@ -381,6 +394,8 @@ SCIP_RETCODE createPpcProblem(
             {
                SCIPdebugMessage("failed to create set packing constraint %s: terminating undercover heuristic\n", name);
                SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+               SCIPfreeBufferArray(scip, &termcounter);
+               SCIPfreeBufferArray(scip, &conscounter);
                return SCIP_OKAY;
             }
 
@@ -421,6 +436,8 @@ SCIP_RETCODE createPpcProblem(
          if( probindex == -1 || SCIPvarGetProbindex(SCIPgetLinearVarUnivardefinite(scip, uvdcons)) )
          {
             SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(uvdcons));
+            SCIPfreeBufferArray(scip, &termcounter);
+            SCIPfreeBufferArray(scip, &conscounter);
             return SCIP_OKAY;
          }
 
