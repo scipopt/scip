@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.11 2009/11/20 19:06:59 bzfpfets Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.12 2009/11/20 19:22:54 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -432,7 +432,7 @@ SCIP_RETCODE createPpcProblem(
 
          /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
          probindex = SCIPvarGetProbindex(uvdvar);
-         if( probindex == -1 || SCIPvarGetProbindex(SCIPgetLinearVarUnivardefinite(scip, uvdcons)) )
+         if( probindex == -1 || SCIPvarGetProbindex(SCIPgetLinearVarUnivardefinite(scip, uvdcons)) == -1 )
          {
             SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(uvdcons));
             SCIPfreeBufferArray(scip, &termcounter);
@@ -449,7 +449,7 @@ SCIP_RETCODE createPpcProblem(
          /* if we want to convexify only and function and bounds are accordingly: nothing to do */
          nottofix = nottofix || (onlyconvexify && SCIPisNonlinearFunctionConvexUnivardefinite(scip, uvdcons) && SCIPisInfinity(scip, -SCIPgetLhsUnivardefinite(scip, uvdcons)));
          nottofix = nottofix || (onlyconvexify && !SCIPisNonlinearFunctionConvexUnivardefinite(scip, uvdcons) && SCIPisInfinity(scip, SCIPgetRhsUnivardefinite(scip, uvdcons)));
-
+         
          if( nottofix )
             continue;
 
@@ -648,6 +648,8 @@ SCIP_RETCODE createSubProblem(
                   SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
          }
          ++fixingcounter;
+         
+         SCIPdebugMessage("fixed variable <%s> to %g in subMIQCP\n", SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(subvars[i]));
       }
       else 
       {
@@ -948,8 +950,8 @@ SCIP_RETCODE solveSubProblem(
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
 
    /* forbid recursive call of heuristics solving subMIPs */
-#if 0
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
+#if 0
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/oneopt/freq", -1) );
@@ -1115,7 +1117,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* create ppc problem */
    SCIPdebugMessage("undercover heuristic creating ppc problem\n");
    success = FALSE;
-   SCIP_CALL( createPpcProblem(scip, ppcscip, ppcvars, ppcstrat, ppcobjquot, TRUE, FALSE, &success) );
+   SCIP_CALL( createPpcProblem(scip, ppcscip, ppcvars, ppcstrat, ppcobjquot, TRUE, onlyconvexify, &success) );
 
    /* solve ppc problem */
    if( success )
