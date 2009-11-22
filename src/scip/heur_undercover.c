@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.13 2009/11/22 00:52:45 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.14 2009/11/22 01:32:19 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -419,22 +419,24 @@ SCIP_RETCODE createPpcProblem(
       for( i = 0; i < SCIPconshdlrGetNConss(conshdlr); ++i )
       {
          SCIP_CONS* uvdcons;
-         SCIP_VAR* uvdvar;
+         SCIP_CONS* ppccons;
+         SCIP_VAR* linearuvdvar;
+         SCIP_VAR* nonlinearuvdvar;
+         SCIP_VAR* ppcconsvars[2];
 
-         SCIP_Bool infeas;
-         SCIP_Bool fixed;
          SCIP_Bool nottofix;
-         int probindex;
 
          uvdcons = SCIPconshdlrGetConss(conshdlr)[i];
          assert( uvdcons != NULL );
 
-         uvdvar = SCIPgetNonlinearVarUnivardefinite(scip, uvdcons);
-         assert( uvdvar != NULL );
+         linearuvdvar = SCIPgetLinearVarUnivardefinite(scip, uvdcons);
+         assert( linearuvdvar != NULL );
+
+         nonlinearuvdvar = SCIPgetNonlinearVarUnivardefinite(scip, uvdcons);
+         assert( nonlinearuvdvar != NULL );
 
          /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
-         probindex = SCIPvarGetProbindex(uvdvar);
-         if( probindex == -1 || SCIPvarGetProbindex(SCIPgetLinearVarUnivardefinite(scip, uvdcons)) == -1 )
+         if( SCIPvarGetProbindex(linearuvdvar) == -1 || SCIPvarGetProbindex(nonlinearuvdvar) == -1 )
          {
             SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(uvdcons));
             SCIPfreeBufferArray(scip, &termcounter);
@@ -442,11 +444,14 @@ SCIP_RETCODE createPpcProblem(
             return SCIP_OKAY;
          }
 
-         /* if the variable is fixed in the original problem, the term is already linear: nothing to do */
-         /* if the variable has zero coefficient in the original problem, the term is already linear: nothing to do */
-         nottofix = local && SCIPisFeasEQ(scip, SCIPvarGetLbLocal(uvdvar), SCIPvarGetUbLocal(uvdvar));
-         nottofix = nottofix || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(uvdvar), SCIPvarGetUbGlobal(uvdvar));
+         /* if one of the variable is fixed in the original problem, the term is already linear: nothing to do */
+         /* if one of the variable has zero coefficient in the original problem, the term is already linear: nothing to do */
+         nottofix = local && SCIPisFeasEQ(scip, SCIPvarGetLbLocal(linearuvdvar), SCIPvarGetUbLocal(linearuvdvar));
+         nottofix = nottofix || (local && SCIPisFeasEQ(scip, SCIPvarGetLbLocal(nonlinearuvdvar), SCIPvarGetUbLocal(nonlinearuvdvar)));
+         nottofix = nottofix || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(linearuvdvar), SCIPvarGetUbGlobal(linearuvdvar));
+         nottofix = nottofix || SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(nonlinearuvdvar), SCIPvarGetUbGlobal(nonlinearuvdvar));
          nottofix = nottofix || SCIPisZero(scip, SCIPgetCoefNonlinearUnivardefinite(scip, uvdcons));
+         nottofix = nottofix || SCIPisZero(scip, SCIPgetCoefLinearUnivardefinite(scip, uvdcons));
 
          /* if we want to convexify only and function and bounds are accordingly: nothing to do */
          nottofix = nottofix || (onlyconvexify && SCIPisNonlinearFunctionConvexUnivardefinite(scip, uvdcons) && SCIPisInfinity(scip, -SCIPgetLhsUnivardefinite(scip, uvdcons)));
@@ -455,11 +460,44 @@ SCIP_RETCODE createPpcProblem(
          if( nottofix )
             continue;
 
-         SCIP_CALL( SCIPfixVar(ppcscip, ppcvars[probindex], 1.0, &infeas, &fixed) );
-         assert( !infeas );
-         assert( fixed );
+         if( SCIPgetNonlinearFunctionUnivardefinite(scip, uvdcons) == SCIP_EXPR_DIV )
+         {
+            /* get name of the original constraint and add the string "_uvd" */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_uvd", SCIPconsGetName(uvdcons));
 
-         SCIPdebugMessage("undercover heuristic: fixing var %s in set covering problem to 1.\n", SCIPvarGetName(ppcvars[probindex]));
+            ppcconsvars[0] = ppcvars[SCIPvarGetProbindex(linearuvdvar)];
+            ppcconsvars[1] = ppcvars[SCIPvarGetProbindex(nonlinearuvdvar)];
+
+            SCIP_CALL( SCIPcreateConsSetcover(ppcscip, &ppccons, name, 2, ppcconsvars,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+            if( ppccons == NULL )
+            {
+               SCIPdebugMessage("failed to create set covering constraint %s: terminating undercover heuristic\n", name);
+               SCIPfreeBufferArray(scip, &termcounter);
+               SCIPfreeBufferArray(scip, &conscounter);
+               return SCIP_OKAY;
+            }
+
+            SCIP_CALL( SCIPaddCons(ppcscip, ppccons) );
+            SCIP_CALL( SCIPreleaseCons(ppcscip, &ppccons) );
+         }
+         else
+         {
+            SCIP_Bool infeas;
+            SCIP_Bool fixed;
+
+            SCIP_CALL( SCIPfixVar(ppcscip, ppcvars[SCIPvarGetProbindex(nonlinearuvdvar)], 1.0, &infeas, &fixed) );
+            assert( !infeas );
+            assert( fixed );
+
+            SCIPdebugMessage("undercover heuristic: fixing var %s in set covering problem to 1.\n", SCIPvarGetName(ppcvars[SCIPvarGetProbindex(nonlinearuvdvar)]));
+         }
+
+         ++(conscounter[SCIPvarGetProbindex(linearuvdvar)]);
+         ++(conscounter[SCIPvarGetProbindex(nonlinearuvdvar)]);
+         ++(termcounter[SCIPvarGetProbindex(linearuvdvar)]);
+         ++(termcounter[SCIPvarGetProbindex(nonlinearuvdvar)]);
       }
    }
 #endif
