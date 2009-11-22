@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.14 2009/11/22 01:32:19 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.15 2009/11/22 14:23:25 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -711,7 +711,7 @@ SCIP_RETCODE createSubProblem(
       SCIPhashmapFree(&varmap);
       return SCIP_OKAY;
    }
-
+#ifndef WITH_UNIVARDEFINITE
    /* get the rows and their number */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
 
@@ -758,7 +758,7 @@ SCIP_RETCODE createSubProblem(
       /* free temporary memory */
       SCIPfreeBufferArray(subscip, &consvars);
    }
-   
+
    /* copy quadratic and soc constraints */
    for( i = 0; i < 2; ++i )
    {
@@ -808,6 +808,42 @@ SCIP_RETCODE createSubProblem(
 
       conshdlr = SCIPfindConshdlr(scip, "univardefinite");
       assert( conshdlr != NULL );
+
+      SCIPdebugMessage("undercover heuristic attempting to copy %d %s constraints\n", SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetName(conshdlr));
+
+      for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
+      {
+         cons = SCIPconshdlrGetConss(conshdlr)[c];
+         assert( cons != NULL );
+
+         SCIP_CALL( SCIPcopyCons(subscip, &conscopy, NULL, conshdlr, scip, cons, varmap,
+             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+             SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+             FALSE, &succeed) );
+
+         if( succeed )
+         {
+            SCIP_CALL( SCIPaddCons(subscip, conscopy) );
+            SCIP_CALL( SCIPreleaseCons(subscip, &conscopy) );
+         }
+         else
+         {
+            SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(cons));
+         }
+      }
+   }
+#endif
+#else
+   /* copy all constraints */
+   for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
+   {
+      SCIP_CONSHDLR* conshdlr;
+      SCIP_CONS* cons;
+      SCIP_CONS* conscopy;
+      SCIP_Bool succeed;
+      int c;
+
+      conshdlr = SCIPgetConshdlrs(scip)[i];
 
       SCIPdebugMessage("undercover heuristic attempting to copy %d %s constraints\n", SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetName(conshdlr));
 
@@ -1563,7 +1599,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
          "factor by which the heuristic should at least improve the incumbent  ",
-         &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+         &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, -1.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/locksrounding",
          "shall LP values for integer vars be rounded according to locks?",
