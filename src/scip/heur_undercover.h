@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.h,v 1.1 2009/11/16 02:47:29 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.h,v 1.2 2009/11/22 00:52:45 bzfgleix Exp $"
 
 /**@file   heur_undercover.h
  * @brief  undercover primal heuristic for MIQCPs
@@ -49,6 +49,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value */
    SCIP_Bool             locksrounding,      /**< shall LP values for integer vars be rounded according to locks? */
    SCIP_Bool             onlyconvexify,      /**< should variable fixing only convexify the problem?             */
+   SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Real             minimprove,         /**< factor by which heuristic should at least improve the incumbent*/
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                    */
    SCIP_Bool             postnlp             /**< shall NLP heuristic be called when a feas. solution was found? */

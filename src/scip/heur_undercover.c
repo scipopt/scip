@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.12 2009/11/20 19:22:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.13 2009/11/22 00:52:45 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -64,6 +64,7 @@
 #define DEFAULT_LOCKSROUNDING TRUE           /* shall LP values for integer vars be rounded according to locks?       */
 #define DEFAULT_ONLYCONVEXIFY FALSE          /* should we only fix/dom.red. variables creating nonconvexity?          */
 #define DEFAULT_ONLYATINTEGER FALSE          /* should heuristic be called only at integer feasible nodes?            */
+#define DEFAULT_GLOBALBOUNDS  FALSE          /* should global bounds on variables be used instead of local bounds at focus node? */
 #define DEFAULT_POSTNLP       TRUE           /* should the NLP heuristic be called to polish a feasible solution?     */
 #define DEFAULT_PPCSTRAT      'u'            /* strategy for finding a ppc solution                                   */
 #define PPCSTRATS             "bcdlmtuv"     /* strategies for finding a ppc solution                                 */
@@ -87,6 +88,7 @@ struct SCIP_HeurData
    SCIP_Bool             locksrounding;      /**< shall LP values for integer vars be rounded according to locks?     */
    SCIP_Bool             onlyconvexify;      /**< should we only fix/dom.red. variables creating nonconvexity?        */
    SCIP_Bool             onlyatinteger;      /**< should heuristic be called only at integer feasible nodes?          */
+   SCIP_Bool             globalbounds;       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             postnlp;            /**< should the NLP heuristic be called to polish a feasible solution?   */
    SCIP_Bool             run;                /**< should heuristic run, i.e. are nonlinear constraints present?       */
    char                  ppcstrat;           /**< strategy for finding a ppc solution                                 */
@@ -1082,6 +1084,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value */
    SCIP_Bool             locksrounding,      /**< shall LP values for integer vars be rounded according to locks? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity?   */
+   SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Real             minimprove,         /**< factor by which heuristic should at least improve the incumbent*/
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                    */
    SCIP_Bool             postnlp             /**< shall NLP heuristic be called when a feas. solution was found? */
@@ -1117,7 +1120,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* create ppc problem */
    SCIPdebugMessage("undercover heuristic creating ppc problem\n");
    success = FALSE;
-   SCIP_CALL( createPpcProblem(scip, ppcscip, ppcvars, ppcstrat, ppcobjquot, TRUE, onlyconvexify, &success) );
+   SCIP_CALL( createPpcProblem(scip, ppcscip, ppcvars, ppcstrat, ppcobjquot, !globalbounds, onlyconvexify, &success) );
 
    /* solve ppc problem */
    if( success )
@@ -1167,7 +1170,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* create subMIQCP */
    SCIPdebugMessage("undercover heuristic creating subMIQCP\n");
    success = FALSE;
-   SCIP_CALL( createSubProblem(scip, subscip, subvars, ppcsolvals, domred, locksrounding, TRUE, &success) );
+   SCIP_CALL( createSubProblem(scip, subscip, subvars, ppcsolvals, domred, locksrounding, !globalbounds, &success) );
 
    /* if there is already a solution, add an objective cutoff */
    if( SCIPgetNSols(scip) > 0 )
@@ -1470,7 +1473,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    SCIPdebugMessage("calling undercover heuristic for <%s>\n", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPapplyUndercover(scip, heur, result, timelimit, memorylimit,
-         heurdata->ppcstrat, heurdata->ppcobjquot, heurdata->domred, heurdata->locksrounding, heurdata->onlyconvexify,
+         heurdata->ppcstrat, heurdata->ppcobjquot, heurdata->domred, heurdata->locksrounding, heurdata->onlyconvexify, heurdata->globalbounds,
          heurdata->minimprove, nstallnodes, heurdata->postnlp) );
 
    return SCIP_OKAY;
@@ -1539,6 +1542,10 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/postnlp",
          "should the NLP heuristic be called to polish a feasible solution?",
          &heurdata->postnlp, TRUE, DEFAULT_POSTNLP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/globalbounds",
+         "should global bounds on variables be used instead of local bounds at focus node?",
+         &heurdata->globalbounds, TRUE, DEFAULT_GLOBALBOUNDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/ppcstrategy",
          "strategy for the ppc problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
