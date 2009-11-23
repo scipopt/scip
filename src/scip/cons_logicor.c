@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_logicor.c,v 1.132 2009/09/02 10:30:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_logicor.c,v 1.133 2009/11/23 21:05:18 bzfheinz Exp $"
 
 /**@file   cons_logicor.c
  * @ingroup CONSHDLRS 
@@ -263,7 +263,7 @@ void consdataPrint(
    SCIPinfoMessage(scip, file, ")");
    
    if( endline )
-      SCIPinfoMessage(scip, file, ")\n");
+      SCIPinfoMessage(scip, file, "\n");
 }
 
 /** stores the given variable numbers as watched variables, and updates the event processing */
