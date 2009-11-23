@@ -10,7 +10,7 @@
 =best= dano3mip      6.8773333333e+02
 =opt=  danoint       6.5666666666e+01
 =opt=  disctom      -5.0000000000e+03
-=best= ds            1.1659000000e+02
+=best= ds            9.3520000000e+01
 =opt=  fast0507      1.7400000000e+02
 =opt=  fiber         4.0593518000e+05
 =opt=  fixnet6       3.9830000000e+03 
@@ -18,7 +18,7 @@
 =opt=  gesa2-o       2.5779856372e+07 
 =opt=  glass4        1.2000126000e+09
 =opt=  harp2        -7.3899798000e+07
-=best= liu           1.1380000000e+03
+=best= liu           1.1320000000e+03
 =opt=  manna81      -1.3164000000e+04
 =opt=  markshare1    1.0000000000e+00
 =opt=  markshare2    1.0000000000e+00
@@ -53,7 +53,7 @@
 =opt=  sp97ar        6.6070564550e+08
 =best= stp3d         4.9371965000e+02
 =opt=  swath         4.67407491e+02
-=best= t1717         1.7019510000e+05
+=best= t1717         1.6886700000e+05
 =opt=  timtab1       7.6477200000e+05
 =opt=  timtab2       1.0965570000e+06
 =opt=  tr12-30       1.3059600000e+05
