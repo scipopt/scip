@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.60 2009/11/16 10:25:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.61 2009/11/24 18:35:14 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -180,6 +180,11 @@ struct SCIP_ConshdlrData
    int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
    int                   nquadconsupgrades;         /**< number of quadratic constraint upgrade methods */
    SCIP_Bool             havesignpowerupgrade;      /**< is one of the quadconsupgrades an upgrade for signpower? FIXME: this is a HACK */
+#ifdef USECLOCK   
+   SCIP_CLOCK*           clock1;
+   SCIP_CLOCK*           clock2;
+   SCIP_CLOCK*           clock3;
+#endif
 };
 
 /** quadratic constraint update method */
@@ -1792,6 +1797,208 @@ SCIP_RETCODE presolveFindComponents(
    return SCIP_OKAY;
 }
 
+#if 1
+/** disaggregates a block separable constraint into several quadratic constraints
+ */
+static
+SCIP_RETCODE presolveDisaggregate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler itself */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_HASHMAP*         terms,              /**< constraint function in form of PRESOLVEQUADTERM's */
+   SCIP_Real             constant,           /**< constant part of constraint function */
+   int                   ncomponents         /**< number of components (blocks) */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA*     consdata;
+   SCIP_HASHMAPLIST*  list;
+   PRESOLVEQUADTERM*  term;
+   SCIP_VAR**         newlinvars;
+   SCIP_Real*         newlincoefs;
+   SCIP_CONS*         blockcons;
+   SCIP_CONSDATA*     blockconsdata;
+   SCIP_VAR*          auxvar;
+   SCIP_VAR*          var;
+   int                nnewlinvars;
+   int                inewlinvars;
+   char               name[255];
+   int                i;
+   int                k;
+   SCIP_CONS*         lincons;
+   SCIP_Real          lhs, rhs;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(terms != NULL);
+   assert(ncomponents > 1);
+   assert(SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIPdebugMessage("disaggregate constraint %s\n", SCIPconsGetName(cons));
+
+   nnewlinvars = ncomponents;
+   for( i = 0; i < SCIPhashmapGetNLists(terms); ++i )
+      for( list = SCIPhashmapGetList(terms, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      {
+         term = (PRESOLVEQUADTERM*) SCIPhashmapListGetImage(list);
+         if( term->component == -1 )
+         {
+            assert(SCIPisZero(scip, term->sqrcoefs));
+            assert(term->bilin == NULL);
+            if( SCIPisZero(scip, term->lincoefs) )
+               continue;
+            ++nnewlinvars;
+         }
+      }
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &newlinvars,  nnewlinvars) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &newlincoefs, nnewlinvars) );
+
+   inewlinvars = 0;
+   for( k = 0; k < ncomponents; ++k )
+   {
+      SCIP_CALL( SCIPallocMemory( scip, &blockconsdata) );
+
+      /* we need to enforce only one bound here
+       * we cannot make auxvar implicit integer then
+       * hope it does not have bad effect on bound tightening
+       */
+      blockconsdata->lhs = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : 0.;
+      blockconsdata->rhs = SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : 0.;
+
+      blockconsdata->nlinvars = 0;
+      blockconsdata->linvars = NULL;
+      blockconsdata->lincoefs = NULL;
+
+      blockconsdata->nquadvars = 0;
+      blockconsdata->quadvars = NULL;
+      blockconsdata->quadlincoefs = NULL;
+      blockconsdata->quadsqrcoefs = NULL;
+      blockconsdata->nadjbilin = NULL;
+      blockconsdata->adjbilin = NULL;
+
+      blockconsdata->nbilinterms = 0;
+      blockconsdata->bilincoefs = NULL;
+      blockconsdata->bilinvars1 = NULL;
+      blockconsdata->bilinvars2 = NULL;
+
+      blockconsdata->linrange = NULL;
+      blockconsdata->quadrangevar = NULL;
+      blockconsdata->linbndchgeventdata = NULL;
+      blockconsdata->quadbndchgeventdata = NULL;
+      blockconsdata->bilinrange = NULL;
+
+      SCIP_CALL( consdataSetFunctionData(scip, blockconsdata, terms, k) );
+      assert(blockconsdata->nlinvars == 0);
+      assert(blockconsdata->linvars == NULL);
+      assert(blockconsdata->lincoefs == NULL);
+      assert(blockconsdata->linrange == NULL);
+      /* we scale the new constraints by ncomponents, so that the sum of the feasibility violations stays below the feasibility tolerance in a solution */
+#if 0
+      for( i = 0; i < blockconsdata->nquadvars; ++i )
+      {
+         blockconsdata->quadlincoefs[i] *= ncomponents;
+         blockconsdata->quadsqrcoefs[i] *= ncomponents;
+      }
+      for( i = 0; i < blockconsdata->nbilinterms; ++i )
+         blockconsdata->bilincoefs[i] *= ncomponents;
+#endif
+
+      (void)SCIPsnprintf(name, 255, "%s#%u", SCIPconsGetName(cons), k);
+      SCIP_CALL( SCIPcreateVar(scip, &auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), SCIPconsIsRemovable(cons), NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, auxvar) );
+
+      SCIP_CALL( SCIPallocMemoryArray(scip, &blockconsdata->linvars,  1) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &blockconsdata->lincoefs, 1) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &blockconsdata->linrange, 1) );
+
+      blockconsdata->nlinvars = 1;
+      blockconsdata->linvars[0] = auxvar;
+      blockconsdata->lincoefs[0] = -1;
+
+      blockconsdata->isconvex = FALSE;
+      blockconsdata->isconcave = FALSE;
+      blockconsdata->isremovedfixings = TRUE;
+      blockconsdata->ispropagated = FALSE;
+      blockconsdata->ispresolved = FALSE; /* so that in the next presolve round maybe auxvar is made implicit integer */
+
+      SCIP_CALL( SCIPcreateCons(scip, &blockcons, name, conshdlr, blockconsdata, 
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+         SCIPconsIsStickingAtNode(cons)) );
+
+      SCIP_CALL( SCIPaddCons(scip, blockcons) );
+      SCIPdebugMessage("created new constraint %s: ", SCIPconsGetName(blockcons));
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(scip, blockcons, NULL) );
+#endif
+      if( SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVING )
+      {
+         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, blockcons) );
+      }
+
+      SCIP_CALL( SCIPreleaseCons(scip, &blockcons) );
+
+      assert(inewlinvars < nnewlinvars);
+      newlinvars [inewlinvars] = auxvar;
+#if 0
+      newlincoefs[inewlinvars] = 1.0/ncomponents;
+#else
+      newlincoefs[inewlinvars] = 1.0;
+#endif
+      ++inewlinvars;
+      SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
+   }
+
+   for( i = 0; i < SCIPhashmapGetNLists(terms); ++i )
+      for( list = SCIPhashmapGetList(terms, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      {
+         term = (PRESOLVEQUADTERM*) SCIPhashmapListGetImage(list);
+         if( term->component == -1 && !SCIPisZero(scip, term->lincoefs) )
+         {
+            var = (SCIP_VAR*) SCIPhashmapListGetOrigin(list);
+            assert(inewlinvars < nnewlinvars);
+            newlinvars [inewlinvars] = var;
+            newlincoefs[inewlinvars] = term->lincoefs;
+            ++inewlinvars;
+            SCIP_CALL( SCIPcaptureVar(scip, var) );
+         }
+      }
+   assert(inewlinvars == nnewlinvars);
+
+   /* create linear constraint from linear part and auxiliary variables */
+   if( !SCIPisInfinity(scip, -consdata->lhs) )
+      lhs = consdata->lhs - constant;
+   else
+      lhs = -SCIPinfinity(scip);
+   if( !SCIPisInfinity(scip, consdata->rhs) )
+      rhs = consdata->rhs - constant;
+   else
+      rhs = SCIPinfinity(scip);
+   
+   SCIP_CALL( SCIPcreateConsLinear(scip, &lincons, SCIPconsGetName(cons), nnewlinvars, newlinvars, newlincoefs, lhs, rhs,
+      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+      SCIPconsIsStickingAtNode(cons)) );
+   SCIP_CALL( SCIPaddCons(scip, lincons) );
+   
+   SCIPdebugMessage("added coupling constraint ");
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
+   
+   SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
+   return SCIP_OKAY;
+}
+#else
 /** disaggregates a block separable constraint into several quadratic constraints
  */
 static
@@ -1987,6 +2194,8 @@ SCIP_RETCODE presolveDisaggregate(
 
    return SCIP_OKAY;
 }
+#endif
+
 #if 0
 /** Reformulates products of binary variables as AND constraint.
  *  For a product y*x, with x and y binary variables, the product is replaced by a new auxiliary variable z and the constraint z = {x and y} is added.
@@ -4080,7 +4289,7 @@ void propagateBoundsUpdateLinRange(
    }
 }
 
-/** updates the ranges for quadratic terms associated to each variable in a constraint data;
+/** updates the ranges for quadratic terms associated to each variable in a constraint data (a*x^2+b*x);
  *  adds up all ranges;
  *  returns whether there is a term which range is entire
  */
@@ -4290,8 +4499,8 @@ SCIP_RETCODE propagateBounds(
    intervalinfty = 1000 * SCIPinfinity(scip) * SCIPinfinity(scip);
 
    SCIPintervalSetBounds(&consbounds,
-      -infty2infty(SCIPinfinity(scip), intervalinfty, -consdata->lhs),
-       infty2infty(SCIPinfinity(scip), intervalinfty,  consdata->rhs));
+      -infty2infty(SCIPinfinity(scip), intervalinfty, -consdata->lhs+SCIPfeastol(scip)/2.0),
+       infty2infty(SCIPinfinity(scip), intervalinfty,  consdata->rhs+SCIPfeastol(scip)/2.0));
    
    propagateBoundsUpdateLinRange(scip, consdata, intervalinfty, &linrangesum, &entirevaridx);
    if( entirevaridx == -2 )
@@ -4486,14 +4695,31 @@ SCIP_RETCODE propagateBounds(
          }
          else
             rhs = consbounds;
-
-         /* we should not just put all bilinear terms into the right hand side, that would be fatal for equations like x*y \in [...]
-          * since recomputing the best quad range is too expensive,
-          * we undo all the substractions of bilinrange where this var is involved and setup an appropriate linear term (b)
-          */
-         if( consdata->nadjbilin[j] )
+         if( consdata->nadjbilin[j] > 0 )
          {
-            for( k = 0; k < consdata->nadjbilin[j]; ++k )
+            /* we should not just put all bilinear terms into the right hand side, that would be fatal for equations like x*y \in [...]
+             * since recomputing the best quad range is too expensive,
+             * we undo all the substractions of bilinrange where this var is involved and setup an appropriate linear term (b)
+             * 
+             * this is also still expensive in case of many bilinear terms
+             * thus, for now, we just pick some bilinear terms arbitrarily that are substracted from the rhs and leave the others on the rhs
+             * TODO something better should be done, maybe sorting adjbilin with some criterion and take the first 6; or rewrite the whole propagation stuff
+             */
+#define MAXBILIN 6
+            int step;
+            if( consdata->nadjbilin[j] < MAXBILIN )
+            {
+               k = 0;
+               step = 1;
+            }
+            else
+            {
+               k = SCIPgetDepth(scip) % MAXBILIN;
+               step = consdata->nadjbilin[j] / MAXBILIN;
+               assert(k < consdata->nadjbilin[j]);
+               assert(step > 0);
+            }
+            for( ; k < consdata->nadjbilin[j]; k += step )
             {
                l = consdata->adjbilin[j][k];
                if( consdata->nquadvars > 2 )
@@ -4827,7 +5053,11 @@ SCIP_DECL_CONSINIT(consInitQuadratic)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Quadratic constraint handler does not have LAPACK for eigenvalue computation. Will assume that matrices (with size > 2x2) are indefinite.\n");
    }
 #endif
-   
+#ifdef USECLOCK   
+   SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock1) );
+   SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock2) );
+   SCIP_CALL( SCIPcreateClock(scip, &conshdlrdata->clock3) );
+#endif
    return SCIP_OKAY;
 }
 
@@ -4854,6 +5084,12 @@ SCIP_DECL_CONSEXIT(consExitQuadratic)
 #endif
 #endif
    
+#ifdef USECLOCK
+   printf("clock1: %g\t clock2: %g\t clock3: %g\n", SCIPgetClockTime(scip, conshdlrdata->clock1), SCIPgetClockTime(scip, conshdlrdata->clock2), SCIPgetClockTime(scip, conshdlrdata->clock3));
+   SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->clock1) );
+   SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->clock2) );
+   SCIP_CALL( SCIPfreeClock(scip, &conshdlrdata->clock3) );
+#endif
    return SCIP_OKAY;
 }
 
@@ -5664,15 +5900,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
             if( havechange || (ncomponents > 1 && conshdlrdata->disaggregation) )
             {
-               /* unlock all variables */
-               for( i = 0; i < consdata->nlinvars; ++i )
-               {
-                  SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
-               }
-               for( i = 0; i < consdata->nquadvars; ++i )
-               {
-                  SCIP_CALL( SCIPunlockVarCons(scip, consdata->quadvars[i], conss[c], TRUE, TRUE) );
-               }
                SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
 
                /* do disaggregation only if nothing had changed and we are not in the first round,
@@ -5680,6 +5907,16 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                 */  
                if( ncomponents == 1 || !conshdlrdata->disaggregation || havechange || nrounds == 1)
                {
+                  /* unlock all variables */
+                  for( i = 0; i < consdata->nlinvars; ++i )
+                  {
+                     SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+                  }
+                  for( i = 0; i < consdata->nquadvars; ++i )
+                  {
+                     SCIP_CALL( SCIPunlockVarCons(scip, consdata->quadvars[i], conss[c], TRUE, TRUE) );
+                  }
+                  
                   SCIP_CALL( consdataSetFunctionData(scip, consdata, terms, -1) );
                   if( !SCIPisInfinity(scip, -consdata->lhs) )
                      consdata->lhs -= constant;
@@ -5691,8 +5928,26 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                }
                else
                {
+#if 1
+                  SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], terms, constant, ncomponents) );
+                  SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+                  ++*nupgdconss;
+                  *result = SCIP_SUCCESS;
+                  presolveQuadTermFree(scip, &terms);
+                  continue;
+#else                  
+                  /* unlock all variables */
+                  for( i = 0; i < consdata->nlinvars; ++i )
+                  {
+                     SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+                  }
+                  for( i = 0; i < consdata->nquadvars; ++i )
+                  {
+                     SCIP_CALL( SCIPunlockVarCons(scip, consdata->quadvars[i], conss[c], TRUE, TRUE) );
+                  }
                   SCIP_CALL( presolveDisaggregate(scip, conshdlr, conss[c], terms, constant, ncomponents) );
                   havechange = TRUE;
+#endif
                }
 
                /* lock all variables */
