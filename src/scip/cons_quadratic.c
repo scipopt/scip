@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.61 2009/11/24 18:35:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.62 2009/11/25 15:46:14 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -154,6 +154,7 @@ struct SCIP_ConshdlrData
 {
    SCIP_Bool             replacesqrbinary;          /**< were squares of binary variables replaced by the variable itself ? */
    int                   replacebinaryprodlength;   /**< length of linear term which when multiplied with a binary variable is replaced by an auxiliary variable and an equivalent linear formulation */
+   int                   empathy4and;               /**< how much empathy we have for using the AND constraint handler: 0 avoid always; 1 use sometimes; 2 use as often as possible */
    SCIP_Bool             disaggregation;            /**< should we disaggregate block separable quadratic constraints ? */
    SCIP_Real             mincutefficacy;            /**< minimal efficacy of a cut in order to add it to relaxation */
    SCIP_Bool             doscaling;                 /**< should constraints be scaled in the feasibility check ? */
@@ -1858,8 +1859,8 @@ SCIP_RETCODE presolveDisaggregate(
          }
       }
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &newlinvars,  nnewlinvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &newlincoefs, nnewlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newlinvars,  nnewlinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &newlincoefs, nnewlinvars) );
 
    inewlinvars = 0;
    for( k = 0; k < ncomponents; ++k )
@@ -1955,7 +1956,6 @@ SCIP_RETCODE presolveDisaggregate(
       newlincoefs[inewlinvars] = 1.0;
 #endif
       ++inewlinvars;
-      SCIP_CALL( SCIPcaptureVar(scip, auxvar) );
    }
 
    for( i = 0; i < SCIPhashmapGetNLists(terms); ++i )
@@ -1969,7 +1969,6 @@ SCIP_RETCODE presolveDisaggregate(
             newlinvars [inewlinvars] = var;
             newlincoefs[inewlinvars] = term->lincoefs;
             ++inewlinvars;
-            SCIP_CALL( SCIPcaptureVar(scip, var) );
          }
       }
    assert(inewlinvars == nnewlinvars);
@@ -1995,6 +1994,9 @@ SCIP_RETCODE presolveDisaggregate(
    SCIPdebug( SCIP_CALL( SCIPprintCons(scip, lincons, NULL) ) );
    
    SCIP_CALL( SCIPreleaseCons(scip, &lincons) );
+
+   SCIPfreeBufferArray(scip, &newlinvars);
+   SCIPfreeBufferArray(scip, &newlincoefs);
 
    return SCIP_OKAY;
 }
@@ -2196,7 +2198,6 @@ SCIP_RETCODE presolveDisaggregate(
 }
 #endif
 
-#if 0
 /** Reformulates products of binary variables as AND constraint.
  *  For a product y*x, with x and y binary variables, the product is replaced by a new auxiliary variable z and the constraint z = {x and y} is added.
  */
@@ -2319,7 +2320,6 @@ SCIP_RETCODE presolveTryAddAND(
 
    return SCIP_OKAY;
 }
-#endif
 
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
  * 
@@ -2337,7 +2337,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_HASHMAP*         terms,              /**< constraint function in form of PRESOLVEQUADTERM's */
    int*                  nvarsadded,         /**< buffer where to store the number of auxiliary variables added */
-   int                   maxnrvar            /**< maximal number of variables in linear term to consider when replacing by one auxiliary variable */
+   int                   maxnrvar,           /**< maximal number of variables in linear term to consider when replacing by one auxiliary variable */
+   int                   empathy4and         /**< empathy for using AND constraint handler */
    )
 {  /*lint --e{666} */
    SCIP_VAR**         xvars  = NULL;
@@ -2443,7 +2444,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
          assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(xbnds)));
          assert(!SCIPisInfinity(scip, SCIPintervalGetSup(xbnds)));
          
-         if( nxvars == 1 && SCIPvarGetType(xvars[0]) == SCIP_VARTYPE_BINARY )
+         if( nxvars == 1 && empathy4and >= 1 && SCIPvarGetType(xvars[0]) == SCIP_VARTYPE_BINARY )
          { /* product of two binary variables, replace by auxvar and AND constraint */
             /* add auxiliary variable z */
             (void)SCIPsnprintf(name, 255, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
@@ -2468,7 +2469,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
          }
          else
-         { /* product of binary avariable with more than one binary or with continuous variables, replace by auxvar and linear constraints */
+         { /* product of binary avariable with more than one binary or with continuous variables or with binary and user did not like AND -> replace by auxvar and linear constraints */
             /* add auxiliary variable z */
             if( nxvars == 1 )
                (void)SCIPsnprintf(name, 255, "prod%s*%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]));
@@ -5811,9 +5812,9 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             int nconsadded;
 
             nconsadded = 0;
-#if 0
-            if( conshdlrdata->replace_binaryprod_forceAND )
-            {
+
+            if( conshdlrdata->empathy4and == 2 )
+            { /* user really likes AND, so give him */
                SCIP_CALL( presolveTryAddAND(scip, conss[c], terms, &nconsadded) );
                if( nconsadded != 0 )
                { /* does this count as an upgrade? */
@@ -5821,8 +5822,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                   havechange = TRUE;
                }
             }
-#endif
-            SCIP_CALL( presolveTryAddLinearReform(scip, conss[c], terms, &nconsadded, conshdlrdata->replacebinaryprodlength) );
+
+            SCIP_CALL( presolveTryAddLinearReform(scip, conss[c], terms, &nconsadded, conshdlrdata->replacebinaryprodlength, conshdlrdata->empathy4and) );
             if( nconsadded != 0 )
             { /* does this count as an upgrade? */
                *result = SCIP_SUCCESS;
@@ -6529,6 +6530,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "max. length of linear term which when multiplied with a binary variables is replaced by an auxiliary variable and a linear reformulation (0 to turn off)",
          &conshdlrdata->replacebinaryprodlength, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/empathy4and",
+         "empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible",
+         &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
+   
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",
          "whether quadratic constraints consisting of several quadratic blocks should be disaggregated in several constraints",
          &conshdlrdata->disaggregation, FALSE, TRUE, NULL, NULL) );
