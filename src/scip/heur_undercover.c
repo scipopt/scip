@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.16 2009/11/25 09:20:12 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.17 2009/11/25 14:48:12 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -670,6 +670,9 @@ SCIP_RETCODE createSubProblem(
             SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]),
                   lpsolval, lpsolval, SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]),
                   SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
+            
+            SCIPdebugMessage("fixed %s variable <%s> to %g in subMIQCP\n", SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
+               SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(subvars[i]));
          }
          else
          {
@@ -689,11 +692,12 @@ SCIP_RETCODE createSubProblem(
                   MAX(lpsolval - domsize, local ? SCIPvarGetLbLocal(vars[i]) : SCIPvarGetLbGlobal(vars[i])),
                   MIN(lpsolval + domsize, local ? SCIPvarGetUbLocal(vars[i]) : SCIPvarGetUbGlobal(vars[i])),
                   SCIPvarGetObj(vars[i]), SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
+
+            SCIPdebugMessage("restricted %s variable <%s> to [%g, %g] in subMIQCP\n", SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
+               SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i]));
          }
          ++fixingcounter;
          
-         SCIPdebugMessage("fixed %s variable <%s> to %g in subMIQCP\n", SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
-            SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(subvars[i]));
       }
       else 
       {
