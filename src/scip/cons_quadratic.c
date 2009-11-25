@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.62 2009/11/25 15:46:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.63 2009/11/25 18:37:44 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3434,18 +3434,26 @@ SCIP_RETCODE generateCut(
             bnd += consdata->quadsqrcoefs[j] * f * (f+1);
          }
 
+         if( SCIPisInfinity(scip, ABS(rowcoef)) )
+         {
+            SCIPdebugMessage("skip linearization of square term in constraint %s because var %s is almost at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
+            SCIP_CALL( SCIPreleaseRow(scip, row) );
+            return SCIP_OKAY;
+         }
+
          SCIP_CALL( SCIPaddVarToRow(scip, *row, x, rowcoef) );
       }
 
       for( j = 0; j < consdata->nbilinterms; ++j )
       { /* linearization of bilinear terms */
+         coef = consdata->bilincoefs[j];
          x = consdata->bilinvars1[j];
          xval = SCIPgetSolVal(scip, sol, x);
          if( xval < SCIPvarGetLbLocal(x) )
             xval = SCIPvarGetLbLocal(x);
          else if( xval > SCIPvarGetUbLocal(x) )
             xval = SCIPvarGetUbLocal(x);
-         if( SCIPisInfinity(scip, ABS(xval)) )
+         if( SCIPisInfinity(scip, ABS(coef*xval)) )
          {
             SCIPdebugMessage("skip linearization of bilinear term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
             SCIP_CALL( SCIPreleaseRow(scip, row) );
@@ -3458,14 +3466,12 @@ SCIP_RETCODE generateCut(
             yval = SCIPvarGetLbLocal(y);
          else if( yval > SCIPvarGetUbLocal(y) )
             yval = SCIPvarGetUbLocal(y);
-         if( SCIPisInfinity(scip, ABS(yval)) )
+         if( SCIPisInfinity(scip, ABS(coef*yval)) )
          {
             SCIPdebugMessage("skip linearization of bilinear term in constraint %s because var %s is at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(y));
             SCIP_CALL( SCIPreleaseRow(scip, row) );
             return SCIP_OKAY;
          }
-
-         coef = consdata->bilincoefs[j];
 
          SCIP_CALL( SCIPaddVarToRow(scip, *row, x, coef * yval) );
          SCIP_CALL( SCIPaddVarToRow(scip, *row, y, coef * xval) );
@@ -3524,6 +3530,13 @@ SCIP_RETCODE generateCut(
             bnd += coef * xlb * xub;
          }
 
+         if( SCIPisInfinity(scip, ABS(rowcoef)) )
+         {
+            SCIPdebugMessage("skip underestimator of square term in constraint %s because var %s is almost at infinity\n", SCIPconsGetName(cons), SCIPvarGetName(x));
+            SCIP_CALL( SCIPreleaseRow(scip, row) );
+            return SCIP_OKAY;
+         }
+         
          SCIP_CALL( SCIPaddVarToRow(scip, *row, x, rowcoef) );
       }
 
@@ -3615,6 +3628,14 @@ SCIP_RETCODE generateCut(
             ycoef = -ycoef;
             bnd_  = -bnd_;
          }
+         
+         if( SCIPisInfinity(scip, ABS(xcoef)) || SCIPisInfinity(scip, ABS(ycoef)) )
+         {
+            SCIPdebugMessage("skip underestimator of bilinear term in constraint %s because var %s or %s is almost unbounded\n", SCIPconsGetName(cons), SCIPvarGetName(x), SCIPvarGetName(y));
+            SCIP_CALL( SCIPreleaseRow(scip, row) );
+            return SCIP_OKAY;
+         }
+         
          SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xcoef) );
          SCIP_CALL( SCIPaddVarToRow(scip, *row, y, ycoef) );
          bnd += bnd_;
@@ -4024,6 +4045,9 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
       
       for( i = 0; i < consdata->nquadvars; ++i )
       {
+         /* do not propose fixed variables */
+         if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->quadvars[i]), SCIPvarGetUbLocal(consdata->quadvars[i])) )
+            continue;
          val = SCIPgetSolVal(scip, NULL, consdata->quadvars[i]);
          if( ABS(val) > brvarval )
          {
