@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.280 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.281 2009/11/25 11:05:51 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2743,6 +2743,8 @@ SCIP_RETCODE solveNode(
          SCIP_RESULT result;
          int nlpcands;
 
+         result = SCIP_DIDNOTRUN;
+
          if( SCIPtreeHasFocusNodeLP(tree) )
          {
             SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpcands, NULL) );
@@ -2865,7 +2867,7 @@ SCIP_RETCODE solveNode(
             }
             break;
          default:
-            SCIPerrorMessage("invalid result code <%d> from SCIPbranchLP() or SCIPbranchPseudo()\n", result);
+            SCIPerrorMessage("invalid result code <%d> from SCIPbranchLP(), SCIPbranchRelax() or SCIPbranchPseudo()\n", result);
             return SCIP_INVALIDRESULT;
          }  /*lint !e788*/
          assert(*cutoff || solvelpagain || propagateagain || branched); /* something must have been done */
