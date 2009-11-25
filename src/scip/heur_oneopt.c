@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.28 2009/09/11 16:34:48 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.29 2009/11/25 09:20:12 bzfberth Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -250,6 +250,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolOneopt)
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolOneopt)
 {
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
    /* reset the timing mask to its default value */
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
 

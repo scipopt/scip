@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.15 2009/11/22 14:23:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.16 2009/11/25 09:20:12 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
  * @brief  undercover primal heuristic for MIQCPs
-
+ *
+ * @author Timo Berthold
  * @author Ambros Gleixner
  *
  * @todo: implement ppc strategy constraint 'v'iolation and 'b'ranching status
@@ -66,6 +67,7 @@
 #define DEFAULT_ONLYATINTEGER FALSE          /* should heuristic be called only at integer feasible nodes?            */
 #define DEFAULT_GLOBALBOUNDS  FALSE          /* should global bounds on variables be used instead of local bounds at focus node? */
 #define DEFAULT_POSTNLP       TRUE           /* should the NLP heuristic be called to polish a feasible solution?     */
+#define DEFAULT_BEFORECUTS    TRUE           /* should undercover called at root node before cut separation?          */
 #define DEFAULT_PPCSTRAT      'u'            /* strategy for finding a ppc solution                                   */
 #define PPCSTRATS             "bcdlmtuv"     /* strategies for finding a ppc solution                                 */
 
@@ -90,6 +92,7 @@ struct SCIP_HeurData
    SCIP_Bool             onlyatinteger;      /**< should heuristic be called only at integer feasible nodes?          */
    SCIP_Bool             globalbounds;       /**< should global bounds on variables be used instead of local bounds at focus node? */
    SCIP_Bool             postnlp;            /**< should the NLP heuristic be called to polish a feasible solution?   */
+   SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation?     */
    SCIP_Bool             run;                /**< should heuristic run, i.e. are nonlinear constraints present?       */
    char                  ppcstrat;           /**< strategy for finding a ppc solution                                 */
 };
@@ -689,7 +692,8 @@ SCIP_RETCODE createSubProblem(
          }
          ++fixingcounter;
          
-         SCIPdebugMessage("fixed variable <%s> to %g in subMIQCP\n", SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(subvars[i]));
+         SCIPdebugMessage("fixed %s variable <%s> to %g in subMIQCP\n", SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
+            SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(subvars[i]));
       }
       else 
       {
@@ -983,8 +987,6 @@ SCIP_RETCODE solvePpcProblem(
 
    SCIPdebugMessage("undercover found a ppc solution: %d/%d variables fixed, normalized penalty=%f\n",
          nfixed, SCIPgetNOrigVars(ppcscip), SCIPgetSolOrigObj(ppcscip, SCIPgetBestSol(ppcscip))/totalpenalty);
-#else
-   SCIPdebugMessage("undercover found a ppc solution\n");
 #endif
 
    *success = TRUE;
@@ -1445,13 +1447,25 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
 
    SCIPdebugMessage("undercover heuristic will not run for <%s> (no known nonlinear constraints present)\n", SCIPgetProbName(scip));
    heurdata->run = FALSE;
+
+   /* if the heuristic is called at the root node, we may want to be called directly after the initial root LP solve */
+   if( heurdata->beforecuts && SCIPheurGetFreqofs(heur) == 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
+
    return SCIP_OKAY;
 }
 
-
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolUndercover NULL
+static
+SCIP_DECL_HEUREXITSOL(heurExitsolUndercover)
+{
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
 
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
+
+   return SCIP_OKAY;
+}
 
 /** execution method of primal heuristic */
 static
@@ -1477,7 +1491,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
- 
+
    /* only call heuristic, if an optimal LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
@@ -1486,6 +1500,10 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       return SCIP_OKAY;
    }
 
+   /* only call undercover once at the root */
+   if( SCIPgetDepth(scip) == 0 && SCIPheurGetNCalls(heur) > 0 )
+      return SCIP_OKAY;
+   
    /* only call heuristic, if LP solution is integral */
    if( heurdata->onlyatinteger )
    {
@@ -1533,6 +1551,11 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
+
+   /* leave some time for NLP heuristic */
+   if( heurdata->postnlp && timelimit >= 100.0 )
+      timelimit -= 11.0;
+
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
    if( !SCIPisInfinity(scip, memorylimit) )   
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
@@ -1543,6 +1566,10 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
+
+   /* reset timing, if it was changed temporary (at the root node) */
+   if( heurtiming != HEUR_TIMING )
+      SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    SCIPdebugMessage("calling undercover heuristic for <%s>\n", SCIPgetProbName(scip));
 
@@ -1620,6 +1647,10 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/globalbounds",
          "should global bounds on variables be used instead of local bounds at focus node?",
          &heurdata->globalbounds, TRUE, DEFAULT_GLOBALBOUNDS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/beforecuts",
+         "should the heuristic be called at root node before cut separation?",
+         &heurdata->beforecuts, TRUE, DEFAULT_BEFORECUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/ppcstrategy",
          "strategy for the ppc problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
