@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.18 2009/11/26 04:08:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.19 2009/11/26 04:52:32 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -670,9 +670,8 @@ SCIP_RETCODE createSubProblem(
                   lpsolval = SCIPvarGetNLocksDown(vars[i]) < SCIPvarGetNLocksUp(vars[i]) ? SCIPfeasFloor(scip, lpsolval) : SCIPfeasCeil(scip, lpsolval);
             }
 
-            assert( SCIPisFeasIntegral(scip, lpsolval);
-            assert( lpsolval >= SCIPvarGetLbGlobal(vars[i]) );
-            assert( lpsolval <= SCIPvarGetUbGlobal(vars[i]) );
+            assert(SCIPisFeasIntegral(scip, lpsolval));
+            assert(SCIPvarGetLbGlobal(vars[i]) <= lpsolval && lpsolval <= SCIPvarGetUbGlobal(vars[i]));
          }
 
          if( SCIPisEQ(scip, domred, 1.0) )
@@ -1067,6 +1066,7 @@ SCIP_RETCODE solveSubProblem(
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
     * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
     */
+
    retstat = SCIPpresolve(subscip);
    if( retstat != SCIP_OKAY )
    { 
