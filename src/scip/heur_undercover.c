@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.17 2009/11/25 14:48:12 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.18 2009/11/26 04:08:54 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -649,17 +649,28 @@ SCIP_RETCODE createSubProblem(
          /* fix integer variables to rounded lpsolval */
          if( SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS )
          {
-            if( SCIPisFeasFracIntegral(scip, lpsolval) )
+            if( SCIPisFeasIntegral(scip, lpsolval) )
                ++roundedfixingcounter;
-
-            if( locksrounding && SCIPvarGetNLocksDown(vars[i]) != SCIPvarGetNLocksUp(vars[i]) )
+            else if( locksrounding )
             {
-               lpsolval = SCIPvarGetNLocksDown(vars[i]) < SCIPvarGetNLocksUp(vars[i]) ? SCIPfeasFloor(scip, lpsolval) : SCIPfeasCeil(scip, lpsolval);
+               if( SCIPvarGetNLocksDown(vars[i]) < SCIPvarGetNLocksUp(vars[i]) ) 
+                  lpsolval = SCIPfeasFloor(scip, lpsolval);
+               else if( SCIPvarGetNLocksDown(vars[i]) > SCIPvarGetNLocksUp(vars[i]) )
+                  lpsolval = SCIPfeasCeil(scip, lpsolval);
+               else 
+                  lpsolval = SCIPfeasFrac(scip, lpsolval) <= 0.5 ? SCIPfeasFloor(scip, lpsolval) : SCIPfeasCeil(scip, lpsolval);
             }
             else
             {
-               lpsolval = SCIPfeasFrac(scip, lpsolval) <= 0.5 ? SCIPfeasFloor(scip, lpsolval) : SCIPfeasCeil(scip, lpsolval);
+               if( SCIPfeasFrac(scip, lpsolval) < 0.5)
+                  lpsolval = SCIPfeasFloor(scip, lpsolval);
+               else if( SCIPfeasFrac(scip, lpsolval) > 0.5 )
+                  lpsolval = SCIPfeasCeil(scip, lpsolval);
+               else
+                  lpsolval = SCIPvarGetNLocksDown(vars[i]) < SCIPvarGetNLocksUp(vars[i]) ? SCIPfeasFloor(scip, lpsolval) : SCIPfeasCeil(scip, lpsolval);
             }
+
+            assert( SCIPisFeasIntegral(scip, lpsolval);
             assert( lpsolval >= SCIPvarGetLbGlobal(vars[i]) );
             assert( lpsolval <= SCIPvarGetUbGlobal(vars[i]) );
          }
@@ -1432,6 +1443,10 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
+   /* if the heuristic is called at the root node, we may want to be called directly after the initial root LP solve */
+   if( heurdata->beforecuts && SCIPheurGetFreqofs(heur) == 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
+
    /* look for nonlinear constraints */
    heurdata->run = TRUE;
 
@@ -1451,10 +1466,6 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
 
    SCIPdebugMessage("undercover heuristic will not run for <%s> (no known nonlinear constraints present)\n", SCIPgetProbName(scip));
    heurdata->run = FALSE;
-
-   /* if the heuristic is called at the root node, we may want to be called directly after the initial root LP solve */
-   if( heurdata->beforecuts && SCIPheurGetFreqofs(heur) == 0 )
-      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
 
    return SCIP_OKAY;
 }
