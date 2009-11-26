@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.345 2009/11/06 15:15:20 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.346 2009/11/26 08:39:44 bzfheinz Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9206,7 +9206,9 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    ncoefs = 0;
    var = NULL;
 
-   while( getNextToken(&tokenizer) )
+   SCIPdebugMessage("start parsing linear constraint expression\n");
+
+   while( getNextToken(&tokenizer) && (*success) )
    {
       /* if the variable type is given ignore it */
       if( strncmp(tokenizer.token, "[B]", 3) == 0 && strlen(tokenizer.token) == 3 )
@@ -9248,11 +9250,27 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       {
          if( ncoefs == 0 && havevalue )
          {
-            assert(sense == CIP_SENSE_LE);
-            lhs  = coef;
+            /* the constraint has no variables */
+            switch(sense)
+            {
+            case CIP_SENSE_LE:
+               lhs = coef;
+               break;
+            case CIP_SENSE_GE:
+               rhs = coef;
+               break;
+            case CIP_SENSE_EQ:
+               lhs = coef;
+               rhs = coef;
+               break;
+            default:
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: expected unknown sense <%d>)\n", sense);
+               (*success) = FALSE;
+            }
             sense = CIP_SENSE_NOTHING;
+            havevalue = FALSE;
          }
-         
+
          continue;
       }
       
@@ -9275,7 +9293,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       /* check if we read a value */
       if( isValue(scip, &tokenizer, &coef) )
       {
-         SCIPdebugMessage("read coefficient value: %g with sign %+d\n", coef, coefsign);
+         SCIPdebugMessage("read coefficient value: <%g> with sign %+d\n", coef, coefsign);
          if( havevalue )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Syntax error: two consecutive values");
