@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.19 2009/11/26 04:52:32 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.20 2009/11/26 06:41:37 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1066,7 +1066,6 @@ SCIP_RETCODE solveSubProblem(
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
     * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
     */
-
    retstat = SCIPpresolve(subscip);
    if( retstat != SCIP_OKAY )
    { 
