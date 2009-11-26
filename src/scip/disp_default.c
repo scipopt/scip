@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.70 2009/04/06 13:06:51 bzfberth Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.71 2009/11/26 14:10:01 bzfheinz Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -67,6 +67,14 @@
 #define DISP_PRIO_LPITERATIONS  30000
 #define DISP_POSI_LPITERATIONS  1000
 #define DISP_STRI_LPITERATIONS  TRUE
+
+#define DISP_NAME_LPAVGITERS    "lpavgiterations"
+#define DISP_DESC_LPAVGITERS    "average number of LP iterations since the last output line"
+#define DISP_HEAD_LPAVGITERS    "LP it/n"
+#define DISP_WIDT_LPAVGITERS    7
+#define DISP_PRIO_LPAVGITERS    25000
+#define DISP_POSI_LPAVGITERS    1500
+#define DISP_STRI_LPAVGITERS    TRUE
 
 #define DISP_NAME_MEMUSED       "memused"
 #define DISP_DESC_MEMUSED       "total number of bytes used in block memory"
@@ -261,8 +269,6 @@
 #define DISP_STRI_NSOLS         TRUE
 
 
-
-
 /*
  * Callback methods
  */
@@ -343,6 +349,23 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpiterations)
 
    SCIPdispLongint(file, SCIPgetNLPIterations(scip), DISP_WIDT_LPITERATIONS);
 
+   return SCIP_OKAY;
+}
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpavgiters)
+{  /*lint --e{715}*/
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPAVGITERS) == 0);
+   assert(scip != NULL);
+   
+   if( SCIPgetNNodes(scip) < 2 )
+      SCIPinfoMessage(scip, file, "     - ");
+   else
+      SCIPinfoMessage(scip, file, "%6.1f ", 
+         ((SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)SCIPgetNNodes(scip) - 1) );
+   
    return SCIP_OKAY;
 }
 
@@ -708,9 +731,6 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNsols)
    return SCIP_OKAY;
 }
 
-
-
-
 /*
  * default display columns specific interface methods
  */
@@ -735,6 +755,9 @@ SCIP_RETCODE SCIPincludeDispDefault(
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_LPITERATIONS, DISP_DESC_LPITERATIONS, DISP_HEAD_LPITERATIONS,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLpiterations, NULL, 
          DISP_WIDT_LPITERATIONS, DISP_PRIO_LPITERATIONS, DISP_POSI_LPITERATIONS, DISP_STRI_LPITERATIONS) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_LPAVGITERS, DISP_DESC_LPAVGITERS, DISP_HEAD_LPAVGITERS,
+         SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputLpavgiters, NULL,
+         DISP_WIDT_LPAVGITERS, DISP_PRIO_LPAVGITERS, DISP_POSI_LPAVGITERS, DISP_STRI_LPAVGITERS) );
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_MEMUSED, DISP_DESC_MEMUSED, DISP_HEAD_MEMUSED,
          SCIP_DISPSTATUS_AUTO, NULL, NULL, NULL, NULL, NULL, SCIPdispOutputMemused, NULL, 
          DISP_WIDT_MEMUSED, DISP_PRIO_MEMUSED, DISP_POSI_MEMUSED, DISP_STRI_MEMUSED) );

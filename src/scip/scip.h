@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.355 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.356 2009/11/26 14:10:01 bzfheinz Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -1413,7 +1413,7 @@ SCIP_RETCODE SCIPsetObjsense(
    SCIP_OBJSENSE         objsense            /**< new objective sense */
    );
 
-/** sets offset of objective function */
+/** adds offset of objective function */
 extern
 SCIP_RETCODE SCIPaddObjoffset(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5400,6 +5400,12 @@ int SCIPgetNLPs(
 /** gets total number of iterations used so far in primal and dual simplex and barrier algorithm */
 extern
 SCIP_Longint SCIPgetNLPIterations(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets total number of iterations used so far in primal and dual simplex and barrier algorithm for the root node */
+extern
+SCIP_Longint SCIPgetNRootLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

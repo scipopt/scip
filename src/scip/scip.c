@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.527 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.528 2009/11/26 14:10:01 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -3092,6 +3092,19 @@ SCIP_RETCODE SCIPsetObjsense(
 
    SCIPprobSetObjsense(scip->origprob, objsense);
 
+   return SCIP_OKAY;
+}
+
+/** sets offset of objective function */
+SCIP_RETCODE SCIPaddObjoffset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             addval              /**< value to add to objective offset */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetObjsense", FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   
+   scip->transprob->objoffset += addval;
+   
    return SCIP_OKAY;
 }
 
@@ -14195,6 +14208,16 @@ SCIP_Longint SCIPgetNLPIterations(
    return scip->stat->nlpiterations;
 }
 
+/** gets total number of iterations used so far in primal and dual simplex and barrier algorithm for the root node */
+SCIP_Longint SCIPgetNRootLPIterations(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNRootLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nrootlpiterations;
+}
+
 /** gets total number of primal LPs solved so far */
 int SCIPgetNPrimalLPs(
    SCIP*                 scip                /**< SCIP data structure */
@@ -15759,8 +15782,10 @@ void printSolutionStatistics(
       SCIPmessageFPrintInfo(file, "  Root Dual Bound  :          -\n");
    else
       SCIPmessageFPrintInfo(file, "  Root Dual Bound  : %+21.14e\n", dualboundroot);
-}
 
+   SCIPmessageFPrintInfo(file, "  Root Iterations  : %10"SCIP_LONGINT_FORMAT"\n", scip->stat->nrootlpiterations);
+}
+      
 /** outputs solving statistics */
 SCIP_RETCODE SCIPprintStatistics(
    SCIP*                 scip,               /**< SCIP data structure */

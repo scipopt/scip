@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.281 2009/11/25 11:05:51 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.282 2009/11/26 14:10:02 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1902,6 +1902,10 @@ SCIP_RETCODE solveNodeLP(
    stat->nnodelps += stat->nlps - nlps;
    stat->nnodelpiterations += stat->nlpiterations - nlpiterations;
 
+   /* update number of root node iterations if the root node was processed */
+   if( SCIPnodeGetDepth(tree->focusnode) == 0 ) 
+      stat->nrootlpiterations += stat->nlpiterations - nlpiterations;
+   
    return SCIP_OKAY;
 }
 

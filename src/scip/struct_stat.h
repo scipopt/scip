@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.54 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.55 2009/11/26 14:10:02 bzfheinz Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -39,6 +39,7 @@ extern "C" {
 struct SCIP_Stat
 {
    SCIP_Longint          nlpiterations;      /**< total number of LP iterations */
+   SCIP_Longint          nrootlpiterations;  /**< total number of LP iterations in root node */
    SCIP_Longint          nprimallpiterations;/**< number of iterations in primal simplex */
    SCIP_Longint          nduallpiterations;  /**< number of iterations in dual simplex */
    SCIP_Longint          nlexduallpiterations;/**< number of iterations in lexicographic dual simplex */

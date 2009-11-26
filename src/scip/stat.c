@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.82 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.83 2009/11/26 14:10:02 bzfheinz Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -154,6 +154,7 @@ void SCIPstatReset(
 
    stat->conflictscoreweight = 1.0;
    stat->nlpiterations = 0;
+   stat->nrootlpiterations = 0;
    stat->nprimallpiterations = 0;
    stat->nduallpiterations = 0;
    stat->nlexduallpiterations = 0;
