@@ -1,3 +1,4 @@
+/*#define SCIP_DEBUG*/
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -12,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.21 2009/11/26 09:48:56 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.22 2009/11/26 15:26:15 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -607,14 +608,10 @@ SCIP_RETCODE createSubProblem(
    )
 {
    SCIP_VAR** vars;                          /* original scip variables                    */
-   SCIP_ROW** rows;                          /* original scip rows                         */
    SCIP_HASHMAP* varmap;
 
    char name[SCIP_MAXSTRLEN];
-
-   int nrows;
    int nvars;
-
    int fixingcounter;
    int roundedfixingcounter;
    int i;
@@ -729,129 +726,7 @@ SCIP_RETCODE createSubProblem(
       SCIPhashmapFree(&varmap);
       return SCIP_OKAY;
    }
-#ifndef WITH_UNIVARDEFINITE
-   /* get the rows and their number */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
 
-   SCIPdebugMessage("undercover heuristic copying %s lp rows\n", local ? "local" : "global");
-
-   /* copy all rows to linear constraints */
-   for( i = 0; i < nrows; i++ )
-   {
-      SCIP_CONS* cons;
-      SCIP_VAR** consvars;
-      SCIP_COL** cols;
-      SCIP_Real constant;
-      SCIP_Real lhs;
-      SCIP_Real rhs;
-      SCIP_Real* vals;
-      int nnonz;
-      int j;
-          
-      /* ignore rows that are only locally valid */
-      if( !local && SCIProwIsLocal(rows[i]) )
-         continue;
-
-      /* get the row's data */
-      constant = SCIProwGetConstant(rows[i]);
-      lhs = SCIProwGetLhs(rows[i]) - constant;
-      rhs = SCIProwGetRhs(rows[i]) - constant;
-      vals = SCIProwGetVals(rows[i]);
-      nnonz = SCIProwGetNNonz(rows[i]);
-      cols = SCIProwGetCols(rows[i]);
-      
-      assert( lhs <= rhs );
-      
-      /* allocate memory array to be filled with the corresponding subproblem variables */
-      SCIP_CALL( SCIPallocBufferArray(subscip, &consvars, nnonz) );
-      for( j = 0; j < nnonz; j++ ) 
-         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-      /* create a new linear constraint and add it to the subproblem */
-      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-      SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-      
-      /* free temporary memory */
-      SCIPfreeBufferArray(subscip, &consvars);
-   }
-
-   /* copy quadratic and soc constraints */
-   for( i = 0; i < 2; ++i )
-   {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONS* cons;
-      SCIP_CONS* conscopy;
-      SCIP_Bool succeed;
-      int c;
-
-      conshdlr = (i == 0) ? SCIPfindConshdlr(scip, "quadratic") : SCIPfindConshdlr(scip, "soc");
-      if( conshdlr == NULL )
-         continue;
-
-      SCIPdebugMessage("undercover heuristic attempting to copy %d %s constraints\n", SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetName(conshdlr));
-
-      for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
-      {
-         cons = SCIPconshdlrGetConss(conshdlr)[c];
-         assert( cons != NULL );
-
-         SCIP_CALL( SCIPcopyCons(subscip, &conscopy, NULL, conshdlr, scip, cons, varmap,
-             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-             SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-             FALSE, &succeed) );
-
-         if( succeed )
-         {
-            SCIP_CALL( SCIPaddCons(subscip, conscopy) );
-            SCIP_CALL( SCIPreleaseCons(subscip, &conscopy) );
-         }
-         else
-         {
-            SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(cons));
-         }
-      }
-   }
-
-#ifdef WITH_UNIVARDEFINITE
-   /* copy "univariate definite" constraints */
-   if( SCIPfindConshdlr(scip, "univardefinite") != NULL )
-   {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONS* cons;
-      SCIP_CONS* conscopy;
-      SCIP_Bool succeed;
-      int c;
-
-      conshdlr = SCIPfindConshdlr(scip, "univardefinite");
-      assert( conshdlr != NULL );
-
-      SCIPdebugMessage("undercover heuristic attempting to copy %d %s constraints\n", SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetName(conshdlr));
-
-      for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
-      {
-         cons = SCIPconshdlrGetConss(conshdlr)[c];
-         assert( cons != NULL );
-
-         SCIP_CALL( SCIPcopyCons(subscip, &conscopy, NULL, conshdlr, scip, cons, varmap,
-             SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
-             SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
-             FALSE, &succeed) );
-
-         if( succeed )
-         {
-            SCIP_CALL( SCIPaddCons(subscip, conscopy) );
-            SCIP_CALL( SCIPreleaseCons(subscip, &conscopy) );
-         }
-         else
-         {
-            SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(cons));
-         }
-      }
-   }
-#endif
-#else
    /* copy all constraints */
    for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
    {
@@ -886,7 +761,6 @@ SCIP_RETCODE createSubProblem(
          }
       }
    }
-#endif
 
    SCIPhashmapFree(&varmap);
 
@@ -1002,6 +876,44 @@ SCIP_RETCODE solvePpcProblem(
    SCIPdebugMessage("undercover found a ppc solution: %d/%d variables fixed, normalized penalty=%f\n",
          nfixed, SCIPgetNOrigVars(ppcscip), SCIPgetSolOrigObj(ppcscip, SCIPgetBestSol(ppcscip))/totalpenalty);
 #endif
+
+   /* forbid optimal solution for next run */
+   do
+   {
+      SCIP_CONS* nogoodcons;
+      SCIP_VAR** nogoodvars;
+      int t;
+
+      SCIP_CALL( SCIPallocBufferArray(ppcscip, &nogoodvars, SCIPgetNOrigVars(ppcscip)) );
+
+      for( t = 0; t < SCIPgetNOrigVars(ppcscip); ++t )
+      {
+         if( SCIPisZero(ppcscip, ppcsolvals[t]) )
+            nogoodvars[t] = ppcvars[t];
+         else
+         {
+            SCIP_CALL( SCIPgetNegatedVar(ppcscip, ppcvars[t], &nogoodvars[t]) );
+         }
+      }
+
+      SCIP_CALL( SCIPfreeTransform(ppcscip) );
+
+      SCIP_CALL( SCIPcreateConsSetcover(ppcscip, &nogoodcons, "nogood", SCIPgetNOrigVars(ppcscip), nogoodvars,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+      if( nogoodcons == NULL )
+      {
+         SCIPdebugMessage("failed to create set packing constraint %s: terminating undercover heuristic\n", "nogood");
+         SCIPfreeBufferArray(ppcscip, &nogoodvars);
+         return SCIP_OKAY;
+      }
+
+      SCIP_CALL( SCIPaddCons(ppcscip, nogoodcons) );
+      SCIP_CALL( SCIPreleaseCons(ppcscip, &nogoodcons) );
+
+      SCIPfreeBufferArray(ppcscip, &nogoodvars);
+   }
+   while( FALSE );
 
    *success = TRUE;
    return SCIP_OKAY;
@@ -1195,6 +1107,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_Bool success;
 
    int nvars;
+   int triescounter;
    int i;
 
    assert( scip != NULL );
@@ -1214,81 +1127,121 @@ SCIP_RETCODE SCIPapplyUndercover(
    success = FALSE;
    SCIP_CALL( createPpcProblem(scip, ppcscip, ppcvars, ppcstrat, ppcobjquot, !globalbounds, onlyconvexify, &success) );
 
-   /* solve ppc problem */
-   if( success )
-   {
-      SCIPdebugMessage("undercover heuristic solving ppc problem\n");
-      SCIP_CALL( SCIPallocBufferArray(scip, &ppcsolvals, nvars) ); 
-      SCIP_CALL( solvePpcProblem(ppcscip, ppcvars, ppcsolvals, timelimit, memorylimit, &success) );
-   }
-
-   subtimelimit = timelimit - SCIPgetTotalTime(ppcscip); /* ???????????????? */
-
-   /* free memory from ppc problem */
-   SCIP_CALL( SCIPfreeTransform(ppcscip) );
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIP_CALL( SCIPreleaseVar(ppcscip, &(ppcvars[i])) );
-   }
-   SCIPfreeBufferArray(scip, &ppcvars);
-   SCIP_CALL( SCIPfree(&ppcscip) );
-
    if( !success )
    {
-      SCIPdebugMessage("undercover heuristic terminating: problems creating/solving ppc problem\n");
+      /* free memory from ppc problem */
+      SCIP_CALL( SCIPfreeTransform(ppcscip) );
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_CALL( SCIPreleaseVar(ppcscip, &(ppcvars[i])) );
+      }
+      SCIPfreeBufferArray(scip, &ppcvars);
+      SCIP_CALL( SCIPfree(&ppcscip) );
+
+      SCIPdebugMessage("undercover heuristic terminating: problems creating ppc problem\n");
       return SCIP_OKAY;
    }
 
-   if( subtimelimit < 10.0 )
+   subtimelimit = timelimit;
+   triescounter = 0;
+   do
    {
-      SCIPdebugMessage("undercover heuristic terminating: subtimelimit=%f\n", subtimelimit);
-      return SCIP_OKAY;
-   }
+      ++triescounter;
 
-   /* initializing subMIQCP */
-   SCIP_CALL( SCIPcreate(&subscip) );
+      /* solve ppc problem */
+      SCIPdebugMessage("undercover heuristic solving ppc problem\n");
+      SCIP_CALL( SCIPallocBufferArray(scip, &ppcsolvals, nvars) ); 
+      SCIP_CALL( solvePpcProblem(ppcscip, ppcvars, ppcsolvals, subtimelimit, memorylimit, &success) );
+
+      if( !success )
+      {   /* TODO: free */
+         SCIPdebugMessage("undercover heuristic terminating: problems solving ppc problem\n");
+         return SCIP_OKAY;
+      }
+
+      subtimelimit = timelimit - SCIPgetTotalTime(ppcscip); /* ???????????????? */
+      if( subtimelimit < 10.0 )
+      {   /* TODO: free */
+         SCIPdebugMessage("undercover heuristic terminating: subtimelimit=%f\n", subtimelimit);
+         return SCIP_OKAY;
+      }
+
+      /* initializing subMIQCP */
+      SCIP_CALL( SCIPcreate(&subscip) );
 
 #ifdef WITH_CONSBRANCHNL
-   SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(subscip) );
+      SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(subscip) );
 #endif
    
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
+      SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
 
 #ifdef WITH_UNIVARDEFINITE
-   SCIP_CALL( SCIPincludeConshdlrUnivardefinite(subscip) );
+      SCIP_CALL( SCIPincludeConshdlrUnivardefinite(subscip) );
 #endif
-   
-   /* create subMIQCP */
-   SCIPdebugMessage("undercover heuristic creating subMIQCP\n");
-   success = FALSE;
-   SCIP_CALL( createSubProblem(scip, subscip, subvars, ppcsolvals, domred, locksrounding, !globalbounds, &success) );
 
-   /* if there is already a solution, add an objective cutoff */
-   if( SCIPgetNSols(scip) > 0 )
+      /* create subMIQCP */
+      SCIPdebugMessage("undercover heuristic creating subMIQCP\n");
+      success = FALSE;
+      SCIP_CALL( createSubProblem(scip, subscip, subvars, ppcsolvals, domred, locksrounding, !globalbounds, &success) );
+
+      if( !success )
+      {   /* TODO: free */
+         SCIPdebugMessage("undercover heuristic terminating: problems creating subproblem\n");
+         return SCIP_OKAY;
+      }
+
+      /* if there is already a solution, add an objective cutoff */
+      if( SCIPgetNSols(scip) > 0 )
+      {
+         SCIP_Real cutoff;
+
+         assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );   
+
+         if( SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) )
+            cutoff = (SCIPgetUpperbound(scip) >= 0 ? 1.0 - minimprove : 1.0 + minimprove)*SCIPgetUpperbound(scip);
+         else
+            cutoff = (1.0 - minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
+
+         cutoff = MIN(SCIPgetUpperbound(scip) - SCIPsumepsilon(scip), cutoff);
+         SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
+      }
+      
+      /* solve subMIQCP */
+      SCIPdebugMessage("undercover heuristic solving subMIQCP\n");
+      SCIP_CALL( solveSubProblem(subscip, !onlyconvexify && SCIPisEQ(scip, domred, 1.0), subtimelimit, memorylimit, nstallnodes, &success) );
+
+      if( !success )
+      {
+   /* free remaining memory */
+   SCIP_CALL( SCIPfreeTransform(subscip) );
+   for( i = 0; i < nvars; ++i )
    {
-      SCIP_Real cutoff;
-
-      assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );   
-
-      if( SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) )
-         cutoff = (SCIPgetUpperbound(scip) >= 0 ? 1.0 - minimprove : 1.0 + minimprove)*SCIPgetUpperbound(scip);
-      else
-         cutoff = (1.0 - minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
-
-      cutoff = MIN(SCIPgetUpperbound(scip) - SCIPsumepsilon(scip), cutoff);
-      SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
+      SCIP_CALL( SCIPreleaseVar(subscip, &(subvars[i])) );
    }
+   SCIPfreeBufferArray(scip, &subvars);
+   SCIP_CALL( SCIPfree(&subscip) );
+   SCIPfreeBufferArray(scip, &ppcsolvals);
+      }
+      else
+      {
+      /* free memory from ppc problem */
+      SCIP_CALL( SCIPfreeTransform(ppcscip) );
+      for( i = 0; i < nvars; ++i )
+      {
+         SCIP_CALL( SCIPreleaseVar(ppcscip, &(ppcvars[i])) );
+      }
+      SCIPfreeBufferArray(scip, &ppcvars);
+      SCIP_CALL( SCIPfree(&ppcscip) );
+      }
+   }
+   while( !success && triescounter < 2 );
 
    if( success )
    {
       SCIP_SOL** subsols;
       SCIP_SOL* newsol;
       int nsubsols;
-
-      /* solve subMIQCP */
-      SCIPdebugMessage("undercover heuristic solving subMIQCP\n");
-      SCIP_CALL( solveSubProblem(subscip, !onlyconvexify && SCIPisEQ(scip, domred, 1.0), subtimelimit, memorylimit, nstallnodes, &success) );
 
       /* check, whether a solution was found;
        * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
@@ -1360,11 +1313,6 @@ SCIP_RETCODE SCIPapplyUndercover(
 
       /* free solution */
       SCIP_CALL( SCIPfreeSol(scip, &newsol) );
-   }
-   else
-   {
-      SCIPdebugMessage("undercover heuristic failed creating subMIQCP; terminating\n");
-   }
 
    /* free remaining memory */
    SCIP_CALL( SCIPfreeTransform(subscip) );
@@ -1375,6 +1323,12 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
    SCIPfreeBufferArray(scip, &ppcsolvals);
+
+   }
+   else
+   {
+      SCIPdebugMessage("undercover heuristic failed creating subMIQCP; terminating\n");
+   }
 
    return SCIP_OKAY;
 }
