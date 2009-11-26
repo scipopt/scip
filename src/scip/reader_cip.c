@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.14 2009/09/04 15:58:23 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cip.c,v 1.15 2009/11/26 14:11:27 bzfheinz Exp $"
+
+#define SCIP_DEBUG
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
@@ -361,7 +363,7 @@ SCIP_RETCODE getConstraints(
       return SCIP_OKAY;
    }
    
-   SCIPdebugMessage("parse constraints\n");
+   SCIPdebugMessage("parse constraints in line %d\n", cipinput->linenumber);
    
    separate = TRUE;
    enforce = TRUE;
