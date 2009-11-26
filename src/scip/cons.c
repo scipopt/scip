@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.189 2009/09/08 20:41:29 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.190 2009/11/26 05:45:54 bzfberth Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4576,15 +4576,17 @@ SCIP_RETCODE SCIPconsParse(
       SCIP_CALL( conshdlr->consparse(set->scip, conshdlr, cons, consname, token, 
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
    }
-#if 0
    else
    {
       if( conshdlr == NULL )
-         SCIPwarningMessage("constraint handler <%s> doesn't exit in SCIP data structure\n", conshdlrname);
+      {
+         SCIPwarningMessage("constraint handler <%s> doesn't exist in SCIP data structure\n", conshdlrname);
+      }
       else if( conshdlr->consparse == NULL )
+      {
          SCIPwarningMessage("constraint handler <%s> doesn't support parsing constraints\n", conshdlrname);
+      }
    }
-#endif
 
    BMSfreeMemoryArray(&copystr);
    
