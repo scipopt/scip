@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.20 2009/11/26 06:41:37 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.21 2009/11/26 09:48:56 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1030,6 +1030,9 @@ SCIP_RETCODE solveSubProblem(
 
    *success = FALSE;
 
+   SCIP_CALL( SCIPreadParams(subscip, "settings/emphasis/feasibility.set") );
+   SCIP_CALL( SCIPreadParams(subscip, "settings/presolving/fast.set") );
+
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
  
@@ -1039,7 +1042,8 @@ SCIP_RETCODE solveSubProblem(
    /* set limits for the sub problem */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 500) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 100) );
 
    /* forbid recursive call of heuristics solving subMIPs */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
@@ -1059,9 +1063,7 @@ SCIP_RETCODE solveSubProblem(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100) );
 #endif
 
-   /* SCIP_CALL( SCIPreadParams(subscip, "undercoversub.set") ); */
-
-   /* presolve subproblem */
+    /* presolve subproblem */
 #ifdef NDEBUG
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
     * Hence in optimized mode, the return code is catched and a warning is printed, only in debug mode, SCIP will stop.
