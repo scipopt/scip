@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.h,v 1.2 2009/11/22 00:52:45 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.h,v 1.3 2009/11/27 09:48:47 bzfviger Exp $"
 
 /**@file   heur_undercover.h
  * @brief  undercover primal heuristic for MIQCPs
@@ -44,6 +44,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_RESULT*          result,             /**< result data structure                                          */
    SCIP_Real             timelimit,          /**< time limit                                                     */        
    SCIP_Real             memorylimit,        /**< memory limit                                                   */
+   SCIP_Longint          nodelimit,          /**< node limit                                                     */
    char                  ppcstrat,           /**< strategy for finding a ppcsolution                             */
    SCIP_Real             ppcobjquot,         /**< additional penalty factor for fixing continuous variables      */
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value */

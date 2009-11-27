@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.23 2009/11/27 06:30:46 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.24 2009/11/27 09:48:47 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -56,7 +56,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 
 #define DEFAULT_MINNODES      (SCIP_Longint)500/* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MAXNODES      (SCIP_Longint)5000/* maximum number of nodes to regard in the subproblem                */
+#define DEFAULT_MAXNODES      (SCIP_Longint)500/* maximum number of nodes to regard in the subproblem                */
 #define DEFAULT_MINIMPROVE    0.01           /* factor by which heuristic should at least improve the incumbent       */
 #define DEFAULT_NODESOFS      (SCIP_Longint)500/* number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
@@ -106,7 +106,7 @@ struct SCIP_HeurData
 static
 /* determines, whether a term is already linear, because the variable is fixed or the coefficient is zero */
 SCIP_Bool termIsLinear(
-   SCIP*                 scip,               /**<  SCIP data structure                 */
+   SCIP*                 scip,               /**< SCIP data structure                 */
    SCIP_VAR*             var,                /**< variable to check                    */
    SCIP_Real             coeff,              /**< coefficient to check                 */
    SCIP_Bool             local               /**< should only local bounds be checked? */
@@ -142,7 +142,7 @@ SCIP_Bool termIsConvex(
 }
 
 static
-/** increases count by one and marks that this field ahs already been increased */
+/** increases count by one and marks that this field has already been increased */
 void  incConsCounter(
    int*                  counter,            /**< array to count in how many constraints a variable appears */
    SCIP_Bool*            marker,             /**< was this variable already counted for this constraint?    */
@@ -930,6 +930,7 @@ SCIP_RETCODE solveSubProblem(
    SCIP_Bool             checklinear,        /**< should we check if subscip is linear after presolve? */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */
+   SCIP_Longint          nodelimit,          /**< node limit */
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
    SCIP_Bool*            success             /**< feasible solution found? */
    )
@@ -945,8 +946,10 @@ SCIP_RETCODE solveSubProblem(
 
    *success = FALSE;
 
+#ifndef WITH_UNIVARDEFINITE
    SCIP_CALL( SCIPreadParams(subscip, "settings/emphasis/feasibility.set") );
    SCIP_CALL( SCIPreadParams(subscip, "settings/presolving/fast.set") );
+#endif
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -957,8 +960,12 @@ SCIP_RETCODE solveSubProblem(
    /* set limits for the sub problem */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 500) );
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
+#ifdef WITH_UNIVARDEFINITE
+   SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
+#else
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", 100) );
+#endif
 
    /* forbid recursive call of undercover heuristic */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
@@ -1077,6 +1084,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_RESULT*          result,             /**< result data structure                                          */
    SCIP_Real             timelimit,          /**< time limit                                                     */        
    SCIP_Real             memorylimit,        /**< memory limit                                                   */
+   SCIP_Longint          nodelimit,          /**< node limit                                                     */
    char                  ppcstrat,           /**< strategy for finding a ppc solution                            */
    SCIP_Real             ppcobjquot,         /**< additional penalty factor for fixing continuous variables      */
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value */
@@ -1185,7 +1193,7 @@ SCIP_RETCODE SCIPapplyUndercover(
       
    /* solve subMIQCP */
    SCIPdebugMessage("undercover heuristic solving subMIQCP\n");
-   SCIP_CALL( solveSubProblem(subscip, !onlyconvexify && SCIPisEQ(scip, domred, 1.0), timelimit, memorylimit, nstallnodes, &success) );
+   SCIP_CALL( solveSubProblem(subscip, !onlyconvexify && SCIPisEQ(scip, domred, 1.0), timelimit, memorylimit, nodelimit, nstallnodes, &success) );
  
    if( success )
    {
@@ -1496,7 +1504,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
 
    SCIPdebugMessage("calling undercover heuristic for <%s>\n", SCIPgetProbName(scip));
 
-   SCIP_CALL( SCIPapplyUndercover(scip, heur, result, timelimit, memorylimit,
+   SCIP_CALL( SCIPapplyUndercover(scip, heur, result, timelimit, memorylimit, heurdata->maxnodes,
          heurdata->ppcstrat, heurdata->ppcobjquot, heurdata->domred, heurdata->locksrounding, heurdata->onlyconvexify, heurdata->globalbounds,
          heurdata->minimprove, nstallnodes, heurdata->postnlp) );
 
@@ -1536,7 +1544,6 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
  
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
          "maximum number of nodes to regard in the subproblem",
-
          &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
  
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
