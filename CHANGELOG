@@ -32,6 +32,7 @@ features:
   a the quadratic part of a quadratic constraint by a QCMATRIX
 - the MPS reader can now write quadratic constraints
 - new undercover heuristic for MIQCPs: fixes variables such as to obtain a MIP and solves this
+- modified implementation of separation algorithms in cons_knapsack.c according to results of diploma thesis; including superadditive lifting (disabled) 
 
 
 performance improvements:
@@ -53,6 +54,7 @@ parameters:
 - added parameter misc/usesmalltables which results in using smaller tables for names, cliques and cuts and improves the performace for smaller instances
 - added parameter misc/usevartable and misc/useconstable which turns on/off the usage of hashtables mapping from variable/constraint names to the 
   variables/constraints; when turned off, SCIPfindVar() and SCIPfindCons() may not be used; the hashtables can be turned off for submips to improve the performance
+- removed parameter constraints/knapsack/maxnumcardlift and adapted setting files
 
 SCIP version 1.2.0
 ===============

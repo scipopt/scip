@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.h,v 1.42 2009/07/31 11:37:14 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.h,v 1.43 2009/11/27 09:11:58 bzfwolte Exp $"
 
 /**@file   cons_knapsack.h
  * @brief  constraint handler for knapsack constraints
@@ -147,6 +147,36 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   );
+
+/** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
+ *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not 
+ *  selected items
+ */
+SCIP_RETCODE SCIPsolveKnapsackApproximately(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nitems,             /**< number of available items */
+   SCIP_Longint*         weights,            /**< item weights */
+   SCIP_Real*            profits,            /**< item profits */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   int*                  items,              /**< item numbers */
+   int*                  solitems,           /**< array to store items in solution, or NULL */
+   int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
+   int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
+   int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
+   SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
+   );
+
+/** separates lifted valid inequalities for given knapsack problem */
+SCIP_RETCODE SCIPseparateKnapsackCuts(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
 
 /** solves knapsack problem with dynamic programming;

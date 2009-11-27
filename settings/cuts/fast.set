@@ -178,10 +178,6 @@ constraints/knapsack/maxsepacuts = 50
 # [type: int, range: [0,2147483647], default: 200]
 constraints/knapsack/maxsepacutsroot = 200
 
-# maximal number of cardinality inequalities lifted per separation round (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/knapsack/maxnumcardlift = -1
-
 # frequency for separating cuts (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 0]
 constraints/logicor/sepafreq = 0

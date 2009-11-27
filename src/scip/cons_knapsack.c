@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.181 2009/09/10 13:47:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.182 2009/11/27 09:11:57 bzfwolte Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -62,19 +62,18 @@
 #define KNAPSACKRELAX_MAXDNOM      1000LL /**< maximal allowed denominator in knapsack rational relaxation */
 #define KNAPSACKRELAX_MAXSCALE     1000.0 /**< maximal allowed scaling factor in knapsack rational relaxation */
 
-#define DEFAULT_SEPACARDFREQ          1 /**< multiplier on separation frequency, how often cardinality cuts are separated */
+#define DEFAULT_SEPACARDFREQ          1 /**< multiplier on separation frequency, how often knapsack cuts are separated */
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     200 /**< maximal number of cuts separated per separation round in the root node */
-#define DEFAULT_MAXNUMCARDLIFT       -1 /**< maximal number of cardinality inequalities lifted per sepa round (-1: unlimited) */
 #define DEFAULT_MAXCARDBOUNDDIST    0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
-                                         *   to best node's dual bound for separating knapsack cardinality cuts */
+                                         *   to best node's dual bound for separating knapsack cuts */
 #define DEFAULT_DISAGGREGATION     TRUE /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
 #define DEFAULT_SIMPLIFYINEQUALITIES FALSE/**< should presolving try to simplify knapsacks */
 
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for knapsack relaxation */
-
+#define USESUPADDLIFT             FALSE /**< should lifted minimal cover ineq using superadditive up-lifting be separated in addition */
 
 
 /*
@@ -113,13 +112,12 @@ struct SCIP_ConshdlrData
    int                   reals1size;         /**< size of reals1 array */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
-                                              *   to best node's dual bound for separating knapsack cardinality cuts */
-   int                   sepacardfreq;       /**< multiplier on separation frequency, how often cardinality cuts are separated */
+                                              *   to best node's dual bound for separating knapsack cuts */
+   int                   sepacardfreq;       /**< multiplier on separation frequency, how often knapsack cuts are separated */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
-   int                   maxnumcardlift;     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
    SCIP_Bool             disaggregation;     /**< should disaggregation of knapsack constraints be allowed in preprocessing? */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
 };
@@ -156,12 +154,37 @@ struct SCIP_EventData
 };
 
 
+/** data structure to combine two sorting key values */
+struct sortkeypair
+{
+   SCIP_Real             key1;               /**< first sort key value */
+   SCIP_Real             key2;               /**< second sort key value */
+};
+typedef struct sortkeypair SORTKEYPAIR;
 
 
 /*
  * Local methods
  */
 
+/** comparison method for two sorting key pairs */
+static
+SCIP_DECL_SORTPTRCOMP(compSortkeypairs)
+{
+   SORTKEYPAIR* sortkeypair1 = (SORTKEYPAIR*)elem1;
+   SORTKEYPAIR* sortkeypair2 = (SORTKEYPAIR*)elem2;
+
+   if( sortkeypair1->key1 < sortkeypair2->key1 )
+      return -1;
+   else if( sortkeypair1->key1 > sortkeypair2->key1 )
+      return +1;
+   else if( sortkeypair1->key2 < sortkeypair2->key2 )
+      return -1;
+   else if( sortkeypair1->key2 > sortkeypair2->key2 )
+      return +1;
+   else 
+      return 0;
+}
 
 /** creates event data */
 static
@@ -664,7 +687,6 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int intcap;
    int d;
    int j;
-   int i;
 
    assert(weights != NULL);
    assert(profits != NULL);
@@ -673,23 +695,57 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    assert(items != NULL);
    assert(nitems >= 0);
 
+   if( capacity == 0 )
+   {
+#ifndef NDEBUG
+      for( j = nitems - 1; j >= 0; --j )
+         assert(weights[j] >= 0);
+#endif
+      if( solitems != NULL)
+      {
+         assert(nonsolitems != NULL);
+         assert(nnonsolitems != NULL);
+         assert(nonsolitems != NULL);
+
+         *nsolitems = 0;
+         *nnonsolitems = 0;
+
+         for( j = 0; j < nitems; j++ )
+         {
+            if( weights[j] == 0 )
+            {
+               solitems[*nsolitems] = items[j];
+               (*nsolitems)++;
+            } 
+            else
+            {
+               assert(weights[j] > 0);
+               nonsolitems[*nnonsolitems] = items[j];
+               (*nnonsolitems)++;
+            }
+         }
+
+      }
+
+      if( solval != NULL )
+         *solval = 0.0;
+
+      return SCIP_OKAY;
+   }
+
    intcap = (int)capacity;
    assert(intcap >= 0);
    SCIP_CALL( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(intcap+1)) );
    
-   /* allocate memory for temporary array used for sorting; array should contain profits devided by corresponding weights (p_1 / w_1 ... p_n / w_n )*/
+   /* sort items (plus corresponding arrays weights and profits) such that 
+    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n 
+    */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
-   /* initialize temporary array */ 
-   for (i = nitems - 1; i >= 0; --i)
+   for( j = nitems - 1; j >= 0; --j )
    {
-      tempsort[i] = profits[i] / weights [i];
+      tempsort[j] = profits[j]/weights[j];
    }
-
-   /* sort tempsort, items, weights and profits such that p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n */
-   SCIPsortDownRealLongRealInt( tempsort, weights, profits, items, nitems);
-
-   /* free temporary array */
-   SCIPfreeBufferArray(scip, &tempsort);
+   SCIPsortDownRealLongRealInt(tempsort, weights, profits, items, nitems);
 
    /* fills dynamic programming table with optimal values */
    for( d = 0; d <= intcap; d++ )
@@ -753,23 +809,23 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    if( solval != NULL )
       *solval = optvalues[IDX(nitems,intcap)];
 
+   SCIPfreeBufferArray(scip, &tempsort);
    SCIPfreeBufferArray(scip, &optvalues);
 
    return SCIP_OKAY;
 }
 
-/**todo: use SCIPsolveKnapsackExactly() instead of SCIPsolveKnapsack() in all methods of cons_knapsack */
-
-/** solves knapsack problem with dynamic programming;
- *  if needed, one can provide arrays to store all selected items and all not selected items
+/** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
+ *  method and rounding down the solution; if needed, one can provide arrays to store all selected items and all not 
+ *  selected items
  */
-SCIP_RETCODE SCIPsolveKnapsack(
+SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nitems,             /**< number of available items */
    SCIP_Longint*         weights,            /**< item weights */
    SCIP_Real*            profits,            /**< item profits */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   int*                  items,              /**< item numbers, or NULL */
+   int*                  items,              /**< item numbers */
    int*                  solitems,           /**< array to store items in solution, or NULL */
    int*                  nonsolitems,        /**< array to store items not in solution, or NULL */
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
@@ -777,107 +833,113 @@ SCIP_RETCODE SCIPsolveKnapsack(
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    ) 
 {
-   SCIP_Real* optvalues;
-   int intcap;
-   int d;
+   SCIP_Real* tempsort;
+   SCIP_Longint solitemsweight;
    int j;
-
+   
    assert(weights != NULL);
    assert(profits != NULL);
    assert(capacity >= 0);
    assert(capacity < INT_MAX);
+   assert(items != NULL);
    assert(nitems >= 0);
 
-   if( capacity == 0 )
+   if( solitems != NULL )
    {
-#ifndef NDEBUG
+      *nsolitems = 0;
+      *nnonsolitems = 0;
+   }
+   if( solval != NULL )
+      *solval = 0.0;
 
-      for( j = nitems - 1; j >= 0; --j )
-         assert(weights[j] > 0);
-#endif
-      if( solitems != NULL)
+   /* sort items (plus corresponding arrays weights and profits) such that 
+    * p_1/w_1 >= p_2/w_2 >= ... >= p_n/w_n 
+    */
+   SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
+   for( j = nitems - 1; j >= 0; --j )
+   {
+      tempsort[j] = profits[j]/weights[j];
+   }
+   SCIPsortDownRealLongRealInt(tempsort, weights, profits, items, nitems);
+
+   /* selects items as long as they fit into the knapsack */
+   solitemsweight = 0;
+   for( j = 0; j < nitems && solitemsweight + weights[j] <= capacity; j++ )
+   {
+      if( solitems != NULL )
       {
-         assert(nonsolitems != NULL);
-         assert(nnonsolitems != NULL);
-         assert(items != NULL);
-         *nsolitems = 0;
-         
-         BMScopyMemoryArray(nonsolitems, items, nitems);
-         *nnonsolitems = nitems;
+         solitems[*nsolitems] = items[j];
+         (*nsolitems)++;
       }
       if( solval != NULL )
-         *solval = 0.0;
-      
-      return SCIP_OKAY;
+         (*solval) += profits[j];
+      solitemsweight += weights[j];
    }
-
-   intcap = (int)capacity;
-   assert(intcap >= 0);
-   SCIP_CALL( SCIPallocBufferArray(scip, &optvalues, (nitems+1)*(intcap+1)) );
+   for( ; j < nitems && solitems != NULL; j++ )
+   {
+      nonsolitems[*nnonsolitems] = items[j];
+      (*nnonsolitems)++;
+   }
    
-   /* fill dynamic programming table with optimal values */
-   for( d = 0; d <= intcap; d++ )
-      optvalues[IDX(0,d)] = 0.0;
-   for( j = 1; j <= nitems; j++ )
-   {
-      int intweight;
-
-      assert(0 <= weights[j-1] && weights[j-1] < INT_MAX);
-      intweight = (int)weights[j-1];
-      assert(intweight >= 0);
-
-      for( d = 0; d < intweight && d <= intcap; d++ )
-         optvalues[IDX(j,d)] = optvalues[IDX(j-1,d)];
-      for( d = intweight; d <= intcap; d++ )
-      {
-         SCIP_Real sumprofit;
-
-         sumprofit = optvalues[IDX(j-1,d-intweight)] + profits[j-1];
-         optvalues[IDX(j,d)] = MAX(sumprofit, optvalues[IDX(j-1,d)]);
-      } 
-   }
-
-   /* produce optimal solution by following the table */
-   if( solitems != NULL)
-   {
-      assert(items != NULL);
-      assert(nsolitems != NULL);
-      assert(nonsolitems != NULL);
-      assert(nnonsolitems != NULL);
-
-      *nnonsolitems = 0;
-      *nsolitems = 0;
-      d = intcap;
-      
-      for( j = nitems; j > 0; j-- )
-      {
-         if( optvalues[IDX(j,d)] > optvalues[IDX(j-1,d)] )
-         {
-            assert(0 <= weights[j-1] && weights[j-1] < INT_MAX);
-            solitems[*nsolitems] = items[j-1];
-            (*nsolitems)++;
-            d -= (int)weights[j-1];
-         } 
-         else
-         { 
-            nonsolitems[*nnonsolitems] = items[j-1];
-            (*nnonsolitems)++;
-         }
-         assert(d >= 0);
-      }
-      assert(*nsolitems + *nnonsolitems == nitems);
-   }
-
-   if( solval != NULL )
-      *solval = optvalues[IDX(nitems,intcap)];
-
-   SCIPfreeBufferArray(scip, &optvalues);
+   SCIPfreeBufferArray(scip, &tempsort);
 
    return SCIP_OKAY;
 }
 
-/** gets a most violated minimal cover C = C2 & C1 for a given knapsack constraint, considering that all variables 
- *  in a given set C2 of variables in knapsack constraint are fixed to one (variables for downlifting)
+#ifndef NDEBUG
+/** returns, whether the the arrays transweights, transprofits and items are sorted such that 
+ *  p_1 / w_1 >= p_2 / w_2 >= ... >= p_n / w_n and these arrays are not changed
+ */
+static
+SCIP_Bool checkSolveKnapsack(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   nitems,             /**< number of available items */
+   SCIP_Longint*         transweights,       /**< item weights */
+   SCIP_Real*            transprofits,       /**< item profits */
+   int*                  items,              /**< item numbers */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   SCIP_Bool             modtransused        /**< TRUE for mod trans sepa prob was used to find cover */
+   )
+{
+   int j;
+   
+   assert(scip != NULL);
+   assert(nitems >= 0);
+   assert(weights != NULL);
+   assert(solvals != NULL);
+   assert(transweights != NULL);
+   assert(transprofits != NULL);
+   
+   for( j = 1; j < nitems; j++ )
+   {
+      assert(SCIPisFeasGE(scip, transprofits[j-1]/transweights[j-1], transprofits[j]/transweights[j]));
+      if( SCIPisFeasLT(scip, transprofits[j-1]/transweights[j-1], transprofits[j]/transweights[j]) )
+         return FALSE;
+      assert(weights[items[j]] == transweights[j]);
+      if( weights[items[j]] != transweights[j] )
+         return FALSE;
+      if( modtransused )
+      {
+         assert(SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]) * weights[items[j]], transprofits[j]));
+         if( !SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]) * weights[items[j]], transprofits[j]) )
+            return FALSE;
+      }
+      else
+      {
+         assert(SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]), transprofits[j]));
+         if( !SCIPisFeasEQ(scip, (1.0 - solvals[items[j]]), transprofits[j]) )
+            return FALSE;
+
+      }
+   }
+   return TRUE;
+}
+#endif
+
+/** gets a most violated cover C ( sum_{j in C} a_j > a_0 ) for a given knapsack constraint sum_{j in N} a_j x_j <= a_0
+ *  taking into consideration the following fixing: j in C, if j in N_1 = {j in N : x*_j = 1} and j in N\C, if j in 
+ *  N_0 = {j in N : x*_j = 0}, if one exists 
  */
 static
 SCIP_RETCODE getCover(
@@ -887,35 +949,32 @@ SCIP_RETCODE getCover(
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   int*                  varsc2,             /**< set C2 of variables in knapsack constraint (variables for downlifting) */
-   int*                  varscn2,            /**< set of variables in knapsack constraint that are not in C2 (cand. for C1) */
-   int                   nvarsc2,            /**< number of variables in C2 */
-   int                   nvarscn2,           /**< number of variables not in C2 */
-   SCIP_Longint          varsc2weight,       /**< sum of weights of variables in C2 */
-   int*                  covervars,          /**< pointer to store cover variables C = C2 & C1 */
+   int*                  covervars,          /**< pointer to store cover variables */
    int*                  noncovervars,       /**< pointer to store noncover variables */
    int*                  ncovervars,         /**< pointer to store number of cover variables */
-   int*                  ncovervarsc1,       /**< pointer to store number of cover variables in C1 (at the end of covervars) */
-   int*                  ncovervarsc2,       /**< pointer to store number of cover variables in C2 (at the beg of covervars) */
    int*                  nnoncovervars,      /**< pointer to store number of noncover variables */
    SCIP_Longint*         coverweight,        /**< pointer to store weight of cover */
-   SCIP_Real*            covervarsc1activity,/**< pointer to store activity of cover variables in C1 */  
-   SCIP_Bool*            found               /**< pointer to store whether a cover was found */
+   SCIP_Bool*            found,              /**< pointer to store whether a cover was found */
+   SCIP_Bool             modtransused,       /**< should modified transformed separation problem be used to find cover */
+   int*                  ntightened,         /**< pointer to store number of variables with tightened upper bound */
+   SCIP_Bool*            fractional          /**< pointer to store whether the LP sol for knapsack vars is fractional */
    )
 {
-   SCIP_Real* dpprofits;
-   SCIP_Real relslack;
-   SCIP_Longint* dpweights;
-   SCIP_Longint dpcapacity;
-   int* items;
+   SCIP_Longint* transweights;
+   SCIP_Longint* modtransweights;
+   SCIP_Real* transprofits;
+   SCIP_Real* modtransprofits;
+   SCIP_Longint transcapacity;
+   SCIP_Longint modtranscapacity;
+   SCIP_Longint fixedonesweight;
+   SCIP_Longint itemsweight;
+   SCIP_Bool infeasible;
+   int* fixedones;
    int* fixedzeros;
-   int* setvars;
-   int* nonsetvars;
-   int nitems;
+   int* items;
+   int nfixedones;
    int nfixedzeros;
-   int nsetvars;
-   int nnonsetvars;
-   int i;
+   int nitems;
    int j; 
 
    assert(scip != NULL);
@@ -924,361 +983,519 @@ SCIP_RETCODE getCover(
    assert(weights != NULL);
    assert(capacity >= 0);
    assert(solvals != NULL);
-   assert(varsc2 != NULL);
-   assert(varscn2 != NULL);
-   assert(nvarsc2 >= 0);
-   assert(nvarscn2 >= 0);
-   assert(nvarsc2 + nvarscn2 == nvars);
-   assert(varsc2weight >= 0);
    assert(covervars != NULL);
    assert(noncovervars != NULL);
    assert(ncovervars != NULL);
-   assert(ncovervarsc1 != NULL);
-   assert(ncovervarsc2 != NULL);
    assert(nnoncovervars != NULL);
    assert(coverweight != NULL);
-   assert(covervarsc1activity != NULL);
    assert(found != NULL);
-   
-   /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &items, nvarscn2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &dpweights, nvarscn2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &dpprofits, nvarscn2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &fixedzeros, nvarscn2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &setvars, nvarscn2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nonsetvars, nvarscn2) );
+   assert(ntightened != NULL);
+   assert(fractional != NULL);
+
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &transweights, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &transprofits, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedones, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &fixedzeros, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &items, nvars) );
+   if( modtransused )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &modtransweights, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &modtransprofits, nvars) );
+   }
 
    *found = FALSE;
    *ncovervars = 0;
-   *ncovervarsc1 = 0;
-   *ncovervarsc2 = 0;
    *nnoncovervars = 0;
    *coverweight = 0;
-   *covervarsc1activity = 0.0;
-   nsetvars = 0;
-   nnonsetvars = 0;
+   *fractional = TRUE;
       
-   /* solve the following knapsack problem with dynamic programming or greedy heuristic:
-    * max SUM (1 - x_i^*) z_i
-    *     SUM w_i z_i <= SUM w_i - capacity - 1
-    *             z_i == 0                       forall variables x_i in C2
-    * with the meaning: x_i is member of cover <==> z_i == 0
+   /* gets the following sets 
+    *  N_1 = {j in N : x*_j = 1} (fixedones), 
+    *  N_0 = {j in N : x*_j = 0} (fixedzeros) and 
+    *  N\(N_0 & N_1) (items), 
+    * where x*_j is the solution value of variable x_j
     */
-   
-   /* use all variables with fractional solution value from the set of variables not in C2 */
-   nitems = 0;
+   nfixedones = 0;
    nfixedzeros = 0;
-   dpcapacity = varsc2weight - capacity - 1;
-   for( i = 0; i < nvarscn2; i++ )
+   nitems = 0;
+   fixedonesweight = 0;
+   itemsweight = 0;
+   *ntightened = 0;
+   for( j = 0; j < nvars; j++ )
    {
-      assert(SCIPvarGetType(vars[varscn2[i]]) == SCIP_VARTYPE_BINARY);
+      assert(SCIPvarGetType(vars[j]) == SCIP_VARTYPE_BINARY);
       
-      /* variable has fractional solution value */
-      if( SCIPisFeasGT(scip, solvals[varscn2[i]], 0.0) )
+      /* tightens upper bound of x_j if weight of x_j is greater than capacity of knapsack */
+      if( weights[j] > capacity ) 
       {
-         /* sort items by non-decreasing relative slack value (1-x_i^*)/w_i */
-         relslack = (1.0 - solvals[varscn2[i]])/weights[varscn2[i]];
-         for( j = nitems; j > 0 && relslack < (1.0 - solvals[items[j-1]])/weights[items[j-1]]; --j )
-            items[j] = items[j-1];
-         items[j] = varscn2[i];
-         nitems++;
-         dpcapacity += weights[varscn2[i]];
+         SCIP_CALL( SCIPtightenVarUb(scip, vars[j], 0.0, FALSE, &infeasible, NULL) );
+         assert(!infeasible);
+         (*ntightened)++;
+         continue;
       }
-      /* variable has solution value 0 */
-      else
+
+      /* variable x_j has solution value one */
+      if( SCIPisFeasEQ(scip, solvals[j], 1.0) ) 
       {
-         fixedzeros[nfixedzeros] = varscn2[i];
+         fixedones[nfixedones] = j;
+         nfixedones++;
+         fixedonesweight += weights[j];
+      }
+      /* variable x_j has solution value zero */
+      else if( SCIPisFeasEQ(scip, solvals[j], 0.0) )
+      {
+         fixedzeros[nfixedzeros] = j;
          nfixedzeros++;
       }
-   }
-   assert(nitems + nfixedzeros == nvarscn2);
-
-   /* get weights and slacks of items */
-   for( i = 0; i < nitems; ++i )
-   {
-      dpweights[i] = weights[items[i]];
-      dpprofits[i] = 1.0 - solvals[items[i]];
-   }
-   
-   /* if the right hand side of the separation knapsack is negative, there cannot be a cover 
-    * (when variables from fixedzeros are not used)
-    */
-   if( dpcapacity >= 0 )
-   {
-      /* if the right hand side is too large, solving the dynamic program would be too expensive in space and time */
-      if( dpcapacity <= MAX_DYNPROG_CAPACITY )
-      {
-         /* solve separation knapsack with dynamic programming */
-         SCIP_CALL( SCIPsolveKnapsack(scip, nitems, dpweights, dpprofits, dpcapacity, 
-               items, nonsetvars, setvars, &nnonsetvars, &nsetvars, NULL) ); 
-         assert(nsetvars + nnonsetvars == nitems);
-      }
+      /* variable x_j has fractional solution value */
       else
       {
-         SCIP_Longint setweight;
-
-         /* use greedy heuristic on separation knapsack */
-         nnonsetvars = 0;
-         nsetvars = 0;
-         setweight = 0;
-         for( i = nitems-1; i >= 0; --i )
-         {
-            assert(weights[items[i]] == dpweights[i]);
-            if( dpcapacity - dpweights[i] >= 0 )
-            {
-               dpcapacity -= dpweights[i];
-               nonsetvars[nnonsetvars] = items[i];
-               nnonsetvars++;
-            }
-            else
-            {
-               setweight += dpweights[i];
-               setvars[nsetvars] = items[i];
-               nsetvars++;
-            }
-         }
-
-         /* the cover might be empty, which means the variables in C2 alone already suffice to exceed the capacity;
-          * this can happen even if C2 consists of the variables at 1.0 in the LP relaxation, because the linear
-          * constraint handler replaces continuous and integer variables by variable lower/upper bounds, and the LP
-          * relaxation may violate these variable bounds
-          */
-         if( nsetvars > 0 )
-         {
-            SCIP_Longint minimumweight;
-            int minimumweightidx;
-            int removevar;
-            SCIP_Bool minimal;
-            /* get minimum weigth of set variables */
-            minimal = FALSE;
-            minimumweight = SCIP_LONGINT_MAX;
-            minimumweightidx = -1;
-            for( i = 0; i < nsetvars; i++ )
-            {
-               if( weights[setvars[i]] <= minimumweight )
-               {
-                  minimumweightidx = i; 
-                  minimumweight = weights[setvars[i]];
-               }
-            }
-            assert(minimumweightidx >= 0 && minimumweightidx < nsetvars);
-            assert(minimumweight == weights[setvars[minimumweightidx]]);
-            assert(setweight > capacity - varsc2weight);
-
-            /* test if set is allready minimal */
-            if( setweight - minimumweight <= capacity - varsc2weight )
-               minimal = TRUE;
-
-            /* make set minimal by removing variables (in decreasing order of slack) */
-            for( i = 0; i < nsetvars && !minimal; i++ )
-            {
-               /* set variable x_i can not be removed with respect to the set property */
-               if( setweight - weights[setvars[i]] <= capacity - varsc2weight )
-                  continue;
-
-               /* remove x_i from setvars */
-               removevar = setvars[i];
-               for( j = i; j < nsetvars - 1; j++ )
-                  setvars[j] = setvars[j + 1];
-               nsetvars--;
-               setweight -= weights[removevar];
-            
-               /* add x_i to nonsetvars */
-               nonsetvars[nnonsetvars] = removevar;
-               nnonsetvars++;
-            
-               /* update minimumweight of setvars */     
-               if( minimumweightidx == i )
-               {
-                  /* get minimum weigth of setvars */
-                  minimumweight = SCIP_LONGINT_MAX;
-                  minimumweightidx = -1;
-                  for( j = 0; j < nsetvars; j++ )
-                  {
-                     if( weights[setvars[j]] <= minimumweight )
-                     {
-                        minimumweightidx = j; 
-                        minimumweight = weights[setvars[j]];
-                     }
-                  }
-               }
-               else
-                  minimumweightidx--;
-               assert(minimumweightidx >= 0 && minimumweightidx < nsetvars);
-               assert(minimumweight == weights[setvars[minimumweightidx]]);
-         
-               /* update index of current setvar */
-               i--;
-
-               /* test if set is now minimal */
-               assert(setweight > capacity - varsc2weight);
-               assert(!minimal);
-               if( setweight - minimumweight <= capacity - varsc2weight )
-                  minimal = TRUE;
-            }
-            assert(minimal);
-         }
+         assert( SCIPisFeasGT(scip, solvals[j], 0.0) && SCIPisFeasLT(scip, solvals[j], 1.0) );
+         items[nitems] = j;
+         nitems++;
+         itemsweight += weights[j];
       }
-      assert(*ncovervars == 0);
-      assert(*nnoncovervars == 0);
-      assert(nvarsc2 + nsetvars + nnonsetvars + nfixedzeros == nvars);
+   }
+   assert(nfixedones + nfixedzeros + nitems == nvars - (*ntightened));
+   
+   /* sets whether the LP solution x* for the knapsack variables is fractional; if it is not fractional we stop 
+    * the separation routine 
+    */
+   assert(nitems >= 0);
+   if( nitems == 0 )
+   {
+      *fractional = FALSE;
+      goto TERMINATE;
+   }
+   assert(*fractional);
 
-      /* get covervars (variables from C2 are in the beginning of covervars) and noncovervars: */ 
+   /* transforms the traditional separation problem (under consideration of the following fixing: 
+    * z_j = 1 for all j in N_1, z_j = 0 for all j in N_0)
+    *
+    *   min sum_{j in N\(N_0 & N_1)} (1 - x*_j) z_j
+    *       sum_{j in N\(N_0 & N_1)} a_j z_j >= (a_0 + 1) - sum_{j in N_1} a_j
+    *                                    z_j in {0,1}, j in N\(N_0 & N_1)
+    *
+    * to a knapsack problem in maximization form by complementing the variables
+    *  
+    * sum_{j in N\(N_0 & N_1)} (1 - x*_j) - 
+    *   max sum_{j in N\(N_0 & N_1)} (1 - x*_j) z°_j
+    *       sum_{j in N\(N_0 & N_1)} a_j z°_j <= sum_{j in N\N_0} a_j - (a_0 + 1) 
+    *                                    z°_j in {0,1}, j in N\(N_0 & N_1)
+    */
 
-      /* add all variables from C2 to covervars */
-      for( i = 0; i < nvarsc2; i++)
-      {
-         covervars[*ncovervars] = varsc2[i];
-         *coverweight += weights[varsc2[i]];
-         (*ncovervars)++;
-         (*ncovervarsc2)++;
-      }
+   /* gets weight and profit of variables in transformed knapsack problem */
+   for( j = 0; j < nitems; j++ )
+   {
+      transweights[j] = weights[items[j]];
+      transprofits[j] = 1.0 - solvals[items[j]];
+   }
+   /* gets capacity of transformed knapsack problem */
+   transcapacity = fixedonesweight + itemsweight - capacity - 1;
 
-      /* add all variables from setvars (variables from set of variables not in C2 which have been chosen to be in the 
-       * cover) to covervars 
+   /* if capacity of transformed knapsack problem is less than zero, there is no cover 
+    * (when variables fixed to zero are not used)
+    */
+   if( SCIPisFeasLT(scip, transcapacity, 0.0) )
+   {
+      assert(!(*found));
+      goto TERMINATE;
+   }
+   
+   if( modtransused )
+   {
+      /* transforms the modified separation problem (under consideration of the following fixing: 
+       * z_j = 1 for all j in N_1, z_j = 0 for all j in N_0)
+       *
+       *   min sum_{j in N\(N_0 & N_1)} (1 - x*_j) a_j z_j
+       *       sum_{j in N\(N_0 & N_1)} a_j z_j >= (a_0 + 1) - sum_{j in N_1} a_j
+       *                                    z_j in {0,1}, j in N\(N_0 & N_1)
+       *
+       * to a knapsack problem in maximization form by complementing the variables
+       *  
+       * sum_{j in N\(N_0 & N_1)} (1 - x*_j) a_j - 
+       *   max sum_{j in N\(N_0 & N_1)} (1 - x*_j) a_j z°_j
+       *       sum_{j in N\(N_0 & N_1)} a_j z°_j <= sum_{j in N\N_0} a_j - (a_0 + 1) 
+       *                                    z°_j in {0,1}, j in N\(N_0 & N_1)
        */
-      for( i = 0; i < nsetvars; i++)
+
+      /* gets weight and profit of variables in modified transformed knapsack problem */
+      for( j = 0; j < nitems; j++ )
       {
-         covervars[*ncovervars] = setvars[i];
-         *coverweight += weights[setvars[i]];
-         *covervarsc1activity += solvals[setvars[i]];
-         (*ncovervars)++;
-         (*ncovervarsc1)++;
+         modtransweights[j] = weights[items[j]];
+         modtransprofits[j] = (1.0 - solvals[items[j]]) * weights[items[j]];
+         assert(SCIPisFeasGT(scip, modtransprofits[j], 0.0));
       }
-      assert(*coverweight > capacity);
-      assert((*ncovervarsc1) + (*ncovervarsc2) == *ncovervars);
+      /* gets capacity of modified transformed knapsack problem */
+      modtranscapacity = fixedonesweight + itemsweight - capacity - 1;
 
-      /* add all variables from nonsetvars (variables from set of variables not in C2 which have not been chosen to be 
-       * in the cover) to noncovervars 
+      /* solves modified transformed knapsack problem approximately by solving the LP-relaxation of the 
+       * modified transformed knapsack problem using Dantzig's method and rounding down the solution.
+       * let z°* be the solution, then 
+       *   j in C,          if z°*_j = 0 and
+       *   i in N\C,        if z°*_j = 1.
        */ 
-      for( i = 0; i < nnonsetvars; i++ )
-      {
-         noncovervars[*nnoncovervars] = nonsetvars[i];
-         (*nnoncovervars)++;
-      }  
-
-      /* add all variables with solution value zero to noncovervars */
-      for( i = 0; i < nfixedzeros; i++ )
-      {
-         noncovervars[*nnoncovervars] = fixedzeros[i];
-         (*nnoncovervars)++;
-      }  
-      assert((*ncovervarsc2) + (*ncovervarsc1) == (*ncovervars));
-      assert((*ncovervars) + (*nnoncovervars) == nvars);
-      *found = TRUE;
+      SCIP_CALL(SCIPsolveKnapsackApproximately(scip, nitems, modtransweights, modtransprofits, modtranscapacity, items, 
+            noncovervars, covervars, nnoncovervars, ncovervars, NULL)); 
+      assert(checkSolveKnapsack(scip, nitems, modtransweights, modtransprofits, items, weights, solvals, modtransused));
    }
    else
    {
-      /* put all variables into noncovervars because no cover was found (variables from fixedzeros have not been used) */
-      
-      /* add all variables from C2 to noncovervars */
-      for( i = 0; i < nvarsc2; i++)
-      {
-         noncovervars[*nnoncovervars] = varsc2[i];
-         (*nnoncovervars)++;
-      }
-      
-      /* add all variables from set of variables not in C2 to noncovervars */
-      for( i = 0; i < nvarscn2; i++)
-      {
-         noncovervars[*nnoncovervars] = varscn2[i];
-         (*nnoncovervars)++;
-      }
-      assert(!(*found));
-      assert(*coverweight == 0 && *covervarsc1activity == 0.0); 
+      /* solves transformed knapsack problem approximately by solving the LP-relaxation of the 
+       * transformed knapsack problem using Dantzig's method and rounding down the solution.
+       * let z°* be the solution, then 
+       *   j in C,          if z°*_j = 0 and
+       *   i in N\C,        if z°*_j = 1.
+       */ 
+      SCIP_CALL(SCIPsolveKnapsackApproximately(scip, nitems, transweights, transprofits, transcapacity, items, 
+            noncovervars, covervars, nnoncovervars, ncovervars, NULL));
+      assert(checkSolveKnapsack(scip, nitems, transweights, transprofits, items, weights, solvals, modtransused));
    }
 
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &nonsetvars);
-   SCIPfreeBufferArray(scip, &setvars);
-   SCIPfreeBufferArray(scip, &fixedzeros);
-   SCIPfreeBufferArray(scip, &dpprofits);
-   SCIPfreeBufferArray(scip, &dpweights);
+   /* constructs cover C (sum_{j in C} a_j > a_0) */
+   for( j = 0; j < *ncovervars; j++ )
+   {
+      (*coverweight) += weights[covervars[j]];
+   }
+   
+   /* adds all variables from N_1 to C */
+   for( j = 0; j < nfixedones; j++ )
+   {
+      covervars[*ncovervars] = fixedones[j];
+      (*ncovervars)++;
+      (*coverweight) += weights[fixedones[j]];
+   }
+
+   /* adds all variables from N_0 to N\C */
+   for( j = 0; j < nfixedzeros; j++ )
+   {
+      noncovervars[*nnoncovervars] = fixedzeros[j];
+      (*nnoncovervars)++;
+   }
+   assert((*ncovervars) + (*nnoncovervars) == nvars - (*ntightened));
+   assert((*coverweight) > capacity);
+   *found = TRUE;
+   
+ TERMINATE:
+   /* frees temporary memory */
+   if( modtransused )
+   {
+      SCIPfreeBufferArray(scip, &modtransprofits);
+      SCIPfreeBufferArray(scip, &modtransweights);
+   }
    SCIPfreeBufferArray(scip, &items);
+   SCIPfreeBufferArray(scip, &fixedzeros);
+   SCIPfreeBufferArray(scip, &fixedones);
+   SCIPfreeBufferArray(scip, &transprofits);
+   SCIPfreeBufferArray(scip, &transweights);
 
    return SCIP_OKAY;
 }
 
-/** gets a partition of all variables in a given knapsack constraint into a set of variables for downlifting (C2) and 
- *  a set of all remaining variables    
+#ifndef NDEBUG
+/** checks if minweightidx is set correctly
  */
 static
-void getPartition(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of variables in knapsack constraint */
+SCIP_Bool checkMinweightidx(
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   int*                  varsc2,             /**< pointer to store variables of knapsack constraint in C2 */
-   int*                  varscn2,            /**< pointer to store variables of knapsack constraint not in C2 */
-   int*                  nvarsc2,            /**< pointer to store number of variables of knapsack constraint in C2 */
-   int*                  nvarscn2,           /**< pointer to store number of variables of knapsack constraint not in C2 */
-   SCIP_Longint*         varsc2weight        /**< pointer to store sum of weights of variables of knapsack constraint in C2 */
-   )
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   int*                  covervars,          /**< pointer to store cover variables */
+   int                   ncovervars,         /**< pointer to store number of cover variables */
+   SCIP_Longint          coverweight,        /**< pointer to store weight of cover */
+   int                   minweightidx,       /**< index of variable in cover variables with minimum weight */
+   int                   j                   /**< current index in cover variables */      
+  )
 {
+   SCIP_Longint minweight;
    int i;
 
-   assert(scip != NULL);
-   assert(nvars > 0);
    assert(weights != NULL);
-   assert(solvals != NULL);
-   assert(varsc2 != NULL);
-   assert(varscn2 != NULL);
-   assert(nvarsc2 !=NULL);
-   assert(nvarscn2 != NULL);
-   assert(varsc2weight !=NULL);
+   assert(covervars != NULL);
+   assert(ncovervars > 0);
 
-   *nvarscn2 = 0;
-   *nvarsc2 = 0;
-   *varsc2weight = 0;
+   minweight = weights[covervars[minweightidx]];
 
-   /* choses all variables with solution value equal to one for the set of variables for downlifting (C2) */
-   for( i = 0; i < nvars; i++ )
+   /* checks if all cover variables before index j have weight greater than minweight */
+   for( i = 0; i < j; i++ )
    {
-      if( SCIPisFeasEQ(scip, solvals[i], 1.0) )
-      {
-         varsc2[*nvarsc2] = i;
-         (*nvarsc2)++;
-         *varsc2weight += weights[i];
-      }
-      else
-      {
-         assert(SCIPisFeasLT(scip, solvals[i], 1.0));
-         varscn2[*nvarscn2] = i;
-         (*nvarscn2)++;
-      }
+      assert(weights[covervars[i]] > minweight);
+      if( weights[covervars[i]] <= minweight )
+         return FALSE;
    }
-}
 
-/** sorts given set of variables in knapsack constraint by non-increasing solution value (variables with equal solution value 
- *  are ordered by non-increasing weight)
+   /* checks if all variables before index j can not be removed, i.e. i cannot be the next minweightidx */
+   for( i = 0; i < j; i++ )
+   {
+      assert(coverweight - weights[covervars[i]] <= capacity);
+      if( coverweight - weights[covervars[i]] > capacity )
+         return FALSE;
+   }
+   return TRUE;
+}
+#endif
+
+
+/** gets partition (C_1,C_2) of minimal cover C, i.e. C_1 & C_2 = C and C_1 cap C_2 = emptyset, with C_1 not empty; 
+ *  choses partition as follows C_2 = { j in C : x*_j = 1 } and C_1 = C\C_2
  */
 static
-void sortSetvars(
+void getPartitionCovervars(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  setvars,            /**< set of variables in knapsack constraint to be sorted */
-   int                   nsetvars,           /**< number of variables in set of variables in knapsack cons. to be sorted */
-   SCIP_Real*            solvals             /**< solution values of all problem variables */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   int*                  covervars,          /**< cover variables */
+   int                   ncovervars,         /**< number of cover variables */
+   int*                  varsC1,             /**< pointer to store variables in C1 */
+   int*                  varsC2,             /**< pointer to store variables in C2 */
+   int*                  nvarsC1,            /**< pointer to store number of variables in C1 */
+   int*                  nvarsC2             /**< pointer to store number of variables in C2 */
    )
 {
-   SCIP_Real solval;
-   int idx;
-   int i;
    int j;
 
    assert(scip != NULL);
-   assert(setvars != NULL);
-   assert(nsetvars >= 0);
+   assert(ncovervars >= 0);
    assert(solvals != NULL);
-
-   /* sorts setvars by non-increasing solution value */
-   for( i = 0; i < nsetvars; i++ ) 
+   assert(covervars != NULL);
+   assert(varsC1 != NULL);
+   assert(varsC2 != NULL);
+   assert(nvarsC1 != NULL);
+   assert(nvarsC2 != NULL);
+   
+   *nvarsC1 = 0;
+   *nvarsC2 = 0;
+   for( j = 0; j < ncovervars; j++ )
    {
-      idx = setvars[i];
-      solval = solvals[idx];
-      for( j = i - 1; j >= 0 && solvals[setvars[j]] < solval; --j )
-         setvars[j + 1] = setvars[j];
-      setvars[j + 1] = idx;
+      assert(SCIPisFeasGT(scip, solvals[covervars[j]], 0.0));
+
+      /* variable has solution value one */
+      if( SCIPisGE(scip, solvals[covervars[j]], 1.0) )
+      {
+         varsC2[*nvarsC2] = covervars[j];
+         (*nvarsC2)++;
+      }
+      /* variable has solution value less than one */
+      else
+      {
+         assert(SCIPisLT(scip, solvals[covervars[j]], 1.0));
+         varsC1[*nvarsC1] = covervars[j];
+         (*nvarsC1)++;
+      }
    }
+   assert((*nvarsC1) + (*nvarsC2) == ncovervars);
+}
+
+/** changes given partition (C_1,C_2) of minimal cover C, if |C1| = 1, by moving one and two (if possoble) variables from 
+ *  C2 to C1 if |C1| = 1 and |C1| = 0, respectively.
+ */
+static
+SCIP_RETCODE changePartitionCovervars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   int*                  varsC1,             /**< pointer to store variables in C1 */
+   int*                  varsC2,             /**< pointer to store variables in C2 */
+   int*                  nvarsC1,            /**< pointer to store number of variables in C1 */
+   int*                  nvarsC2             /**< pointer to store number of variables in C2 */
+   )
+{
+   SCIP_Real* sortkeysC2;
+   int j;
+
+   assert(*nvarsC1 >= 0 && *nvarsC1 <= 1);
+   assert(*nvarsC2 > 0);
+
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, *nvarsC2) );
+
+   /* sorts variables in C2 such that a_1 >= .... >= a_|C2| */
+   for( j = 0; j < *nvarsC2; j++ )
+      sortkeysC2[j] = (SCIP_Real) weights[varsC2[j]];
+   SCIPsortDownRealInt(sortkeysC2, varsC2, *nvarsC2);
+
+   /* adds one or two variable from C2 with smallest weight to C1 and removes them from C2 */
+   assert(*nvarsC2 == 1 || weights[varsC2[(*nvarsC2)-1]] <= weights[varsC2[(*nvarsC2)-2]]);
+   while( *nvarsC1 < 2 && *nvarsC2 > 0 )
+   {
+      varsC1[*nvarsC1] = varsC2[(*nvarsC2)-1];
+      (*nvarsC1)++;
+      (*nvarsC2)--;
+   }
+   
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &sortkeysC2);
+
+   return SCIP_OKAY;
+}
+
+/** changes given partition (C_1,C_2) of feasible set C, if |C1| = 1, by moving one variable from C2 to C1 */
+static
+SCIP_RETCODE changePartitionFeasiblesetvars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   int*                  varsC1,             /**< pointer to store variables in C1 */
+   int*                  varsC2,             /**< pointer to store variables in C2 */
+   int*                  nvarsC1,            /**< pointer to store number of variables in C1 */
+   int*                  nvarsC2             /**< pointer to store number of variables in C2 */
+   )
+{
+   SCIP_Real* sortkeysC2;
+   int j;
+
+   assert(*nvarsC1 >= 0 && *nvarsC1 <= 1);
+   assert(*nvarsC2 > 0);
+
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, *nvarsC2) );
+
+   /* sorts variables in C2 such that a_1 >= .... >= a_|C2| */
+   for( j = 0; j < *nvarsC2; j++ )
+      sortkeysC2[j] = (SCIP_Real) weights[varsC2[j]];
+   SCIPsortDownRealInt(sortkeysC2, varsC2, *nvarsC2);
+
+   /* adds variable from C2 with smallest weight to C1 and removes it from C2 */
+   assert(*nvarsC2 == 1 || weights[varsC2[(*nvarsC2)-1]] <= weights[varsC2[(*nvarsC2)-2]]);
+   varsC1[*nvarsC1] = varsC2[(*nvarsC2)-1];
+   (*nvarsC1)++;
+   (*nvarsC2)--;
+   
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &sortkeysC2);
+
+   return SCIP_OKAY;
+}
+
+
+/** gets partition (F,R) of N\C where C is a minimal cover, i.e. F & R = N\C and F cap R = emptyset; choses partition as 
+ *  follows R = { j in N\C : x*_j = 0 } and F = (N\C)\F
+ */
+static
+void getPartitionNoncovervars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   int*                  noncovervars,       /**< noncover variables */
+   int                   nnoncovervars,      /**< number of noncover variables */
+   int*                  varsF,              /**< pointer to store variables in F */
+   int*                  varsR,              /**< pointer to store variables in R */
+   int*                  nvarsF,             /**< pointer to store number of variables in F */
+   int*                  nvarsR              /**< pointer to store number of variables in R */
+   )
+{
+   int j;
+
+   assert(scip != NULL);
+   assert(nnoncovervars >= 0);
+   assert(solvals != NULL);
+   assert(noncovervars != NULL);
+   assert(varsF != NULL);
+   assert(varsR != NULL);
+   assert(nvarsF != NULL);
+   assert(nvarsR != NULL);
+   
+   *nvarsF = 0;
+   *nvarsR = 0;
+   for( j = 0; j < nnoncovervars; j++ )
+   {
+      /* variable has solution value zero */
+      if( SCIPisFeasEQ(scip, solvals[noncovervars[j]], 0.0) )
+      {
+         varsR[*nvarsR] = noncovervars[j];
+         (*nvarsR)++;
+      }
+      /* variable has solution value greater than zero */
+      else
+      {
+         assert(SCIPisFeasGT(scip, solvals[noncovervars[j]], 0.0));
+         varsF[*nvarsF] = noncovervars[j];
+         (*nvarsF)++;
+      }
+   }
+   assert((*nvarsF) + (*nvarsR) == nnoncovervars);
+}
+
+/** sorts variables in F, C_2, and R according to the second level lifting sequence that will be used in the sequential 
+ *  lifting procedure 
+ */
+static 
+SCIP_RETCODE getLiftingSequence(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   int*                  varsF,              /**< pointer to store variables in F */
+   int*                  varsC2,             /**< pointer to store variables in C2 */
+   int*                  varsR,              /**< pointer to store variables in R */
+   int                   nvarsF,             /**< number of variables in F */
+   int                   nvarsC2,            /**< number of variables in C2 */
+   int                   nvarsR              /**< number of variables in R */
+   )
+{
+   SORTKEYPAIR** sortkeypairsF;
+   SCIP_Real* sortkeysC2;
+   SCIP_Real* sortkeysR;
+   int j;
+
+   assert(scip != NULL);
+   assert(solvals != NULL);
+   assert(weights != NULL);
+   assert(varsF != NULL);
+   assert(varsC2 != NULL);
+   assert(varsR != NULL);
+   assert(nvarsF >= 0);
+   assert(nvarsC2 >= 0);
+   assert(nvarsR >= 0);
+   
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsF, nvarsF) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
+   
+   /* gets sorting key for variables in F corresponding to the following lifting sequence 
+    *  sequence 1: non-increasing absolute difference between x*_j and the value the variable is fixed to, i.e. 
+    *              x*_1 >= x*_2 >= ... >= x*_|F| 
+    * in case of equality uses 
+    *  sequence 4: non-increasing a_j, i.e. a_1 >= a_2 >= ... >= a_|C_2| 
+    */
+   for( j = 0; j < nvarsF; j++ )
+   {
+      SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairsF[j]) );
+
+      sortkeypairsF[j]->key1 = solvals[varsF[j]]; 
+      sortkeypairsF[j]->key2 = (SCIP_Real) weights[varsF[j]]; 
+   }
+   
+   /* gets sorting key for variables in C_2 corresponding to the following lifting sequence 
+    *  sequence 4: non-increasing a_j, i.e. a_1 >= a_2 >= ... >= a_|C_2| 
+    */
+   for( j = 0; j < nvarsC2; j++ )
+      sortkeysC2[j] = (SCIP_Real) weights[varsC2[j]]; 
+   
+   /* gets sorting key for variables in R corresponding to the following lifting sequence 
+    *  sequence 4: non-increasing a_j, i.e. a_1 >= a_2 >= ... >= a_|R| 
+    */
+   for( j = 0; j < nvarsR; j++ )
+      sortkeysR[j] = (SCIP_Real) weights[varsR[j]]; 
+   
+   /* sorts F, C2 and R */
+   if( nvarsF > 0 )
+   {
+      SCIPsortDownPtrInt((void**)sortkeypairsF, varsF, compSortkeypairs, nvarsF);
+   }   
+   if( nvarsC2 > 0 )
+   {
+      SCIPsortDownRealInt(sortkeysC2, varsC2, nvarsC2);
+   }   
+   if( nvarsR > 0)
+   {
+      SCIPsortDownRealInt(sortkeysR, varsR, nvarsR);
+   }
+   
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &sortkeysR);
+   SCIPfreeBufferArray(scip, &sortkeysC2);
+   for( j = nvarsF-1; j >= 0; j-- )
+      SCIPfreeBuffer(scip, &sortkeypairsF[j]);
+   SCIPfreeBufferArray(scip, &sortkeypairsF);
+   
+   return SCIP_OKAY;
 }
 
 /** enlarges minweight table to at least the given length */
@@ -1295,6 +1512,10 @@ SCIP_RETCODE enlargeMinweights(
 
    assert(minweightsptr != NULL);
    assert(*minweightsptr != NULL);
+   assert(minweightslen != NULL);
+   assert(*minweightslen >= 0);
+   assert(minweightssize != NULL);
+   assert(*minweightssize >= 0);
 
    if( newlen > *minweightssize )
    {
@@ -1315,368 +1536,329 @@ SCIP_RETCODE enlargeMinweights(
    return SCIP_OKAY;
 }
 
-/** lifts up given inequality sum(j in C1) x_j <= liftrhs which is valid for the knapsack polytop { x binary | 
- *  x is solution of knapsack constraint, x_j = 1 for all j in C2, x_j = 0 for all j in noncovervars } to a valid 
- *  inequality for the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 1 for all j in C2,
- *  x_j = 0 for all j in noncovervars with solution value = 0 }
- */
+/** lifts given inequality 
+ *    sum_{j in M_1} x_j <= alpha_0 
+ *  valid for 
+ *    S^0 = { x in {0,1}^|M_1| : sum_{j in M_1} a_j x_j <= a_0 - sum_{j in M_2} a_j } 
+ *  to a valid inequality 
+ *    sum_{j in M_1} x_j + sum_{j in F} alpha_j x_j + sum_{j in M_2} alpha_j x_j + sum_{j in R} alpha_j x_j 
+ *    <= alpha_0 + sum_{j in M_2} alpha_j 
+ *  for 
+ *    S = { x in {0,1}^|N| : sum_{j in N} a_j x_j <= a_0 }; 
+ *  uses sequential up-lifting for the variables in F, sequential down-lifting for the variable in M_2, and 
+ *  sequential up-lifting for the variabels in R; procedure can be used to strengthen minimal cover inequalities and 
+ *  extended weight inequalities.   
+ */ 
 static
-SCIP_RETCODE liftupKnapsackCover(
+SCIP_RETCODE sequentialUpAndDownLifting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   int                   ntightened,         /**< number of variables with tightened upper bound */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
-   int                   ncovervars,         /**< number of cover variables */
-   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int                   nnoncovervars,      /**< number of noncover variables */
-   SCIP_Longint          fixedoneweight,     /**< sum of weights of variables from C2 which are still fixed to 1 */ 
-   int*                  liftcoefs,          /**< lifting coefficients of var in knapsack constraint in lifted inequality */
-   int*                  liftrhs,            /**< right hand side of lifted inequality */
-   SCIP_Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
-   int*                  lastlifted,         /**< pointer to store index of noncover var lifted last (-1 if no var lifted) */
-   SCIP_Longint*         initminweight,      /**< initial minweight table (aggregation of sorted weights) */
-   SCIP_Longint**        minweightsptr,      /**< pointer to minweights table */
-   int*                  minweightslen,      /**< pointer to store number of entries in minweights table (incl. z=0) */
-   int*                  minweightssize      /**< pointer to current size of minweights table */
-   )
+   int*                  varsM1,             /**< variables in M_1 */
+   int*                  varsM2,             /**< variables in M_2 */
+   int*                  varsF,              /**< variables in F */
+   int*                  varsR,              /**< variables in R */
+   int                   nvarsM1,            /**< number of variables in M_1 */
+   int                   nvarsM2,            /**< number of variables in M_2 */
+   int                   nvarsF,             /**< number of variables in F */
+   int                   nvarsR,             /**< number of variables in R */
+   int                   alpha0,             /**< rights hand side of given valid inequality */
+   int*                  liftcoefs,          /**< pointer to store lifting coefficient of vars in knapsack constraint */
+   SCIP_Real*            cutact,             /**< pointer to store activity of lifted valid inequality */
+   int*                  liftrhs             /**< pointer to store right hand side of the lifted valid inequality */
+)
 {
    SCIP_Longint* minweights;
-   SCIP_Longint rescapacity;
-   int i;
+   SCIP_Real* sortkeys;
+   SCIP_Longint fixedonesweight;
+   int minweightssize;
+   int minweightslen;
+   int j;
+   int w;
 
    assert(scip != NULL);
    assert(vars != NULL);
+   assert(nvars >= 0);
    assert(weights != NULL);
    assert(capacity >= 0);
    assert(solvals != NULL);
-   assert(covervars != NULL);
-   assert(noncovervars != NULL);
-   assert(ncovervars >= 0);
-   assert(ncovervarsc1 >= 0);
-   assert(ncovervarsc2 >= 0);
-   assert(ncovervarsc1 + ncovervarsc2 == ncovervars);
-   assert(nnoncovervars >= 0);
-   assert(fixedoneweight >= 0);
+   assert(varsM1 != NULL);
+   assert(varsM2 != NULL);
+   assert(varsF != NULL);
+   assert(varsR != NULL);
+   assert(nvarsM1 >= 0 && nvarsM1 <= nvars - ntightened);
+   assert(nvarsM2 >= 0 && nvarsM2 <= nvars - ntightened);
+   assert(nvarsF >= 0 && nvarsF <= nvars - ntightened);
+   assert(nvarsR >= 0 && nvarsR <= nvars - ntightened);
+   assert(nvarsM1 + nvarsM2 + nvarsF + nvarsR == nvars  - ntightened);
+   assert(alpha0 >= 0);
    assert(liftcoefs != NULL);
+   assert(cutact != NULL);
    assert(liftrhs != NULL);
-   assert(liftlpval != NULL);
-   assert(lastlifted != NULL);
-   assert(initminweight != NULL);
-   assert(minweightsptr != NULL);
-   assert(minweightslen != NULL);
-   assert(minweightssize != NULL);
-   assert(ncovervarsc1 < *minweightssize);
-   assert(initminweight[0] == 0);
-   assert(*liftrhs <= ncovervarsc1);
 
-   minweights = *minweightsptr;
-   assert(minweights != NULL);
+   /* allocates temporary memory */
+   minweightssize = nvarsM1 + 1;
+   SCIP_CALL( SCIPallocBufferArray(scip, &minweights, minweightssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeys, nvarsM1) );
+   
+   /* initializes data structures */
+   BMSclearMemoryArray(liftcoefs, nvars);
+   *cutact = 0.0;
 
-   /* initialize the minweight table
-    *  minweights[z] := minimal sum of weights s.t. activity of cut inequality equals z
+   /* sets lifting coefficient of variables in M1, sorts variables in M1 such that a_1 <= a_2 <= ... <= a_|M1| 
+    * and calculates activity of the current valid inequality 
     */
-   BMScopyMemoryArray(minweights, initminweight, ncovervarsc1+1);
-   *minweightslen = ncovervarsc1 + 1;
-   assert(*liftrhs < *minweightslen);
-   assert(0 <= *minweightslen && *minweightslen <= *minweightssize);
+   for( j = 0; j < nvarsM1; j++ )
+   {
+      assert(liftcoefs[varsM1[j]] == 0);
+      liftcoefs[varsM1[j]] = 1;
+      sortkeys[j] = (SCIP_Real) (weights[varsM1[j]]);
+      (*cutact) += solvals[varsM1[j]];
+   }
 
-   /* calculate lifting coefficients for noncover variables with solution value > 0:
-    *  for each noncovervar x_i with LP-value > 0 (in non-increasing order of LP-value and weight): 
-    *   1. calculates max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
-    *      x_i = 1, x_j = 0 for all j in noncovervars with j > i, x_j = 1 for all j in C2
-    *   2. adds x_i with lifting coefficient beta_i = liftrhs - z_max to current lifted inequality
-    *   3. updates minweight table: calculates minimal sum of weights s.t. activity of current lifted inequality equals z 
+   SCIPsortRealInt(sortkeys, varsM1, nvarsM1);
+  
+   /* initializes (i = 1) the minweight table, defined as: minweights_i[w] = 
+    *   min   sum_{j in M_1} a_j x_j + sum_{k=1}^{i-1} a_{j_k}     x_{j_k}   
+    *   s.t.  sum_{j in M_1}     x_j + sum_{k=1}^{i-1} alpha_{j_k} x_{j_k} >= w
+    *                                    x_j in {0,1} for j in M_1 & {j_i,...,j_i-1},
+    * for i = 1,...,t with t = |N\M1| and w = 0,...,|M1| + sum_{k=1}^{i-1} alpha_{j_k}; 
     */
-   for( i = 0; i < nnoncovervars && SCIPisFeasPositive(scip, solvals[noncovervars[i]]); i++ )
+   minweights[0] = 0;
+   for( w = 1; w <= nvarsM1; w++ )
+      minweights[w] = minweights[w-1] + weights[varsM1[w-1]];
+   minweightslen = nvarsM1 + 1;
+
+   /* gets sum of weights of variables fixed to one, i.e. sum of weights of variables in M_2 */
+   fixedonesweight = 0;   
+   for( j = 0; j < nvarsM2; j++ )
+      fixedonesweight += weights[varsM2[j]];
+   assert(fixedonesweight >= 0);
+
+   /* initializes right hand side of lifted valid inequality */
+   *liftrhs = alpha0;
+   
+   /* sequentially up-lifts all variables in F: */
+   for( j = 0; j < nvarsF; j++ )
    {
       SCIP_Longint weight;
       int liftvar;
       int liftcoef;
-      int z;
+      int z; 
 
-      liftvar = noncovervars[i];
-      assert(liftvar >= 0);
+      liftvar = varsF[j];
       weight = weights[liftvar];
+      assert(liftvar >= 0 && liftvar < nvars);
+      assert(SCIPisFeasGT(scip, solvals[liftvar], 0.0));
+      assert(weight > 0);
 
-      /* binary search in sorted minweights array for the largest entry that is not greater than 
-       * capacity - fixedoneweight - weight_i 
+      /* knapsack problem is infeasible: 
+       *   sets z = 0 
        */
-      assert(*liftrhs < *minweightslen);
-      rescapacity = capacity - fixedoneweight - weight;
-      if( rescapacity < 0 )
+      if( capacity - fixedonesweight - weight < 0 )
       {
-         /* lifted inequality cut is valid for any beta_i, but it may no longer be facet inducing: set beta = liftrhs+1 */
-         liftcoef = (*liftrhs) + 1;
+         z = 0; 
       }
-      else if( minweights[*liftrhs] <= rescapacity )
+      /* knapsack problem is feasible: 
+       *   sets z = max { w : 0 <= w <= liftrhs, minweights_i[w] <= a_0 - fixedonesweight - a_{j_i}  } = liftrhs,
+       *   if minweights_i[liftrhs] <= a_0 - fixedonesweight - a_{j_i}
+       */
+      else if( minweights[*liftrhs] <= capacity - fixedonesweight - weight )
       {
-         /* weight of variable is too small to get a positive lifting coefficient */
-         liftcoefs[liftvar] = 0;
-         continue;
-      }
+         z = *liftrhs;
+      } 
+      /* knapsack problem is feasible: 
+       *   uses binary search to find z = max { w : 0 <= w <= liftrhs, minweights_i[w] <= a_0 - fixedonesweight - a_{j_i} }
+       */
       else
       {
          int left;
          int right;
          int middle;
          
+         assert((*liftrhs) + 1 >= minweightslen || minweights[(*liftrhs) + 1] > capacity - fixedonesweight - weight);
          left = 0;
          right = (*liftrhs) + 1;
-         while( left < right - 1)
+         while( left < right - 1 )
          {
             middle = (left + right) / 2;
-            assert(0 <= middle && middle < *minweightslen);
-            if( minweights[middle] <= rescapacity ) 
+            assert(0 <= middle && middle < minweightslen);
+            if( minweights[middle] <= capacity - fixedonesweight - weight ) 
                left = middle;
             else
                right = middle;
          }
          assert(left == right - 1);
-         assert(0 <= left && left < *minweightslen);
-         assert(minweights[left] <= rescapacity);
-         assert(left == (*minweightslen)-1 || minweights[left+1] > rescapacity);
-            
-         /* now z_max = left: calculate lifting coefficient beta_i */
-         liftcoef = (*liftrhs) - left;
-      }
-      liftcoefs[liftvar] = liftcoef;
+         assert(0 <= left && left < minweightslen);
+         assert(minweights[left] <= capacity - fixedonesweight - weight );
+         assert(left == minweightslen - 1 || minweights[left+1] > capacity - fixedonesweight - weight);
 
-      /* update LP solution value of lifted variables (without C1) */
-      *liftlpval += liftcoef * solvals[liftvar];
+         /* now z = left */
+         z = left;
+         assert(z <= *liftrhs);
+      }
          
-      /* if we have downlifting candidates, we have to increase the size of the minweight table;
-       * otherwise, we only have to keep track of the elements up to z = liftrhs
-       */
-      if( ncovervarsc2 > 0 )
-      {
-         SCIP_CALL( enlargeMinweights(scip, minweightsptr, minweightslen, minweightssize, *minweightslen + liftcoef) );
-         minweights = *minweightsptr;
-      }
+      /* calculates lifting coefficients alpha_{j_i} = liftrhs - z */
+      liftcoef = (*liftrhs) - z;
+      liftcoefs[liftvar] = liftcoef;
+      assert(liftcoef >= 0 && liftcoef <= (*liftrhs) + 1);
 
-      /* update minweights table: calculates minimal sum of weights s.t. activity of curr lifted inequality equals z */
-      for( z = (*minweightslen) - 1; z >= liftcoef; z-- )
+      /* minweight table and activity of current valid inequality will not change, if alpha_{j_i} = 0 */
+      if( liftcoef == 0 )
+         continue;
+
+      /* updates activity of current valid inequality */
+      (*cutact) += liftcoef * solvals[liftvar];
+
+      /* enlarges current minweight table:
+       *  from minweightlen = |M1| + sum_{k=1}^{i-1} alpha_{j_k} + 1 entries 
+       *  to                  |M1| + sum_{k=1}^{i  } alpha_{j_k} + 1 entries
+       * and sets minweights_i[w] = infinity for 
+       *  w = |M1| + sum_{k=1}^{i-1} alpha_{j_k} + 1 , ... , |M1| + sum_{k=1}^{i} alpha_{j_k} 
+       */
+      SCIP_CALL( enlargeMinweights(scip, &minweights, &minweightslen, &minweightssize, minweightslen + liftcoef) );
+     
+      /* updates minweight table: minweight_i+1[w] = 
+       *   min{ minweights_i[w], a_{j_i}},                                 if w <  alpha_j_i
+       *   min{ minweights_i[w], minweights_i[w - alpha_j_i] + a_j_i},     if w >= alpha_j_i
+       */
+      for( w = minweightslen - 1; w >= 0; w-- )
       {
          SCIP_Longint min;
-         min = MIN(minweights[z], minweights[z - liftcoef] + weights[liftvar]);
-         assert(min > 0);
-         minweights[z] = min;
+         if( w < liftcoef )
+         {
+            min = MIN(minweights[w], weight);
+            minweights[w] = min;
+         }
+         else
+         {
+            assert(w >= liftcoef);
+            min = MIN(minweights[w], minweights[w - liftcoef] + weight);
+            minweights[w] = min;
+         }
       }
    }
+   assert(minweights[0] == 0);
 
-   /* update noncover variable lifted last */
-   *lastlifted = i-1;
-
-   return SCIP_OKAY;
-}
-
-/** lifts down given inequality sum(j in C1 & noncovervars with solution value > 0) beta_j * x_j <= liftrhs which is valid for 
- *  the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 1 for all j in C2, x_j = 0 for all j in 
- *  noncovervars with solution value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack 
- *  constraint, x_j = 0 for all j in noncovervars with solution value 0}
- */
-static
-SCIP_RETCODE liftdownKnapsackCover(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
-   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
-   int                   ncovervars,         /**< number of cover variables */
-   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int                   nnoncovervars,      /**< number of noncover variables */
-   SCIP_Longint          fixedoneweight,     /**< sum of weights of variables from C2 which are still fixed to 1 */ 
-   int*                  liftcoefs,          /**< lifting coefficients of var in knapsack constraint in lifted inequality */
-   int*                  liftrhs,            /**< right hand side of lifted inequality */
-   SCIP_Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
-   SCIP_Longint**        minweightsptr,      /**< pointer to minweights table */
-   int*                  minweightslen,      /**< pointer to store number of entries in minweights table (incl. z=0) */
-   int*                  minweightssize       /**< pointer to current size of minweights table */
-   )
-{
-   SCIP_Longint* minweights;
-   int i;
-
-   assert(scip != NULL);
-   assert(vars != NULL);
-   assert(weights != NULL);
-   assert(capacity >= 0);
-   assert(solvals != NULL);
-   assert(covervars != NULL);
-   assert(noncovervars != NULL);
-   assert(ncovervars >= 0);
-   assert(ncovervarsc1 >= 0);
-   assert(ncovervarsc2 >= 0);
-   assert(ncovervarsc1 + ncovervarsc2 == ncovervars);
-   assert(nnoncovervars >= 0);
-   assert(fixedoneweight >= 0);
-   assert(liftcoefs != NULL);
-   assert(liftrhs != NULL);
-   assert(liftlpval != NULL);
-   assert(minweightsptr != NULL);
-   assert(minweightslen != NULL);
-   assert(0 <= *minweightslen && *minweightslen <= *minweightssize);
-
-   minweights = *minweightsptr;
-   assert(minweights != NULL);
-
-   /* calculate lifting coefficients for cover variables in C2:
-    *  for each covervar x_i in C2 (in non-increasing order of LP-value and weight): 
-    *   1. calculate max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
-    *      x_i = 0, x_j = 1 for all covervars in C2 with j > i, x_j = 0 for all j in noncovervars with solution value 0
-    *   2. add x_i with lifting coefficient beta_i = z_max - liftrhs to current lifted inequality
-    *   3. change liftrhs: liftrhs = liftrhs + beta_i
-    *   4. update minweight table: calculate minimal sum of weights s.t. activity of current lifted inequality equals z 
-    */
-   for( i = 0; i < ncovervarsc2; i++ )
+   /* sequentially down-lifts all variables in M_2: */
+   for( j = 0; j < nvarsM2; j++ )
    {
-      SCIP_Longint rescapacity;
+      SCIP_Longint weight;
       int liftvar;
       int liftcoef;
       int left;
       int right;
       int middle;
-      int z;
+      int z; 
 
-      assert(SCIPisFeasEQ(scip, solvals[covervars[i]], 1.0)); 
-      liftvar = covervars[i];
-      assert(liftvar >= 0);
+      liftvar = varsM2[j];
+      weight = weights[liftvar];
+      assert(SCIPisFeasEQ(scip, solvals[liftvar], 1.0));
+      assert(liftvar >= 0 && liftvar < nvars);
+      assert(weight > 0);
       
-      /* update sum of weights of variables in knapsack still fixed to 1 */
-      fixedoneweight -= weights[liftvar];
-    
-      /* binary search in sorted minweights array for the largest entry that is not greater then 
-       * capacity - fixedoneweight
+      /* uses binary search to find 
+       *   z = max { w : 0 <= w <= |M_1| + sum_{k=1}^{i-1} alpha_{j_k}, minweights_[w] <= a_0 - fixedonesweight + a_{j_i}}
        */
-      rescapacity = capacity - fixedoneweight;
-      assert(rescapacity >= 0);
       left = 0;
-      right = *minweightslen;
-      while( left < right - 1)
+      right = minweightslen;
+      while( left < right - 1 )
       {
          middle = (left + right) / 2;
-         assert(0 <= middle && middle < *minweightslen);
-         if( minweights[middle] <= rescapacity ) 
+         assert(0 <= middle && middle < minweightslen);
+         if( minweights[middle] <= capacity - fixedonesweight + weight ) 
             left = middle;
          else
             right = middle;
       }
       assert(left == right - 1);
-      assert(0 <= left && left < *minweightslen);
-      assert(minweights[left] <= rescapacity);
-      assert(left == *minweightslen - 1 || minweights[left+1] > rescapacity);
+      assert(0 <= left && left < minweightslen);
+      assert(minweights[left] <= capacity - fixedonesweight + weight );
+      assert(left == minweightslen - 1 || minweights[left+1] > capacity - fixedonesweight + weight);
 
-      /* now z_max = left: calculate lifting coefficient beta_i */
-      assert(left >= (*liftrhs));
-      liftcoef = left - (*liftrhs);
+      /* now z = left */
+      z = left;
+      assert(z >= *liftrhs);
+         
+      /* calculates lifting coefficients alpha_{j_i} = z - liftrhs */
+      liftcoef = z - (*liftrhs);
       liftcoefs[liftvar] = liftcoef;
+      assert(liftcoef >= 0);
+
+      /* updates sum of weights of variables fixed to one */
+      fixedonesweight -= weight;
+
+      /* updates right-hand side of current valid inequality */
+      (*liftrhs) += liftcoef;
+      assert(*liftrhs >= alpha0);
+
+      /* minweight table and activity of current valid inequality will not change, if alpha_{j_i} = 0 */
       if( liftcoef == 0 )
          continue;
 
-      /* update LP solution value of lifted variables (without C1) */
-      *liftlpval += liftcoef * solvals[liftvar];
-      
-      /* change liftrhs */
-      (*liftrhs) += liftcoef;
-      
-      /* update minweights table: calculate minimal sum of weights s.t. activity of curr lifted inequality equals z */
-      SCIP_CALL( enlargeMinweights(scip, minweightsptr, minweightslen, minweightssize, *minweightslen + liftcoef) );
-      minweights = *minweightsptr;
-      for( z = *minweightslen - 1; z >= liftcoef; z-- )
+      /* updates activity of current valid inequality */
+      (*cutact) += liftcoef * solvals[liftvar];
+
+      /* enlarges current minweight table:
+       *  from minweightlen = |M1| + sum_{k=1}^{i-1} alpha_{j_k} + 1 entries 
+       *  to                  |M1| + sum_{k=1}^{i  } alpha_{j_k} + 1 entries
+       * and sets minweights_i[w] = infinity for 
+       *  w = |M1| + sum_{k=1}^{i-1} alpha_{j_k} + 1 , ... , |M1| + sum_{k=1}^{i} alpha_{j_k} 
+       */
+      SCIP_CALL( enlargeMinweights(scip, &minweights, &minweightslen, &minweightssize, minweightslen + liftcoef) );
+     
+      /* updates minweight table: minweight_i+1[w] = 
+       *   min{ minweights_i[w], a_{j_i}},                                 if w <  alpha_j_i
+       *   min{ minweights_i[w], minweights_i[w - alpha_j_i] + a_j_i},     if w >= alpha_j_i
+       */
+      for( w = minweightslen - 1; w >= 0; w-- )
       {
          SCIP_Longint min;
-         min = MIN(minweights[z], minweights[z - liftcoef] + weights[liftvar]);
-         assert(min > 0);
-         minweights[z] = min;
+         if( w < liftcoef )
+         {
+            min = MIN(minweights[w], weight);
+            minweights[w] = min;
+         }
+         else
+         {
+            assert(w >= liftcoef);
+            min = MIN(minweights[w], minweights[w - liftcoef] + weight);
+            minweights[w] = min;
+         }
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/** lifts up given inequality sum(j in C1 & noncovervars with solution value > 0 & C2) beta_j * x_j <= liftrhs which is valid 
- *  for the knapsack polytop { x binary | x is solution of knapsack constraint, x_j = 0 for all j in noncovervars with 
- *  solution value 0} to a valid inequality for the knapsack polytop { x binary | x is solution of knapsack constraint }
- */
-static
-void liftupZerosKnapsackCover(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
-   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*                  noncovervars,       /**< noncover variables (sorted by non-incr solution value then weight) */
-   int                   ncovervars,         /**< number of cover variables */
-   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int                   nnoncovervars,      /**< number of noncover variables */
-   int*                  liftcoefs,          /**< lifting coefficients of variables in knapsack cons in lifted inequality */
-   int*                  liftrhs,            /**< right hand side of lifted inequality */
-   SCIP_Real*            liftlpval,          /**< LP solution value of lifted variables (without C1) */  
-   int                   lastlifted,         /**< index of last noncover var with solution value > 0 lifted (-1 if no var lifted) */
-   SCIP_Longint*         minweights          /**< minweights table */
-   )
-{
-   int i;
-
-   assert(scip != NULL);
-   assert(vars != NULL);
-   assert(weights != NULL);
-   assert(capacity >= 0);
-   assert(solvals != NULL);
-   assert(covervars != NULL);
-   assert(noncovervars != NULL);
-   assert(ncovervars >= 0);
-   assert(ncovervarsc1 >= 0);
-   assert(ncovervarsc2 >= 0);
-   assert(ncovervarsc1 + ncovervarsc2 == ncovervars);
-   assert(nnoncovervars >= 0);
-   assert(liftcoefs != NULL);
-   assert(liftrhs != NULL);
-   assert(liftlpval != NULL);
-   assert(minweights != NULL);
-
-   /* calculates lifting coefficients for noncover variables with solution value = 0:
-    *  for each noncovervar x_i with LP-value = 0 (i > lastlifted) (in non-increasing order of LP-value and weight): 
-    *   1. calculates max activity z_max of current lifted inequality s.t. the knapsack is still feasible with 
-    *      x_i = 1, x_j = 0 for all j in noncovervars with j > i
-    *   2. adds x_i with lifting coefficient beta_i = liftrhs - z_max to current lifted inequality
-    *   3. updates minweight table: calculates minimal sum of weights s.t. activity of current lifted inequality equals z 
-    */
-   for( i = lastlifted + 1; i < nnoncovervars; i++ )
+   assert(fixedonesweight == 0);
+   assert(*liftrhs >= alpha0);
+   
+   /* sequentially up-lifts all variables in R: */
+   for( j = 0; j < nvarsR; j++ )
    {
       SCIP_Longint weight;
-      SCIP_Longint rescapacity;
       int liftvar;
       int liftcoef;
-      int z;
+      int z; 
 
-      assert(SCIPisFeasLE(scip, solvals[noncovervars[i]], 0.0));  
-
-      liftvar = noncovervars[i];
-      assert(liftvar >= 0);
+      liftvar = varsR[j];
       weight = weights[liftvar];
- 
-      /* binary search in sorted minweights array for the largest entry that is not greater then capacity - weight_i */
-      rescapacity = capacity - weight;
-      if( rescapacity < 0 )
+      assert(liftvar >= 0 && liftvar < nvars);
+      assert(SCIPisFeasEQ(scip, solvals[liftvar], 0.0));
+      assert(weight > 0);
+      assert(capacity - weight >= 0);
+      assert((*liftrhs) + 1 >= minweightslen || minweights[(*liftrhs) + 1] > capacity - weight);
+      
+      /* sets z = max { w : 0 <= w <= liftrhs, minweights_i[w] <= a_0 - a_{j_i} } = liftrhs, 
+       * if minweights_i[liftrhs] <= a_0 - a_{j_i}
+       */
+      if( minweights[*liftrhs] <= capacity - weight )
       {
-         /* lifted inequality cut is valid for any beta_i, but it may no longer be facet inducing, sets beta_i = liftrhs+1 */
-         liftcoef = (*liftrhs) + 1;
-      }
-      else if( minweights[*liftrhs] <= rescapacity )
-      {
-         /* weight of variable is too small to get a positive lifting coefficient */
-         liftcoefs[liftvar] = 0;
-         continue;
-      }
+         z = *liftrhs;
+      } 
+      /* uses binary search to find z = max { w : 0 <= w <= liftrhs, minweights_i[w] <= a_0 - a_{j_i} } 
+       */
       else
       {
          int left;
@@ -1688,221 +1870,862 @@ void liftupZerosKnapsackCover(
          while( left < right - 1)
          {
             middle = (left + right) / 2;
-            if( minweights[middle] <= rescapacity ) 
+            assert(0 <= middle && middle < minweightslen);
+            if( minweights[middle] <= capacity - weight ) 
                left = middle;
             else
                right = middle;
          }
          assert(left == right - 1);
-         assert(minweights[left] <= rescapacity);
-         assert(left == *liftrhs || minweights[left+1] > rescapacity);
-            
-         /* now z_max = left: calculates lifting coefficient beta_i */
-         liftcoef = (*liftrhs) - left;
-      }
-      liftcoefs[liftvar] = liftcoef;
+         assert(0 <= left && left < minweightslen);
+         assert(minweights[left] <= capacity - weight );
+         assert(left == minweightslen - 1 || minweights[left+1] > capacity - weight);
 
-      /* updates LP solution value of lifted variables (without C1) */
-      *liftlpval += liftcoef * solvals[liftvar];
+         /* now z = left */
+         z = left;
+         assert(z <= *liftrhs);
+      }
          
-      /* update minweights table: calculates minimal sum of weights s.t. activity of curr lifted inequality equals z */
-      for( z = *liftrhs; z >= liftcoef; z-- )
+      /* calculates lifting coefficients alpha_{j_i} = liftrhs - z */
+      liftcoef = (*liftrhs) - z;
+      liftcoefs[liftvar] = liftcoef;
+      assert(liftcoef >= 0 && liftcoef <= *liftrhs);
+
+      /* minweight table and activity of current valid inequality will not change, if alpha_{j_i} = 0 */
+      if( liftcoef == 0 )
+         continue;
+
+      /* updates activity of current valid inequality */
+      (*cutact) += liftcoef * solvals[liftvar];
+
+      /* updates minweight table: minweight_i+1[w] = 
+       *   min{ minweight_i[w], a_{j_i}},                                if w <  alpha_j_i
+       *   min{ minweight_i[w], minweight_i[w - alpha_j_i] + a_j_i},     if w >= alpha_j_i
+       */
+      for( w = *liftrhs; w >= 0; w-- )
       {
          SCIP_Longint min;
-         min = MIN(minweights[z], minweights[z - liftcoef] + weights[liftvar]);
-         assert(min > 0);
-         minweights[z] = min;
+         if( w < liftcoef )
+         {
+            min = MIN(minweights[w], weight);
+            minweights[w] = min;
+         }
+         else
+         {
+            assert(w >= liftcoef);
+            min = MIN(minweights[w], minweights[w - liftcoef] + weight);
+            minweights[w] = min;
+         }
       }
    }
-}
-
-/** lifts given cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
- *  polytop by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
- *  are fixed to one (C2)
- */
-static
-SCIP_RETCODE liftKnapsackCover(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
-   int                   nvars,              /**< number of variables in knapsack constraint */
-   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
-   SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
-   int                   ncovervars,         /**< number of cover variables */
-   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
-   int                   nnoncovervars,      /**< number of noncover variables */
-   SCIP_Longint*         initminweight,      /**< initial minweight table (aggregation of sorted weights) */
-   int*                  liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
-   int*                  liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
-   SCIP_Real*            liftlpval           /**< pointer to store LP solution value of lifted variables */  
-   )
-{
-   SCIP_Longint fixedoneweight;
-   SCIP_Longint* minweights;
-   int minweightssize;
-   int minweightslen;
-   int lastlifted;
-   int i;
-
-   assert(scip != NULL);
-   assert(vars != NULL);
-   assert(nvars > 0);
-   assert(weights != NULL);
-   assert(capacity >= 0);
-   assert(solvals != NULL);
-   assert(covervars != NULL);
-   assert(noncovervars != NULL);
-   assert(ncovervars >= 0);
-   assert(ncovervarsc1 >= 0);
-   assert(ncovervarsc2 >= 0);
-   assert(ncovervarsc1 + ncovervarsc2 == ncovervars);
-   assert(nnoncovervars >= 0);
-   assert(ncovervars + nnoncovervars <= nvars); /* some noncovervars might have been removed already */
-   assert(liftcoefs != NULL);
-   assert(liftrhs != NULL);
-   assert(liftlpval != NULL);
-
-   /* sets rights hand side of cut for cardinality inequality sum(j in C1) x_j <= |C1| */
-   *liftrhs = ncovervarsc1; 
-
-   /* allocates temporary memory */
-   minweightssize = ncovervarsc1+1;
-   SCIP_CALL( SCIPallocBufferArray(scip, &minweights, minweightssize) );
-
-   /* initializes data structures */
-   *liftlpval = 0.0;
-   BMSclearMemoryArray(liftcoefs, nvars);
-
-   /* sets lifting coefficient of cover variables of C1 */
-   for( i = ncovervarsc2; i < ncovervars; i++ )
-   {
-      assert(liftcoefs[covervars[i]] == 0);
-      liftcoefs[covervars[i]] = 1;
-   }
    
-   /* lifts up all noncover variables with solution value > 0 */
-   fixedoneweight = 0;
-   for( i = 0; i < ncovervarsc2; i++ )
-      fixedoneweight += weights[covervars[i]];
-   SCIP_CALL( liftupKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, 
-         ncovervarsc1, ncovervarsc2, nnoncovervars, fixedoneweight, liftcoefs, liftrhs, liftlpval, &lastlifted, 
-         initminweight, &minweights, &minweightslen, &minweightssize) );
-   assert(minweightslen <= minweightssize);
-   assert(lastlifted < nnoncovervars);
-
-   /* lifts down all cover variables from C2 */
-   SCIP_CALL( liftdownKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars,
-         ncovervarsc1, ncovervarsc2, nnoncovervars, fixedoneweight, liftcoefs, liftrhs, liftlpval,
-         &minweights, &minweightslen, &minweightssize) );
-
-   /* lifts up all remaining noncover variables (noncover variables with solution value 0) */
-   liftupZerosKnapsackCover(scip, vars, weights, capacity, solvals, covervars, noncovervars, ncovervars, ncovervarsc1, 
-      ncovervarsc2, nnoncovervars, liftcoefs, liftrhs, liftlpval, lastlifted, minweights);
-
    /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &sortkeys);
    SCIPfreeBufferArray(scip, &minweights);
 
    return SCIP_OKAY;
 }
 
-/** lifts given cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
- *  polytop by using uplifting for all variables not in the cover and downlifting for all variables in the cover that 
- *  are fixed to one (C2)
- */
-SCIP_RETCODE SCIPliftKnapsackCover(
+/** lifts given minimal cover inequality 
+ *    sum_{j in C} x_j <= |C| - 1 
+ *  valid for 
+ *    S^0 = { x in {0,1}^|C| : sum_{j in C} a_j x_j <= a_0 } 
+ *  to a valid inequality 
+ *    sum_{j in C} x_j + sum_{j in N\C} alpha_j x_j <= |C| - 1 
+ *  for 
+ *    S = { x in {0,1}^|N| : sum_{j in N} a_j x_j <= a_0 }; 
+ *  uses superadditive up-lifting for the variables in N\C.
+ */ 
+static
+SCIP_RETCODE superadditiveUpLifting(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    int                   nvars,              /**< number of variables in knapsack constraint */
+   int                   ntightened,         /**< number of variables with tightened upper bound */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
    SCIP_Real*            solvals,            /**< solution values of all problem variables */
-   int*                  covervars,          /**< cover variables C = C2 & C1 (C2, C1 sorted by non-incr LP val then weight) */
-   int*                  noncovervars,       /**< noncover variables (sorted by non-incr LP val then weight) */
+   int*                  covervars,          /**< cover variables */
+   int*                  noncovervars,       /**< noncover variables */
    int                   ncovervars,         /**< number of cover variables */
-   int                   ncovervarsc1,       /**< number of cover variables in C1 (at the end of covervars) */
-   int                   ncovervarsc2,       /**< number of cover variables in C2 (at the beginning of covervars) */
    int                   nnoncovervars,      /**< number of noncover variables */
-   int*                  liftcoefs,          /**< pointer to store lifting coefficient of variables in knapsack constraint */
-   int*                  liftrhs,            /**< pointer to store right hand side of the lifted cover inequality */
-   SCIP_Real*            liftlpval           /**< pointer to store LP solution value of lifted variables */  
-   )
+   SCIP_Longint          coverweight,        /**< weight of cover */
+   SCIP_Real*            liftcoefs,          /**< pointer to store lifting coefficient of vars in knapsack constraint */
+   SCIP_Real*            cutact              /**< pointer to store activity of lifted valid inequality */
+)
 {
-   SCIP_Longint* initminweight;
-   int i;
+   SCIP_Longint* maxweightsums;
+   SCIP_Longint* intervalends;
+   SCIP_Longint* rhos;
+   SCIP_Real* sortkeys;
+   SCIP_Longint lambda;
+   int j;
+   int h;
 
+   assert(scip != NULL);
+   assert(vars != NULL);
+   assert(nvars >= 0);
    assert(weights != NULL);
+   assert(capacity >= 0);
+   assert(solvals != NULL);
    assert(covervars != NULL);
+   assert(noncovervars != NULL);
+   assert(ncovervars > 0 && ncovervars <= nvars);
+   assert(nnoncovervars >= 0 && nnoncovervars <= nvars - ntightened);
+   assert(ncovervars + nnoncovervars == nvars - ntightened);
+   assert(liftcoefs != NULL);
+   assert(cutact != NULL);
 
-   /* allocate temporary memory for initial minweight table */
-   SCIP_CALL( SCIPallocBufferArray(scip, &initminweight, ncovervarsc1+1) );
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeys, ncovervars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &maxweightsums, ncovervars + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &intervalends, ncovervars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rhos, ncovervars) );
    
-   /* sort weights of variables in C1 (leave open position 0 to store a zero afterwards) */
-   for( i = 0; i < ncovervarsc1; i++ )
-   {
-      SCIP_Longint weight;
-      int j;
+   /* initializes data structures */
+   BMSclearMemoryArray(liftcoefs, nvars);
+   *cutact = 0.0;
 
-      assert(ncovervarsc2 + i < ncovervars);
-      weight = weights[covervars[ncovervarsc2 + i]];
-      for( j = i+1; j > 1 && weight < initminweight[j-1]; --j )
-         initminweight[j] = initminweight[j-1];
-      initminweight[j] = weight;
+   /* sets lifting coefficient of variables in C, sorts variables in C such that a_1 >= a_2 >= ... >= a_|C| 
+    * and calculates activity of current valid inequality 
+    */
+   for( j = 0; j < ncovervars; j++ )
+   {
+      assert(liftcoefs[covervars[j]] == 0.0);
+      liftcoefs[covervars[j]] = 1.0;
+      sortkeys[j] = (SCIP_Real) weights[covervars[j]];
+      (*cutact) += solvals[covervars[j]];
+   }
+   SCIPsortDownRealInt(sortkeys, covervars, ncovervars);
+   
+   /* calculates weight excess of cover C */
+   lambda = coverweight - capacity;
+   assert(lambda > 0);
+
+   /* calculates A_h for h = 0,...,|C|, I_h for h = 1,...,|C| and rho_h for h = 1,...,|C| */
+   maxweightsums[0] = 0;
+   for( h = 1; h <= ncovervars; h++ )
+   {
+      maxweightsums[h] = maxweightsums[h-1] + weights[covervars[h-1]];
+      intervalends[h-1] = maxweightsums[h] - lambda;
+      rhos[h-1] = MAX(0, weights[covervars[h-1]] - weights[covervars[0]] + lambda);
    }
    
-   /* the initial minweight table is the aggregation of the sorted weights */
-   initminweight[0] = 0;
-   for( i = 1; i <= ncovervarsc1; ++i )
-      initminweight[i] += initminweight[i-1];
+   /* sorts variables in N\C such that a_{j_1} <= a_{j_2} <= ... <= a_{j_t} */
+   for( j = 0; j < nnoncovervars; j++ )
+      sortkeys[j] = (SCIP_Real) (weights[noncovervars[j]]);
+   SCIPsortRealInt(sortkeys, noncovervars, nnoncovervars);
 
-   /* calculate the lifted knapsack cover cut */
-   SCIP_CALL( liftKnapsackCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars,
-         ncovervars, ncovervarsc1, ncovervarsc2, nnoncovervars, initminweight, liftcoefs, liftrhs, liftlpval) );
+   /* calculates lifting coefficient for all variables in N\C */
+   h = 0;
+   for( j = 0; j < nnoncovervars; j++ )
+   {
+      int liftvar;
+      SCIP_Longint weight;
+      SCIP_Real liftcoef;
 
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &initminweight);
+      liftvar = noncovervars[j];
+      weight = weights[liftvar];
+      
+      while( intervalends[h] < weight )
+         h++;
+
+      if( h == 0 )
+         liftcoef = h;
+      else 
+      {
+         if( weight <= intervalends[h-1] + rhos[h] )
+         {
+            SCIP_Real tmp1;
+            SCIP_Real tmp2;
+            tmp1 =  (SCIP_Real) (intervalends[h-1] + rhos[h] - weight);
+            tmp2 =  (SCIP_Real) rhos[1];
+            liftcoef = h - ( tmp1 / tmp2 );
+         }
+         else
+            liftcoef = h;
+      }      
+
+      /* sets lifting coefficient */
+      assert(liftcoefs[liftvar] == 0.0);
+      liftcoefs[liftvar] = liftcoef;
+
+      /* updates activity of current valid inequality */
+      (*cutact) += liftcoef * solvals[liftvar];
+   } 
+
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &rhos);
+   SCIPfreeBufferArray(scip, &intervalends);
+   SCIPfreeBufferArray(scip, &maxweightsums);
+   SCIPfreeBufferArray(scip, &sortkeys);
 
    return SCIP_OKAY;
 }
 
-/** separates lifted cover inequalities for given knapsack problem */
-SCIP_RETCODE SCIPseparateKnapsackCover(
+
+/** separates lifted minimal cover inequalities using sequential up- and down-lifting for given knapsack problem */
+static
+SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem, or NULL */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   int                   ntightened,         /**< number of variables with tightened upper bound */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   int*                  mincovervars,       /**< mincover variables */
+   int*                  nonmincovervars,    /**< nonmincover variables */
+   int                   nmincovervars,      /**< number of mincover variables */
+   int                   nnonmincovervars,   /**< number of nonmincover variables */
+   SCIP_Longint          mincoverweight,     /**< weight of minimal cover */
+   SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   )
+{
+   int* varsC1;
+   int* varsC2;
+   int* varsF;
+   int* varsR;
+   int nvarsC1;
+   int nvarsC2;
+   int nvarsF;
+   int nvarsR;
+   SCIP_Real cutact;
+   int* liftcoefs;
+   int liftrhs;
+
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsC1, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsC2, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsF, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsR, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &liftcoefs, nvars) );
+
+   /* gets partition (C_1,C_2) of C, i.e. C_1 & C_2 = C and C_1 cap C_2 = emptyset, with C_1 not empty; choses partition 
+    * as follows
+    *   C_2 = { j in C : x*_j = 1 } and
+    *   C_1 = C\C_2
+    */
+   getPartitionCovervars(scip, solvals, mincovervars, nmincovervars, varsC1, varsC2, &nvarsC1, &nvarsC2);
+   assert(nvarsC1 + nvarsC2 == nmincovervars);
+   assert(nmincovervars > 0); 
+   assert(nvarsC1 >= 0); /* nvarsC1 > 0 does not always hold, because relaxed knapsack conss may already be violated */
+
+   /* changes partition (C_1,C_2) of minimal cover C, if |C1| = 1, by moving one variable from C2 to C1 */
+   if( nvarsC1 < 2 && nvarsC2 > 0)
+   {
+      SCIP_CALL( changePartitionCovervars(scip, weights, varsC1, varsC2, &nvarsC1, &nvarsC2) );
+      assert(nvarsC1 >= 1);
+   }
+   assert(nvarsC2 == 0 || nvarsC1 >= 1);
+   
+   /* gets partition (F,R) of N\C, i.e. F & R = N\C and F cap R = emptyset; choses partition as follows 
+    *   R = { j in N\C : x*_j = 0 } and 
+    *   F = (N\C)\F
+    */
+   getPartitionNoncovervars(scip, solvals, nonmincovervars, nnonmincovervars, varsF, varsR, &nvarsF, &nvarsR);
+   assert(nvarsF + nvarsR == nnonmincovervars);
+   assert(nvarsC1 + nvarsC2 + nvarsF + nvarsR == nvars - ntightened);
+
+   /* sorts variables in F, C_2, and R according to the second level lifting sequence that will be used in the sequential 
+    * lifting procedure 
+    */
+   SCIP_CALL( getLiftingSequence(scip, solvals, weights, varsF, varsC2, varsR, nvarsF, nvarsC2, nvarsR) );
+
+   /* lifts minimal cover inequality sum_{j in C_1} x_j <= |C_1| - 1 valid for 
+    *
+    *    S^0 = { x in {0,1}^|C_1| : sum_{j in C_1} a_j x_j <= a_0 - sum_{j in C_2} a_j } 
+    *
+    * to a valid inequality sum_{j in C_1} x_j + sum_{j in N\C_1} alpha_j x_j <= |C_1| - 1 + sum_{j in C_2} alpha_j for 
+    *
+    *      S = { x in {0,1}^|N|   : sum_{j in N}   a_j x_j <= a_0 }, 
+    *
+    * uses sequential up-lifting for the variables in F, sequential down-lifting for the variable in C_2 and sequential 
+    * up-lifting for the variabels in R according to the second level lifting sequence    
+    */ 
+   SCIP_CALL( sequentialUpAndDownLifting(scip, vars, nvars, ntightened, weights, capacity, solvals, varsC1, varsC2, varsF,
+         varsR, nvarsC1, nvarsC2, nvarsF, nvarsR, nvarsC1 - 1, liftcoefs, &cutact, &liftrhs) );
+
+   /* checks, if lifting yielded a violated cut */
+   if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
+   {
+      SCIP_ROW* row;
+      char name[SCIP_MAXSTRLEN];
+      int j;
+            
+      /* creates LP row */
+      if( cons != NULL )
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcseq%"SCIP_LONGINT_FORMAT"", SCIPconsGetName(cons),
+            SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
+      else
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcseq_%"SCIP_LONGINT_FORMAT"", *ncuts); 
+      
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
+            cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
+            cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
+      
+      /* adds all variables in the knapsack constraint with calculated lifting coefficient to the cut */
+      SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+      assert(nvarsC1 + nvarsC2 + nvarsF + nvarsR == nvars - ntightened);
+      for( j = 0; j < nvarsC1; j++ )
+      {
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsC1[j]], 1.0) ); 
+      }
+      for( j = 0; j < nvarsC2; j++ )
+      {
+         if( liftcoefs[varsC2[j]] > 0 )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsC2[j]], (SCIP_Real)liftcoefs[varsC2[j]]) );
+         }
+      }
+      for( j = 0; j < nvarsF; j++ )
+      {
+         if( liftcoefs[varsF[j]] > 0 )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsF[j]], (SCIP_Real)liftcoefs[varsF[j]]) );
+         }
+      }
+      for( j = 0; j < nvarsR; j++ )
+      {
+         if( liftcoefs[varsR[j]] > 0 )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsR[j]], (SCIP_Real)liftcoefs[varsR[j]]) );
+         }
+      }
+      SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            
+      /* checks, if cut is violated enough */
+      if( SCIPisCutEfficacious(scip, sol, row) )
+      {
+         if( cons != NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         (*ncuts)++;
+      }
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+   
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &liftcoefs);
+   SCIPfreeBufferArray(scip, &varsR);
+   SCIPfreeBufferArray(scip, &varsF);
+   SCIPfreeBufferArray(scip, &varsC2);
+   SCIPfreeBufferArray(scip, &varsC1);
+
+   return SCIP_OKAY;
+}
+
+/** separates lifted extended weight inequalities using sequential up- and down-lifting for given knapsack problem */
+static
+SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem, or NULL */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   int                   ntightened,         /**< number of variables with tightened upper bound */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   int*                  feassetvars,        /**< variables in feasible set */
+   int*                  nonfeassetvars,     /**< variables not in feasible set */
+   int                   nfeassetvars,       /**< number of variables in feasible set */
+   int                   nnonfeassetvars,    /**< number of variables not in feasible set */
+   SCIP_Bool             modtransused,       /**< TRUE if mod trans sepa prob was used to find initial cover */    
+   SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   )
+{
+   int* varsT1;
+   int* varsT2;
+   int* varsF;
+   int* varsR;
+   int* liftcoefs;
+   SCIP_Real cutact;
+   int nvarsT1;
+   int nvarsT2;
+   int nvarsF;
+   int nvarsR;
+   int liftrhs;
+   int j;
+
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsT1, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsT2, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsF, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsR, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &liftcoefs, nvars) );
+
+   /* gets partition (T_1,T_2) of T, i.e. T_1 & T_2 = T and T_1 cap T_2 = emptyset, with T_1 not empty; choses partition 
+    * as follows
+    *   T_2 = { j in T : x*_j = 1 } and
+    *   T_1 = T\T_2
+    */
+   getPartitionCovervars(scip, solvals, feassetvars, nfeassetvars, varsT1, varsT2, &nvarsT1, &nvarsT2);
+   assert(nvarsT1 + nvarsT2 == nfeassetvars);
+   
+   /* changes partition (T_1,T_2) of feasible set T, if |T1| = 0, by moving one variable from T2 to T1 */
+   if( nvarsT1 == 0 && nvarsT2 > 0)
+   {
+      SCIP_CALL( changePartitionFeasiblesetvars(scip, weights, varsT1, varsT2, &nvarsT1, &nvarsT2) );
+      assert(nvarsT1 == 1);
+   }
+   assert(nvarsT2 == 0 || nvarsT1 > 0);
+   
+   /* gets partition (F,R) of N\T, i.e. F & R = N\T and F cap R = emptyset; choses partition as follows 
+    *   R = { j in N\T : x*_j = 0 } and 
+    *   F = (N\T)\F
+    */
+   getPartitionNoncovervars(scip, solvals, nonfeassetvars, nnonfeassetvars, varsF, varsR, &nvarsF, &nvarsR);
+   assert(nvarsF + nvarsR == nnonfeassetvars);
+   assert(nvarsT1 + nvarsT2 + nvarsF + nvarsR == nvars - ntightened);
+
+   /* sorts variables in F, T_2, and R according to the second level lifting sequence that will be used in the sequential 
+    * lifting procedure (the variable removed last from the initial cover does not have to be lifted first, therefore it 
+    * is included in the sorting routine)
+    */
+   SCIP_CALL( getLiftingSequence(scip, solvals, weights, varsF, varsT2, varsR, nvarsF, nvarsT2, nvarsR) );
+
+   /* lifts extended weight inequality sum_{j in T_1} x_j <= |T_1| valid for 
+    *
+    *    S^0 = { x in {0,1}^|T_1| : sum_{j in T_1} a_j x_j <= a_0 - sum_{j in T_2} a_j } 
+    *
+    * to a valid inequality sum_{j in T_1} x_j + sum_{j in N\T_1} alpha_j x_j <= |T_1| + sum_{j in T_2} alpha_j for 
+    *
+    *      S = { x in {0,1}^|N|   : sum_{j in N}   a_j x_j <= a_0 }, 
+    *
+    * uses sequential up-lifting for the variables in F, sequential down-lifting for the variable in T_2 and sequential 
+    * up-lifting for the variabels in R according to the second level lifting sequence    
+    */ 
+   SCIP_CALL( sequentialUpAndDownLifting(scip, vars, nvars, ntightened, weights, capacity, solvals, varsT1, varsT2, varsF, varsR, 
+         nvarsT1, nvarsT2, nvarsF, nvarsR, nvarsT1, liftcoefs, &cutact, &liftrhs) );
+
+   /* checks, if lifting yielded a violated cut */
+   if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
+   {
+      SCIP_ROW* row;
+      char name[SCIP_MAXSTRLEN];
+            
+      /* creates LP row */
+      if( cons != NULL )
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_ewseq%"SCIP_LONGINT_FORMAT"", SCIPconsGetName(cons),
+            SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
+      else
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_ewseq_%"SCIP_LONGINT_FORMAT"", *ncuts); 
+      
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
+            cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
+            cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
+            
+      /* adds all variables in the knapsack constraint with calculated lifting coefficient to the cut */
+      SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+      assert(nvarsT1 + nvarsT2 + nvarsF + nvarsR == nvars - ntightened);
+      for( j = 0; j < nvarsT1; j++ )
+      {
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsT1[j]], 1.0) ); 
+      }
+      for( j = 0; j < nvarsT2; j++ )
+      {
+         if( liftcoefs[varsT2[j]] > 0 )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsT2[j]], (SCIP_Real)liftcoefs[varsT2[j]]) );
+         }
+      }
+      for( j = 0; j < nvarsF; j++ )
+      {
+         if( liftcoefs[varsF[j]] > 0 )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsF[j]], (SCIP_Real)liftcoefs[varsF[j]]) );
+         }
+      }
+      for( j = 0; j < nvarsR; j++ )
+      {
+         if( liftcoefs[varsR[j]] > 0 )
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[varsR[j]], (SCIP_Real)liftcoefs[varsR[j]]) );
+         }
+      }
+      SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            
+      /* checks, if cut is violated enough */
+      if( SCIPisCutEfficacious(scip, sol, row) )
+      {
+         if( cons != NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         (*ncuts)++;
+      }
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &liftcoefs);
+   SCIPfreeBufferArray(scip, &varsR);
+   SCIPfreeBufferArray(scip, &varsF);
+   SCIPfreeBufferArray(scip, &varsT2);
+   SCIPfreeBufferArray(scip, &varsT1);
+   
+   return SCIP_OKAY;
+}
+
+/** separates lifted minimal cover inequalities using superadditive up-lifting for given knapsack problem */
+static
+SCIP_RETCODE separateSupLiftedMinimalCoverInequality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem, or NULL */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   int                   ntightened,         /**< number of variables with tightened upper bound */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   int*                  mincovervars,       /**< mincover variables */
+   int*                  nonmincovervars,    /**< nonmincover variables */
+   int                   nmincovervars,      /**< number of mincover variables */
+   int                   nnonmincovervars,   /**< number of nonmincover variables */
+   SCIP_Longint          mincoverweight,     /**< weight of minimal cover */
+   SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
+   )
+{
+   SCIP_Real* realliftcoefs;
+   SCIP_Real cutact;
+   int liftrhs;
+
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &realliftcoefs, nvars) );
+
+   /* lifts minimal cover inequality sum_{j in C} x_j <= |C| - 1 valid for 
+    * 
+    *    S^0 = { x in {0,1}^|C| : sum_{j in C} a_j x_j <= a_0 } 
+    *
+    * to a valid inequality sum_{j in C} x_j + sum_{j in N\C} alpha_j x_j <= |C| - 1 for 
+    *
+    *      S = { x in {0,1}^|N|   : sum_{j in N}   a_j x_j <= a_0 }, 
+    *
+    * uses superadditive up-lifting for the variables in N\C.    
+    */ 
+   SCIP_CALL( superadditiveUpLifting(scip, vars, nvars, ntightened, weights, capacity, solvals, mincovervars, 
+         nonmincovervars, nmincovervars, nnonmincovervars, mincoverweight, realliftcoefs, &cutact) );
+   liftrhs = nmincovervars - 1;
+
+   /* checks, if lifting yielded a violated cut */
+   if( SCIPisEfficacious(scip, (cutact - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
+   {
+      SCIP_ROW* row;
+      char name[SCIP_MAXSTRLEN];
+      int j;
+            
+      /* creates LP row */
+      if( cons != NULL )
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_mcsup%"SCIP_LONGINT_FORMAT"", SCIPconsGetName(cons),
+            SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)));
+      else
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "nn_mcsup_%"SCIP_LONGINT_FORMAT"", *ncuts); 
+
+      SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
+            cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
+            cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
+            
+      /* adds all variables in the knapsack constraint with calculated lifting coefficient to the cut */
+      SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+      assert(nmincovervars + nnonmincovervars == nvars - ntightened);
+      for( j = 0; j < nmincovervars; j++ )
+      {
+         SCIP_CALL( SCIPaddVarToRow(scip, row, vars[mincovervars[j]], 1.0) ); 
+      }
+      for( j = 0; j < nnonmincovervars; j++ )
+      {
+         assert(SCIPisFeasGE(scip, realliftcoefs[nonmincovervars[j]], 0.0));
+         if( SCIPisFeasGT(scip, realliftcoefs[nonmincovervars[j]], 0.0) ) 
+         {
+            SCIP_CALL( SCIPaddVarToRow(scip, row, vars[nonmincovervars[j]], realliftcoefs[nonmincovervars[j]]) );
+         }
+      }
+      SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            
+      /* checks, if cut is violated enough */
+      if( SCIPisCutEfficacious(scip, sol, row) )
+      {
+         if( cons != NULL )
+         {
+            SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         }
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         (*ncuts)++;
+      }
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+   }
+
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &realliftcoefs);
+
+   return SCIP_OKAY;
+}
+
+/** coverts given cover C to a minimal cover by removing variables in the reverse order in which the variables were chosen
+ *  to be in C, i.e. in the order of non-increasing (1 - x*_j)/a_j, if the transformed separation problem was used to find
+ *  C and in the order of non-increasing (1 - x*_j), if the modified transformed separation problem was used to find C; 
+ *  note that all variables with x*_j = 1 will be removed last
+ */
+static
+SCIP_RETCODE makeCoverMinimal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   int*                  covervars,          /**< pointer to store cover variables */
+   int*                  noncovervars,       /**< pointer to store noncover variables */
+   int*                  ncovervars,         /**< pointer to store number of cover variables */
+   int*                  nnoncovervars,      /**< pointer to store number of noncover variables */
+   SCIP_Longint*         coverweight,        /**< pointer to store weight of cover */
+   SCIP_Bool             modtransused        /**< TRUE if mod trans sepa prob was used to find cover */    
+)
+{
+   SORTKEYPAIR** sortkeypairs;
+   SCIP_Longint minweight;
+   int nsortkeypairs;
+   int minweightidx;
+   int j;
+   int k;
+
+   assert(scip != NULL);
+   assert(covervars != NULL);
+   assert(noncovervars != NULL);
+   assert(ncovervars != NULL);
+   assert(*ncovervars > 0);
+   assert(nnoncovervars != NULL);
+   assert(*nnoncovervars >= 0);
+   assert(coverweight != NULL);
+   assert(*coverweight > 0);
+   assert(*coverweight > capacity);
+
+   /* allocates temporary memory */
+   nsortkeypairs = *ncovervars;
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairs, nsortkeypairs) );
+
+   /* sorts C in the reverse order in which the variables were chosen to be in the cover, i.e. 
+    *   such that (1 - x*_1)/a_1 >= ... >= (1 - x*_|C|)/a_|C|,  if          trans separation problem was used to find C 
+    *   such that (1 - x*_1)     >= ... >= (1 - x*_|C|),        if modified trans separation problem was used to find C 
+    * note that all variables with x*_j = 1 are in the end of the sorted C, so they will be removed last from C
+    */
+   assert(*ncovervars == nsortkeypairs);
+   if( modtransused )
+   {
+      for( j = 0; j < *ncovervars; j++ )
+      {
+         SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairs[j]) );
+         
+         sortkeypairs[j]->key1 = solvals[covervars[j]]; 
+         sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 
+      }
+   }
+   else
+   {
+      for( j = 0; j < *ncovervars; j++ )
+      {
+         SCIP_CALL( SCIPallocBuffer(scip, &sortkeypairs[j]) );
+         
+         sortkeypairs[j]->key1 = (solvals[covervars[j]] - 1.0) / weights[covervars[j]]; 
+         sortkeypairs[j]->key2 = (SCIP_Real) (-weights[covervars[j]]); 
+      }
+   }
+   SCIPsortPtrInt((void**)sortkeypairs, covervars, compSortkeypairs, *ncovervars);
+
+   /* gets j' with a_j' = min{ a_j : j in C } */
+   minweightidx = 0;
+   minweight = weights[covervars[minweightidx]];
+   for( j = 1; j < *ncovervars; j++ )
+   {
+      if( weights[covervars[j]] <= minweight )
+      {
+         minweightidx = j;
+         minweight = weights[covervars[minweightidx]];
+      }
+   }
+   assert(minweightidx >= 0 && minweightidx < *ncovervars);
+   assert(minweight > 0 && minweight <= *coverweight);
+
+   /* removes variables from C until the remaining variables form a minimal cover */
+   for( j = 0; j < *ncovervars && ((*coverweight) - minweight > capacity); j++ )
+   {
+      assert(minweightidx >= j);
+      assert(checkMinweightidx(weights, capacity, covervars, *ncovervars, *coverweight, minweightidx, j));
+
+      /* if sum_{i in C} a_i - a_j <= a_0, j cannot be removed from C */
+      if( (*coverweight) - weights[covervars[j]] <= capacity )
+         continue;
+      
+      /* adds j to N\C */
+      noncovervars[*nnoncovervars] = covervars[j];
+      (*nnoncovervars)++;
+
+      /* removes j from C */
+      (*coverweight) -= weights[covervars[j]];
+      for( k = j; k < (*ncovervars) - 1; k++ )
+         covervars[k] = covervars[k+1];
+      (*ncovervars)--;
+
+      /* updates j' with a_j' = min{ a_j : j in C } */
+      if( j == minweightidx )
+      {
+         minweightidx = 0;
+         minweight = weights[covervars[minweightidx]];
+         for( k = 1; k < *ncovervars; k++ )
+         {
+            if( weights[covervars[k]] <= minweight )
+            {
+               minweightidx = k;
+               minweight = weights[covervars[minweightidx]];
+            }
+         }
+         assert(minweight > 0 && minweight <= *coverweight);
+         assert(minweightidx >= 0 && minweightidx < *ncovervars);
+      }
+      else
+      {
+         assert(minweightidx > j);
+         minweightidx--;
+      }
+      /* updates j */
+      j--;
+   }
+   assert((*coverweight) > capacity);
+   assert((*coverweight) - minweight <= capacity);
+   
+   /* frees temporary memory */
+   for( j = nsortkeypairs-1; j >= 0; j-- )
+      SCIPfreeBuffer(scip, &sortkeypairs[j]);
+   SCIPfreeBufferArray(scip, &sortkeypairs);
+   
+   return SCIP_OKAY;
+}
+
+/** coverts given initial cover C_init to a feasible set by removing variables in the reverse order in which 
+ *  they were chosen to be in C_init:
+ *   non-increasing (1 - x*_j)/a_j,   if          transformed separation problem was used to find C_init 
+ *   non-increasing (1 - x*_j),       if modified transformed separation problem was used to find C_init.
+ *  separates lifted extended weight inequalities using sequential up- and down-lifting for this feasible set 
+ *  and all subsequent feasible sets.
+ */
+static
+SCIP_RETCODE getFeasibleSet(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem */
+   SCIP_VAR**            vars,               /**< variables in knapsack constraint */
+   int                   nvars,              /**< number of variables in knapsack constraint */
+   int                   ntightened,         /**< number of variables with tightened upper bound */
+   SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
+   SCIP_Longint          capacity,           /**< capacity of knapsack */
+   SCIP_Real*            solvals,            /**< solution values of all problem variables */
+   int*                  covervars,          /**< pointer to store cover variables */
+   int*                  noncovervars,       /**< pointer to store noncover variables */
+   int*                  ncovervars,         /**< pointer to store number of cover variables */
+   int*                  nnoncovervars,      /**< pointer to store number of noncover variables */
+   SCIP_Longint*         coverweight,        /**< pointer to store weight of cover */
+   SCIP_Bool             modtransused,       /**< TRUE if mod trans sepa prob was used to find cover */    
+   SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
+   int*                  ncuts               /**< pointer to add up the number of found cuts */
+)
+{
+   SCIP_Real* sortkeys;
+   int j;
+   int k;
+
+   assert(scip != NULL);
+   assert(covervars != NULL);
+   assert(noncovervars != NULL);
+   assert(ncovervars != NULL);
+   assert(*ncovervars > 0);
+   assert(nnoncovervars != NULL);
+   assert(*nnoncovervars >= 0);
+   assert(coverweight != NULL);
+   assert(*coverweight > 0);
+   assert(*coverweight > capacity);
+   assert(*ncovervars + *nnoncovervars == nvars - ntightened);
+
+   /* allocates temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeys, *ncovervars) );
+
+   /* sorts C in the reverse order in which the variables were chosen to be in the cover, i.e. 
+    *   such that (1 - x*_1)/a_1 >= ... >= (1 - x*_|C|)/a_|C|,  if          trans separation problem was used to find C 
+    *   such that (1 - x*_1)     >= ... >= (1 - x*_|C|),        if modified trans separation problem was used to find C 
+    * note that all variables with x*_j = 1 are in the end of the sorted C, so they will be removed last from C
+    */
+   if( modtransused )
+   {
+      for( j = 0; j < *ncovervars; j++ )
+      {
+         sortkeys[j] = solvals[covervars[j]];
+         assert(SCIPisFeasGE(scip, sortkeys[j], 0.0));
+      }
+   }
+   else
+   {
+      for( j = 0; j < *ncovervars; j++ )
+      {
+         sortkeys[j] = (solvals[covervars[j]] - 1.0) / weights[covervars[j]];
+         assert(SCIPisFeasLE(scip, sortkeys[j], 0.0));
+      }
+   }
+   SCIPsortRealInt(sortkeys, covervars, *ncovervars);
+
+   /* removes variables from C_init and separates lifted extended weight inequalities using sequential up- and down-lifting;
+    * in addition to an extended weight inequality this gives cardinality inequalities  
+    */
+   while( *ncovervars >= 2 ) 
+   {
+      /* adds first element of C_init to N\C_init */
+      noncovervars[*nnoncovervars] = covervars[0];
+      (*nnoncovervars)++;
+
+      /* removes first element from C_init */
+      (*coverweight) -= weights[covervars[0]];
+      for( k = 0; k < (*ncovervars) - 1; k++ )
+         covervars[k] = covervars[k+1];
+      (*ncovervars)--;
+
+      assert(*ncovervars + *nnoncovervars == nvars - ntightened);
+      if( (*coverweight) <= capacity )
+      {
+         SCIP_CALL( separateSequLiftedExtendedWeightInequality(scip, cons, vars, nvars, ntightened, weights, capacity, solvals, 
+               covervars, noncovervars, *ncovervars, *nnoncovervars, modtransused, sol, ncuts) );
+      }
+   }
+
+   /* frees temporary memory */
+   SCIPfreeBufferArray(scip, &sortkeys);
+   
+   return SCIP_OKAY;
+}
+
+/** separates different classes of valid inequalities for the 0-1 knapsack problem */ 
+SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that originates the knapsack problem, or NULL */
    SCIP_VAR**            vars,               /**< variables in knapsack constraint */
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
-   int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
    SCIP_Real* solvals;
-   SCIP_Real solval;
-   SCIP_Real covervarsc1activity;
-   SCIP_Real liftlpval;
-   SCIP_Bool coverfound;
-   SCIP_Longint varsc2weight;
-   SCIP_Longint coverweight;
-   SCIP_Longint weight;
-   int* varscn2;
-   int* varsc2;
    int* covervars;
    int* noncovervars;
-   int* liftcoefs;
-   int nvarscn2;
-   int nvarsc2;
+   SCIP_Bool coverfound;
+   SCIP_Bool fractional;
+   SCIP_Bool modtransused;
+   SCIP_Longint coverweight;
    int ncovervars;
-   int ncovervarsc1;
-   int ncovervarsc2;
    int nnoncovervars;
-   int liftrhs;
-   int loopend;
-   int i;
-   int j;
+   int ntightened;
 
    assert(scip != NULL);
    assert(vars != NULL);
@@ -1916,197 +2739,101 @@ SCIP_RETCODE SCIPseparateKnapsackCover(
    {
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
-
-   /* allocate temporary memory */
+   
+   /* allocates temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &solvals, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varscn2, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &varsc2, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &covervars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &noncovervars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &liftcoefs, nvars) );
 
-   /* get solution values of all problem variables */
+   /* gets solution values of all problem variables */
    SCIP_CALL( SCIPgetSolVals(scip, sol, nvars, vars, solvals) );
 
-   /* get a partition of the set of variables in knapsack constraint in a set of variables for downlifting (varsc2) and 
-    * a set of the remaining variables (varscn2) 
-    */
-   getPartition(scip, nvars, weights, solvals, varsc2, varscn2, &nvarsc2, &nvarscn2, &varsc2weight);
-   
-   /* get a most violated minimal cover C = C2 & C1, considering that the variables for downlifting (varsc2) are fixed 
-    * to one 
-    */
-   SCIP_CALL( getCover(scip, vars, nvars, weights, capacity, solvals, varsc2, varscn2, nvarsc2, nvarscn2, varsc2weight,
-         covervars, noncovervars, &ncovervars, &ncovervarsc1, &ncovervarsc2, &nnoncovervars, 
-         &coverweight, &covervarsc1activity, &coverfound) );
-   assert(ncovervars + nnoncovervars == nvars);
-
-   if( coverfound ) 
+#ifdef SCIP_DEBUG
    {
-      SCIP_Longint* initminweight;
+      int i;
 
-#if 0
-      /* increase C1 if |C1| = 1 */
-      if( ncovervarsc2 > 0 && ncovervarsc1 == 1 )
+      SCIPdebugMessage("separate cuts for knapsack constraint originated by cons <%s>:\n", 
+         cons == NULL ? "-" : SCIPconsGetName(cons));
+      for( i = 0; i < nvars; ++i )
       {
-         covervarsc1activity += solvals[covervars[ncovervarsc2-1]];
-         ncovervarsc1++;
-         ncovervarsc2--;
+         printf("%+"SCIP_LONGINT_FORMAT"<%s>(%g)", weights[i], SCIPvarGetName(vars[i]), solvals[i]);
       }
-#endif 
-      
-      /* allocate temporary memory for initial minweight table */
-      SCIP_CALL( SCIPallocBufferArray(scip, &initminweight, ncovervarsc1+1) );
+      printf(" <= %"SCIP_LONGINT_FORMAT"\n", capacity);
+   }
+#endif
 
-      /* sort weights of variables in C1 (leave open position 0 to store a zero afterwards) */
-      for( i = 0; i < ncovervarsc1; i++ )
-      {
-         assert(ncovervarsc2 + i < ncovervars);
-         weight = weights[covervars[ncovervarsc2 + i]];
-         for( j = i+1; j > 1 && weight < initminweight[j-1]; --j )
-            initminweight[j] = initminweight[j-1];
-         initminweight[j] = weight;
-      }
+   /* LMCI1 (lifted minimal cover inequalities using sequential up- and down-lifting) 
+    * (and LMCI2 (lifted minimal cover inequalities using superadditive up-lifting)) 
+    */
 
-      /* the initial minweight table is the aggregation of the sorted weights */
-      initminweight[0] = 0;
-      for( i = 1; i <= ncovervarsc1; ++i )
-         initminweight[i] += initminweight[i-1];
+   /* gets a most violated initial cover C_init ( sum_{j in C_init} a_j > a_0 ) by using the 
+    * MODIFIED transformed separation problem and taking into account the following fixing: 
+    *   j in C_init,           if j in N_1 = {j in N : x*_j = 1} and 
+    *   j in N\C_init,         if j in N_0 = {j in N : x*_j = 0}, 
+    * if one exists 
+    */
+   SCIPdebugMessage("separate LMCI1 cuts:\n");
+   modtransused = TRUE;
+   SCIP_CALL( getCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, &ncovervars, 
+         &nnoncovervars, &coverweight, &coverfound, modtransused, &ntightened, &fractional) );
+   assert(!coverfound || !fractional || ncovervars + nnoncovervars == nvars - ntightened);
 
-      /* sort covervars and noncovervars by non-increasing solution value */
-      sortSetvars(scip, covervars, ncovervars, solvals);
-      sortSetvars(scip, noncovervars, nnoncovervars, solvals);
-         
-      /* generate lifted cardinality inequalities, consecutively removing variables from the cardinality inequality 
-       * (only from C1), starting with the full cover 
+   /* if x* is not fractional we stop the separation routine */
+   if( !fractional )
+      goto TERMINATE;
+   
+   /* if no cover was found we stop the separation routine for lifted minimal cover inequality */
+   if( coverfound )
+   {
+      /* coverts initial cover C_init to a minimal cover C by removing variables in the reverse order in which the 
+       * variables were chosen to be in C_init; note that variables with x*_j = 1 will be removed last
        */
-      if( maxnumcardlift == -1 )
-         loopend = ncovervarsc2;
-      else
-         loopend = MAX(ncovervarsc2, ncovervars - maxnumcardlift - 1);
-      assert(loopend >= ncovervarsc2 && loopend <= ncovervars);
-      for( j = ncovervars - 1; j >= loopend; j-- )
-      {
-         SCIP_Longint oldweight;
-         SCIP_Longint newweight;
-         int n;
+      SCIP_CALL( makeCoverMinimal(scip, weights, capacity, solvals, covervars, noncovervars, &ncovervars, 
+            &nnoncovervars, &coverweight, modtransused) );
 
-         /* delete current variable from C1 */
-         weight = weights[covervars[j]];
-         solval = solvals[covervars[j]];
-         coverweight -= weight;
-         covervarsc1activity -= solval;
-         ncovervars--;
-         ncovervarsc1--;
-         assert(ncovervars == j);
-         assert(ncovervarsc1 + ncovervarsc2 == ncovervars);
-         assert(SCIPisFeasGE(scip, covervarsc1activity, 0.0));
+      /* separates lifted minimal cover inequalities using sequential up- and down-lifting */
+      SCIP_CALL( separateSequLiftedMinimalCoverInequality(scip, cons, vars, nvars, ntightened, weights, capacity, solvals,
+            covervars, noncovervars, ncovervars, nnoncovervars, coverweight, sol, ncuts) );
 
-         /* remove the entry from the initial minweight table */
-         oldweight = initminweight[ncovervarsc1+1];
-         for( i = ncovervarsc1; i > 0 && oldweight - initminweight[i] != weight; --i )
-         {
-            newweight = oldweight - weight;
-            oldweight = initminweight[i];
-            assert(newweight > oldweight);
-            initminweight[i] = newweight;
-         }
-
-         /* add current variable to noncovervars */
-         for( i = nnoncovervars - 1; i >= 0 && solvals[noncovervars[i]] < solval; i-- )
-            noncovervars[i + 1] = noncovervars[i];
-         noncovervars[i + 1] = covervars[j];
-         nnoncovervars++;
-         assert(nnoncovervars + ncovervars <= nvars); /* some variables might have been removed from noncovervars */
-
-         /* remove variables from noncovervars, that would fit into the knapsack together with all covervars;
-          * the corresponding lifting coefficients would be zero
-          */
-         for( i = 0, n = 0; i < nnoncovervars; i++ )
-         {
-            if( coverweight + weights[noncovervars[i]] > capacity )
-            {
-               noncovervars[n] = noncovervars[i];
-               n++;
-            }
-         }
-         nnoncovervars = n;
-            
-         /* lift cardinality inequality sum(j in C1) x_j <= |C1| to a valid inequality of the full dimensional knapsack 
-          * polytop: 
-          *  1. uplifting of noncovervars with solution value > 0 
-          *  2. downlifting of covervarsc2 (C2)
-          *  3. uplifting of noncovervars with solution value = 0 
-          */
-         SCIP_CALL( liftKnapsackCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, 
-               ncovervars, ncovervarsc1, ncovervarsc2, nnoncovervars, initminweight,
-               liftcoefs, &liftrhs, &liftlpval) );
-
-         /* check, if lifting yielded a violated cut */
-         if( SCIPisEfficacious(scip, (covervarsc1activity + liftlpval - liftrhs)/sqrt((SCIP_Real)MAX(liftrhs, 1))) )
-         {
-            SCIP_ROW* row;
-            char name[SCIP_MAXSTRLEN];
-            int v;
-            
-            /* create LP row */
-            if( cons != NULL )
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_card%"SCIP_LONGINT_FORMAT"_%d", SCIPconsGetName(cons),
-                  SCIPconshdlrGetNCutsFound(SCIPconsGetHdlr(cons)), j);
-            else
-               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "card_%d", j);
-
-            SCIP_CALL( SCIPcreateEmptyRow(scip, &row, name, -SCIPinfinity(scip), (SCIP_Real)liftrhs, 
-                  cons != NULL ? SCIPconsIsLocal(cons) : FALSE, FALSE,
-                  cons != NULL ? SCIPconsIsRemovable(cons) : TRUE) );
-            
-            /* add all variables in the knapsack constraint with calculated lifting coefficient to the cut */
-            SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
-            for( v = 0; v < ncovervars; v++ )
-            {
-               SCIP_CALL( SCIPaddVarToRow(scip, row, vars[covervars[v]], (SCIP_Real)liftcoefs[covervars[v]]) ); 
-            }
-            for( v = 0; v < nnoncovervars; v++ )
-            {
-               if( liftcoefs[noncovervars[v]] > 0 )
-               {
-                  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[noncovervars[v]], (SCIP_Real)liftcoefs[noncovervars[v]]) );
-               }
-            }
-            SCIP_CALL( SCIPflushRowExtensions(scip, row) );
-            
-            /* check, if cut is violated enough */
-            if( SCIPisCutEfficacious(scip, sol, row) )
-            {         
-               if( cons != NULL )
-               {
-                  SCIP_CALL( SCIPresetConsAge(scip, cons) );
-               }
-               SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-               if( !SCIProwIsLocal(row) )
-               {
-                  SCIP_CALL( SCIPaddPoolCut(scip, row) );
-               }
-               (*ncuts)++;
-            }
-            SCIP_CALL( SCIPreleaseRow(scip, &row) );
-         }
-
-         /* if no variable in noncovervar is left that does not fit in the knapsack, we can break the separation loop */
-         if( nnoncovervars == 0 )
-            break;
+      if( USESUPADDLIFT )
+      { 
+         SCIPdebugMessage("separate LMCI2 cuts:\n"); 
+         /* separates lifted minimal cover inequalities using superadditive up-lifting */
+         SCIP_CALL( separateSupLiftedMinimalCoverInequality(scip, cons, vars, nvars, ntightened, weights, capacity, 
+               solvals, covervars, noncovervars, ncovervars, nnoncovervars, coverweight, sol, ncuts) );
       }
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &initminweight);
    }
 
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &liftcoefs);
+   /* LEWI (lifted extended weight inequalities using sequential up- and down-lifting) */
+
+   /* gets a most violated initial cover C_init ( sum_{j in C_init} a_j > a_0 ) by using the 
+    * transformed separation problem and taking into account the following fixing: 
+    *   j in C_init,           if j in N_1 = {j in N : x*_j = 1} and 
+    *   j in N\C_init,         if j in N_0 = {j in N : x*_j = 0}, 
+    * if one exists 
+    */
+   SCIPdebugMessage("separate LEWI cuts:\n"); 
+   modtransused = FALSE; 
+   SCIP_CALL( getCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, &ncovervars, 
+            &nnoncovervars, &coverweight, &coverfound, modtransused, &ntightened, &fractional) );
+   assert(fractional);
+   assert(!coverfound || !fractional || ncovervars + nnoncovervars == nvars - ntightened);
+   
+   /* if no cover was found we stop the separation routine */
+   if( !coverfound )
+      goto TERMINATE;
+      
+   /* coverts initial cover C_init to a feasible set by removing variables in the reverse order in which 
+    * they were chosen to be in C_init and separates lifted extended weight inequalities using sequential 
+    * up- and down-lifting for this feasible set and all subsequent feasible sets.
+    */
+   SCIP_CALL( getFeasibleSet(scip, cons, vars, nvars, ntightened, weights, capacity, solvals, covervars, noncovervars, 
+         &ncovervars, &nnoncovervars, &coverweight, modtransused, sol, ncuts) );
+   
+ TERMINATE:
+   /* frees temporary memory */
    SCIPfreeBufferArray(scip, &noncovervars);
    SCIPfreeBufferArray(scip, &covervars);
-   SCIPfreeBufferArray(scip, &varsc2);
-   SCIPfreeBufferArray(scip, &varscn2);
    SCIPfreeBufferArray(scip, &solvals);
 
    return SCIP_OKAY;
@@ -2459,7 +3186,7 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 #endif
 
          /* separate lifted cut from relaxed knapsack constraint */
-         SCIP_CALL( SCIPseparateKnapsackCover(scip, cons, consvars, nconsvars, consvals, capacity, sol, -1, ncuts) );
+         SCIP_CALL( SCIPseparateKnapsackCuts(scip, cons, consvars, nconsvars, consvals, capacity, sol, ncuts) );
       }
    }
 
@@ -2484,15 +3211,13 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
    return SCIP_OKAY;
 }
-
 /** separates given knapsack constraint */
 static
 SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< knapsack constraint */
-   SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
-   SCIP_Bool             sepacardinality,    /**< should knapsack cardinality cuts be separated? */
-   int                   maxnumcardlift,     /**< maximal number of cardinality inequ. lifted per sepa round (-1: unlimited) */
+   SCIP_SOL*             sol,                /**< primal SCIP solution, NULL for current LP solution */
+   SCIP_Bool             sepacuts,           /**< should knapsack cuts be separated? */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
 {
@@ -2515,10 +3240,10 @@ SCIP_RETCODE separateCons(
       SCIP_CALL( addRelaxation(scip, cons, sol) );
       (*ncuts)++;
    }
-   else if( sepacardinality )
+   else if( sepacuts )
    {
-      SCIP_CALL( SCIPseparateKnapsackCover(scip, cons, consdata->vars, consdata->nvars, consdata->weights, 
-            consdata->capacity, sol, maxnumcardlift, ncuts) );
+      SCIP_CALL( SCIPseparateKnapsackCuts(scip, cons, consdata->vars, consdata->nvars, consdata->weights, 
+            consdata->capacity, sol, ncuts) );
    }
    
    return SCIP_OKAY;
@@ -4599,13 +5324,13 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
       || (depth > 0 && conshdlrdata->maxrounds >= 0 && nrounds >= conshdlrdata->maxrounds) )
       return SCIP_OKAY;
 
-   /* check, if we should additionally separate cardinality cuts */
+   /* check, if we should additionally separate knapsack cuts */
    sepafreq = SCIPconshdlrGetSepaFreq(conshdlr);
    sepacardfreq = sepafreq * conshdlrdata->sepacardfreq;
    sepacardinality = (conshdlrdata->sepacardfreq >= 0)
       && ((sepacardfreq == 0 && depth == 0) || (sepacardfreq >= 1 && (depth % sepacardfreq == 0)));
 
-   /* check dual bound to see if we want to produce knapsack cardinality cuts at this node */
+   /* check dual bound to see if we want to produce knapsack cuts at this node */
    if( sepacardinality )
    {
       SCIP_Real loclowerbound;
@@ -4629,7 +5354,7 @@ SCIP_DECL_CONSSEPALP(consSepalpKnapsack)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts && !SCIPisStopped(scip); i++ )
    {
-      SCIP_CALL( separateCons(scip, conss[i], NULL, sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[i], NULL, sepacardinality, &ncuts) );
    }
    
    /* adjust return value */
@@ -4670,7 +5395,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
       || (depth > 0 && conshdlrdata->maxrounds >= 0 && nrounds >= conshdlrdata->maxrounds) )
       return SCIP_OKAY;
 
-   /* check, if we should additionally separate cardinality cuts */
+   /* check, if we should additionally separate knapsack cuts */
    sepafreq = SCIPconshdlrGetSepaFreq(conshdlr);
    sepacardfreq = sepafreq * conshdlrdata->sepacardfreq;
    sepacardinality = (conshdlrdata->sepacardfreq >= 0)
@@ -4685,7 +5410,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolKnapsack)
    /* separate useful constraints */
    for( i = 0; i < nusefulconss && ncuts < maxsepacuts && !SCIPisStopped(scip); i++ )
    {
-      SCIP_CALL( separateCons(scip, conss[i], sol, sepacardinality, conshdlrdata->maxnumcardlift, &ncuts) );
+      SCIP_CALL( separateCons(scip, conss[i], sol, sepacardinality, &ncuts) );
    }
    
    /* adjust return value */
@@ -5315,11 +6040,11 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    /* add knapsack constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/sepacardfreq",
-         "multiplier on separation frequency, how often cardinality cuts are separated (-1: never, 0: only at root)",
+         "multiplier on separation frequency, how often knapsack cuts are separated (-1: never, 0: only at root)",
          &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/knapsack/maxcardbounddist",
-         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",
+         "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cuts",
          &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "constraints/knapsack/maxrounds",
@@ -5337,10 +6062,6 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
          "constraints/knapsack/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/knapsack/maxnumcardlift",
-         "maximal number of cardinality inequalities lifted per separation round (-1: unlimited)",
-         &conshdlrdata->maxnumcardlift, TRUE, DEFAULT_MAXNUMCARDLIFT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/knapsack/disaggregation",
          "should disaggregation of knapsack constraints be allowed in preprocessing?",

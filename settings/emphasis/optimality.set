@@ -858,10 +858,6 @@ constraints/knapsack/maxsepacuts = 50
 # [type: int, range: [0,2147483647], default: 200]
 constraints/knapsack/maxsepacutsroot = 500
 
-# maximal number of cardinality inequalities lifted per separation round (-1: unlimited)
-# [type: int, range: [-1,2147483647], default: -1]
-constraints/knapsack/maxnumcardlift = -1
-
 # should disaggregation of knapsack constraints be allowed in preprocessing?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/knapsack/disaggregation = TRUE
