@@ -23,14 +23,14 @@ features:
   added to the list of relaxation candidates, e.g., by constraint handlers. Branching on relaxation solutions is performed 
   if the enforcement resulted in an unresolved infeasibility and there are no LP branching candidates, but before pseudo solution branching.
 - primal heuristics may now already be called before presolving, using the new timing point SCIP_HEURTIMING_BEFOREPRESOL. 
-  Note that solutions that solutions that are added before/during presolving, will be retransformed to the original space.
+  Note that solutions that are added before/during presolving, will be retransformed to the original space.
 - SCIP can branch on continuous variables. The branching value x' must not be one of the bounds. Two children (x <= x', x >= x') will be created.
 - SCIP may now be manually restarted
 - The solution behavior of SCIP can be diversified by randomly permuting constraints and variables or randomly determining 
   a set of branching variables with a unique high priority
 - the MPS reader can now read MIQPs and MIQCPs where a quadratic objective function can be specified by a QMATRIX or QUADOBJ section and
   a the quadratic part of a quadratic constraint by a QCMATRIX
-- the MPS reader can now write quadratic constraints
+- the MPS reader can now write quadratic and soc constraints
 - new undercover heuristic for MIQCPs: fixes variables such as to obtain a MIP and solves this
 - modified implementation of separation algorithms in cons_knapsack.c according to results of diploma thesis; including superadditive lifting (disabled) 
 
