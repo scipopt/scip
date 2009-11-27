@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.19 2009/11/04 13:31:02 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.20 2009/11/27 20:19:15 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -1160,6 +1160,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
          {
             SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conslinidxs [oracle->nconss+i], &lininds[linoffsets[i]], oracle->conslinlens[oracle->nconss+i]) );
             SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conslincoefs[oracle->nconss+i], &linvals[linoffsets[i]], oracle->conslinlens[oracle->nconss+i]) );
+            SCIPsortIntReal(oracle->conslinidxs[oracle->nconss+i], oracle->conslincoefs[oracle->nconss+i], oracle->conslinlens[oracle->nconss+i]);
          }
          else
          {
@@ -1628,7 +1629,10 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    for( c = 0; c < oracle->nconss; ++c )
    {
       if( oracle->conslinlens )
+      {
          mapIndices (delstats, oracle->conslinlens[c], oracle->conslinidxs[c]);
+         SCIPsortIntReal(oracle->conslinidxs[c], oracle->conslincoefs[c], oracle->conslinlens[c]);
+      }
       if( oracle->consquadlens )
          mapIndices2(delstats, oracle->consquadlens[c], oracle->consquadrows[c], oracle->consquadcols[c]);
 #ifdef WITH_NL
@@ -1753,7 +1757,6 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
 }
 
 /** changes linear coefficients in one constraint or objective
- *  @return error if coefficient did not exist before
  */
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    SCIP*                 scip,               /**< pointer to SCIP */
@@ -1761,18 +1764,112 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    int                   considx,            /**< index of constraint where linear coefficients should be changed, or -1 for objective */
    int                   nentries,           /**< number of coefficients to change */
    const int*            varidxs,            /**< array with indices of variables which coefficients should be changed */
-   const SCIP_Real*      newcoeffs           /**< array with new coefficients of variables */
+   const SCIP_Real*      newcoefs            /**< array with new coefficients of variables */
    )
 {  /*lint --e{715}*/
+   SCIP_Bool addednew;
+   int       i;
+   
+   int**       linidxs;
+   SCIP_Real** lincoefs;
+   int*        linlen;
+   
    assert(scip != NULL);
    assert(oracle != NULL);
+   assert(varidxs != NULL || nentries == 0);
+   assert(newcoefs != NULL || nentries == 0);
+   assert(considx >= -1);
+   assert(considx < oracle->nconss);
    
-   /* @TODO */
-   SCIPerrorMessage("SCIPnlpiOracleChgLinearCoefs is not implemented\n");
+   if( nentries == 0 )
+      return SCIP_OKAY;
    
-   return SCIP_ERROR;
+   addednew = FALSE;
+   
+   if( considx == -1 )
+   {
+      linidxs = &oracle->objlinidxs;
+      lincoefs = &oracle->objlinvals;
+      linlen = &oracle->objnlin;
+   }
+   else
+   {
+      if( oracle->conslinlens == NULL )
+      { /* first time we have linear coefficients in a constraint */
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conslinlens,  oracle->nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conslinidxs,  oracle->nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &oracle->conslincoefs, oracle->nconss) );
+         BMSclearMemoryArray(oracle->conslinlens,  oracle->nconss);
+         BMSclearMemoryArray(oracle->conslinidxs,  oracle->nconss);
+         BMSclearMemoryArray(oracle->conslincoefs, oracle->nconss);
+      }
+      
+      linidxs = &oracle->conslinidxs[considx];
+      lincoefs = &oracle->conslincoefs[considx];
+      linlen = &oracle->conslinlens[considx];
+   }
+   
+   if( *linlen == 0 )
+   { /* first time we have linear coefficients in this constraint (or objective) */
+      assert(*linidxs == NULL);
+      assert(*lincoefs == NULL);
+      
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, linidxs,  varidxs,  nentries) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, lincoefs, newcoefs, nentries) );
+      SCIPsortIntReal(*linidxs, *lincoefs, nentries);
+            
+      addednew = TRUE;
+   }
+   else
+   {
+      int pos;
+      int len = *linlen;
+      
+      for( i = 0; i < nentries; ++i )
+      {
+         /* we assume that indices are not repeating in varidxs (!) */
+         if( SCIPsortedvecFindInt(*linidxs, varidxs[i], *linlen, &pos) )
+         {
+            (*lincoefs)[pos] = newcoefs[i];
+         }
+         else
+         {
+            if( !addednew )
+            { /* first coefficient that is added new, realloc memory */
+               int newsize = *linlen + (nentries-i); /* new size for arrays (upper bound) */
+               SCIP_CALL( SCIPreallocMemoryArray(scip, linidxs,  newsize) );
+               SCIP_CALL( SCIPreallocMemoryArray(scip, lincoefs, newsize) );
+            }
+            /* append new entries */
+            (*linidxs)[len]  = varidxs[i];
+            (*lincoefs)[len] = newcoefs[i];
+            ++len;
+            addednew = TRUE;
+            /* increase degree of variable to 1 */
+            oracle->vardegrees[varidxs[i]] = MAX(1, oracle->vardegrees[varidxs[i]]);
+         }
+      }
+      
+      if( addednew )
+      {
+         *linlen = len;
+         /* shrink to actual needed size */
+         SCIP_CALL( SCIPreallocMemoryArray(scip, linidxs , len) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, lincoefs, len) );
+         
+         SCIPsortIntReal(*linidxs, *lincoefs, len);
+      }
+   }
+   
+   if( addednew )
+      invalidateJacobiSparsity(scip, oracle);
+   
+   assert(*linlen == 0 || (*linidxs)[0] >= 0);
+   assert(*linlen == 0 || (*linidxs)[*linlen-1] < oracle->nvars);
+   
+   return SCIP_OKAY;
 }
-  
+
 /** changes coefficients in the quadratic part of one constraint or objective
  *  @return error if coefficient did not exist before
  */
@@ -1782,7 +1879,7 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
    const int             nentries,           /**< number of coefficients to change */
    const int*            rowoffset,          /**< row offset containing modified indices */
-   const int*            colidx,             /**< columns containint modified indices to the corresponding row offset */
+   const int*            colidx,             /**< columns containing modified indices to the corresponding row offset */
    SCIP_Real*            newcoeff            /**< new quadratic coefficients */ 
    )
 {  /*lint --e{715}*/
@@ -2089,7 +2186,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
       oracle->jacoffsets[i] = nnz;
       
       if( oracle->conslinlens != NULL && (oracle->consquadlens == NULL || oracle->consquadlens[i] == 0) && (oracle->consexprtrees == NULL || oracle->consexprtrees[i] == NULL) )
-      { /* linear constraint: since we just want to copy the conslinvals at EvalJacobian, we need to copy conslinidxs here too (it can be unsorted, and sorting would confuse ChgLinearCoef later) */
+      { /* linear constraint: since we just want to copy the conslinvals at EvalJacobian, we need to copy conslinidxs here too */
          int nz = oracle->conslinlens[i];
          if( nz > 0 )
          {

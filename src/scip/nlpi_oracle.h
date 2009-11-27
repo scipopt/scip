@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.7 2009/09/11 15:18:33 bzfgamra Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.8 2009/11/27 20:19:16 bzfviger Exp $"
 
 /**@file   nlpi_oracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -162,7 +162,6 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
    );
 
 /** changes linear coefficients in one constraint or objective
- *  @return error if coefficient did not exist before
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
@@ -175,7 +174,6 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    );
 
 /** changes coefficients in the quadratic part of one constraint or objective
- *  @return error if coefficient did not exist before
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(

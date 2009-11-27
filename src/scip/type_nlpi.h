@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.13 2009/10/30 17:08:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.14 2009/11/27 20:19:16 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -237,33 +237,29 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  */
 #define SCIP_DECL_NLPIDELCONSSET(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int* dstats)
 
-/** change one linear coefficient in a constraint or objective
+/** changes (or adds) linear coefficients in a constraint or objective
  * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - idx index of constraint or -1 for objective
- *  - nvals number of values in linear constraint
- *  - varidxs indices of variable
- *  - vals new values for coefficient
- * 
- * return: Error if coefficient did not exist before
+ *  - nvals number of values in linear constraint to change
+ *  - varidxs indices of variables which coefficient to change
+ *  - vals new values for coefficients
  */
 #define SCIP_DECL_NLPICHGLINEARCOEFS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int idx, int nvals, \
    const int* varidxs, const SCIP_Real* vals)
 
-/** change one coefficient in the quadratic part of a constraint or objective
+/** changes (or adds) coefficients in the quadratic part of a constraint or objective
  * 
  * input:
  *  - scip SCIP datastructure
  *  - nlpi datastructure for solver interface
  *  - idx index of constraint or -1 for objective
- *  - nentries number of values in quadratic constraint
- *  - rows row offset containing modified indices
- *  - cols cols containing modified indices to the corresponding row offset
- *  - values coefficients corresponding to same indices as used when constraint/objective was constructed
- * 
- * return: Error if coefficient did not exist before
+ *  - nentries number of entries in quadratic matrix to change
+ *  - rows row indices of entries in quadratic matrix where values should be changed
+ *  - cols column indices of entries in quadratic matrix where values should be changed
+ *  - values new values for entries in quadratic matrix
  */
 #define SCIP_DECL_NLPICHGQUADCOEFS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, const int idx, const int nentries, \
    const int* rows, const int* cols, SCIP_Real* values)

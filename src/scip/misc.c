@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.101 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.102 2009/11/27 20:19:15 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2730,6 +2730,13 @@ void SCIPsort(
 #define SORTTPL_NAMEEXT     IntInt
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
+#include "scip/sorttpl.c"
+
+
+/* SCIPsortIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  SCIP_Real
 #include "scip/sorttpl.c"
 
 
