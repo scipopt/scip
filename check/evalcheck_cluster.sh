@@ -13,12 +13,15 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.8 2009/04/06 13:06:47 bzfberth Exp $
+# $Id: evalcheck_cluster.sh,v 1.9 2009/11/27 15:05:33 bzfheinz Exp $
 export LANG=C
 
+FILE=$1
+REMOVE=$2
+
 AWKARGS=""
-DIR=`dirname $1`
-EVALFILE=`basename $1 .eval`
+DIR=`dirname $FILE`
+EVALFILE=`basename $FILE .eval`
 
 OUTFILE=$DIR/$EVALFILE.out 
 ERRFILE=$DIR/$EVALFILE.err
@@ -26,6 +29,12 @@ RESFILE=$DIR/$EVALFILE.res
 TEXFILE=$DIR/$EVALFILE.tex
 PAVFILE=$DIR/$EVALFILE.pav
 
+if test ! -e $DIR/$EVALFILE.eval
+then
+    echo File $DIR/$EVALFILE.eval does not exist
+    exit
+fi
+    
 echo > $OUTFILE
 echo > $ERRFILE
 echo create overall output and error file
@@ -35,21 +44,30 @@ for i in `cat $DIR/$EVALFILE.eval` DONE
       then
       break
   fi
-
+      
   FILE=$i.out
   if test -e $FILE
       then
       cat $FILE >> $OUTFILE
+      
+      if test "$REMOVE" = "1"
+	  then
+	  rm -f $FILE
+      fi
   fi
-
+      
   FILE=$i.err
   if test -e $FILE
       then
       cat $FILE >> $ERRFILE
+      if test "$REMOVE" = "1"
+	  then
+	  rm -f $FILE
+      fi
   fi
 done
 
-
+    
 TSTNAME=`echo $EVALFILE | sed 's/check.\([a-zA-Z0-9_-]*\).*/\1/g'`
 
 if test -f $TSTNAME.test
@@ -65,9 +83,14 @@ if test -f $TSTNAME.solu
 else if test -f all.solu
     then
     SOLUFILE=all.solu
-else
+    else
     SOLUFILE=""
+    fi
 fi
-fi
+
 awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" $AWKARGS $TESTFILE $SOLUFILE $OUTFILE | tee $RESFILE
 
+if test "$REMOVE" = "1"
+    then
+    rm -f $DIR/$EVALFILE.eval
+fi
