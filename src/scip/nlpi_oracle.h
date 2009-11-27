@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.8 2009/11/27 20:19:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.9 2009/11/27 21:23:21 bzfviger Exp $"
 
 /**@file   nlpi_oracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -161,7 +161,7 @@ SCIP_RETCODE SCIPnlpiOracleDelConsSet(
                                               *   new position of row in output (-1 if row was deleted) */
    );
 
-/** changes linear coefficients in one constraint or objective
+/** changes (or adds) linear coefficients in one constraint or objective
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
@@ -173,7 +173,7 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    const SCIP_Real*      newcoefs            /**< array with new coefficients of variables */
    );
 
-/** changes coefficients in the quadratic part of one constraint or objective
+/** changes (or adds) coefficients in the quadratic part of one constraint or objective
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
@@ -181,8 +181,8 @@ SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
    const int             nentries,           /**< number of coefficients to change */
-   const int*            rowoffsets,         /**< array with row offsets containing modified indices */
-   const int*            colidxs,            /**< array with columns containing modified indices to the corresponding row offset */
+   const int*            rowidxs,            /**< array with row indices of quadratic matrix entries for which new values are provided */
+   const int*            colidxs,            /**< array with column indices of quadratic matrix entries for which new values are provided */
    SCIP_Real*            newcoefs            /**< array with new quadratic coefficients */ 
    );
 

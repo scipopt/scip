@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.21 2009/11/27 20:50:43 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.22 2009/11/27 21:23:21 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -1925,26 +1925,164 @@ SCIP_RETCODE SCIPnlpiOracleChgLinearCoefs(
    return SCIP_OKAY;
 }
 
-/** changes coefficients in the quadratic part of one constraint or objective
- *  @return error if coefficient did not exist before
+/** changes (or adds) coefficients in the quadratic part of one constraint or objective
  */
 SCIP_RETCODE SCIPnlpiOracleChgQuadCoefs(
    SCIP*                 scip,               /**< pointer to SCIP */
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
    int                   considx,            /**< index of constraint where quadratic coefficients should be changed, or -1 for objective */
    const int             nentries,           /**< number of coefficients to change */
-   const int*            rowoffset,          /**< row offset containing modified indices */
-   const int*            colidx,             /**< columns containing modified indices to the corresponding row offset */
-   SCIP_Real*            newcoeff            /**< new quadratic coefficients */ 
+   const int*            rowidxs,            /**< array with row indices of quadratic matrix entries for which new values are provided */
+   const int*            colidxs,            /**< array with column indices of quadratic matrix entries for which new values are provided */
+   SCIP_Real*            newcoefs            /**< new quadratic coefficients */ 
    )
 {  /*lint --e{715}*/
+   SCIP_Bool addednew;
+   int       i;
+   
+   int**       quadrowidxs;
+   int**       quadcolidxs;
+   SCIP_Real** quadcoefs;
+   int*        quadlen;
+   
    assert(scip != NULL);
    assert(oracle != NULL);
+   assert(rowidxs != NULL || nentries == 0);
+   assert(colidxs != NULL || nentries == 0);
+   assert(newcoefs != NULL || nentries == 0);
+   assert(considx >= -1);
+   assert(considx < oracle->nconss);
    
-   /* @TODO */
-   SCIPerrorMessage("SCIPnlpiOracleChgQuadCoefs is not implemented\n");
+   if( nentries == 0 )
+      return SCIP_OKAY;
    
-   return SCIP_ERROR;
+   addednew = FALSE;
+   
+   if( considx == -1 )
+   {
+      quadrowidxs = &oracle->objquadrows;
+      quadcolidxs = &oracle->objquadcols;
+      quadcoefs   = &oracle->objquadvals;
+      quadlen     = &oracle->objquadlen;
+   }
+   else
+   {
+      if( oracle->consquadlens == NULL )
+      { /* first time we have quadratic coefficients in a constraint */
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consquadlens), oracle->nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consquadrows), oracle->nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consquadcols), oracle->nconss) );
+         SCIP_CALL( SCIPallocMemoryArray(scip, &(oracle->consquadvals), oracle->nconss) );
+         BMSclearMemoryArray(oracle->consquadlens, oracle->nconss);
+         BMSclearMemoryArray(oracle->consquadrows, oracle->nconss);
+         BMSclearMemoryArray(oracle->consquadcols, oracle->nconss);
+         BMSclearMemoryArray(oracle->consquadvals, oracle->nconss);
+      }
+      
+      quadrowidxs = &oracle->consquadrows[considx];
+      quadcolidxs = &oracle->consquadcols[considx];
+      quadcoefs   = &oracle->consquadvals[considx];
+      quadlen     = &oracle->consquadlens[considx];
+   }
+   
+   if( *quadlen == 0 )
+   { /* first time we have quadratic coefficients in this constraint (or objective) */
+      assert(*quadrowidxs == NULL);
+      assert(*quadcolidxs == NULL);
+      assert(*quadcoefs   == NULL);
+      
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, quadrowidxs, rowidxs,  nentries) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, quadcolidxs, colidxs,  nentries) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, quadcoefs,   newcoefs, nentries) );
+            
+      addednew = TRUE;
+   }
+   else
+   {
+      int rowpos;
+      int colpos;
+      int len = *quadlen;
+      
+      for( i = 0; i < nentries; ++i )
+      {
+         assert(rowidxs[i] >= 0);
+         assert(colidxs[i] >= 0);
+         assert(rowidxs[i] < oracle->nvars);
+         assert(colidxs[i] < oracle->nvars);
+         
+         /* we assume that index pairs are not repeating */
+         /* see if we already have an entry for (rowidxs[i], colidxs[i]) */
+         if( SCIPsortedvecFindInt(*quadrowidxs, rowidxs[i], *quadlen, &rowpos) )
+         {
+            int nextrowpos;
+            if( !SCIPsortedvecFindInt(&((*quadrowidxs)[rowpos+1]), rowidxs[i]+1, *quadlen-rowpos, &nextrowpos) )
+               nextrowpos = *quadlen;
+            if( !SCIPsortedvecFindInt(&((*quadcolidxs)[rowpos]), colidxs[i], nextrowpos-rowpos, &colpos) )
+               colpos = -1;
+         }
+         else
+            colpos = -1;
+         
+         if( colpos >= 0 )
+         {
+            (*quadcoefs)[colpos] = newcoefs[i];
+         }
+         else
+         {
+            if( !addednew )
+            { /* first coefficient that is added new, realloc memory */
+               int newsize = *quadlen + (nentries-i); /* new size for arrays (upper bound) */
+               SCIP_CALL( SCIPreallocMemoryArray(scip, quadrowidxs, newsize) );
+               SCIP_CALL( SCIPreallocMemoryArray(scip, quadcolidxs, newsize) );
+               SCIP_CALL( SCIPreallocMemoryArray(scip, quadcoefs,   newsize) );
+            }
+            /* append new entries */
+            (*quadrowidxs)[len] = rowidxs[i];
+            (*quadcolidxs)[len] = colidxs[i];
+            (*quadcoefs)  [len] = newcoefs[i];
+            ++len;
+            addednew = TRUE;
+            /* increase degree of variable to 1 */
+            oracle->vardegrees[rowidxs[i]] = MAX(2, oracle->vardegrees[rowidxs[i]]);
+            oracle->vardegrees[colidxs[i]] = MAX(2, oracle->vardegrees[colidxs[i]]);
+         }
+      }
+      
+      if( addednew )
+      {
+         *quadlen = len;
+         /* shrink to actual needed size */
+         SCIP_CALL( SCIPreallocMemoryArray(scip, quadrowidxs, len) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, quadcolidxs, len) );
+         SCIP_CALL( SCIPreallocMemoryArray(scip, quadcoefs,   len) );
+      }
+   }
+   
+   if( addednew )
+   {
+      int j, k;
+      
+      invalidateJacobiSparsity(scip, oracle);
+      
+      /* sort quadrows and quadcols */
+      SCIPsortIntIntReal(*quadrowidxs, *quadcolidxs, *quadcoefs, *quadlen);
+      j = 0;
+      k = 0;
+      while( j < *quadlen )
+      {
+         while( k < *quadlen && (*quadrowidxs)[j] == (*quadrowidxs)[k] )
+            ++k;
+         SCIPsortIntReal(&((*quadcolidxs)[j]), &((*quadcoefs)[j]), k-j);
+         j = k;
+      }
+   }
+   
+   assert(*quadlen == 0 || (*quadrowidxs)[0] >= 0);
+   assert(*quadlen == 0 || (*quadrowidxs)[*quadlen-1] < oracle->nvars);
+   assert(*quadlen == 0 || (*quadcolidxs)[0] >= 0);
+   assert(*quadlen == 0 || (*quadcolidxs)[*quadlen-1] < oracle->nvars);
+   
+   return SCIP_OKAY;
 }
 
 /** gives the current number of variables */
