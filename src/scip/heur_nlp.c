@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.39 2009/11/19 20:26:19 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.40 2009/11/27 10:07:48 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1151,6 +1151,10 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
       SCIPdebugMessage("No nonlinear continuous variables. NLP local search heuristic will not run.\n");
    }
    
+   /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
+   if( SCIPheurGetFreqofs(heur) == 0 )
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
+
    return SCIP_OKAY;
 }
 
@@ -1192,6 +1196,8 @@ SCIP_DECL_HEUREXITSOL(heurExitsolNlp)
       SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
    }
 
+   SCIPheurSetTimingmask(heur, HEUR_TIMING);
+
    return SCIP_OKAY;
 }
 
@@ -1225,7 +1231,8 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       /* only call heuristic if optimal LP solution is available */
       if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       {
-         SCIPdebugMessage("skip NLP heuristic because no start candidate given and no LP solution available\n");
+         *result = SCIP_DELAYED;
+         SCIPdebugMessage("NLP heuristic delayed because no start candidate given and no LP solution available\n");
          return SCIP_OKAY;
       }
 
@@ -1289,6 +1296,10 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
    /* forget startcand */
    if( heurdata->startcand != NULL )
       SCIP_CALL( SCIPfreeSol(scip, &heurdata->startcand) );
+   
+   /* reset timing, if it was changed temporary (at the root node) */
+   if( heurtiming != HEUR_TIMING )
+      SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    return SCIP_OKAY;
 }
