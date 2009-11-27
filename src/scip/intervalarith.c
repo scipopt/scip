@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.33 2009/11/19 18:26:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.34 2009/11/27 18:54:57 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -1353,7 +1353,7 @@ void SCIPintervalSignPowerScalar(
    }
    else
    {
-      SCIPwarningMessage("Warning: interval arithmetic for pow function is not rounding safe");
+      SCIPwarningMessage("Warning: interval arithmetic for pow function is not rounding safe!\n");
       if( operand1.inf <= -infinity )
       {
          resultant->inf = -infinity;
@@ -1484,7 +1484,7 @@ void SCIPintervalExp(
   
    roundmode = getRoundingMode();
 
-   SCIPwarningMessage("Warning: interval arithmetic for exp function is not rounding safe");
+   SCIPwarningMessage("Warning: interval arithmetic for exp function is not rounding safe!\n");
 
    if( operand.inf <= -infinity )
    {
@@ -1531,7 +1531,7 @@ void SCIPintervalLog(
   
    roundmode = getRoundingMode();
 
-   SCIPwarningMessage("Warning: interval arithmetic for log function is not rounding safe");
+   SCIPwarningMessage("Warning: interval arithmetic for log function is not rounding safe!\n");
   
    if( operand.inf <= 0.0 )
    {
