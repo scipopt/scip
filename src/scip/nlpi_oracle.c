@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.20 2009/11/27 20:19:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.21 2009/11/27 20:50:43 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -1244,6 +1244,18 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             }
             assert(k == oracle->consquadlens[oracle->nconss + i]);
             
+            /* sort quadrows and quadcols */
+            SCIPsortIntIntReal(oracle->consquadrows[oracle->nconss+i], oracle->consquadcols[oracle->nconss+i], oracle->consquadvals[oracle->nconss+i], oracle->consquadlens[oracle->nconss+i]);
+            j = 0;
+            k = 0;
+            while( j < oracle->consquadlens[oracle->nconss+i] )
+            {
+               while( k < oracle->consquadlens[oracle->nconss+i] && oracle->consquadrows[oracle->nconss+i][j] == oracle->consquadrows[oracle->nconss+i][k] )
+                  ++k;
+               SCIPsortIntReal(&oracle->consquadcols[oracle->nconss+i][j], &oracle->consquadvals[oracle->nconss+i][j], k-j);
+               j = k;
+            }
+            
             addednlcon = TRUE;
          }
          else
@@ -1406,6 +1418,8 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
       oracle->objnlin = nlin;
       for( i = 0; i < nlin; ++i )
          oracle->vardegrees[lininds[i]] = MAX(1, oracle->vardegrees[lininds[i]]);
+      
+      SCIPsortIntReal(oracle->objlinidxs, oracle->objlinvals, nlin);
    }
    else
       oracle->objnlin = 0;
@@ -1447,6 +1461,18 @@ SCIP_RETCODE SCIPnlpiOracleSetObjective(
          oracle->vardegrees[quadrowidxs[j]] = MAX(2, oracle->vardegrees[quadrowidxs[j]]);
       }
       assert(k == oracle->objquadlen);
+
+      /* sort quadrows and quadcols */
+      SCIPsortIntIntReal(oracle->objquadrows, oracle->objquadcols, oracle->objquadvals, oracle->objquadlen);
+      j = 0;
+      k = 0;
+      while( j < oracle->objquadlen )
+      {
+         while( k < oracle->objquadlen && oracle->objquadrows[j] == oracle->objquadrows[k] )
+            ++k;
+         SCIPsortIntReal(&oracle->objquadcols[j], &oracle->objquadvals[j], k-j);
+         j = k;
+      }
    }
    else
       oracle->objquadlen = 0;
@@ -1551,7 +1577,7 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
                                               *   new position of var in output (-1 if var was deleted) */
    )
 {  /*lint --e{715}*/
-   int c;
+   int c, j, k;
    int lastgood; /* index of the last variable that should be kept */ 
    
    assert(scip != NULL);
@@ -1620,7 +1646,21 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
    assert(c == lastgood);
 
    mapIndices (delstats, oracle->objnlin,    oracle->objlinidxs); /* TODO delete entries for deleted variables */
+   SCIPsortIntReal(oracle->objlinidxs, oracle->objlinvals, oracle->objnlin);
+   
    mapIndices2(delstats, oracle->objquadlen, oracle->objquadrows, oracle->objquadcols);
+   /* sort quadrows and quadcols */
+   SCIPsortIntIntReal(oracle->objquadrows, oracle->objquadcols, oracle->objquadvals, oracle->objquadlen);
+   j = 0;
+   k = 0;
+   while( j < oracle->objquadlen )
+   {
+      while( k < oracle->objquadlen && oracle->objquadrows[j] == oracle->objquadrows[k] )
+         ++k;
+      SCIPsortIntReal(&oracle->objquadcols[j], &oracle->objquadvals[j], k-j);
+      j = k;
+   }
+
 #ifdef WITH_NL
    if( oracle->objexprtree )
       mapIndices(delstats, SCIPexprtreeGetNVars(oracle->objexprtree), oracle->objexprvaridxs);
@@ -1633,8 +1673,23 @@ SCIP_RETCODE SCIPnlpiOracleDelVarSet(
          mapIndices (delstats, oracle->conslinlens[c], oracle->conslinidxs[c]);
          SCIPsortIntReal(oracle->conslinidxs[c], oracle->conslincoefs[c], oracle->conslinlens[c]);
       }
+      
       if( oracle->consquadlens )
+      {
          mapIndices2(delstats, oracle->consquadlens[c], oracle->consquadrows[c], oracle->consquadcols[c]);
+         /* sort quadrows and quadcols */
+         SCIPsortIntIntReal(oracle->consquadrows[c], oracle->consquadcols[c], oracle->consquadvals[c], oracle->consquadlens[c]);
+         j = 0;
+         k = 0;
+         while( j < oracle->consquadlens[c] )
+         {
+            while( k < oracle->consquadlens[c] && oracle->consquadrows[c][j] == oracle->consquadrows[c][k] )
+               ++k;
+            SCIPsortIntReal(&oracle->consquadcols[c][j], &oracle->consquadvals[c][j], k-j);
+            j = k;
+         }
+      }
+      
 #ifdef WITH_NL
       if( oracle->consexprtrees )
          mapIndices (delstats, SCIPexprtreeGetNVars(oracle->consexprtrees[c]), oracle->consexprvaridxs[c]);

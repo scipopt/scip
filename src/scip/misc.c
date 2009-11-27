@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.102 2009/11/27 20:19:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.103 2009/11/27 20:50:43 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -2762,12 +2762,22 @@ void SCIPsort(
 #define SORTTPL_FIELD2TYPE  void*
 #include "scip/sorttpl.c"
 
+
+/* SCIPsortIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#include "scip/sorttpl.c"
+
+
 /* SCIPsortIntPtrReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntPtrReal
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #include "scip/sorttpl.c"
+
 
 /* SCIPsortIntPtrIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntPtrIntReal
