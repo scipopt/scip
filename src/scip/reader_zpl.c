@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.48 2009/11/06 12:04:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.49 2009/11/28 04:46:52 bzfberth Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -486,10 +486,13 @@ Var* xlp_addvar(
    SCIP_Bool initial;
    SCIP_Bool removable;
    SCIP_Bool dynamiccols;
+   SCIP_Bool usestartsol;
+
    Var* zplvar;
    int branchpriority;
 
    SCIP_CALL_ABORT( SCIPgetBoolParam(scip_, "reading/zplreader/dynamiccols", &dynamiccols) );
+   SCIP_CALL_ABORT( SCIPgetBoolParam(scip_, "reading/zplreader/usestartsol", &usestartsol) );
 
    switch( bound_get_type(lower) )
    {
@@ -566,16 +569,19 @@ Var* xlp_addvar(
    SCIP_CALL_ABORT( SCIPaddVar(scip_, var) );
    SCIP_CALL_ABORT( SCIPchgVarBranchPriority(scip_, var, branchpriority) );
 
-   if( nstartvals_ >= startvalssize_ )
+   if( usestartsol )
    {
-      startvalssize_ *= 2;
-      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &startvals_, startvalssize_) );
-      SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &startvars_, startvalssize_) );
+      if( nstartvals_ >= startvalssize_ )
+      {
+         startvalssize_ *= 2;
+         SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &startvals_, startvalssize_) );
+         SCIP_CALL_ABORT( SCIPreallocMemoryArray(scip_, &startvars_, startvalssize_) );
+      }
+      assert( nstartvals_ < startvalssize_ );
+      startvals_[nstartvals_] = (SCIP_Real)numb_todbl(startval);
+      startvars_[nstartvals_] = var;
+      nstartvals_++;
    }
-   assert( nstartvals_ < startvalssize_ );
-   startvals_[nstartvals_] = (SCIP_Real)numb_todbl(startval);
-   startvars_[nstartvals_] = var;
-   nstartvals_++;
 
    return zplvar;
 }
@@ -934,9 +940,11 @@ SCIP_DECL_READERREAD(readerReadZpl)
 
    int i;
    SCIP_Bool changedir;
+   SCIP_Bool usestartsol;
    SCIP_Bool success;
    
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/changedir", &changedir) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/zplreader/usestartsol", &usestartsol) );
 
    path = NULL;
    oldpath[0] = '\0';
@@ -991,9 +999,13 @@ SCIP_DECL_READERREAD(readerReadZpl)
    scip_ = scip;
    issuedbranchpriowarning_ = FALSE;
    readerror_ = FALSE;
-   startvalssize_ = 1024;
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvals_,startvalssize_) );
-   SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvars_,startvalssize_) );
+
+   if( usestartsol )
+   {
+      startvalssize_ = 1024;
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvals_,startvalssize_) );
+      SCIP_CALL_ABORT( SCIPallocMemoryArray(scip_,&startvars_,startvalssize_) );
+   }
 
    /* get the parameter string */
    SCIP_CALL( SCIPgetStringParam(scip, "reading/zplreader/parameters", &paramstr) );
@@ -1107,24 +1119,27 @@ SCIP_DECL_READERREAD(readerReadZpl)
       }
    }
 
-   /* transform the problem such that adding primal solutions is possible */
-   SCIP_CALL( SCIPtransformProb(scip) );
-   SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
-   for( i = 0; i < nstartvals_; i++ )
+   if( usestartsol )
    {
-      SCIP_CALL( SCIPsetSolVal(scip, startsol, startvars_[i], startvals_[i]) );
-      SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) );
-   }
+      /* transform the problem such that adding primal solutions is possible */
+      SCIP_CALL( SCIPtransformProb(scip) );
+      SCIP_CALL( SCIPcreateSol(scip, &startsol, NULL) );
+      for( i = 0; i < nstartvals_; i++ )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, startsol, startvars_[i], startvals_[i]) );
+         SCIP_CALL( SCIPreleaseVar(scip, &startvars_[i]) );
+      }
    
-   success = FALSE;
-   SCIP_CALL( SCIPtrySolFree(scip, &startsol, TRUE, TRUE, TRUE, &success) );
-   if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
+      success = FALSE;
+      SCIP_CALL( SCIPtrySolFree(scip, &startsol, TRUE, TRUE, TRUE, &success) );
+      if( success && SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_FULL )
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "ZIMPL starting solution accepted\n");
 
-   SCIPfreeMemoryArray(scip_,&startvals_);
-   SCIPfreeMemoryArray(scip_,&startvars_);
-   nstartvals_ = 0;
-   startvalssize_ = 0;
+      SCIPfreeMemoryArray(scip_,&startvals_);
+      SCIPfreeMemoryArray(scip_,&startvars_);
+      nstartvals_ = 0;
+      startvalssize_ = 0;
+   }
 
    *result = SCIP_SUCCESS;
 
@@ -1169,6 +1184,9 @@ SCIP_RETCODE SCIPincludeReaderZpl(
          NULL, FALSE, FALSE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/zplreader/changedir", "should the current directory be changed to that of the ZIMPL file before parsing?",
+         NULL, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "reading/zplreader/usestartsol", "should ZIMPL starting solutions be forwarded to SCIP?",
          NULL, FALSE, TRUE, NULL, NULL) );
    SCIP_CALL( SCIPaddStringParam(scip,
          "reading/zplreader/parameters", "additional parameter string passed to the ZIMPL parser (or - for no additional parameters)",
