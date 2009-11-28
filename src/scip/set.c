@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.207 2009/11/05 10:32:02 bzfgleix Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.208 2009/11/28 11:27:49 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -1523,6 +1523,16 @@ SCIP_RETCODE SCIPsetResetParams(
    )
 {
    SCIP_CALL( SCIPparamsetSetToDefault(set->paramset, set->scip) );
+
+   return SCIP_OKAY;
+}
+
+/** sets heuristic parameters to aggressive values */
+SCIP_RETCODE SCIPsetSetHeuristicsAggressive(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   SCIP_CALL( SCIPparamsetSetToHeuristicsAggressive(set->paramset, set->scip) );
 
    return SCIP_OKAY;
 }

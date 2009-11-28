@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.356 2009/11/26 14:10:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.357 2009/11/28 11:27:49 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -531,6 +531,12 @@ SCIP_RETCODE SCIPresetParams(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** sets heuristic parameters to aggressive values */
+extern 
+SCIP_RETCODE SCIPsetHeuristicsAggressive(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+   
 /** returns the array of all available SCIP parameters */
 extern
 SCIP_PARAM** SCIPgetParams(

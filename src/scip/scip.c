@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.528 2009/11/26 14:10:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.529 2009/11/28 11:27:49 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -1209,6 +1209,18 @@ SCIP_RETCODE SCIPresetParams(
    SCIP_CALL( checkStage(scip, "SCIPresetParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
    SCIP_CALL( SCIPsetResetParams(scip->set) );
+
+   return SCIP_OKAY;
+}
+
+/** sets heuristic parameters to aggressive values */
+SCIP_RETCODE SCIPsetHeuristicsAggressive(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPresetParams", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   SCIP_CALL( SCIPsetSetHeuristicsAggressive(scip->set) );
 
    return SCIP_OKAY;
 }

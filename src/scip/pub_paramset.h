@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_paramset.h,v 1.17 2009/09/23 08:54:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pub_paramset.h,v 1.18 2009/11/28 11:27:49 bzfberth Exp $"
 
 /**@file   pub_paramset.h
  * @ingroup PUBLICMETHODS
@@ -232,6 +232,12 @@ SCIP_RETCODE SCIPparamSetToDefault(
    SCIP*                 scip                /**< SCIP data structure, or NULL if paramchgd method should not be called */   
    );
 
+/** sets heuristics to aggressive */
+extern
+SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 #ifdef __cplusplus
 }
 #endif
