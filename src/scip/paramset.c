@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: paramset.c,v 1.57 2009/11/28 11:27:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: paramset.c,v 1.58 2009/11/30 16:10:57 bzfviger Exp $"
 
 /**@file   paramset.c
  * @brief  methods for handling parameter settings
@@ -2200,8 +2200,8 @@ SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param != NULL )
    {
-      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-      SCIP_CALL( SCIPparamSetInt(param, scip, 2000) );
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
+      SCIP_CALL( SCIPparamSetLongint(param, scip, 2000) );
    }
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/rens/minfixingrate");
@@ -2217,8 +2217,8 @@ SCIP_RETCODE SCIPparamsetSetToHeuristicsAggressive(
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
    if( param != NULL )
    {
-      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_INT);
-      SCIP_CALL( SCIPparamSetInt(param, scip, 20) );
+      assert(SCIPparamGetType(param) == SCIP_PARAMTYPE_LONGINT);
+      SCIP_CALL( SCIPparamSetLongint(param, scip, 20) );
    }
 
    return SCIP_OKAY;
