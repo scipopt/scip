@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.27 2009/11/28 13:01:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.28 2009/11/30 13:39:35 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -236,7 +236,7 @@ SCIP_RETCODE createPpcProblem(
 
          /* get coefficient arrays of constraint */
          quadcons = SCIPconshdlrGetConss(conshdlr)[i];
-         assert( quadcons != NULL );
+         assert(quadcons != NULL);
          sqrcoefs = SCIPgetSqrCoefsQuadVarsQuadratic(scip, quadcons);
          bilincoefs = SCIPgetBilinCoefsQuadratic(scip, quadcons);
          BMSclearMemoryArray(consmarker, nvars);
@@ -247,7 +247,7 @@ SCIP_RETCODE createPpcProblem(
             SCIP_VAR* quadvar;
          
             quadvar = SCIPgetQuadVarsQuadratic(scip, quadcons)[t];
-            assert( quadvar != NULL );
+            assert(quadvar != NULL);
 
             /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
             probindex = SCIPvarGetProbindex(quadvar);
@@ -347,7 +347,7 @@ SCIP_RETCODE createPpcProblem(
          int ntofix;
 
          soccons = SCIPconshdlrGetConss(conshdlr)[i];
-         assert( soccons != NULL );
+         assert(soccons != NULL);
 
          SCIP_CALL( SCIPallocBufferArray(ppcscip, &ppcconsvars, SCIPgetNLhsVarsSOC(scip, soccons) + 1) );
          ntofix = 0;
@@ -355,7 +355,7 @@ SCIP_RETCODE createPpcProblem(
 
          /* right hand side variable */
          socrhsvar = SCIPgetRhsVarSOC(scip, soccons);
-         assert( socrhsvar != NULL );
+         assert(socrhsvar != NULL);
 
          /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
          probindex = SCIPvarGetProbindex(socrhsvar);
@@ -377,12 +377,12 @@ SCIP_RETCODE createPpcProblem(
 
          /* left hand side variables */
          soclhsvars = SCIPgetLhsVarsSOC(scip, soccons);
-         assert( soclhsvars != NULL );
+         assert(soclhsvars != NULL);
 
          for( t = 0; t < SCIPgetNLhsVarsSOC(scip, soccons); ++t )
          {
             SCIP_Real coef;
-            assert( soclhsvars[t] != NULL );
+            assert(soclhsvars[t] != NULL);
 
             /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
             probindex = SCIPvarGetProbindex(soclhsvars[t]);
@@ -442,13 +442,13 @@ SCIP_RETCODE createPpcProblem(
          SCIP_VAR* ppcconsvars[2];
 
          uvdcons = SCIPconshdlrGetConss(conshdlr)[i];
-         assert( uvdcons != NULL );
+         assert(uvdcons != NULL);
 
          linearuvdvar = SCIPgetLinearVarUnivardefinite(scip, uvdcons);
-         assert( linearuvdvar != NULL );
+         assert(linearuvdvar != NULL);
 
          nonlinearuvdvar = SCIPgetNonlinearVarUnivardefinite(scip, uvdcons);
-         assert( nonlinearuvdvar != NULL );
+         assert(nonlinearuvdvar != NULL);
 
          /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
          if( SCIPvarGetProbindex(linearuvdvar) == -1 || SCIPvarGetProbindex(nonlinearuvdvar) == -1 )
@@ -492,8 +492,8 @@ SCIP_RETCODE createPpcProblem(
             SCIP_Bool fixed;
 
             SCIP_CALL( SCIPfixVar(ppcscip, ppcvars[SCIPvarGetProbindex(nonlinearuvdvar)], 1.0, &infeas, &fixed) );
-            assert( !infeas );
-            assert( fixed );
+            assert(!infeas);
+            assert(fixed);
 
             SCIPdebugMessage("undercover heuristic: fixing var %s in set covering problem to 1.\n", SCIPvarGetName(ppcvars[SCIPvarGetProbindex(nonlinearuvdvar)]));
          }
@@ -748,7 +748,7 @@ SCIP_RETCODE createSubProblem(
       for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
       {
          cons = SCIPconshdlrGetConss(conshdlr)[c];
-         assert( cons != NULL );
+         assert(cons != NULL);
 
          SCIP_CALL( SCIPcopyCons(subscip, &conscopy, NULL, conshdlr, scip, cons, varmap,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
@@ -795,12 +795,12 @@ SCIP_RETCODE solvePpcProblem(
    int i;
 #endif
 
-   assert( ppcscip != NULL );
-   assert( ppcvars != NULL );
-   assert( ppcsolvals != NULL );
-   assert( timelimit > 0.0 );
-   assert( memorylimit > 0.0 );
-   assert( success != NULL );
+   assert(ppcscip != NULL);
+   assert(ppcvars != NULL);
+   assert(ppcsolvals != NULL);
+   assert(timelimit > 0.0);
+   assert(memorylimit > 0.0);
+   assert(success != NULL);
 
    *success = FALSE;
 
@@ -862,7 +862,7 @@ SCIP_RETCODE solvePpcProblem(
    if( SCIPgetNSols(ppcscip) == 0 )
       return SCIP_OKAY;
 
-   assert( SCIPgetBestSol(ppcscip) != NULL );
+   assert(SCIPgetBestSol(ppcscip) != NULL);
 
    SCIP_CALL( SCIPgetSolVals(ppcscip, SCIPgetBestSol(ppcscip), SCIPgetNOrigVars(ppcscip), ppcvars, ppcsolvals) );
 
@@ -900,9 +900,9 @@ SCIP_RETCODE solveSubProblem(
    SCIP_RETCODE retstat;
 #endif
 
-   assert( subscip != NULL );
-   assert( timelimit > 0.0 );
-   assert( memorylimit > 0.0 );
+   assert(subscip != NULL);
+   assert(timelimit > 0.0);
+   assert(memorylimit > 0.0);
 
    SCIP_CALL( SCIPsetHeuristicsAggressive(subscip) );
 #ifndef WITH_UNIVARDEFINITE
@@ -1000,16 +1000,16 @@ SCIP_RETCODE copySol(
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    int        nvars;
         
-   assert( scip != NULL );
-   assert( subscip != NULL );
-   assert( subvars != NULL );
-   assert( subsol != NULL );
-   assert( newsol != NULL );
-   assert( *newsol != NULL );
+   assert(scip != NULL);
+   assert(subscip != NULL);
+   assert(subvars != NULL);
+   assert(subsol != NULL);
+   assert(newsol != NULL);
+   assert(*newsol != NULL);
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
-   assert( nvars == SCIPgetNOrigVars(subscip) );  
+   assert(nvars == SCIPgetNOrigVars(subscip));
  
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
 
@@ -1056,10 +1056,10 @@ SCIP_RETCODE SCIPapplyUndercover(
    int nvars;
    int i;
 
-   assert( scip != NULL );
-   assert( heur != NULL );
-   assert( result != NULL );
-   assert( *result == SCIP_DIDNOTFIND );
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(result != NULL);
+   assert(*result == SCIP_DIDNOTFIND);
 
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
@@ -1126,7 +1126,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    {
       SCIP_Real cutoff;
 
-      assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );   
+      assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
 
       if( SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) )
          cutoff = (SCIPgetUpperbound(scip) >= 0 ? 1.0 - minimprove : 1.0 + minimprove)*SCIPgetUpperbound(scip);
@@ -1235,12 +1235,12 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
@@ -1256,12 +1256,12 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* initialize data */
    heurdata->nusednodes = 0;
@@ -1283,12 +1283,12 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    SCIP_CONSHDLR* conshdlrunivar;     /* constraint handler for univariate definite constraints or NULL      */
    SCIP_HEURDATA* heurdata;
 
-   assert( heur != NULL );
-   assert( scip != NULL );
+   assert(heur != NULL);
+   assert(scip != NULL);
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* if the heuristic is called at the root node, we may want to be called directly after the initial root LP solve */
    if( heurdata->beforecuts && SCIPheurGetFreqofs(heur) == 0 )
@@ -1334,14 +1334,14 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    SCIP_Real memorylimit;
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
 
-   assert( heur != NULL );
-   assert( scip != NULL );
-   assert( result != NULL );
-   /* assert( SCIPhasCurrentNodeLP(scip) ); this leads to an assert e.g. in bell3a ?????????????????????? */
+   assert(heur != NULL);
+   assert(scip != NULL);
+   assert(result != NULL);
+   /* TODO: assert(SCIPhasCurrentNodeLP(scip)); this leads to an assert e.g. in bell3a ?????????????????????? */
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
-   assert( heurdata != NULL );
+   assert(heurdata != NULL);
 
    /* do not call heuristic, if no nonlinear constraints are present */
    if( !(heurdata->run) )
