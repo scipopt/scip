@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi.h,v 1.6 2009/10/30 17:08:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi.h,v 1.7 2009/11/30 16:26:17 bzfviger Exp $"
 
 /**@file   nlpi.h
  * @brief  internal methods for NLPI solver interfaces
@@ -104,11 +104,9 @@ SCIP_RETCODE SCIPnlpiAddConstraints(
    int                   nconss,             /**< number of added constraints */
    const SCIP_Real*      lhss,               /**< left hand sides of constraints */
    const SCIP_Real*      rhss,               /**< right hand sides of constraints */
-   const int*            linoffsets,         /**< start index of each constraints linear coefficients in lininds and linvals, 
-                                              * length: nconss + 1, linoffsets[nconss] gives length of lininds and linvals may 
-                                              * be NULL in case of no linear part */
-   const int*            lininds,            /**< variable indices, may be NULL in case of no linear part */
-   const SCIP_Real*      linvals,            /**< coefficient values may be NULL in case of no linear part */
+   const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
+   int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
+   SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
    const int*            nquadrows,          /**< number of columns in matrix of quadratic part for each constraint, may be
                                               * NULL in case of no quadratic part in any constraint */
    int* const*           quadrowidxs,        /**< indices of variables for which a quadratic part is specified, may be NULL

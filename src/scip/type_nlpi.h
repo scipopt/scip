@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nlpi.h,v 1.14 2009/11/27 20:19:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: type_nlpi.h,v 1.15 2009/11/30 16:26:18 bzfviger Exp $"
 
 /**@file   type_nlpi.h
  * @ingroup TYPEDEFINITIONS
@@ -121,12 +121,11 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - ncons number of added constraints
  *  - lhss left hand sides of constraints
  *  - rhss right hand sides of constraints
- *  - linoffsets start index of each constraints linear coefficients in lininds and linvals
- *    length: ncons + 1, linoffsets[ncons] gives length of lininds and linvals
+ *  - nlininds number of linear coefficients for each constraint
  *    may be NULL in case of no linear part
- *  - lininds variable indices
+ *  - lininds indices of variables for linear coefficients for each constraint
  *    may be NULL in case of no linear part
- *  - linvals coefficient values
+ *  - linvals values of linear coefficient for each constraint
  *    may be NULL in case of no linear part
  *  - nquadrows number of columns in matrix of quadratic part for each constraint
  *    may be NULL in case of no quadratic part in any constraint
@@ -152,7 +151,7 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - names of constraints, may be NULL or entries may be NULL
  */
 #define SCIP_DECL_NLPIADDCONSTRAINTS(x) SCIP_RETCODE x (SCIP* scip, SCIP_NLPI* nlpi, int ncons, const SCIP_Real* lhss, \
-   const SCIP_Real* rhss, const int* linoffsets, const int* lininds, const SCIP_Real* linvals, const int* nquadrows, \
+   const SCIP_Real* rhss, const int* nlininds, int* const* lininds, SCIP_Real* const* linvals, const int* nquadrows, \
    int* const* quadrowidxs, int* const* quadoffsets, int* const* quadinds, SCIP_Real* const* quadvals, \
    int* const* exprvaridxs, SCIP_EXPRTREE* const* exprtrees, const char** names)
 

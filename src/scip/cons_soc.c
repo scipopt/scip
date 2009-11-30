@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.7 2009/11/17 19:20:14 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.8 2009/11/30 16:26:17 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2318,10 +2318,9 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    SCIP_CONSDATA* consdata;
    SCIP_Real*     lhs;
    SCIP_Real*     rhs;
-   int*           linoffset = NULL;   /* row offsets */
-   int*           linindex  = NULL;    /* column indices */
-   SCIP_Real*     lincoeff  = NULL;    /* coefficients of linear variables */
-   int            linnnz;
+   int*           nlininds = NULL;
+   int**          lininds  = NULL;
+   SCIP_Real**    linvals  = NULL;
    int*           nquadrows;
    int**          quadrowidx;
    int**          quadoffset;
@@ -2329,7 +2328,8 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    SCIP_Real**    quadcoeff;
    int            quadnnz;
    int            i, j;
-   int            lincnt;      /* how many linear cofficients written so far */
+   int            lincnt;
+   SCIP_Bool      havelin;
       
    assert(scip     != NULL);
    assert(conshdlr != NULL);
@@ -2341,20 +2341,20 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    
    /* @todo try different nlp-formulations of a soc constraint (sqrt not good, but convex would be nice) */
 
-   /* linear part exists if there are offsets */
-   linnnz = 0;
-   for( i = 0; i < nconss; ++i )
+   /* check if there is a linear part, i.e., whether there are offsets */
+   havelin = FALSE;
+   for( i = 0; !havelin && i < nconss; ++i )
    {
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
-      
-      if( consdata->offsets != NULL )
-         for( j = 0; j < consdata->nvars; ++j )
-            if( consdata->offsets[j] )
-               ++linnnz;
-      
+
       if( consdata->rhsoffset != 0.0 )
-         ++linnnz;
+         havelin = TRUE;
+
+      if( consdata->offsets != NULL )
+         for( j = 0; !havelin && j < consdata->nvars; ++j )
+            if( consdata->offsets[j] )
+               havelin = TRUE;
    }
 
    assert(var_scip2nlp != NULL);
@@ -2362,11 +2362,14 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss) );
 
-   if( linnnz != 0 )
+   if( havelin )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &linoffset, nconss+1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &linindex,  linnnz) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &lincoeff,  linnnz) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds,  nconss) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &linvals,  nconss) );
+      BMSclearMemoryArray(nlininds, nconss);
+      BMSclearMemoryArray(lininds,  nconss);
+      BMSclearMemoryArray(linvals,  nconss);
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nquadrows,  nconss) );
@@ -2375,7 +2378,6 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    SCIP_CALL( SCIPallocBufferArray(scip, &quadindex,  nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &quadcoeff,  nconss) );
 
-   lincnt = 0;
    for( i = 0; i < nconss; ++i )
    {
       consdata = SCIPconsGetData(conss[i]);
@@ -2384,17 +2386,29 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       lhs[i] = -SCIPinfinity(scip);
       rhs[i] = -consdata->constant;
       
-      if( linoffset != NULL )
-         linoffset[i] = lincnt;
-
       quadnnz = consdata->nvars + 1;
 
       nquadrows[i] = consdata->nvars + 1;
-      SCIPallocBufferArray(scip, &quadrowidx[i], consdata->nvars + 1);
-      SCIPallocBufferArray(scip, &quadoffset[i], consdata->nvars + 2);
-      SCIPallocBufferArray(scip, &quadindex[i],  consdata->nvars + 1);
-      SCIPallocBufferArray(scip, &quadcoeff[i],  consdata->nvars + 1);
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadrowidx[i], consdata->nvars + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadoffset[i], consdata->nvars + 2) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadindex[i],  consdata->nvars + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &quadcoeff[i],  consdata->nvars + 1) );
       
+      nlininds[i] = consdata->rhsoffset ? 1 : 0;
+      if( consdata->offsets )
+         for( j = 0; j < consdata->nvars; ++j )
+         {
+            if( consdata->offsets[j] )
+               ++nlininds[i];
+         }
+      if( nlininds[i] )
+      {
+         assert( havelin == TRUE );
+         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], nlininds[i]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[i], nlininds[i]) );
+      }
+
+      lincnt = 0;
       for( j = 0; j < consdata->nvars; ++j )
       {
          quadrowidx[i][j] = (int) (size_t) SCIPhashmapGetImage(var_scip2nlp, consdata->vars[j]);
@@ -2404,8 +2418,8 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
          
          if( consdata->offsets && consdata->offsets[j] )
          {
-            linindex[lincnt] = quadrowidx[i][j];
-            lincoeff[lincnt] = 2 * quadcoeff[i][j] * consdata->offsets[j];
+            lininds[i][lincnt] = quadrowidx[i][j];
+            linvals[i][lincnt] = 2 * quadcoeff[i][j] * consdata->offsets[j];
             ++lincnt;
             
             rhs[i] -= quadcoeff[i][j] * consdata->offsets[j] * consdata->offsets[j];
@@ -2418,24 +2432,20 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       
       if( consdata->rhsoffset )
       {
-         linindex[lincnt] = quadrowidx[i][consdata->nvars];
-         lincoeff[lincnt] = - 2 * consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset;
+         lininds[i][lincnt] = quadrowidx[i][consdata->nvars];
+         linvals[i][lincnt] = - 2 * consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset;
          ++lincnt;
          
          rhs[i] += consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset * consdata->rhsoffset;
       }
+      assert(nlininds == NULL || lincnt == nlininds[i]);
       
       quadoffset[i][consdata->nvars + 1] = consdata->nvars + 1;
-   }
-   if( linoffset )
-   {
-      linoffset[nconss] = lincnt;
-      assert(lincnt == linnnz);
    }
 
    SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nconss,
       lhs, rhs,
-      linoffset, linindex, lincoeff,
+      nlininds, lininds, linvals,
       nquadrows, quadrowidx, quadoffset, quadindex, quadcoeff,
       NULL, NULL, NULL) );
 
@@ -2445,16 +2455,21 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       SCIPfreeBufferArrayNull(scip, &quadoffset[i]);
       SCIPfreeBufferArrayNull(scip, &quadindex[i]);
       SCIPfreeBufferArrayNull(scip, &quadcoeff[i]);
+      if( havelin )
+      {
+         SCIPfreeBufferArrayNull(scip, &lininds[i]);
+         SCIPfreeBufferArrayNull(scip, &linvals[i]);
+      }
    }
 
    SCIPfreeBufferArray(scip, &lhs);
    SCIPfreeBufferArray(scip, &rhs);
 
-   if( linoffset != NULL )
+   if( havelin )
    {
-      SCIPfreeBufferArray(scip, &linoffset);
-      SCIPfreeBufferArray(scip, &linindex);
-      SCIPfreeBufferArray(scip, &lincoeff);
+      SCIPfreeBufferArray(scip, &nlininds);
+      SCIPfreeBufferArray(scip, &lininds);
+      SCIPfreeBufferArray(scip, &linvals);
    }
 
    SCIPfreeBufferArray(scip, &nquadrows);

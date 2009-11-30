@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.40 2009/11/27 10:07:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.41 2009/11/30 16:26:17 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -116,11 +116,10 @@ SCIP_RETCODE addLinearConstraints(
    SCIP_CONS**      useconss;
    SCIP_Real*       lhs;
    SCIP_Real*       rhs;
-   SCIP_Real*       coeff;
-   int*             rowoffset;
-   int*             colindex;
+   int*             nlininds;
+   int**            lininds;
+   SCIP_Real**      linvals;
 
-   int              nnz;
    int              nconss;
    int              nuseconss;
    int              i;
@@ -139,9 +138,8 @@ SCIP_RETCODE addLinearConstraints(
    
    SCIP_CALL( SCIPallocBufferArray(scip, &useconss, nconss) );
    
-   /* count the number of constraints and nonzeros to add to NLP
+   /* count the number of constraints to add to NLP
     * constraints with only integer variables are not added to the NLP, since all its variables will be fixed later */
-   nnz = 0;
    nuseconss = 0;
    for( i = 0; i < nconss; ++i )
    {
@@ -149,7 +147,6 @@ SCIP_RETCODE addLinearConstraints(
       {
          if( SCIPvarGetType(SCIPgetVarsLinear(scip, conss[i])[k]) > SCIP_VARTYPE_INTEGER )
          {
-            nnz += SCIPgetNVarsLinear(scip, conss[i]);
             useconss[nuseconss] = conss[i];
             ++nuseconss;
             break;
@@ -165,48 +162,50 @@ SCIP_RETCODE addLinearConstraints(
    
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nuseconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nuseconss) );
-   /* three arrays to store linear constraints matrix as sparse matrix */ 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowoffset, nuseconss+1) ); /* array to hold start index of each row in the colindex and coeff arrays */
-   SCIP_CALL( SCIPallocBufferArray(scip, &colindex, nnz) ); /* array to hold column indices of all linear constraints */
-   SCIP_CALL( SCIPallocBufferArray(scip, &coeff, nnz) ); /* array to hold coefficients of all linear constraints */
+   /* arrays to store linear constraints */ 
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nuseconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds,  nuseconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals,  nuseconss) );
    
-   j = 0; /* counter for number of nonzero elements passed so far */
    for( i = 0; i < nuseconss; ++i )
    {
       SCIP_VAR** vars;
       SCIP_Real* vals;
       int nvars;
 
-      vars = SCIPgetVarsLinear(scip, useconss[i]);
-      vals = SCIPgetValsLinear(scip, useconss[i]);
+      vars  = SCIPgetVarsLinear(scip, useconss[i]);
+      vals  = SCIPgetValsLinear(scip, useconss[i]);
       nvars = SCIPgetNVarsLinear(scip, useconss[i]);
       assert(vars != NULL);
       assert(vals != NULL);
 
       lhs[i] = SCIPgetLhsLinear(scip, useconss[i]);
       rhs[i] = SCIPgetRhsLinear(scip, useconss[i]);
-      rowoffset[i] = j; /* obviously, coefficients and colindices for constraint i will be stored beginning at position j */ 
-
-      /* copy coefficients (vals) into long coeff array starting at position j */
-      BMScopyMemoryArray(&coeff[j], vals, nvars);
-
-      /* fill column indices of variables (vars) in conss[i] with variable indices in NLP; and increase j */
-      for( k = 0; k < nvars; ++k, ++j )
+      
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], nvars) );
+      nlininds[i] = nvars;
+      linvals[i]  = vals;
+     
+      /* fill column indices of variables (vars) in conss[i] with variable indices in NLP */
+      for( k = 0; k < nvars; ++k )
       {
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, vars[k]));
-         colindex[j] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, vars[k]);
+         lininds[i][k] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, vars[k]);
       }
    }
-   rowoffset[nuseconss] = nnz; /* the last+1'th row starts at position nnz ( == j) */
-   assert(j == nnz);
    
    SCIP_CALL( SCIPnlpiAddConstraints(scip, heurdata->nlpi, nuseconss,
-         lhs, rhs, rowoffset, colindex, coeff,
+         lhs, rhs, nlininds, lininds, linvals,
          NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    
-   SCIPfreeBufferArray(scip, &coeff);
-   SCIPfreeBufferArray(scip, &colindex);
-   SCIPfreeBufferArray(scip, &rowoffset);
+   for( i = 0; i < nuseconss; ++i )
+   {
+      SCIPfreeBufferArray(scip, &lininds[i]);
+   }
+   
+   SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
+   SCIPfreeBufferArray(scip, &nlininds);
    SCIPfreeBufferArray(scip, &rhs);
    SCIPfreeBufferArray(scip, &lhs);
    SCIPfreeBufferArray(scip, &useconss);
@@ -264,9 +263,9 @@ SCIP_RETCODE collectVarBoundConstraints(
    {
       SCIP_Real*       lhs;
       SCIP_Real*       rhs;
-      int*             rowoffset;
-      int*             colindex;
-      SCIP_Real*       coeff;
+      int*             nlininds;
+      int**            lininds;
+      SCIP_Real**      linvals;
       int              j;
       int              k;
 
@@ -278,9 +277,9 @@ SCIP_RETCODE collectVarBoundConstraints(
       /* memory to store those varbound constraints that are added to the NLP as linear constraint */
       SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss4nlp) );
       SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss4nlp) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &rowoffset, nconss4nlp + 1) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &colindex, 2*nconss4nlp) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &coeff, 2*nconss4nlp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nconss4nlp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds,  nconss4nlp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &linvals,  nconss4nlp) );
       
       j = 0; /* the number of explicitely handled varbound constraints passed so far */
       k = 0; /* the number of varbound constraints for the NLP passed so far */
@@ -300,32 +299,40 @@ SCIP_RETCODE collectVarBoundConstraints(
          /* varbound constraints: lhs <= x + c * y <= rhs */
          lhs[k] = SCIPgetLhsVarbound(scip, conss[i]);
          rhs[k] = SCIPgetRhsVarbound(scip, conss[i]);
-         rowoffset[k] = 2*k; /* since for each varbound constraint we have 2 nonzeros (x and y) */
+         
+         nlininds[k] = 2;
+         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[k], 2) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[k], 2) );
          
          /* add x term to coefficient matrix */
-         coeff[2*k] = 1.0;
+         linvals[k][0] = 1.0;
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, SCIPgetVarVarbound(scip, conss[i])));
-         colindex[2*k] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, SCIPgetVarVarbound(scip, conss[i]));
+         lininds[k][0] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, SCIPgetVarVarbound(scip, conss[i]));
          
          /* add c * y term to coefficient matrix */
-         coeff[2*k+1] = SCIPgetVbdcoefVarbound(scip, conss[i]);
+         linvals[k][1] = SCIPgetVbdcoefVarbound(scip, conss[i]);
          assert(SCIPhashmapExists(heurdata->var_scip2nlp, SCIPgetVbdvarVarbound(scip, conss[i])));
-         colindex[2*k+1] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, SCIPgetVbdvarVarbound(scip, conss[i]));
+         lininds[k][1] = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, SCIPgetVbdvarVarbound(scip, conss[i]));
 
          ++k;
       }
 
-      rowoffset[k] = 2 * nconss4nlp; /* the last entry of rowoffset holds the number of nonzeros in the coefficients matrix */
       assert(j == heurdata->nvarbndconss);
       assert(k == nconss4nlp);
       
       SCIP_CALL( SCIPnlpiAddConstraints(scip, heurdata->nlpi, nconss4nlp,
-            lhs, rhs, rowoffset, colindex, coeff,
+            lhs, rhs, nlininds, lininds, linvals,
             NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
       
-      SCIPfreeBufferArray(scip, &coeff);
-      SCIPfreeBufferArray(scip, &colindex);
-      SCIPfreeBufferArray(scip, &rowoffset);
+      for( k = 0; k < nconss4nlp; ++k )
+      {
+         SCIPfreeBufferArray(scip, &lininds[k]);
+         SCIPfreeBufferArray(scip, &linvals[k]);
+      }
+      
+      SCIPfreeBufferArray(scip, &nlininds);
+      SCIPfreeBufferArray(scip, &lininds);
+      SCIPfreeBufferArray(scip, &linvals);
       SCIPfreeBufferArray(scip, &rhs);
       SCIPfreeBufferArray(scip, &lhs);
    }

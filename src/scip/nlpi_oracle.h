@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.9 2009/11/27 21:23:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.h,v 1.10 2009/11/30 16:26:17 bzfviger Exp $"
 
 /**@file   nlpi_oracle.h
  * @brief  methods to store an NLP and request function, gradient, and hessian values
@@ -78,10 +78,9 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    int                   nconss,             /**< number of constraints to add */
    const SCIP_Real*      lhss,               /**< array with left-hand sides of constraints, or NULL if all -infinity */
    const SCIP_Real*      rhss,               /**< array with right-hand sides of constraints, or NULL if all +infinity */
-   const int*            linoffsets,         /**< array with start indices of each constraints linear coefficients in linind and linval 
-                                              *   (length: nconss + 1, linoffset[nconss] gives length of linind and linval), or NULL if no linear part */
-   const int*            lininds,            /**< array with variable indices in linear part, or NULL if no linear part */
-   const SCIP_Real*      linvals,            /**< array with variable coefficients in linear part, of NULL if no linear part */ 
+   const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
+   int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
+   SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
    const int*            nquadrows,          /**< NULL if no quadratic parts, otherwise nquadrows[.] gives the number of columns in the matrix 
                                               *   of the quadratic part, or 0 if no quadratic part in this constraint */
    int* const*           quadrowidxs,        /**< NULL if no quadratic parts, otherwise quadrowidx[.] gives the indices of variables 

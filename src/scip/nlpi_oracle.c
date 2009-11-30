@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.22 2009/11/27 21:23:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.23 2009/11/30 16:26:17 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -1077,10 +1077,9 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    int                   nconss,             /**< number of constraints to add */
    const SCIP_Real*      lhss,               /**< array with left-hand sides of constraints, or NULL if all -infinity */
    const SCIP_Real*      rhss,               /**< array with right-hand sides of constraints, or NULL if all +infinity */
-   const int*            linoffsets,         /**< array with start indices of each constraints linear coefficients in linind and linval 
-                                              *   (length: nconss + 1, linoffset[nconss] gives length of linind and linval), or NULL if no linear part */
-   const int*            lininds,            /**< array with variable indices in linear part, or NULL if no linear part */
-   const SCIP_Real*      linvals,            /**< array with variable coefficients in linear part, of NULL if no linear part */ 
+   const int*            nlininds,           /**< number of linear coefficients for each constraint, may be NULL in case of no linear part */
+   int* const*           lininds,            /**< indices of variables for linear coefficients for each constraint, may be NULL in case of no linear part */
+   SCIP_Real* const*     linvals,            /**< values of linear coefficient for each constraint, may be NULL in case of no linear part */
    const int*            nquadrows,          /**< NULL if no quadratic parts, otherwise nquadrows[.] gives the number of columns in the matrix 
                                               *   of the quadratic part, or 0 if no quadratic part in this constraint */
    int* const*           quadrowidxs,        /**< NULL if no quadratic parts, otherwise quadrowidx[.] gives the indices of variables 
@@ -1099,7 +1098,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
    )
 {  /*lint --e{715}*/
    SCIP_Bool addednlcon;  /* whether a nonlinear constraint was added */
-   int i;
+   int i, j;
 
    assert(scip != NULL);
    assert(oracle != NULL);
@@ -1132,7 +1131,7 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       for( i = 0; i < nconss; ++i )
          oracle->consrhss[oracle->nconss+i] =  SCIPinfinity(scip);
 
-   if( linoffsets != NULL )
+   if( nlininds != NULL )
    {
       assert(lininds != NULL);
       assert(linvals != NULL);
@@ -1155,12 +1154,14 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       
       for( i = 0; i < nconss; ++i )
       {
-         oracle->conslinlens[oracle->nconss+i] = linoffsets[i+1] - linoffsets[i];
+         oracle->conslinlens[oracle->nconss+i] = nlininds[i];
          if( oracle->conslinlens[oracle->nconss+i] )
          {
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conslinidxs [oracle->nconss+i], &lininds[linoffsets[i]], oracle->conslinlens[oracle->nconss+i]) );
-            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conslincoefs[oracle->nconss+i], &linvals[linoffsets[i]], oracle->conslinlens[oracle->nconss+i]) );
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conslinidxs [oracle->nconss+i], lininds[i], oracle->conslinlens[oracle->nconss+i]) );
+            SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conslincoefs[oracle->nconss+i], linvals[i], oracle->conslinlens[oracle->nconss+i]) );
             SCIPsortIntReal(oracle->conslinidxs[oracle->nconss+i], oracle->conslincoefs[oracle->nconss+i], oracle->conslinlens[oracle->nconss+i]);
+            for( j = 0; j < nlininds[i]; ++j )
+               oracle->vardegrees[lininds[i][j]] = MAX(1, oracle->vardegrees[lininds[i][j]]);
          }
          else
          {
@@ -1168,8 +1169,6 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             oracle->conslincoefs[oracle->nconss+i] = NULL;
          }
       }
-      for( i = 0; i < linoffsets[nconss]; ++i )
-         oracle->vardegrees[lininds[i]] = MAX(1, oracle->vardegrees[lininds[i]]);
    }
    else if( oracle->conslinlens != NULL )
    { /* no new linear parts, but we had linear parts before */
@@ -1209,7 +1208,6 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
       {
          if( quadoffsets[i] != NULL && nquadrows[i] != 0 )
          {
-            int j;
             int k;
 
             assert(quadrowidxs[i] != NULL);
@@ -1297,8 +1295,6 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
          if( exprtrees[i] != NULL )
          {
 #ifdef WITH_NL
-            int j;
-
             assert(oracle->exprinterpreter != NULL);
             assert(SCIPexprtreeHasVarsAsIndex(exprtrees[i]));
             

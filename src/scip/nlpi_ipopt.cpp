@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.12 2009/11/13 15:40:05 bzfgleix Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.13 2009/11/30 16:26:17 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -460,7 +460,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
  
    SCIP_CALL( SCIPnlpiOracleAddConstraints(scip, data->oracle,
       ncons, lhss, rhss,
-      linoffsets, lininds, linvals,
+      nlininds, lininds, linvals,
       nquadrows, quadrowidxs, quadoffsets, quadinds, quadvals,
       exprvaridxs, exprtrees, names) );
 

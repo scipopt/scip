@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.64 2009/11/27 15:39:15 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.65 2009/11/30 16:26:17 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5085,24 +5085,23 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    SCIP_CONSDATA* consdata;
    SCIP_Real*     lhs;
    SCIP_Real*     rhs;
-   int*           linoffset;   /* row offsets */
-   int*           linindex;    /* column indices */
-   SCIP_Real*     lincoefs;    /* coefficients of linear variables */
-   int            linnnz;
+   int*           nlininds;
+   int**          lininds;
+   SCIP_Real**    linvals;
    int*           nquadrows;
    int**          quadrowidx;
    int**          quadoffset;
    int**          quadindex;
    SCIP_Real**    quadcoefs;
    int            quadnnz;
-   int            lincnt;      /* how many linear cofficients written so far */
    SCIP_HASHMAP*  var2rowidx;
    SCIP_VAR*      othervar;
    int            i;
    int            j;
    int            k;
    int            l;
-      
+   int            lincnt;
+
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(nlpi != NULL);
@@ -5113,24 +5112,12 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    assert(conss != NULL);
    assert(scipvar2nlpvar != NULL);
 
-   linnnz = 0;
-   for( i = 0; i < nconss; ++i )
-   {
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-      
-      linnnz += consdata->nlinvars;
-      for( j = 0; j < consdata->nquadvars; ++j )
-         if( consdata->quadlincoefs[j] != 0.0 )
-            ++linnnz; /* we assume here that the quadratic variables are disjunct from the linear variables; but it might not harm if this assumption does not hold */
-   }
-
    SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &linoffset, nconss+1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &linindex, linnnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lincoefs, linnnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds,  nconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals,  nconss) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nquadrows, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &quadrowidx, nconss) );
@@ -5138,7 +5125,6 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    SCIP_CALL( SCIPallocBufferArray(scip, &quadindex, nconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &quadcoefs, nconss) );
 
-   lincnt = 0;
    for( i = 0; i < nconss; ++i )
    {
       consdata = SCIPconsGetData(conss[i]);
@@ -5146,19 +5132,35 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
 
       lhs[i] = consdata->lhs;
       rhs[i] = consdata->rhs;
-
-      linoffset[i] = lincnt;
-      BMScopyMemoryArray(&lincoefs[lincnt], consdata->lincoefs, consdata->nlinvars);
-      for( j = 0; j < consdata->nlinvars; ++j, ++lincnt )
-      {
-         assert(SCIPhashmapExists(scipvar2nlpvar, consdata->linvars[j]));
-         linindex[lincnt] = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpvar, consdata->linvars[j]);
-      }
-
+      
+      /* count nonzeros in quadratic part */
+      nlininds[i] = consdata->nlinvars;
       quadnnz = consdata->nbilinterms;
       for( j = 0; j < consdata->nquadvars; ++j )
+      {
          if( consdata->quadsqrcoefs[j] )
             ++quadnnz;
+         if( consdata->quadlincoefs[j] != 0.0 )
+            ++nlininds[i];
+      }
+
+      if( nlininds[i] )
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], nlininds[i]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[i], nlininds[i]) );
+      }
+      else
+      {
+         lininds[i] = NULL;
+         linvals[i] = NULL;
+      }
+
+      for( j = 0; j < consdata->nlinvars; ++j )
+      {
+         linvals[i][j] = consdata->lincoefs[j];
+         assert(SCIPhashmapExists(scipvar2nlpvar, consdata->linvars[j]));
+         lininds[i][j] = (int) (size_t) SCIPhashmapGetImage(scipvar2nlpvar, consdata->linvars[j]);
+      }
 
       if( quadnnz == 0 )
       {
@@ -5178,13 +5180,14 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
 
       SCIP_CALL( SCIPhashmapCreate(&var2rowidx, SCIPblkmem(scip), consdata->nquadvars) );
       k = 0;
+      lincnt = consdata->nlinvars;
       for( j = 0; j < consdata->nquadvars; ++j )
       {
          assert(SCIPhashmapExists(scipvar2nlpvar, consdata->quadvars[j]));
          if( consdata->quadlincoefs[j] != 0.0 )
          {
-            linindex[lincnt] = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpvar, consdata->quadvars[j]);
-            lincoefs[lincnt] = consdata->quadlincoefs[j];
+            lininds[i][lincnt] = (int)(size_t)SCIPhashmapGetImage(scipvar2nlpvar, consdata->quadvars[j]);
+            linvals[i][lincnt] = consdata->quadlincoefs[j];
             ++lincnt;
          }
 
@@ -5222,12 +5225,11 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
       assert(k == quadnnz);
       SCIPhashmapFree(&var2rowidx);
    }
-   linoffset[nconss] = lincnt;
-   assert(lincnt == linnnz);
+   assert(lincnt == nlininds[i]);
 
    SCIP_CALL( SCIPnlpiAddConstraints(scip, nlpi, nconss,
       lhs, rhs,
-      linoffset, linindex, lincoefs,
+      nlininds, lininds, linvals,
       nquadrows, quadrowidx, quadoffset, quadindex, quadcoefs,
       NULL, NULL, NULL) );
 
@@ -5237,6 +5239,8 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
       SCIPfreeBufferArrayNull(scip, &quadoffset[i]);
       SCIPfreeBufferArrayNull(scip, &quadindex[i]);
       SCIPfreeBufferArrayNull(scip, &quadcoefs[i]);
+      SCIPfreeBufferArrayNull(scip, &lininds[i]);
+      SCIPfreeBufferArrayNull(scip, &linvals[i]);
    }
 
    SCIPfreeBufferArray(scip, &quadcoefs);
@@ -5245,9 +5249,9 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    SCIPfreeBufferArray(scip, &quadrowidx);
    SCIPfreeBufferArray(scip, &nquadrows);
 
-   SCIPfreeBufferArray(scip, &lincoefs);
-   SCIPfreeBufferArray(scip, &linindex);
-   SCIPfreeBufferArray(scip, &linoffset);
+   SCIPfreeBufferArray(scip, &nlininds);
+   SCIPfreeBufferArray(scip, &lininds);
+   SCIPfreeBufferArray(scip, &linvals);
 
    SCIPfreeBufferArray(scip, &rhs);
    SCIPfreeBufferArray(scip, &lhs);
