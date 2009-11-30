@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.34 2009/11/30 09:37:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.35 2009/11/30 23:34:29 bzfheinz Exp $"
+
+#define SCIP_DEBUG
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -839,7 +841,7 @@ void computeLinearConsSides(
    SCIPdebugMessage("lhs = %g, rhs = %g\n", *lhs, *rhs);
 }
 
-/** parse a list of elements */
+/** parse a list of elements which is separates by a comma */
 static
 SCIP_RETCODE parseList(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1949,7 +1951,7 @@ CREATE_CONSTRAINT(createComparisonOpCons)
     * 'le' -- less or equal than 
     * 'ge' -- greater or equal than 
     */
-   if( strlen(ftokens[nftokens - 1]) != 2)
+   if( strlen(ftokens[nftokens - 1]) != 2 && nftokens != 2 )
       return SCIP_OKAY;
 
    /* check if any sets are involved in the constraint */
@@ -2043,6 +2045,109 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       SCIPfreeBufferArray(scip, &vars);
       SCIPfreeBufferArray(scip, &vals);
    }
+   else if( equalTokens(ftokens[1], "minus") || equalTokens(ftokens[1], "plus") || equalTokens(ftokens[1], "negate") )
+   {
+      /* here we take care of the three expression 
+       *
+       * - int_plus(x1,x2,x3)   -> x1 + x2 == x3
+       * - int_minus(x1,x2,x3)  -> x1 - x2 == x3
+       * - int_negate(x1,x2)    -> x1 + x2 == 0
+       */
+      char** elements;
+      int nelements;
+
+      assert(nftokens == 2);
+      
+      SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
+      nelements = 0;
+      
+      /* parse the list of three elements */
+      SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 3) );
+      assert(nelements <= 3 && nelements >= 2);
+      
+      if( !hasError(fzninput) )
+      {
+         SCIP_CONS* cons;
+         SCIP_VAR** vars;
+         SCIP_Real* vals;
+         SCIP_Real value;
+         int nvars;
+
+         nvars = 0;
+         lhs = 0.0;
+         
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
+
+         /* parse first element */
+         vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[0]);
+         if( vars[nvars] == NULL )
+         {
+            parseValue(scip, fzninput, &value, elements[0]);
+            lhs -= value;
+         }
+         else
+         {
+            vals[nvars] = 1.0;
+            nvars++;
+         }
+         
+         /* parse second element */
+         vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[1]);
+         if( vars[nvars] == NULL )
+         {
+            parseValue(scip, fzninput, &value, elements[1]);
+            if( equalTokens(ftokens[1], "minus") )
+               lhs += value;
+            else
+               lhs -= value;
+         }
+         else
+         {
+            if( equalTokens(ftokens[1], "minus") )
+            {
+               /* in case of minus the second element get a -1.0 as coefficient */
+               vals[nvars] = -1.0;
+            }
+            else
+               vals[nvars] = 1.0;
+
+            nvars++;
+         }
+
+         if( !equalTokens(ftokens[1], "negate") )
+         {
+            /* parse third element in case of "minus" or "plus" */
+            vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[2]);
+            if( vars[nvars] == NULL )
+            {
+               parseValue(scip, fzninput, &value, elements[2]);
+               lhs += value;
+            }
+            else
+            {
+               vals[nvars] = -1.0;
+               nvars++;
+            }
+         }
+         
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, fname, nvars, vars, vals, lhs, lhs, 
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         
+         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+
+         SCIP_CALL( SCIPaddCons(scip, cons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         /* free buffer arrays */
+         SCIPfreeBufferArray(scip, &vals);
+         SCIPfreeBufferArray(scip, &vars);
+      }
+
+      /* free elements array */
+      freeStringBufferArray(scip, elements, nelements);
+
+   }
    else
    {
       assert(nftokens == 2);
@@ -2107,7 +2212,7 @@ static CREATE_CONSTRAINT((*constypes[])) =  {
    createLogicalOpCons,
    createArrayOpCons,
    createComparisonOpCons,
-   createAlldifferentOpCons
+   createAlldifferentOpCons,
 };
 
 /** size of the function pointer array */
