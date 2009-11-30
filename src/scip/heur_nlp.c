@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.41 2009/11/30 16:26:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.42 2009/11/30 16:31:42 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -123,7 +123,6 @@ SCIP_RETCODE addLinearConstraints(
    int              nconss;
    int              nuseconss;
    int              i;
-   int              j;
    int              k;
 
    assert(scip != NULL);
