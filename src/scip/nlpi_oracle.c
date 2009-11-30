@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.24 2009/11/30 18:47:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.25 2009/11/30 18:50:49 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -2435,7 +2435,7 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
          
          if( nnz >= maxnnz )
          {
-            maxnnz *= 2;
+            maxnnz = MAX(nnz, 2*maxnnz);
             SCIP_CALL( SCIPreallocMemoryArray(scip, &oracle->jaccols, maxnnz) );
          }
          
