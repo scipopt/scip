@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.33 2009/11/16 22:24:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.34 2009/11/30 09:37:38 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -639,63 +639,49 @@ SCIP_RETCODE createLinking(
 {
    SCIP_VAR** vars;
    SCIP_Real vals[] = {1.0,-1.0};
-   SCIP_Real value;
-   SCIP_Real sign;
+   SCIP_Real value1;
+   SCIP_Real value2;
    int nvars;
 
    nvars = 0;
-   sign = -1.0;
-   value = 0.0;
-
+   value1 = 0.0;
+   value2 = 0.0;
+ 
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, 2) );
    
    vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) name1);
    if( vars[nvars] != NULL )
-   {
       nvars++;
-      sign = 1.0;
-   }
-   else if( !isValue(name1, &value) )
+   else if( !isValue(name1, &value1) )
    {
       FZNCONSTANT* constant;
       
       constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) name1);
       assert(constant != NULL);
 
-      value = constant->value;
+      value1 = constant->value;
    }
 
    vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) name2);
    if( vars[nvars] != NULL )
       nvars++;
-   else if( !isValue(name2, &value) )
+   else if( !isValue(name2, &value2) )
    {
       FZNCONSTANT* constant;
       
       constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) name2);
       assert(constant != NULL);
       
-      value = constant->value;
+      value2 = constant->value;
    }
-     
-   assert( nvars > 0 );
-   
-   if( nvars == 2 )
-   {
-      SCIP_CALL( createLinearCons(scip, consname, 2, vars, vals, lhs, rhs) );
-   }
-   else
-   {
-      assert(nvars == 1);
-      
-      if( !SCIPisInfinity(scip, -lhs) )
-         lhs += (sign * value);
+ 
+   if( !SCIPisInfinity(scip, -lhs) )
+      lhs += (value2 - value1);
 
-      if( !SCIPisInfinity(scip, rhs) )
-         rhs += (sign * value);
-
-      SCIP_CALL( createLinearCons(scip, consname, 1, vars, vals, lhs, rhs) );
-   }
+   if( !SCIPisInfinity(scip, rhs) )
+      rhs += (value2 - value1);
+    
+   SCIP_CALL( createLinearCons(scip, consname, nvars, vars, vals, lhs, rhs) );
    
    SCIPfreeBufferArray(scip, &vars);
    
@@ -1832,7 +1818,8 @@ CREATE_CONSTRAINT(createLogicalOpCons)
       int nelements;
       
       /* the bool_eq constraint is processed in createComparisonOpCons() */
-      if( equalTokens(ftokens[1], "eq") )
+      if( equalTokens(ftokens[1], "eq") || equalTokens(ftokens[1], "ge") || equalTokens(ftokens[1], "le")
+          || equalTokens(ftokens[1], "lt") || equalTokens(ftokens[1], "gt") )
          return SCIP_OKAY;
       
       SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
@@ -1845,11 +1832,17 @@ CREATE_CONSTRAINT(createLogicalOpCons)
          SCIP_CONS* cons;
          SCIP_VAR** vars;
          int v;
+         int nvars;
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
+         if( equalTokens(ftokens[1], "ne") || equalTokens(ftokens[1], "not") )
+            nvars = 2;
+         else
+            nvars = 3;
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
          /* collect variable if constraint identifier is a variable */
-         for( v = 0; v < 3; ++v )
+         for( v = 0; v < nvars; ++v )
          {
             vars[v] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[v]);
             
@@ -1860,7 +1853,17 @@ CREATE_CONSTRAINT(createLogicalOpCons)
             }
          }   
 
-         if( equalTokens(ftokens[1], "or" ) )
+
+         if( equalTokens(ftokens[1], "ne" ) || equalTokens(ftokens[1], "not") )
+         {
+            SCIP_Real vals[] = {1.0, -1.0};
+
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, fname, 2, vars, vals, 1.0, 1.0, 
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+           
+            *created = TRUE;
+         } 
+         else if( equalTokens(ftokens[1], "or" ) )
          {
             SCIP_CALL( SCIPcreateConsOr(scip, &cons, fname, vars[2], 2, vars, 
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
