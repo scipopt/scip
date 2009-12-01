@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_default.c,v 1.71 2009/11/26 14:10:01 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp_default.c,v 1.72 2009/12/01 13:51:24 bzfgleix Exp $"
 
 /**@file   disp_default.c
  * @ingroup DISPLAYS
@@ -364,7 +364,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputLpavgiters)
       SCIPinfoMessage(scip, file, "     - ");
    else
       SCIPinfoMessage(scip, file, "%6.1f ", 
-         ((SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)SCIPgetNNodes(scip) - 1) );
+         (SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)(SCIPgetNNodes(scip) - 1) );
    
    return SCIP_OKAY;
 }
