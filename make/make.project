@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.14 2009/09/10 12:52:58 bzfpfets Exp $
+# $Id: make.project,v 1.15 2009/12/01 21:56:53 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -23,7 +23,7 @@
 #-----------------------------------------------------------------------------
 # detect host architecture
 #-----------------------------------------------------------------------------
-include $(SCIPDIR)/make/make.detecthost
+include make/make.detecthost
 
 
 #-----------------------------------------------------------------------------
@@ -51,7 +51,7 @@ LIBEXT		=	$(STATICLIBEXT)
 READLINE	=	true
 ZLIB		=	true
 GMP             =       auto
-ZIMPL		=	true
+ZIMPL		=	false
 IPOPT		=	false
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
@@ -121,7 +121,7 @@ EXEEXTENSION	=
 ALLSRC		=
 
 #-----------------------------------------------------------------------------
-include $(SCIPDIR)/make/make.$(BASE)
+include make/make.$(BASE)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP)
 -include $(SCIPDIR)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
