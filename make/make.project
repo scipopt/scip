@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: make.project,v 1.15 2009/12/01 21:56:53 bzfheinz Exp $
+# $Id: make.project,v 1.16 2009/12/01 21:58:40 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile to include in SCIP projects
@@ -51,7 +51,7 @@ LIBEXT		=	$(STATICLIBEXT)
 READLINE	=	true
 ZLIB		=	true
 GMP             =       auto
-ZIMPL		=	false
+ZIMPL		=	true
 IPOPT		=	false
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
