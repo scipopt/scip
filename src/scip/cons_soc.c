@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.8 2009/11/30 16:26:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.9 2009/12/01 11:54:01 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2394,14 +2394,20 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       SCIP_CALL( SCIPallocBufferArray(scip, &quadindex[i],  consdata->nvars + 1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &quadcoeff[i],  consdata->nvars + 1) );
       
-      nlininds[i] = consdata->rhsoffset ? 1 : 0;
+      if( nlininds )
+         nlininds[i] = consdata->rhsoffset ? 1 : 0;
+      else
+         assert(consdata->rhsoffset == 0.0);
       if( consdata->offsets )
          for( j = 0; j < consdata->nvars; ++j )
          {
             if( consdata->offsets[j] )
+            {
+               assert(nlininds != NULL);
                ++nlininds[i];
+            }
          }
-      if( nlininds[i] )
+      if( nlininds && nlininds[i] )
       {
          assert( havelin == TRUE );
          SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], nlininds[i]) );
@@ -2432,6 +2438,8 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
       
       if( consdata->rhsoffset )
       {
+         assert(lininds != NULL);
+         assert(linvals != NULL);
          lininds[i][lincnt] = quadrowidx[i][consdata->nvars];
          linvals[i][lincnt] = - 2 * consdata->rhscoeff * consdata->rhscoeff * consdata->rhsoffset;
          ++lincnt;
