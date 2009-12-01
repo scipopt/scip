@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.42 2009/11/30 16:31:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.43 2009/12/01 11:54:53 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -637,6 +637,169 @@ SCIP_RETCODE setupNLP(
 }
 #endif
 
+/** Sets up an NLP so that applyNlpHeur can be called.
+ * 
+ * Looks at the current problem and if it has continuous variables in nonlinear constraints.
+ * If so and if there is an NLP solver available, then sets up the NLP and sets *success to TRUE.
+ * Otherwise returns with *success == FALSE.
+ */
+SCIP_RETCODE SCIPsetupNlpHeur(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< NLP heuristic */
+   SCIP_Bool*            success             /**< if not NULL, indicates whether an NLP was setup */
+   )
+{
+   SCIP_HEURDATA* heurdata;
+   SCIP_Bool      havenlp;
+
+   assert(scip != NULL);
+   assert(heur != NULL);
+   
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+   
+   if( heurdata->nlpi != NULL )
+   {
+      SCIPdebugMessage("already have NLP; skip additional setup.\n");
+      if( success )
+         *success = TRUE;
+      return SCIP_OKAY;
+   }
+   
+   assert(SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED);
+   assert(SCIPgetStage(scip) < SCIP_STAGE_SOLVED);
+   
+   havenlp = FALSE; /* first assume all continuous variables are linear */
+
+   /* do not build NLP if there are no nonlinear continuous or impl. integer variables */
+   if( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
+   {
+      /* check if we have nonlinear continuous or impl. integer variables in the quadratic constraints */
+      SCIP_CONSHDLR* conshdlr;
+      
+      conshdlr = SCIPfindConshdlr(scip, "quadratic");
+      if( conshdlr && SCIPconshdlrGetNConss(conshdlr) )
+      {
+         int i;
+         int j;
+         for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
+         {
+            SCIP_VAR** quadvars;
+            SCIP_CONS* cons;
+            int nquadvars;
+
+            cons = SCIPconshdlrGetConss(conshdlr)[i];
+            assert(cons != NULL);
+
+            nquadvars = SCIPgetNQuadVarsQuadratic(scip, cons);
+            quadvars = SCIPgetQuadVarsQuadratic(scip, cons);
+            assert(nquadvars == 0 || quadvars != NULL);
+
+            for( j = 0; !havenlp && j < nquadvars; ++j )
+               if( SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_CONTINUOUS )
+                  havenlp = TRUE;
+         }
+      }
+
+      if (!havenlp)
+      {
+         conshdlr = SCIPfindConshdlr(scip, "soc");
+         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
+            havenlp = TRUE;  /* @TODO check if some SOC constraint has a continuous variable */
+      }
+
+#ifdef WITH_NL
+      if (!havenlp)
+      {
+         conshdlr = SCIPfindConshdlr(scip, "nonlinear");
+         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
+         {
+            SCIP_CONS*     cons;
+            SCIP_EXPRTREE* exprtree;
+            int            i, j;
+            for (i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i)
+            {
+               cons = SCIPconshdlrGetConss(conshdlr)[i];
+               exprtree = SCIPgetExprtreeNonlinear(cons);
+               if (!exprtree)
+                  continue;
+               for (j = 0; !havenlp && j < SCIPexprtreeGetNVars(exprtree); ++j)
+                  if (SCIPvarGetType(SCIPexprtreeGetVars(exprtree)[j]) > SCIP_VARTYPE_IMPLINT)
+                     havenlp = TRUE;
+            }
+         }
+      }
+#endif
+
+#ifdef WITH_SIGNPOWER
+      if (!havenlp)
+      {
+         conshdlr = SCIPfindConshdlr(scip, "signpower");
+         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
+         {
+            SCIP_CONS*     cons;
+            SCIP_VAR*      x;
+            int            i;
+            for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
+            {
+               cons     = SCIPconshdlrGetConss(conshdlr)[i];
+               x        = SCIPgetNonlinearVarSignpower(scip, cons);
+               if( x == NULL )
+                  continue;
+               if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
+                  havenlp = TRUE;
+            }
+         }
+      }
+#endif
+
+#ifdef WITH_UNIVARDEFINITE
+      if (!havenlp)
+      {
+         conshdlr = SCIPfindConshdlr(scip, "univardefinite");
+         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
+         {
+            SCIP_CONS*     cons;
+            SCIP_VAR*      x;
+            int            i;
+            for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
+            {
+               cons     = SCIPconshdlrGetConss(conshdlr)[i];
+               x        = SCIPgetNonlinearVarUnivardefinite(scip, cons);
+               if( x == NULL )
+                  continue;
+               if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
+                  havenlp = TRUE;
+            }
+         }
+      }
+#endif
+   }
+   
+   if( !havenlp )
+   { /* no suitable nonlinearities -> forget about NLP and return */
+      SCIPdebugMessage("No nonlinear continuous variables. NLP local search heuristic will not run.\n");
+      if( success )
+         *success = FALSE;
+      
+      return SCIP_OKAY;
+   }
+
+   /* setup NLP (if NLP solver available) */
+#ifdef WITH_IPOPT
+   SCIP_CALL( setupNLP(scip, heurdata) );
+   *success = TRUE;
+   
+#else
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
+   havenlp = FALSE;
+   if( success )
+      *success = FALSE;
+#endif
+   
+   return SCIP_OKAY;   
+}
+
 /** for a fixation of discrete variables, applies the variable bound constraints to the NLP */
 static
 SCIP_RETCODE applyVarBoundConstraints(
@@ -1023,139 +1186,19 @@ SCIP_DECL_HEURFREE(heurFreeNlp)
 static
 SCIP_DECL_HEURINITSOL(heurInitsolNlp)
 {
-   SCIP_Bool havenlp; /* first assume all continuous variables are linear */
+   SCIP_Bool havenlp;
    
    assert(scip != NULL);
    assert(heur != NULL);
    
+   /* do not setup NLP if heuristic is never called by SCIP */
    if( SCIPheurGetFreq(heur) < 0 )
       return SCIP_OKAY;
-
-   havenlp = FALSE;
-
-   /* do not build NLP if there are no nonlinear continuous or impl. integer variables */
-   if( SCIPgetNContVars(scip) > 0 || SCIPgetNImplVars(scip) > 0 )
-   {
-      /* check if we have nonlinear continuous or impl. integer variables in the quadratic constraints */
-      SCIP_CONSHDLR* conshdlr;
-      
-      conshdlr = SCIPfindConshdlr(scip, "quadratic");
-      if( conshdlr && SCIPconshdlrGetNConss(conshdlr) )
-      {
-         int i;
-         int j;
-         for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
-         {
-            SCIP_VAR** quadvars;
-            SCIP_CONS* cons;
-            int nquadvars;
-
-            cons = SCIPconshdlrGetConss(conshdlr)[i];
-            assert(cons != NULL);
-
-            nquadvars = SCIPgetNQuadVarsQuadratic(scip, cons);
-            quadvars = SCIPgetQuadVarsQuadratic(scip, cons);
-            assert(nquadvars == 0 || quadvars != NULL);
-
-            for( j = 0; !havenlp && j < nquadvars; ++j )
-               if( SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_IMPLINT || SCIPvarGetType(quadvars[j]) == SCIP_VARTYPE_CONTINUOUS )
-                  havenlp = TRUE;
-         }
-      }
-
-      if (!havenlp)
-      {
-         conshdlr = SCIPfindConshdlr(scip, "soc");
-         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-            havenlp = TRUE;  /* @TODO check if some SOC constraint has a continuous variable */
-      }
-
-#ifdef WITH_NL
-      if (!havenlp)
-      {
-         conshdlr = SCIPfindConshdlr(scip, "nonlinear");
-         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-         {
-            SCIP_CONS*     cons;
-            SCIP_EXPRTREE* exprtree;
-            int            i, j;
-            for (i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i)
-            {
-               cons = SCIPconshdlrGetConss(conshdlr)[i];
-               exprtree = SCIPgetExprtreeNonlinear(cons);
-               if (!exprtree)
-                  continue;
-               for (j = 0; !havenlp && j < SCIPexprtreeGetNVars(exprtree); ++j)
-                  if (SCIPvarGetType(SCIPexprtreeGetVars(exprtree)[j]) > SCIP_VARTYPE_IMPLINT)
-                     havenlp = TRUE;
-            }
-         }
-      }
-#endif
-
-#ifdef WITH_SIGNPOWER
-      if (!havenlp)
-      {
-         conshdlr = SCIPfindConshdlr(scip, "signpower");
-         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-         {
-            SCIP_CONS*     cons;
-            SCIP_VAR*      x;
-            int            i;
-            for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
-            {
-               cons     = SCIPconshdlrGetConss(conshdlr)[i];
-               x        = SCIPgetNonlinearVarSignpower(scip, cons);
-               if( x == NULL )
-                  continue;
-               if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
-                  havenlp = TRUE;
-            }
-         }
-      }
-#endif
-
-#ifdef WITH_UNIVARDEFINITE
-      if (!havenlp)
-      {
-         conshdlr = SCIPfindConshdlr(scip, "univardefinite");
-         if (conshdlr && SCIPconshdlrGetNConss(conshdlr))
-         {
-            SCIP_CONS*     cons;
-            SCIP_VAR*      x;
-            int            i;
-            for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
-            {
-               cons     = SCIPconshdlrGetConss(conshdlr)[i];
-               x        = SCIPgetNonlinearVarUnivardefinite(scip, cons);
-               if( x == NULL )
-                  continue;
-               if( SCIPvarGetType(x) > SCIP_VARTYPE_IMPLINT )
-                  havenlp = TRUE;
-            }
-         }
-      }
-#endif
-   }
-
-   if( havenlp )
-   { 
-      SCIP_HEURDATA* heurdata;
-
-      /* get heuristic's data */
-      heurdata = SCIPheurGetData(heur);
-      assert( heurdata != NULL );
-
-#ifdef WITH_IPOPT
-      SCIP_CALL( setupNLP(scip, heurdata) );
-#else
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
-#endif
-   }
-   else
-   {
-      SCIPdebugMessage("No nonlinear continuous variables. NLP local search heuristic will not run.\n");
-   }
+   
+   SCIP_CALL( SCIPsetupNlpHeur(scip, heur, &havenlp) );
+   
+   if( !havenlp )
+      return SCIP_OKAY;
    
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
