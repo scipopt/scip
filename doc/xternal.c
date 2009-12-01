@@ -3977,7 +3977,7 @@
  *  \n
  *  All test problems have to be listed by a relative path, e.g., "../../problems/instance1.lp" 
  *  or absolute path, e.g., "/home/problems/instance2.mps" in this file. Thereby, 
- *  only one problem pre line (since the command <code>cat</code> is used to parse this file). 
+ *  only one problem per line (since the command <code>cat</code> is used to parse this file).
  *  Note that these problem have to be readable for SCIP in order to solve them. 
  *  However, you can merge different file formats.
  *
@@ -4076,7 +4076,7 @@
  *
  *  To run SCIP with a custom settings file, say for example <tt>fast.set</tt>, we call
  *
- *  <code> make TEST=testrun SETTING=fast test</code>
+ *  <code> make TEST=testrun SETTINGS=fast test</code>
  *
  *  in the SCIP root directory.
  *
