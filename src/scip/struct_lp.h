@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_lp.h,v 1.54 2009/07/31 11:37:18 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_lp.h,v 1.55 2009/12/01 19:00:41 bzfgleix Exp $"
 
 /**@file   struct_lp.h
  * @brief  datastructures for LP management
@@ -262,12 +262,14 @@ struct SCIP_Lp
    SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */
    SCIP_Bool             lpilpinfo;          /**< current LPINFO setting in LPI */
+   SCIP_Bool             lpisimplexrowrep;   /**< should simplex algorithm use row representation of the basis? */
    SCIP_Bool             lpihasfeastol;      /**< does the LPI support the FEASTOL parameter? */
    SCIP_Bool             lpihasdualfeastol;  /**< does the LPI support the DUALFEASTOL parameter? */
    SCIP_Bool             lpihasbarrierconvtol;/**< does the LPI support the BARRIERCONVTOL parameter? */
    SCIP_Bool             lpihasfastmip;      /**< does the LPI support the FASTMIP parameter? */
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
+   SCIP_Bool             lpihassimplexrowrep;/**< does the LPI support the SIMPLEXROWREP parameter? */
 };
 
 #ifdef __cplusplus

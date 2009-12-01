@@ -29,7 +29,7 @@ features:
 - The solution behavior of SCIP can be diversified by randomly permuting constraints and variables or randomly determining 
   a set of branching variables with a unique high priority
 - the MPS reader can now read MIQPs and MIQCPs where a quadratic objective function can be specified by a QMATRIX or QUADOBJ section and
-  a the quadratic part of a quadratic constraint by a QCMATRIX
+  the quadratic part of a quadratic constraint by a QCMATRIX
 - the MPS reader can now write quadratic and soc constraints
 - new undercover heuristic for MIQCPs: fixes variables such as to obtain a MIP and solves this
 - modified implementation of separation algorithms in cons_knapsack.c according to results of diploma thesis; including superadditive lifting (disabled) 
@@ -54,11 +54,12 @@ plugins:
 parameters: 
 - added parameter <misc/usesmalltables> which results in using smaller tables for names, cliques and cuts and improves the
   performace for smaller instances, default value FALSE 
-- added parameter <misc/usevartabl>e and <misc/useconstable> which turns on/off the usage of hashtables mapping from 
+- added parameter <misc/usevartable> and <misc/useconstable> which turns on/off the usage of hashtables mapping from 
   variable/constraint names to the variables/constraints; when turned off, SCIPfindVar() and SCIPfindCons() may not be used; 
   the hashtables can be turned off for subMIPs to improve the performance, default value TRUE
 - removed parameter constraints/knapsack/maxnumcardlift and adapted setting files
 - added parameter <reading/zplreader/usestartsol> which allows to switch ZIMPL start solutions off, default value TRUE
+- added parameter <lp/simplexrowrep> telling simplex solver to use row representation of the basis (if possible), default value FALSE
 
 SCIP version 1.2.0
 ===============

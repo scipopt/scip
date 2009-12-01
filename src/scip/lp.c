@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.328 2009/09/10 10:01:35 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.329 2009/12/01 19:00:40 bzfgleix Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -2058,6 +2058,31 @@ SCIP_RETCODE lpSetPresolving(
       SCIP_CALL( lpSetBoolpar(lp, SCIP_LPPAR_PRESOLVING, presolving, success) );
       if( *success )
          lp->lpipresolving = presolving;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sets the SIMPLEXROWREP setting of the LP solver */
+static
+SCIP_RETCODE lpSetSimplexRowRep(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             simplexrowrep,      /**< new SIMPLEXROWREP setting */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   SCIP_CALL( lpCheckBoolpar(lp, SCIP_LPPAR_SIMPLEXROWREP, lp->lpisimplexrowrep) );
+
+   if( simplexrowrep != lp->lpisimplexrowrep )
+   {
+      SCIP_CALL( lpSetBoolpar(lp, SCIP_LPPAR_SIMPLEXROWREP, simplexrowrep, success) );
+      if( *success )
+         lp->lpisimplexrowrep = simplexrowrep;
    }
    else
       *success = FALSE;
@@ -6139,6 +6164,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpiscaling = TRUE;
    (*lp)->lpipresolving = TRUE;
    (*lp)->lpilpinfo = FALSE;
+   (*lp)->lpisimplexrowrep = FALSE;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
@@ -6219,6 +6245,14 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: lpinfo setting not available -- SCIP parameter has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetBoolpar(*lp, SCIP_LPPAR_SIMPLEXROWREP, (*lp)->lpisimplexrowrep, &success) );
+   (*lp)->lpihassimplexrowrep = success;
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: simplexrowrep setting not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
 
@@ -10539,6 +10573,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetFastmip(lp, fastmip, &success) );
    SCIP_CALL( lpSetScaling(lp, set->lp_scaling, &success) );
    SCIP_CALL( lpSetPresolving(lp, set->lp_presolving, &success) );
+   SCIP_CALL( lpSetSimplexRowRep(lp, set->lp_simplexrowrep, &success) );
    SCIP_CALL( lpSetPricingChar(lp, set->lp_pricing) );
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );

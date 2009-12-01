@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.208 2009/11/28 11:27:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.209 2009/12/01 19:00:41 bzfgleix Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -163,7 +163,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALROOTONLY    TRUE /**< should the lexicographic dual algorithm be applied only at the root node */
 #define SCIP_DEFAULT_LP_LEXDUALMAXROUNDS      2 /**< maximum number of rounds in the dual lexicographic algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
-
+#define SCIP_DEFAULT_LP_SIMPLEXROWREP     FALSE /**< should simplex algorithm use row representation of the basis? */
 
 /* Memory */
 
@@ -753,6 +753,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/lexdualbasic",
          "choose fractional basic variables in lexicographic dual algorithm?",
          &(*set)->lp_lexdualbasic, TRUE, SCIP_DEFAULT_LP_LEXDUALBASIC,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, blkmem,
+         "lp/simplexrowrep",
+         "should simplex algorithm use row representation of the basis?",
+         &(*set)->lp_simplexrowrep, TRUE, SCIP_DEFAULT_LP_SIMPLEXROWREP,
          NULL, NULL) );
 
    /* memory parameters */
