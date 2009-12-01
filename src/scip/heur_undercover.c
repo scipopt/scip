@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.28 2009/11/30 13:39:35 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.29 2009/12/01 11:19:17 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -724,8 +724,8 @@ SCIP_RETCODE createSubProblem(
 
    SCIPdebugMessage("undercover heuristic fixed %d variables (%d integer variables to rounded LP value)\n", fixingcounter, roundedfixingcounter);
 
-   /* abort, if all variables were fixed to their current LP value */
-   if( fixingcounter == nvars && roundedfixingcounter == 0)
+   /* abort, if nothing was fixed or all variables were fixed to their current LP value */
+   if( fixingcounter == 0 || (fixingcounter == nvars && roundedfixingcounter == 0) )
    {
       *success = FALSE;
       SCIPhashmapFree(&varmap);
