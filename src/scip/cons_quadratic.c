@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.67 2009/12/01 11:55:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.68 2009/12/01 13:42:25 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -5129,6 +5129,16 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
    {
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
+      
+      /* skip local constraints; TODO do not add empty constraints to NLP */
+      if( SCIPconsIsLocal(conss[i]) )
+      {
+         lhs[i] = -SCIPinfinity(scip);
+         rhs[i] =  SCIPinfinity(scip);
+         nlininds[i] = 0;
+         nquadrows[i] = 0;
+         continue;
+      }
 
       lhs[i] = consdata->lhs;
       rhs[i] = consdata->rhs;

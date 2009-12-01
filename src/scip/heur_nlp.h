@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.h,v 1.7 2009/12/01 11:54:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.h,v 1.8 2009/12/01 13:42:25 bzfviger Exp $"
 
 /**@file   heur_nlp.h
  * @brief  NLP local search primal heuristic
@@ -46,19 +46,6 @@ SCIP_RETCODE SCIPheurNlpUpdateStartpoint(
    SCIP_HEUR*            heur,               /**< NLP heuristic */
    SCIP_SOL*             solcand,            /**< solution candidate */
    SCIP_Real             violation           /**< constraint violation of solution candidate */
-   );
-
-/** Sets up an NLP so that applyNlpHeur can be called.
- * 
- * Looks at the current problem and if it has continuous variables in nonlinear constraints.
- * If so and if there is an NLP solver available, then sets up the NLP and sets *success to TRUE.
- * Otherwise returns with *success == FALSE.
- */
-extern
-SCIP_RETCODE SCIPsetupNlpHeur(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< NLP heuristic */
-   SCIP_Bool*            success             /**< if not NULL, indicates whether an NLP was setup */
    );
 
 /** main procedure of the NLP heuristic */

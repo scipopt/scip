@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.43 2009/12/01 11:54:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.44 2009/12/01 13:42:25 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -70,6 +70,7 @@ struct SCIP_HeurData
 {
    SCIP_NLPI*            nlpi;               /**< NLP solver interface */
    SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
+   SCIP_Bool             triedsetupnlp;      /**< whether we have tried to setup an NLP */ 
    
    int                   nvars;              /**< number of variables in NLP */
    SCIP_VAR**            var_nlp2scip;       /**< mapping variables in NLP to SCIP variables */
@@ -142,6 +143,8 @@ SCIP_RETCODE addLinearConstraints(
    nuseconss = 0;
    for( i = 0; i < nconss; ++i )
    {
+      if( SCIPconsIsLocal(conss[i]) )
+         continue;
       for( k = 0; k < SCIPgetNVarsLinear(scip, conss[i]); ++k )
       {
          if( SCIPvarGetType(SCIPgetVarsLinear(scip, conss[i])[k]) > SCIP_VARTYPE_INTEGER )
@@ -224,6 +227,7 @@ SCIP_RETCODE collectVarBoundConstraints(
                                             
    int                   nconss;             /* total number of varbound constraints */
    int                   nconss4nlp;         /* number of varbound constraints we have to add to NLP because vbdvar is only implicit integer */
+   int                   nconsslocal;        /* number of local varbound constraints */
    int                   i;                 
 
    assert(scip != NULL);
@@ -239,26 +243,26 @@ SCIP_RETCODE collectVarBoundConstraints(
    
    conss = SCIPconshdlrGetConss(varbndconshdlr);
    
-   if( heurdata->varboundexplicit )
+   /* count for how many global constraint the Vbdvar is only implicit integer, so we need to add constraint to NLP */
+   nconss4nlp = 0;
+   nconsslocal = 0;
+   for( i = 0; i < nconss; ++i )
    {
-      /* count for how many constraint the Vbdvar is only implicit integer, so we need to add constraint to NLP */
-      nconss4nlp = 0;
-      for( i = 0; i < nconss; ++i )
+      if( SCIPconsIsLocal(conss[i]) )
       {
-         if( SCIPvarGetType(SCIPgetVbdvarVarbound(scip, conss[i])) > SCIP_VARTYPE_INTEGER )
-         {  /* will add constraint to NLP soon */
-            nconss4nlp++;
-         }
-         else
-         {  /* will handle constraint explicitely before solving NLP */
-            SCIP_CALL( SCIPcaptureCons(scip, conss[i]) );
-         }
+         ++nconsslocal;
+      }
+      else if( SCIPvarGetType(SCIPgetVbdvarVarbound(scip, conss[i])) > SCIP_VARTYPE_INTEGER )
+      {  /* will add constraint to NLP soon */
+         nconss4nlp++;
+      }
+      else
+      {  /* will handle constraint explicitely before solving NLP */
+         SCIP_CALL( SCIPcaptureCons(scip, conss[i]) );
       }
    }
-   else /* user wants us to add all varbound constraints to NLP */
-      nconss4nlp = nconss;
 
-   if( nconss4nlp )
+   if( nconsslocal == 0 && nconss4nlp != 0 )
    {
       SCIP_Real*       lhs;
       SCIP_Real*       rhs;
@@ -269,13 +273,13 @@ SCIP_RETCODE collectVarBoundConstraints(
       int              k;
 
       /* number of and space for varbound constraints that are handled explicitely */
-      heurdata->nvarbndconss = nconss - nconss4nlp;
+      heurdata->nvarbndconss = nconss - nconss4nlp - nconsslocal;
       if( heurdata->nvarbndconss )
          SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->varbndconss, heurdata->nvarbndconss) );
 
       /* memory to store those varbound constraints that are added to the NLP as linear constraint */
-      SCIP_CALL( SCIPallocBufferArray(scip, &lhs, nconss4nlp) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &rhs, nconss4nlp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lhs,      nconss4nlp) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rhs,      nconss4nlp) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nlininds, nconss4nlp) );
       SCIP_CALL( SCIPallocBufferArray(scip, &lininds,  nconss4nlp) );
       SCIP_CALL( SCIPallocBufferArray(scip, &linvals,  nconss4nlp) );
@@ -285,6 +289,10 @@ SCIP_RETCODE collectVarBoundConstraints(
       
       for( i = 0; i < nconss; ++i )
       {
+         /* skip local constraints */
+         if( SCIPconsIsLocal(conss[i]) )
+            continue;
+         
          /* treat constraint explicitly via boundchanges */
          if( heurdata->varboundexplicit && SCIPvarGetType(SCIPgetVbdvarVarbound(scip, conss[i])) <= SCIP_VARTYPE_INTEGER )
          { 
@@ -336,7 +344,7 @@ SCIP_RETCODE collectVarBoundConstraints(
       SCIPfreeBufferArray(scip, &lhs);
    }
    else
-   {  /* all varbound constraints are handled explicitely */
+   {  /* all varbound constraints are global and handled explicitely */
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->varbndconss, conss, nconss) );
       heurdata->nvarbndconss = nconss;
    }
@@ -637,16 +645,16 @@ SCIP_RETCODE setupNLP(
 }
 #endif
 
-/** Sets up an NLP so that applyNlpHeur can be called.
+/** Checks if an NLP should be setup and if positive, then sets up the NLP.
  * 
  * Looks at the current problem and if it has continuous variables in nonlinear constraints.
  * If so and if there is an NLP solver available, then sets up the NLP and sets *success to TRUE.
  * Otherwise returns with *success == FALSE.
  */
-SCIP_RETCODE SCIPsetupNlpHeur(
+static
+SCIP_RETCODE checkCIPandSetupNLP(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEUR*            heur,               /**< NLP heuristic */
-   SCIP_Bool*            success             /**< if not NULL, indicates whether an NLP was setup */
+   SCIP_HEUR*            heur                /**< NLP heuristic */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -660,11 +668,12 @@ SCIP_RETCODE SCIPsetupNlpHeur(
    
    if( heurdata->nlpi != NULL )
    {
+      assert(heurdata->triedsetupnlp == TRUE);
       SCIPdebugMessage("already have NLP; skip additional setup.\n");
-      if( success )
-         *success = TRUE;
       return SCIP_OKAY;
    }
+   
+   heurdata->triedsetupnlp = TRUE;
    
    assert(SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED);
    assert(SCIPgetStage(scip) < SCIP_STAGE_SOLVED);
@@ -690,6 +699,9 @@ SCIP_RETCODE SCIPsetupNlpHeur(
 
             cons = SCIPconshdlrGetConss(conshdlr)[i];
             assert(cons != NULL);
+            
+            if( SCIPconsIsLocal(cons) )
+               continue;
 
             nquadvars = SCIPgetNQuadVarsQuadratic(scip, cons);
             quadvars = SCIPgetQuadVarsQuadratic(scip, cons);
@@ -720,6 +732,10 @@ SCIP_RETCODE SCIPsetupNlpHeur(
             for (i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i)
             {
                cons = SCIPconshdlrGetConss(conshdlr)[i];
+               
+               if( SCIPconsIsLocal(cons) )
+                  continue;
+
                exprtree = SCIPgetExprtreeNonlinear(cons);
                if (!exprtree)
                   continue;
@@ -743,6 +759,10 @@ SCIP_RETCODE SCIPsetupNlpHeur(
             for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
             {
                cons     = SCIPconshdlrGetConss(conshdlr)[i];
+               
+               if( SCIPconsIsLocal(cons) )
+                  continue;
+
                x        = SCIPgetNonlinearVarSignpower(scip, cons);
                if( x == NULL )
                   continue;
@@ -765,6 +785,10 @@ SCIP_RETCODE SCIPsetupNlpHeur(
             for( i = 0; !havenlp && i < SCIPconshdlrGetNConss(conshdlr); ++i )
             {
                cons     = SCIPconshdlrGetConss(conshdlr)[i];
+               
+               if( SCIPconsIsLocal(cons) )
+                  continue;
+
                x        = SCIPgetNonlinearVarUnivardefinite(scip, cons);
                if( x == NULL )
                   continue;
@@ -779,22 +803,15 @@ SCIP_RETCODE SCIPsetupNlpHeur(
    if( !havenlp )
    { /* no suitable nonlinearities -> forget about NLP and return */
       SCIPdebugMessage("No nonlinear continuous variables. NLP local search heuristic will not run.\n");
-      if( success )
-         *success = FALSE;
-      
       return SCIP_OKAY;
    }
 
    /* setup NLP (if NLP solver available) */
 #ifdef WITH_IPOPT
    SCIP_CALL( setupNLP(scip, heurdata) );
-   *success = TRUE;
-   
 #else
    SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "No NLP solver available. NLP local search heuristic will not run.\n");
    havenlp = FALSE;
-   if( success )
-      *success = FALSE;
 #endif
    
    return SCIP_OKAY;   
@@ -977,6 +994,12 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* try to setup NLP if not tried before */
+   if( heurdata->nlpi == NULL && !heurdata->triedsetupnlp )
+   {
+      SCIP_CALL( checkCIPandSetupNLP(scip, heur) );
+   }
 
    /* not initialized */
    if( heurdata->nlpi == NULL )
@@ -1186,7 +1209,7 @@ SCIP_DECL_HEURFREE(heurFreeNlp)
 static
 SCIP_DECL_HEURINITSOL(heurInitsolNlp)
 {
-   SCIP_Bool havenlp;
+   SCIP_HEURDATA* heurdata;
    
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1194,10 +1217,14 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    /* do not setup NLP if heuristic is never called by SCIP */
    if( SCIPheurGetFreq(heur) < 0 )
       return SCIP_OKAY;
+
+   /* try to setup NLP; fails if there are no nonlinear continuous variables or there is no NLP solver */
+   SCIP_CALL( checkCIPandSetupNLP(scip, heur) );
+
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
    
-   SCIP_CALL( SCIPsetupNlpHeur(scip, heur, &havenlp) );
-   
-   if( !havenlp )
+   if( heurdata->nlpi == NULL )
       return SCIP_OKAY;
    
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
@@ -1246,6 +1273,8 @@ SCIP_DECL_HEUREXITSOL(heurExitsolNlp)
    }
 
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
+   
+   heurdata->triedsetupnlp = FALSE;
 
    return SCIP_OKAY;
 }

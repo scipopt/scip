@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.9 2009/12/01 11:54:01 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.10 2009/12/01 13:42:25 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -2347,6 +2347,9 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    {
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
+      
+      if( SCIPconsIsLocal(conss[i]) )
+         continue;
 
       if( consdata->rhsoffset != 0.0 )
          havelin = TRUE;
@@ -2382,6 +2385,21 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    {
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
+      
+      /* skip local constraints; TODO do not add empty constraints to NLP */
+      if( SCIPconsIsLocal(conss[i]) )
+      {
+         if (nlininds)
+            nlininds[i] = 0;
+         nquadrows[i] = 0;
+         quadrowidx[i] = NULL;
+         quadoffset[i] = NULL;
+         quadindex[i] = NULL;
+         quadcoeff[i] = NULL;
+         lhs[i] = -SCIPinfinity(scip);
+         rhs[i] =  SCIPinfinity(scip);
+         continue;
+      }
 
       lhs[i] = -SCIPinfinity(scip);
       rhs[i] = -consdata->constant;
