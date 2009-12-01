@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.66 2009/11/30 18:04:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.67 2009/12/01 11:55:13 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7493,7 +7493,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
  */
 int SCIPgetNLinearVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7507,7 +7507,7 @@ int SCIPgetNLinearVarsQuadratic(
  */
 SCIP_VAR** SCIPgetLinearVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7520,7 +7520,7 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
  */
 int SCIPgetNQuadVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7534,7 +7534,7 @@ int SCIPgetNQuadVarsQuadratic(
  */
 SCIP_VAR** SCIPgetQuadVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7548,7 +7548,7 @@ SCIP_VAR** SCIPgetQuadVarsQuadratic(
  */
 SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7562,7 +7562,7 @@ SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(
  */
 SCIP_Real* SCIPgetLinearCoefsQuadVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7576,7 +7576,7 @@ SCIP_Real* SCIPgetLinearCoefsQuadVarsQuadratic(
  */
 SCIP_Real* SCIPgetSqrCoefsQuadVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7589,7 +7589,7 @@ SCIP_Real* SCIPgetSqrCoefsQuadVarsQuadratic(
  */
 int SCIPgetNBilinTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7603,7 +7603,7 @@ int SCIPgetNBilinTermsQuadratic(
  */
 SCIP_VAR** SCIPgetBilinVars1Quadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7617,7 +7617,7 @@ SCIP_VAR** SCIPgetBilinVars1Quadratic(
  */
 SCIP_VAR** SCIPgetBilinVars2Quadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7631,7 +7631,7 @@ SCIP_VAR** SCIPgetBilinVars2Quadratic(
  */
 SCIP_Real* SCIPgetBilinCoefsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7645,7 +7645,7 @@ SCIP_Real* SCIPgetBilinCoefsQuadratic(
  */
 int* SCIPgetNAdjBilinQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7659,7 +7659,7 @@ int* SCIPgetNAdjBilinQuadratic(
  */
 int** SCIPgetAdjBilinQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7672,7 +7672,7 @@ int** SCIPgetAdjBilinQuadratic(
  */
 SCIP_Real SCIPgetLhsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
@@ -7685,11 +7685,61 @@ SCIP_Real SCIPgetLhsQuadratic(
  */
 SCIP_Real SCIPgetRhsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    )
 {
    assert(cons != NULL);
    assert(SCIPconsGetData(cons) != NULL);
    
    return SCIPconsGetData(cons)->rhs;
+}
+
+/** Indicates whether the quadratic function of a quadratic constraint is (known to be) convex.
+ */
+SCIP_Bool SCIPisConvexQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
+   
+   return SCIPconsGetData(cons)->isconvex;
+}
+
+/** Indicates whether the quadratic function of a quadratic constraint is (known to be) concave.
+ */
+SCIP_Bool SCIPisConcaveQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+   assert(SCIPconsGetData(cons) != NULL);
+   
+   return SCIPconsGetData(cons)->isconcave;
+}
+
+/** Computes the violation of a constraint by a solution */
+SCIP_RETCODE SCIPgetViolationQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
+   SCIP_Real*            violation           /**< buffer to store violation of constraint */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(violation != NULL);
+   
+   SCIP_CALL( computeViolation(scip, cons, sol, TRUE) ); /* we assume that scaling was left on */
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   *violation = MAX(consdata->lhsviol, consdata->rhsviol);
+   
+   return SCIP_OKAY;
 }

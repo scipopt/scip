@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.13 2009/09/21 18:00:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.14 2009/12/01 11:55:13 bzfviger Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -165,7 +165,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
 extern
 int SCIPgetNLinearVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the variables in the linear part of a quadratic constraint.
@@ -174,7 +174,7 @@ int SCIPgetNLinearVarsQuadratic(
 extern
 SCIP_VAR** SCIPgetLinearVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the number of variables in the quadratic part of a quadratic constraint.
@@ -182,7 +182,7 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
 extern
 int SCIPgetNQuadVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the variables in the quadratic part of a quadratic constraint.
@@ -191,7 +191,7 @@ int SCIPgetNQuadVarsQuadratic(
 extern
 SCIP_VAR** SCIPgetQuadVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the coefficients in the linear part of a quadratic constraint.
@@ -200,7 +200,7 @@ SCIP_VAR** SCIPgetQuadVarsQuadratic(
 extern
 SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the linear coefficients in the quadratic part of a quadratic constraint.
@@ -209,7 +209,7 @@ SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(
 extern
 SCIP_Real* SCIPgetLinearCoefsQuadVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the square coefficients in the quadratic part of a quadratic constraint.
@@ -218,7 +218,7 @@ SCIP_Real* SCIPgetLinearCoefsQuadVarsQuadratic(
 extern
 SCIP_Real* SCIPgetSqrCoefsQuadVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the number of bilinear terms in a quadratic constraint.
@@ -226,7 +226,7 @@ SCIP_Real* SCIPgetSqrCoefsQuadVarsQuadratic(
 extern
 int SCIPgetNBilinTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the first variables in the bilinear terms in a quadratic constraint.
@@ -235,7 +235,7 @@ int SCIPgetNBilinTermsQuadratic(
 extern
 SCIP_VAR** SCIPgetBilinVars1Quadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the second variables in the bilinear terms in a quadratic constraint.
@@ -244,7 +244,7 @@ SCIP_VAR** SCIPgetBilinVars1Quadratic(
 extern
 SCIP_VAR** SCIPgetBilinVars2Quadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the coefficients of the bilinear terms in a quadratic constraint.
@@ -253,7 +253,7 @@ SCIP_VAR** SCIPgetBilinVars2Quadratic(
 extern
 SCIP_Real* SCIPgetBilinCoefsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets for each quadratic variable the number of bilinear terms in which the variable is involved in a quadratic constraint.
@@ -262,7 +262,7 @@ SCIP_Real* SCIPgetBilinCoefsQuadratic(
 extern
 int* SCIPgetNAdjBilinQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets for each quadratic variable the indices of bilinear terms in which the variable is involved in a quadratic constraint.
@@ -271,7 +271,7 @@ int* SCIPgetNAdjBilinQuadratic(
 extern
 int** SCIPgetAdjBilinQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the left hand side of a quadratic constraint.
@@ -279,7 +279,7 @@ int** SCIPgetAdjBilinQuadratic(
 extern
 SCIP_Real SCIPgetLhsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
 
 /** Gets the right hand side of a quadratic constraint.
@@ -287,8 +287,34 @@ SCIP_Real SCIPgetLhsQuadratic(
 extern
 SCIP_Real SCIPgetRhsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint data */
+   SCIP_CONS*            cons                /**< constraint */
    );
+
+/** Indicates whether the quadratic function of a quadratic constraint is (known to be) convex.
+ */
+extern
+SCIP_Bool SCIPisConvexQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** Indicates whether the quadratic function of a quadratic constraint is (known to be) concave.
+ */
+extern
+SCIP_Bool SCIPisConcaveQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** Gets the violation of a constraint by a solution */
+extern
+SCIP_RETCODE SCIPgetViolationQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution which violation to calculate, or NULL for LP solution */
+   SCIP_Real*            violation           /**< buffer to store violation of constraint */
+   );
+   
 
 /** NLPI initialization method of constraint handler
  * 
