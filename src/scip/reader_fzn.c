@@ -12,9 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.35 2009/11/30 23:34:29 bzfheinz Exp $"
-
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.36 2009/12/02 00:38:03 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -1858,7 +1856,7 @@ CREATE_CONSTRAINT(createLogicalOpCons)
 
          if( equalTokens(ftokens[1], "ne" ) || equalTokens(ftokens[1], "not") )
          {
-            SCIP_Real vals[] = {1.0, -1.0};
+            SCIP_Real vals[] = {1.0, 1.0};
 
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, fname, 2, vars, vals, 1.0, 1.0, 
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
