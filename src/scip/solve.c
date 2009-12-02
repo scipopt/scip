@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.283 2009/12/02 01:25:38 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.284 2009/12/02 01:30:58 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2531,7 +2531,7 @@ SCIP_RETCODE solveNode(
       if( solverelax && !(*cutoff) )
       {
          /**  clears the storage for relaxation branching */
-         SCIP_CALL( SCIPbranchcandClearRelaxCands(branchcand) );
+         SCIPbranchcandClearRelaxCands(branchcand);
 
          SCIP_CALL( solveNodeRelax(set, stat, tree, actdepth, TRUE, cutoff, &propagateagain, &solvelpagain, &solverelaxagain) );
 
