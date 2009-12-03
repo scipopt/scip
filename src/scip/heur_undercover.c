@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.29 2009/12/01 11:19:17 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.30 2009/12/03 00:34:09 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -34,6 +34,7 @@
 #include "scip/heur_undercover.h"
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
+#include "scip/cons_and.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_setppc.h"
@@ -221,6 +222,94 @@ SCIP_RETCODE createPpcProblem(
       SCIP_CALL( SCIPaddVar(ppcscip, ppcvars[i]) );
    }
 
+   /* go through all and constraints in the original problem */
+   conshdlr = SCIPfindConshdlr(scip, "and");
+   if( conshdlr != NULL )
+   {
+      for( i = 0; i < SCIPconshdlrGetNConss(conshdlr); ++i )
+      {
+         SCIP_CONS* andcons;
+         SCIP_CONS* ppccons;
+         SCIP_VAR** andvars;
+         SCIP_VAR** ppcconsvars;
+
+         int ntofix;
+
+         andcons = SCIPconshdlrGetConss(conshdlr)[i];
+         assert(andcons != NULL);
+
+         SCIP_CALL( SCIPallocBufferArray(ppcscip, &ppcconsvars, SCIPgetNVarsAnd(scip, andcons)) );
+         ntofix = 0;
+         BMSclearMemoryArray(consmarker, nvars);
+
+         /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+         if( SCIPvarGetProbindex(SCIPgetResultantAnd(scip, andcons)) == -1 )
+         {
+            SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(andcons));
+            SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+            goto TERMINATE;
+         }
+
+         /* and variables */
+         andvars = SCIPgetVarsAnd(scip, andcons);
+         assert(andvars != NULL);
+
+         for( t = 0; t < SCIPgetNVarsAnd(scip, andcons); ++t )
+         {
+            assert(andvars[t] != NULL);
+
+            /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+            probindex = SCIPvarGetProbindex(andvars[t]);
+            if( probindex == -1 )
+            {
+               SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(andcons));
+               SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+               goto TERMINATE;
+            }
+
+            /* if variable is already fixed: nothing to do; if already fixed to 0 entire constraint is already linear */
+            if( termIsLinear(scip, andvars[t], 1.0, local) )
+            {
+               if( (local && SCIPisFeasZero(scip, SCIPvarGetLbLocal(andvars[t]))) || (!local && SCIPisFeasZero(scip, SCIPvarGetLbGlobal(andvars[t]))) )
+               {
+                  ntofix = 0;
+                  break;
+               }
+               else
+                  continue;
+            }
+
+            SCIP_CALL( SCIPgetNegatedVar(ppcscip, ppcvars[probindex], &ppcconsvars[ntofix]) );
+            ++ntofix;
+
+            ++termcounter[probindex];
+            if( !consmarker[probindex] )
+               incConsCounter(conscounter, consmarker, probindex);
+         }
+
+         if( ntofix > 0 )
+         {
+            /* get name of the original constraint and add the string "_and" */
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_and", SCIPconsGetName(andcons));
+
+            SCIP_CALL( SCIPcreateConsSetpack(ppcscip, &ppccons, name, ntofix, ppcconsvars,
+                  TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+            if( ppccons == NULL )
+            {
+               SCIPdebugMessage("failed to create set packing constraint %s: terminating undercover heuristic\n", name);
+               SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+               goto TERMINATE;
+            }
+
+            SCIP_CALL( SCIPaddCons(ppcscip, ppccons) );
+            SCIP_CALL( SCIPreleaseCons(ppcscip, &ppccons) );
+         }
+
+         SCIPfreeBufferArray(ppcscip, &ppcconsvars);
+      }
+   }
+
    /* go through all quadratic and bilinear terms in the original problem */
    conshdlr = SCIPfindConshdlr(scip, "quadratic");
    if( conshdlr != NULL )
@@ -392,7 +481,7 @@ SCIP_RETCODE createPpcProblem(
                SCIPfreeBufferArray(ppcscip, &ppcconsvars);
                goto TERMINATE;
             }
-        
+
             coef = SCIPgetLhsCoefsSOC(scip, soccons) == NULL ? 1.0 : SCIPgetLhsCoefsSOC(scip, soccons)[t];
             if( termIsLinear(scip, soclhsvars[t], coef, local) )
                continue;
@@ -957,8 +1046,13 @@ SCIP_RETCODE solveSubProblem(
       SCIP_CONSHDLR* conshdlr;
       SCIP_Bool  islinear;
 
+      islinear = TRUE;
+
+      conshdlr = SCIPfindConshdlr(subscip, "and");
+      islinear = islinear && (conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
+
       conshdlr = SCIPfindConshdlr(subscip, "quadratic");
-      islinear = conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0;
+      islinear = islinear && (conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
 
       conshdlr = SCIPfindConshdlr(subscip, "soc");
       islinear = islinear && (conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
@@ -1278,8 +1372,9 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
 static
 SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLR* conshdlrsoc;        /* constraint handler for second order cone constraints or NULL        */
+   SCIP_CONSHDLR* conshdlrand;        /* constraint handler for and constraints or NULL                      */
    SCIP_CONSHDLR* conshdlrquad;       /* constraint handler for quadratic constraints or NULL                */
+   SCIP_CONSHDLR* conshdlrsoc;        /* constraint handler for second order cone constraints or NULL        */
    SCIP_CONSHDLR* conshdlrunivar;     /* constraint handler for univariate definite constraints or NULL      */
    SCIP_HEURDATA* heurdata;
 
@@ -1295,14 +1390,16 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
 
    /* look for nonlinear constraints */
+   conshdlrand = SCIPfindConshdlr(scip, "and");
    conshdlrquad = SCIPfindConshdlr(scip, "quadratic");
    conshdlrsoc  = SCIPfindConshdlr(scip, "soc");
    conshdlrunivar = SCIPfindConshdlr(scip, "univardefinite");
 
    /* only run heuristic, when there is at least on nonlinear constraint */
    heurdata->run = FALSE;
+   heurdata->run =  heurdata->run || (conshdlrand != NULL && SCIPconshdlrGetNConss(conshdlrand) > 0); 
    heurdata->run =  heurdata->run || (conshdlrquad != NULL && SCIPconshdlrGetNConss(conshdlrquad) > 0); 
-   heurdata->run =  heurdata->run || (conshdlrsoc != NULL && SCIPconshdlrGetNConss(conshdlrquad) > 0);
+   heurdata->run =  heurdata->run || (conshdlrsoc != NULL && SCIPconshdlrGetNConss(conshdlrsoc) > 0);
    heurdata->run =  heurdata->run || (conshdlrunivar != NULL && SCIPconshdlrGetNConss(conshdlrunivar) > 0);
 
    if( !heurdata->run )
