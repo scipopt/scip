@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.37 2009/11/16 02:47:29 bzfgleix Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.38 2009/12/04 16:17:14 bzfhende Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -86,6 +86,7 @@
 #include "scip/heur_trysol.h"
 #include "scip/heur_undercover.h"
 #include "scip/heur_veclendiving.h"
+#include "scip/heur_zirounding.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_dfs.h"
 #include "scip/nodesel_estimate.h"
