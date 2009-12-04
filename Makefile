@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.319 2009/11/16 02:47:28 bzfgleix Exp $
+# $Id: Makefile,v 1.320 2009/12/04 15:43:01 bzfwanie Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -91,6 +91,11 @@ DOXY		=	doxygen
 CPLEX		=	cplex
 CBC		=	cbc
 MOSEK           =       mosek
+GUROBI          =       gurobi.sh
+GLPK            =       glpsol
+SYMPHONY        =       symphony
+BLIS            =       blis
+
 
 SHELL		= 	bash
 READ		=	read -e
@@ -661,6 +666,26 @@ testcluster:
 testclustercbc:		
 		cd check; \
 		$(SHELL) ./check_cluster_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE) $(LOCK);
+
+.PHONY: testgurobi
+testgurobi:		
+		cd check; \
+		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testglpk
+testglpk:		
+		cd check; \
+		$(SHELL) ./check_glpk.sh $(TEST) $(GLPK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testsymphony
+testsymphony:		
+		cd check; \
+		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testblis
+testblis:		
+		cd check; \
+		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: tags
 tags:

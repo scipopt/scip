@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.7 2009/04/06 13:06:47 bzfberth Exp $
+# $Id: check_cbc.awk,v 1.8 2009/12/04 15:43:01 bzfwanie Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator
@@ -33,6 +33,7 @@ BEGIN {
    nodegeomshift = 1000.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    useshortnames = 1;   # should problem name be truncated to fit into column?
+   infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -48,9 +49,9 @@ BEGIN {
    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
    printf("\\midrule\n")                                            >TEXFILE;
 
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
-   printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+   printf("-------------------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf("Name               | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
+   printf("-------------------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    nprobs   = 0;
    sbab     = 0;
@@ -101,8 +102,8 @@ BEGIN {
    opti       = 0;
    feasible   = 1;
    cuts       = 0;
-   pb         = +1e+75;
-   db         = -1e+75;
+   pb         = +infty;
+   db         = -infty;
    mipgap     = 1e-4;
    absmipgap  = 1e-6;
    bbnodes    = 0;
@@ -153,9 +154,25 @@ BEGIN {
 #
 # problem size
 #
-/^Problem has/ {
-   cons = $3;
-   vars = $5;
+/^Problem / {
+   if ( $3 == "has" )
+   {
+      origcons = $4;
+      origvars = $6;
+      if ( cons == 0 )
+         cons = origcons;
+      if ( vars == 0 )
+         vars = origvars;
+   }
+   else
+   {
+      cons = $3;
+      vars = $5;
+   }
+}
+/^Cgl0004I processed model has / {
+   cons = $5;
+   vars = $7;
 }
 
 #
@@ -173,13 +190,13 @@ BEGIN {
 # solution
 #
 /^Result - Finished objective/ {
-   pb       = $5;
+   pb       = ( $5 == 1e+50 ) ? +infty : $5; # since CBC (version 2.3.0) doesn't report infeasibility in tree, this is a workaround
    db       = pb;
    bbnodes  = $7;
    dualiter = $10;
    iters    = dualiter;
    tottime  = $14;
-   feasible = (pb < 1e+20);
+   feasible = (pb < +infty);
    opti     = 1;
    aborted  = 0;
 }
@@ -190,17 +207,17 @@ BEGIN {
    dualiter = $10;
    iters    = dualiter;
    tottime  = $14;
-   feasible = (pb < 1e+20);
+   feasible = (pb < +infty);
    opti     = 1;
    aborted  = 0;
 }
 /^Result - Stopped on time objective/ {
-   pb       = $7;
+   pb       = ( $7 == 1e+50 ) ? +infty : $7;
    bbnodes  = $9;
    dualiter = $12;
    iters    = dualiter;
    tottime  = $16;
-   feasible = (pb < 1e+20);
+   feasible = (pb < +infty);
    opti     = 0;
    timeout  = 1;
    aborted  = 0;
@@ -211,19 +228,24 @@ BEGIN {
    dualiter = $12;
    iters    = dualiter;
    tottime  = $16;
-   feasible = (pb < 1e+20);
+   feasible = (pb < +infty);
    opti     = 0;
    timeout  = 1;
    aborted  = 0;
 }
 /^Cputime limit exceeded/ {
-   feasible = (pb < 1e+20);
+   feasible = (pb < +infty);
    opti     = 0;
    timeout  = 1;
    aborted  = 0;
    tottime  = max(tottime, timelimit);
 }
-
+/^Pre-processing says infeasible or unbounded/ { 
+   feasible = 0;
+   aborted = 0;
+   pb = +infty;
+   db = +infty;
+}
 #
 # evaluation
 #
@@ -236,7 +258,7 @@ BEGIN {
     
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 )
+      if( abs(pb - db) < 1e-06 && pb < infty)
       {
          gap = 0.0;
          optimal = 1;
@@ -246,9 +268,9 @@ BEGIN {
          gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
-      else if( abs(db) >= 1e+20 )
+      else if( abs(db) >= +infty )
          gap = -1.0;
-      else if( abs(pb) >= 1e+20 )
+      else if( abs(pb) >= +infty )
          gap = -1.0;
       else
          gap = 100.0*abs((pb-db)/db);
@@ -262,8 +284,8 @@ BEGIN {
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
-      printf("%-19s %6d %6d %16.9g %16.9g %6s %9d %8d %7.1f ",
-         shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+      printf("%-19s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+          shortprob, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted )
       {
@@ -359,7 +381,7 @@ END {
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+   printf("-------------------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");

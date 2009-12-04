@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.48 2009/04/06 13:06:47 bzfberth Exp $
+# $Id: cmpres.awk,v 1.49 2009/12/04 15:43:01 bzfwanie Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -217,7 +217,7 @@ BEGIN {
 }
 // {
    # check if this is a useable line
-   if( $10 == "ok" || $10 == "timeout" || $10 == "unknown" || $10 == "abort" || $10 == "fail" || $10 == "readerror" ) # CPLEX, CBC
+   if( $10 == "ok" || $10 == "timeout" || $10 == "unknown" || $10 == "abort" || $10 == "fail" || $10 == "readerror" ) # BLIS, SYMPHONY
    {
       # collect data
       name[nsolver,nprobs[nsolver]] = $1;
@@ -240,7 +240,30 @@ BEGIN {
          problistlen++;
       }
    }
-   else if( $13 == "ok" || $13 == "timeout" || $13 == "unknown" || $13 == "abort" || $13 == "fail" || $13 == "readerror" ) # SCIP
+   else if( $12 == "ok" || $12 == "timeout" || $12 == "unknown" || $12 == "abort" || $12 == "fail" || $12 == "readerror" ) # GUROBI, CBC
+   {
+      # collect data (line with original and presolved problem size and simplex iterations)
+      name[nsolver,nprobs[nsolver]] = $1;
+      type[nsolver,nprobs[nsolver]] = "?";
+      conss[nsolver,nprobs[nsolver]] = $4;
+      vars[nsolver,nprobs[nsolver]] = $5;
+      dualbound[nsolver,nprobs[nsolver]] = max(min($6, +infinity), -infinity);
+      primalbound[nsolver,nprobs[nsolver]] = max(min($7, +infinity), -infinity);
+      gap[nsolver,nprobs[nsolver]] = $8;
+      iters[nsolver,nprobs[nsolver]] = $9;
+      nodes[nsolver,nprobs[nsolver]] = max($10,1);
+      time[nsolver,nprobs[nsolver]] = fracceil(max($11,mintime),0.1);
+      status[nsolver,nprobs[nsolver]] = $12;
+      probidx[$1,nsolver] = nprobs[nsolver];
+      probcnt[$1]++;
+      nprobs[nsolver]++;
+      if( probcnt[$1] == 1 )
+      {
+         problist[problistlen] = $1;
+         problistlen++;
+      }
+   }
+   else if( $13 == "ok" || $13 == "timeout" || $13 == "unknown" || $13 == "abort" || $13 == "fail" || $13 == "readerror" ) # SCIP, GLPK, CPLEX
    {
       # collect data (line with original and presolved problem size and simplex iterations)
       name[nsolver,nprobs[nsolver]] = $1;

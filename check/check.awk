@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.awk,v 1.79 2009/09/04 13:43:49 bzfheinz Exp $
+# $Id: check.awk,v 1.80 2009/12/04 15:43:01 bzfwanie Exp $
 #
 #@file    check.awk
 #@brief   SCIP Check Report Generator
@@ -21,6 +21,7 @@
 #@author  Tobias Achterberg
 #@author  Alexander Martin
 #@author  Timo Berthold
+#
 function abs(x)
 {
    return x < 0 ? -x : x;
@@ -42,6 +43,7 @@ BEGIN {
    onlyintestfile = 0;  # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;   # should problem name be truncated to fit into column?
+   infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -141,8 +143,8 @@ BEGIN {
    origcons = 0;
    timeout = 0;
    feasible = 0;
-   pb = +1e20;
-   db = -1e20;
+   pb = +infty;
+   db = -infty;
    simpiters = 0;
    bbnodes = 0;
    primlps = 0;
@@ -277,13 +279,13 @@ BEGIN {
 /^  Primal Bound     :/ {
    if( $4 == "infeasible" )
    {
-      pb = 1e+20;
-      db = 1e+20;
+      pb = +infty;
+      db = +infty;
       feasible = 0;
    }
    else if( $4 == "-" )
    {
-      pb = 1e+20;
+      pb = +infty;
       feasible = 0;
    }
    else
@@ -321,7 +323,7 @@ BEGIN {
 
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 )
+      if( abs(pb - db) < 1e-06 && pb < infty)
       {
          gap = 0.0;
          optimal = 1;
@@ -331,9 +333,9 @@ BEGIN {
          gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
-      else if( abs(db) >= 1e+20 )
+      else if( abs(db) >= +infty )
          gap = -1.0;
-      else if( abs(pb) >= 1e+20 )
+      else if( abs(pb) >= +infty )
          gap = -1.0;
       else
          gap = 100.0*abs((pb-db)/db);

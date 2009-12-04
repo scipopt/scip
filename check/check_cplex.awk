@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.39 2009/09/09 16:49:19 bzfheinz Exp $
+# $Id: check_cplex.awk,v 1.40 2009/12/04 15:43:01 bzfwanie Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -33,6 +33,7 @@ BEGIN {
    nodegeomshift = 1000.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    useshortnames = 1;   # should problem name be truncated to fit into column?
+   infty = +1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -48,9 +49,9 @@ BEGIN {
    printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
    printf("\\midrule\n")                                            >TEXFILE;
 
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
-   printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+   printf("------------------+------+--- Original --+-- Presolved --+----------------+----------------+------+--------+-------+-------+-------\n");
+   printf("Name              | Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters | Nodes |  Time |       \n");
+   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    nprobs   = 0;
    sbab     = 0;
@@ -101,8 +102,8 @@ BEGIN {
    opti       = 0;
    feasible   = 1;
    cuts       = 0;
-   pb         = +1e+75;
-   db         = -1e+75;
+   pb         = +infty;
+   db         = -infty;
    mipgap     = 1e-4;
    absmipgap  = 1e-6;
    bbnodes    = 0;
@@ -157,15 +158,40 @@ BEGIN {
 #
 # problem size
 #
-/nonzeros.$/ { cons = $4; vars = $6; }
+/^Variables            : / {
+   if ( $3 != "Min" )
+   {
+      origvars = $3;
+      intvars = $10;
+      binvars = $7;
+   }
+   if ( vars == 0 )
+      vars = origvars;
+   contvars = vars - intvars - binvars;
+}
+/^Linear constraints   : / {
+   if ( $4 > 0 )
+      origcons = $4;
+   if ( cons == 0 )
+      cons = origcons;
+}
+/nonzeros.$/ { 
+    cons = $4; 
+    vars = $6; 
+}
+/indicators.$/ {
+   binvars = $4;
+   intvars = $6;
+   contvars = vars - intvars - binvars;
+}
 #
 # solution
 #
 /^Integer /  {
    if ($2 == "infeasible." || $2 == "infeasible")
    {
-      db = 1e+20;
-      pb = 1e+20;
+      db = +infty;
+      pb = +infty;
       absgap = 0.0;
       feasible = 0;
    }
@@ -181,8 +207,8 @@ BEGIN {
 /^MIP - Integer /  { # since CPLEX 10.0
    if ($4 == "infeasible." || $4 == "infeasible")
    {
-      db = 1e+20;
-      pb = 1e+20;
+      db = +infty;
+      pb = +infty;
       absgap = 0.0;
       feasible = 0;
    }
@@ -204,11 +230,11 @@ BEGIN {
    timeout = 1;
 }
 /^Time /  {
-   pb = ($4 == "no") ? 1e+75 : $8;
+   pb = ($4 == "no") ? +infty : $8;
    timeout = 1;
 }
 /^MIP - Time /  { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
+   pb = ($6 == "no") ? +infty : $10;
    timeout = 1;
 }
 /^Memory limit exceeded, integer feasible:/ {
@@ -220,29 +246,29 @@ BEGIN {
    timeout = 1;
 }
 /^Node / {
-   pb = ($4 == "no") ? 1e+75 : $8;
+   pb = ($4 == "no") ? +infty : $8;
    timeout = 1;
 }
 /^MIP - Node / { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
+   pb = ($6 == "no") ? +infty : $10;
    timeout = 1;
 }
 /^Tree /  {
-   pb = ($4 == "no") ? 1e+75 : $8;
+   pb = ($4 == "no") ? +infty : $8;
    timeout = 1;
 }
 /^MIP - Tree /  { # since CPLEX 10.0
-   pb = ($6 == "no") ? 1e+75 : $10;
+   pb = ($6 == "no") ? +infty : $10;
    timeout = 1;
 }
 /^Error /  {
-   pb = ($3 == "no") ? 1e+75 : $7;
+   pb = ($3 == "no") ? +infty : $7;
 }
 /^MIP - Error /  { # since CPLEX 10.0
-   pb = ($5 == "no") ? 1e+75 : $9;
+   pb = ($5 == "no") ? +infty : $9;
 }
 /^MIP - Unknown status / {
-   pb = ($6 == "Objective") ? $8 : 1e+75;
+   pb = ($6 == "Objective") ? $8 : +infty;
 }
 /cuts applied/ { 
    cuts += $NF;
@@ -269,22 +295,23 @@ BEGIN {
     
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 )
+      if( abs(pb - db) < 1e-06 && pb < infty)
       {
          gap = 0.0;
          optimal = 1;
          markersym = "  ";
       }
-      else if( abs(db) < 1e-06 )
+      else if( abs(db)*1.0 < 1e-06 )
          gap = -1.0;
-      else if( pb*db < 0.0 )
+      else if( pb*db*1.0 < 0.0 )
          gap = -1.0;
-      else if( abs(db) >= 1e+20 )
+      else if( abs(db)*1.0 >= +infty )
          gap = -1.0;
-      else if( abs(pb) >= 1e+20 )
+      else if( abs(pb)*1.0 >= +infty )
          gap = -1.0;
       else
-         gap = 100.0*abs((pb-db)/db);
+         gap = 100.0*abs((pb-db)*1.0/(1.0*db));
+
       if( gap < 0.0 )
          gapstr = "  --  ";
       else if( gap < 1e+04 )
@@ -292,11 +319,29 @@ BEGIN {
       else
          gapstr = " Large";
 
+      if( vars == 0 )
+         probtype = "--";
+      else if( binvars == 0 && intvars == 0 )
+         probtype = "LP";
+      else if( contvars == 0 )
+      {
+         if( intvars == 0 && implvars == 0 )
+            probtype = "BP";
+         else
+            probtype = "IP";
+      }
+      else
+      {
+         if( intvars == 0 )
+            probtype = "MBP";
+         else
+            probtype = "MIP";
+      }
+
       printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
          pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
-
-      printf("%-19s %6d %6d %16.9g %16.9g %6s %9d %8d %7.1f ",
-             shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+      printf("%-19s %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+         shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
 
       if( aborted )
       {
@@ -392,7 +437,7 @@ END {
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");

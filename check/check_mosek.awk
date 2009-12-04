@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_mosek.awk,v 1.1 2009/09/18 13:24:47 bzfheinz Exp $
+# $Id: check_mosek.awk,v 1.2 2009/12/04 15:43:01 bzfwanie Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
@@ -33,6 +33,7 @@ BEGIN {
    nodegeomshift = 1000.0;
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    useshortnames = 1;   # should problem name be truncated to fit into column?
+   infty = 1e+20;
 
    printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
    printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
@@ -101,8 +102,8 @@ BEGIN {
    opti       = 0;
    feasible   = 1;
    cuts       = 0;
-   pb         = +1e+75;
-   db         = -1e+75;
+   pb         = +infty;
+   db         = -infty;
    mipgap     = 1e-4;
    absmipgap  = 1e-6;
    bbnodes    = 0;
@@ -156,7 +157,7 @@ BEGIN {
     
       optimal = 0;
       markersym = "\\g";
-      if( abs(pb - db) < 1e-06 )
+      if( abs(pb - db) < 1e-06 && pb < infty)
       {
          gap = 0.0;
          optimal = 1;
@@ -166,9 +167,9 @@ BEGIN {
          gap = -1.0;
       else if( pb*db < 0.0 )
          gap = -1.0;
-      else if( abs(db) >= 1e+20 )
+      else if( abs(db) >= +infty )
          gap = -1.0;
-      else if( abs(pb) >= 1e+20 )
+      else if( abs(pb) >= +infty )
          gap = -1.0;
       else
          gap = 100.0*abs((pb-db)/db);
