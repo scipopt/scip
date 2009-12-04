@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: primal.c,v 1.89 2009/04/06 13:06:54 bzfberth Exp $"
+#pragma ident "@(#) $Id: primal.c,v 1.90 2009/12/04 16:03:38 bzfhende Exp $"
 
 /**@file   primal.c
  * @brief  methods for collecting primal CIP solutions and primal informations
@@ -459,6 +459,21 @@ SCIP_RETCODE primalAddSol(
    assert(0 <= insertpos && insertpos < primal->nsols);
    primal->sols[insertpos] = sol;
    primal->nsolsfound++;
+   
+   /* if its the first primal solution, store the relevan statistics */
+   if(primal->nsolsfound == 1 )
+   {
+      stat->nnodesbeforefirst = SCIPsolGetNodenum(sol);
+      stat->nrunsbeforefirst = SCIPsolGetRunnum(sol);
+      stat->firstprimalheur = SCIPsolGetHeur(sol);
+      stat->firstprimaltime = SCIPsolGetTime(sol);
+      stat->firstprimaldepth = SCIPsolGetDepth(sol);
+      stat->firstprimalbound = SCIPsolGetObj(sol, set, prob);
+      SCIPdebugMessage("First Solution stored in problem specific statistics.\n");
+      SCIPdebugMessage("-> %"SCIP_LONGINT_FORMAT" nodes, %d runs, %.2g time, %d depth, %.15g objective\n", stat->nnodesbeforefirst, stat->nrunsbeforefirst,
+         stat->firstprimaltime, stat->firstprimaldepth, stat->firstprimalbound);
+   }
+
    SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n", 
       insertpos, primal->nsols, primal->nsolsfound);
 

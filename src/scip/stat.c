@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: stat.c,v 1.83 2009/11/26 14:10:02 bzfheinz Exp $"
+#pragma ident "@(#) $Id: stat.c,v 1.84 2009/12/04 16:03:38 bzfhende Exp $"
 
 /**@file   stat.c
  * @brief  methods for problem statistics
@@ -205,7 +205,11 @@ void SCIPstatReset(
    stat->nenabledconss = 0;
    stat->solindex = 0;
    stat->memsavemode = FALSE;
-
+   stat->nnodesbeforefirst = -1;
+   stat->nrunsbeforefirst = -1;
+   stat->firstprimalheur = NULL; 
+   stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
+   stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;

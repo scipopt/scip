@@ -36,6 +36,7 @@ features:
 - added support for bool_gt, bool_lt, bool_ge, bool_le, bool_ne, and bool_not constraints to flatzinc reader
 - added scripts check_*.sh, evalcheck_*.sh and check_*.awk for blis, glkp, gurobi and symphony (including targets in Makefile)
   and slightly modified scripts for cplex, cbc and mosek and cmpres-script
+- added statistic information about the first primal solution to SCIP statistic; in the statistic output a new line appears with this information
 
 performance improvements:
 

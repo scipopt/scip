@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.529 2009/11/28 11:27:49 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.530 2009/12/04 16:03:38 bzfhende Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -15733,6 +15733,7 @@ void printSolutionStatistics(
    SCIP_Real dualboundroot;
    SCIP_Real bestsol;
    SCIP_Real gap;
+   SCIP_Real firstprimalbound;
 
    assert(scip != NULL);
    assert(scip->stat != NULL);
@@ -15746,6 +15747,7 @@ void printSolutionStatistics(
    SCIPmessageFPrintInfo(file, "Solution           :\n");
    SCIPmessageFPrintInfo(file, "  Solutions found  : %10"SCIP_LONGINT_FORMAT" (%d improvements)\n",
       scip->primal->nsolsfound, scip->primal->nbestsolsfound);
+
    if( SCIPsetIsInfinity(scip->set, REALABS(primalbound)) )
    {
       if( scip->set->stage == SCIP_STAGE_SOLVED )
@@ -15760,11 +15762,27 @@ void printSolutionStatistics(
    }
    else
    {
-      SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
       if( scip->primal->nsols == 0 )
          SCIPmessageFPrintInfo(file, "   (user objective limit)\n");
       else
       {
+         /* display first primal bound line */
+         firstprimalbound = scip->stat->firstprimalbound;
+         firstprimalbound = SCIPretransformObj(scip, firstprimalbound);
+         SCIPmessageFPrintInfo(file, "  First Solution   : %+21.14e", firstprimalbound);
+         
+         SCIPmessageFPrintInfo(file, "   (in run %d, after %"SCIP_LONGINT_FORMAT" nodes, %.2f seconds, depth %d, found by <%s>)\n",
+            scip->stat->nrunsbeforefirst,
+            scip->stat->nnodesbeforefirst,
+            scip->stat->firstprimaltime,
+            scip->stat->firstprimaldepth,
+            ( scip->stat->firstprimalheur != NULL )
+            ? ( SCIPheurGetName(scip->stat->firstprimalheur) )
+            : (( scip->stat->nrunsbeforefirst == 0 ) ? "initial" : "relaxation"));
+         
+         SCIPmessageFPrintInfo(file, "  Primal Bound     : %+21.14e", primalbound);
+         
+         /* display (best) primal bound */
          bestsol = SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob);
          bestsol = SCIPretransformObj(scip, bestsol);
          if( SCIPsetIsGT(scip->set, bestsol, primalbound) )

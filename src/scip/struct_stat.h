@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_stat.h,v 1.55 2009/11/26 14:10:02 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_stat.h,v 1.56 2009/12/04 16:03:38 bzfhende Exp $"
 
 /**@file   struct_stat.h
  * @brief  datastructures for problem statistics
@@ -75,8 +75,11 @@ struct SCIP_Stat
    SCIP_Longint          nholechgs;          /**< total number of hole changes generated in the tree */
    SCIP_Longint          nprobboundchgs;     /**< total number of bound changes generated in the tree during probing */
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
+   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             conflictscoreweight;/**< current weight to use for updating conflict scores in history */
+   SCIP_Real             firstprimalbound;   /**< objective value of first primal solution */
+   SCIP_Real             firstprimaltime;    /**< time (in seconds) needed for first primal solution */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
@@ -93,6 +96,7 @@ struct SCIP_Stat
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
    SCIP_VBC*             vbc;                /**< VBC Tool information */
+   SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */     
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
@@ -143,6 +147,8 @@ struct SCIP_Stat
    int                   npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
    int                   npresolchgsides;    /**< number of presolving side changes in current run */
    int                   solindex;           /**< consecutively numbered solution index */
+   int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
+   int                   firstprimaldepth;   /**< depth in which first primal solution was found */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */
