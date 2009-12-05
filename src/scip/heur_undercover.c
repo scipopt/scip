@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.30 2009/12/03 00:34:09 bzfgleix Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.31 2009/12/05 16:13:14 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -44,6 +44,9 @@
 #endif
 #ifdef WITH_CONSBRANCHNL
 #include "cons_branchnonlinear.h"
+#endif
+#ifdef WITH_SIGNPOWER
+#include "cons_signpower.h"
 #endif
 #include "scip/heur_nlp.h"
 
@@ -595,6 +598,79 @@ SCIP_RETCODE createPpcProblem(
    }
 #endif
 
+#ifdef WITH_SIGNPOWER
+   /* go through all "signpower" constraints in the original problem */
+   conshdlr = SCIPfindConshdlr(scip, "signpower");
+   if( conshdlr != NULL )
+   {
+      for( i = 0; i < SCIPconshdlrGetNConss(conshdlr); ++i )
+      {
+         SCIP_CONS* spcons;
+         SCIP_CONS* ppccons;
+         SCIP_VAR* linearspvar;
+         SCIP_VAR* nonlinearspvar;
+         SCIP_VAR* ppcconsvars[2];
+
+         spcons = SCIPconshdlrGetConss(conshdlr)[i];
+         assert(spcons != NULL);
+
+         linearspvar = SCIPgetLinearVarSignpower(scip, spcons);
+         assert(linearspvar != NULL);
+
+         nonlinearspvar = SCIPgetNonlinearVarSignpower(scip, spcons);
+         assert(nonlinearspvar != NULL);
+
+         /* if constraints with inactive variables are present, we will have difficulty creating the subscip later */
+         if( SCIPvarGetProbindex(linearspvar) == -1 || SCIPvarGetProbindex(nonlinearspvar) == -1 )
+         {
+            SCIPdebugMessage("undercover heuristic detected constraint <%s> with inactive variables\n", SCIPconsGetName(spcons));
+            goto TERMINATE;
+         }
+
+         /* if one of the variables is fixed or has zero coefficient, continue */
+         if( termIsLinear(scip, linearspvar, SCIPgetCoefLinearSignpower(scip, spcons), local)
+            || termIsLinear(scip, nonlinearspvar, 1.0, local) )
+            continue;
+
+         /* if we want to convexify only and constraint and bounds are accordingly: nothing to do */
+         if( onlyconvexify )
+         {
+            /* if constraint is x|x|^{n-1} - cz <= rhs with x >= 0, then it's a convex constraint already */
+            if( SCIPisInfinity(scip, -SCIPgetLhsSignpower(scip, spcons)) && !SCIPisNegative(scip, local ? SCIPvarGetLbLocal(nonlinearspvar) : SCIPvarGetLbGlobal(nonlinearspvar)) )
+               continue;
+            /* if constraint is lhs <= x|x|^{n-1} - cz with x <= 0, then it's a convex constraint already */
+            if( SCIPisInfinity(scip,  SCIPgetRhsSignpower(scip, spcons)) && !SCIPisPositive(scip, local ? SCIPvarGetUbLocal(nonlinearspvar) : SCIPvarGetUbGlobal(nonlinearspvar)) )
+               continue;
+         }
+
+         /* need to fix either linear or nonlinear variable to get rid of nonlinearity */
+
+         /* get name of the original constraint and add the string "_sp" */
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sp", SCIPconsGetName(spcons));
+
+         ppcconsvars[0] = ppcvars[SCIPvarGetProbindex(linearspvar)];
+         ppcconsvars[1] = ppcvars[SCIPvarGetProbindex(nonlinearspvar)];
+
+         SCIP_CALL( SCIPcreateConsSetcover(ppcscip, &ppccons, name, 2, ppcconsvars,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
+         if( ppccons == NULL )
+         {
+            SCIPdebugMessage("failed to create set covering constraint %s: terminating undercover heuristic\n", name);
+            goto TERMINATE;
+         }
+
+         SCIP_CALL( SCIPaddCons(ppcscip, ppccons) );
+         SCIP_CALL( SCIPreleaseCons(ppcscip, &ppccons) );
+
+         ++(conscounter[SCIPvarGetProbindex(linearspvar)]);
+         ++(conscounter[SCIPvarGetProbindex(nonlinearspvar)]);
+         ++(termcounter[SCIPvarGetProbindex(linearspvar)]);
+         ++(termcounter[SCIPvarGetProbindex(nonlinearspvar)]);
+      }
+   }
+#endif
+
    /* set obj value of ppc variables according to strat */
    conobjfac = objquot > 1.0 ? objquot : 1.0;
    intobjfac = objquot > 1.0 ? 1.0 : 1.0/objquot;
@@ -1060,6 +1136,9 @@ SCIP_RETCODE solveSubProblem(
       conshdlr = SCIPfindConshdlr(subscip, "univardefinite");
       islinear = islinear && (conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
 
+      conshdlr = SCIPfindConshdlr(subscip, "signpower");
+      islinear = islinear && (conshdlr == NULL || SCIPconshdlrGetNConss(conshdlr) == 0);
+
       assert(islinear);
    }
 #endif
@@ -1202,6 +1281,9 @@ SCIP_RETCODE SCIPapplyUndercover(
 
 #ifdef WITH_UNIVARDEFINITE
    SCIP_CALL( SCIPincludeConshdlrUnivardefinite(subscip) );
+#endif
+#ifdef WITH_SIGNPOWER
+   SCIP_CALL( SCIPincludeConshdlrSignpower(subscip) );
 #endif
 
    /* create subMIQCP */
@@ -1376,6 +1458,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    SCIP_CONSHDLR* conshdlrquad;       /* constraint handler for quadratic constraints or NULL                */
    SCIP_CONSHDLR* conshdlrsoc;        /* constraint handler for second order cone constraints or NULL        */
    SCIP_CONSHDLR* conshdlrunivar;     /* constraint handler for univariate definite constraints or NULL      */
+   SCIP_CONSHDLR* conshdlrsignpower;  /* constraint handler for signpower constraints or NULL      */
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -1394,6 +1477,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    conshdlrquad = SCIPfindConshdlr(scip, "quadratic");
    conshdlrsoc  = SCIPfindConshdlr(scip, "soc");
    conshdlrunivar = SCIPfindConshdlr(scip, "univardefinite");
+   conshdlrsignpower = SCIPfindConshdlr(scip, "signpower");
 
    /* only run heuristic, when there is at least on nonlinear constraint */
    heurdata->run = FALSE;
@@ -1401,6 +1485,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
    heurdata->run =  heurdata->run || (conshdlrquad != NULL && SCIPconshdlrGetNConss(conshdlrquad) > 0); 
    heurdata->run =  heurdata->run || (conshdlrsoc != NULL && SCIPconshdlrGetNConss(conshdlrsoc) > 0);
    heurdata->run =  heurdata->run || (conshdlrunivar != NULL && SCIPconshdlrGetNConss(conshdlrunivar) > 0);
+   heurdata->run =  heurdata->run || (conshdlrsignpower != NULL && SCIPconshdlrGetNConss(conshdlrsignpower) > 0);
 
    if( !heurdata->run )
    {
