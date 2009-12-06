@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_orbitope.c,v 1.4 2009/09/27 13:47:31 bzfpfets Exp $"
+#pragma ident "@(#) $Id: cons_orbitope.c,v 1.5 2009/12/06 16:46:20 bzfpfets Exp $"
 
 /**@file   cons_orbitope.c
  * @brief  constraint handler for (partitioning/packing) orbitope constraints w.r.t. the full symmetric group
@@ -1581,7 +1581,7 @@ SCIP_DECL_CONSCHECK(consCheckOrbitope)
 	 for (j = lastcolumn; j > 1; --j)
 	 {
 	    bar += vals[i][j];
-	    assert( SCIPisIntegral(scip, vals[i][j]) );
+	    assert( SCIPisFeasIntegral(scip, vals[i][j]) );
 
 	    /* check whether weights[i-1][j-1] < bar  (<=> bar - weights[i-1][j-1] > 0), i.e. cut is violated) */
 	    if ( SCIPisGT(scip, bar - weights[i-1][j-1], 0.0) )
@@ -1870,6 +1870,7 @@ SCIP_DECL_CONSPRINT(consPrintOrbitope)
       if ( i < nspcons-1 )
 	 SCIPinfoMessage(scip, file, ";");
    }
+   SCIPinfoMessage(scip, file, ")");
 
    return SCIP_OKAY;
 }
