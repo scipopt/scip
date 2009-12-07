@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.34 2009/11/27 18:54:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.35 2009/12/07 10:31:51 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -152,6 +152,9 @@ ROUNDMODE getRoundingMode(
  */
 #define SIGN(x) ((x) >= 0.0 ? 1.0 : -1.0)
 
+static SCIP_Bool warned_unsafe_pow = FALSE;
+static SCIP_Bool warned_unsafe_exp = FALSE;
+static SCIP_Bool warned_unsafe_log = FALSE;
 
 /*
  * Interval arithmetic operations
@@ -1079,7 +1082,11 @@ void SCIPintervalPowerScalar(
       }
    }
 
-   SCIPwarningMessage("Warning: interval arithmetic for pow function is not rounding safe!\n");
+   if( !warned_unsafe_pow )
+   {
+      SCIPwarningMessage("Warning: interval arithmetic for pow function is not rounding safe!\n");
+      warned_unsafe_pow = TRUE;
+   }
 
    roundmode = getRoundingMode();
    
@@ -1353,7 +1360,11 @@ void SCIPintervalSignPowerScalar(
    }
    else
    {
-      SCIPwarningMessage("Warning: interval arithmetic for pow function is not rounding safe!\n");
+      if( !warned_unsafe_pow )
+      {
+         SCIPwarningMessage("Warning: interval arithmetic for pow function is not rounding safe!\n");
+         warned_unsafe_pow = TRUE;
+      }
       if( operand1.inf <= -infinity )
       {
          resultant->inf = -infinity;
@@ -1484,7 +1495,11 @@ void SCIPintervalExp(
   
    roundmode = getRoundingMode();
 
-   SCIPwarningMessage("Warning: interval arithmetic for exp function is not rounding safe!\n");
+   if( !warned_unsafe_exp )
+   {
+      SCIPwarningMessage("Warning: interval arithmetic for exp function is not rounding safe!\n");
+      warned_unsafe_exp = TRUE;
+   }
 
    if( operand.inf <= -infinity )
    {
@@ -1531,7 +1546,11 @@ void SCIPintervalLog(
   
    roundmode = getRoundingMode();
 
-   SCIPwarningMessage("Warning: interval arithmetic for log function is not rounding safe!\n");
+   if( !warned_unsafe_log )
+   {
+      SCIPwarningMessage("Warning: interval arithmetic for log function is not rounding safe!\n");
+      warned_unsafe_log = TRUE;
+   }
   
    if( operand.inf <= 0.0 )
    {
