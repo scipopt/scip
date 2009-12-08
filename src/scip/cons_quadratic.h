@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.h,v 1.14 2009/12/01 11:55:13 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.h,v 1.15 2009/12/08 13:37:53 bzfgleix Exp $"
 
 /**@file   cons_quadratic.h
  * @ingroup CONSHDLRS
@@ -92,12 +92,12 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nlinvars,           /**< number of linear terms (n) */
-   SCIP_VAR**            linvars,            /**< variables in linear part (x_i) */
-   SCIP_Real*            lincoefs,           /**< coefficients of variables in linear part (b_i) */
+   SCIP_VAR**            linvars,            /**< variables in linear part (x_i) or NULL if nlinvars == 0 */
+   SCIP_Real*            lincoefs,           /**< coefficients of variables in linear part (b_i) or NULL if nlinvars == 0 */
    int                   nquadterms,         /**< number of quadratic terms (m) */
-   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms (y_j) */
-   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms (z_j) */
-   SCIP_Real*            quadcoeffs,         /**< array with coefficients of quadratic terms (a_j) */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms (y_j) or NULL if nquadterms == 0 */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms (z_j) or NULL if nquadterms == 0 */
+   SCIP_Real*            quadcoeffs,         /**< array with coefficients of quadratic terms (a_j) or NULL if nquadterms == 0 */
    SCIP_Real             lhs,                /**< left hand side of quadratic equation (l) */
    SCIP_Real             rhs,                /**< right hand side of quadratic equation (u) */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -135,18 +135,18 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nlinvars,           /**< number of linear terms (n) */
-   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */ 
-   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */ 
+   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) or NULL if nlinvars == 0 */ 
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) or NULL if nlinvars == 0 */ 
    int                   nquadvars,          /**< number of quadratic terms (m) */
-   SCIP_VAR**            quadvars,           /**< array with variables in quadratic terms (y_j) */
-   SCIP_Real*            quadlincoefs,       /**< array with linear coefficients of quadratic variables (b_j) */
-   SCIP_Real*            quadsqrcoefs,       /**< array with coefficients of square terms of quadratic variables (a_j) */
-   int*                  nadjbilin,          /**< number of bilinear terms where the variable is involved */
-   int**                 adjbilin,           /**< indices of bilinear terms in which variable is involved */
+   SCIP_VAR**            quadvars,           /**< array with variables in quadratic terms (y_j) or NULL if nquadvars == 0 */
+   SCIP_Real*            quadlincoefs,       /**< array with linear coefficients of quadratic variables (b_j) or NULL if nquadvars == 0 */
+   SCIP_Real*            quadsqrcoefs,       /**< array with coefficients of square terms of quadratic variables (a_j) or NULL if nquadterms == 0 */
+   int*                  nadjbilin,          /**< number of bilinear terms where the variable is involved or NULL if nquadterms == 0 */
+   int**                 adjbilin,           /**< indices of bilinear terms in which variable is involved or NULL if nquadterms == 0 */
    int                   nbilin,             /**< number of bilinear terms (p) */
-   SCIP_VAR**            bilinvars1,         /**< array with first variables in bilinear term (v_k) */
-   SCIP_VAR**            bilinvars2,         /**< array with second variables in bilinear term (w_k) */
-   SCIP_Real*            bilincoefs,         /**< array with coefficients of bilinear term (c_k) */
+   SCIP_VAR**            bilinvars1,         /**< array with first variables in bilinear term (v_k) or NULL if nbilin == 0 */
+   SCIP_VAR**            bilinvars2,         /**< array with second variables in bilinear term (w_k) or NULL if nbilin == 0 */
+   SCIP_Real*            bilincoefs,         /**< array with coefficients of bilinear term (c_k) or NULL if nbilin == 0 */
    SCIP_Real             lhs,                /**< constraint left hand side (l) */
    SCIP_Real             rhs,                /**< constraint right hand side (u) */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? */
