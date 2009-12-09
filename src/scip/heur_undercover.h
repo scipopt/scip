@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.h,v 1.3 2009/11/27 09:48:47 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.h,v 1.4 2009/12/09 07:39:03 bzfberth Exp $"
 
 /**@file   heur_undercover.h
  * @brief  undercover primal heuristic for MIQCPs
@@ -48,6 +48,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    char                  ppcstrat,           /**< strategy for finding a ppcsolution                             */
    SCIP_Real             ppcobjquot,         /**< additional penalty factor for fixing continuous variables      */
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value */
+   SCIP_Bool             fixandprop,         /**< should undercover fix consecutively and propagate fixings?          */
    SCIP_Bool             locksrounding,      /**< shall LP values for integer vars be rounded according to locks? */
    SCIP_Bool             onlyconvexify,      /**< should variable fixing only convexify the problem?             */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
