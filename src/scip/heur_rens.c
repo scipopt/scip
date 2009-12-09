@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.c,v 1.27 2009/11/24 08:56:24 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_rens.c,v 1.28 2009/12/09 11:00:07 bzfheinz Exp $"
 
 /**@file   heur_rens.c
  * @ingroup PRIMALHEURISTICS
@@ -259,7 +259,7 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-/** main procedure of the RENS heuristic, creates and sovles a subMIP */
+/** main procedure of the RENS heuristic, creates and solves a subMIP */
 SCIP_RETCODE SCIPapplyRens(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                       */
