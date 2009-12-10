@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.73 2009/12/10 15:35:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.74 2009/12/10 16:03:44 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7402,6 +7402,8 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    SCIP_CONSDATA* consdata;
    SCIP_HASHMAP*  terms;
    int i;
+   
+   assert( modifiable == FALSE ); /* we do not support column generation */
 
    /* find the quadratic constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -7507,6 +7509,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_CONSDATA* consdata;
    int i;
    
+   assert( modifiable == FALSE ); /* we do not support column generation */
    assert(nlinvars == 0 || (linvars != NULL && lincoefs != NULL));
    assert(nquadvars == 0 || (quadvars != NULL && quadlincoefs != NULL && quadsqrcoefs != NULL));
    assert(nbilinterms == 0 || (bilinvars1 != NULL && bilinvars2 != NULL && bilincoefs != NULL && nquadvars > 0));

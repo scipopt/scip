@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.11 2009/12/10 15:35:55 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.12 2009/12/10 16:03:44 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3597,6 +3597,8 @@ SCIP_RETCODE SCIPcreateConsSOC(
    
    assert(scip != NULL);
    assert(cons != NULL);
+
+   assert( modifiable == FALSE ); /* we do not support column generation */
 
    /* find the soc constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
