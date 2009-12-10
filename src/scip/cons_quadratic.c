@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.71 2009/12/10 14:33:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.72 2009/12/10 14:40:30 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -164,7 +164,8 @@ struct SCIP_ConshdlrData
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP heuristic */
 
-   SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic */
+   SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic, if available */
+   SCIP_HEUR*            rensnlheur;                /**< a pointer to the RENSNL heuristic, if available */
    SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
    int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if catched */
 
@@ -4036,14 +4037,16 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    sol = SCIPeventGetSol(event);
    assert(sol != NULL);
 
-   /* we are only interested in solution coming from the NLP heuristic (is that good?) */
-   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur )
+   /* we are only interested in solution coming from the NLP or RENSNL heuristic (is that good?) */
+   if( SCIPsolGetHeur(sol) == NULL )
+      return SCIP_OKAY;
+   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensnlheur)
       return SCIP_OKAY;
 
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("catched new sol event %d; have %d conss\n", SCIPeventGetType(event), nconss);
+   SCIPdebugMessage("catched new sol event %d from heur %p; have %d conss\n", SCIPeventGetType(event), SCIPsolGetHeur(sol), nconss);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -5607,10 +5610,11 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "There are nonconvex quadratic constraints.\n");
    }
 
-   conshdlrdata->nlpheur = SCIPfindHeur(scip, "nlp");
+   conshdlrdata->nlpheur    = SCIPfindHeur(scip, "nlp");
+   conshdlrdata->rensnlheur = SCIPfindHeur(scip, "rensnl");
    
    conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 && conshdlrdata->nlpheur != NULL && conshdlrdata->linearizenlpsol )
+   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensnlheur != NULL) && conshdlrdata->linearizenlpsol )
    {
       SCIP_EVENTHDLR* eventhdlr;
 
@@ -5659,6 +5663,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
    }
 
    conshdlrdata->nlpheur = NULL;
+   conshdlrdata->rensnlheur = NULL;
 
    return SCIP_OKAY;
 }
