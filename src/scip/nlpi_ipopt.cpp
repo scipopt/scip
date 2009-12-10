@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.13 2009/11/30 16:26:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.14 2009/12/10 21:27:59 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -20,7 +20,6 @@
  * @author  Stefan Vigerske
  *
  * @todo warm starts
- * @todo delete initial guess when calling nlpiSetInitialGuessIpopt with NULL
  * @todo ScipJournal to redirect Ipopt output 
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
  */
@@ -750,13 +749,20 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
    assert(data != NULL);
    assert(data->oracle != NULL);
 
-   if( !data->initguess )
+   if( values != NULL )
    {
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &data->initguess, values, SCIPnlpiOracleGetNVars(data->oracle)) );
+      if( !data->initguess )
+      {
+         SCIP_CALL( SCIPduplicateMemoryArray(scip, &data->initguess, values, SCIPnlpiOracleGetNVars(data->oracle)) );
+      }
+      else
+      {
+         BMScopyMemoryArray(data->initguess, values, SCIPnlpiOracleGetNVars(data->oracle));
+      }
    }
    else
    {
-      BMScopyMemoryArray(data->initguess, values, SCIPnlpiOracleGetNVars(data->oracle));
+      SCIPfreeMemoryArrayNull(scip, &data->initguess);
    }
 
    return SCIP_OKAY;
@@ -1544,8 +1550,19 @@ bool ScipNLP::get_starting_point(
       }
       else
       {
-         SCIPwarningMessage("Ipopt started without intial primal values.\n");
-         return false; // do not have initial guess, this will make Ipopt fail; @TODO: should we make up some point?
+         SCIP_Real lb, ub;
+         SCIPdebugMessage("Ipopt started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+         for( int i = 0; i < n; ++i )
+         {
+            lb = SCIPnlpiOracleGetVarLbs(nlpidata->oracle)[i];
+            ub = SCIPnlpiOracleGetVarUbs(nlpidata->oracle)[i];
+            if( lb > 0.0 )
+               x[i] = lb;
+            else if( ub < 0.0 )
+               x[i] = ub;
+            else
+               x[i] = 0.0;
+         }
       }
    }
    if( init_z || init_lambda )
