@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.33 2009/12/09 13:57:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.34 2009/12/10 06:34:19 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -59,22 +59,23 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 
-#define DEFAULT_MINNODES      (SCIP_Longint)500/* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MAXNODES      (SCIP_Longint)500/* maximum number of nodes to regard in the subproblem                */
-#define DEFAULT_MINIMPROVE    0.01           /* factor by which heuristic should at least improve the incumbent       */
-#define DEFAULT_NODESOFS      (SCIP_Longint)500/* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_NODESQUOT     0.1            /* subproblem nodes in relation to nodes of the original problem         */
-#define DEFAULT_PPCOBJQUOT    1.0            /* additional penalty factor for fixing continuous variables             */
-#define DEFAULT_DOMRED        1.0            /* reduce domain of selected variables by this factor around LP value    */
-#define DEFAULT_LOCKSROUNDING TRUE           /* shall LP values for integer vars be rounded according to locks?       */
-#define DEFAULT_ONLYCONVEXIFY FALSE          /* should we only fix/dom.red. variables creating nonconvexity?          */
-#define DEFAULT_ONLYATINTEGER FALSE          /* should heuristic be called only at integer feasible nodes?            */
-#define DEFAULT_GLOBALBOUNDS  FALSE          /* should global bounds on variables be used instead of local bounds at focus node? */
-#define DEFAULT_POSTNLP       TRUE           /* should the NLP heuristic be called to polish a feasible solution?     */
-#define DEFAULT_BEFORECUTS    TRUE           /* should undercover called at root node before cut separation?          */
-#define DEFAULT_FIXANDPROP    TRUE           /* should undercover fix consecutively and propagate fixings?            */
-#define DEFAULT_PPCSTRAT      'u'            /* strategy for finding a ppc solution                                   */
-#define PPCSTRATS             "bcdlmtuv"     /* strategies for finding a ppc solution                                 */
+#define DEFAULT_MINNODES      (SCIP_Longint)500/**< minimum number of nodes to regard in the subproblem                 */
+#define DEFAULT_MAXNODES      (SCIP_Longint)500/**< maximum number of nodes to regard in the subproblem                */
+#define DEFAULT_MINIMPROVE    0.01           /**< factor by which heuristic should at least improve the incumbent       */
+#define DEFAULT_NODESOFS      (SCIP_Longint)500/**< number of nodes added to the contingent of the total nodes          */
+#define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem         */
+#define DEFAULT_PPCOBJQUOT    1.0            /**< additional penalty factor for fixing continuous variables             */
+#define DEFAULT_DOMRED        1.0            /**< reduce domain of selected variables by this factor around LP value    */
+#define DEFAULT_LOCKSROUNDING TRUE           /**< shall LP values for integer vars be rounded according to locks?       */
+#define DEFAULT_ONLYCONVEXIFY FALSE          /**< should we only fix/dom.red. variables creating nonconvexity?          */
+#define DEFAULT_ONLYATINTEGER FALSE          /**< should heuristic be called only at integer feasible nodes?            */
+#define DEFAULT_GLOBALBOUNDS  FALSE          /**< should global bounds on variables be used instead of local bounds at focus node? */
+#define DEFAULT_POSTNLP       TRUE           /**< should the NLP heuristic be called to polish a feasible solution?     */
+#define DEFAULT_BEFORECUTS    TRUE           /**< should undercover called at root node before cut separation?          */
+#define DEFAULT_FIXANDPROP    TRUE           /**< should undercover fix consecutively and propagate fixings?            */
+#define DEFAULT_BACKTRACK     TRUE           /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_PPCSTRAT      'u'            /**< strategy for finding a ppc solution                                   */
+#define PPCSTRATS             "bcdlmtuv"     /**< strategies for finding a ppc solution                                 */
 
 
 /*
@@ -99,6 +100,7 @@ struct SCIP_HeurData
    SCIP_Bool             postnlp;            /**< should the NLP heuristic be called to polish a feasible solution?   */
    SCIP_Bool             beforecuts;         /**< should undercover be called at root node before cut separation?     */
    SCIP_Bool             fixandprop;         /**< should undercover fix consecutively and propagate fixings?          */
+   SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered?      */
    SCIP_Bool             run;                /**< should heuristic run, i.e. are nonlinear constraints present?       */
    char                  ppcstrat;           /**< strategy for finding a ppc solution                                 */
 };
@@ -766,14 +768,15 @@ SCIP_RETCODE createPpcProblem(
 }
 
 static
+/** calculate the reduced bounds of a variable in the subMIQCP */
 void calculateBounds(
-   SCIP* scip, 
-   SCIP_VAR* var, 
-   SCIP_Real* lb, 
-   SCIP_Real* ub,
-   SCIP_Real domred,
-   int* roundedfixingcounter,
-   SCIP_Bool locksrounding
+   SCIP*                 scip, 
+   SCIP_VAR*             var, 
+   SCIP_Real*            lb, 
+   SCIP_Real*            ub,
+   SCIP_Real             domred,
+   int*                  roundedfixingcounter,
+   SCIP_Bool             locksrounding
    )
 {  
    SCIP_Real lpsolval;
@@ -831,6 +834,121 @@ void calculateBounds(
    assert(*lb <= *ub);
 }
 
+
+/** calculates up to four alternative values for backtracking, if fixing the variable failed. 
+ * The alternatives are the two bounds of the variable, and the averages of the bounds and the fixing value.
+ * For infinite bounds, fixval +/- abs(fixval) will be used instead. 
+ */
+static
+void calculateAlternatives(
+   SCIP*                 scip, 
+   SCIP_VAR*             var, 
+   SCIP_Real             fixval, 
+   SCIP_Real*            alternatives, 
+   int*                  nalternatives
+   )
+{
+   SCIP_Real lb;
+   SCIP_Real ub;
+
+   /* for binary variables, there is only one possible alternative value for backtracking */
+   if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+   {
+      assert(SCIPisFeasEQ(scip, fixval, 0.0) || SCIPisFeasEQ(scip, fixval, 1.0));
+      alternatives[0] = 1.0 - fixval;
+      *nalternatives = 1;
+      return;
+   }
+   
+   *nalternatives = 0;
+   lb = SCIPvarGetLbLocal(var);
+   ub = SCIPvarGetUbLocal(var);
+   
+   assert(!SCIPisEQ(scip, lb, ub));
+ 
+   /* use the lower bound as alternative value, if it is infinite, use x'-|x'| */  
+   if( SCIPisInfinity(scip, -lb) )
+   { 
+      /* lower bound is infinite, use x'-|x'|. If x' is zero, use -1.0 instead */
+      if( SCIPisFeasZero(scip, fixval) )
+         alternatives[*nalternatives] = -1.0;
+      else
+         alternatives[*nalternatives] = fixval - ABS(fixval);
+
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip,alternatives[*nalternatives]));
+      (*nalternatives)++;     
+   }
+   else if( !SCIPisEQ(scip, lb, fixval) )
+   {
+      /* lower bound is finite. Use it as alternative backtracking value */
+      alternatives[*nalternatives] = lb;
+      (*nalternatives)++;
+   }
+   
+   /* use the upper bound as alternative value, if it is infinite, use x'+|x'| instead */  
+   if( SCIPisInfinity(scip, ub) )
+   {
+      /* upper bound is infinite, use x'+|x'|. If x' is zero, use 1.0 instead */
+      if( SCIPisZero(scip, fixval) )
+         alternatives[*nalternatives] = 1.0;
+      else
+         alternatives[*nalternatives] = fixval + ABS(fixval);
+
+      assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip,alternatives[*nalternatives]));
+      (*nalternatives)++;     
+   }
+   else if( !SCIPisEQ(scip, ub, fixval) )
+   {
+      /* upper bound is finite. Use it as alternative backtracking value */
+      alternatives[*nalternatives] = ub;
+      (*nalternatives)++;
+   }
+   assert(*nalternatives == 1 || *nalternatives == 2);
+
+   /* use the average of x' and lower bound as alternative value, if this is not equal to any of the other values */  
+   if( !SCIPisInfinity(scip, -lb) && !SCIPisEQ(scip, lb, fixval) 
+      && (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || !SCIPisEQ(scip, lb, fixval-1)) )
+   {
+      alternatives[*nalternatives] = (lb+fixval)/2.0;
+      
+      /* round up for discrete variables */
+      if(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS)
+      {
+         alternatives[*nalternatives] = SCIPceil(scip, alternatives[*nalternatives]);
+         assert(!SCIPisEQ(scip, alternatives[*nalternatives], fixval));
+      }         
+      (*nalternatives)++; 
+   }
+
+   /* use the average of x' and upper bound as alternative value, if this is not equal to any of the other values */  
+   if( !SCIPisInfinity(scip, ub) && !SCIPisEQ(scip, ub, fixval) 
+      && (SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || !SCIPisEQ(scip, ub, fixval+1)) )
+   {
+      alternatives[*nalternatives] = (ub+fixval)/2.0;
+      
+      if(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS)
+      {
+         alternatives[*nalternatives] = SCIPfloor(scip, alternatives[*nalternatives]);
+         assert(!SCIPisEQ(scip, alternatives[*nalternatives], fixval));
+      }         
+      (*nalternatives)++; 
+   }  
+   
+#ifndef NDEBUG
+   {
+      int i;
+      int j;
+      for( i=0; i < *nalternatives; ++i)
+      {
+         assert(!SCIPisEQ(scip, alternatives[i], fixval));
+         for( j=i+1; j < *nalternatives; ++j)
+            assert(!SCIPisEQ(scip, alternatives[i], alternatives[j]));               
+      }
+   }
+#endif     
+
+}
+
 /** creates a subproblem for subSCIP by fixing the variables with ppcsolvals[.] == 1 */
 static
 SCIP_RETCODE createSubProblem(
@@ -840,6 +958,7 @@ SCIP_RETCODE createSubProblem(
    SCIP_Real*            ppcsolvals,         /**< ppcsolvals[i] == 1 if var. i should be fixed/dom.red. in subproblem */
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value  */
    SCIP_Bool             fixandprop,         /**< should undercover fix consecutively and propagate fixings?          */
+   SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered?      */
    SCIP_Bool             locksrounding,      /**< shall LP values for integer vars be rounded according to locks?     */
    SCIP_Bool             local,              /**< shall local LP rows be copied and local bounds be used?             */
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully       */
@@ -873,12 +992,13 @@ SCIP_RETCODE createSubProblem(
    /* create the variables of the subproblem */
    fixingcounter = 0;
    roundedfixingcounter = 0;
+
+
    for( i = 0; i < nvars; ++i )
    {
+      assert(SCIPvarGetProbindex(vars[i]) == i);
       SCIP_Real lb;
       SCIP_Real ub;
-      
-      assert(SCIPvarGetProbindex(vars[i]) == i);
 
       lb = local ? SCIPvarGetLbLocal(vars[i]) :  SCIPvarGetLbGlobal(vars[i]);
       ub = local ? SCIPvarGetUbLocal(vars[i]) :  SCIPvarGetLbGlobal(vars[i]);
@@ -895,10 +1015,152 @@ SCIP_RETCODE createSubProblem(
          ++fixingcounter;         
       }
       
+      /* variable is created. domain reductions were only performed when we want to fix all variables at a time, without intermediate propagation */
       SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), lb, ub, SCIPvarGetObj(vars[i]), 
             SCIPvarGetType(vars[i]), SCIPvarIsInitial(vars[i]), SCIPvarIsRemovable(vars[i]), NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
       SCIP_CALL( SCIPhashmapInsert(varmap, vars[i], subvars[i]) );
+   }
+
+   /* fix-and-propagate loop */
+   if( fixandprop )
+   {
+      int nbacktracks;
+      int nalternatives;
+      SCIP_Real* alternatives;
+
+      /* start probing */
+      SCIP_CALL( SCIPstartProbing(scip) );
+      
+      /* if we want to use global bounds and are not at the root node, reset bounds */
+      for( i = 0; i < nvars; ++i )
+      {
+         if( SCIPgetDepth(scip) > 0 && !local )
+         {
+            SCIP_CALL( SCIPchgVarLbProbing(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
+            SCIP_CALL( SCIPchgVarUbProbing(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
+         }
+      } 
+
+      /* we try at most four alternative values in backtracking */
+      SCIP_CALL( SCIPallocBufferArray(scip, &alternatives, 4) );
+    
+      fixingcounter = 0;
+      roundedfixingcounter = 0;
+
+      /* for each variable, which has to be fixed: fix and propagate */   
+      for( i = nvars-1; i >= 0; --i )
+      {
+         assert(SCIPvarGetProbindex(vars[i]) == i);
+
+         /* iff ppcsolvals[i] == 1, variable is fixed/dom.red. in the subproblem */
+         if( SCIPisEQ(scip, ppcsolvals[i], 1.0)  )
+         {
+            SCIP_Real lb;
+            SCIP_Real ub;
+            SCIP_Real oldlb;
+            SCIP_Real oldub;
+
+            SCIP_Bool infeasible;
+            SCIP_Longint ndomredsfound;
+  
+            lb = SCIPvarGetLbLocal(vars[i]);
+            ub = SCIPvarGetUbLocal(vars[i]);
+
+            /* if the variable was already fixed, e.g. by propagation, continue */
+            if( SCIPisEQ(scip, lb, ub) )
+               continue;
+            
+            oldlb = lb;
+            oldub = ub;
+            nalternatives = 0;
+
+            /* create next probing node */
+            SCIP_CALL( SCIPnewProbingNode(scip) );
+
+            /* calculate the new bounds of the variable */
+            calculateBounds(scip, vars[i], &lb, &ub, domred, &roundedfixingcounter, locksrounding);  
+            if( backtrack )
+            {
+               /* Backtracking without fixing is not supported yet */
+               if( domred != 1.0 )
+               {
+                  SCIPerrorMessage("Backtracking for domain reduction not implemented yet.\n");
+                  return SCIP_INVALIDDATA;
+               }
+               else
+               {
+                  /* calculate between one and four alternative fixing values for the case of backtracking */
+                  assert(SCIPisEQ(scip,lb,ub));
+                  calculateAlternatives(scip, vars[i], lb, alternatives, &nalternatives);
+                  assert(nalternatives >= 1);
+               }
+            }
+
+            nbacktracks = 0;
+            /* backtracking loop */
+            do
+            {
+               /* if we are in backtracking, try next alternative value */
+               if( nbacktracks > 0 )
+               {          
+                  lb = alternatives[nbacktracks-1];
+                  ub = alternatives[nbacktracks-1];                  
+               }
+
+               /* change variable bounds in probing, subMIQCP will follow later */
+               if( SCIPisLbBetter(scip, lb, oldlb, oldub) )
+               {
+                  SCIP_CALL( SCIPchgVarLbProbing(scip, vars[i], lb) );
+               }
+               if( SCIPisUbBetter(scip, ub, oldlb, oldub) )
+               {
+                  SCIP_CALL( SCIPchgVarUbProbing(scip, vars[i], ub) );
+               }
+               
+               SCIPdebugMessage("tentatively %s variable <%s> to [%g, %g] for probing\n", SCIPisEQ(scip, lb, ub) ? "fix" : "restrict",                   
+                  SCIPvarGetName(vars[i]), lb, ub);
+
+               /* propagate the bound change */       
+               SCIP_CALL( SCIPpropagateProbing(scip, 0, &infeasible, &ndomredsfound) );
+               SCIPdebugMessage("  --> propagation reduced %lld further domains\n", ndomredsfound);
+               
+               /* if propagation led to a cutoff, backtrack or abort */
+               if( infeasible )
+               {  
+                  if( backtrack && nbacktracks < nalternatives )
+                  {
+                     SCIPdebugMessage("  --> cutoff detected - backtracking\n");
+                     SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+                     SCIP_CALL( SCIPnewProbingNode(scip) );
+                     nbacktracks++;
+                  }
+                  else 
+                  {
+                     SCIPfreeBufferArray(scip, &alternatives);
+                     SCIP_CALL( SCIPendProbing(scip) );
+                     SCIPdebugMessage("  --> cutoff detected - abort\n");
+                     goto TERMINATE;
+                  }
+               }
+               else 
+               {
+                  /* if the fixing did not lead to a cutoff, transfer it to the subMIQCP */
+                  SCIPdebugMessage("  --> finally %s %s variable <%s> to [%g, %g] in subMIQCP\n", SCIPisEQ(scip, lb, ub) ? "fix" : "restrict", 
+                  SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
+                  SCIPvarGetName(vars[i]), lb, ub);
+                  SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
+                  SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
+                  break;
+               }
+            }
+            while( backtrack && nbacktracks <= nalternatives );
+
+            ++fixingcounter;         
+         }
+      }
+      SCIPfreeBufferArray(scip, &alternatives);
+      SCIP_CALL( SCIPendProbing(scip) );
    }
 
    /* abort, if nothing was fixed or all variables were fixed to their current LP value */
@@ -921,6 +1183,7 @@ SCIP_RETCODE createSubProblem(
 
       SCIPdebugMessage("undercover heuristic attempting to copy %d %s constraints\n", SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetName(conshdlr));
 
+      /* loop over all constraint handlers and copy all their constraints */
       for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
       {
          cons = SCIPconshdlrGetConss(conshdlr)[c];
@@ -931,6 +1194,7 @@ SCIP_RETCODE createSubProblem(
                SCIPconsIsPropagated(cons), TRUE, SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
                FALSE, &succeed) );
 
+         /* some constraint handlers may not have a copy constructor. Since we only need a relaxation of the problem, we can proceed */
          if( succeed )
          {
             SCIP_CALL( SCIPaddCons(subscip, conscopy) );
@@ -941,78 +1205,6 @@ SCIP_RETCODE createSubProblem(
             SCIPdebugMessage("failed to copy constraint %s\n", SCIPconsGetName(cons));
          }
       }
-   }
-
-   if( fixandprop )
-   {
-      /* start probing */
-      SCIP_CALL( SCIPstartProbing(scip) );
-      
-      /* if we want to use global bounds and are not at the root node, reset bounds */
-      if( SCIPgetDepth(scip) > 0 && !local )
-      {
-         SCIP_CALL( SCIPchgVarLbProbing(scip, vars[i], SCIPvarGetLbGlobal(vars[i])) );
-         SCIP_CALL( SCIPchgVarUbProbing(scip, vars[i], SCIPvarGetUbGlobal(vars[i])) );
-      }
-      
-      /* for each variable, which has to be fixed: fix and propagate */
-      fixingcounter = 0;
-      roundedfixingcounter = 0;
-      for( i = 0; i < nvars; ++i )
-      {
-         assert(SCIPvarGetProbindex(vars[i]) == i);
-
-         /* iff ppcsolvals[i] == 1, variable is fixed/dom.red. in the subproblem */
-         if( SCIPisEQ(scip, ppcsolvals[i], 1.0)  )
-         {
-            SCIP_Real lb;
-            SCIP_Real ub;
-            SCIP_Real oldlb;
-            SCIP_Real oldub;
-
-            SCIP_Bool infeasible;
-            SCIP_Longint ndomredsfound;
-
-            /* create next probing node */
-            SCIP_CALL( SCIPnewProbingNode(scip) );
-            
-            lb = SCIPvarGetLbLocal(vars[i]);
-            ub = SCIPvarGetUbLocal(vars[i]);
-            oldlb = lb;
-            oldub = ub;
-            
-            calculateBounds(scip, vars [i], &lb, &ub, domred, &roundedfixingcounter, locksrounding);  
-
-            /* change variable bounds in probing and in the subMIQCP */
-            SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], lb) );
-            SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], ub) );
-            if( SCIPisLbBetter(scip, lb, oldlb, oldub) )
-            {
-               SCIP_CALL( SCIPchgVarLbProbing(scip, vars[i], lb) );
-            }
-            if( SCIPisUbBetter(scip, ub, oldlb, oldub) )
-            {
-               SCIP_CALL( SCIPchgVarUbProbing(scip, vars[i], ub) );
-            }
-
-            SCIPdebugMessage("%s %s variable <%s> to [%g, %g] in subMIQCP\n", SCIPisEQ(scip, lb, ub) ? "fix" : "restrict", 
-               SCIPvarGetType(vars[i]) == SCIP_VARTYPE_CONTINUOUS ? "continuous" : "discrete",
-               SCIPvarGetName(vars[i]), SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i]));
-
-            /* propagate the bound change */       
-            SCIP_CALL( SCIPpropagateProbing(scip, 0, &infeasible, &ndomredsfound) );
-            SCIPdebugMessage("  --> propagation reduced %lld further domains\n", ndomredsfound);
-            if( infeasible)
-            {  
-               SCIP_CALL( SCIPendProbing(scip) );
-               SCIPdebugMessage("  --> infeasibility detected\n");
-               goto TERMINATE;
-            }
-
-            ++fixingcounter;         
-         }
-      }
-      SCIP_CALL( SCIPendProbing(scip) );
    }
 
    *success = TRUE;
@@ -1293,6 +1485,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    SCIP_Real             ppcobjquot,         /**< additional penalty factor for fixing continuous variables      */
    SCIP_Real             domred,             /**< reduce domain of selected variables by this factor around LP value */
    SCIP_Bool             fixandprop,         /**< should undercover fix consecutively and propagate fixings?          */
+   SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered?      */
    SCIP_Bool             locksrounding,      /**< shall LP values for integer vars be rounded according to locks? */
    SCIP_Bool             onlyconvexify,      /**< should we only fix/dom.red. variables creating nonconvexity?   */
    SCIP_Bool             globalbounds,       /**< should global bounds on variables be used instead of local bounds at focus node? */
@@ -1375,7 +1568,7 @@ SCIP_RETCODE SCIPapplyUndercover(
    /* create subMIQCP */
    SCIPdebugMessage("undercover heuristic creating subMIQCP\n");
    success = FALSE;
-   SCIP_CALL( createSubProblem(scip, subscip, subvars, ppcsolvals, domred, fixandprop, locksrounding, !globalbounds, &success) );
+   SCIP_CALL( createSubProblem(scip, subscip, subvars, ppcsolvals, domred, fixandprop, backtrack, locksrounding, !globalbounds, &success) );
 
    if( !success )
    { 
@@ -1700,7 +1893,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    SCIPdebugMessage("calling undercover heuristic for <%s>\n", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPapplyUndercover(scip, heur, result, timelimit, memorylimit, heurdata->maxnodes, heurdata->ppcstrat, 
-         heurdata->ppcobjquot, heurdata->domred, heurdata->fixandprop, heurdata->locksrounding, heurdata->onlyconvexify, 
+         heurdata->ppcobjquot, heurdata->domred, heurdata->fixandprop, heurdata->backtrack, heurdata->locksrounding, heurdata->onlyconvexify, 
          heurdata->globalbounds, heurdata->minimprove, nstallnodes, heurdata->postnlp) );
 
    return SCIP_OKAY;
@@ -1781,6 +1974,11 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
          "should undercover fix consecutively and propagate fixings?",
          &heurdata->fixandprop, TRUE, DEFAULT_FIXANDPROP, NULL, NULL) );
 
+SCIP_CALL( SCIPaddBoolParam(scip,
+         "heuristics/"HEUR_NAME"/backtrack", 
+         "use one level of backtracking if infeasibility is encountered?",
+         &heurdata->backtrack, FALSE, DEFAULT_BACKTRACK, NULL, NULL) );
+ 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/ppcstrategy",
          "strategy for the ppc problem ('b'ranching status, influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties, constraint 'v'iolation)",
          &heurdata->ppcstrat, TRUE, DEFAULT_PPCSTRAT, PPCSTRATS, NULL, NULL) );
