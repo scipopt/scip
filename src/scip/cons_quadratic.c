@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.70 2009/12/09 07:39:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.71 2009/12/10 14:33:21 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -162,9 +162,11 @@ struct SCIP_ConshdlrData
    SCIP_Bool             fastpropagate;             /**< should a faster but maybe less effective propagation be used ? */
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
+   SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP heuristic */
 
    SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic */
    SCIP_EVENTHDLR*       eventhdlr;                 /**< our handler for variable bound change events */
+   int                   newsoleventfilterpos;      /**< filter position of new solution event handler, if catched */
 
 #ifdef WITH_CONSBRANCHNL
    SCIP_CONSHDLR*        branchnl;                  /**< constraint handler for branching on nonlinear variables */
@@ -942,7 +944,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(event != NULL);
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
-   /* assert(strcmp(SCIPeventhdlrGetName(eventhdlr), CONSHDLR_NAME) == 0); */
 
    consdata = eventdata->consdata;
    assert(consdata != NULL);
@@ -1011,6 +1012,7 @@ SCIP_RETCODE catchVarEvents(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   consdata->isremovedfixings = TRUE;
    SCIP_CALL( SCIPreallocMemoryArray(scip, &consdata->linbndchgeventdata, consdata->nlinvars) );
    for( i = 0; i < consdata->nlinvars; ++i )
    {
@@ -1018,6 +1020,7 @@ SCIP_RETCODE catchVarEvents(
       consdata->linbndchgeventdata[i].consdata = consdata;
       consdata->linbndchgeventdata[i].varidx = i;
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->linvars[i], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, &consdata->linbndchgeventdata[i], NULL) );
+      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(consdata->linvars[i]);
    }
    SCIP_CALL( SCIPreallocMemoryArray(scip, &consdata->quadbndchgeventdata, consdata->nquadvars) );
    SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->quadrange);
@@ -1027,6 +1030,7 @@ SCIP_RETCODE catchVarEvents(
       consdata->quadbndchgeventdata[i].consdata = consdata;
       consdata->quadbndchgeventdata[i].varidx   = -i-1;
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->quadvars[i], SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_VARFIXED, eventhdlr, &consdata->quadbndchgeventdata[i], NULL) );
+      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(consdata->quadvars[i]);
    }
    for( i = 0; i < consdata->nbilinterms; ++i )
       SCIPintervalSetEmpty(SCIPinfinity(scip), &consdata->bilinrange[i]);
@@ -1802,13 +1806,18 @@ SCIP_RETCODE presolveCreateQuadTerm(
       var = consdata->linvars[i];
       *havechange = *havechange || ((SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN) && (SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE));
       *havechange = *havechange || SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+      *havechange = *havechange || SCIPisZero(scip, consdata->lincoefs[i]);
       SCIP_CALL( presolveAddLinearTerm(scip, *terms, constant, consdata->lincoefs[i], var) );
    }
 
    for( j = 0; j < consdata->nquadvars; ++j )
    {
       if( consdata->quadlincoefs[j] == 0.0 && consdata->quadsqrcoefs[j] == 0.0 )
+      {
+         if( consdata->nadjbilin[j] == 0 )
+            *havechange = TRUE;
          continue;
+      }
 
       var = consdata->quadvars[j];
       assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL); /* should not happen after transformation */
@@ -1865,7 +1874,10 @@ SCIP_RETCODE presolveCreateQuadTerm(
       coef = consdata->bilincoefs[j];
 
       if( coef == 0.0 )
+      {
+         *havechange = TRUE;
          continue;
+      }
 
       assert(SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL);
       switch( SCIPvarGetStatus(var) )
@@ -3629,7 +3641,7 @@ SCIP_RETCODE generateCut(
    isconvex = (violbound == SCIP_BOUNDTYPE_LOWER) ? consdata->isconcave : consdata->isconvex;
    isglobal = SCIPconsIsGlobal(cons) && isconvex;
 
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "cut", -SCIPinfinity(scip), SCIPinfinity(scip), !isglobal /* locally */, TRUE /* modifiable */, TRUE /* removable */ ) );
+   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "cut", -SCIPinfinity(scip), SCIPinfinity(scip), !isglobal /* locally */, FALSE /* modifiable */, TRUE /* removable */ ) );
    bnd = (violbound == SCIP_BOUNDTYPE_LOWER) ? consdata->lhs : consdata->rhs;
    assert(!SCIPisInfinity(scip, ABS(bnd)));
 
@@ -3986,6 +3998,79 @@ SCIP_RETCODE separatePoint(
        */ 
       if( c >= nusefulconss && *result == SCIP_SEPARATED )
          break;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** processes the event that a new primal solution has been found */
+static
+SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS**    conss;
+   int            nconss;
+   SCIP_CONSDATA* consdata;
+   int            c;
+   SCIP_SOL*      sol;
+   SCIP_ROW*      row = NULL;
+
+   assert(scip != NULL);
+   assert(event != NULL);
+   assert(eventdata != NULL);
+   assert(eventhdlr != NULL);
+
+   assert((SCIPeventGetType(event) | SCIP_EVENTTYPE_SOLFOUND) != 0);
+
+   conshdlr = (SCIP_CONSHDLR*)eventdata;
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   sol = SCIPeventGetSol(event);
+   assert(sol != NULL);
+
+   /* we are only interested in solution coming from the NLP heuristic (is that good?) */
+   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur )
+      return SCIP_OKAY;
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+   assert(conss != NULL);
+
+   SCIPdebugMessage("catched new sol event %d; have %d conss\n", SCIPeventGetType(event), nconss);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsIsLocal(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         SCIP_CALL( generateCut(scip, conss[c], sol, SCIP_BOUNDTYPE_UPPER, &row, conshdlrdata->cutmaxrange) );
+      }
+      else if( consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         SCIP_CALL( generateCut(scip, conss[c], sol, SCIP_BOUNDTYPE_LOWER, &row, conshdlrdata->cutmaxrange) );
+      }
+      else
+         continue;
+
+      if( row == NULL )
+         continue;
+
+      assert(!SCIProwIsLocal(row));
+
+      SCIP_CALL( SCIPaddPoolCut(scip, row) );
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
    }
 
    return SCIP_OKAY;
@@ -5521,9 +5606,20 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
        else
            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "There are nonconvex quadratic constraints.\n");
    }
-       
+
    conshdlrdata->nlpheur = SCIPfindHeur(scip, "nlp");
    
+   conshdlrdata->newsoleventfilterpos = -1;
+   if( nconss != 0 && conshdlrdata->nlpheur != NULL && conshdlrdata->linearizenlpsol )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
+   }
+
    return SCIP_OKAY;
 }
 
@@ -5546,7 +5642,22 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       assert(conss != NULL);
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
    }
-   
+
+   if( conshdlrdata->newsoleventfilterpos >= 0 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      /* failing of the following events mean that new solution events should not have been catched */
+      assert(conshdlrdata->nlpheur != NULL);
+      assert(conshdlrdata->linearizenlpsol);
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, conshdlrdata->newsoleventfilterpos) );
+      conshdlrdata->newsoleventfilterpos = -1;
+   }
+
    conshdlrdata->nlpheur = NULL;
 
    return SCIP_OKAY;
@@ -6050,6 +6161,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             /* delete upgraded constraint */
             if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
             {
+               SCIPdebugMessage("delete constraint %s after upgrade\n", SCIPconsGetName(conss[c]));
                SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
                SCIP_CALL( SCIPdelCons(scip, conss[c]) );
                continue;
@@ -6117,6 +6229,8 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
                    (!SCIPisInfinity(scip,  consdata->rhs) && SCIPisFeasGT(scip, constant,     consdata->rhs)) )
                { /* constant is out of bounds */
                   SCIPdebugMessage("constraint %s is constant and infeasible\n", SCIPconsGetName(conss[c]));
+                  SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+                  SCIP_CALL( SCIPdelCons(scip, conss[c]) );
                   *result = SCIP_CUTOFF;
                   break;
                }
@@ -7141,6 +7255,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "maximal range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, FALSE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol",
+         "whether convex quadratic constraints should be linearized in a solution found by the NLP heuristic",
+         &conshdlrdata->linearizenlpsol, FALSE, TRUE, NULL, NULL) );
+
 #ifndef WITH_CONSBRANCHNL
 #ifndef USE_RELAXBRANCH
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/strategy",
@@ -7153,9 +7271,12 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->mindistbrpointtobound, FALSE, 0.2, 0.0001, 0.5, NULL, NULL) );
 #endif
    
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change to a quadratic constraint",
+   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
       NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME);
+   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
+
+   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
+      NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
 
    return SCIP_OKAY;
 }
