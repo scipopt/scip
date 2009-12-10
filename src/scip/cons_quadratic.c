@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.72 2009/12/10 14:40:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.73 2009/12/10 15:35:55 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -162,7 +162,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             fastpropagate;             /**< should a faster but maybe less effective propagation be used ? */
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
-   SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP heuristic */
+   SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENSNL heuristic */
 
    SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic, if available */
    SCIP_HEUR*            rensnlheur;                /**< a pointer to the RENSNL heuristic, if available */
@@ -5652,7 +5652,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       SCIP_EVENTHDLR* eventhdlr;
 
       /* failing of the following events mean that new solution events should not have been catched */
-      assert(conshdlrdata->nlpheur != NULL);
+      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->rensnlheur != NULL);
       assert(conshdlrdata->linearizenlpsol);
 
       eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
@@ -5662,7 +5662,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       conshdlrdata->newsoleventfilterpos = -1;
    }
 
-   conshdlrdata->nlpheur = NULL;
+   conshdlrdata->nlpheur    = NULL;
    conshdlrdata->rensnlheur = NULL;
 
    return SCIP_OKAY;
@@ -7261,7 +7261,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->cutmaxrange, FALSE, 1e+10, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol",
-         "whether convex quadratic constraints should be linearized in a solution found by the NLP heuristic",
+         "whether convex quadratic constraints should be linearized in a solution found by the NLP or RENSNL heuristic",
          &conshdlrdata->linearizenlpsol, FALSE, TRUE, NULL, NULL) );
 
 #ifndef WITH_CONSBRANCHNL

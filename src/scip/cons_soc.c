@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.10 2009/12/01 13:42:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.11 2009/12/10 15:35:55 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -89,15 +89,18 @@ struct SCIP_ConsData
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
    SCIP_HEUR*            nlpheur;        /**< a pointer to the NLP heuristic */
+   SCIP_HEUR*            rensnlheur;     /**< a pointer to the RENSNL heuristic */
+   SCIP_EVENTHDLR*       eventhdlr;      /**< event handler for bound change events */
+   int                   newsoleventfilterpos;  /**< filter position of new solution event handler, if catched */
+   SCIP_Longint          nextbranchnode; /**< (lower bound on) index of node where to branch next time if adding weak cuts fails */ 
    
    SCIP_Bool             glineur;        /**< is the Glineur outer approx prefered to Ben-Tal Nemirovski? */
    SCIP_Bool             doscaling;      /**< are constraint violations scaled? */
    SCIP_Bool             projectpoint;   /**< is the point in which a cut is generated projected onto the feasible set? */
    int                   nauxvars;       /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
    int                   branchfreq;     /**< frequency of branching on a node instead of adding weak cuts */
-   SCIP_Longint          nextbranchnode; /**< (lower bound on) index of node where to branch next time if adding weak cuts fails */ 
+   SCIP_Bool             linearizenlpsol;/**< whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic */
 };
 
 
@@ -244,7 +247,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    assert(event     != NULL);
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), CONSHDLR_NAME) == 0);
 
    consdata = eventdata->consdata;
    assert(consdata  != NULL);
@@ -650,7 +652,7 @@ SCIP_RETCODE generateCut(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    
-   assert(SCIPisPositive(scip, consdata->lhsval)); /* otherwise constraint is not be violated */
+   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
    
    SCIP_CALL( SCIPallocBufferArray(scip, &rowcoeff, consdata->nvars) );
    
@@ -670,7 +672,7 @@ SCIP_RETCODE generateCut(
    rhs /= consdata->lhsval;
    rhs -= consdata->lhsval - consdata->rhscoeff * consdata->rhsoffset;
    
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "soccut", -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), TRUE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "soccut", -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
    
@@ -729,7 +731,7 @@ SCIP_RETCODE generateCutProjectedPoint(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisPositive(scip, consdata->lhsval)); /* otherwise constraint is not be violated */
+   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
 
    if( !SCIPisZero(scip, consdata->constant) )
    {  /* have not thought about this case yet */
@@ -772,7 +774,7 @@ SCIP_RETCODE generateCutProjectedPoint(
    rhs /= 1.0 - lambda;
    rhs -= consdata->rhscoeff * consdata->rhsoffset;
    
-   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "soccut", -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), TRUE, TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "soccut", -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
    SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
    
@@ -844,6 +846,80 @@ SCIP_RETCODE separatePoint(
        */ 
       if( c >= nusefulconss && *success )
          break;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** processes the event that a new primal solution has been found */
+static
+SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONS**    conss;
+   int            nconss;
+   SCIP_CONSDATA* consdata;
+   int            c;
+   SCIP_SOL*      sol;
+   SCIP_ROW*      row = NULL;
+
+   assert(scip != NULL);
+   assert(event != NULL);
+   assert(eventdata != NULL);
+   assert(eventhdlr != NULL);
+
+   assert((SCIPeventGetType(event) | SCIP_EVENTTYPE_SOLFOUND) != 0);
+
+   conshdlr = (SCIP_CONSHDLR*)eventdata;
+
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   sol = SCIPeventGetSol(event);
+   assert(sol != NULL);
+
+   /* we are only interested in solution coming from the NLP or RENSNL heuristic (is that good?) */
+   if( SCIPsolGetHeur(sol) == NULL )
+      return SCIP_OKAY;
+   if( SCIPsolGetHeur(sol) != conshdlrdata->nlpheur && SCIPsolGetHeur(sol) != conshdlrdata->rensnlheur)
+      return SCIP_OKAY;
+
+   conss = SCIPconshdlrGetConss(conshdlr);
+   assert(conss != NULL);
+
+   SCIPdebugMessage("catched new sol event %d from heur %p; have %d conss\n", SCIPeventGetType(event), SCIPsolGetHeur(sol), nconss);
+
+   for( c = 0; c < nconss; ++c )
+   {
+      if( SCIPconsIsLocal(conss[c]) )
+         continue;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      SCIP_CALL( evalLhs(scip, conss[c], sol) );
+      if( !SCIPisPositive(scip, consdata->lhsval) )
+      {
+         SCIPdebugMessage("skip adding linearization for <%s> since lhs is %g\n", SCIPconsGetName(conss[c]), consdata->lhsval);
+         continue;
+      }
+      
+      SCIP_CALL( generateCut(scip, conss[c], sol, &row) );
+
+      if( row == NULL )
+         continue;
+
+      assert(!SCIProwIsLocal(row));
+
+      SCIP_CALL( SCIPaddPoolCut(scip, row) );
+      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      SCIPdebugMessage("added linearization of constraint <%s> in solution from heuristic to cut pool\n", SCIPconsGetName(conss[c]));
    }
 
    return SCIP_OKAY;
@@ -2615,9 +2691,22 @@ SCIP_DECL_CONSINITSOL(consInitsolSOC)
       SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
    }
    
-   conshdlrdata->nlpheur        = SCIPfindHeur(scip, "nlp");
    conshdlrdata->nextbranchnode = conshdlrdata->branchfreq;
    
+   conshdlrdata->nlpheur        = SCIPfindHeur(scip, "nlp");
+   conshdlrdata->rensnlheur     = SCIPfindHeur(scip, "rensnl");
+   
+   conshdlrdata->newsoleventfilterpos = -1;
+   if( nconss != 0 && (conshdlrdata->nlpheur != NULL || conshdlrdata->rensnlheur != NULL) )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
+   }
+
    return SCIP_OKAY;
 }
 #else
@@ -2649,7 +2738,22 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOC)
       SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
    }
    
-   conshdlrdata->nlpheur = NULL;
+   if( conshdlrdata->newsoleventfilterpos >= 0 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      /* failing of the following events mean that new solution events should not have been catched */
+      assert(conshdlrdata->nlpheur != NULL || conshdlrdata->rensnlheur != NULL);
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, conshdlrdata->newsoleventfilterpos) );
+      conshdlrdata->newsoleventfilterpos = -1;
+   }
+
+   conshdlrdata->nlpheur    = NULL;
+   conshdlrdata->rensnlheur = NULL;
    
    return SCIP_OKAY;
 }
@@ -3412,9 +3516,12 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    conshdlrdata->nlpheur   = NULL;
    
-   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME, "signals a bound change to a second order cone constraint",
+   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a second order cone constraint",
       NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
-   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME);
+   conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
+
+   SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
+      NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -3437,6 +3544,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/nauxvars",     "number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint; 0 to turn off", &conshdlrdata->nauxvars,     FALSE, 2, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/branchfreq",   "frequency of branching on a node if only weak cuts could be added in enforcement; 0 to turn off",               &conshdlrdata->branchfreq,   TRUE,  0, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",      "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",                          &conshdlrdata->glineur,      FALSE, TRUE,          NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol", "whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic",            &conshdlrdata->linearizenlpsol, FALSE, TRUE,       NULL, NULL) );
 
 #ifdef QUADCONSUPGD_PRIORITY
    /* notify function that upgrades quadratic constraint to SOC's */
