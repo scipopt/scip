@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.44 2009/12/01 13:42:25 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.45 2009/12/10 21:33:49 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1014,13 +1014,13 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    if( iterused != NULL )
       *iterused = 0;
 
-   /* get starting values (=refpoint, if not NULL; otherwise LP solution) */
+   /* get starting values (=refpoint, if not NULL; otherwise LP solution (or pseudo solution)) */
    SCIP_CALL( SCIPallocBufferArray(scip, &startpoint, heurdata->nvars) );
    SCIP_CALL( SCIPgetSolVals(scip, refpoint, heurdata->nvars, heurdata->var_nlp2scip, startpoint) );
 
    /* fix discrete variables to values in startpoint */
    if( heurdata->ndiscrvars > 0 )
-   { 
+   {
       SCIP_Real* discrfix;
       int i;
 
@@ -1033,11 +1033,19 @@ SCIP_RETCODE SCIPapplyNlpHeur(
          /* only apply to integer feasible points */
          if( !SCIPisFeasIntegral(scip, discrfix[i]) )
          {
-            SCIPdebugMessage("skip NLP heuristic because start candidate not integer feasible\n");
-            SCIPfreeBufferArray(scip, &startpoint);
-            *result = SCIP_DIDNOTRUN;
-            return SCIP_OKAY;
+            if( refpoint || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+            {
+               SCIPdebugMessage("skip NLP heuristic because start candidate not integer feasible: var %d is %g\n", i, discrfix[i]);
+               SCIPfreeBufferArray(scip, &startpoint);
+               *result = SCIP_DIDNOTRUN;
+               return SCIP_OKAY;
+            }
+            /* otherwise we desperately wanna run the NLP heur, so we continue and round what we have */
          }
+         /* if we do not really have a startpoint, then we should take care that we do not fix variables to very large values
+          * set to 0 here and project on bounds below */ 
+         if( ABS(discrfix[i]) > 1E+10 && !refpoint && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+            discrfix[i] = 0;
 
          /* round fractional variables to the nearest integer */
          discrfix[i] = SCIPfrac(scip, discrfix[i]) > 0.5 ? SCIPceil(scip, discrfix[i]) : SCIPfloor(scip, discrfix[i]);
@@ -1063,8 +1071,15 @@ SCIP_RETCODE SCIPapplyNlpHeur(
    SCIP_CALL( SCIPnlpiSetIntPar(scip, heurdata->nlpi, SCIP_NLPPAR_ITLIM, (int)itercontingent) );
    SCIP_CALL( SCIPnlpiSetRealPar(scip, heurdata->nlpi, SCIP_NLPPAR_TILIM, timelimit) );
 
-   /* pass initial guess to NLP solver */
-   SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, startpoint) );
+   /* pass initial guess to NLP solver, if we have one; otherwise clear previous guess and let NLP solver choose */
+   if( refpoint || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, startpoint) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPnlpiSetInitialGuess(scip, heurdata->nlpi, NULL) );
+   }
    
    SCIPfreeBufferArray(scip, &startpoint);
 
@@ -1229,7 +1244,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolNlp)
    
    /* if the heuristic is called at the root node, we want to be called directly after the initial root LP solve */
    if( SCIPheurGetFreqofs(heur) == 0 )
-      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
+      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | HEUR_TIMING);
 
    return SCIP_OKAY;
 }
@@ -1305,21 +1320,32 @@ SCIP_DECL_HEUREXEC(heurExecNlp)
       return SCIP_OKAY;
    
    if( heurdata->startcand == NULL )
-   {  /* if no start candidate is given, we consider the LP solution of the current node */
-      /* only call heuristic if optimal LP solution is available */
+   {  /* if no start candidate is given, we like to consider the LP solution of the current node */
+      /* at least if we are not called the first time, we call the heuristic only if an optimal LP solution is available 
+       * if we are called the first time and the LP is unbounded, then we are quite desperate and still give the NLP a try */
       if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       {
+         if( SCIPgetNNodes(scip) > 1 || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         {
+            *result = SCIP_DELAYED;
+            SCIPdebugMessage("NLP heuristic delayed because no start candidate given and no LP solution available\n");
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIPdebugMessage("LP is unbounded in root node, so we are quite desperate; run NLP heuristic and pray\n");
+         }
+      }
+      else if( SCIPgetNLPBranchCands(scip) > 0 )
+      { /* only call heuristic, if there are no fractional variables */
          *result = SCIP_DELAYED;
-         SCIPdebugMessage("NLP heuristic delayed because no start candidate given and no LP solution available\n");
+         SCIPdebugMessage("NLP heuristic delayed because no start candidate given and current LP solution is fractional\n");
          return SCIP_OKAY;
       }
-
-      /* only call heuristic, if there are no fractional variables */
-      if( SCIPgetNLPBranchCands(scip) > 0 )
-      {
-         SCIPdebugMessage("skip NLP heuristic because no start candidate given and current LP solution is fractional\n");
-         return SCIP_OKAY;
-      }
+   }
+   else
+   {
+      SCIPdebugMessage("have startcand from heur %s\n", SCIPsolGetHeur(heurdata->startcand) ? SCIPheurGetName(SCIPsolGetHeur(heurdata->startcand)) : "NULL");
    }
 
    /* compute the contingent on number of iterations that the NLP solver is allowed to use
