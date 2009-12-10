@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma ident "@(#) $Id: heur_zirounding.c,v 1.2 2009/12/10 09:31:49 bzfheinz Exp $"
 
 /**@file   heur_zirounding.c
  * @ingroup PRIMALHEURISTICS
@@ -35,10 +36,10 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
 
-#define DEFAULT_MAXROUNDINGLOOPS   2      /**> delimits the number of main loops */
-#define DEFAULT_STOPZIROUND        TRUE   /**> deactivation check is enabled by default */     
-#define DEFAULT_STOPPERCENTAGE     0.02   /**> the tolerance percentage after which zirounding will not be executed anymore */
-#define DEFAULT_MINSTOPNCALLS      1000   /**> number of heuristic calls before deactivation check */   
+#define DEFAULT_MAXROUNDINGLOOPS   2      /**< delimits the number of main loops */
+#define DEFAULT_STOPZIROUND        TRUE   /**< deactivation check is enabled by default */     
+#define DEFAULT_STOPPERCENTAGE     0.02   /**< the tolerance percentage after which zirounding will not be executed anymore */
+#define DEFAULT_MINSTOPNCALLS      1000   /**< number of heuristic calls before deactivation check */   
 
 /*
  * Data structures
@@ -47,12 +48,12 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_SOL*             sol;                /**> working solution */
-   SCIP_Longint          lastlp;             /**> the number of the last LP for which ZIRounding was called */
-   int                   maxroundingloops;   /**> limits rounding loops in execution */ 
-   SCIP_Bool             stopziround;        /**> sets deactivation check */
-   SCIP_Real             stoppercentage;     /**> threshold for deactivation check */
-   int                   minstopncalls;      /**> number of heuristic calls before deactivation check */   
+   SCIP_SOL*             sol;                /**< working solution */
+   SCIP_Longint          lastlp;             /**< the number of the last LP for which ZIRounding was called */
+   int                   maxroundingloops;   /**< limits rounding loops in execution */ 
+   SCIP_Bool             stopziround;        /**< sets deactivation check */
+   SCIP_Real             stoppercentage;     /**< threshold for deactivation check */
+   int                   minstopncalls;      /**< number of heuristic calls before deactivation check */   
 };
 
 enum Direction
@@ -252,8 +253,8 @@ void updateSlacks(
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeZirounding) /*lint --e{715}*/
-{   /*lint --e{715}*/
+SCIP_DECL_HEURFREE(heurFreeZirounding)
+{  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -270,7 +271,7 @@ SCIP_DECL_HEURFREE(heurFreeZirounding) /*lint --e{715}*/
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
-SCIP_DECL_HEURINIT(heurInitZirounding)  /*lint --e{715}*/
+SCIP_DECL_HEURINIT(heurInitZirounding)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -304,7 +305,7 @@ SCIP_DECL_HEUREXIT(heurExitZirounding)  /*lint --e{715}*/
 
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_HEURINITSOL(heurInitsolZirounding)  /*lint --e{715}*/
+SCIP_DECL_HEURINITSOL(heurInitsolZirounding)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -323,8 +324,8 @@ SCIP_DECL_HEURINITSOL(heurInitsolZirounding)  /*lint --e{715}*/
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecZirounding)  /*lint --e{715}*/
-{    /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecZirounding)
+{  /*lint --e{715}*/
    SCIP_HEURDATA*     heurdata;
    SCIP_SOL*          sol;
    SCIP_VAR**         lpcands;
@@ -441,7 +442,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)  /*lint --e{715}*/
       else
          upslacks[i] = rhs - activities[i];
 
-      /* Due to numerical inaccuracies, the rows might be feasible, even if the slacks are 
+      /* due to numerical inaccuracies, the rows might be feasible, even if the slacks are 
        * significantly smaller than zero -> terminate 
        */      
       if( SCIPisFeasLT(scip, upslacks[i], 0.0) || SCIPisFeasLT(scip, downslacks[i], 0.0) )
@@ -612,12 +613,14 @@ SCIP_RETCODE SCIPincludeHeurZirounding(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/maxroundingloops",
          "determines maximum number of rounding loops",
          &heurdata->maxroundingloops, TRUE, DEFAULT_MAXROUNDINGLOOPS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/zirounding/stopziround", "flag to determine "
-         "if Zirounding is deactivated after a certain percentage of unsuccessful calls",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/zirounding/stopziround", 
+         "flag to determine if Zirounding is deactivated after a certain percentage of unsuccessful calls",
          &heurdata->stopziround, TRUE, DEFAULT_STOPZIROUND, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,"heuristics/zirounding/stoppercentage", "if percentage of found solutions falls below this parameter, Zirounding will be deactivated",
+   SCIP_CALL( SCIPaddRealParam(scip,"heuristics/zirounding/stoppercentage", 
+         "if percentage of found solutions falls below this parameter, Zirounding will be deactivated",
          &heurdata->stoppercentage, TRUE, DEFAULT_STOPPERCENTAGE, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/minstopncalls", "determines the minimum number of calls before percentage-based deactivation of"
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/zirounding/minstopncalls", 
+         "determines the minimum number of calls before percentage-based deactivation of"
          " Zirounding is applied", &heurdata->minstopncalls, TRUE, DEFAULT_MINSTOPNCALLS, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
