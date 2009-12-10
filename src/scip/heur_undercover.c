@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.34 2009/12/10 06:34:19 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.35 2009/12/10 13:25:48 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -996,9 +996,10 @@ SCIP_RETCODE createSubProblem(
 
    for( i = 0; i < nvars; ++i )
    {
-      assert(SCIPvarGetProbindex(vars[i]) == i);
       SCIP_Real lb;
       SCIP_Real ub;
+      
+      assert(SCIPvarGetProbindex(vars[i]) == i);
 
       lb = local ? SCIPvarGetLbLocal(vars[i]) :  SCIPvarGetLbGlobal(vars[i]);
       ub = local ? SCIPvarGetUbLocal(vars[i]) :  SCIPvarGetLbGlobal(vars[i]);
