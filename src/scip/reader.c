@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.51 2009/09/04 09:28:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.52 2009/12/11 20:39:06 bzfwinkm Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -223,7 +223,7 @@ SCIP_RETCODE SCIPreaderWrite(
       {
          /* save variable and constraint names and replace these names by generic names */
 
-         /* alloac memory for saving the original variable and constraint names */
+         /* allocate memory for saving the original variable and constraint names */
          SCIP_ALLOC( BMSallocMemoryArray(&varnames, nvars) );
          SCIP_ALLOC( BMSallocMemoryArray(&fixedvarnames, nfixedvars) );
          SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss) );
