@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.75 2009/12/10 21:37:18 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.76 2009/12/11 09:57:16 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3077,7 +3077,7 @@ SCIP_RETCODE checkCurvature(
       consdata->isconcave = TRUE;
       for( i = 0; i < n; ++i )
       {
-         consdata->isconvex = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadsqrcoefs[i]);
+         consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadsqrcoefs[i]);
          consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadsqrcoefs[i]);
       }
       return SCIP_OKAY;
@@ -3099,7 +3099,7 @@ SCIP_RETCODE checkCurvature(
    SCIP_CALL( SCIPallocBufferArray(scip, &matrix, nn) );
    BMSclearMemoryArray(matrix, nn);
 
-   consdata->isconvex = TRUE;
+   consdata->isconvex  = TRUE;
    consdata->isconcave = TRUE;
 
    SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
@@ -3110,11 +3110,11 @@ SCIP_RETCODE checkCurvature(
          SCIP_CALL( SCIPhashmapInsert(var2index, consdata->quadvars[i], (void*)(size_t)i) );
          matrix[i*n + i] = consdata->quadsqrcoefs[i];
       }
-      else
-      {
-         consdata->isconvex = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadsqrcoefs[i]);
-         consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadsqrcoefs[i]);
-      }
+      /* nonzero elements on diagonal tell a lot about convexity/concavity */
+      if( SCIPisNegative(scip, consdata->quadsqrcoefs[i]) )
+         consdata->isconvex  = FALSE;
+      if( SCIPisPositive(scip, consdata->quadsqrcoefs[i]) )
+         consdata->isconcave = FALSE;
    }
 
    if( !consdata->isconvex && !consdata->isconcave )
