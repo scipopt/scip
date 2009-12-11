@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.36 2009/12/11 22:18:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.37 2009/12/11 22:23:04 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -564,7 +564,7 @@ SCIP_RETCODE createPpcProblem(
          if( onlyconvexify && termIsConvex(scip, SCIPgetLhsUnivardefinite(scip, uvdcons), SCIPgetRhsUnivardefinite(scip, uvdcons), SCIPisNonlinearFunctionConvexUnivardefinite(scip, uvdcons)) )
             continue;
 
-         if( local ? SCIPgetMonotonicityLocalUnivardefinite(scip, uvdcons) : SCIPgetMonotonicityGlobalUnivardefinite(scip, uvdcons) )
+         if( SCIPgetNonlinearFunctionUnivardefinite(scip, uvdcons) == SCIP_EXPR_DIV )
          {
             /* get name of the original constraint and add the string "_uvd" */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_uvd", SCIPconsGetName(uvdcons));
