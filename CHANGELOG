@@ -37,6 +37,8 @@ features:
 - added scripts check_*.sh, evalcheck_*.sh and check_*.awk for blis, glkp, gurobi and symphony (including targets in Makefile)
   and slightly modified scripts for cplex, cbc and mosek and cmpres-script
 - added statistic information about the first primal solution to SCIP statistic; in the statistic output a new line appears with this information
+- primal heuristics may now be called during propagation or directly after the node's propagation loop, 
+  using the new timing points SCIP_HEURTIMING_DURINGPROPLOOP or SCIP_HEURTIMING_AFTERPROPLOOP, respectively. 
 
 performance improvements:
 

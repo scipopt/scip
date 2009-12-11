@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.h,v 1.55 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.h,v 1.56 2009/12/11 08:26:21 bzfberth Exp $"
 
 /**@file   solve.h
  * @brief  internal methods for main solving loop and node processing
@@ -63,6 +63,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */

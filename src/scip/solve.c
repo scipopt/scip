@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.284 2009/12/02 01:30:58 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.285 2009/12/11 08:26:21 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -85,7 +85,7 @@ SCIP_Bool SCIPsolveIsStopped(
    }
    else if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
       stat->status = SCIP_STATUS_TIMELIMIT;
-   else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1024.0*1024.0 )
+   else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1048576.0 )
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
       stat->status = SCIP_STATUS_GAPLIMIT;
@@ -106,12 +106,126 @@ SCIP_Bool SCIPsolveIsStopped(
    return (stat->status != SCIP_STATUS_UNKNOWN);
 }
 
+/** calls primal heuristics */
+SCIP_RETCODE SCIPprimalHeuristics(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL if called during presolving */
+   SCIP_LP*              lp,                 /**< LP data, or NULL if called during presolving or propagation */
+   SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left or called during presolving */
+   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
+   SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
+   )
+{  /*lint --e{715}*/
+
+   SCIP_RESULT result;
+   SCIP_Longint oldnbestsolsfound;
+   int ndelayedheurs;
+   int depth;
+   int lpstateforkdepth;
+   int h;
+
+   assert(set != NULL);
+   assert(primal != NULL);
+   assert(tree != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL);
+   assert(lp != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPROPLOOP 
+      || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP);
+   assert(heurtiming == SCIP_HEURTIMING_BEFORENODE || heurtiming == SCIP_HEURTIMING_DURINGLPLOOP
+      || heurtiming == SCIP_HEURTIMING_AFTERLPLOOP || heurtiming == SCIP_HEURTIMING_AFTERNODE
+      || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL
+      || heurtiming == SCIP_HEURTIMING_DURINGPROPLOOP || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP
+      || heurtiming == (SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE));
+   assert(heurtiming != SCIP_HEURTIMING_AFTERNODE || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
+   assert(foundsol != NULL);
+
+   *foundsol = FALSE;
+
+   /* nothing to do, if no heuristics are available, or if the branch-and-bound process is finished */
+   if( set->nheurs == 0 || (heurtiming == SCIP_HEURTIMING_AFTERNODE && nextnode == NULL) )
+      return SCIP_OKAY;
+
+   /* sort heuristics by priority, but move the delayed heuristics to the front */
+   SCIPsetSortHeurs(set);
+
+   /* specialize the AFTERNODE timing flag */
+   if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) == SCIP_HEURTIMING_AFTERNODE )
+   {
+      SCIP_Bool plunging;
+      SCIP_Bool pseudonode;
+
+      /* clear the AFTERNODE flags and replace them by the right ones */
+      heurtiming &= ~SCIP_HEURTIMING_AFTERNODE;
+
+      /* we are in plunging mode iff the next node is a sibling or a child, and no leaf */
+      assert(nextnode == NULL
+         || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_SIBLING
+         || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_CHILD
+         || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
+      plunging = (nextnode != NULL && SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
+      pseudonode = !SCIPtreeHasFocusNodeLP(tree);
+      if( plunging && SCIPtreeGetCurrentDepth(tree) > 0 ) /* call plunging heuristics also at root node */
+      {
+         if( !pseudonode )
+            heurtiming |= SCIP_HEURTIMING_AFTERLPNODE;
+         else
+            heurtiming |= SCIP_HEURTIMING_AFTERPSEUDONODE;
+      }
+      else
+      {
+         if( !pseudonode )
+            heurtiming |= SCIP_HEURTIMING_AFTERLPPLUNGE | SCIP_HEURTIMING_AFTERLPNODE;
+         else
+            heurtiming |= SCIP_HEURTIMING_AFTERPSEUDOPLUNGE | SCIP_HEURTIMING_AFTERPSEUDONODE;
+      }
+   }
+
+   /* initialize the tree related data, if we are not in presolving */
+   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
+   {
+      depth = -1;
+      lpstateforkdepth = -1;
+
+      SCIPdebugMessage("calling primal heuristics before presolving\n");
+   }
+   else
+   {
+      depth = SCIPtreeGetFocusDepth(tree);
+      lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
+      
+      SCIPdebugMessage("calling primal heuristics in depth %d (timing: %u)\n", depth, heurtiming);
+   }
+
+   /* call heuristics */
+   ndelayedheurs = 0;
+   oldnbestsolsfound = primal->nbestsolsfound;
+   for( h = 0; h < set->nheurs; ++h )
+   {
+      /* it might happen that a diving heuristic renders the previously solved node LP invalid
+       * such that additional calls to LP heuristics will fail; better abort the loop in this case
+       */      
+      if( lp != NULL && lp->resolvelperror) 
+         break;
+
+      SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
+         SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
+      SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
+   }
+   assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
+
+   *foundsol = (primal->nbestsolsfound > oldnbestsolsfound);
+
+   return SCIP_OKAY;
+}
+
 /** applies one round of propagation */
 static
 SCIP_RETCODE propagationRound(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    SCIP_Bool             fullpropagation,    /**< should all constraints be propagated (or only new ones)? */
    SCIP_Bool             onlydelayed,        /**< should only delayed propagators be called? */
@@ -122,6 +236,7 @@ SCIP_RETCODE propagationRound(
 {
    SCIP_RESULT result;
    SCIP_Bool abortoncutoff;
+   SCIP_Bool foundsol;
    int i;
 
    assert(set != NULL);
@@ -139,7 +254,7 @@ SCIP_RETCODE propagationRound(
     * anyway
     */
    abortoncutoff = set->prop_abortoncutoff || (set->stage != SCIP_STAGE_SOLVING);
-
+ 
    /* call additional propagators with nonnegative priority */
    for( i = 0; i < set->nprops && (!(*cutoff) || !abortoncutoff); ++i )
    {
@@ -217,6 +332,17 @@ SCIP_RETCODE propagationRound(
       }
    }
 
+    /* call primal heuristics that are applicable during propagation loop, 
+     * if the heuristics find a new incumbent solution, propagate again.
+     */
+    if( !(*cutoff) && !SCIPtreeProbing(tree))
+    {
+       assert(result != SCIP_CUTOFF);
+       foundsol = FALSE;
+       SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, NULL, NULL, SCIP_HEURTIMING_DURINGPROPLOOP, &foundsol) );
+       *propagain = *propagain || foundsol;
+    }
+
    return SCIP_OKAY;
 }
 
@@ -226,6 +352,7 @@ SCIP_RETCODE propagateDomains(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    int                   depth,              /**< depth level to use for propagator frequency checks */
    int                   maxproprounds,      /**< maximal number of propagation rounds (-1: no limit, 0: parameter settings) */
@@ -268,15 +395,22 @@ SCIP_RETCODE propagateDomains(
       propround++;
 
       /* perform the propagation round by calling the propagators and constraint handlers */
-      SCIP_CALL( propagationRound(blkmem, set, stat, depth, fullpropagation, FALSE, &delayed, &propagain, cutoff) );
+      SCIP_CALL( propagationRound(blkmem, set, stat, primal, tree, depth, fullpropagation, FALSE, &delayed, &propagain, cutoff) );
 
       /* if the propagation will be terminated, call the delayed propagators */
       while( delayed && (!propagain || propround >= maxproprounds) && !(*cutoff) )
       {
          /* call the delayed propagators and constraint handlers */
-         SCIP_CALL( propagationRound(blkmem, set, stat, depth, fullpropagation, TRUE, &delayed, &propagain, cutoff) );
+         SCIP_CALL( propagationRound(blkmem, set, stat, primal, tree, depth, fullpropagation, TRUE, &delayed, &propagain, cutoff) );
       }
 
+      /* call primal heuristics that are applicable after propagation loop */
+      if( (!propagain || propround >= maxproprounds) && !(*cutoff) && !SCIPtreeProbing(tree) )
+      {
+         /* if the heuristics find a new incumbent solution, propagate again */
+         SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, NULL, NULL, SCIP_HEURTIMING_AFTERPROPLOOP, &propagain) );
+      }
+      
       /* if a reduction was found, we want to do another full propagation round (even if the propagator only claimed
        * to have done a domain reduction without applying a domain change)
        */
@@ -295,6 +429,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    int                   depth,              /**< depth level to use for propagator frequency checks */
@@ -303,7 +438,7 @@ SCIP_RETCODE SCIPpropagateDomains(
    )
 {
    /* apply domain propagation */
-   SCIP_CALL( propagateDomains(blkmem, set, stat, tree, depth, maxproprounds, TRUE, cutoff) );
+   SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, depth, maxproprounds, TRUE, cutoff) );
 
    /* flush the conflict set storage */
    SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, prob, tree) );
@@ -693,116 +828,6 @@ SCIP_RETCODE solveNodeInitialLP(
       /* update pseudo cost values */
       SCIP_CALL( updatePseudocost(set, stat, tree, lp) );
    }
-
-   return SCIP_OKAY;
-}
-
-/** calls primal heuristics */
-SCIP_RETCODE SCIPprimalHeuristics(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   SCIP_TREE*            tree,               /**< branch and bound tree, or NULL if called during presolving */
-   SCIP_LP*              lp,                 /**< LP data, or NULL if called during presolving */
-   SCIP_NODE*            nextnode,           /**< next node that will be processed, or NULL if no more nodes left or called during presolving */
-   SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
-   SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
-   )
-{  /*lint --e{715}*/
-
-   SCIP_RESULT result;
-   SCIP_Longint oldnbestsolsfound;
-   int ndelayedheurs;
-   int depth;
-   int lpstateforkdepth;
-   int h;
-
-   assert(set != NULL);
-   assert(primal != NULL);
-   assert(tree != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL);
-   assert(lp != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL);
-   assert(heurtiming == SCIP_HEURTIMING_BEFORENODE || heurtiming == SCIP_HEURTIMING_DURINGLPLOOP
-      || heurtiming == SCIP_HEURTIMING_AFTERLPLOOP || heurtiming == SCIP_HEURTIMING_AFTERNODE
-      || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL
-      || heurtiming == (SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE));
-   assert(heurtiming != SCIP_HEURTIMING_AFTERNODE || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
-   assert(foundsol != NULL);
-
-   *foundsol = FALSE;
-
-   /* nothing to do, if no heuristics are available, or if the branch-and-bound process is finished */
-   if( set->nheurs == 0 || (heurtiming == SCIP_HEURTIMING_AFTERNODE && nextnode == NULL) )
-      return SCIP_OKAY;
-
-   /* sort heuristics by priority, but move the delayed heuristics to the front */
-   SCIPsetSortHeurs(set);
-
-   /* specialize the AFTERNODE timing flag */
-   if( (heurtiming & SCIP_HEURTIMING_AFTERNODE) == SCIP_HEURTIMING_AFTERNODE )
-   {
-      SCIP_Bool plunging;
-      SCIP_Bool pseudonode;
-
-      /* clear the AFTERNODE flags and replace them by the right ones */
-      heurtiming &= ~SCIP_HEURTIMING_AFTERNODE;
-
-      /* we are in plunging mode iff the next node is a sibling or a child, and no leaf */
-      assert(nextnode == NULL
-         || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_SIBLING
-         || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_CHILD
-         || SCIPnodeGetType(nextnode) == SCIP_NODETYPE_LEAF);
-      plunging = (nextnode != NULL && SCIPnodeGetType(nextnode) != SCIP_NODETYPE_LEAF);
-      pseudonode = !SCIPtreeHasFocusNodeLP(tree);
-      if( plunging && SCIPtreeGetCurrentDepth(tree) > 0 ) /* call plunging heuristics also at root node */
-      {
-         if( !pseudonode )
-            heurtiming |= SCIP_HEURTIMING_AFTERLPNODE;
-         else
-            heurtiming |= SCIP_HEURTIMING_AFTERPSEUDONODE;
-      }
-      else
-      {
-         if( !pseudonode )
-            heurtiming |= SCIP_HEURTIMING_AFTERLPPLUNGE | SCIP_HEURTIMING_AFTERLPNODE;
-         else
-            heurtiming |= SCIP_HEURTIMING_AFTERPSEUDOPLUNGE | SCIP_HEURTIMING_AFTERPSEUDONODE;
-      }
-   }
-
-   /* initialize the tree related data, if we are not in presolving */
-   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
-   {
-      depth = -1;
-      lpstateforkdepth = -1;
-
-      SCIPdebugMessage("calling primal heuristics before presolving\n");
-   }
-   else
-   {
-      depth = SCIPtreeGetFocusDepth(tree);
-      lpstateforkdepth = (tree->focuslpstatefork != NULL ? SCIPnodeGetDepth(tree->focuslpstatefork) : -1);
-      
-      SCIPdebugMessage("calling primal heuristics in depth %d (timing: %u)\n", depth, heurtiming);
-   }
-
-   /* call heuristics */
-   ndelayedheurs = 0;
-   oldnbestsolsfound = primal->nbestsolsfound;
-   for( h = 0; h < set->nheurs; ++h )
-   {
-      /* it might happen that a diving heuristic renders the previously solved node LP invalid
-       * such that additional calls to LP heuristics will fail; better abort the loop in this case
-       */      
-      if( heurtiming != SCIP_HEURTIMING_BEFOREPRESOL && lp->resolvelperror) 
-         break;
-
-      SCIPdebugMessage(" -> executing heuristic <%s> with priority %d\n",
-         SCIPheurGetName(set->heurs[h]), SCIPheurGetPriority(set->heurs[h]));
-      SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, &ndelayedheurs, &result) );
-   }
-   assert(0 <= ndelayedheurs && ndelayedheurs <= set->nheurs);
-
-   *foundsol = (primal->nbestsolsfound > oldnbestsolsfound);
 
    return SCIP_OKAY;
 }
@@ -1542,7 +1567,7 @@ SCIP_RETCODE priceAndCutLoop(
             {
                SCIPdebugMessage(" -> global lower bound changed from %g to %g: propagate domains again\n",
                                 oldlowerbound, newlowerbound);
-               SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
+               SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
 
                /* if we found something, solve LP again */
                if( !lp->flushed && !(*cutoff) )
@@ -1693,7 +1718,7 @@ SCIP_RETCODE priceAndCutLoop(
                if( stat->domchgcount != olddomchgcount )
                {
                   /* propagate domains */
-                  SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
+                  SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, cutoff) );
 
                   /* in the root node, remove redundant rows permanently from the LP */
                   if( root )
@@ -2458,9 +2483,7 @@ SCIP_RETCODE solveNode(
 
    /* if diving produced an LP error, switch back to non-LP node */
    if( lp->resolvelperror )
-   {
       SCIPtreeSetFocusNodeLP(tree, FALSE);
-   }
 
    /* external node solving loop:
     *  - propagate domains
@@ -2513,7 +2536,7 @@ SCIP_RETCODE solveNode(
 
          lpwasflushed = lp->flushed;
 
-         SCIP_CALL( propagateDomains(blkmem, set, stat, tree, SCIPtreeGetCurrentDepth(tree), 0, fullpropagation, cutoff) );
+         SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, fullpropagation, cutoff) );
          fullpropagation = FALSE;
 
          /* check, if the path was cutoff */

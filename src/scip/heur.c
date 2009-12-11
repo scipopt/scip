@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.71 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.72 2009/12/11 08:26:21 bzfberth Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -401,8 +401,8 @@ SCIP_RETCODE SCIPheurExec(
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d)\n", 
-         heur->name, depth, *ndelayedheurs);
+      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was %s delayed before, had delaypos %d\n", 
+         heur->name, depth, *ndelayedheurs, *result == SCIP_DELAYED ? "" : "not", heur->delaypos);
 
       /* mark the heuristic delayed */
       if( heur->delaypos != *ndelayedheurs )

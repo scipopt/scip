@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.25 2009/11/10 07:38:03 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.26 2009/12/11 08:26:21 bzfberth Exp $"
 
 /**@file   type_heur.h
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for primal heuristics
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -33,7 +34,7 @@
 extern "C" {
 #endif
 
-/** heurstics execution timing flags */
+/** heuristics execution timing flags */
 #define SCIP_HEURTIMING_BEFORENODE        0x001 /**< call heuristic before the processing of the node starts */
 #define SCIP_HEURTIMING_DURINGLPLOOP      0x002 /**< call heuristic after each LP solving during cut-and-price loop */
 #define SCIP_HEURTIMING_AFTERLPLOOP       0x004 /**< call heuristic after the cut-and-price loop was finished */
@@ -46,7 +47,9 @@ extern "C" {
 #define SCIP_HEURTIMING_AFTERPSEUDOPLUNGE 0x040 /**< call heuristic after the processing of the last node in the current
                                                  *   plunge was finished, and only if the LP was not solved for this node */
 #define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x080 /**< call heuristic during pricing loop */
-#define SCIP_HEURTIMING_BEFOREPRESOL      0x100 /**< call heuristic before presolving   */
+#define SCIP_HEURTIMING_BEFOREPRESOL      0x100 /**< call heuristic before presolving */
+#define SCIP_HEURTIMING_DURINGPROPLOOP    0x200 /**< call heuristic after each round in the propagation loop */
+#define SCIP_HEURTIMING_AFTERPROPLOOP     0x400 /**< call heuristic after propagation for this node was finished */
 
 typedef unsigned int SCIP_HEURTIMING;
 

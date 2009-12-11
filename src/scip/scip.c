@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.530 2009/12/04 16:03:38 bzfhende Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.531 2009/12/11 08:26:21 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12097,8 +12097,8 @@ SCIP_RETCODE SCIPpropagateProbing(
    if( ndomredsfound != NULL )
       *ndomredsfound = -(scip->stat->nprobboundchgs + scip->stat->nprobholechgs);
 
-   SCIP_CALL( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, scip->tree,
-         scip->conflict, 0, maxproprounds, cutoff) );
+   SCIP_CALL( SCIPpropagateDomains(scip->mem->solvemem, scip->set, scip->stat, scip->transprob, 
+         scip->primal, scip->tree, scip->conflict, 0, maxproprounds, cutoff) );
 
    if( ndomredsfound != NULL )
       *ndomredsfound += scip->stat->nprobboundchgs + scip->stat->nprobholechgs;
