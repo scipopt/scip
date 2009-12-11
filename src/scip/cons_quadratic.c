@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.76 2009/12/11 09:57:16 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.77 2009/12/11 22:18:57 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -184,7 +184,6 @@ struct SCIP_ConshdlrData
    SCIP_QUADCONSUPGRADE** quadconsupgrades;         /**< quadratic constraint upgrade methods for specializing quadratic constraints */
    int                   quadconsupgradessize;      /**< size of quadconsupgrade array */
    int                   nquadconsupgrades;         /**< number of quadratic constraint upgrade methods */
-   SCIP_Bool             havesignpowerupgrade;      /**< is one of the quadconsupgrades an upgrade for signpower? FIXME: this is a HACK */
 #ifdef USECLOCK   
    SCIP_CLOCK*           clock1;
    SCIP_CLOCK*           clock2;
@@ -6347,55 +6346,52 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
    
-   /** FIXME: HACK for cons_signpower and cons_soc: call upgrade method before aggregated variables are replaced or disaggregation took place */
-   if( nrounds == 0 /*&& conshdlrdata->havesignpowerupgrade*/ )
+   /** call upgrade method before aggregated variables are replaced or disaggregation takes place */
+   havechange = FALSE;
+   for( c = 0; c < nconss; ++c )
    {
-      havechange = FALSE;
-      for( c = 0; c < nconss; ++c )
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+      for( i = 0; i < consdata->nlinvars; ++i )
       {
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-         for( i = 0; i < consdata->nlinvars; ++i )
+         SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+      }
+      SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgdconslhs, &upgdconsrhs) );
+      if( upgdconslhs != NULL || upgdconsrhs != NULL )
+      {
+         /* add the upgraded constraint(s) to the problem */
+         if( upgdconslhs != NULL && upgdconslhs != upgdconsrhs )
          {
-            SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+            SCIP_CALL( SCIPaddCons(scip, upgdconslhs) );
+            SCIP_CALL( SCIPreleaseCons(scip, &upgdconslhs) );
          }
-         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgdconslhs, &upgdconsrhs) );
-         if( upgdconslhs != NULL || upgdconsrhs != NULL )
+
+         if( upgdconsrhs != NULL )
          {
-            /* add the upgraded constraint(s) to the problem */
-            if( upgdconslhs != NULL && upgdconslhs != upgdconsrhs )
-            {
-               SCIP_CALL( SCIPaddCons(scip, upgdconslhs) );
-               SCIP_CALL( SCIPreleaseCons(scip, &upgdconslhs) );
-            }
-
-            if( upgdconsrhs != NULL )
-            {
-               SCIP_CALL( SCIPaddCons(scip, upgdconsrhs) );
-               SCIP_CALL( SCIPreleaseCons(scip, &upgdconsrhs) );
-            }
-
-            (*nupgdconss)++;
-            *result = SCIP_SUCCESS;
-            havechange = TRUE;
-
-            /* delete upgraded constraint */
-            if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
-            {
-               SCIPdebugMessage("delete constraint %s after upgrade\n", SCIPconsGetName(conss[c]));
-               SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-               continue;
-            }
+            SCIP_CALL( SCIPaddCons(scip, upgdconsrhs) );
+            SCIP_CALL( SCIPreleaseCons(scip, &upgdconsrhs) );
          }
-         for( i = 0; i < consdata->nlinvars; ++i )
+
+         (*nupgdconss)++;
+         *result = SCIP_SUCCESS;
+         havechange = TRUE;
+
+         /* delete upgraded constraint */
+         if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
          {
-            SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+            SCIPdebugMessage("delete constraint %s after upgrade\n", SCIPconsGetName(conss[c]));
+            SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+            continue;
          }
       }
-      if( havechange )
-         return SCIP_OKAY;
+      for( i = 0; i < consdata->nlinvars; ++i )
+      {
+         SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+      }
    }
+   if( havechange )
+      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -6513,10 +6509,10 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
             {
                SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
 
-               /* do disaggregation only if nothing had changed and we are not in the first round,
+               /* do disaggregation only if nothing had changed,
                 * so upgrade methods below have a chance to see the whole constraint
-                */  
-               if( ncomponents == 1 || !conshdlrdata->disaggregation || havechange || nrounds == 1)
+                */
+               if( ncomponents == 1 || !conshdlrdata->disaggregation || havechange )
                {
                   /* unlock all variables */
                   for( i = 0; i < consdata->nlinvars; ++i )
@@ -6577,7 +6573,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          presolveQuadTermFree(scip, &terms);
 
          consdata->isremovedfixings = TRUE;
-         
+#if 0         
          /** let other constraint handlers try upgrading cons to a more specific quadratic constraint
           * since the locking of the linear variables changes if their is an upgrade, we unlock them all here (could be improved)
           */
@@ -6618,6 +6614,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          {
             SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
          }
+#endif
       }
 
       if( !consdata->ispropagated )
@@ -7562,12 +7559,6 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
          paramname, paramdesc,
          &quadconsupgrade->active, FALSE, TRUE, NULL, NULL) );
    
-   if( !conshdlrdata->havesignpowerupgrade && strcmp(conshdlrname, "signpower") == 0)
-      conshdlrdata->havesignpowerupgrade = TRUE;
-
-   if( !conshdlrdata->havesignpowerupgrade && strcmp(conshdlrname, "pressureloss") == 0)
-      conshdlrdata->havesignpowerupgrade = TRUE;
-
    return SCIP_OKAY;
 }
 

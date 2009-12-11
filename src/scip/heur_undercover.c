@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.35 2009/12/10 13:25:48 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.36 2009/12/11 22:18:57 bzfviger Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -329,6 +329,8 @@ SCIP_RETCODE createPpcProblem(
 
          SCIP_Bool infeas;
          SCIP_Bool fixed;
+         
+         /* TODO: if onlyconvexify, then use SCIPisConvexQuadratic and SCIPisConcaveQuadratic to decide here if the whole constraint does not need to be considered */
 
          /* get coefficient arrays of constraint */
          quadcons = SCIPconshdlrGetConss(conshdlr)[i];
@@ -562,7 +564,7 @@ SCIP_RETCODE createPpcProblem(
          if( onlyconvexify && termIsConvex(scip, SCIPgetLhsUnivardefinite(scip, uvdcons), SCIPgetRhsUnivardefinite(scip, uvdcons), SCIPisNonlinearFunctionConvexUnivardefinite(scip, uvdcons)) )
             continue;
 
-         if( SCIPgetNonlinearFunctionUnivardefinite(scip, uvdcons) == SCIP_EXPR_DIV )
+         if( local ? SCIPgetMonotonicityLocalUnivardefinite(scip, uvdcons) : SCIPgetMonotonicityGlobalUnivardefinite(scip, uvdcons) )
          {
             /* get name of the original constraint and add the string "_uvd" */
             (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_uvd", SCIPconsGetName(uvdcons));
