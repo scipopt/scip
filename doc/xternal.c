@@ -222,7 +222,7 @@
  
   - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.a":
   > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.a" (return if not needed):
-  > ../../soplex/lib/libsoplex.linux.x86_64.gnu.opt
+  > ../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a
   -> creating softlink "lib/libsoplex.linux.x86_64.gnu.opt.a" -> "../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a"
  
  
