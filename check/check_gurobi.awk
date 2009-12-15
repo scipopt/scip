@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_gurobi.awk,v 1.1 2009/12/04 15:51:37 bzfwanie Exp $
+# $Id: check_gurobi.awk,v 1.2 2009/12/15 12:19:51 bzfwanie Exp $
 #
 #@file    check_gurobi.awk
 #@brief   GUROBI Check Report Generator
@@ -160,8 +160,8 @@ BEGIN {
 /^Best objective/ {
    if ( feasible == 1 )
    {
-      pb = ($3 == "-") ? +infty : $3;
-      db = ($6 == "-") ? -infty : $6;
+      pb = ($3 == "-,") ? +infty : $3;
+      db = ($6 == "-,") ? -infty : $6;
       absgap = ($8 == "-") ? 0.0 : $8;
    }
 }
