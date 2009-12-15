@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.8 2009/12/04 15:43:01 bzfwanie Exp $
+# $Id: check_cbc.awk,v 1.9 2009/12/15 12:42:10 bzfwanie Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator
@@ -245,6 +245,23 @@ BEGIN {
    aborted = 0;
    pb = +infty;
    db = +infty;
+}
+/^Result - Finishedproven-infeasible objective/ {
+   feasible = 0;
+   aborted = 0;
+   pb = +infty;
+   db = +infty;
+   bbnodes = $7;
+   dualiter = $10;
+   iters = dualiter;
+   tottime = $14;
+}
+/^Problem is infeasible/ {
+   feasible = 0;
+   aborted = 0;
+   pb = +infty;
+   db = +infty;
+   tottime = $5;
 }
 #
 # evaluation
