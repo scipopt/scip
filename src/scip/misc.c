@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.104 2009/12/11 20:39:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.105 2009/12/16 14:41:14 bzfviger Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -1016,7 +1016,7 @@ void SCIPhashmapPrintStatistics(
    SCIPmessagePrintInfo("\n");
 }
 
-
+/** indicates whether an hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1031,6 +1031,7 @@ SCIP_Bool SCIPhashmapIsEmpty(
    return TRUE;
 }
 
+/** gives the number of entries in an hash map */ 
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1045,7 +1046,7 @@ int SCIPhashmapGetNEntries(
    return count;
 }
 
-
+/** gives the number of lists (buckets) in an hash map */ 
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*      hashmap          /**< hash map */
 )
@@ -1055,6 +1056,7 @@ int SCIPhashmapGetNLists(
    return hashmap->nlists;
 }
 
+/** gives a specific list (bucket) in an hash map */
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*     hashmap,          /**< hash map */
    int               listindex         /**< index of hash map list */
@@ -1067,6 +1069,7 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
    return hashmap->lists[listindex];
 }
 
+/** gives the number of entries in a list of a hash map */ 
 int SCIPhashmapListGetNEntries(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list, can be NULL */
 )
@@ -1079,6 +1082,7 @@ int SCIPhashmapListGetNEntries(
    return count;
 }
 
+/** retrieves origin of given entry in an hash map */ 
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1088,6 +1092,7 @@ void* SCIPhashmapListGetOrigin(
    return hashmaplist->origin;
 }
 
+/** retrieves image of given entry in an hash map */ 
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1097,6 +1102,7 @@ void* SCIPhashmapListGetImage(
    return hashmaplist->image;
 }
 
+/** retrieves next entry from given entry in an hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 )
@@ -1106,6 +1112,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    return hashmaplist->next;
 }
 
+/** removes all entries in an hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*     hashmap           /**< hash map */
 )

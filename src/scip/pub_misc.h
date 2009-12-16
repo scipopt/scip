@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pub_misc.h,v 1.62 2009/12/11 20:39:07 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pub_misc.h,v 1.63 2009/12/16 14:41:14 bzfviger Exp $"
 
 /**@file   pub_misc.h
  * @ingroup PUBLICMETHODS
@@ -275,7 +275,7 @@ void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
 );
 
-/** Retrieves image of given entry in an hash map */ 
+/** retrieves image of given entry in an hash map */ 
 extern
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST* hashmaplist       /**< hash map list */
