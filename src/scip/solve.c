@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.285 2009/12/11 08:26:21 bzfberth Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.286 2009/12/16 07:30:11 bzfberth Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -128,13 +128,14 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
    assert(set != NULL);
    assert(primal != NULL);
-   assert(tree != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL);
-   assert(lp != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPROPLOOP 
-      || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP);
+   assert(tree != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP);
+   assert(lp != NULL || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP 
+      || heurtiming == SCIP_HEURTIMING_DURINGPROPLOOP || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP);
    assert(heurtiming == SCIP_HEURTIMING_BEFORENODE || heurtiming == SCIP_HEURTIMING_DURINGLPLOOP
       || heurtiming == SCIP_HEURTIMING_AFTERLPLOOP || heurtiming == SCIP_HEURTIMING_AFTERNODE
       || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL
-      || heurtiming == SCIP_HEURTIMING_DURINGPROPLOOP || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP
+      || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP  || heurtiming == SCIP_HEURTIMING_DURINGPROPLOOP 
+      || heurtiming == SCIP_HEURTIMING_AFTERPROPLOOP
       || heurtiming == (SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE));
    assert(heurtiming != SCIP_HEURTIMING_AFTERNODE || (nextnode == NULL) == (SCIPtreeGetNNodes(tree) == 0));
    assert(foundsol != NULL);
@@ -181,12 +182,13 @@ SCIP_RETCODE SCIPprimalHeuristics(
    }
 
    /* initialize the tree related data, if we are not in presolving */
-   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
+   if( heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP )
    {
       depth = -1;
       lpstateforkdepth = -1;
 
-      SCIPdebugMessage("calling primal heuristics before presolving\n");
+      SCIPdebugMessage("calling primal heuristics %s presolving\n", 
+         heurtiming == SCIP_HEURTIMING_BEFOREPRESOL ? "before" : "during");
    }
    else
    {

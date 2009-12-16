@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.531 2009/12/11 08:26:21 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.532 2009/12/16 07:30:11 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -4883,6 +4883,32 @@ SCIP_RETCODE presolveRound(
             "clique table cleanup detected infeasibility\n");
       }
    }
+
+   /* call primal heuristics that are applicable during presolving */
+   if( scip->set->nheurs > 0 )
+   {
+      SCIP_Bool foundsol;
+
+      SCIPdebugMessage("calling primal heuristics during presolving\n");
+
+      /* call primal heuristics */
+      SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->primal, NULL, NULL, NULL, SCIP_HEURTIMING_DURINGPRESOLLOOP, &foundsol) );
+
+      /* output a message, if a solution was found */
+      if( foundsol )
+      {
+         SCIP_SOL* sol;
+
+         assert(SCIPgetNSols(scip) > 0);         
+         sol = SCIPgetBestSol(scip);
+         assert(sol != NULL);           
+         assert(SCIPgetSolOrigObj(scip,sol) != SCIP_INVALID);           
+         
+         SCIPmessagePrintVerbInfo(scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "feasible solution found by %s heuristic, objective value %13.6e\n",
+            SCIPheurGetName(SCIPsolGetHeur(sol)), SCIPgetSolOrigObj(scip,sol));                    
+      }
+   }
+
 
    /* issue PRESOLVEROUND event */
    SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_PRESOLVEROUND) );

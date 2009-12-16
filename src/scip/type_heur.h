@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.26 2009/12/11 08:26:21 bzfberth Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.27 2009/12/16 07:30:12 bzfberth Exp $"
 
 /**@file   type_heur.h
  * @ingroup TYPEDEFINITIONS
@@ -48,8 +48,9 @@ extern "C" {
                                                  *   plunge was finished, and only if the LP was not solved for this node */
 #define SCIP_HEURTIMING_DURINGPRICINGLOOP 0x080 /**< call heuristic during pricing loop */
 #define SCIP_HEURTIMING_BEFOREPRESOL      0x100 /**< call heuristic before presolving */
-#define SCIP_HEURTIMING_DURINGPROPLOOP    0x200 /**< call heuristic after each round in the propagation loop */
-#define SCIP_HEURTIMING_AFTERPROPLOOP     0x400 /**< call heuristic after propagation for this node was finished */
+#define SCIP_HEURTIMING_DURINGPRESOLLOOP  0x200 /**< call heuristic during presolving loop */
+#define SCIP_HEURTIMING_DURINGPROPLOOP    0x400 /**< call heuristic after each round in the propagation loop */
+#define SCIP_HEURTIMING_AFTERPROPLOOP     0x800 /**< call heuristic after propagation for this node was finished */
 
 typedef unsigned int SCIP_HEURTIMING;
 

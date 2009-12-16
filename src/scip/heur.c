@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.72 2009/12/11 08:26:21 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.73 2009/12/16 07:30:11 bzfberth Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -302,15 +302,16 @@ SCIP_RETCODE SCIPheurExec(
    assert(set != NULL);
    assert(set->scip != NULL);
    assert(primal != NULL);
-   assert(depth >= 0 || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL);
+   assert(depth >= 0 || heurtiming == SCIP_HEURTIMING_BEFOREPRESOL || heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP);
    assert(ndelayedheurs != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
-   if( (heur->timingmask & SCIP_HEURTIMING_BEFOREPRESOL) && heurtiming == SCIP_HEURTIMING_BEFOREPRESOL )
+   if( ((heur->timingmask & SCIP_HEURTIMING_BEFOREPRESOL) && heurtiming == SCIP_HEURTIMING_BEFOREPRESOL)
+       || ((heur->timingmask & SCIP_HEURTIMING_DURINGPRESOLLOOP) && heurtiming == SCIP_HEURTIMING_DURINGPRESOLLOOP) )
    {
-      /* heuristic may be executed before presolving. Do so, if it was not disabled by setting the frequency to -1 */
+      /* heuristic may be executed before/during presolving. Do so, if it was not disabled by setting the frequency to -1 */
       execute = heur->freq >= 0; 
    } 
    else if( (heur->timingmask & SCIP_HEURTIMING_AFTERPSEUDONODE) == 0
