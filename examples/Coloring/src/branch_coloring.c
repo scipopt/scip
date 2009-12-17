@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.c,v 1.8 2009/04/17 12:13:32 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_coloring.c,v 1.9 2009/12/17 20:35:37 bzfgamra Exp $"
 
 /**@file   branch_coloring.c
  * @brief  coloring branching rule
@@ -341,6 +341,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
 #define branchExitColoring NULL
 #define branchInitsolColoring NULL
 #define branchExitsolColoring NULL
+#define branchExecrelColoring NULL
 
 
 /*
@@ -364,7 +365,7 @@ SCIP_RETCODE SCIPincludeBranchruleColoring(
 	 BRANCHRULE_MAXBOUNDDIST,
          branchFreeColoring, branchInitColoring, branchExitColoring,
          branchInitsolColoring, branchExitsolColoring,
-         branchExeclpColoring, branchExecpsColoring,
+         branchExeclpColoring, branchExecrelColoring, branchExecpsColoring,
          branchruledata) );
 
    return SCIP_OKAY;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.10 2009/04/17 12:13:32 bzfgamra Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.11 2009/12/17 20:35:37 bzfgamra Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -717,6 +717,7 @@ SCIP_DECL_BRANCHEXIT(branchExitStrongcoloring)
 #define branchInitsolStrongcoloring NULL
 #define branchExitsolStrongcoloring NULL
 #define branchExecpsStrongcoloring NULL
+#define branchExecrelStrongcoloring NULL
 
 
 /*
@@ -740,7 +741,7 @@ SCIP_RETCODE SCIPincludeBranchruleStrongcoloring(
 	 BRANCHRULE_MAXBOUNDDIST,
          branchFreeStrongcoloring, branchInitStrongcoloring, branchExitStrongcoloring,
          branchInitsolStrongcoloring, branchExitsolStrongcoloring,
-         branchExeclpStrongcoloring, branchExecpsStrongcoloring,
+         branchExeclpStrongcoloring, branchExecrelStrongcoloring, branchExecpsStrongcoloring,
          branchruledata) );
    
    SCIP_CALL( SCIPaddIntParam(scip,
