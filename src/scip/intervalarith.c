@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.35 2009/12/07 10:31:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.36 2009/12/18 23:00:17 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -111,6 +111,44 @@ ROUNDMODE getRoundingMode(
 }
 #endif
 
+#ifdef ROUNDING_MS
+#define ROUNDING
+/*
+ * Microsoft compiler rounding operations
+ */
+
+#include <float.h>
+
+/** Microsoft rounding mode settings */
+enum RoundMode
+{
+   SCIP_ROUND_DOWNWARDS = RC_DOWN,           /**< round always down */
+   SCIP_ROUND_UPWARDS   = RC_UP              /**< round always up */
+};
+typedef enum RoundMode ROUNDMODE;
+
+/** sets rounding mode of floating point operations */
+static
+void setRoundingMode(
+   ROUNDMODE        roundmode           /**< rounding mode to activate */
+   )
+{
+   if( _controlfp(roundmode, _MCW_RC) & _MCW_RC != roundmode )
+   {
+      SCIPerrorMessage("error setting rounding mode to %d\n", roundmode);
+      SCIPABORT();
+   }
+}
+
+/** gets current rounding mode of floating point operations */
+static
+ROUNDMODE getRoundingMode(
+   void
+   )
+{
+	return _controlfp(0, 0) & _MCW_RC;
+}
+#endif
 
 
 #ifndef ROUNDING
