@@ -154,6 +154,10 @@ heuristics/crossover/minimprove = 0.01
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 heuristics/crossover/randomization = TRUE
 
+# should the nwaitingnodes parameter be ignored at the root node?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/crossover/dontwaitatroot = TRUE
+
 # priority of heuristic <dins>
 # [type: int, range: [-536870912,536870911], default: -1105000]
 heuristics/dins/priority = -1105000

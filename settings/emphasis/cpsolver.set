@@ -2748,7 +2748,7 @@ propagating/pseudoobj/priority = 0
 
 # frequency for calling propagator <pseudoobj> (-1: never, 0: only in root node)
 # [type: int, range: [-1,2147483647], default: 1]
-propagating/pseudoobj/freq = 1
+propagating/pseudoobj/freq = -1
 
 # should propagator be delayed, if other propagators found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
