@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_blis.awk,v 1.1 2009/12/04 15:51:37 bzfwanie Exp $
+# $Id: check_blis.awk,v 1.2 2009/12/21 00:26:40 bzfwanie Exp $
 #
 #@file    check_blis.awk
 #@brief   BLIS Check Report Generator
@@ -130,21 +130,29 @@ BEGIN {
 #
 # solving process
 #
-/^Clp0000I Optimal - objective value/ { logging = 1; }
-/%/ {
-   if ( $4 != "gap" )
-   {
-      db = $4;
-      logging = 0;
-   }
-}
-/ / {
-   if ( logging == 1 )
-   {
-      db = $3;
-   }
+# optional parsing of root-LP-solving
+#/^Clp0006I / {
+#   if ( NF == 8 )
+#      db = $4;
+#}
+/^Clp0000I Optimal - objective value/ { 
+   db = $6;
+   logging = 1;
+   next;
 }
 /^Alps/ { logging = 0; }
+/ / {
+   if ( logging == 1 && $2 != "Processing" && $2 != "Node" && $5 != "Gap" && $1 != "-----------------------------" && $5 != "CET" && $5 != "CEST" )
+   {
+      if ( NF == 5 )
+         db = $3;
+      else if ( NF == 7 )
+      {
+         pb = $3;
+         db = $4;
+      }
+   }
+}
 #
 # solution
 #
@@ -192,6 +200,8 @@ BEGIN {
 }
 #iters not displayed (version 0.91)
 /^=ready=/ {
+   logging = 0;
+
    if( !onlyinsolufile || solstatus[prob] != "" )
    {
       bbnodes = max(bbnodes, 1);
