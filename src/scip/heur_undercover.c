@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.37 2009/12/11 22:23:04 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.38 2009/12/28 08:48:55 bzfgleix Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -54,13 +54,13 @@
 #define HEUR_DESC             "solves a linearization of an MIQCP determined by a set covering approach"
 #define HEUR_DISPCHAR         'u'
 #define HEUR_PRIORITY         -1110000
-#define HEUR_FREQ             1
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 
 #define DEFAULT_MINNODES      (SCIP_Longint)500/**< minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MAXNODES      (SCIP_Longint)500/**< maximum number of nodes to regard in the subproblem                */
+#define DEFAULT_MAXNODES      (SCIP_Longint)500/**< maximum number of nodes to regard in the subproblem                 */
 #define DEFAULT_MINIMPROVE    0.01           /**< factor by which heuristic should at least improve the incumbent       */
 #define DEFAULT_NODESOFS      (SCIP_Longint)500/**< number of nodes added to the contingent of the total nodes          */
 #define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem         */
@@ -73,7 +73,7 @@
 #define DEFAULT_POSTNLP       TRUE           /**< should the NLP heuristic be called to polish a feasible solution?     */
 #define DEFAULT_BEFORECUTS    TRUE           /**< should undercover called at root node before cut separation?          */
 #define DEFAULT_FIXANDPROP    TRUE           /**< should undercover fix consecutively and propagate fixings?            */
-#define DEFAULT_BACKTRACK     TRUE           /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_BACKTRACK     TRUE           /**< use one level of backtracking if infeasibility is encountered?        */
 #define DEFAULT_PPCSTRAT      'u'            /**< strategy for finding a ppc solution                                   */
 #define PPCSTRATS             "bcdlmtuv"     /**< strategies for finding a ppc solution                                 */
 
