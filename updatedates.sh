@@ -1,6 +1,6 @@
 #!/bin/sh
 
-OLDYEAR=2008
+OLDYEAR=2009
 NEWYEAR=2010
 
 DIRECTORIES=(check doc src src/scip src/objscip src/blockmemshell src/tclique examples examples/*/src examples/*/doc)
