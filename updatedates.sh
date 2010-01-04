@@ -1,7 +1,20 @@
-#!/bin/sh
+#!/bin/bash
+#
+# This bash script updates all copyrights in the SCIP files and 
+# posted those files which contain a copyrights which do not have the right format
+#
+# You just have to run this script. There is nothing to adjust. 
+# The correct year is detected through the 'date' function 
+#
+# Note that not all files (usually scripts) contain a copyright. A copyright is only 
+# needed for those files which are part of a SCIP distribution (see makedist.sh)
+#
+# This bash script also changes the copyrights of the SCIP examples
+#
+# $Id: updatedates.sh,v 1.8 2010/01/04 20:35:32 bzfheinz Exp $
 
-OLDYEAR=2009
-NEWYEAR=2010
+NEWYEAR=`date +"%Y"`
+LASTYEAR=`expr $NEWYEAR - 1`
 
 DIRECTORIES=(check doc src src/scip src/objscip src/blockmemshell src/tclique examples examples/*/src examples/*/doc)
 EXTENSIONS=(sh awk h c hpp cpp)
@@ -14,8 +27,7 @@ do
     do
       if test -f $FILE
       then
-	  # check if the file has a correct old date 
-
+	  # check if the file has already the the new copyright 
 	  COUNT1=`grep -c 2002-$NEWYEAR $FILE`
 	  COUNT2=`grep -c 1996-$NEWYEAR $FILE`
 
@@ -24,20 +36,22 @@ do
 	      continue
 	  fi
 	  
-	  COUNT1=`grep -c 2002-$OLDYEAR $FILE`
-	  COUNT2=`grep -c 1996-$OLDYEAR $FILE`
+	  # check if the file has a correct old copyright 
+	  COUNT1=`grep -c 2002-$LASTYEAR $FILE`
+	  COUNT2=`grep -c 1996-$LASTYEAR $FILE`
 
 	  if test "$COUNT1" == "$COUNT2"
 	  then
-	      echo "DATE ERROR --------------------> $FILE"
+	      # post those files which have a wrong old copyright
+	      echo "COPYRIGHT ERROR --------------------> $FILE"
 	      grep "2002-2" $FILE
 	      grep "1996-2" $FILE	  
 	  else
 	      echo $FILE
   
 	      mv $FILE $FILE.olddate
-	      sed 's!2002-'$OLDYEAR'!2002-'$NEWYEAR'!g 
-s!1996-'$OLDYEAR'!1996-'$NEWYEAR'!g' $FILE.olddate > $FILE
+	      sed 's!2002-'$LASTYEAR'!2002-'$NEWYEAR'!g 
+                   s!1996-'$LASTYEAR'!1996-'$NEWYEAR'!g' $FILE.olddate > $FILE
 	  fi
       fi
     done
