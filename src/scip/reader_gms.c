@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.32 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.33 2010/01/05 14:47:29 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -932,7 +932,7 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    /* add gms reader parameters for writing routines*/
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/gmsreader/freeints", "are integer variables free by default (depending on GAMS version)?",
+         "reading/gmsreader/freeints", "have integer variables no upper bound by default (depending on GAMS version)?",
          NULL, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -1118,9 +1118,9 @@ SCIP_RETCODE SCIPwriteGms(
       }
 
       /* lower bound */
-      if( v < nbinvars || (v < nintvars && !freeints) )
+      if( v < nbinvars + nintvars )
       {
-         /* default lower bound is 0 */
+         /* default lower bound of binaries and integers is 0 (also in recent gams versions if pf4=0 is given) */
          if( !SCIPisZero(scip, lb) )
          {
             if( !SCIPisInfinity(scip, -lb) )
@@ -1130,13 +1130,7 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else if( v < nintvars && !SCIPisInfinity(scip, -lb) )
-      {
-         /* freeints == TRUE: integer variables are free by default */
-         SCIPinfoMessage(scip, file, " %s.lo = %g;\n", varname, SCIPceil(scip, lb));
-         nondefbounds = TRUE;
-      }
-      else if( v >= nintvars && !SCIPisInfinity(scip, -lb) )
+      else if( v >= nbinvars + nintvars && !SCIPisInfinity(scip, -lb) )
       {
          /* continuous variables are free by default */
          SCIPinfoMessage(scip, file, " %s.lo = %.15g;\n", varname, lb);
@@ -1152,7 +1146,7 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else if( v < nintvars && !freeints )
+      else if( v < nbinvars + nintvars && !freeints )
       {
          /* freeints == FALSE: integer variables have upper bound 100 by default */
          if( !SCIPisEQ(scip, ub, 100.0) )
@@ -1164,13 +1158,13 @@ SCIP_RETCODE SCIPwriteGms(
             nondefbounds = TRUE;
          }
       }
-      else if( v < nintvars && !SCIPisInfinity(scip, ub) )
+      else if( v < nbinvars + nintvars && !SCIPisInfinity(scip, ub) )
       {
-         /* freeints == TRUE: integer variables are free by default */
+         /* freeints == TRUE: integer variables have no upper bound by default */
          SCIPinfoMessage(scip, file, " %s.up = %g;\n", varname, SCIPfloor(scip, ub));
          nondefbounds = TRUE;
       }
-      else if( v >= nintvars && !SCIPisInfinity(scip, ub) )
+      else if( v >= nbinvars + nintvars && !SCIPisInfinity(scip, ub) )
       {
          /* continuous variables are free by default */
          SCIPinfoMessage(scip, file, " %s.up = %.15g;\n", varname, ub);
