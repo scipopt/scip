@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.33 2010/01/05 14:47:29 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.34 2010/01/05 14:59:04 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1173,7 +1173,7 @@ SCIP_RETCODE SCIPwriteGms(
    }
 
    if( !nondefbounds )
-      SCIPinfoMessage(scip, file, "* (All other bounds at default value: binary [0,1], integer [%s], continuous [-inf,+inf].)\n", freeints ? "-inf,+inf" : "0,100");
+      SCIPinfoMessage(scip, file, "* (All other bounds at default value: binary [0,1], integer [%s], continuous [-inf,+inf].)\n", freeints ? "0,+inf" : "0,100");
    SCIPinfoMessage(scip, file, "\n");
 
    /* print equations section */
