@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.85 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.86 2010/01/05 17:44:07 bzfheinz Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2342,8 +2342,8 @@ void checkVarnames(
 {
    int v;
 
-   assert( scip != NULL );
-   assert( vars != NULL );
+   assert(scip != NULL);
+   assert(vars != NULL || nvars == 0);
 
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
