@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.150 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.151 2010/01/05 17:42:33 bzfheinz Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -872,12 +872,12 @@ SCIP_RETCODE conflictsetAddBound(
          bdchginfos[i-1] = bdchginfo;
 
       /* remove the redundant bound change by moving the later ones one slot to the front */
+      conflictset->nbdchginfos--;
       for( ; i < conflictset->nbdchginfos; ++i )
       {
          bdchginfos[i] = bdchginfos[i+1];
          sortvals[i] = sortvals[i+1];
       }
-      conflictset->nbdchginfos--;
    }
 
    return SCIP_OKAY;

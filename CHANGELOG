@@ -55,6 +55,7 @@ fixed bugs:
 - fixed bug in tree.c: propagate implications on multi-aggregated should not be performed 
 - fixed bugs in flatzinc readers with constraints that exclusively consist of constants
 - fixed bug in reader_gms: correct handling of nonstandard bounds on general integer variables
+- fixed bug in conflict.c in the method conflictsetAddBound() 
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
