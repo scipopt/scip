@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_cons.h,v 1.55 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_cons.h,v 1.56 2010/01/06 14:02:52 bzfheinz Exp $"
 
 /**@file   type_cons.h
  * @ingroup TYPEDEFINITIONS
@@ -145,7 +145,6 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints of the constraint handler
  *  - nconss          : number of constraints of the constraint handler
  *  - restart         : was this exit solve call triggered by a restart?
-
  */
 #define SCIP_DECL_CONSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_Bool restart)
 
@@ -155,10 +154,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  the corresponding bound change event was not yet processed.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    conshdlr        : the constraint handler itself
- *    cons            : the constraint belonging to the constraint data
- *    consdata        : pointer to the constraint data to free
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - cons            : the constraint belonging to the constraint data
+ *  - consdata        : pointer to the constraint data to free
  */
 #define SCIP_DECL_CONSDELETE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, SCIP_CONSDATA** consdata)
 
