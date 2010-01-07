@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_prob.h,v 1.19 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_prob.h,v 1.20 2010/01/07 11:50:15 bzfheinz Exp $"
 
 /**@file   type_prob.h
  * @ingroup TYPEDEFINITIONS
@@ -50,8 +50,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  This method should free the user data of the original problem.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    probdata        : pointer to the user problem data to free
+ *  - scip            : SCIP main data structure
+ *  - probdata        : pointer to the user problem data to free
  */
 #define SCIP_DECL_PROBDELORIG(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA** probdata)
 
@@ -68,9 +68,9 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  memory location.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    sourcedata      : source problem data to transform
- *    targetdata      : pointer to store created transformed problem data
+ *  - scip            : SCIP main data structure
+ *  - sourcedata      : source problem data to transform
+ *  - targetdata      : pointer to store created transformed problem data
  */
 #define SCIP_DECL_PROBTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* sourcedata, SCIP_PROBDATA** targetdata)
 
@@ -81,8 +81,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  user data of the transformed problem, that was created in the PROBTRANS method.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    probdata        : pointer to the user problem data to free
+ *  - scip            : SCIP main data structure
+ *  - probdata        : pointer to the user problem data to free
  */
 #define SCIP_DECL_PROBDELTRANS(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA** probdata)
 
@@ -92,8 +92,8 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  data that depends for example on the number of active problem variables, because these are now fixed.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    probdata        : user problem data
+ *  - scip            : SCIP main data structure
+ *  - probdata        : user problem data
  */
 #define SCIP_DECL_PROBINITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata)
 
@@ -104,10 +104,11 @@ typedef struct SCIP_ProbData SCIP_PROBDATA;       /**< user problem data set by 
  *  to the transformed user problem data are released.
  *
  *  input:
- *    scip            : SCIP main data structure
- *    probdata        : user problem data
+ *  - scip            : SCIP main data structure
+ *  - probdata        : user problem data
+ *  - restart         : was this exit solve call triggered by a restart?
  */
-#define SCIP_DECL_PROBEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata)
+#define SCIP_DECL_PROBEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROBDATA* probdata, SCIP_Bool restart)
 
 #ifdef __cplusplus
 }

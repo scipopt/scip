@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.108 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.109 2010/01/07 11:50:15 bzfheinz Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -1331,7 +1331,8 @@ SCIP_RETCODE SCIPprobExitSolve(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    )
 {
    SCIP_VAR* var;
@@ -1344,7 +1345,7 @@ SCIP_RETCODE SCIPprobExitSolve(
    /* call user data function */
    if( prob->probexitsol != NULL )
    {
-      SCIP_CALL( prob->probexitsol(set->scip, prob->probdata) );
+      SCIP_CALL( prob->probexitsol(set->scip, prob->probdata, restart) );
    }
 
    /* convert all COLUMN variables back into LOOSE variables */

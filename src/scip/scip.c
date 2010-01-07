@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.533 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.534 2010/01/07 11:50:15 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5245,7 +5245,7 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->solvemem, scip->set, scip->lp) );
 
    /* deinitialize transformed problem */
-   SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->solvemem, scip->set, scip->lp) );
+   SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->solvemem, scip->set, scip->lp, restart) );
 
    /* free solution process data structures */
    SCIP_CALL( SCIPcutpoolFree(&scip->cutpool, scip->mem->solvemem, scip->set, scip->lp) );

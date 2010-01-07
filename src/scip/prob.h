@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.h,v 1.66 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.h,v 1.67 2010/01/07 11:50:15 bzfheinz Exp $"
 
 /**@file   prob.h
  * @brief  internal methods for storing and manipulating the main problem
@@ -282,7 +282,8 @@ SCIP_RETCODE SCIPprobExitSolve(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_LP*              lp                  /**< current LP data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
    );
 
 
