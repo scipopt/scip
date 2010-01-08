@@ -44,6 +44,7 @@ features:
   using the new timing points SCIP_HEURTIMING_DURINGPROPLOOP or SCIP_HEURTIMING_AFTERPROPLOOP, respectively. 
 - SCIP is now able to write non-linear opb-files(linear instances with and-constraints)
 - primal heuristics may now be called during presolving, using the new timing point SCIP_HEURTIMING_DURINGPRESOLLOOP
+- added new dialog for writing all solutions which are collected during the counting process (see cons_countsols.{c,h})
 
 performance improvements:
 

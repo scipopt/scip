@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.h,v 1.9 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.h,v 1.10 2010/01/08 12:00:47 bzfheinz Exp $"
 
 /**@file   cons_countsols.h
  * @brief  constraint handler for counting feasible solutions
@@ -42,6 +42,10 @@ typedef struct SparseSolution SPARSESOLUTION;
 /** dialog execution method for the count command */
 extern
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
+   
+/** execution method of dialog for writing all solutions */
+extern
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecAllsolutions);
 
 /** creates the handler for countsol constraints and includes it in SCIP */
 extern
