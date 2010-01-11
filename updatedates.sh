@@ -11,7 +11,7 @@
 #
 # This bash script also changes the copyrights of the SCIP examples
 #
-# $Id: updatedates.sh,v 1.8 2010/01/04 20:35:32 bzfheinz Exp $
+# $Id: updatedates.sh,v 1.9 2010/01/11 11:10:23 bzfheinz Exp $
 
 NEWYEAR=`date +"%Y"`
 LASTYEAR=`expr $NEWYEAR - 1`
@@ -27,7 +27,7 @@ do
     do
       if test -f $FILE
       then
-	  # check if the file has already the the new copyright 
+	  # check if the file has already the new copyright 
 	  COUNT1=`grep -c 2002-$NEWYEAR $FILE`
 	  COUNT2=`grep -c 1996-$NEWYEAR $FILE`
 
