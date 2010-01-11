@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.20 2010/01/11 16:25:58 bzfheinz Exp $
+# $Id: Makefile,v 1.21 2010/01/11 19:26:48 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C example project featuring a very simple pricer
@@ -89,7 +89,8 @@ $(BINDIR):
 .PHONY: clean
 clean:
 ifneq ($(OBJDIR),)
-		-rm -rf $(OBJDIR)/*
+		-rm -f $(OBJDIR)/*.o
+		-rmdir -p $(OBJDIR)
 endif
 		-rm -f $(MAINFILE)
 
