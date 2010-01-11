@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.5 2009/09/11 18:43:48 bzfheinz Exp $
+# $Id: Makefile,v 1.6 2010/01/11 16:25:57 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C Coloring example using SCIP as a callable library
@@ -99,7 +99,10 @@ $(BINDIR):
 
 .PHONY: clean
 clean:
-		-rm -rf $(OBJDIR)/* $(MAINFILE)
+ifneq ($(OBJDIR),)
+		-rm -rf $(OBJDIR)/*
+endif
+		-rm -f $(MAINFILE)
 
 .PHONY: depend
 depend:		$(SCIPDIR)

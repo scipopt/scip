@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.10 2009/09/11 18:50:03 bzfheinz Exp $
+# $Id: Makefile,v 1.11 2010/01/11 16:25:58 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   Makefile for C++ vehicle routing example using SCIP for branch-and-price
@@ -90,7 +90,10 @@ $(BINDIR):
 
 .PHONY: clean
 clean:
-		-rm -rf $(OBJDIR)/* $(MAINFILE)
+ifneq ($(OBJDIR),)
+		-rm -rf $(OBJDIR)/*
+endif
+		-rm -f $(MAINFILE)
 
 .PHONY: depend
 depend:		$(SCIPDIR)
