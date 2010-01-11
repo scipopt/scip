@@ -52,7 +52,7 @@ conflict/lpiterations = 10
 
 # number of depth levels up to which first UIP's are used in conflict analysis (-1: use All-FirstUIP rule)
 # [type: int, range: [-1,2147483647], default: -1]
-conflict/fuiplevels = -1
+conflict/fuiplevels = 1
 
 # maximal number of intermediate conflict constraints generated in conflict graph (-1: use every intermediate constraint)
 # [type: int, range: [-1,2147483647], default: -1]
