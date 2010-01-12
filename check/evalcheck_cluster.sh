@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.10 2010/01/04 20:35:33 bzfheinz Exp $
+# $Id: evalcheck_cluster.sh,v 1.11 2010/01/12 09:29:34 bzfheinz Exp $
 export LANG=C
 
 FILE=$1
@@ -25,6 +25,7 @@ EVALFILE=`basename $FILE .eval`
 
 OUTFILE=$DIR/$EVALFILE.out 
 ERRFILE=$DIR/$EVALFILE.err
+SETFILE=$DIR/$EVALFILE.set
 RESFILE=$DIR/$EVALFILE.res
 TEXFILE=$DIR/$EVALFILE.tex
 PAVFILE=$DIR/$EVALFILE.pav
@@ -62,6 +63,25 @@ for i in `cat $DIR/$EVALFILE.eval` DONE
       cat $FILE >> $ERRFILE
       if test "$REMOVE" = "1"
 	  then
+	  rm -f $FILE
+      fi
+  fi
+
+  FILE=$i.set
+  if test -e $FILE
+  then
+      cp $FILE $SETFILE
+      if test "$REMOVE" = "1"
+      then
+	  rm -f $FILE
+      fi
+  fi
+
+  FILE=$i.tmp
+  if test -e $FILE
+  then
+      if test "$REMOVE" = "1"
+      then
 	  rm -f $FILE
       fi
   fi
