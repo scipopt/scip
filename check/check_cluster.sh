@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.28 2010/01/04 20:35:32 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.29 2010/01/12 09:09:41 bzfheinz Exp $
 #
 # Call with "make testcluster"
 
@@ -124,7 +124,7 @@ do
   SHORTFILENAME=`basename $SHORTFILENAME .lp`
   SHORTFILENAME=`basename $SHORTFILENAME .opb`
 
-  FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
+  FILENAME=$USER.$QUEUE.$TSTNAME.$COUNT"_"$SHORTFILENAME.$BINID.$SETNAME
   BASENAME=$SCIPPATH/results/$FILENAME
 
   TMPFILE=$BASENAME.tmp
