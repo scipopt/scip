@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.87 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.88 2010/01/14 13:47:33 bzfviger Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -324,7 +324,7 @@ SCIP_Bool checkCons(
       return TRUE;
 }
 
-/** propagation methode for variable bound constraint */
+/** propagation method for variable bound constraint */
 static
 SCIP_RETCODE propagateCons(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -639,7 +639,7 @@ SCIP_RETCODE resolvePropagation(
 
    case PROPRULE_INVALID:
    default:
-      SCIPerrorMessage("invalid inference information %d in linear constraint <%s>\n", proprule, SCIPconsGetName(cons));
+      SCIPerrorMessage("invalid inference information %d in variable bound constraint <%s>\n", proprule, SCIPconsGetName(cons));
       return SCIP_INVALIDDATA;
    }
 
