@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.35 2010/01/08 12:00:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.36 2010/01/15 11:05:25 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -113,6 +113,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             sparsetest;         /**< allow to check for sparse solutions */
    SCIP_Bool             collect;            /**< should the solutions be collected */
 
+   SCIP_Bool             warning;            /**< was the warning messages already posted? */
+   
    /* specific problem data */
    int                   nvars;              /**< number of variables in problem */
    SCIP_VAR**            vars;               /**< array containing a copy of all variables before presolving */
@@ -280,7 +282,7 @@ SCIP_RETCODE conshdlrdataCreate(
    allocInt(&(*conshdlrdata)->nsols);
    
    (*conshdlrdata)->cutoffSolution = NULL;
-
+   (*conshdlrdata)->warning = FALSE;
    (*conshdlrdata)->nvars = 0;
    (*conshdlrdata)->vars = NULL;
 
@@ -1459,7 +1461,12 @@ SCIP_DECL_CONSCHECK(consCheckCountsols)
 
    if( conshdlrdata->active )
    {
-      SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
+      if( !conshdlrdata->warning )
+      {
+         SCIPwarningMessage("a solution comes in over <SCIP_DECL_CONSCHECK(consCheckCountsols)>; currently these solutions are ignored\n");
+         conshdlrdata->warning = TRUE;
+      }
+      
       *result = SCIP_INFEASIBLE;
    }
    else
@@ -1954,7 +1961,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecAllsolutions)
       }
       else if( nsparsesols == 0 )
       {
-         SCIPdialogMessage(scip, NULL, "nothing to write since there is no solution collect\n");
+         SCIPdialogMessage(scip, NULL, "nothing to write since there is no solution collect (parameter <constraints/countsols/collect>)\n");
       }
       else
       {
