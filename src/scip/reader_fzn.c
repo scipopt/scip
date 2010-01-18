@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.37 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.38 2010/01/18 13:26:17 bzfheinz Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -850,6 +850,7 @@ SCIP_RETCODE parseList(
    )
 {
    char assignment[FZN_BUFFERLEN];
+   assert(selements > 0);
 
    /* check if the list is not empty */
    if( getNextToken(fzninput) && !isChar(fzninput->token, ']') )
@@ -1195,7 +1196,7 @@ static
 void parseArrayType(
    SCIP*                 scip,               /**< SCIP data structure */
    FZNINPUT*             fzninput,           /**< FZN reading data */
-   SCIP_Bool*            isvararray,           /**< pointer to store if it is a variable or constant array */
+   SCIP_Bool*            isvararray,         /**< pointer to store if it is a variable or constant array */
    FZNNUMBERTYPE*        type,               /**< pointer to store number type */
    SCIP_Real*            lb,                 /**< pointer to store the lower bound */
    SCIP_Real*            ub                  /**< pointer to store the lower bound */
@@ -2195,11 +2196,11 @@ CREATE_CONSTRAINT(createAlldifferentOpCons)
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-   SCIPfreeBufferArray(scip, &vars);
-   
    *created = TRUE;
 #endif
    
+   SCIPfreeBufferArray(scip, &vars);
+
    return SCIP_OKAY;
 }
    
