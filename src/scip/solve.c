@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.287 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.288 2010/01/20 21:51:37 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1335,14 +1335,14 @@ SCIP_RETCODE SCIPpriceLoop(
       SCIPsetSortPricers(set);
 
       /* call external pricer algorithms, that are active for the current problem */
-      enoughvars = (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2);
+      enoughvars = (SCIPpricestoreGetNVars(pricestore) >= (SCIPsetGetPriceMaxvars(set, pretendroot)+1)/2);
       for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
       {
          SCIP_CALL( SCIPpricerExec(set->pricers[p], set, prob, lp, pricestore, &lb, &result) );
          assert(result == SCIP_DIDNOTRUN || result == SCIP_SUCCESS);
          SCIPdebugMessage("pricing: pricer %s returned result = %s, lowerbound = %f\n", 
             SCIPpricerGetName(set->pricers[p]), (result == SCIP_DIDNOTRUN ? "didnotrun" : "success"), *lowerbound);
-         enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2);
+         enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= (SCIPsetGetPriceMaxvars(set, pretendroot)+1)/2);
          *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
          *lowerbound = MAX(*lowerbound, lb);
       }
@@ -2475,7 +2475,6 @@ SCIP_RETCODE solveNode(
    focusnodehaslp = (set->lp_solvedepth == -1 || actdepth <= set->lp_solvedepth);
    focusnodehaslp = focusnodehaslp && (set->lp_solvefreq >= 1 && actdepth % set->lp_solvefreq == 0);
    focusnodehaslp = focusnodehaslp || (actdepth == 0 && set->lp_solvefreq == 0);
-   focusnodehaslp = focusnodehaslp || (actdepth == 0 && prob->ncontvars > 0);
    focusnodehaslp = focusnodehaslp && SCIPsetIsLT(set, SCIPlpGetPseudoObjval(lp, set), primal->cutoffbound);
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
 
