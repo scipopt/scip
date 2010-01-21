@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.322 2009/12/16 07:28:00 bzfberth Exp $
+# $Id: Makefile,v 1.323 2010/01/21 15:16:15 bzfheinz Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -728,11 +728,22 @@ $(BINDIR):
 
 .PHONY: clean
 clean:
-ifneq ($(OBJDIR),)
-		-rm -rf $(OBJDIR)/*
+ifneq ($(LIBOBJDIR),)
+		@cd $(LIBOBJDIR) && rm -f */*.o && rmdir $(LIBOBJSUBDIRS)
+		@-rmdir $(LIBOBJDIR)
 endif
-		-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) \
+ifneq ($(BINOBJDIR),)
+		@-rm -f $(BINOBJDIR)/*.o && rmdir $(BINOBJDIR)
+endif
+ifneq ($(OBJDIR),)
+		@-rm -f $(LASTSETTINGS)
+		@-rmdir $(OBJDIR)
+endif
+		@echo "-> remove objective files"
+		@-rm -f $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(MAINFILE) \
 		$(LPILIBLINK) $(SCIPLIBLINK) $(OBJSCIPLIBLINK) $(MAINLINK) $(MAINSHORTLINK)
+		@echo "-> remove libraries"
+		@echo "-> remove binary"
 
 .PHONY: lpidepend
 lpidepend:
