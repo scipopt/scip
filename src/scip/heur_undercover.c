@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.41 2010/01/23 07:53:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.42 2010/01/23 08:02:47 bzfberth Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1268,7 +1268,7 @@ SCIP_RETCODE solvePpcProblem(
    SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/localbranching/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/mutation/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(ppcscip, "heuristics/dins/freq", -1) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(ppcscip, "separating/rapidlearning/freq", -1) );
 
 #ifdef SCIP_DEBUG
    /* for debugging, enable MIP output */
