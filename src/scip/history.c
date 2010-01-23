@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.c,v 1.32 2010/01/04 20:35:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: history.c,v 1.33 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   history.c
  * @brief  methods for branching and inference history
@@ -209,6 +209,7 @@ void SCIPhistoryUpdatePseudocost(
 /* end ???????? */
 #undef SCIPhistoryIncNBranchings
 #undef SCIPhistoryIncNInferences
+#undef SCIPhistoryIncNInferencesVal
 #undef SCIPhistoryIncNCutoffs
 #undef SCIPhistoryGetNBranchings
 #undef SCIPhistoryGetNInferences
@@ -380,6 +381,23 @@ void SCIPhistoryIncNInferences(
 
    history->ninferences[dir]++;
 }
+
+/** increases the number of inferences counter by a certian value */
+extern
+void SCIPhistoryIncNInferencesVal(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   int                   val                 /**< value by which the counter should be increased */
+   ) 
+{
+   assert(history != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+   assert((int)dir == 0 || (int)dir == 1);
+   assert(history->nbranchings[dir] >= 1);
+   assert(val >= 0);
+
+   history->ninferences[dir] += val;
+} 
 
 /** increases the number of cutoffs counter */
 void SCIPhistoryIncNCutoffs(

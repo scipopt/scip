@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.210 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.211 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -133,6 +133,7 @@
 #define SCIP_DEFAULT_LIMIT_BESTSOL           -1 /**< solving stops, if given number of solution improvements were found
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
+#define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
 
 /* LP */
@@ -651,6 +652,11 @@ SCIP_RETCODE SCIPsetCreate(
          "limits/maxsol",
          "maximal number of solutions to store in the solution storage",
          &(*set)->limit_maxsol, FALSE, SCIP_DEFAULT_LIMIT_MAXSOL, 1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, blkmem,
+         "limits/restarts",
+         "solving stops, if the given number of restarts was triggered (-1: no limit)",
+         &(*set)->limit_restarts, FALSE, SCIP_DEFAULT_LIMIT_RESTARTS, -1, INT_MAX,
          NULL, NULL) );
 
    /* LP parameters */

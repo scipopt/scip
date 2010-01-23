@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.347 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.348 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -9999,10 +9999,16 @@ SCIP_RETCODE SCIPcopyConsLinear(
    /* map variables of the source constraint to variables of the target SCIP */
    for( v = 0; v < nvars && *success; ++v )
    {
-      vars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, vars[v]);
+      SCIP_VAR* var;
+      var = vars[v];
+      vars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, var);
 
       if( vars[v] == NULL )
+      {
+         SCIPdebugMessage("Could not map variable <%s>, copying constraint <%s> failed \n", SCIPvarGetName(var), name);    
          (*success) = FALSE;
+      }
+
    }
 
    if( *success )

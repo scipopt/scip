@@ -14,6 +14,8 @@ interface:
 - added SCIPsortPtrPtrInt and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added to the callback method SCIP_DECL_PROBEXITSOL(x) (type_prob.h) the parameter restart; 
   this parameter is set to TRUE if the exit solve call was triggered by a restart?
+- new method SCIPswapPointers()
+- new method SCIPsetVarNInferencesInitial() to initialize the inference values of a variable
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -45,8 +47,11 @@ features:
 - SCIP is now able to write non-linear opb-files(linear instances with and-constraints)
 - primal heuristics may now be called during presolving, using the new timing point SCIP_HEURTIMING_DURINGPRESOLLOOP
 - added new dialog for writing all solutions which are collected during the counting process (see cons_countsols.{c,h})
+- new separator rapid learning that produces conflicts, global bound changes, primal solutions and initializes inference values for branching
 
 performance improvements:
+- improved settings/emphasis/cpsolver.set to decrease time per node
+- reworked access to pseudo solution and inference value of variables in order to reduce function calls
 
 fixed bugs:
 - fixed bug in lpi_clp.cpp: SCIPlpiChgBounds checks if the column status exists in Clp before using it

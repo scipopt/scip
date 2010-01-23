@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.36 2010/01/04 20:35:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.37 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -457,9 +457,11 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/crossover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/undercover/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/localbranching/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/mutation/freq", -1) );
 
    /* disable heuristics which aim to feasibility instead of optimality */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );

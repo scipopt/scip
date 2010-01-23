@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.85 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.86 2010/01/23 07:53:53 bzfberth Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -179,6 +179,7 @@ struct SCIP_Set
    int                   limit_bestsol;      /**< solving stops, if the given number of solution improvements were found
                                               *   (-1: no limit) */
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
+   int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 
    /* LP settings */
    int                   lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */

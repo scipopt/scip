@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.358 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.359 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -2959,6 +2959,15 @@ extern
 SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** increases the number of inferences counter of the variable by a certain value*/
+extern
+SCIP_RETCODE SCIPsetVarNInferencesInitial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which should be initialized */
+   SCIP_Longint          downval,            /**< value to which inference counter for downwards branching should be initialized */
+   SCIP_Longint          upval               /**< value to which inference counter for upwards branching should be initialized */
    );
 
 /** returns the average number of cutoffs found after branching on the variable in given direction;

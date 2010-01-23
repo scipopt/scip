@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.534 2010/01/07 11:50:15 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.535 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5560,8 +5560,9 @@ SCIP_RETCODE SCIPsolve(
          return SCIP_ERROR;
       }  /*lint !e788*/
    }
-   while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE) );
-
+   while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE) 
+      && (scip->set->limit_restarts == -1 || scip->stat->nruns <= scip->set->limit_restarts ) );
+      
    /* release the CTRL-C interrupt */
    if( scip->set->misc_catchctrlc )
       SCIPinterruptRelease(scip->interrupt);
@@ -9145,6 +9146,31 @@ SCIP_Real SCIPgetVarAvgInferenceScoreCurrentRun(
    inferup = SCIPvarGetAvgInferencesCurrentRun(var, scip->stat, SCIP_BRANCHDIR_UPWARDS);
 
    return SCIPbranchGetScore(scip->set, var, inferdown, inferup);
+}
+
+/** increases the number of inferences counter of the variable by a certain value*/
+SCIP_RETCODE SCIPsetVarNInferencesInitial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which should be initialized */
+   SCIP_Longint          downval,            /**< value to which inference counter for downwards branching should be initialized */
+   SCIP_Longint          upval               /**< value to which inference counter for upwards branching should be initialized */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetVarNInferencesInitial", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( downval > 0 )
+   {
+      SCIP_CALL( SCIPvarIncNBranchings(var, scip->stat, 1, SCIP_BRANCHDIR_DOWNWARDS) );
+      SCIP_CALL( SCIPvarIncNInferencesVal(var, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, downval) );  
+   }
+
+   if( upval > 0 )
+   {
+      SCIP_CALL( SCIPvarIncNBranchings(var, scip->stat, 1, SCIP_BRANCHDIR_UPWARDS) );
+      SCIP_CALL( SCIPvarIncNInferencesVal(var, scip->stat, SCIP_BRANCHDIR_UPWARDS, upval) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** returns the average number of cutoffs found after branching on the variable in given direction;

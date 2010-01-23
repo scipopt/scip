@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.38 2010/01/18 13:26:17 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.39 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -44,6 +44,7 @@
 #include "scip/cons_or.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
+#include "scip/cons_quadratic.h"
 #include "scip/cons_xor.h"
 #include "scip/pub_misc.h"
 #include "scip/reader_fzn.h"
@@ -430,19 +431,6 @@ SCIP_Bool getNextLine(
    return TRUE;
 }
 
-/** swaps the addresses of two pointers */
-static
-void swapPointers(
-   char**                pointer1,           /**< first pointer */
-   char**                pointer2            /**< second pointer */
-   )
-{
-   char* tmp;
-
-   tmp = *pointer1;
-   *pointer1 = *pointer2;
-   *pointer2 = tmp;
-}
 
 /** reads the next token from the input file into the token buffer; returns whether a token was read */
 static
@@ -461,7 +449,7 @@ SCIP_Bool getNextToken(
    /* check the token stack */
    if( fzninput->npushedtokens > 0 )
    {
-      swapPointers(&fzninput->token, &fzninput->pushedtokens[fzninput->npushedtokens-1]);
+      SCIPswapPointers((void*)&fzninput->token, (void*)&fzninput->pushedtokens[fzninput->npushedtokens-1]);
       fzninput->npushedtokens--;
       SCIPdebugMessage("(line %d) read token again: '%s'\n", fzninput->linenumber, fzninput->token);
       return TRUE;
@@ -563,7 +551,7 @@ void pushToken(
    assert(fzninput != NULL);
    assert(fzninput->npushedtokens < FZN_MAX_PUSHEDTOKENS);
 
-   swapPointers(&fzninput->pushedtokens[fzninput->npushedtokens], &fzninput->token);
+   SCIPswapPointers((void*)&fzninput->pushedtokens[fzninput->npushedtokens], (void*)&fzninput->token);
    fzninput->npushedtokens++;
 }
 
@@ -602,6 +590,35 @@ SCIP_Bool isValue(
 
 /** creates, adds, and releases a linear constraint */
 static
+SCIP_RETCODE createQuadraticCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of constraint */
+   int                   nlinvars,           /**< number of linear terms (n) */
+   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */
+   int                   nquadterms,         /**< number of quadratic terms (m) */
+   SCIP_VAR**            quadvars1,          /**< array with first variables in quadratic terms (y_j) */
+   SCIP_VAR**            quadvars2,          /**< array with second variables in quadratic terms (z_j) */
+   SCIP_Real*            quadcoefs,          /**< array with coefficients of quadratic terms (a_j) */
+   SCIP_Real             lhs,                /**< left hand side of quadratic equation (ell) */
+   SCIP_Real             rhs                 /**< right hand side of quadratic equation (u) */
+   )   
+{
+   SCIP_CONS* cons;
+
+   SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs, nquadterms, quadvars1, quadvars2, 
+         quadcoefs, lhs, rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) ); 
+
+   SCIPdebug( SCIPprintCons(scip, cons, NULL) );
+
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}           
+
+/** creates, adds, and releases a linear constraint */
+static
 SCIP_RETCODE createLinearCons(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of constraint */
@@ -633,12 +650,12 @@ SCIP_RETCODE createLinking(
    const char*           consname,           /**< name of constraint */
    const char*           name1,              /**< name of first identifier */
    const char*           name2,              /**< name of second identifier */
-   SCIP_Real             lhs,                /**< left hand side of the linkling */
-   SCIP_Real             rhs                 /**< right hand side of the linkling */
+   SCIP_Real             lhs,                /**< left hand side of the linking */
+   SCIP_Real             rhs                 /**< right hand side of the linking */
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real vals[] = {1.0,-1.0};
+   SCIP_Real vals[] = {0.0,0.0};
    SCIP_Real value1;
    SCIP_Real value2;
    int nvars;
@@ -651,7 +668,10 @@ SCIP_RETCODE createLinking(
    
    vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) name1);
    if( vars[nvars] != NULL )
-      nvars++;
+   {
+      vals[nvars] = 1.0;
+      nvars++;      
+   }
    else if( !isValue(name1, &value1) )
    {
       FZNCONSTANT* constant;
@@ -664,7 +684,10 @@ SCIP_RETCODE createLinking(
 
    vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) name2);
    if( vars[nvars] != NULL )
+   {
+      vals[nvars] = -1.0;
       nvars++;
+   }
    else if( !isValue(name2, &value2) )
    {
       FZNCONSTANT* constant;
@@ -889,44 +912,6 @@ SCIP_RETCODE parseList(
    /* push back ']' which closes the list */
    pushToken(fzninput);
 
-   return SCIP_OKAY;
-}
-
-/** parse linking statement */
-static
-SCIP_RETCODE parseLinking(
-   SCIP*                 scip,               /**< SCIP data structure */
-   FZNINPUT*             fzninput,           /**< FZN reading data */
-   const char*           name,               /**< name of constraint */
-   const char*           type,               /**< linear constraint type */
-   SCIP_Real             sidevalue           /**< side value of constraint */
-   )   
-{
-   char** names;
-   SCIP_Real lhs;
-   SCIP_Real rhs;
-   int nnames;
-
-   nnames = 0;
-   SCIP_CALL( SCIPallocBufferArray(scip, &names, 2) );
-   
-   SCIP_CALL( parseList(scip, fzninput, &names, &nnames, 2) );
-   assert(nnames == 2);
-   
-   if( hasError(fzninput) )
-      goto TERMINATE;
-   
-   /* compute left and right side */
-   computeLinearConsSides(scip, fzninput, type, sidevalue, &lhs, &rhs);
-   
-   if( hasError(fzninput) )
-      goto TERMINATE;
-
-   SCIP_CALL( createLinking(scip, fzninput, name, names[0], names[1], lhs, rhs) );
-   
- TERMINATE:
-   freeStringBufferArray(scip, names, nnames);
-   
    return SCIP_OKAY;
 }
 
@@ -1750,6 +1735,271 @@ SCIP_RETCODE parseVariableArrayAssignment(
    return SCIP_OKAY;
 }
 
+/** parse linking statement */
+static
+SCIP_RETCODE parseQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           name                /**< name of constraint */
+   )   
+{
+   char** elements;
+   int nelements;
+      
+   SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
+   nelements = 0;
+      
+   /* parse the list of three elements */
+   SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 3) );
+   assert(nelements == 3);
+      
+   if( !hasError(fzninput) )
+   {
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      SCIP_Real rhs;
+      int v;
+
+      rhs = 0.0;
+         
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
+    
+      for( v = 0; v < 3; ++v )
+      {
+         /* collect variable if constraint identifier is a variable */
+         vars[v] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[v]);
+         
+         /* parse the numeric value otherwise */
+         if( vars[v] == NULL )
+            parseValue(scip, fzninput, &vals[v], elements[v]);
+         else
+            vals[v] = SCIP_INVALID;                
+      }
+
+      /* the first two identifiers are proper variables => the constraints is indeed quadratic */
+      if( vars[0] != NULL && vars[1] != NULL )
+      {
+         SCIP_Real quadval;
+         quadval = 1.0;
+
+         /* we might have an additional linear term or just a constant */
+         if( vars[2] != NULL )
+         {
+            SCIP_Real linval;     
+            linval = -1.0;
+     
+            SCIP_CALL( createQuadraticCons(scip, name, 1, &vars[2], &linval, 1, &vars[0], &vars[1], &quadval, rhs, rhs) );
+         }
+         else
+         {
+            rhs += vals[2];
+            SCIP_CALL( createQuadraticCons(scip, name, 0, NULL, NULL, 1, &vars[0], &vars[1], &quadval, rhs, rhs));      
+         }
+      }
+      else if( vars[0] != NULL || vars[1] != NULL )
+      {
+         int nvars;
+         nvars = 1;
+
+         /* the left hand side of x*y = z is linear (but not constant) */
+         if( vars[0] == NULL )
+            SCIPswapPointers((void*)&vars[0], (void*)&vars[1]);
+         else
+            SCIPswapPointers((void*)&vals[0], (void*)&vals[1]);
+
+         /* after swapping, the variable and the coefficient should stand in front */
+         assert(vars[0] != NULL && vals[0] != SCIP_INVALID );
+
+         /* the right hand side might be a variable or a constant */
+         if( vars[2] != NULL )
+         {
+            SCIPswapPointers((void*)&vars[1], (void*)&vars[2]); 
+            vals[1] = -1.0;
+            nvars++;
+         }
+         else
+         {
+            assert(vals[2] != SCIP_INVALID);
+            rhs += vals[2];
+         }
+         
+         SCIP_CALL( createLinearCons(scip, name, nvars, vars, vals, rhs, rhs) );
+      }
+      else
+      {
+         /* the left hand side of x*y = z is constant */
+         assert(vals[0] != SCIP_INVALID && vals[1] != SCIP_INVALID);
+
+         rhs = rhs - vals[0]*vals[1];
+       
+         /* the right hand side might be a variable or a constant */
+         if( vars[2] != NULL )
+         {
+            SCIP_Real val;     
+            val = -1.0;
+            SCIP_CALL( createLinearCons(scip, name, 1, &vars[2], &val, rhs, rhs) );
+         }
+         else
+         {
+            assert(vals[2] != SCIP_INVALID);
+            rhs += vals[2];
+            SCIP_CALL( createLinearCons(scip, name, 0, NULL, NULL, rhs, rhs) );  
+         }
+      }
+      
+      /* free buffer arrays */
+      SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
+   }
+  
+   /* free elements array */
+   freeStringBufferArray(scip, elements, nelements);
+
+   return SCIP_OKAY;
+}
+
+/** parse aggregation statement (plus, minus, negate) */
+static
+SCIP_RETCODE parseAggregation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           name,               /**< name of constraint */
+   const char*           type                /**< linear constraint type */
+   )   
+{
+   /* here we take care of the three expression 
+    *
+    * - int_plus(x1,x2,x3)   -> x1 + x2 == x3
+    * - int_minus(x1,x2,x3)  -> x1 - x2 == x3
+    * - int_negate(x1,x2)    -> x1 + x2 == 0
+    */
+   char** elements;
+   int nelements;
+      
+   SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
+   nelements = 0;
+      
+   /* parse the list of three elements */
+   SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 3) );
+   assert(nelements == 3 || nelements == 2);
+      
+   if( !hasError(fzninput) )
+   {
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      SCIP_Real value;
+      SCIP_Real rhs;
+      int nvars;
+
+      nvars = 0;
+      rhs = 0.0;
+         
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
+
+      /* parse first element */
+      vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[0]);
+      if( vars[nvars] == NULL )
+      {
+         parseValue(scip, fzninput, &value, elements[0]);
+         rhs -= value;
+      }
+      else
+      {
+         vals[nvars] = 1.0;
+         nvars++;
+      }
+         
+      /* parse second element */
+      vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[1]);
+      if( vars[nvars] == NULL )
+      {
+         parseValue(scip, fzninput, &value, elements[1]);
+         if( equalTokens(type, "minus") )
+            rhs += value;
+         else
+            rhs -= value;
+      }
+      else
+      {
+         if( equalTokens(type, "minus") )
+         {
+            /* in case of minus the second element get a -1.0 as coefficient */
+            vals[nvars] = -1.0;
+         }
+         else
+            vals[nvars] = 1.0;
+
+         nvars++;
+      }
+
+      if( !equalTokens(type, "negate") )
+      {
+         /* parse third element in case of "minus" or "plus" */
+         vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[2]);
+         if( vars[nvars] == NULL )
+         {
+            parseValue(scip, fzninput, &value, elements[2]);
+            rhs += value;
+         }
+         else
+         {
+            vals[nvars] = -1.0;
+            nvars++;
+         }
+      }
+         
+      SCIP_CALL( createLinearCons(scip, name, nvars, vars, vals, rhs, rhs) );
+      
+      /* free buffer arrays */
+      SCIPfreeBufferArray(scip, &vals);
+      SCIPfreeBufferArray(scip, &vars);
+   }
+
+   /* free elements array */
+   freeStringBufferArray(scip, elements, nelements);
+   return SCIP_OKAY;
+}
+
+/** parse linking statement */
+static
+SCIP_RETCODE parseLinking(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FZNINPUT*             fzninput,           /**< FZN reading data */
+   const char*           name,               /**< name of constraint */
+   const char*           type,               /**< linear constraint type */
+   SCIP_Real             sidevalue           /**< side value of constraint */
+   )   
+{
+   char** names;
+   SCIP_Real lhs;
+   SCIP_Real rhs;
+   int nnames;
+
+   nnames = 0;
+   SCIP_CALL( SCIPallocBufferArray(scip, &names, 2) );
+   
+   SCIP_CALL( parseList(scip, fzninput, &names, &nnames, 2) );
+   assert(nnames == 2);
+   
+   if( hasError(fzninput) )
+      goto TERMINATE;
+   
+   /* compute left and right side */
+   computeLinearConsSides(scip, fzninput, type, sidevalue, &lhs, &rhs);
+   
+   if( hasError(fzninput) )
+      goto TERMINATE;
+
+   SCIP_CALL( createLinking(scip, fzninput, name, names[0], names[1], lhs, rhs) );
+   
+ TERMINATE:
+   freeStringBufferArray(scip, names, nnames);
+   
+   return SCIP_OKAY;
+}
+
 /** creates a linear constraint for an array operation */
 static
 CREATE_CONSTRAINT(createCoercionOpCons)
@@ -1880,12 +2130,8 @@ CREATE_CONSTRAINT(createLogicalOpCons)
          }
          else if( equalTokens(ftokens[1], "xor") )
          {
-            SCIP_VAR* tmpVar;
-
             /* swap resultant to front */
-            tmpVar = vars[2];
-            vars[2] = vars[0];
-            vars[0] = tmpVar;
+            SCIPswapPointers((void*)&vars[0], (void*)&vars[2]); 
 
             SCIP_CALL( SCIPcreateConsXor(scip, &cons, fname, FALSE, 3, vars, 
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) ); 
@@ -1942,13 +2188,20 @@ CREATE_CONSTRAINT(createComparisonOpCons)
       return SCIP_OKAY;
    }
    
-   /* the last token can only be 
+   /* the last token can be 
     * 'eq' -- equal
     * 'ne' -- not equal
     * 'lt' -- less than
     * 'gt' -- greater than
     * 'le' -- less or equal than 
     * 'ge' -- greater or equal than 
+    *         => these are comparison constraints
+    * 'plus'   -- addition
+    * 'minus'  -- substraction
+    * 'negate' -- negation
+    *             => these are aggregation constraints
+    * 'times' -- multiplication
+    *            => this is a nonlinear constraint
     */
    if( strlen(ftokens[nftokens - 1]) != 2 && nftokens != 2 )
       return SCIP_OKAY;
@@ -2046,111 +2299,23 @@ CREATE_CONSTRAINT(createComparisonOpCons)
    }
    else if( equalTokens(ftokens[1], "minus") || equalTokens(ftokens[1], "plus") || equalTokens(ftokens[1], "negate") )
    {
-      /* here we take care of the three expression 
-       *
-       * - int_plus(x1,x2,x3)   -> x1 + x2 == x3
-       * - int_minus(x1,x2,x3)  -> x1 - x2 == x3
-       * - int_negate(x1,x2)    -> x1 + x2 == 0
-       */
-      char** elements;
-      int nelements;
-
       assert(nftokens == 2);
-      
-      SCIP_CALL( SCIPallocBufferArray(scip, &elements, 3) );
-      nelements = 0;
-      
-      /* parse the list of three elements */
-      SCIP_CALL( parseList(scip, fzninput, &elements, &nelements, 3) );
-      assert(nelements <= 3 && nelements >= 2);
-      
-      if( !hasError(fzninput) )
-      {
-         SCIP_CONS* cons;
-         SCIP_VAR** vars;
-         SCIP_Real* vals;
-         SCIP_Real value;
-         int nvars;
-
-         nvars = 0;
-         lhs = 0.0;
-         
-         SCIP_CALL( SCIPallocBufferArray(scip, &vars, 3) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &vals, 3) );
-
-         /* parse first element */
-         vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[0]);
-         if( vars[nvars] == NULL )
-         {
-            parseValue(scip, fzninput, &value, elements[0]);
-            lhs -= value;
-         }
-         else
-         {
-            vals[nvars] = 1.0;
-            nvars++;
-         }
-         
-         /* parse second element */
-         vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[1]);
-         if( vars[nvars] == NULL )
-         {
-            parseValue(scip, fzninput, &value, elements[1]);
-            if( equalTokens(ftokens[1], "minus") )
-               lhs += value;
-            else
-               lhs -= value;
-         }
-         else
-         {
-            if( equalTokens(ftokens[1], "minus") )
-            {
-               /* in case of minus the second element get a -1.0 as coefficient */
-               vals[nvars] = -1.0;
-            }
-            else
-               vals[nvars] = 1.0;
-
-            nvars++;
-         }
-
-         if( !equalTokens(ftokens[1], "negate") )
-         {
-            /* parse third element in case of "minus" or "plus" */
-            vars[nvars] = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) elements[2]);
-            if( vars[nvars] == NULL )
-            {
-               parseValue(scip, fzninput, &value, elements[2]);
-               lhs += value;
-            }
-            else
-            {
-               vals[nvars] = -1.0;
-               nvars++;
-            }
-         }
-         
-         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, fname, nvars, vars, vals, lhs, lhs, 
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-         
-         SCIPdebug( SCIPprintCons(scip, cons, NULL) );
-
-         SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-         /* free buffer arrays */
-         SCIPfreeBufferArray(scip, &vals);
-         SCIPfreeBufferArray(scip, &vars);
-      }
-
-      /* free elements array */
-      freeStringBufferArray(scip, elements, nelements);
-
+      SCIP_CALL( parseAggregation(scip, fzninput, fname, ftokens[1]) );
    }
-   else
+   else if( equalTokens(ftokens[1], "eq") || equalTokens(ftokens[1], "le") || equalTokens(ftokens[1], "ge") 
+      || equalTokens(ftokens[1], "lt") || equalTokens(ftokens[1], "gt") )
    {
       assert(nftokens == 2);
       SCIP_CALL( parseLinking(scip, fzninput, fname, ftokens[1], 0.0) );
+   }
+   else if( equalTokens(ftokens[1], "times") )    
+   {
+      assert(nftokens == 2);
+      SCIP_CALL( parseQuadratic(scip, fzninput, fname) );
+   }
+   else
+   {
+      syntaxError(scip, fzninput, "unknown contraint type");
    }
 
    *created = TRUE;

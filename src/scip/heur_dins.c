@@ -578,7 +578,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rins/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/rens/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/dins/freq", -1) );
-   
+   SCIP_CALL( SCIPsetIntParam(subscip, "separating/rapidlearning/freq", -1) );
+
    /* disable heuristics which aim to feasibility instead of optimality */
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/feaspump/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/octane/freq", -1) );

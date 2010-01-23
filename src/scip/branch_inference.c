@@ -12,12 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.27 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.28 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   branch_inference.c
  * @ingroup BRANCHINGRULES
  * @brief  inference history branching rule
  * @author Tobias Achterberg
+ * @author Timo Berthold
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,17 +35,22 @@
 #define BRANCHRULE_MAXDEPTH      -1
 #define BRANCHRULE_MAXBOUNDDIST  1.0
 
-#define DEFAULT_CONFLICTWEIGHT  1000.0  /**< factor to weigh conflict score against inference score */
-#define DEFAULT_CUTOFFWEIGHT       1.0  /**< factor to weigh average number of cutoffs in branching score */
+#define DEFAULT_CONFLICTWEIGHT  1000.0  /**< weight in score calculations for conflict score */
+#define DEFAULT_CUTOFFWEIGHT       1.0  /**< weight in score calculations for cutoff score */
+#define DEFAULT_INFERENCEWEIGHT    1.0  /**< weight in score calculations for inference score */
 #define DEFAULT_FRACTIONALS        TRUE /**< should branching on LP solution be restricted to the fractional variables? */
+#define DEFAULT_USEWEIGHTEDSUM     TRUE /**< should a weighted sum of inference, conflict and cutoff weigths be used? */
+
 
 
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_Real             conflictweight;     /**< factor to weigh conflict score against inference score */
-   SCIP_Real             cutoffweight;       /**< factor to weigh average number of cutoffs in branching score */
+   SCIP_Real             conflictweight;     /**< weight in score calculations for conflict score */
+   SCIP_Real             cutoffweight;       /**< weight in score calculations for cutoff score */
+   SCIP_Real             inferenceweight;    /**< weight in score calculations for inference score */
    SCIP_Bool             fractionals;        /**< should branching on LP solution be restricted to the fractional variables? */
+   SCIP_Bool             useweightedsum;     /**< should a weighted sum of inference, conflict and cutoff weigths be used? */
 };
 
 
@@ -55,8 +61,10 @@ SCIP_RETCODE performBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            cands,              /**< candidate array */
    int                   ncands,             /**< number of candidates */
-   SCIP_Real             conflictweight,     /**< factor to weigh conflict score against inference score */
-   SCIP_Real             cutoffweight        /**< factor to weigh average number of cutoffs in branching score */
+   SCIP_Real             conflictweight,     /**< weight in score calculations for conflict score */
+   SCIP_Real             inferenceweight,    /**< weight in score calculations for inference score */
+   SCIP_Real             cutoffweight,       /**< weight in score calculations for cutoff score */
+   SCIP_Bool             useweightedsum      /**< should a weighted sum of inference, conflict and cutoff weigths be used? */
    )
 {
    SCIP_VAR* var;
@@ -68,17 +76,34 @@ SCIP_RETCODE performBranching(
    /* search for variable with best score w.r.t. average inferences per branching */
    bestscore = 0.0;
    bestcand = -1;
-   for( c = 0; c < ncands; ++c )
-   {
-      score = conflictweight * SCIPgetVarConflictScore(scip, cands[c])
-         + SCIPgetVarAvgInferenceCutoffScore(scip, cands[c], cutoffweight);
-      if( score > bestscore )
+   if( useweightedsum )
+   { 
+      for( c = 0; c < ncands; ++c )
       {
-         bestscore = score;
-         bestcand = c;
+         score = conflictweight * SCIPgetVarConflictScore(scip, cands[c])
+            + inferenceweight * SCIPgetVarAvgInferenceCutoffScore(scip, cands[c], cutoffweight);
+         if( score > bestscore )
+         {
+            bestscore = score;
+            bestcand = c;
+         }
+         SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cands[c]), SCIPvarGetBranchPriority(cands[c]),
+            SCIPgetVarSol(scip, cands[c]), score);
       }
-      SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cands[c]), SCIPvarGetBranchPriority(cands[c]),
-                       SCIPgetVarSol(scip, cands[c]), score);
+   }
+   else
+   {
+      for( c = 0; c < ncands; ++c )
+      {
+         score = SCIPgetVarAvgInferenceScore(scip, cands[c]);
+         if( score > bestscore )
+         {
+            bestscore = score;
+            bestcand = c;
+         }
+         SCIPdebugMessage(" -> cand <%s>: prio=%d, solval=%g, score=%g\n", SCIPvarGetName(cands[c]), SCIPvarGetBranchPriority(cands[c]),
+            SCIPgetVarSol(scip, cands[c]), score);
+      }
    }
    assert(0 <= bestcand && bestcand < ncands);
    var = cands[bestcand];
@@ -155,7 +180,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
    }
 
    /* perform the branching */
-   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->conflictweight, branchruledata->cutoffweight) );
+   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->conflictweight, 
+         branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->useweightedsum) );
 
    *result = SCIP_BRANCHED;
    
@@ -185,7 +211,8 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsInference)
    SCIP_CALL( SCIPgetPseudoBranchCands(scip, &cands, NULL, &ncands) );
 
    /* perform the branching */
-   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->conflictweight, branchruledata->cutoffweight) );
+   SCIP_CALL( performBranching(scip, cands, ncands, branchruledata->conflictweight, 
+         branchruledata->inferenceweight, branchruledata->cutoffweight, branchruledata->useweightedsum) );
 
    *result = SCIP_BRANCHED;
    
@@ -219,16 +246,24 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
    /* inference branching rule parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/inference/conflictweight", 
-         "factor to weigh conflict score against inference score",
+         "weight in score calculations for conflict score",
          &branchruledata->conflictweight, TRUE, DEFAULT_CONFLICTWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
+         "branching/inference/inferenceweight", 
+         "weight in score calculations for inference score",
+         &branchruledata->inferenceweight, TRUE, DEFAULT_INFERENCEWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "branching/inference/cutoffweight", 
-         "factor to weigh average number of cutoffs in branching score",
+         "weight in score calculations for cutoff score",
          &branchruledata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/inference/fractionals", 
          "should branching on LP solution be restricted to the fractional variables?",
          &branchruledata->fractionals, TRUE, DEFAULT_FRACTIONALS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/inference/useweightedsum", 
+         "should a weighted sum of inference, conflict and cutoff weigths be used?",
+         &branchruledata->useweightedsum, FALSE, DEFAULT_USEWEIGHTEDSUM, NULL, NULL) );
 
    return SCIP_OKAY;
 }

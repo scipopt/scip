@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: misc.c,v 1.106 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: misc.c,v 1.107 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   misc.c
  * @brief  miscellaneous methods
@@ -3702,6 +3702,19 @@ SCIP_Real SCIPgetRandomReal(
 /*
  * Permutations / Shuffling
  */
+
+/** swaps the addresses of two pointers */
+void SCIPswapPointers(
+   void**                pointer1,           /**< first pointer */
+   void**                pointer2            /**< second pointer */
+   )
+{
+   void* tmp;
+
+   tmp = *pointer1;
+   *pointer1 = *pointer2;
+   *pointer2 = tmp;
+}
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 void SCIPpermuteArray(

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.129 2010/01/04 20:35:52 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.130 2010/01/23 07:53:53 bzfberth Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -1106,6 +1106,15 @@ SCIP_RETCODE SCIPvarIncNInferences(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** increases the number of inferences counter of the variable by a certain value*/
+extern
+SCIP_Longint SCIPvarIncNInferencesVal(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */   
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   int                   val                 /**< value by which the number of inferences counter is increased */
+   );
+
 /** increases the number of cutoffs counter of the variable */
 extern
 SCIP_RETCODE SCIPvarIncNCutoffs(
@@ -1116,7 +1125,7 @@ SCIP_RETCODE SCIPvarIncNCutoffs(
 
 /** returns the average number of inferences found after branching on the variable in given direction */
 extern
-SCIP_Real SCIPvarGetConflictScore(
+SCIP_Real SCIPvarGetConflictScore_rec(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
@@ -1205,6 +1214,14 @@ SCIP_RETCODE SCIPvarDropEvent(
    int                   filterpos           /**< position of event filter entry returned by SCIPvarCatchEvent(), or -1 */
    );
 
+/** returns the average number of inferences found after branching on the variable in given direction */
+extern
+SCIP_Real SCIPvarGetConflictScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
 #else
 
 /* In optimized mode, the methods are implemented as defines to reduce the number of function calls and
@@ -1215,6 +1232,8 @@ SCIP_RETCODE SCIPvarDropEvent(
    SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
 #define SCIPvarDropEvent(var, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) \
    SCIPeventfilterDel(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos)
+#define SCIPvarGetConflictScore(var, stat, dir)    ((var)->varstatus == SCIP_VARSTATUS_LOOSE || (var)->varstatus == SCIP_VARSTATUS_COLUMN ? \
+      SCIPhistoryGetConflictScore(var->history, dir)/stat->conflictscoreweight : SCIPvarGetConflictScore_rec(var, stat, dir))
 
 #endif
 

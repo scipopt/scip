@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.323 2010/01/21 15:16:15 bzfheinz Exp $
+# $Id: Makefile,v 1.324 2010/01/23 07:53:52 bzfberth Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -521,6 +521,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepa_impliedbounds.o \
 			scip/sepa_intobj.o \
 			scip/sepa_mcf.o \
+			scip/sepa_rapidlearning.o \
 			scip/sepa_redcost.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \

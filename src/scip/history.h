@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: history.h,v 1.30 2010/01/04 20:35:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: history.h,v 1.31 2010/01/23 07:53:52 bzfberth Exp $"
 
 /**@file   history.h
  * @brief  internal methods for branching and inference history
@@ -178,6 +178,14 @@ void SCIPhistoryIncNInferences(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** increases the number of inferences counter by a certian value */
+extern
+void SCIPhistoryIncNInferencesVal(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   int                   val                 /**< value by which the counter should be increased */
+   ); 
+
 /** increases the number of cutoffs counter */
 extern
 void SCIPhistoryIncNCutoffs(
@@ -257,6 +265,7 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
 #define SCIPhistoryIncNBranchings(history,depth,dir) { (history)->nbranchings[dir]++; \
       (history)->branchdepthsum[dir] += depth; }
 #define SCIPhistoryIncNInferences(history,dir)     (history)->ninferences[dir]++
+#define SCIPhistoryIncNInferencesVal(history,dir,val) ((history)->ninferences[dir] += val)
 #define SCIPhistoryIncNCutoffs(history,dir)        (history)->ncutoffs[dir]++
 #define SCIPhistoryGetNBranchings(history,dir)     ((history)->nbranchings[dir])
 #define SCIPhistoryGetNInferences(history,dir)     ((history)->ninferences[dir])
