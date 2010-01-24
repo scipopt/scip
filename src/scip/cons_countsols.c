@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.36 2010/01/15 11:05:25 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.37 2010/01/24 21:41:12 bzfheinz Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1957,11 +1957,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecAllsolutions)
       }
       else if( nsols == 0 )
       {
-         SCIPdialogMessage(scip, NULL, "nothing to write since there is no counted solutions\n");
+         SCIPdialogMessage(scip, NULL, "there are no counted solutions\n");
       }
       else if( nsparsesols == 0 )
       {
-         SCIPdialogMessage(scip, NULL, "nothing to write since there is no solution collect (parameter <constraints/countsols/collect>)\n");
+         SCIPdialogMessage(scip, NULL, "there is no solution collect (parameter <constraints/countsols/collect>)\n");
       }
       else
       {
