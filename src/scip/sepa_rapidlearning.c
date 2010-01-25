@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.1 2010/01/23 08:02:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.2 2010/01/25 20:07:59 bzfheinz Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -23,6 +23,9 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#ifndef NDEBUG
+#include <string.h>
+#endif
 
 #include "scip/sepa_rapidlearning.h"
 #include "scip/scipdefplugins.h"
