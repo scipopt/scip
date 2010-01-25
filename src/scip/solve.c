@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.288 2010/01/20 21:51:37 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.289 2010/01/25 13:02:30 bzfgamra Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -1335,7 +1335,7 @@ SCIP_RETCODE SCIPpriceLoop(
       SCIPsetSortPricers(set);
 
       /* call external pricer algorithms, that are active for the current problem */
-      enoughvars = (SCIPpricestoreGetNVars(pricestore) >= (SCIPsetGetPriceMaxvars(set, pretendroot)+1)/2);
+      enoughvars = (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2 + 1);
       for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
       {
          SCIP_CALL( SCIPpricerExec(set->pricers[p], set, prob, lp, pricestore, &lb, &result) );
