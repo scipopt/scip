@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.267 2010/01/23 07:53:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.268 2010/01/25 20:13:47 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -8930,6 +8930,7 @@ SCIP_Real SCIPvarGetLPSol_rec(
 }
 
 /** gets pseudo solution value of variable at current node */
+static
 SCIP_Real SCIPvarGetPseudoSol_rec(
    SCIP_VAR*             var                 /**< problem variable */
    )
