@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.36 2010/01/04 20:35:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.37 2010/01/25 22:53:46 bzfheinz Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -124,9 +124,8 @@ SCIP_RETCODE vboundsSearchPos(
    SCIP_Bool*            found               /**< pointer to store whether the same variable was found at the returned pos */
    )
 {
-   int varidx;
-   int left;
-   int right;
+   SCIP_Bool exists;
+   int pos;
 
    assert(insertpos != NULL);
    assert(found != NULL);
@@ -141,70 +140,56 @@ SCIP_RETCODE vboundsSearchPos(
    assert(vbounds->len >= 0);
 
    /* binary search for the given variable */
-   varidx = SCIPvarGetIndex(var);
-   left = -1;
-   right = vbounds->len;
-   while( left < right-1 )
+   exists = SCIPsortedvecFindPtr((void**)vbounds->vars, SCIPvarComp, var, vbounds->len, &pos);
+
+   if( exists )
    {
-      int middle;
-      int idx;
-
-      middle = (left+right)/2;
-      assert(0 <= middle && middle < vbounds->len);
-      idx = SCIPvarGetIndex(vbounds->vars[middle]);
-
-      if( varidx < idx )
-         right = middle;
-      else if( varidx > idx )
-         left = middle;
-      else
+      /* we found the variable: check if the sign of the coefficient matches */
+      assert(var == vbounds->vars[pos]);
+      if( (vbounds->coefs[pos] < 0.0) == negativecoef )
       {
-         /* we found the variable: check if the sign of the coefficient matches */
-         assert(var == vbounds->vars[middle]);
-         if( (vbounds->coefs[middle] < 0.0) == negativecoef )
+         /* the variable exists with the same sign at the current position */
+         *insertpos = pos;
+         *found = TRUE;
+      }
+      else if( negativecoef )
+      {
+         if( pos+1 < vbounds->len && vbounds->vars[pos+1] == var )
          {
-            /* the variable exists with the same sign at the current position */
-            *insertpos = middle;
+            /* the variable exists with the desired sign at the next position */
+            assert(vbounds->coefs[pos+1] < 0.0);
+            *insertpos = pos+1;
             *found = TRUE;
-         }
-         else if( negativecoef )
-         {
-            if( middle+1 < vbounds->len && vbounds->vars[middle+1] == var )
-            {
-               /* the variable exists with the desired sign at the next position */
-               assert(vbounds->coefs[middle+1] < 0.0);
-               *insertpos = middle+1;
-               *found = TRUE;
-            }
-            else
-            {
-               /* the negative coefficient should be inserted to the right of the positive one */
-               *insertpos = middle+1;
-               *found = FALSE;
-            }
          }
          else
          {
-            if( middle-1 >= 0 && vbounds->vars[middle-1] == var )
-            {
-               /* the variable exists with the desired sign at the previous position */
-               assert(vbounds->coefs[middle-1] > 0.0);
-               *insertpos = middle-1;
-               *found = TRUE;
-            }
-            else
-            {
-               /* the positive coefficient should be inserted to the left of the negative one */
-               *insertpos = middle;
-               *found = FALSE;
-            }
+            /* the negative coefficient should be inserted to the right of the positive one */
+            *insertpos = pos+1;
+            *found = FALSE;
          }
-         return SCIP_OKAY;
+      }
+      else
+      {
+         if( pos-1 >= 0 && vbounds->vars[pos-1] == var )
+         {
+            /* the variable exists with the desired sign at the previous position */
+            assert(vbounds->coefs[pos-1] > 0.0);
+            *insertpos = pos-1;
+            *found = TRUE;
+            }
+         else
+         {
+            /* the positive coefficient should be inserted to the left of the negative one */
+            *insertpos = pos;
+            *found = FALSE;
+         }
       }
    }
-
-   *insertpos = right;
-   *found = FALSE;
+   else
+   {
+      *insertpos = pos;
+      *found = FALSE;
+   }
 
    return SCIP_OKAY;
 }
