@@ -67,6 +67,7 @@ fixed bugs:
 - fixed "bug" in projects Makefiles w.r.t. "make clean"
 - fixed bugs in solve.c: even with LP solving disabled, the root LP was solved in case continous variables are 
   contained; setting pricing/maxvars(root) to 1 resulted in not calling the pricers
+- fixed bugs do to HEUR_TIMING SCIP_HEURTIMING_AFTERPROPLOOP which appeared during repropagation
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

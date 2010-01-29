@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.289 2010/01/25 13:02:30 bzfgamra Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.290 2010/01/29 13:46:38 bzfheinz Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -406,13 +406,6 @@ SCIP_RETCODE propagateDomains(
          SCIP_CALL( propagationRound(blkmem, set, stat, primal, tree, depth, fullpropagation, TRUE, &delayed, &propagain, cutoff) );
       }
 
-      /* call primal heuristics that are applicable after propagation loop */
-      if( (!propagain || propround >= maxproprounds) && !(*cutoff) && !SCIPtreeProbing(tree) )
-      {
-         /* if the heuristics find a new incumbent solution, propagate again */
-         SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, NULL, NULL, SCIP_HEURTIMING_AFTERPROPLOOP, &propagain) );
-      }
-      
       /* if a reduction was found, we want to do another full propagation round (even if the propagator only claimed
        * to have done a domain reduction without applying a domain change)
        */
@@ -2551,6 +2544,13 @@ SCIP_RETCODE solveNode(
       }
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
+      /* call primal heuristics that are applicable after propagation loop */
+      if( !(*cutoff) && !SCIPtreeProbing(tree) )
+      {
+         /* if the heuristics find a new incumbent solution, propagate again */
+         SCIP_CALL( SCIPprimalHeuristics(set, stat, primal, tree, NULL, NULL, SCIP_HEURTIMING_AFTERPROPLOOP, &propagateagain) );
+      }
+         
       /* solve external relaxations with non-negative priority */
       if( solverelax && !(*cutoff) )
       {
