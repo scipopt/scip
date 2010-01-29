@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.11 2010/01/12 09:29:34 bzfheinz Exp $
+# $Id: evalcheck_cluster.sh,v 1.12 2010/01/29 08:44:16 bzfheinz Exp $
 export LANG=C
 
 FILE=$1
@@ -55,6 +55,8 @@ for i in `cat $DIR/$EVALFILE.eval` DONE
 	  then
 	  rm -f $FILE
       fi
+  else
+      echo Missing $i
   fi
       
   FILE=$i.err
