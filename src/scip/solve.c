@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: solve.c,v 1.290 2010/01/29 13:46:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: solve.c,v 1.291 2010/01/30 15:30:00 bzfviger Exp $"
 
 /**@file   solve.c
  * @brief  main solving loop and node processing
@@ -2869,11 +2869,11 @@ SCIP_RETCODE solveNode(
             {
                assert(!SCIPtreeHasFocusNodeLP(tree) || pricingaborted); /* feasible LP solutions with all integers fixed must be feasible */
 
-               if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT )
+               if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT || SCIPsolveIsStopped(set, stat, FALSE) )
                {
                   SCIP_NODE* node;
                
-                  /* as we hit the time or iteration limit, we do not want to solve the LP again.
+                  /* as we hit the time or iteration limit or another interrupt (e.g., gap limit), we do not want to solve the LP again.
                    * in order to terminate correctly, we create a "branching" with only one child node 
                    * that is a copy of the focusnode 
                    */
