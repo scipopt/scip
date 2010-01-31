@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.26 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.27 2010/01/31 13:49:30 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -1161,7 +1161,11 @@ SCIP_RETCODE SCIPnlpiOracleAddConstraints(
             SCIP_CALL( SCIPduplicateMemoryArray(scip, &oracle->conslincoefs[oracle->nconss+i], linvals[i], oracle->conslinlens[oracle->nconss+i]) );
             SCIPsortIntReal(oracle->conslinidxs[oracle->nconss+i], oracle->conslincoefs[oracle->nconss+i], oracle->conslinlens[oracle->nconss+i]);
             for( j = 0; j < nlininds[i]; ++j )
+            {
+               assert(lininds[i][j] >= 0);
+               assert(lininds[i][j] <= oracle->nvars);
                oracle->vardegrees[lininds[i][j]] = MAX(1, oracle->vardegrees[lininds[i][j]]);
+            }
          }
          else
          {
