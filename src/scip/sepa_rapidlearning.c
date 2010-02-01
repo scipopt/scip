@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.2 2010/01/25 20:07:59 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.3 2010/02/01 15:40:57 bzfwinkm Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -274,6 +274,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    *result = SCIP_DIDNOTRUN;
    
+   /* only run when still not fixed binary variables exists */
+   if( SCIPgetNBinVars(scip) == 0 )
+      return SCIP_OKAY;
+
    /* only run for binary programs */
    if( SCIPgetNBinVars(scip) != SCIPgetNVars(scip) )
       return SCIP_OKAY;
