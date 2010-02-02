@@ -12,17 +12,17 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.34 2010/01/05 14:59:04 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.35 2010/02/02 14:35:52 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
  * @brief  GAMS file reader
  * @author Ambros Gleixner
+ * @author Stefan Vigerske
  *
  * @todo Test for uniqueness of variable names (after cutting down).
  * @todo Check for words reserved for GAMS.
  * @todo Routines for reading.
- * @todo General SOS constraints.
  * @todo Indicator constraints.
  */
 
@@ -41,12 +41,13 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_quadratic.h"
+#include "scip/cons_soc.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_varbound.h"
 #include "scip/pub_misc.h"
 
 #define READER_NAME             "gmsreader"
-#define READER_DESC             "file reader for MI(NL)Ps in GAMS file format"
+#define READER_DESC             "file reader for MI(NL)(SOC)Ps in GAMS file format"
 #define READER_EXTENSION        "gms"
 
 
@@ -738,7 +739,147 @@ SCIP_RETCODE printQuadraticCons(
    return SCIP_OKAY;
 }
 
+/** check GAMS limitations on SOC constraints
+ * returns true of constraint can be written as conic equation in GAMS (using equation type =C=)
+ */
+static
+SCIP_Bool isGAMSprintableSOC(
+   int                   nlhsvars,           /**< number of variables on left hand side */
+   SCIP_VAR**            lhsvars,            /**< variables on left hand side */
+   SCIP_Real*            lhscoeffs,          /**< coefficients of variables on left hand side, or NULL if == 1.0 */
+   SCIP_Real*            lhsoffsets,         /**< offsets of variables on left hand side, or NULL if == 0.0 */
+   SCIP_Real             lhsconstant,        /**< constant on left hand side */
+   SCIP_VAR*             rhsvar,             /**< variable on right hand side */
+   SCIP_Real             rhscoef,            /**< coefficient of variable on right hand side */
+   SCIP_Real             rhsoffset           /**< offset of variable on right hand side */
+   )
+{
+   int i;
 
+   assert(nlhsvars == 0 || lhsvars != NULL);
+
+   if (rhscoef != 0.0)
+      return FALSE;
+
+   if( rhsvar == NULL )
+      return FALSE;
+
+   if( !SCIPvarIsActive(rhsvar) )
+      return FALSE;
+
+   if( rhsoffset != 0.0 )
+      return FALSE;
+
+   if( lhsconstant != 0.0 )
+      return FALSE;
+
+   if( nlhsvars < 2 )
+      return FALSE;
+
+   for( i = 0; i < nlhsvars; ++i )
+   {
+      if( lhscoeffs  && lhscoeffs [i] != 1.0 )
+         return FALSE;
+
+      if( lhsoffsets && lhsoffsets[i] != 0.0 )
+         return FALSE;
+
+      if( !SCIPvarIsActive(lhsvars[i]) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+/* print second order cone row in GAMS format to file stream (performing retransformation to active variables)
+ * The constraints are of the following form:
+ * \f[
+ *    \left\{ x \;:\; \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1}) \right\}.
+ * \f]
+ * */
+static
+SCIP_RETCODE printSOCCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   const char*           rowname,            /**< row name */
+   int                   nlhsvars,           /**< number of variables on left hand side */
+   SCIP_VAR**            lhsvars,            /**< variables on left hand side */
+   SCIP_Real*            lhscoeffs,          /**< coefficients of variables on left hand side, or NULL if == 1.0 */
+   SCIP_Real*            lhsoffsets,         /**< offsets of variables on left hand side, or NULL if == 0.0 */
+   SCIP_Real             lhsconstant,        /**< constant on left hand side */
+   SCIP_VAR*             rhsvar,             /**< variable on right hand side */
+   SCIP_Real             rhscoef,            /**< coefficient of variable on right hand side */
+   SCIP_Real             rhsoffset,          /**< offset of variable on right hand side */
+   SCIP_Bool             transformed         /**< transformed constraint? */
+   )
+{
+   char linebuffer[GMS_MAX_PRINTLEN] = { '\0' };
+   int linecnt;
+
+   char consname[GMS_MAX_NAMELEN + 3]; /* four extra characters for ' ..' */
+   char buffer[GMS_MAX_PRINTLEN];
+
+   assert( scip != NULL );
+   assert( strlen(rowname) > 0 );
+   assert( nlhsvars == 0 || lhsvars != NULL );
+
+   clearLine(linebuffer, &linecnt);
+
+   /* start each line with a space */
+   appendLine(scip, file, linebuffer, &linecnt, " ");
+
+   /* print row name */
+   (void) SCIPsnprintf(buffer, GMS_MAX_NAMELEN + 3, "%s ..", rowname);
+   SCIP_CALL( printConformName(scip, consname, GMS_MAX_NAMELEN + 3, buffer) );
+
+   appendLine(scip, file, linebuffer, &linecnt, consname);
+
+   if( !isGAMSprintableSOC(nlhsvars, lhsvars, lhscoeffs, lhsoffsets, lhsconstant, rhsvar, rhscoef, rhsoffset) )
+   {
+      int t;
+
+      /* print right-hand side on left */
+      (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "sqr(%.15g +", rhsoffset);
+
+      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, ")", 1, &rhsvar, &rhscoef, transformed) );
+
+      appendLine(scip, file, linebuffer, &linecnt, " =g= ");
+
+      /* print left-hand side on right */
+
+      if( lhsconstant != 0.0 )
+      {
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "%.15g", lhsconstant);
+
+         appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
+
+      for( t = 0; t < nlhsvars; ++t )
+      {
+         assert( lhsvars[t] != NULL );
+
+         (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, "+ sqr(%.15g * (%.15g + ", lhscoeffs ? lhscoeffs[t] : 1.0, lhsoffsets ? lhsoffsets[t] : 0.0);
+
+         SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, buffer, "))", 1, &lhsvars[t], NULL, transformed) );
+      }
+   }
+   else
+   {
+      /* print right-hand side on left */
+      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", 1, &rhsvar, &rhscoef, transformed) );
+
+      appendLine(scip, file, linebuffer, &linecnt, " =c= ");
+
+      /* print left-hand side on right */
+      SCIP_CALL( printActiveVariables(scip, file, linebuffer, &linecnt, "+", " ", nlhsvars, lhsvars, lhscoeffs, transformed) );
+   }
+
+   appendLine(scip, file, linebuffer, &linecnt, ";");
+
+   endLine(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
+}
 
 /** method check if the variable names are not longer than GMS_MAX_NAMELEN */
 static
@@ -1212,10 +1353,17 @@ SCIP_RETCODE SCIPwriteGms(
          appendLine(scip, file, linebuffer, &linecnt, buffer);
       }
       else if( strcmp(conshdlrname, "knapsack") == 0 || strcmp(conshdlrname, "logicor") == 0 || strcmp(conshdlrname, "setppc") == 0
-            || strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0 )
+            || strcmp(conshdlrname, "linear") == 0 || strcmp(conshdlrname, "quadratic") == 0 || strcmp(conshdlrname, "varbound") == 0
+            || strcmp(conshdlrname, "soc") == 0 )
       {
          (void) SCIPsnprintf(buffer, GMS_MAX_PRINTLEN, " %s%s", consname, (c < nconss - 1) ? "," : ";");
          appendLine(scip, file, linebuffer, &linecnt, buffer);
+      }
+      else
+      {
+         SCIPwarningMessage("Constraint type <%s> not supported. Skip writing constraint <%s>.\n", conshdlrname, consname);
+         if( c == nconss - 1 )
+            appendLine(scip, file, linebuffer, &linecnt, ";");
       }
    }
       
@@ -1348,6 +1496,14 @@ SCIP_RETCODE SCIPwriteGms(
 
          SCIPfreeBufferArray(scip, &consvars);
          SCIPfreeBufferArray(scip, &consvals);
+      }
+      else if( strcmp(conshdlrname, "soc") == 0 )
+      {
+         SCIP_CALL( printSOCCons(scip, file, consname,
+               SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
+               SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons), transformed) );
+         nlcons = nlcons || !isGAMSprintableSOC(SCIPgetNLhsVarsSOC(scip, cons), SCIPgetLhsVarsSOC(scip, cons), SCIPgetLhsCoefsSOC(scip, cons), SCIPgetLhsOffsetsSOC(scip, cons), SCIPgetLhsConstantSOC(scip, cons),
+               SCIPgetRhsVarSOC(scip, cons), SCIPgetRhsCoefSOC(scip, cons), SCIPgetRhsOffsetSOC(scip, cons));
       }
       else
       {
