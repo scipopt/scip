@@ -11,7 +11,7 @@ interface:
 - new method SCIPbranchRelax() to branch on a relaxation solution
 - new method SCIPbranchVarVal() to branch on an arbitrary value within the variable's bounds
 - new callback SCIP_DECL_BRANCHEXECRELAX(), together with new parameter in SCIPincludeBranchrule() for branching on a relaxation solution
-- added SCIPsortPtrPtrInt and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- added SCIPsortPtrPtrInt (and various other) and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added to the callback method SCIP_DECL_PROBEXITSOL(x) (type_prob.h) the parameter restart; 
   this parameter is set to TRUE if the exit solve call was triggered by a restart?
 - new method SCIPswapPointers()
@@ -35,6 +35,7 @@ features:
 - the MPS reader can now read MIQPs and MIQCPs where a quadratic objective function can be specified by a QMATRIX or QUADOBJ section and
   the quadratic part of a quadratic constraint by a QCMATRIX
 - the MPS reader can now write quadratic and soc constraints
+- the GAMS reader can now write soc constraints
 - new undercover heuristic for MIQCPs: fixes variables such as to obtain a MIP and solves this
 - modified implementation of separation algorithms in cons_knapsack.c according to results of diploma thesis; including superadditive lifting (disabled) 
 - added support for bool_gt, bool_lt, bool_ge, bool_le, bool_ne, bool_not, int_times, int_minus, int_plus, int_negate, 
