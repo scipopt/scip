@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.35 2010/02/02 14:35:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.36 2010/02/02 14:52:04 bzfviger Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -494,7 +494,6 @@ SCIP_RETCODE printLinearCons(
 
    /* The GAMS format does not forbid that the variable array is empty */
    assert( nvars == 0 || vars != NULL );
-   assert( nvars > 0 || vars == NULL );
 
    assert( lhs <= rhs );
    
