@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.119 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.120 2010/02/03 14:20:57 bzfviger Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -81,6 +81,7 @@ enum MpsSection
       MPS_RANGES,
       MPS_BOUNDS,
       MPS_SOS,
+      MPS_QUADOBJ,
       MPS_QMATRIX,
       MPS_QCMATRIX,
       MPS_ENDATA
@@ -979,7 +980,7 @@ SCIP_RETCODE readRhs(
          else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
             mpsinputSetSection(mpsi, MPS_QMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
-            mpsinputSetSection(mpsi, MPS_QMATRIX);
+            mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
@@ -1100,7 +1101,7 @@ SCIP_RETCODE readRanges(
          else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
             mpsinputSetSection(mpsi, MPS_QMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
-            mpsinputSetSection(mpsi, MPS_QMATRIX);
+            mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
@@ -1231,7 +1232,7 @@ SCIP_RETCODE readBounds(
          else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
             mpsinputSetSection(mpsi, MPS_QMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
-            mpsinputSetSection(mpsi, MPS_QMATRIX);
+            mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
@@ -1424,7 +1425,7 @@ SCIP_RETCODE readSOS(
          else if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
             mpsinputSetSection(mpsi, MPS_QMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
-            mpsinputSetSection(mpsi, MPS_QMATRIX);
+            mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
          break;
@@ -1547,15 +1548,17 @@ SCIP_RETCODE readSOS(
 }
 
 
-/* Process QMATRIX (or QUADOBJ) section.
+/* Process QMATRIX or QUADOBJ section.
  *
- * We read the QMATRIX (or QUADOBJ) section, which is a nonstandard section introduced by CPLEX.
+ * We read the QMATRIX or QUADOBJ section, which is a nonstandard section introduced by CPLEX.
  * We create a quadratic constraint for this matrix and add a variable to the objective to represent the value of the QMATRIX.
- * We expect that every coefficient has to be divided by 2.0.
+ * For a QMATRIX, we expect that both lower and upper diagonal elements are given and every coefficient has to be divided by 2.0.
+ * For a QUADOBJ, we expect that only the upper diagonal elements are given and thus only coefficients on the diagonal have to be divided by 2.0.
  */
 static
 SCIP_RETCODE readQMatrix(
    MPSINPUT*             mpsi,
+   SCIP_Bool             isQuadObj,          /**< whether we actually read a QUADOBJ section */
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1565,7 +1568,7 @@ SCIP_RETCODE readQMatrix(
    int cnt  = 0; /* number of qmatrix elements processed so far */
    int size = 0; /* size of quad* arrays */
 
-   SCIPdebugMessage("read QMATRIX constraints\n");
+   SCIPdebugMessage("read %s objective\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
    
    size = 1;
    SCIP_CALL( SCIPallocBufferArray(scip, &quadvars1, size) );
@@ -1643,7 +1646,12 @@ SCIP_RETCODE readQMatrix(
             assert(cnt < size);
             quadvars1[cnt] = var1;
             quadvars2[cnt] = var2;
-            quadcoefs[cnt] = coef / 2.0;
+            quadcoefs[cnt] = coef;
+            /* diagonal elements have to be divided by 2.0
+             * in a QMATRIX section also off-diagonal have to be divided by 2.0, since both lower and upper diagonal elements are given
+             */
+            if( var1 == var2 || !isQuadObj )
+              quadcoefs[cnt] /= 2.0;
             ++cnt;
             
             SCIPdebugMessage("stored term %g*<%s>*<%s>.\n", coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
@@ -1706,7 +1714,7 @@ SCIP_RETCODE readQMatrix(
    }
    else
    {
-      SCIPwarningMessage("QMATRIX section has no entries.\n");
+      SCIPwarningMessage("%s section has no entries.\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
    }
    
    SCIPfreeBufferArray(scip, &quadvars1);
@@ -1732,7 +1740,7 @@ SCIP_RETCODE readQCMatrix(
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
-   int cnt  = 0; /* number of qmatrix elements processed so far */
+   int cnt  = 0; /* number of qcmatrix elements processed so far */
    int size = 0; /* size of quad* arrays */
 
    if( mpsinputField1(mpsi) == NULL )
@@ -1771,7 +1779,7 @@ SCIP_RETCODE readQCMatrix(
          if( !strcmp(mpsinputField0(mpsi), "QMATRIX") )
             mpsinputSetSection(mpsi, MPS_QMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "QUADOBJ") )
-            mpsinputSetSection(mpsi, MPS_QMATRIX);
+            mpsinputSetSection(mpsi, MPS_QUADOBJ);
          else if( !strcmp(mpsinputField0(mpsi), "QCMATRIX") )
             mpsinputSetSection(mpsi, MPS_QCMATRIX);
          else if( !strcmp(mpsinputField0(mpsi), "ENDATA") )
@@ -1802,7 +1810,7 @@ SCIP_RETCODE readQCMatrix(
          if( var2 == NULL )
          {
             /* ignore unkown variables - we would not know the type anyway */
-            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QMatrix", "QMATRIX", SCIP_VERBLEVEL_NORMAL);
+            mpsinputEntryIgnored(scip, mpsi, "column", mpsinputField2(mpsi), "QCMatrix", "QCMATRIX", SCIP_VERBLEVEL_NORMAL);
          }
          else
          {
@@ -1974,7 +1982,11 @@ SCIP_RETCODE readMps(
    }
    if( mpsinputSection(mpsi) == MPS_QMATRIX )
    {
-      SCIP_CALL( readQMatrix(mpsi, scip) );
+      SCIP_CALL( readQMatrix(mpsi, FALSE, scip) );
+   }
+   if( mpsinputSection(mpsi) == MPS_QUADOBJ )
+   {
+      SCIP_CALL( readQMatrix(mpsi, TRUE, scip) );
    }
    while( mpsinputSection(mpsi) == MPS_QCMATRIX )
    {
@@ -3543,7 +3555,9 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIPfreeBufferArray(scip, &namestr);
    }
 
-   /* print QCMATRIX sections for quadratic constraints */
+   /* print QCMATRIX sections for quadratic constraints
+    * in difference to an quadratic term in the objective function, the quadratic part is not divided by 2 here
+    */
    if( nConsQuadratic > 0 )
    {
       SCIP_Real*  sqrcoefs;
