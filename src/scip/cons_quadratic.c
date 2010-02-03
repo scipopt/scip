@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.78 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.79 2010/02/03 16:21:37 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3084,12 +3084,15 @@ SCIP_RETCODE checkCurvature(
 
    if( n == 2 )
    { /* compute eigenvalues by hand */
-      SCIP_Real d;
       assert(consdata->nbilinterms == 1);
-      d = (consdata->quadsqrcoefs[0] - consdata->quadsqrcoefs[1]);
-      d = sqrt(d*d + consdata->bilincoefs[0]*consdata->bilincoefs[0]);
-      consdata->isconvex = !SCIPisNegative(scip, -(consdata->quadsqrcoefs[0] + consdata->quadsqrcoefs[1]) - d);
-      consdata->isconcave = !SCIPisPositive(scip, -(consdata->quadsqrcoefs[0] + consdata->quadsqrcoefs[1]) + d);
+      consdata->isconvex =
+         consdata->quadsqrcoefs[0] >= 0 &&
+         consdata->quadsqrcoefs[1] >= 0 &&
+         consdata->quadsqrcoefs[0] * consdata->quadsqrcoefs[1] >= consdata->bilincoefs[0] * consdata->bilincoefs[0];
+      consdata->isconcave = 
+         consdata->quadsqrcoefs[0] <= 0 &&
+         consdata->quadsqrcoefs[1] <= 0 &&
+         consdata->quadsqrcoefs[0] * consdata->quadsqrcoefs[1] <= consdata->bilincoefs[0] * consdata->bilincoefs[0];
       return SCIP_OKAY;
    }
 
@@ -3819,7 +3822,7 @@ SCIP_RETCODE generateCut(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(row != NULL);
-
+   
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 

@@ -71,6 +71,7 @@ fixed bugs:
 - fixed bugs do to HEUR_TIMING SCIP_HEURTIMING_AFTERPROPLOOP which appeared during repropagation
 - fixed bug in solve.c: make sure SCIP terminates correctly also when a user interrupt or gap limit is reached, i.e., avoid error "pricing was aborted, but no branching could be created!"
 - fixed bug in sepa_rapidlearning.c, stop processing if there are no binary variables left
+- fixed bug in cons_quadratic.c: curvature of bivariate quadratic constraints was not detected correctly
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
