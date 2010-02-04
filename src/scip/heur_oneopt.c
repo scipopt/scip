@@ -12,9 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.31 2010/02/04 10:39:32 bzfheinz Exp $"
-
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.32 2010/02/04 13:43:09 bzfheinz Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
