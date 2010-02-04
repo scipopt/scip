@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.268 2010/01/25 20:13:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.269 2010/02/04 16:54:46 bzfheinz Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1356,7 +1356,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
 
    assert(var != NULL);
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
-   assert(SCIPvarIsActive(var));
+   assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
@@ -1480,8 +1480,8 @@ SCIP_RETCODE varRemoveImplicsVbs(
       constants = SCIPvboundsGetConstants(var->vlbs);
 
       /* remove for all variable bounds x >= b*z+d the following implication from z's implications 
-       *   z == 1  ==>  x >= b + d           , if b > 0
-       *   z == 0  ==>  x >= d               , if b < 0
+       *   z == ub  ==>  x >= b*ub + d           , if b > 0
+       *   z == lb  ==>  x >= b*lb + d           , if b < 0
        */
       newnvbds = 0;
       for( i = 0; i < nvbds; i++ )
@@ -1497,7 +1497,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
          {
             SCIP_Real vbound;
 
-            vbound = MAX(coef, 0.0) + constants[i];
+            vbound = MAX(coef * SCIPvarGetUbGlobal(vars[i]), coef * SCIPvarGetLbGlobal(vars[i])) + constants[i];
             if( SCIPsetIsFeasGT(set, vbound, lb) )
             {
                /* the variable bound is not redundant: keep it */
@@ -1506,7 +1506,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
                   if( newnvbds < i )
                   {
                      vars[newnvbds] = vars[i];
-                     coefs[newnvbds] = coefs[i];
+                     coefs[newnvbds] = coef;
                      constants[newnvbds] = constants[i];
                   }
                   newnvbds++;
@@ -1548,8 +1548,8 @@ SCIP_RETCODE varRemoveImplicsVbs(
       constants = SCIPvboundsGetConstants(var->vubs);
 
       /* remove for all variable bounds x <= b*z+d the following implication from z's implications 
-       *   z == 0  ==>  x <= d               , if b > 0
-       *   z == 1  ==>  x <= b + d           , if b < 0
+       *   z == lb  ==>  x <= b*lb + d           , if b > 0
+       *   z == ub  ==>  x <= b*ub + d           , if b < 0
        */
       newnvbds = 0;
       for( i = 0; i < nvbds; i++ )
@@ -1565,7 +1565,7 @@ SCIP_RETCODE varRemoveImplicsVbs(
          {
             SCIP_Real vbound;
 
-            vbound = MIN(coef, 0.0) + constants[i];
+            vbound = MIN(coef * SCIPvarGetUbGlobal(vars[i]), coef * SCIPvarGetLbGlobal(vars[i])) + constants[i];
             if( SCIPsetIsFeasLT(set, vbound, ub) )
             {
                /* the variable bound is not redundant: keep it */
@@ -8491,12 +8491,13 @@ SCIP_RETCODE SCIPvarGetProbvarBound(
    return SCIP_OKAY;
 }
 
-/** @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by 
- *    SCIPvarFlattenAggregationGraph()
- * transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
+/** transforms given variable, scalar and constant to the corresponding active, fixed, or multi-aggregated variable,
  *  scalar and constant;
  *  if the variable resolves to a fixed variable, "scalar" will be 0.0 and the value of the sum will be stored
  *  in "constant"
+ *
+ *  @todo: Handle multi-aggregated variables which consist of at most one variable -- which may be caused by
+ *         SCIPvarFlattenAggregationGraph()
  */
 SCIP_RETCODE SCIPvarGetProbvarSum(
    SCIP_VAR**            var,                /**< pointer to problem variable x in sum a*x + c */

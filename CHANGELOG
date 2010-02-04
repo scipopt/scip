@@ -53,7 +53,6 @@ features:
 - SCIP is now able to write non-linear opb-files(linear instances with and-constraints)
 - primal heuristics may now be called during presolving, using the new timing point SCIP_HEURTIMING_DURINGPRESOLLOOP
 - added new dialog for writing all solutions which are collected during the counting process (see cons_countsols.{c,h})
-- new separator rapid learning that produces conflicts, global bound changes, primal solutions and initializes inference values for branching
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
@@ -85,6 +84,8 @@ plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
 - added packing/partitioning orbitope constraint handler for symmetry handling (cons_orbitope.<c/h>)
 - added heuristic zirounding (heur_zirounding.{c,h})
+- new separator rapid learning (sepa_rapidlearning.{c,h]) that produces conflicts, global bound changes, primal solutions and initializes inference values for branching
+- added propagator for variable lower and upper bounds (prop_vbound.{c,h}); adjusted cons_varbound.c, var.c, and, implics.c to work correctly with the new propagator
 
 parameters: 
 - added parameter <misc/usesmalltables> which results in using smaller tables for names, cliques and cuts and improves the

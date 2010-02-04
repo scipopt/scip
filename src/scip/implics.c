@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: implics.c,v 1.37 2010/01/25 22:53:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: implics.c,v 1.38 2010/02/04 16:54:45 bzfheinz Exp $"
 
 /**@file   implics.c
  * @brief  methods for implications, variable bounds, and clique tables
@@ -214,6 +214,7 @@ SCIP_RETCODE SCIPvboundsAdd(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
    assert(added != NULL);
+   assert(!SCIPsetIsZero(set, coef));
 
    *added = FALSE;
 
@@ -259,10 +260,12 @@ SCIP_RETCODE SCIPvboundsAdd(
       /* insert variable at the correct position */
       for( i = (*vbounds)->len; i > insertpos; --i )
       {
+         assert(!SCIPsetIsZero(set, (*vbounds)->coefs[i-1]));
          (*vbounds)->vars[i] = (*vbounds)->vars[i-1];
          (*vbounds)->coefs[i] = (*vbounds)->coefs[i-1];
          (*vbounds)->constants[i] = (*vbounds)->constants[i-1];
       }
+      assert(!SCIPsetIsZero(set, coef));
       (*vbounds)->vars[insertpos] = var;
       (*vbounds)->coefs[insertpos] = coef;
       (*vbounds)->constants[insertpos] = constant;
