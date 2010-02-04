@@ -19,6 +19,8 @@ interface:
 - new method SCIPexecRelpscostBranching() in branch_relpscots.{c,h}; this method allows of calling the reliability pseudo cost branching algorithm 
   for given set of branching candidates from the outside
 - added SCIPsortRealRealRealPtr() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
+- added to the method SCIPapplyRens() the parameter uselprows, this allows to switch between LP row and SCIP constraints as basis for the subSCIP, 
+  setting ist to TRUE (uses LP rows) will lead to same version as before
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -91,6 +93,8 @@ parameters:
 - added parameter <reading/zplreader/usestartsol> which allows to switch ZIMPL start solutions off, default value TRUE
 - added parameter <lp/simplexrowrep> telling simplex solver to use row representation of the basis (if possible), default value FALSE
 - added parameter <heuristics/crossover/dontwaitatroot> that allows to call crossover at root node independently from nwaitingnodes
+- added parameter <heuristics/rens/uselprows> that allows to switch between LP row and SCIP constraints as basis for the subSCIP, 
+  default is TRUE (uses LP rows)
 
 SCIP version 1.2.0
 ===============

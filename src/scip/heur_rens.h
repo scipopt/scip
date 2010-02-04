@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_rens.h,v 1.7 2010/01/04 20:35:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_rens.h,v 1.8 2010/02/04 10:35:48 bzfheinz Exp $"
 
 /**@file   heur_rens.h
  * @brief  RENS primal heuristic
@@ -47,7 +47,8 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_Real             minimprove,         /**< factor by which RENS should at least improve the incumbent     */
    SCIP_Longint          maxnodes,           /**< maximum number of  nodes for the subproblem                    */
    SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem                    */
-   SCIP_Bool             binarybounds        /**< should general integers get binary bounds [floor(.),ceil(.)]?  */
+   SCIP_Bool             binarybounds,       /**< should general integers get binary bounds [floor(.),ceil(.)]?  */
+   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
    );
 
 #ifdef __cplusplus
