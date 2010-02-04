@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.19 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: ConshdlrSubtour.cpp,v 1.20 2010/02/04 16:58:52 bzfheinz Exp $"
 
 /**@file   ConshdlrSubtour.cpp
  * @brief  C++ file reader for TSP data files
@@ -261,7 +261,7 @@ SCIP_RETCODE ConshdlrSubtour::scip_trans(
 
    sourcedata = SCIPconsGetData(sourcecons);
 
-   SCIP_CALL( SCIPallocMemory(scip,&targetdata) );
+   SCIP_CALL( SCIPallocMemory(scip, &targetdata) );
    targetdata->graph = sourcedata->graph;
    capture_graph(targetdata->graph);
 
