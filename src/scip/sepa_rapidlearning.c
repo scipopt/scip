@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2009 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.3 2010/02/01 15:40:57 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.4 2010/02/04 12:10:06 bzfwinkm Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -34,12 +34,14 @@
 #define SEPA_NAME              "rapidlearning"
 #define SEPA_DESC               "rapid learning heuristic and separator"
 #define SEPA_PRIORITY          -1200000
-#define SEPA_FREQ                     0
+#define SEPA_FREQ                    -1 
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_APPLYCONFLICTS     TRUE /**< should the found conflicts be applied in the original SCIP?                 */
-#define DEFAULT_APPLYBDCHGS        TRUE /**< should the found global bound deductions be applied in the original SCIP?   */
+#define DEFAULT_APPLYBDCHGS        TRUE /**< should the found global bound deductions be applied in the original SCIP?   
+					 *   apply only if conflicts and incumbent solution will be copied too
+					 */
 #define DEFAULT_APPLYINFERVALS     TRUE /**< should the inference values be used as initialization in the original SCIP? */
 #define DEFAULT_APPLYPRIMALSOL     TRUE /**< should the incumbent solution be copied to the original SCIP?               */
 #define DEFAULT_APPLYSOLVED        TRUE /**< should a solved status ba copied to the original SCIP?                      */
@@ -74,6 +76,7 @@ SCIP_RETCODE createSubproblem(
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
 {
+   SCIP_CONSHDLR** conshdlrs;
    SCIP_VAR** vars;                          /* original SCIP variables */
    int nvars;
    int i; 
@@ -92,6 +95,8 @@ SCIP_RETCODE createSubproblem(
    /* create the variables of the subproblem */
    for( i = 0; i < nvars; i++ )
    {     
+      assert(SCIPvarGetLbLocal(vars[i]) == SCIPvarGetLbGlobal(vars[i]));
+      assert(SCIPvarGetUbLocal(vars[i]) == SCIPvarGetUbGlobal(vars[i]));
       SCIP_CALL( SCIPcreateVar(subscip, &subvars[i], SCIPvarGetName(vars[i]), SCIPvarGetLbLocal(vars[i]),
             SCIPvarGetUbLocal(vars[i]), SCIPvarGetObj(vars[i]), 
             SCIPvarGetType(vars[i]) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_INTEGER : SCIPvarGetType(vars[i]),
@@ -99,24 +104,31 @@ SCIP_RETCODE createSubproblem(
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
       SCIP_CALL( SCIPhashmapInsert(varmapfw, vars[i], subvars[i]) );
    }
+
+   conshdlrs = SCIPgetConshdlrs(scip);
  
    /* copy problem: loop through all constraint handlers */  
    for( i = 0; i < SCIPgetNConshdlrs(scip); ++i )
    {
       SCIP_CONSHDLR* conshdlr;
+      SCIP_CONS** conss;
       SCIP_CONS* cons;
       SCIP_CONS* conscopy;
       SCIP_Bool succeed;
+      int nconss;
       int c;
 
-      conshdlr = SCIPgetConshdlrs(scip)[i];
+      conshdlr = conshdlrs[i];
 
       SCIPdebugMessage("rapid learning separator attempting to copy %d %s constraints\n", SCIPconshdlrGetNConss(conshdlr), SCIPconshdlrGetName(conshdlr));
 
+      conss = SCIPconshdlrGetConss(conshdlr);
+      nconss = SCIPconshdlrGetNConss(conshdlr);
+
       /* copy problem: loop through all constraints of one type */  
-      for( c = 0; c < SCIPconshdlrGetNConss(conshdlr); ++c )
+      for( c = 0; c < nconss; ++c )
       {
-         cons = SCIPconshdlrGetConss(conshdlr)[c];
+         cons = conss[c];
          assert(cons != NULL);
 
          /* copy each constraint */
@@ -163,7 +175,9 @@ SCIP_RETCODE createNewSol(
    assert( scip != NULL );
    assert( subscip != NULL );
    assert( subvars != NULL );
+   assert( heur != NULL );
    assert( subsol != NULL );
+   assert( success != NULL );
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -182,6 +196,7 @@ SCIP_RETCODE createNewSol(
    SCIP_CALL( SCIPcheckSol(scip, newsol, TRUE, TRUE, TRUE, success) );
    if( *success )
    {
+      SCIPdebugMessage("Solution checking successful.\n");
       SCIP_CALL( SCIPheurPassSolTrySol(scip, heur, newsol) );
    }
 
@@ -251,7 +266,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    int nfixedvars;                           /* number of variables that could be fixed by rapid learning */
    int nvars;                                /* number of variables                                       */           
    int restartnum;                           /* maximal number of conflicts that should be created        */
-   int restarts;                             /* maximal number of restarts tht should be performed        */
+   int restarts;                             /* maximal number of restarts that should be performed       */
    int i;                                    /* counter                                                   */
 
    SCIP_Bool success;                        /* was problem creation / copying constraint successful? */
@@ -401,7 +416,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    }
 
    /** allocate memory for constraints storage. Each constraint that will be created from now on will be a conflict.
-    * Therefore, we need to emember oldnconss to get the conflicts from the FD search. 
+    *  Therefore, we need to remember oldnconss to get the conflicts from the FD search. 
     */
    nconshdlrs = 4;
    SCIP_CALL( SCIPallocBufferArray(scip, &conshdlrs, nconshdlrs) );
@@ -415,6 +430,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    /* redundant constraints might be eliminated in presolving */
    SCIP_CALL( SCIPpresolve(subscip));
+
    for( i = 0; i < nconshdlrs; ++i)
    {
       if( conshdlrs[i] != NULL )
@@ -442,7 +458,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* abort solving, if limit of applied conflicts is reached */
    if( SCIPgetNConflictConssApplied(subscip) >= restartnum && restarts == 0 )
    {
-         SCIPdebugMessage("finish after %lld successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip)); 
+      SCIPdebugMessage("finish after %lld successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip)); 
    }
    /* if the first 20% of the solution process were successful, proceed */
    else if( (sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPisFeasLT(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
@@ -506,6 +522,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       /* sequentially add solutions to trysol heuristic */
       for( i = 0; i < nsubsols && !soladded; ++i )
       {
+	 SCIPdebugMessage("Try to create new solution by copying subscip solution.\n");
          SCIP_CALL( createNewSol(scip, subscip, subvars, heurtrysol, subsols[i], &soladded) );
       }
    }
@@ -514,7 +531,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    dualboundchg = FALSE;
    if( sepadata->applysolved && (SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(subscip) == SCIP_STATUS_INFEASIBLE) )
    {
-      SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPgetDualbound(subscip)) );
+      /* we need to multiply the dualbound with the scaling facting and add the offset, 
+       * because thiinformation was   disregarded in the subscip */
+      SCIPdebugMessage("Update old dualbound %g to new dualbound %g.\n", SCIPgetDualbound(scip), SCIPgetTransObjscale(scip) * SCIPgetDualbound(subscip) + SCIPgetTransObjoffset(scip));
+      SCIP_CALL( SCIPupdateLocalDualbound(scip, SCIPgetDualbound(subscip) * SCIPgetTransObjscale(scip) + SCIPgetTransObjoffset(scip)) );
       dualboundchg = TRUE;
    }
 
@@ -528,9 +548,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
          /* copy constraints that have been created in FD run */
          if( conshdlrs[i] != NULL && SCIPconshdlrGetNConss(conshdlrs[i]) > oldnconss[i] )
          {
+	    SCIP_CONS** conss;
             int c;
             int nconss;
-            nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+            
+	    nconss = SCIPconshdlrGetNConss(conshdlrs[i]);
+	    conss = SCIPconshdlrGetConss(conshdlrs[i]);
 
             /* loop over all constraints that have been added in subSCIP run, these are the conflicts */            
             for( c = oldnconss[i]; c < nconss; ++c)
@@ -538,7 +561,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                SCIP_CONS* cons;
                SCIP_CONS* conscopy;
                
-               cons = SCIPconshdlrGetConss(conshdlrs[i])[c];
+               cons = conss[c];
                assert(cons != NULL);        
                
                SCIP_CALL( SCIPcopyCons(scip, &conscopy, NULL, conshdlrs[i], subscip, cons, varmapbw,
@@ -563,30 +586,31 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    /* check, whether tighter global bounds were detected */
    nbdchgs = 0;
-   for( i = 0; i < nvars; ++i )
-   {
-      SCIP_Bool infeasible;
-      SCIP_Bool tightened;
-      
-      assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i]))); 
-      assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
-      assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));  
-      
-      /* update the bounds of the original SCIP, if a better bound was proven in the subSCIP */
-      SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
-      if( tightened ) 
-         nbdchgs++;
- 
-      SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
-      if( tightened )
-         nbdchgs++;   
-   }
+   if( sepadata->applybdchgs )
+      for( i = 0; i < nvars; ++i )
+      {
+	 SCIP_Bool infeasible;
+	 SCIP_Bool tightened;
+	 
+	 assert(SCIPisLE(scip, SCIPvarGetLbGlobal(vars[i]), SCIPvarGetLbGlobal(subvars[i]))); 
+	 assert(SCIPisLE(scip, SCIPvarGetLbGlobal(subvars[i]), SCIPvarGetUbGlobal(subvars[i])));
+	 assert(SCIPisLE(scip, SCIPvarGetUbGlobal(subvars[i]), SCIPvarGetUbGlobal(vars[i])));  
+	 
+	 /* update the bounds of the original SCIP, if a better bound was proven in the subSCIP */
+	 SCIP_CALL( SCIPtightenVarUb(scip, vars[i], SCIPvarGetUbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+	 if( tightened ) 
+	   nbdchgs++;
+	 
+	 SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
+	 if( tightened )
+	   nbdchgs++;   
+      }
 
    n1startinfers = 0;
    n2startinfers = 0;
 
    /* install start values for inference branching */
-   if( sepadata->applyinfervals)
+   if( sepadata->applyinfervals )
    {
       for( i = 0; i < nvars; ++i )
       {

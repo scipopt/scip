@@ -79,6 +79,7 @@ fixed bugs:
 - fixed bug in cons_quadratic.c: curvature of bivariate quadratic constraints was not detected correctly
 - fixed bug in heur_oneopt.c w.r.t. to SCIPtrySol(); it is necessary that the bound of the solution is check 
   otherwise, infeasible solution could be accepted as feasible
+- fixed bug in sepa_rapidlearning.c, corrected computation of right dualbound
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
