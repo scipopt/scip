@@ -12,7 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.30 2010/01/04 20:35:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.31 2010/02/04 10:39:32 bzfheinz Exp $"
+
+#define SCIP_DEBUG
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -312,7 +314,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
     * with continuous or implicit integer variables
     */
    if( nvars > nintvars && ( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL ) )
-	 return SCIP_OKAY;
+      return SCIP_OKAY;
 
    if( heurtiming == SCIP_HEURTIMING_BEFORENODE && SCIPhasCurrentNodeLP(scip) )
    {
@@ -321,7 +323,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_CALL( SCIPconstructLP(scip,&cutoff) );
       SCIP_CALL( SCIPflushLP(scip) );       
    }
-
+   
    /* we need an LP */
    if( SCIPgetNLPRows(scip) == 0 )
       return SCIP_OKAY;
@@ -453,7 +455,13 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          SCIP_Bool success;
 
-         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
+         /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
+          * "current" global bounds. This can be the case if we shift one variable down and the corresponding
+          * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
+          * bounds. Note, that the global bounds change during solution process. It can even happen that the best
+          * solution which we have at hand is not feasible anymore in the current transformed problem.
+          */
+         SCIP_CALL( SCIPtrySol(scip, worksol, TRUE, FALSE, FALSE, &success) );
          if( success )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
@@ -520,9 +528,15 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
-            /* check solution for feasibility */
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
+            /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
+             * "current" global bounds. This can be the case if we shift one variable down and the corresponding
+             * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
+             * bounds. Note, that the global bounds change during solution process. It can even happen that the best
+             * solution which we have at hand is not feasible anymore in the current transformed problem.
+             */
+            SCIP_CALL( SCIPtrySol(scip, worksol, TRUE, FALSE, FALSE, &success) );
 
+            /* check solution for feasibility */
             if( success )
             {
                SCIPdebugMessage("found feasible shifted solution:\n");
