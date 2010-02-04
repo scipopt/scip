@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.32 2010/02/04 13:43:09 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.33 2010/02/04 14:23:12 bzfwinkm Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -273,6 +273,10 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    SCIP_Real* activities;                    /* row activities for working solution */
    SCIP_Real* shiftvals;
 
+   SCIP_Real lb;
+   SCIP_Real ub;
+   SCIP_Bool valid;
+   int nchgbound;
    int nbinvars;
    int nintvars;
    int nvars;
@@ -328,18 +332,51 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
    *result = SCIP_DIDNOTFIND;
 
+   nchgbound = 0;
+
    /* initialize data */
    nshiftcands = 0;
    shiftcandssize = 8;
    heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
-
    SCIP_CALL( SCIPcreateSolCopy(scip, &worksol, bestsol) );
    SCIPsolSetHeur(worksol,heur);
 
+   SCIPdebugMessage("Starting bound adjustment in 1-opt heuristic\n");
+
+   /* maybe change solution values due to global bound changes first */
+   for( i = nvars - 1; i >= 0; --i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real solval;
+
+      var = vars[i];
+      lb = SCIPvarGetLbGlobal(var);
+      ub = SCIPvarGetUbGlobal(var);
+
+      solval = SCIPgetSolVal(scip, bestsol,var);
+      /* old solution value is smaller than the actual lower bound */
+      if( SCIPisFeasLT(scip, solval, lb) )
+      {
+         /* set the solution value to the global lower bound */
+         SCIP_CALL( SCIPsetSolVal(scip, worksol, var, lb) );
+         ++nchgbound;
+         SCIPdebugMessage("var <%s> type %d, old solval %g now fixed to lb %g\n", SCIPvarGetName(var), SCIPvarGetType(var), solval, lb);
+      }
+      /* old solution value is greater than the actual upper bound */
+      else if( SCIPisFeasGT(scip, solval, SCIPvarGetUbGlobal(var)) )
+      {
+         /* set the solution value to the global upper bound */
+         SCIP_CALL( SCIPsetSolVal(scip, worksol, var, ub) );
+         ++nchgbound;
+         SCIPdebugMessage("var <%s> type %d, old solval %g now fixed to ub %g\n", SCIPvarGetName(var), SCIPvarGetType(var), solval, ub);
+      }
+   }
+
+   SCIPdebugMessage("number of bound changes (due to global bounds) = %d\n", nchgbound);
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &shiftcands, shiftcandssize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &shiftvals, shiftcandssize) );
+
+   valid = TRUE;
 
    /* initialize activities */
    for( i = 0; i < nlprows; ++i )
@@ -351,10 +388,28 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       if( !SCIProwIsLocal(row) )
       {
-         activities[i] = SCIPgetRowSolActivity(scip, row, bestsol);
+         activities[i] = SCIPgetRowSolActivity(scip, row, worksol);
          SCIPdebugMessage("Row <%s> has activity %g\n", SCIProwGetName(row), activities[i]);
+         if( SCIPisFeasLT(scip, activities[i], SCIProwGetLhs(row)) || SCIPisFeasGT(scip, activities[i], SCIProwGetRhs(row)) )
+         {
+            valid = FALSE;
+            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+            SCIPdebugMessage("row <%s> activity %g violates bounds, lhs = %g, rhs = %g\n", SCIProwGetName(row), activities[i], SCIProwGetLhs(row), SCIProwGetRhs(row));
+            break;
+         }
       }
    }
+
+   if(!valid)
+   {
+      /** @todo try to correct lp rows */
+      SCIPdebugMessage("Some global bound changes were not valid in lp rows.\n");
+      goto TERMINATE;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &shiftcands, shiftcandssize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &shiftvals, shiftcandssize) );
+
 
    SCIPdebugMessage("Starting 1-opt heuristic\n");
 
@@ -367,7 +422,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIP_Real solval;
 
          /* find out whether the variable can be shifted */
-         solval = SCIPgetSolVal(scip, bestsol,vars[i]);
+         solval = SCIPgetSolVal(scip, worksol,vars[i]);
          shiftval = calcShiftVal(scip, vars[i], solval, activities);
 
          /* insert the variable into the list of shifting candidates */
@@ -400,7 +455,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          var = shiftcands[0];
          assert(var != NULL);
-         solval = SCIPgetSolVal(scip, bestsol, var);
+         solval = SCIPgetSolVal(scip, worksol, var);
          shiftval = shiftvals[0];
          assert(!SCIPisFeasZero(scip,shiftval));
          SCIPdebugMessage(" Only one shiftcand found, var <%s>, which is now shifted by<%1.1f> \n",
@@ -435,7 +490,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          {
             var = shiftcands[i];
             assert(var != NULL);
-            solval = SCIPgetSolVal(scip, bestsol, var);
+            solval = SCIPgetSolVal(scip, worksol, var);
             shiftval = calcShiftVal(scip, var, solval, activities);
             SCIPdebugMessage(" -> Variable <%s> is now shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
             assert(i > 0 || !SCIPisFeasZero(scip, shiftval));
@@ -453,6 +508,9 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       {
          SCIP_Bool success;
 
+#if 1
+         SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
+#else
          /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
           * "current" global bounds. This can be the case if we shift one variable down and the corresponding
           * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
@@ -460,6 +518,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
           * solution which we have at hand is not feasible anymore in the current transformed problem.
           */
          SCIP_CALL( SCIPtrySol(scip, worksol, TRUE, FALSE, FALSE, &success) );
+#endif
          if( success )
          {
             SCIPdebugMessage("found feasible shifted solution:\n");
@@ -526,6 +585,9 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             /* copy the current LP solution to the working solution */
             SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
+#if 1
+            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
+#else
             /* We have to check the bounds of the work solution since it might be that these are violated w.r.t. to the
              * "current" global bounds. This can be the case if we shift one variable down and the corresponding
              * constraint/row which would enforce this shifting to an other variable is deleted due to the "current" global
@@ -533,7 +595,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
              * solution which we have at hand is not feasible anymore in the current transformed problem.
              */
             SCIP_CALL( SCIPtrySol(scip, worksol, TRUE, FALSE, FALSE, &success) );
-
+#endif
             /* check solution for feasibility */
             if( success )
             {
@@ -550,10 +612,12 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    }
    SCIPdebugMessage("Finished 1-opt heuristic\n");
 
-   SCIP_CALL( SCIPfreeSol(scip, &worksol) );
-   SCIPfreeBufferArray(scip, &activities);
    SCIPfreeBufferArray(scip, &shiftvals);
    SCIPfreeBufferArray(scip, &shiftcands);
+
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &activities);
+   SCIP_CALL( SCIPfreeSol(scip, &worksol) );
 
    return SCIP_OKAY;
 }
