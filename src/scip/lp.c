@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.330 2010/01/04 20:35:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.331 2010/02/04 17:20:55 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -7103,7 +7103,7 @@ void sumMIRRow(
    }
 
    /* check if the total number of non-zeros is too large */
-   if( *nrowinds > maxmksetcoefs )
+   if( *nvarinds > maxmksetcoefs )
       *rowtoolong = TRUE;
 }
 

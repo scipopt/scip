@@ -3273,8 +3273,8 @@ separating/zerohalf/maxncalls = -1
 separating/zerohalf/relaxcontvars = FALSE
 
 # should rows be scaled to make fractional coefficients integer?
-# [type: bool, range: {TRUE,FALSE}, default: FALSE]
-separating/zerohalf/scalefraccoeffs = FALSE
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/scalefraccoeffs = TRUE
 
 # should zerohalf cuts found in previous callbacks ignored?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -3287,6 +3287,14 @@ separating/zerohalf/onlyorigrows = FALSE
 # should zerohalf cuts be filtered using a cutpool?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/zerohalf/usezhcutpool = TRUE
+
+# maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1)
+# [type: int, range: [-1,2147483647], default: 10]
+separating/zerohalf/maxtestdelta = 10
+
+# should negative values also be tested in scaling for cmir?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/zerohalf/trynegscaling = TRUE
 
 # should problem be decomposed into subproblems (if possible) before applying preprocessing?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
@@ -3312,8 +3320,8 @@ separating/zerohalf/preprocessing/delta = 0.5
    #                      
                          #                      '-' no preprocessing
      #                     
-# [type: string, default: "CXRGXIM"]
-separating/zerohalf/preprocessing/ppmethods = "CXRGXIM"
+# [type: string, default: "CXGXIM"]
+separating/zerohalf/preprocessing/ppmethods = "CXGXIM"
 
 # should the cuts be forced to enter the LP?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]

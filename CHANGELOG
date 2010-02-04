@@ -21,6 +21,7 @@ interface:
 - added SCIPsortRealRealRealPtr() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 - added to the method SCIPapplyRens() the parameter uselprows, this allows to switch between LP row and SCIP constraints as basis for the subSCIP, 
   setting ist to TRUE (uses LP rows) will lead to same version as before
+- new parameters "maxmksetcoefs", "delta", and "deltavalid" in sepa_cmir.c: SCIPcutGenerationHeuristicCmir()
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
@@ -57,6 +58,8 @@ features:
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
 - reworked access to pseudo solution and inference value of variables in order to reduce function calls
+- improved zerohalf cut separator: more than one delta is tested for MIR cuts, better handling of dense base inequalities, 
+  faster scaling of fractional coefficients in rows (now enabled), improved parameter settings (presolving)   
 
 fixed bugs:
 - fixed bug in lpi_clp.cpp: SCIPlpiChgBounds checks if the column status exists in Clp before using it
@@ -79,6 +82,8 @@ fixed bugs:
 - fixed bug in heur_oneopt.c w.r.t. to SCIPtrySol(); it is necessary that the bound of the solution is check 
   otherwise, infeasible solution could be accepted as feasible
 - fixed bug in sepa_rapidlearning.c, corrected computation of right dualbound
+- fixed bug in lp.c: in sumMIRRow() rowtoolong was not set correctly 
+- fixed bugs in sepa_zerohalf.c, e.g., handling of intscaling and substitution of variable bounds  
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
