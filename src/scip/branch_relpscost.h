@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.h,v 1.15 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.h,v 1.16 2010/02/04 10:23:56 bzfheinz Exp $"
 
 /**@file   branch_relpscost.h
  * @brief  reliable pseudo costs branching rule
@@ -35,6 +35,19 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** execution reliability pseudo cost branching with the given branching candidates */
+extern
+SCIP_RETCODE SCIPexecRelpscostBranching(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             allowaddcons,       /**< is the branching rule allowed to add constraints to the current node
+                                              *   in order to cut off the current solution instead of creating a branching? */
+   SCIP_VAR**            branchcands,        /**< brancing candidates */
+   SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
+   SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
+   int                   nbranchcands,       /**< number of branching candidates */
+   SCIP_RESULT*          result              /**< pointer to the result of the execution */
    );
 
 #ifdef __cplusplus
