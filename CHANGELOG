@@ -18,6 +18,7 @@ interface:
 - new method SCIPsetVarNInferencesInitial() to initialize the inference values of a variable
 - new method SCIPexecRelpscostBranching() in branch_relpscots.{c,h}; this method allows of calling the reliability pseudo cost branching algorithm 
   for given set of branching candidates from the outside
+- added SCIPsortRealRealRealPtr() and corresponding sorting/inserting/deleting methods in pub_misc.h and necessary defines in misc.c
 
 features:
 - constraint handler can now register their upgrade functions for quadratic constraints to cons_quadratic (similar to LINCONSUPGD)
