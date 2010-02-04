@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.33 2010/02/04 14:23:12 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.34 2010/02/04 16:58:06 bzfheinz Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -422,7 +422,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIP_Real solval;
 
          /* find out whether the variable can be shifted */
-         solval = SCIPgetSolVal(scip, worksol,vars[i]);
+         solval = SCIPgetSolVal(scip, worksol, vars[i]);
          shiftval = calcShiftVal(scip, vars[i], solval, activities);
 
          /* insert the variable into the list of shifting candidates */
