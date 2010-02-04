@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.191 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.192 2010/02/04 10:36:47 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -868,7 +868,7 @@ void conshdlrDelEnfocons(
    checkConssArrays(conshdlr);
 }
 
-/** adds constraint to the chckconss array of constraint handler */
+/** adds constraint to the checkconss array of constraint handler */
 static
 SCIP_RETCODE conshdlrAddCheckcons(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -910,7 +910,7 @@ SCIP_RETCODE conshdlrAddCheckcons(
    return SCIP_OKAY;
 }
 
-/** deletes constraint from the chckconss array of constraint handler */
+/** deletes constraint from the checkconss array of constraint handler */
 static
 void conshdlrDelCheckcons(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
@@ -4931,7 +4931,7 @@ SCIP_RETCODE SCIPconsSetChecked(
          }
       }
 
-      /* if constraint is active, update the chckconss array of the constraint handler */
+      /* if constraint is active, update the checkconss array of the constraint handler */
       if( cons->active )
       {
          if( cons->check )
