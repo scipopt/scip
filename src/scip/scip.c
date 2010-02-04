@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.535 2010/01/23 07:53:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.536 2010/02/04 13:19:38 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -13746,8 +13746,11 @@ SCIP_RETCODE SCIPcheckSolOrig(
       {
          *feasible = FALSE;
         
-         SCIPmessagePrintInfo("solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
-            SCIPvarGetName(var), lb, ub, solval);
+         if( printreason )
+         {
+            SCIPmessagePrintInfo("solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+               SCIPvarGetName(var), lb, ub, solval);
+         }
          
          if( !completely )
             return SCIP_OKAY;
