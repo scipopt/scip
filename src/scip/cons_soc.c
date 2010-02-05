@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.14 2010/02/05 20:00:53 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.15 2010/02/05 20:14:59 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -3740,8 +3740,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol", "whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic",            &conshdlrdata->linearizenlpsol, FALSE, TRUE,       NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",  "minimal efficacy of a cut to be added to LP in separation",                                                     &conshdlrdata->minefficacy,  FALSE, 0.0001, 0, SCIPinfinity(scip), NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sparsify",     "whether to sparsify cuts",                                                                                      &conshdlrdata->sparsify,     FALSE, TRUE,          NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsify/maxloss", "maximal loss in cut efficacy by sparsification",                                                            &conshdlrdata->sparsifymaxloss, FALSE, 0.2, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsify/nzgrowth", "growth rate of maximal allowed nonzeros in cuts in sparsification",                                        &conshdlrdata->sparsifynzgrowth, FALSE, 1.5, 1.000001, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifymaxloss", "maximal loss in cut efficacy by sparsification",                                                            &conshdlrdata->sparsifymaxloss, FALSE, 0.2, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifynzgrowth", "growth rate of maximal allowed nonzeros in cuts in sparsification",                                        &conshdlrdata->sparsifynzgrowth, FALSE, 1.5, 1.000001, SCIPinfinity(scip), NULL, NULL) );
 
 #ifdef QUADCONSUPGD_PRIORITY
    /* notify function that upgrades quadratic constraint to SOC's */
