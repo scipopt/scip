@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.13 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.14 2010/02/05 20:00:53 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -101,6 +101,10 @@ struct SCIP_ConshdlrData
    int                   nauxvars;       /**< number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint */
    int                   branchfreq;     /**< frequency of branching on a node instead of adding weak cuts */
    SCIP_Bool             linearizenlpsol;/**< whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic */
+   SCIP_Real             minefficacy;    /**< minimal efficacy of a cut to be added to LP in separation loop */
+   SCIP_Bool             sparsify;       /**< whether to sparsify cuts */
+   SCIP_Real             sparsifymaxloss;/**< maximal loss in cut efficacy by sparsification */
+   SCIP_Real             sparsifynzgrowth; /**< growth rate of maximal allowed nonzeros in cuts in sparsification */
 };
 
 
@@ -629,10 +633,9 @@ SCIP_RETCODE computeViolations(
    return SCIP_OKAY;
 }
 
-
-/** generate supporting hyperplane */
+/** generate supporting hyperplane in a given solution */
 static
-SCIP_RETCODE generateCut(
+SCIP_RETCODE generateCutSol(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
@@ -681,6 +684,79 @@ SCIP_RETCODE generateCut(
    return SCIP_OKAY;   
 }
 
+/** generate supporting hyperplane in a given point */
+static
+SCIP_RETCODE generateCutPoint(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Real*            x,                  /**< point (lhs-vars) where to generate cut */
+   SCIP_ROW**            row                 /**< place to store cut */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real*     rowcoeff;
+   SCIP_Real      rhs = 0.0;
+   SCIP_Real      lhsval;
+   SCIP_Real      val;
+   int            i;
+   
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(row  != NULL);
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   lhsval = consdata->constant;
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      assert(!SCIPisInfinity(scip, ABS(x[i])));
+      
+      val = x[i];
+      if( consdata->offsets )
+         val += consdata->offsets[i];
+      if( consdata->coefs )
+         val *= consdata->coefs[i];
+      lhsval += val * val;      
+   }
+   lhsval = sqrt(lhsval);
+   
+   if( SCIPisZero(scip, lhsval) )
+   { /* do not like to linearize in 0 */
+      return SCIP_OKAY;
+   }
+   
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowcoeff, consdata->nvars) );
+   
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      val  = x[i];
+      if( consdata->offsets != NULL )
+         val += consdata->offsets[i];
+      if( SCIPisZero(scip, val) )
+      {
+         rowcoeff[i] = 0.0;
+         continue;
+      }
+      if( consdata->coefs != NULL )
+         val *= consdata->coefs[i] * consdata->coefs[i];
+
+      rowcoeff[i] = val / lhsval;
+      
+      val *= x[i];
+      rhs += val;
+   }
+   rhs /= lhsval;
+   rhs -= lhsval - consdata->rhscoeff * consdata->rhsoffset;
+   
+   SCIP_CALL( SCIPcreateEmptyRow(scip, row, "soccut", -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
+   SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
+   SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
+   
+   SCIPfreeBufferArray(scip, &rowcoeff);
+   
+   return SCIP_OKAY;   
+}
 
 /** generate supporting hyperplane w.r.t. solution projected on feasible set 
  * 
@@ -735,7 +811,7 @@ SCIP_RETCODE generateCutProjectedPoint(
 
    if( !SCIPisZero(scip, consdata->constant) )
    {  /* have not thought about this case yet */
-      SCIP_CALL( generateCut(scip, cons, sol, row) );
+      SCIP_CALL( generateCutSol(scip, cons, sol, row) );
       return SCIP_OKAY;
    }
    
@@ -750,7 +826,7 @@ SCIP_RETCODE generateCutProjectedPoint(
    
    if( SCIPisFeasEQ(scip, lambda, 1.0) )
    {  /* avoid numerical difficulties when dividing by (1-lambda) below */ 
-      SCIP_CALL( generateCut(scip, cons, sol, row) );
+      SCIP_CALL( generateCutSol(scip, cons, sol, row) );
       return SCIP_OKAY;
    }
    
@@ -783,21 +859,130 @@ SCIP_RETCODE generateCutProjectedPoint(
    return SCIP_OKAY;   
 }
 
+/** generates sparsified supporting hyperplane */
+static
+SCIP_RETCODE generateSparseCut(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
+   SCIP_ROW**            row,                /**< place to store cut */
+   SCIP_Real             minefficacy,        /**< minimal efficacy for a cut to be accepted */
+   SCIP_Real             sparsifymaxloss,    /**< maximal loose of efficacy for a sparsified cut compared to constraint violation */
+   SCIP_Real             nzgrowth            /**< growth factor for number of nonzeros */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real*     x;
+   SCIP_Real*     dist;  /* distance to 0 */
+   int*           ind;   /* indicies */
+   int            i;
+   int            maxnz, nextmaxnz;
+   SCIP_Real      efficacy;
+   SCIP_Real      goodefficacy;
+      
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(row  != NULL);
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   
+   assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
+   
+   if( consdata->nvars <= 3 )
+   {
+      SCIP_CALL( generateCutSol(scip, cons, sol, row) );
+      return SCIP_OKAY;
+   }
+   
+   goodefficacy = MAX((1.0-sparsifymaxloss) * consdata->violation, minefficacy);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &x,    consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &dist, consdata->nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ind,  consdata->nvars) );
+   
+   SCIP_CALL( SCIPgetSolVals(scip, sol, consdata->nvars, consdata->vars, x) );
+   /* distance to "-offset" * alpha_i^2 should indicate loss when moving refpoint to x[i] = -offset[i] */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      ind[i] = i;
+      if( consdata->offsets )
+         dist[i] = ABS(x[i] + consdata->offsets[i]);
+      else
+         dist[i] = ABS(x[i]);
+      if( consdata->coefs )
+         dist[i] *= consdata->coefs[i] * consdata->coefs[i];
+   }
+   
+   /* sort variables according to dist */
+   SCIPsortRealInt(dist, ind, consdata->nvars);
+
+   maxnz = 2;
+   /* set all except biggest maxnz entries in x to -offset */
+   for( i = 0; i < consdata->nvars - maxnz; ++i )
+      x[ind[i]] = consdata->offsets ? -consdata->offsets[i] : 0.0;
+
+   do
+   {
+      /* TODO speed up a bit by computing efficacy of new cut from efficacy of old cut
+       * generate row only if efficiant enough */
+      SCIP_CALL( generateCutPoint(scip, cons, x, row) );
+      
+      if( *row != NULL )
+      {
+         efficacy = SCIPgetCutEfficacy(scip, sol, *row);
+
+         if( efficacy >= goodefficacy || 
+             (maxnz >= consdata->nvars && efficacy >= minefficacy) )
+         { /* cut cuts off solution and is efficient enough */
+            SCIPdebugMessage("accepted cut with %d of %d nonzeros, efficacy = %g\n", maxnz, consdata->nvars, efficacy);
+            break;
+         }
+         SCIP_CALL( SCIPreleaseRow(scip, row) );
+      }
+      
+      if( maxnz >= consdata->nvars )
+      { /* cut also not efficient enough if generated in original refpoint (that's bad) */
+         break;
+      }
+      
+      nextmaxnz = (int)(nzgrowth * maxnz);
+      if( nextmaxnz == consdata->nvars - 1)
+         nextmaxnz = consdata->nvars;
+      else if( nextmaxnz == maxnz )
+         ++nextmaxnz;
+      
+      /* restore entries of x that are nonzero in next attempt */
+      for( i = MAX(0, consdata->nvars - nextmaxnz); i < consdata->nvars - maxnz; ++i )
+         x[ind[i]] = SCIPgetSolVal(scip, sol, consdata->vars[ind[i]]);
+      
+      maxnz = nextmaxnz;
+   } while( TRUE );
+   
+   SCIPfreeBufferArray(scip, &x);
+   SCIPfreeBufferArray(scip, &dist);
+   SCIPfreeBufferArray(scip, &ind);
+   
+   return SCIP_OKAY;
+}
+
 /** separates a point, if possible */
 static
 SCIP_RETCODE separatePoint(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of constraints that seem to be useful */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
    SCIP_Bool             addweakcuts,        /**< whether also weak (only slightly violated) cuts should be added in a nonconvex constraint */
-   SCIP_Bool             projectpoint,       /**< whether the point in which a cut is generated should be projected onto the feasible set */
    SCIP_Bool*            success             /**< buffer to store whether the point was separated */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Real          efficacy;
+   SCIP_Real          minefficacy;
    int                c;
    SCIP_ROW*          row;
 
@@ -806,7 +991,11 @@ SCIP_RETCODE separatePoint(
    assert(nusefulconss <= nconss);
    assert(success != NULL);
    
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   
    *success = FALSE;
+   
+   minefficacy = addweakcuts ? SCIPfeastol(scip) : conshdlrdata->minefficacy;
    
    for( c = 0; c < nconss; ++c )
    {
@@ -816,27 +1005,31 @@ SCIP_RETCODE separatePoint(
       if( SCIPisFeasPositive(scip, consdata->violation) )
       {
          /* generate cut */
-         if( projectpoint )
+         if( conshdlrdata->sparsify )
+         {
+            SCIP_CALL( generateSparseCut(scip, conss[c], sol, &row, minefficacy, conshdlrdata->sparsifymaxloss, conshdlrdata->sparsifynzgrowth) );
+         }  
+         else if( conshdlrdata->projectpoint )
          {
             SCIP_CALL( generateCutProjectedPoint(scip, conss[c], sol, &row) );
+            if( SCIPgetCutEfficacy(scip, sol, row) < minefficacy )
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
          else
          {
-            SCIP_CALL( generateCut(scip, conss[c], sol, &row) );
+            SCIP_CALL( generateCutSol(scip, conss[c], sol, &row) );
+            if( SCIPgetCutEfficacy(scip, sol, row) < minefficacy )
+               SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
-         if( row == NULL ) /* failed to generate cut */
+         
+         if( row == NULL ) /* failed to generate (efficiant enough) cut */
             continue;
 
-         efficacy = SCIPgetCutEfficacy(scip, sol, row);
-
-         if( ( addweakcuts && SCIPisFeasPositive(scip, efficacy)) ||
-             (!addweakcuts && SCIPisEfficacious (scip, efficacy)) )
-         { /* cut cuts off solution and efficient enough */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
-            SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            *success = TRUE;
-            SCIPdebugMessage("added cut with efficacy %g\n", efficacy);
-         }
+         /* cut cuts off solution and efficient enough */
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
+         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+         *success = TRUE;
+         SCIPdebugMessage("added cut with efficacy %g\n", efficacy);
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
@@ -910,7 +1103,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
          continue;
       }
       
-      SCIP_CALL( generateCut(scip, conss[c], sol, &row) );
+      SCIP_CALL( generateSparseCut(scip, conss[c], sol, &row, SCIPfeastol(scip), conshdlrdata->sparsifymaxloss, conshdlrdata->sparsifynzgrowth) );
 
       if( row == NULL )
          continue;
@@ -2921,7 +3114,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSOC)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conss, nconss, nusefulconss, NULL, FALSE, conshdlrdata->projectpoint, &sepasuccess) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, FALSE, &sepasuccess) );
    if( sepasuccess )
       *result = SCIP_SEPARATED;
 
@@ -2956,7 +3149,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
-   SCIP_CALL( separatePoint(scip, conss, nconss, nusefulconss, sol, TRUE, conshdlrdata->projectpoint, &sepasuccess) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE, &sepasuccess) );
    if( sepasuccess )
       *result = SCIP_SEPARATED;
 
@@ -3000,7 +3193,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    allow_weak_cuts = !conshdlrdata->branchfreq || SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) < conshdlrdata->nextbranchnode;
    if( !allow_weak_cuts )
       conshdlrdata->nextbranchnode += conshdlrdata->branchfreq;
-   SCIP_CALL( separatePoint(scip, conss, nconss, nusefulconss, NULL, allow_weak_cuts, conshdlrdata->projectpoint, &success) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, allow_weak_cuts, &success) );
    if( success )
    {
       SCIPdebugMessage("enforced by separation\n");
@@ -3038,7 +3231,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
    }
    else if( !allow_weak_cuts )
    { /* try again separation, now also allow weaker cuts */
-      SCIP_CALL( separatePoint(scip, conss, nconss, nusefulconss, NULL, TRUE, conshdlrdata->projectpoint, &success) );
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, &success) );
       if( success )
       {
          SCIPdebugMessage("enforced by separation via weak cut\n");
@@ -3545,6 +3738,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/branchfreq",   "frequency of branching on a node if only weak cuts could be added in enforcement; 0 to turn off",               &conshdlrdata->branchfreq,   TRUE,  0, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",      "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",                          &conshdlrdata->glineur,      FALSE, TRUE,          NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol", "whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic",            &conshdlrdata->linearizenlpsol, FALSE, TRUE,       NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",  "minimal efficacy of a cut to be added to LP in separation",                                                     &conshdlrdata->minefficacy,  FALSE, 0.0001, 0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sparsify",     "whether to sparsify cuts",                                                                                      &conshdlrdata->sparsify,     FALSE, TRUE,          NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsify/maxloss", "maximal loss in cut efficacy by sparsification",                                                            &conshdlrdata->sparsifymaxloss, FALSE, 0.2, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsify/nzgrowth", "growth rate of maximal allowed nonzeros in cuts in sparsification",                                        &conshdlrdata->sparsifynzgrowth, FALSE, 1.5, 1.000001, SCIPinfinity(scip), NULL, NULL) );
 
 #ifdef QUADCONSUPGD_PRIORITY
    /* notify function that upgrades quadratic constraint to SOC's */
