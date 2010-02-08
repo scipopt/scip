@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.86 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.87 2010/02/08 18:20:46 bzfviger Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -2008,26 +2008,31 @@ SCIP_RETCODE SCIPbranchExecRelax(
       SCIP_VAR* var;
       SCIP_Real val;
       SCIP_Real factor;
+      SCIP_Real domain;
       SCIP_Real bestfactor;
+      SCIP_Real bestdomain;
       int priority;
       int bestpriority;
       int bestcand;
 
       /* no branching method succeeded in choosing a branching: just branch on the first branching candidates with maximal
-       * priority, and out of these on the one with maximal branch factor
+       * priority, and out of these on the one with maximal branch factor, and out of these on the one with largest domain
        */
       bestcand = -1;
       bestpriority = INT_MIN;
       bestfactor = SCIP_REAL_MIN;
+      bestdomain = 0.0;
       for( i = 0; i < branchcand->nrelaxcands; ++i )
       {
          priority = SCIPvarGetBranchPriority(branchcand->relaxcands[i]);
          factor = SCIPvarGetBranchFactor(branchcand->relaxcands[i]);
-         if( priority > bestpriority || (priority == bestpriority && factor > bestfactor) )
+         domain = (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(branchcand->relaxcands[i])) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(branchcand->relaxcands[i]))) ? SCIPsetInfinity(set) : SCIPvarGetUbLocal(branchcand->relaxcands[i])-SCIPvarGetLbLocal(branchcand->relaxcands[i]);
+         if( priority > bestpriority || (priority == bestpriority && factor > bestfactor) || (priority == bestpriority && factor == bestfactor && domain > bestdomain) )
          {
             bestcand = i;
             bestpriority = priority;
             bestfactor = factor;
+            bestdomain = domain;
          }
       }
       assert(0 <= bestcand && bestcand < branchcand->nrelaxcands);
@@ -2037,6 +2042,9 @@ SCIP_RETCODE SCIPbranchExecRelax(
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
       assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
       assert(SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
+
+      SCIPdebugMessage("no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
+         SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val);
 
       SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, lp, branchcand, eventqueue, var, val, NULL, NULL, NULL) );
 
