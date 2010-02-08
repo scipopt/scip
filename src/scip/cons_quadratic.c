@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.80 2010/02/08 16:04:03 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.81 2010/02/08 20:06:39 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -4345,7 +4345,7 @@ SCIP_Real calculateBranchingPoint(
             branchpoint = mindistbrpointtobound * lb + (1-mindistbrpointtobound) * ub;
 
          /* for very tiny intervals we set it into the middle */
-         if( !SCIPisGT(scip, branchpoint, lb) || !SCIPisLT(scip, branchpoint, ub) )
+         if( SCIPisEQ(scip, lb/2, ub/2) )
             branchpoint = (lb+ub) * 0.5;
       }
       else if( !SCIPisLT(scip, lb, branchpoint) )
@@ -4430,7 +4430,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          {
             xlb = SCIPvarGetLbLocal(consdata->quadvars[j]);
             xub = SCIPvarGetUbLocal(consdata->quadvars[j]);
-            if( SCIPisEQ(scip, xlb, xub) )
+            if( SCIPisEQ(scip, xlb/2, xub/2) )
                continue;
             
             xval = SCIPgetSolVal(scip, NULL, consdata->quadvars[j]);
@@ -4523,7 +4523,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
          if( gap < 0.0 ) 
             gap = 0.0;
          
-         if( !SCIPisEQ(scip, xlb, xub) )
+         if( !SCIPisEQ(scip, xlb/2, xub/2) )
          {
 #ifdef WITH_CONSBRANCHNL
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars1[j], gap, SCIPinfinity(scip)) );
@@ -4536,7 +4536,7 @@ SCIP_RETCODE registerVariableInfeasibilities(
 #endif
             ++*nnotify;
          }
-         if( !SCIPisEQ(scip, ylb, yub) )
+         if( !SCIPisEQ(scip, ylb/2, yub/2) )
          {
 #ifdef WITH_CONSBRANCHNL
             SCIP_CALL(  SCIPconshdlrBranchNonlinearUpdateVarInfeasibility(scip, conshdlrdata->branchnl, consdata->bilinvars2[j], gap, SCIPinfinity(scip)) );
