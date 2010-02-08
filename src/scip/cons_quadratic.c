@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.79 2010/02/03 16:21:37 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.80 2010/02/08 16:04:03 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -3088,11 +3088,11 @@ SCIP_RETCODE checkCurvature(
       consdata->isconvex =
          consdata->quadsqrcoefs[0] >= 0 &&
          consdata->quadsqrcoefs[1] >= 0 &&
-         consdata->quadsqrcoefs[0] * consdata->quadsqrcoefs[1] >= consdata->bilincoefs[0] * consdata->bilincoefs[0];
+         4 * consdata->quadsqrcoefs[0] * consdata->quadsqrcoefs[1] >= consdata->bilincoefs[0] * consdata->bilincoefs[0];
       consdata->isconcave = 
          consdata->quadsqrcoefs[0] <= 0 &&
          consdata->quadsqrcoefs[1] <= 0 &&
-         consdata->quadsqrcoefs[0] * consdata->quadsqrcoefs[1] <= consdata->bilincoefs[0] * consdata->bilincoefs[0];
+         4 * consdata->quadsqrcoefs[0] * consdata->quadsqrcoefs[1] >= consdata->bilincoefs[0] * consdata->bilincoefs[0];
       return SCIP_OKAY;
    }
 
