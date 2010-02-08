@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.360 2010/02/08 18:55:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.361 2010/02/08 20:05:52 bzfviger Exp $"
 
 /**@file   scip.h
  * @ingroup PUBLICMETHODS
@@ -4717,7 +4717,7 @@ SCIP_RETCODE SCIPcreateChild(
    SCIP_Real             estimate            /**< estimate for (transformed) objective value of best feasible solution in subtree */
    );
 
-/** branches on a variable v using the current LP or pseudo solution;
+/** branches on a non-continuous variable v using the current LP or pseudo solution;
  *  if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')), 
  *  if solution value is integral, the x' is equal to lower or upper bound of the branching 

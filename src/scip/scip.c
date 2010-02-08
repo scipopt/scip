@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.537 2010/02/08 18:56:00 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.538 2010/02/08 20:05:52 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12646,7 +12646,7 @@ SCIP_RETCODE SCIPcreateChild(
    return SCIP_OKAY;
 }
 
-/** branches on a variable v using the current LP or pseudo solution;
+/** branches on a non-continuous variable v using the current LP or pseudo solution;
  *  if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')),
  *  if solution value is integral, the x' is equal to lower or upper bound of the branching

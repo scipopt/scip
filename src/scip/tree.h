@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.h,v 1.104 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: tree.h,v 1.105 2010/02/08 20:05:52 bzfviger Exp $"
 
 /**@file   tree.h
  * @brief  internal methods for branch and bound tree
@@ -409,7 +409,10 @@ SCIP_Real SCIPtreeCalcChildEstimate(
    SCIP_Real             targetvalue         /**< new value of the variable in the child node */
    );
 
-/** branches on a variable v; if solution value x' is fractional, two child nodes are created
+/** branches on a variable v
+ *  if v is a continuous variable, then two child nodes with x <= x' and x >= x' are created
+ *  if v is not a continuous variable, then:
+ *  if solution value x' is fractional, two child nodes are created
  *  (x <= floor(x'), x >= ceil(x')), 
  *  if solution value is integral, the x' is equal to lower or upper bound of the branching 
  *  variable and the bounds of v are finite, then two child nodes are created
