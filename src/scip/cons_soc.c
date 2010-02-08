@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.15 2010/02/05 20:14:59 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.16 2010/02/08 16:04:45 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -241,7 +241,7 @@ SCIP_RETCODE dropVarEvents(
    return SCIP_OKAY;
 }
 
-/** processed variable bound tightening event */
+/** process variable bound tightening event */
 static
 SCIP_DECL_EVENTEXEC(processVarEvent)
 {
@@ -3732,16 +3732,16 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          conshdlrdata) );
 
    /* add soc constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",      "whether a constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",          &conshdlrdata->doscaling,    FALSE, TRUE,          NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/projectpoint", "whether the reference point of a cut should be projected onto the feasible set of the SOC constraint",          &conshdlrdata->projectpoint, FALSE, FALSE,         NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/nauxvars",     "number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint; 0 to turn off", &conshdlrdata->nauxvars,     FALSE, 2, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/branchfreq",   "frequency of branching on a node if only weak cuts could be added in enforcement; 0 to turn off",               &conshdlrdata->branchfreq,   TRUE,  0, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",      "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",                          &conshdlrdata->glineur,      FALSE, TRUE,          NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol", "whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic",            &conshdlrdata->linearizenlpsol, FALSE, TRUE,       NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",  "minimal efficacy of a cut to be added to LP in separation",                                                     &conshdlrdata->minefficacy,  FALSE, 0.0001, 0, SCIPinfinity(scip), NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sparsify",     "whether to sparsify cuts",                                                                                      &conshdlrdata->sparsify,     FALSE, TRUE,          NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifymaxloss", "maximal loss in cut efficacy by sparsification",                                                            &conshdlrdata->sparsifymaxloss, FALSE, 0.2, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifynzgrowth", "growth rate of maximal allowed nonzeros in cuts in sparsification",                                        &conshdlrdata->sparsifynzgrowth, FALSE, 1.5, 1.000001, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/scaling",      "whether a constraint should be scaled w.r.t. the current gradient norm when checking for feasibility",          &conshdlrdata->doscaling,        FALSE, TRUE,          NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/projectpoint", "whether the reference point of a cut should be projected onto the feasible set of the SOC constraint",          &conshdlrdata->projectpoint,     FALSE, FALSE,         NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/nauxvars",     "number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint; 0 to turn off", &conshdlrdata->nauxvars,         FALSE, 2, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/branchfreq",   "frequency of branching on a node if only weak cuts could be added in enforcement; 0 to turn off",               &conshdlrdata->branchfreq,       TRUE,  0, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",      "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",                          &conshdlrdata->glineur,          FALSE, TRUE,          NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizenlpsol", "whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic",            &conshdlrdata->linearizenlpsol,  FALSE, TRUE,          NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",  "minimal efficacy of a cut to be added to LP in separation",                                                     &conshdlrdata->minefficacy,      FALSE, 0.0001, 0, SCIPinfinity(scip), NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sparsify",     "whether to sparsify cuts",                                                                                      &conshdlrdata->sparsify,         FALSE, FALSE,         NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifymaxloss", "maximal loss in cut efficacy by sparsification",                                                             &conshdlrdata->sparsifymaxloss,  FALSE, 0.2, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifynzgrowth", "growth rate of maximal allowed nonzeros in cuts in sparsification",                                         &conshdlrdata->sparsifynzgrowth, FALSE, 1.3, 1.000001, SCIPinfinity(scip), NULL, NULL) );
 
 #ifdef QUADCONSUPGD_PRIORITY
    /* notify function that upgrades quadratic constraint to SOC's */
