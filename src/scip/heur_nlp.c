@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.47 2010/02/08 16:05:23 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.48 2010/02/08 18:17:03 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -925,6 +925,8 @@ SCIP_RETCODE applyVarBoundConstraints(
             varlb[varcnt] = SCIPvarGetLbGlobal(var);
          if (SCIPvarGetUbGlobal(var) < varub[varcnt])
             varub[varcnt] = SCIPvarGetUbGlobal(var);
+         if( varlb[varcnt] > varub[varcnt] )
+            varlb[varcnt] = varub[varcnt];
          
          /* remember that a bound change for variable var is now stored at position varbnd */
          SCIP_CALL( SCIPhashmapInsert(varmap, var, (void*)(size_t)(varcnt+1)) );
@@ -959,6 +961,8 @@ SCIP_RETCODE applyVarBoundConstraints(
          /* possibly tighten previously stored bound change on variable var with newly computed bounds */ 
          varlb[idx_] = MAX(varlb[idx_],lhs);
          varub[idx_] = MIN(varub[idx_],rhs);
+         if( varlb[idx_] > varub[idx_] )
+            varlb[idx_] = varub[idx_];
    
          SCIPdebugMessage("%s: var %s at %d now bounded in [%g, %g] due to %s = %g  [updated]\n",
             SCIPconsGetName(cons), SCIPvarGetName(var), varidx[idx_],
