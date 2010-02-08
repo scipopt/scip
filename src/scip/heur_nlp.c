@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.46 2010/01/04 20:35:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.47 2010/02/08 16:05:23 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -71,6 +71,7 @@ struct SCIP_HeurData
    SCIP_NLPI*            nlpi;               /**< NLP solver interface */
    SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
    SCIP_Bool             triedsetupnlp;      /**< whether we have tried to setup an NLP */ 
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for global bound change events */
    
    int                   nvars;              /**< number of variables in NLP */
    SCIP_VAR**            var_nlp2scip;       /**< mapping variables in NLP to SCIP variables */
@@ -640,10 +641,46 @@ SCIP_RETCODE setupNLP(
    
    /* initialize data structure for NLP solve statistics */
    SCIP_CALL( SCIPnlpStatisticsCreate(scip, &heurdata->nlpstatistics) );
+   
+   /** catch variable global bounds change events */
+   for( i = 0; i < heurdata->nvars; ++i )
+   {
+      SCIP_CALL( SCIPcatchVarEvent(scip, heurdata->var_nlp2scip[i], SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, NULL) );
+   }
 
    return SCIP_OKAY;
 }
 #endif
+
+/** process variable global bound change event */
+static
+SCIP_DECL_EVENTEXEC(processVarEvent)
+{
+   SCIP_HEURDATA* heurdata;
+   SCIP_VAR*      var;
+   int            nlpidx;
+   SCIP_Real      lb, ub;
+   
+   assert(scip      != NULL);
+   assert(event     != NULL);
+   assert(eventdata != NULL);
+   assert(eventhdlr != NULL);
+
+   heurdata = (SCIP_HEURDATA*)eventdata;
+   assert(heurdata  != NULL);
+
+   var = SCIPeventGetVar(event);
+   assert(var != NULL);
+   
+   assert(SCIPhashmapExists(heurdata->var_scip2nlp, var));
+   nlpidx = (int) (size_t) SCIPhashmapGetImage(heurdata->var_scip2nlp, var);
+
+   lb = SCIPvarGetLbGlobal(var);
+   ub = SCIPvarGetUbGlobal(var);
+   SCIP_CALL( SCIPnlpiChgVarBounds(scip, heurdata->nlpi, 1, &nlpidx, &lb, &ub) );
+
+   return SCIP_OKAY;
+}
 
 /** Checks if an NLP should be setup and if positive, then sets up the NLP.
  * 
@@ -957,7 +994,10 @@ SCIP_RETCODE destroyNLP(
    assert(heurdata->nlpstatistics != NULL);
    
    for( i = 0; i < heurdata->nvars; ++i )
+   {
+      SCIP_CALL( SCIPdropVarEvent(scip, heurdata->var_nlp2scip[i], SCIP_EVENTTYPE_GBDCHANGED, heurdata->eventhdlr, (SCIP_EVENTDATA*)heurdata, -1) );
       SCIP_CALL( SCIPreleaseVar(scip, &heurdata->var_nlp2scip[i]) );
+   }
    
    SCIPfreeMemoryArray(scip, &heurdata->var_nlp2scip);
    SCIPhashmapFree(&heurdata->var_scip2nlp);
@@ -1423,7 +1463,12 @@ SCIP_RETCODE SCIPincludeHeurNlp(
    /* create Nlp primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
-   
+
+   /* include variable event handler */
+   SCIP_CALL( SCIPincludeEventhdlr(scip, HEUR_NAME, "propagates a global bound change to the NLP",
+      NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
+   heurdata->eventhdlr = SCIPfindEventhdlr(scip, HEUR_NAME);
+
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, heurFreeNlp, heurInitNlp, heurExitNlp, heurInitsolNlp, heurExitsolNlp, heurExecNlp,
