@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.536 2010/02/04 13:19:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.537 2010/02/08 18:56:00 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12364,10 +12364,9 @@ int SCIPgetNPrioLPBranchCands(
    return npriolpcands;
 }
 
-/** gets branching candidates for  solution branching */
 /** gets branching candidates for relaxation solution branching along with solution values, scores, 
  *  and number of branching candidates;
- *  branching rules should always select the branching candidate among the first npriolpcands of the candidate
+ *  branching rules should always select the branching candidate among the first npriorelaxcands of the candidate
  *  list
  */
 SCIP_RETCODE SCIPgetRelaxBranchCands(
@@ -12379,7 +12378,7 @@ SCIP_RETCODE SCIPgetRelaxBranchCands(
    int*                  npriorelaxcands,    /**< pointer to store the number of candidates with maximal priority, or NULL */
    int*                  npriorelaxbins,     /**< pointer to store the number of binary candidates with maximal priority, or NULL */
    int*                  npriorelaxints,     /**< pointer to store the number of integer candidates with maximal priority, or NULL */
-   int*                  npriorelaximpls     /**< pointer to store the number of implicit integercandidates with maximal priority, 
+   int*                  npriorelaximpls     /**< pointer to store the number of implicit integer candidates with maximal priority, 
                                               *   or NULL */
    )
 {
