@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.55 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_fullstrong.c,v 1.56 2010/02/11 16:50:51 bzfviger Exp $"
 
 /**@file   branch_fullstrong.c
  * @ingroup BRANCHINGRULES
@@ -359,7 +359,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 }
 
 
-/** branching execution method for fractional LP solutions */
+/** branching execution method for relaxation solutions */
 #define branchExecrelFullstrong NULL
 
 

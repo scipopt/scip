@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.28 2010/01/23 07:53:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.29 2010/02/11 16:50:51 bzfviger Exp $"
 
 /**@file   branch_inference.c
  * @ingroup BRANCHINGRULES
@@ -189,7 +189,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInference)
 }
 
 
-/** branching execution method for fractional LP solutions */
+/** branching execution method for relaxation solutions */
 #define branchExecrelInference NULL
 
 

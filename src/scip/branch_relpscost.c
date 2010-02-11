@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.60 2010/02/04 10:23:56 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.61 2010/02/11 16:50:51 bzfviger Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -812,7 +812,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
 }
 
 
-/** branching execution method for fractional LP solutions */
+/** branching execution method for relaxation solutions */
 #define branchExecrelRelpscost NULL
 
 
