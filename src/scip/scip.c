@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.538 2010/02/08 20:05:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.539 2010/02/11 17:24:08 bzfviger Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -12704,7 +12704,7 @@ SCIP_RETCODE SCIPbranchVarVal(
 {
    SCIP_CALL( checkStage(scip, "SCIPbranchVar", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
    
-   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || (SCIPisFeasLT(scip, SCIPvarGetLbLocal(var), val) && SCIPisFeasLT(scip, val, SCIPvarGetUbLocal(var)) ) );
+   assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS || (SCIPisLT(scip, SCIPvarGetLbLocal(var), val) && SCIPisLT(scip, val, SCIPvarGetUbLocal(var)) ) );
 
    if( SCIPsetIsEQ(scip->set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
    {
