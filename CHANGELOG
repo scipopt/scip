@@ -32,6 +32,7 @@ features:
 - SCIP can now branch on relaxation solutions that are either installed to the relaxsol field of the variables or 
   added to the list of relaxation candidates, e.g., by constraint handlers. Branching on relaxation solutions is performed 
   if the enforcement resulted in an unresolved infeasibility and there are no LP branching candidates, but before pseudo solution branching.
+  The branching rules leastinf, mostinf, random, and pscost implement the callback for branching on relaxation candidates.
 - primal heuristics may now already be called before presolving, using the new timing point SCIP_HEURTIMING_BEFOREPRESOL. 
   Note that solutions that are added before/during presolving, will be retransformed to the original space.
 - SCIP can branch on continuous variables. The branching value x' must not be one of the bounds. Two children (x <= x', x >= x') will be created.
