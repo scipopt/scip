@@ -2344,7 +2344,7 @@
  * to be processed. The ordering relation of the tree's leaves for storing them in the leave priority queue is also
  * defined by the node selectors.  
  * \n
- * A complete list of all propagators contained in this release can be found \ref NODESELECTORS "here".
+ * A complete list of all node selectors contained in this release can be found \ref NODESELECTORS "here".
  *
  * In the following, we explain how the user can add an own node selector.
  * Take the node selector for depth first search (src/scip/nodesel_dfs.c) as an example.
