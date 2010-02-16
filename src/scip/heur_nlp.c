@@ -12,14 +12,13 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.48 2010/02/08 18:17:03 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.49 2010/02/16 17:14:20 bzfviger Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
  * @brief   NLP local search primal heuristic
  * @author  Stefan Vigerske
  * 
- * @todo catch changes on global bound changes (e.g., due to new incumbents) and propagate to nlpi
  * @todo set cutoff or similar
  */
 
@@ -685,8 +684,7 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 /** Checks if an NLP should be setup and if positive, then sets up the NLP.
  * 
  * Looks at the current problem and if it has continuous variables in nonlinear constraints.
- * If so and if there is an NLP solver available, then sets up the NLP and sets *success to TRUE.
- * Otherwise returns with *success == FALSE.
+ * If so and if there is an NLP solver available, then sets up the NLP.
  */
 static
 SCIP_RETCODE checkCIPandSetupNLP(
