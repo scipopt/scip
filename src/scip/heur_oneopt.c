@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_oneopt.c,v 1.34 2010/02/04 16:58:06 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_oneopt.c,v 1.35 2010/02/16 14:14:05 bzfviger Exp $"
 
 /**@file   heur_oneopt.c
  * @ingroup PRIMALHEURISTICS
@@ -186,12 +186,14 @@ SCIP_RETCODE updateRowActivities(
 
       /* update row activity, only regard global rows in the LP */
       if( rowpos >= 0 && !SCIProwIsLocal(row) )
+      {
          activities[rowpos] +=  shiftval * colvals[i];
 
-      if( SCIPisInfinity(scip, activities[rowpos]) )
-         activities[rowpos] = SCIPinfinity(scip);
-      else if( SCIPisInfinity(scip, -activities[rowpos]) )
-         activities[rowpos] = -SCIPinfinity(scip);
+         if( SCIPisInfinity(scip, activities[rowpos]) )
+            activities[rowpos] = SCIPinfinity(scip);
+         else if( SCIPisInfinity(scip, -activities[rowpos]) )
+            activities[rowpos] = -SCIPinfinity(scip);
+      }
    }
 
    return SCIP_OKAY;
