@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.539 2010/02/11 17:24:08 bzfviger Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.540 2010/02/17 08:37:50 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5495,7 +5495,7 @@ SCIP_RETCODE SCIPsolve(
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
                "(run %d, node %lld) restarting after %d global fixings of integer variables\n",
                scip->stat->nruns, scip->stat->nnodes, scip->stat->nrootintfixingsrun);
-         /* an extra blank line should be printed separately since the buffer message handler only handle up to one line
+         /* an extra blank line should be printed separately since the buffer message handler only handles up to one line
           *  correctly */
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "\n");
          SCIP_CALL( freeSolve(scip, TRUE) );
