@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.331 2010/02/04 17:20:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.332 2010/02/17 09:56:29 bzfheinz Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -12443,10 +12443,24 @@ SCIP_RETCODE SCIPlpGetSol(
             && !SCIPsetIsFeasPositive(set, lpicols[c]->primsol - lpicols[c]->ub);
       if( dualfeasible != NULL )
       {
-         if( SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
-            *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
-         if( SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
-            *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+         if ( lp->lastlpalgo == SCIP_LPALGO_BARRIER )
+         {
+            double compslack;
+
+            /* complementary slackness in barrier solutions is measured as product of primal solution and reduced costs */
+            compslack = (lpicols[c]->primsol - lpicols[c]->lb) * lpicols[c]->redcost;
+            *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, compslack);
+            compslack = (lpicols[c]->ub - lpicols[c]->primsol) * lpicols[c]->redcost;
+            *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, compslack);
+         }
+         else
+         {
+            /* complementary slackness in simplex means that basic variables should have zero reduced costs */
+            if( SCIPsetIsFeasGT(set, lpicols[c]->primsol, lpicols[c]->lb) )
+               *dualfeasible = *dualfeasible && !SCIPsetIsFeasPositive(set, lpicols[c]->redcost);
+            if( SCIPsetIsFeasLT(set, lpicols[c]->primsol, lpicols[c]->ub) )
+               *dualfeasible = *dualfeasible && !SCIPsetIsFeasNegative(set, lpicols[c]->redcost);
+         }
       } /*lint --e{705}*/
       SCIPdebugMessage(" col <%s> [%g,%g]: primsol=%.9f, redcost=%.9f, pfeas=%u/%u(%u), dfeas=%u(%u)\n",
          SCIPvarGetName(lpicols[c]->var), lpicols[c]->lb, lpicols[c]->ub, lpicols[c]->primsol, lpicols[c]->redcost,
