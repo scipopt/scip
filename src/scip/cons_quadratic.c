@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.81 2010/02/08 20:06:39 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.82 2010/02/17 14:41:06 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -7454,7 +7454,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",
          "whether quadratic constraints consisting of several quadratic blocks should be disaggregated in several constraints",
-         &conshdlrdata->disaggregation, FALSE, TRUE, NULL, NULL) );
+         &conshdlrdata->disaggregation, FALSE, FALSE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",
          "minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy",
