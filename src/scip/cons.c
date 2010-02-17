@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.192 2010/02/04 10:36:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.193 2010/02/17 08:37:03 bzfheinz Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4860,16 +4860,17 @@ SCIP_RETCODE SCIPconsSetSeparated(
 
    if( cons->separate != separate )
    {
-      cons->separate = separate;
       if( cons->enabled && cons->sepaenabled )
       {
-         if( cons->separate )
+         if( separate )
          {
+            cons->separate = separate;
             SCIP_CALL( conshdlrAddSepacons(cons->conshdlr, set, cons) );
          }
          else
          {
             conshdlrDelSepacons(cons->conshdlr, cons);
+            cons->separate = separate;
          }
       }
    }
@@ -4888,16 +4889,17 @@ SCIP_RETCODE SCIPconsSetEnforced(
 
    if( cons->enforce != enforce )
    {
-      cons->enforce = enforce;
       if( cons->enabled )
       {
-         if( cons->enforce )
+         if( enforce )
          {
+            cons->enforce = enforce;
             SCIP_CALL( conshdlrAddEnfocons(cons->conshdlr, set, cons) );
          }
          else
          {
             conshdlrDelEnfocons(cons->conshdlr, cons);
+            cons->enforce = enforce;
          }
       }
    }
