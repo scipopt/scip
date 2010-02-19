@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_zirounding.c,v 1.3 2010/01/04 20:35:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_zirounding.c,v 1.4 2010/02/19 10:03:58 bzfheinz Exp $"
 
 /**@file   heur_zirounding.c
  * @ingroup PRIMALHEURISTICS
@@ -57,10 +57,10 @@ struct SCIP_HeurData
 };
 
 enum Direction
-   {
-      DIRECTION_UP           =  1,
-      DIRECTION_DOWN         = -1
-   };
+{
+   DIRECTION_UP           =  1,
+   DIRECTION_DOWN         = -1
+};
 typedef enum Direction DIRECTION;
 
 /*
