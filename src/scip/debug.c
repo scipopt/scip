@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.37 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.38 2010/02/19 10:03:18 bzfheinz Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -64,6 +64,7 @@ SCIP_RETCODE readSolfile(
 {
    FILE* file;
    int solsize;
+   int nonvalues;
    int i;
 
    assert(*names == NULL);
@@ -82,6 +83,8 @@ SCIP_RETCODE readSolfile(
 
    /* read data */
    solsize = 0;
+   nonvalues = 0;
+
    while( !feof(file) )
    {
       char buf[SCIP_MAXSTRLEN];
@@ -100,12 +103,23 @@ SCIP_RETCODE readSolfile(
 
       /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
       if( strncmp(buf, "solution", 8) == 0 || strncmp(buf, "objective", 9) == 0 )
+      {
+   	 nonvalues++;
          continue;
+      }
+
+      /* skip empty lines */
+      if( strlen(buf) == 1 )
+      {
+   	 nonvalues++;
+         continue;
+      }
+	
 
       nread = sscanf(buf, "%s %lf %s\n", name, &val, objstring);
       if( nread < 2 )
       {
-         printf("invalid input line %d in solution file <%s>: <%s>\n", *nvals, SCIP_DEBUG_SOLUTION, name);
+         printf("invalid input line %d in solution file <%s>: <%s>\n", *nvals + nonvalues, SCIP_DEBUG_SOLUTION, name);
          fclose(file);
          return SCIP_READERROR;
       }
