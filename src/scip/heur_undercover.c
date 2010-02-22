@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.42 2010/01/23 08:02:47 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.43 2010/02/22 20:57:23 bzfwinkm Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -989,12 +989,9 @@ SCIP_RETCODE createSubProblem(
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-   SCIPdebugMessage("undercover heuristic fixed %d variables (%d integer variables to rounded LP value)\n", fixingcounter, roundedfixingcounter);
-
    /* create the variables of the subproblem */
    fixingcounter = 0;
    roundedfixingcounter = 0;
-
 
    for( i = 0; i < nvars; ++i )
    {
@@ -1024,6 +1021,8 @@ SCIP_RETCODE createSubProblem(
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
       SCIP_CALL( SCIPhashmapInsert(varmap, vars[i], subvars[i]) );
    }
+
+   SCIPdebugMessage("undercover heuristic fixed %d variables (%d integer variables to rounded LP value)\n", fixingcounter, roundedfixingcounter);
 
    /* fix-and-propagate loop */
    if( fixandprop )
@@ -1164,6 +1163,9 @@ SCIP_RETCODE createSubProblem(
       }
       SCIPfreeBufferArray(scip, &alternatives);
       SCIP_CALL( SCIPendProbing(scip) );
+
+      SCIPdebugMessage("undercover heuristic fixed %d variables (%d integer variables to rounded LP value) during probing\n", fixingcounter, roundedfixingcounter);
+
    }
 
    /* abort, if nothing was fixed or all variables were fixed to their current LP value */
