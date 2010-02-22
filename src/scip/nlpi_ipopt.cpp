@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.15 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.16 2010/02/22 10:22:22 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -20,7 +20,6 @@
  * @author  Stefan Vigerske
  *
  * @todo warm starts
- * @todo ScipJournal to redirect Ipopt output 
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
  */
 
@@ -40,6 +39,7 @@ namespace Ipopt
 }
 #include "IpIpoptCalculatedQuantities.hpp"
 #include "IpSolveStatistics.hpp"
+#include "IpJournalist.hpp"
 
 using namespace Ipopt;
 
@@ -260,6 +260,30 @@ public:
    );
 };
 
+/** A particular Ipopt::Journal implementation that uses the SCIP message routines for output.
+ */
+class ScipJournal : public Ipopt::Journal {
+public:
+  ScipJournal(const char* name, Ipopt::EJournalLevel default_level)
+  : Ipopt::Journal(name, default_level)
+  { }
+
+  ~ScipJournal() { }
+
+protected:
+  void PrintImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* str)
+  {
+     SCIPmessagePrintInfo(str);
+  }
+
+  void PrintfImpl(Ipopt::EJournalCategory category, Ipopt::EJournalLevel level, const char* pformat, va_list ap)
+  {
+     SCIPmessageVPrintInfo(pformat, ap);
+  }
+
+  void FlushBufferImpl() { }
+};
+
 /** clears the last solution arrays and sets the solstat and termstat to unknown and other, resp. */
 static
 void SCIPnlpiIpoptInvalidateSolution(
@@ -302,25 +326,29 @@ SCIP_DECL_NLPIINIT(nlpiInitIpopt)
    
    try
    {
-      data->ipopt = new IpoptApplication();
+      /* initialize IPOPT without default journal */
+      data->ipopt = new IpoptApplication(false);
       if( IsNull(data->ipopt) )
          throw std::bad_alloc();
-   }
-   catch( std::bad_alloc )
-   {
-      SCIPerrorMessage("Not enough memory to allocate IpoptApplication.\n");
-      return SCIP_NOMEMORY;
-   }
+      
+      /* plugin our journal to get output through SCIP message handler */
+      SmartPtr<Journal> jrnl = new ScipJournal("console", J_ITERSUMMARY);
+      if( IsNull(jrnl) )
+         throw std::bad_alloc();
+      jrnl->SetPrintLevel(J_DBG, J_NONE);
+      if (!data->ipopt->Jnlst()->AddJournal(jrnl))
+      {
+         SCIPerrorMessage("Failed to register ScipJournal for IPOPT output.");
+      }
 
-   try
-   {
+      /* initialize Ipopt/SCIP NLP interface */
       data->nlp = new ScipNLP(scip, data);
       if( IsNull(data->nlp) )
          throw std::bad_alloc();
    }
    catch( std::bad_alloc )
    {
-      SCIPerrorMessage("Not enough memory to allocate ScipNLP.\n");
+      SCIPerrorMessage("Not enough memory to initialize Ipopt.\n");
       return SCIP_NOMEMORY;
    }
    
