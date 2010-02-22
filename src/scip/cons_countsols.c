@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.37 2010/01/24 21:41:12 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.38 2010/02/22 20:56:54 bzfwinkm Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -2067,7 +2067,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecAllsolutions)
 
 /** create the interactive shell dialogs for the counting process  */
 static
-SCIP_RESULT createCountDialog(
+SCIP_RETCODE createCountDialog(
    SCIP*                    scip             /**< SCIP data structure */
    )
 {

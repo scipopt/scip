@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.h,v 1.130 2010/01/23 07:53:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: var.h,v 1.131 2010/02/22 20:56:54 bzfwinkm Exp $"
 
 /**@file   var.h
  * @brief  internal methods for problem variables
@@ -1108,7 +1108,7 @@ SCIP_RETCODE SCIPvarIncNInferences(
 
 /** increases the number of inferences counter of the variable by a certain value*/
 extern
-SCIP_Longint SCIPvarIncNInferencesVal(
+SCIP_RETCODE SCIPvarIncNInferencesVal(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_STAT*            stat,               /**< problem statistics */   
    SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
