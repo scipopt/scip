@@ -85,6 +85,7 @@ fixed bugs:
 - fixed bug in sepa_rapidlearning.c, corrected computation of right dualbound
 - fixed bug in lp.c: in sumMIRRow() rowtoolong was not set correctly 
 - fixed bugs in sepa_zerohalf.c, e.g., handling of intscaling and substitution of variable bounds  
+- fixed buglist entry 35, which was caused by a wrong read in correction when the reading buffer was full in reader_opb.c
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

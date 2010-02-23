@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.44 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.45 2010/02/23 14:19:26 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -382,21 +382,23 @@ SCIP_Bool getNextLine(
       
    if( opbinput->linebuf[OPB_MAX_LINELEN-2] != '\0' )
    {
+      /* overwrite the character to search the last blank from this position backwards */
+      opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
+
       /* buffer is full; erase last token since it might be incomplete */
       opbinput->endline = FALSE;
       last = strrchr(opbinput->linebuf, ' ');
-
       if( last == NULL )
       {
-         SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", OPB_MAX_LINELEN - 2);
-         opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         SCIPdebugMessage("the buffer might be corrupted\n");
+	 SCIPwarningMessage("we read %d character from the file; these might indicates an corrupted input file!", OPB_MAX_LINELEN - 2);
+	 opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
+	 SCIPdebugMessage("the buffer might be corrupted\n");
       }
-      else
+      else 
       {
-         SCIPfseek(opbinput->file, -(long) strlen(last), SEEK_CUR);
-         *last = '\0';
-         SCIPdebugMessage("correct buffer\n");
+	 SCIPfseek(opbinput->file, -(long) strlen(last) - 1, SEEK_CUR);
+	 SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last) + 1);
+	 *last = '\0';
       }
    }
    else 
@@ -705,6 +707,7 @@ SCIP_RETCODE createVariable(
    
    /* create new variable of the given name */
    SCIPdebugMessage("creating new variable: <%s>\n", name);
+   
    SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
          initial, removable, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, newvar) );
