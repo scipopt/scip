@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.540 2010/02/17 08:37:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.541 2010/02/24 16:40:10 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -5084,6 +5084,63 @@ SCIP_RETCODE presolve(
       SCIP_Bool unbd;
       SCIP_Bool infeas;
 
+#if 0
+      /* @todo the idea is to resort the variables w.r.t. to their index; this means to sort the variables in the same
+       * order within their categories/region as they were generated in the beginning; the hope was to get a more
+       * deterministic behavior; computational experiments showed that this resorting slows down the overall solution
+       * process by 10%; therefore, this code is not used and more tests are needed to overcome this draw back of 10% */
+      
+      SCIP_VAR** vars;
+      int nbinvars;
+      int nintvars;
+      int nimplvars;
+      int ncontvars;
+      int nvars;
+      int i;
+
+      /* sort variables, which appear in four categories (binary, integer, implicit, continuous) after presolve, again
+       * with respect to their original index and in their categories. Adjust the problem index afterwards which is
+       * supposed to reflect the position in the variable array. This additional sorting is supposed to reobtain a
+       * possible block structure induced by the user model */
+      vars = scip->transprob->vars;
+      nvars = scip->transprob->nvars;
+      nbinvars = scip->transprob->nbinvars;
+      nintvars = scip->transprob->nintvars;
+      nimplvars = scip->transprob->nimplvars;
+      ncontvars = scip->transprob->ncontvars;
+
+      assert(vars != NULL);
+      assert(nbinvars + nintvars + nimplvars + ncontvars == nvars);
+
+      SCIPdebugMessage("entering sortation with respect to original block structure! \n");
+     
+      /* check for every variable type whether it appears in the presolved problem. if yes, sort the specific part of
+       * the variables array */
+
+      /* sort binaries */
+      if( nbinvars > 0 )
+         SCIPsortPtr((void**)vars, SCIPvarComp, nbinvars);
+      
+      /* sort integers */
+      if( nintvars > 0 )
+         SCIPsortPtr((void**)&vars[nbinvars], SCIPvarComp, nintvars);
+      
+      /* sort implicit variables  */
+      if( nimplvars > 0 )
+         SCIPsortPtr((void**)&vars[nbinvars + nintvars], SCIPvarComp, nimplvars);
+      
+      /* sort continuous variables*/
+      if( ncontvars > 0 )
+         SCIPsortPtr((void**)&vars[nbinvars + nintvars + nimplvars], SCIPvarComp, ncontvars);
+
+      /* after sorting, the problem index of each variable has to be adjusted */
+      for( i = 0; i < nvars; i++ )
+      {
+         vars[i]->probindex = i;
+         SCIPdebugMessage("Variable: Problem index <%d>, original index <%d> \n", vars[i]->probindex, vars[i]->index);
+      }
+#endif
+      
       SCIP_CALL( exitPresolve(scip, &unbd, &infeas) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
       if( infeas && !(*infeasible) )
