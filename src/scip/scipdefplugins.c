@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.c,v 1.93 2010/02/04 16:54:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.c,v 1.94 2010/02/24 16:12:06 bzfhende Exp $"
 
 /**@file   scipdefplugins.c
  * @brief  default SCIP plugins
@@ -114,6 +114,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurSimplerounding(scip) );
    SCIP_CALL( SCIPincludeHeurTrivial(scip) );
    SCIP_CALL( SCIPincludeHeurTrySol(scip) );
+   SCIP_CALL( SCIPincludeHeurTwoopt(scip) );
    SCIP_CALL( SCIPincludeHeurUndercover(scip) );
    SCIP_CALL( SCIPincludeHeurVeclendiving(scip) );
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );

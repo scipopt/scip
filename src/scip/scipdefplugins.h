@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipdefplugins.h,v 1.41 2010/02/04 16:54:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipdefplugins.h,v 1.42 2010/02/24 16:12:06 bzfhende Exp $"
 
 /**@file   scipdefplugins.h
  * @brief  default SCIP plugins
@@ -84,6 +84,7 @@
 #include "scip/heur_simplerounding.h"
 #include "scip/heur_trivial.h"
 #include "scip/heur_trysol.h"
+#include "scip/heur_twoopt.h"
 #include "scip/heur_undercover.h"
 #include "scip/heur_veclendiving.h"
 #include "scip/heur_zirounding.h"
