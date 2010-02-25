@@ -1,4 +1,4 @@
-# SCIP version 1.2.0.4
+# SCIP version 1.2.0.8
 
 # branching score function ('s'um, 'p'roduct)
 # [type: char, range: {sp}, default: p]
@@ -179,6 +179,10 @@ limits/bestsol = -1
 # maximal number of solutions to store in the solution storage
 # [type: int, range: [1,2147483647], default: 100]
 limits/maxsol = 100
+
+# solving stops, if the given number of restarts was triggered (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+limits/restarts = -1
 
 # frequency for solving LP at the nodes (-1: never; 0: only root LP)
 # [type: int, range: [-1,2147483647], default: 1]
@@ -1025,8 +1029,8 @@ constraints/quadratic/replacebinaryprod = 2147483647
 constraints/quadratic/empathy4and = 0
 
 # whether quadratic constraints consisting of several quadratic blocks should be disaggregated in several constraints
-# [type: bool, range: {TRUE,FALSE}, default: TRUE]
-constraints/quadratic/disaggregate = TRUE
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/quadratic/disaggregate = FALSE
 
 # minimal efficacy for a cut to be added to the LP; overwrites separating/efficacy
 # [type: real, range: [0,1e+20], default: 0.0001]
@@ -1177,7 +1181,7 @@ constraints/SOS2/delayprop = FALSE
 constraints/SOS2/delaypresol = FALSE
 
 # frequency for separating cuts (-1: never, 0: only in root node)
-# [type: int, range: [-1,2147483647], default: 5]
+# [type: int, range: [-1,2147483647], default: 1]
 constraints/soc/sepafreq = 5
 
 # frequency for propagating domains (-1: never, 0: only in root node)
@@ -1213,7 +1217,7 @@ constraints/soc/scaling = TRUE
 constraints/soc/projectpoint = FALSE
 
 # number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint; 0 to turn off
-# [type: int, range: [0,2147483647], default: 2]
+# [type: int, range: [0,2147483647], default: 0]
 constraints/soc/nauxvars = 2
 
 # frequency of branching on a node if only weak cuts could be added in enforcement; 0 to turn off
@@ -1227,6 +1231,22 @@ constraints/soc/glineur = TRUE
 # whether SOC constraints should be linearized in a solution found by the NLP or RENSNL heuristic
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/soc/linearizenlpsol = TRUE
+
+# minimal efficacy of a cut to be added to LP in separation
+# [type: real, range: [0,1e+20], default: 0.0001]
+constraints/soc/minefficacy = 0.0001
+
+# whether to sparsify cuts
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/soc/sparsify = FALSE
+
+# maximal loss in cut efficacy by sparsification
+# [type: real, range: [0,1], default: 0.2]
+constraints/soc/sparsifymaxloss = 0.2
+
+# growth rate of maximal allowed nonzeros in cuts in sparsification
+# [type: real, range: [1.000001,1e+20], default: 1.3]
+constraints/soc/sparsifynzgrowth = 1.3
 
 # enable quadratic upgrading for constraint handler <soc>
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
@@ -1656,17 +1676,25 @@ branching/inference/maxdepth = -1
 # [type: real, range: [0,1], default: 1]
 branching/inference/maxbounddist = 1
 
-# factor to weigh conflict score against inference score
+# weight in score calculations for conflict score
 # [type: real, range: [0,1.79769313486232e+308], default: 1000]
 branching/inference/conflictweight = 1000
 
-# factor to weigh average number of cutoffs in branching score
+# weight in score calculations for inference score
+# [type: real, range: [-1.79769313486232e+308,1.79769313486232e+308], default: 1]
+branching/inference/inferenceweight = 1
+
+# weight in score calculations for cutoff score
 # [type: real, range: [0,1.79769313486232e+308], default: 1]
 branching/inference/cutoffweight = 1
 
 # should branching on LP solution be restricted to the fractional variables?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 branching/inference/fractionals = TRUE
+
+# should a weighted sum of inference, conflict and cutoff weigths be used?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+branching/inference/useweightedsum = TRUE
 
 # priority of branching rule <mostinf>
 # [type: int, range: [-536870912,536870911], default: 100]
@@ -1680,6 +1708,10 @@ branching/mostinf/maxdepth = 0
 # [type: real, range: [0,1], default: 1]
 branching/mostinf/maxbounddist = 1
 
+# minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain
+# [type: real, range: [0.0001,0.5], default: 0.2]
+branching/mostinf/mindistbrpointtobound = 0.2
+
 # priority of branching rule <leastinf>
 # [type: int, range: [-536870912,536870911], default: 50]
 branching/leastinf/priority = 50
@@ -1691,6 +1723,10 @@ branching/leastinf/maxdepth = 0
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 1]
 branching/leastinf/maxbounddist = 1
+
+# minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain
+# [type: real, range: [0.0001,0.5], default: 0.2]
+branching/leastinf/mindistbrpointtobound = 0.2
 
 # priority of branching rule <pscost>
 # [type: int, range: [-536870912,536870911], default: 2000]
@@ -1704,6 +1740,14 @@ branching/pscost/maxdepth = 0
 # [type: real, range: [0,1], default: 1]
 branching/pscost/maxbounddist = 1
 
+# minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain
+# [type: real, range: [0.0001,0.5], default: 0.2]
+branching/pscost/mindistbrpointtobound = 0.2
+
+# strategy for computing score of relaxation branching candidates: b: rb-int-br, r: rb-int-br-rev, i: rb-inf
+# [type: char, range: {bri}, default: r]
+branching/pscost/strategy = r
+
 # priority of branching rule <random>
 # [type: int, range: [-536870912,536870911], default: -100000]
 branching/random/priority = -100000
@@ -1715,6 +1759,10 @@ branching/random/maxdepth = 0
 # maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)
 # [type: real, range: [0,1], default: 1]
 branching/random/maxbounddist = 1
+
+# minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain
+# [type: real, range: [0.0001,0.5], default: 0.2]
+branching/random/mindistbrpointtobound = 0.2
 
 # priority of branching rule <relpscost>
 # [type: int, range: [-536870912,536870911], default: 10000]
@@ -1894,7 +1942,7 @@ heuristics/crossover/freq = -1
 
 # frequency offset for calling primal heuristic <crossover>
 # [type: int, range: [0,2147483647], default: 0]
-heuristics/crossover/freqofs = 10
+heuristics/crossover/freqofs = 0
 
 # maximal depth level to call primal heuristic <crossover> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
@@ -2636,6 +2684,10 @@ heuristics/rens/nodesquot = 0.1
 # [type: real, range: [0,1], default: 0.01]
 heuristics/rens/minimprove = 0.01
 
+# should subproblem be created out of the rows in the LP rows?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/rens/uselprows = TRUE
+
 # priority of heuristic <rins>
 # [type: int, range: [-536870912,536870911], default: -1101000]
 heuristics/rins/priority = -1101000
@@ -2803,6 +2855,34 @@ heuristics/trysol/freqofs = 0
 # maximal depth level to call primal heuristic <trysol> (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 heuristics/trysol/maxdepth = -1
+
+# priority of heuristic <twoopt>
+# [type: int, range: [-536870912,536870911], default: -20100]
+heuristics/twoopt/priority = -20100
+
+# frequency for calling primal heuristic <twoopt> (-1: never, 0: only at depth freqofs)
+# [type: int, range: [-1,2147483647], default: 1]
+heuristics/twoopt/freq = -1
+
+# frequency offset for calling primal heuristic <twoopt>
+# [type: int, range: [0,2147483647], default: 0]
+heuristics/twoopt/freqofs = 0
+
+# maximal depth level to call primal heuristic <twoopt> (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+heuristics/twoopt/maxdepth = -1
+
+#  Should Integer-2-Optimization be applied or not?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+heuristics/twoopt/intopt = TRUE
+
+# user parameter to determine number of nodes to wait after last best solution before calling heuristic
+# [type: int, range: [0,10000], default: 0]
+heuristics/twoopt/waitingnodes = 0
+
+# parameter to determine the percentage of rows two variables have to share before they are considered equal
+# [type: real, range: [0,1], default: 0.65]
+heuristics/twoopt/matchingrate = 0.65
 
 # priority of heuristic <undercover>
 # [type: int, range: [-536870912,536870911], default: -1110000]
@@ -2995,6 +3075,18 @@ propagating/rootredcost/freq = 1
 # should propagator be delayed, if other propagators found reductions?
 # [type: bool, range: {TRUE,FALSE}, default: FALSE]
 propagating/rootredcost/delay = FALSE
+
+# priority of propagator <vbounds>
+# [type: int, range: [-536870912,536870911], default: 2000000]
+propagating/vbounds/priority = 2000000
+
+# frequency for calling propagator <vbounds> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: 1]
+propagating/vbounds/freq = 1
+
+# should propagator be delayed, if other propagators found reductions?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+propagating/vbounds/delay = FALSE
 
 # priority of separator <clique>
 # [type: int, range: [-536870912,536870911], default: -5000]
@@ -3379,6 +3471,50 @@ separating/mcf/separateflowcutset = TRUE
 # should we separate knapsack cover inequalities on the network cuts?
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 separating/mcf/separateknapsack = TRUE
+
+# priority of separator <rapidlearning>
+# [type: int, range: [-536870912,536870911], default: -1200000]
+separating/rapidlearning/priority = -1200000
+
+# frequency for calling separator <rapidlearning> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/rapidlearning/freq = -1
+
+# maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying separator <rapidlearning> (0.0: only on current best node, 1.0: on all nodes)
+# [type: real, range: [0,1], default: 1]
+separating/rapidlearning/maxbounddist = 1
+
+# should separator be delayed, if other separators found cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/rapidlearning/delay = FALSE
+
+# should the found conflicts be applied in the original SCIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/rapidlearning/applyconflicts = TRUE
+
+# should the found global bound deductions be applied in the original SCIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/rapidlearning/applybdchgs = TRUE
+
+# should the inference values be used as initialization in the original SCIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/rapidlearning/applyinfervals = TRUE
+
+# should the incumbent solution be copied to the original SCIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/rapidlearning/applyprimalsol = TRUE
+
+# should a solved status ba copied to the original SCIP?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/rapidlearning/applysolved = TRUE
+
+# maximum problem size (variables) for which rapid learning will be called
+# [type: int, range: [0,2147483647], default: 10000]
+separating/rapidlearning/maxnvars = 10000
+
+# maximum problem size (constraints) for which rapid learning will be called
+# [type: int, range: [0,2147483647], default: 10000]
+separating/rapidlearning/maxnconss = 10000
 
 # priority of separator <redcost>
 # [type: int, range: [-536870912,536870911], default: 10000000]
