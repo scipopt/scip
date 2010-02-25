@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.542 2010/02/25 14:40:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.543 2010/02/25 18:58:48 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -7015,7 +7015,7 @@ SCIP_RETCODE SCIPchgVarUbNode(
    
    if( node == NULL )
    {
-      SCIP_CALL( SCIPchgVarUb(scip, var, node) );
+      SCIP_CALL( SCIPchgVarUb(scip, var, newbound) );
    }
    else
    {
