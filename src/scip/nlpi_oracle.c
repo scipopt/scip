@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.28 2010/02/25 20:18:49 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_oracle.c,v 1.29 2010/02/25 20:36:22 bzfviger Exp $"
 
 /**@file    nlpi_oracle.c
  * @ingroup NLPIS
@@ -653,8 +653,70 @@ void hessLagSparsitySetNzFlagForQuad(
       }
    }
 }
-#else
 
+#ifdef WITH_NL
+static
+SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
+   SCIP*                 scip,       /**< pointer to SCIP */
+   SCIP_NLPIORACLE*      oracle,     /**< NLPI oracle */
+   SCIP_Bool*            nzflag,     /**< where to set flags */
+   int*                  nzcount,    /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
+   int*                  exprvaridx, /**< indices of variables from expression tree in NLP */
+   SCIP_EXPRTREE*        exprtree,   /**< expression tree */
+   int                   dim         /**< dimension of matrix */
+)
+{
+   SCIP_Real*  x;
+   SCIP_Bool*  hesnz;
+   int         i, j, n, nn, idx, row, col;
+   
+   assert(scip != NULL);
+   assert(oracle != NULL);
+   assert(nzflag  != NULL);
+   assert(nzcount != NULL);
+   assert(exprvaridx != NULL);
+   assert(exprtree != NULL);
+   assert(dim >= 0);
+   
+   n  = SCIPexprtreeGetNVars(exprtree);
+   nn = n*n;
+   
+   SCIP_CALL( SCIPallocBufferArray(scip, &x, n) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &hesnz, nn) );
+   
+   for (i = 0; i < n; ++i)
+      x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */
+   
+   SCIP_CALL( SCIPexprintHessianSparsityDense(scip, oracle->exprinterpreter, exprtree, x, NULL, hesnz) );
+   
+   for (i = 0; i < n; ++i) /* rows */
+      for (j = 0; j <= i; ++j) /* cols */
+      {
+         if (!hesnz[i*n + j])
+            continue;
+         
+         row = MAX(exprvaridx[i], exprvaridx[j]);
+         col = MIN(exprvaridx[i], exprvaridx[j]);
+         
+         assert(row < dim);
+         assert(col <= row);
+         
+         idx = (row * (row + 1)) / 2 + col;
+         if (!nzflag[idx])
+         {
+            nzflag[idx] = TRUE;
+            ++*nzcount;
+         }
+      }
+   
+   SCIPfreeBufferArray(scip, &x);
+   SCIPfreeBufferArray(scip, &hesnz);
+   
+   return SCIP_OKAY;
+}
+#endif
+
+#else
 /** increases the size of an an array of integers so that it can contain at least one more element than in its current size */
 static
 SCIP_RETCODE increaseIntArraySize(
@@ -741,11 +803,13 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
 {
    SCIP_Real*  x;
    SCIP_Bool*  hesnz;
-   int         i, j, n, nn, idx, row, col, pos;
+   int         i, j, n, nn, row, col, pos;
    
    assert(scip != NULL);
    assert(oracle != NULL);
-   assert(nzflag  != NULL);
+   assert(colnz  != NULL);
+   assert(collen != NULL);
+   assert(colnnz != NULL);
    assert(nzcount != NULL);
    assert(exprvaridx != NULL);
    assert(exprtree != NULL);
@@ -793,68 +857,6 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
    return SCIP_OKAY;
 }
 #endif
-#endif
-
-#ifdef WITH_NL
-static
-SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
-   SCIP*                 scip,       /**< pointer to SCIP */
-   SCIP_NLPIORACLE*      oracle,     /**< NLPI oracle */
-   SCIP_Bool*            nzflag,     /**< where to set flags */
-   int*                  nzcount,    /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
-   int*                  exprvaridx, /**< indices of variables from expression tree in NLP */
-   SCIP_EXPRTREE*        exprtree,   /**< expression tree */
-   int                   dim         /**< dimension of matrix */
-)
-{
-   SCIP_Real*  x;
-   SCIP_Bool*  hesnz;
-   int         i, j, n, nn, idx, row, col;
-   
-   assert(scip != NULL);
-   assert(oracle != NULL);
-   assert(nzflag  != NULL);
-   assert(nzcount != NULL);
-   assert(exprvaridx != NULL);
-   assert(exprtree != NULL);
-   assert(dim >= 0);
-   
-   n  = SCIPexprtreeGetNVars(exprtree);
-   nn = n*n;
-   
-   SCIP_CALL( SCIPallocBufferArray(scip, &x, n) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &hesnz, nn) );
-   
-   for (i = 0; i < n; ++i)
-      x[i] = 2.0; /* hope that this value does not make much trouble for the evaluation routines */
-   
-   SCIP_CALL( SCIPexprintHessianSparsityDense(scip, oracle->exprinterpreter, exprtree, x, NULL, hesnz) );
-   
-   for (i = 0; i < n; ++i) /* rows */
-      for (j = 0; j <= i; ++j) /* cols */
-      {
-         if (!hesnz[i*n + j])
-            continue;
-         
-         row = MAX(exprvaridx[i], exprvaridx[j]);
-         col = MIN(exprvaridx[i], exprvaridx[j]);
-         
-         assert(row < dim);
-         assert(col <= row);
-         
-         idx = (row * (row + 1)) / 2 + col;
-         if (!nzflag[idx])
-         {
-            nzflag[idx] = TRUE;
-            ++*nzcount;
-         }
-      }
-   
-   SCIPfreeBufferArray(scip, &x);
-   SCIPfreeBufferArray(scip, &hesnz);
-   
-   return SCIP_OKAY;
-}
 #endif
 
 /** adds quadratic part of a constraint into hessian structure */
