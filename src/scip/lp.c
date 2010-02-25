@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.332 2010/02/17 09:56:29 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.333 2010/02/25 19:02:57 bzfwinkm Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -10939,10 +10939,10 @@ SCIP_RETCODE lpSolve(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      if( SCIPsetIsRelGE(set, lp->lpobjval, lp->lpiuobjlim) )
+      if( SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
-         SCIPdebugMessage("optimal solution %g exceeds objective limit %g\n", lp->lpobjval, lp->lpiuobjlim);
+         SCIPdebugMessage("optimal solution %.15g exceeds objective limit %.15g\n", lp->lpobjval, lp->lpiuobjlim);
          lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
          lp->lpobjval = SCIPsetInfinity(set);
       }
@@ -11470,14 +11470,14 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* optimal solution / objlimit with fastmip turned off / itlimit or timelimit, but objlimit exceeded */
                if( solstat == SCIP_LPSOLSTAT_OPTIMAL || solstat == SCIP_LPSOLSTAT_OBJLIMIT 
                   || ( (solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT) 
-                     && SCIPsetIsRelGE(set, objval, lp->cutoffbound - lp->looseobjval) ) )
+                     && SCIPsetIsGE(set, objval, lp->cutoffbound - lp->looseobjval) ) )
                {
                   /* get new solution and objective value */
                   SCIP_CALL( SCIPlpGetSol(lp, set, stat, NULL, NULL) );
                   /* if objective value is larger than the cutoff bound, set solution status to objective 
                      limit reached and objective value to infinity, in case solstat = SCIP_LPSOLSTAT_OBJLIMIT,
                      this was already done in the lpSolve() method */               
-                  if( SCIPsetIsRelGE(set, objval, lp->cutoffbound - lp->looseobjval) )
+                  if( SCIPsetIsGE(set, objval, lp->cutoffbound - lp->looseobjval) )
                   {
                      lp->lpsolstat = SCIP_LPSOLSTAT_OBJLIMIT;
                      lp->lpobjval = SCIPsetInfinity(set);
@@ -13666,7 +13666,7 @@ SCIP_RETCODE SCIPlpGetProvedLowerbound(
 {
    SCIP_CALL( provedBound(lp, set, FALSE, bound) );
 
-   SCIPdebugMessage("proved lower bound of LP: %g\n", *bound);
+   SCIPdebugMessage("proved lower bound of LP: %.15g\n", *bound);
 
    return SCIP_OKAY;
 }

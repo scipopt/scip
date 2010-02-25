@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_cpx.c,v 1.126 2010/01/04 20:35:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_cpx.c,v 1.127 2010/02/25 19:02:58 bzfwinkm Exp $"
 
 /**@file   lpi_cpx.c
  * @ingroup LPIS
@@ -3400,7 +3400,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
 
-   SCIPdebugMessage("setting real parameter %d to %g\n", type, dval);
+   SCIPdebugMessage("setting real parameter %d to %.15g\n", type, dval);
 
    switch( type )
    {
