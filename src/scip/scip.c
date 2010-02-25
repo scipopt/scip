@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.541 2010/02/24 16:40:10 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.542 2010/02/25 14:40:35 bzfheinz Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -6986,10 +6986,16 @@ SCIP_RETCODE SCIPchgVarLbNode(
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarLbNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPvarAdjustLb(var, scip->set, &newbound);
-
-   SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
-         scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+   if( node == NULL )
+   {
+      SCIP_CALL( SCIPchgVarLb(scip, var, newbound) );
+   }  
+   else
+   {
+      SCIPvarAdjustLb(var, scip->set, &newbound);
+      SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+            scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+   }
 
    return SCIP_OKAY;
 }
@@ -7006,12 +7012,18 @@ SCIP_RETCODE SCIPchgVarUbNode(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPchgVarUbNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
-
-   SCIPvarAdjustUb(var, scip->set, &newbound);
-
-   SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
-         scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
-
+   
+   if( node == NULL )
+   {
+      SCIP_CALL( SCIPchgVarUb(scip, var, node) );
+   }
+   else
+   {
+      SCIPvarAdjustUb(var, scip->set, &newbound);
+      SCIP_CALL( SCIPnodeAddBoundchg(node, scip->mem->solvemem, scip->set, scip->stat, scip->tree, scip->lp,
+            scip->branchcand, scip->eventqueue, var, newbound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+   }
+   
    return SCIP_OKAY;
 }
 
