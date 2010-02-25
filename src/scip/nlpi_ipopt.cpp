@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.16 2010/02/22 10:22:22 bzfviger Exp $"
+#pragma ident "@(#) $Id: nlpi_ipopt.cpp,v 1.17 2010/02/25 20:17:43 bzfviger Exp $"
 
 /**@file    nlpi_ipopt.cpp
  * @ingroup NLPIS
@@ -1592,6 +1592,10 @@ bool ScipNLP::get_starting_point(
                x[i] = 0.0;
          }
       }
+#ifndef NDEBUG
+      for( int i = 0; i < n; ++i )
+         assert(!SCIPisInfinity(scip, ABS(x[i])));
+#endif
    }
    if( init_z || init_lambda )
       return false;
