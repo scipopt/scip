@@ -13,11 +13,11 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.30 2010/01/29 08:43:29 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.31 2010/02/26 08:56:37 bzfheinz Exp $
 #
 # Call with "make testcluster"
-
-# The Cluster consist of 80 nodes. These are divided into two sets of 40
+#
+# The cluster consists of 80 nodes. These are divided into two sets of 40
 # node. Each set has a different hardware configuration. Both sets can be reached
 # over different queues.
 # - queue "ib":  PowerEdgeTM 1950 Xeon E5420 with 2 CPUS each with 4 Cores  and 16 GB RAM
@@ -36,7 +36,7 @@
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
 #  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
-
+#
 # number of needed core at a certain cluster node
 #  - PPN=8 means we need 8 core, therefore time measuring is possible if we use 1 node of queue "ib"
 #  - PPN=4 means we need 4 core, therefore time measuring is possible if we use 1 node of queue "gbe"
@@ -118,6 +118,12 @@ do
       then
       break
   fi
+
+  # the cluster queue has an upper bound of 2000 jobs; if this limit is
+  # reached the submitted jobs are dumped; to avoid that we check the total
+  # load of the cluster and wait until it is save (total load not more than
+  # 1900 jobs) to submit the next job.
+  ./waitcluster.sh 1900
 
   SHORTFILENAME=`basename $i .gz`
   SHORTFILENAME=`basename $SHORTFILENAME .mps`
