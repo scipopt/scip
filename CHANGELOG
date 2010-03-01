@@ -87,6 +87,7 @@ fixed bugs:
 - fixed bugs in sepa_zerohalf.c, e.g., handling of intscaling and substitution of variable bounds  
 - fixed buglist entry 35, which was caused by a wrong read in correction when the reading buffer was full in reader_opb.c
 - fixed bug in lp.c w.r.t. objective limit reached and the chosen comparison (fixed buglist entry 40)
+- fixed bug in heur_trivial.c w.r.t. to debug messages after a solution was freed
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))

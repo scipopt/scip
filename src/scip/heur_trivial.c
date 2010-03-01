@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.10 2010/03/01 11:57:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.11 2010/03/01 12:01:21 bzfheinz Exp $"
 
 
 /**@file   heur_trivial.c
@@ -144,8 +144,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       }
    }
    
-   /* try and free lower bound solution */
-   SCIP_CALL( SCIPtrySolFree(scip, &lbsol, FALSE, TRUE, TRUE, &success) );
+   /* try lower bound solution */
+   SCIP_CALL( SCIPtrySol(scip, lbsol, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
@@ -155,8 +155,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       *result = SCIP_FOUNDSOL;
    }
 
-   /* try and free upper bound solution */   
-   SCIP_CALL( SCIPtrySolFree(scip, &ubsol, FALSE, TRUE, TRUE, &success) );
+   /* try upper bound solution */   
+   SCIP_CALL( SCIPtrySol(scip, ubsol, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
@@ -166,10 +166,10 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       *result = SCIP_FOUNDSOL;
    }
 
-   /* try and free zero solution */
+   /* try zero solution */
    if( zerovalid )
    {
-      SCIP_CALL( SCIPtrySolFree(scip, &zerosol, FALSE, TRUE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, zerosol, FALSE, TRUE, TRUE, &success) );
       
       if( success )
       {
@@ -179,13 +179,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
          *result = SCIP_FOUNDSOL;
       }
    }
-   else
-   {
-      SCIP_CALL( SCIPfreeSol(scip, &zerosol) );
-   }
 
-   /* try and free lock solution */
-   SCIP_CALL( SCIPtrySolFree(scip, &locksol, FALSE, TRUE, TRUE, &success) );
+   /* try lock solution */
+   SCIP_CALL( SCIPtrySol(scip, locksol, FALSE, TRUE, TRUE, &success) );
 
    if( success )
    {
@@ -194,6 +190,12 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
 
       *result = SCIP_FOUNDSOL;
    }
+
+   /* free solutions */
+   SCIP_CALL( SCIPfreeSol(scip, &lbsol) );
+   SCIP_CALL( SCIPfreeSol(scip, &ubsol) );
+   SCIP_CALL( SCIPfreeSol(scip, &zerosol) );
+   SCIP_CALL( SCIPfreeSol(scip, &locksol) );
 
    return SCIP_OKAY;
 }
