@@ -94,26 +94,24 @@ do
 	LASTPROB=""
 	if test -f $i
 	then
-	    rm -f $SETFILE
 	    echo @01 $i ===========
 	    echo @01 $i ===========                     >> $ERRFILE
 
-	    echo BEGIN MOSEK                            > $TMPFILE
-	    echo MSK_IPAR_LOG_MIO_FREQ $DISPFREQ        >> $TMPFILE
-            echo MSK_DPAR_MIO_MAX_TIME $TIMELIMIT       >> $TMPFILE
-#	    echo set mip limits nodes $NODELIMIT    >> $TMPFILE
+	    ENVPARAM=""
+	    ENVPARAM="$ENVPARAM -d MSK_IPAR_LOG_MIO_FREQ $DISPFREQ" 
+	    ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_MAX_TIME $TIMELIMIT"
+	    ENVPARAM="$ENVPARAM -d MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"
+	    ENVPARAM="$ENVPARAM -d MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"
 #	    echo set mip limits treememory $MEMLIMIT >> $TMPFILE
 	    if test $FEASTOL != "default"
 	    then
-		echo MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL  >> $TMPFILE
+		ENVPARAM="$ENVPARAM -d  MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"
 	    fi
-	    echo MSK_DPAR_MIO_NEAR_TOL_REL_GAP $MIPGAP  >> $TMPFILE
-	    echo END MOSEK                              >> $TMPFILE
-	    cp $TMPFILE $SETFILE
+	    ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_NEAR_TOL_REL_GAP $MIPGAP"
 	    echo -----------------------------
 	    date
 	    echo -----------------------------
-	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $MOSEKBIN -p $TMPFILE $i" 2>>$ERRFILE
+	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $MOSEKBIN $ENVPARAM -pari $SETTINGS -paro $SETFILE $i" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
 	    echo -----------------------------

@@ -13,10 +13,10 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_mosek.awk,v 1.3 2010/01/04 20:35:33 bzfheinz Exp $
+# $Id: check_mosek.awk,v 1.4 2010/03/01 13:07:15 bzfheinz Exp $
 #
-#@file    check_cplex.awk
-#@brief   CPLEX Check Report Generator
+#@file    check_mosek.awk
+#@brief   MOSEK Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #
@@ -34,20 +34,6 @@ BEGIN {
    onlyinsolufile = 0;  # should only instances be reported that are included in the .solu file?
    useshortnames = 1;   # should problem name be truncated to fit into column?
    infty = 1e+20;
-
-   printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
-   printf("\\usepackage{a4wide}\n")                                 >TEXFILE;
-   printf("\\usepackage{amsmath,amsfonts,amssymb,booktabs}\n")      >TEXFILE;
-   printf("\\pagestyle{empty}\n\n")                                 >TEXFILE;
-   printf("\\begin{document}\n\n")                                  >TEXFILE;
-   printf("\\begin{table}[p]\n")                                    >TEXFILE;
-   printf("\\begin{center}\n")                                      >TEXFILE;
-   printf("\\setlength{\\tabcolsep}{2pt}\n")                        >TEXFILE;
-   printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n")    >TEXFILE;
-   printf("\\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrrrrrrr@{}}\n") >TEXFILE;
-   printf("\\toprule\n")                                            >TEXFILE;
-   printf("Name                &  Conss &   Vars &     Dual Bound &   Primal Bound &  Gap\\% &     Nodes &     Time \\\\\n") > TEXFILE;
-   printf("\\midrule\n")                                            >TEXFILE;
 
    printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
    printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
@@ -96,11 +82,13 @@ BEGIN {
    pprob = a[1];
    for( i = 2; i <= n; i++ )
       pprob = pprob "\\_" a[i];
+
+   # rest variables
    vars       = 0;
    cons       = 0;
    timeout    = 0;
-   opti       = 0;
-   feasible   = 1;
+   optimal    = 0;
+   feasible   = 0;
    cuts       = 0;
    pb         = +infty;
    db         = -infty;
@@ -124,15 +112,32 @@ BEGIN {
 #
 /^MOSEK      - constraints/ { cons = $5; vars = $8; }
 #
-# solution
+# problem status
 #
-/Problem status  : PRIMAL_FEASIBLE/ { feasible = 1; }
-/Solution status : INTEGER_OPTIMAL/ { opti = 1; }
-/^Objective of best integer solution/ { pb = $7; }
+/Problem status  :/ {
+    if( $4 == "PRIMAL_FEASIBLE" )
+	feasible = 1;
+    else if( $4 == "PRIMAL_INFEASIBLE" )
+    { 
+	pb = infty; 
+	db = infty; 
+	feasible = 0; 
+    }
+}
+#
+# solution status
+# 
+/Solution status : INTEGER_OPTIMAL/ {optimal = 1;}
+/^    Primal - objective:/ { 
+    if( feasible) 
+	pb = $4; 
+    if( optimal )
+	db = $4;
+}
 
 /^Mixed integer optimizer terminated. Time:/ {
-   tottime   = $6;
-   aborted   = 0;
+    tottime   = $6;
+    aborted   = 0;
 }
 /^Number of simplex iterations/ { iters = $6;}
 
@@ -147,6 +152,11 @@ BEGIN {
       abort = 1;
 }
 
+
+/^[0-9]/ {
+    if( NF == 7 )
+	db = $5;
+}
 
 /^=ready=/ {
    if( !onlyinsolufile || solstatus[prob] != "" )
