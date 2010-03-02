@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.146 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.147 2010/03/02 17:24:10 bzfwinkm Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -1695,7 +1695,7 @@ SCIP_RETCODE updateFlags(
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
- *  accordingly; in contrast to preprocessConstraintPairs(), it uses a hash table 
+ *  accordingly; in contrast to removeRedundantConstraints(), it uses a hash table 
  */
 static
 SCIP_RETCODE detectRedundantConstraints(
@@ -2029,6 +2029,8 @@ SCIP_RETCODE removeRedundantConstraints(
    SCIP_Bool cons0changed;
    int c;
 
+   assert(scip != NULL);
+   assert(conss != NULL);
    assert(cutoff != NULL);
    assert(nfixedvars != NULL);
    assert(ndelconss != NULL);
@@ -2176,9 +2178,6 @@ SCIP_RETCODE removeRedundantConstraints(
 
    return SCIP_OKAY;
 }
-
-
-
 
 /*
  * Callback methods of constraint handler
@@ -3235,8 +3234,10 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       {
          /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
          SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, ndelconss, nchgsides) );
+	 if( oldndelconss < *ndelconss )
+	    *result = SCIP_SUCCESS;
       }
-            
+
       /* check constraints for redundancy */
       if( conshdlrdata->presolpairwise )
       {
@@ -3266,6 +3267,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
                   oldndelconss = *ndelconss;
                   oldnfixedvars = *nfixedvars;
                   npaircomparisons = 0;
+		  *result = SCIP_SUCCESS;
                }
             }
          }
