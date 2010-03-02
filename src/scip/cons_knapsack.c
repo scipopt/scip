@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.184 2010/03/02 11:08:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.185 2010/03/02 14:53:27 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -425,22 +425,41 @@ SCIP_RETCODE consdataCreate(
          {
             (*consdata)->vars[k] = vars[v];
             (*consdata)->weights[k] = weights[v];
-            k++;
+            ++k;
          }
       }
+      assert(k >= 0);
+
       (*consdata)->nvars = k;
+      if( k < nvars )
+      {
+         if( k > 0 )
+         {
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*consdata)->vars, nvars, k) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*consdata)->weights, nvars, k) );
+         }
+         else
+         {
+            SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, nvars);
+            SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, nvars);
+
+            (*consdata)->vars = NULL;
+            (*consdata)->weights = NULL;
+            assert( (*consdata)->nvars == 0 );
+         }
+      }
    }
    else
    {
       (*consdata)->vars = NULL;
       (*consdata)->weights = NULL;
+      (*consdata)->nvars = 0;
    }
 
    /* capacity has to be greater or equal to zero */
    assert( capacity >= 0 );
 
-   (*consdata)->nvars = nvars;
-   (*consdata)->varssize = nvars;
+   (*consdata)->varssize = (*consdata)->nvars;
    (*consdata)->capacity = capacity;
    (*consdata)->eventdatas = NULL;
    (*consdata)->cliquepartition = NULL;
@@ -460,8 +479,8 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
       /* allocate memory for additional data structures */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, nvars) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cliquepartition, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->eventdatas, (*consdata)->nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->cliquepartition, (*consdata)->nvars) );
 
       /* catch events for variables */
       SCIP_CALL( catchEvents(scip, *consdata, eventhdlr) );
@@ -502,8 +521,13 @@ SCIP_RETCODE consdataFree(
    {
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->cliquepartition, (*consdata)->varssize);
    }
-   SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
-   SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->varssize);
+   if( (*consdata)->vars != NULL )
+   {
+      assert( (*consdata)->weights != NULL );
+      assert( (*consdata)->varssize > 0 );
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
+      SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->varssize);
+   }
 
    SCIPfreeBlockMemory(scip, consdata);
  
