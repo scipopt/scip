@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.183 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.184 2010/03/02 11:08:44 bzfheinz Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -421,10 +421,10 @@ SCIP_RETCODE consdataCreate(
          /* all weight have to be not negative */
          assert( weights[v] >= 0 );
 
-         if( weights[v] != 0 )
+         if( weights[v] > 0 )
          {
-            vars[k] = vars[v];
-            weights[k] = weights[v];
+            (*consdata)->vars[k] = vars[v];
+            (*consdata)->weights[k] = weights[v];
             k++;
          }
       }
