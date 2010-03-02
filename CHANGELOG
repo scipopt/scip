@@ -90,6 +90,7 @@ fixed bugs:
 - fixed bug in heur_trivial.c w.r.t. to debug messages after a solution was freed
 - fixed bug for HEUR_TIMING SCIP_HEURTIMING_BEFOREPRESOL and modifiable constraints 
 - fixed bug in cons_knapsack.c w.r.t. to items with zero weight
+- fixed bug in lp.c w.r.t. to the number of "active" pricer
 
 plugins:
 - added constraint handler for second order cone constraints (cons_soc.(c|h))
