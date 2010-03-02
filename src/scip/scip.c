@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.7 2009/08/12 09:27:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.8 2010/03/02 17:20:51 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -72,6 +72,9 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
+#ifdef EXACTSOLVE
+#include "scip/cons_exactlp.h"
+#endif
 
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
@@ -364,6 +367,19 @@ SCIP_Real getPrimalbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+#ifdef EXACTSOLVE
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CONS** conss;
+      
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+      assert(SCIPgetNConss(scip) == 1);
+      
+      return SCIPgetExternSafeObjval(scip, conss[0], scip->primal->upperbound, FALSE);
+   }
+#endif
+
    return SCIPprobExternObjval(scip->transprob, scip->set, scip->primal->upperbound);
 }
 
@@ -379,7 +395,21 @@ SCIP_Real getDualbound(
    if( SCIPsetIsInfinity(scip->set, lowerbound) )
       return getPrimalbound(scip);
    else
+   {
+#ifdef EXACTSOLVE
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIP_CONS** conss;
+         
+         conss = SCIPgetConss(scip);
+         assert(conss != NULL);
+         assert(SCIPgetNConss(scip) == 1);
+ 
+         return SCIPgetExternSafeObjval(scip, conss[0], lowerbound, TRUE);
+      }
+#endif
       return SCIPprobExternObjval(scip->transprob, scip->set, lowerbound);
+   }
 }
 
 /** gets global lower (dual) bound in transformed problem */
@@ -2999,6 +3029,17 @@ SCIP_RETCODE SCIPsetObjsense(
    return SCIP_OKAY;
 }
 
+/** sets objective scale of the tranformed problem */
+void SCIPsetTransObjscale(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             objscale            /**< new objective scalar */
+   )   
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPsetTransObjscale", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+   
+   scip->transprob->objscale = objscale;
+}
+
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
 SCIP_RETCODE SCIPsetObjlimit(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4122,6 +4163,20 @@ SCIP_Real SCIPgetLocalDualbound(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetLocalDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    node = SCIPtreeGetCurrentNode(scip->tree);
+
+#ifdef EXACTSOLVE
+   if( SCIPisExactSolve(scip) && node != NULL )
+   {
+      SCIP_CONS** conss;
+      
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+      assert(SCIPgetNConss(scip) == 1);
+      
+      return SCIPgetExternSafeObjval(scip, conss[0], SCIPnodeGetLowerbound(node), TRUE);
+   }
+#endif
+
    return node != NULL ? SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node)) : SCIP_INVALID;
 }
 
@@ -4146,6 +4201,19 @@ SCIP_Real SCIPgetNodeDualbound(
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNodeDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+#ifdef EXACTSOLVE
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CONS** conss;
+      
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+      assert(SCIPgetNConss(scip) == 1);
+      
+      return SCIPgetExternSafeObjval(scip, conss[0], SCIPnodeGetLowerbound(node), TRUE);
+   }
+#endif
 
    return SCIPprobExternObjval(scip->transprob, scip->set, SCIPnodeGetLowerbound(node));
 }
@@ -5441,17 +5509,59 @@ SCIP_RETCODE SCIPsolve(
             SCIPmessagePrintInfo("%.2f %%\n", 100.0*SCIPgetGap(scip));
       }
 
+#ifdef EXACTSOLVE
+      if( SCIPisExactSolve(scip) && scip->set->stage >= SCIP_STAGE_TRANSFORMED && scip->set->stage <= SCIP_STAGE_FREESOLVE )
+      {
+         SCIP_CONS** conss;
+         char s[SCIP_MAXSTRLEN];
+         mpq_t primalboundex;
+         
+         conss = SCIPgetConss(scip);
+         assert(conss != NULL);
+         mpq_init(primalboundex);
+
+         SCIPgetBestSolexObj(scip, conss[0], primalboundex);
+         gmp_snprintf(s, SCIP_MAXSTRLEN, "Exact Primal Bound : %+Qd (%d solutions)\n", primalboundex, SCIPgetNSolexs(scip));
+         SCIPmessagePrintInfo(s);
+         mpq_clear(primalboundex);
+      }
+#endif
+
       /* check solution for feasibility in original problem */
       if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
       {
          SCIP_SOL* sol;
+         SCIP_Bool feasible;
+
+#ifdef EXACTSOLVE
+         if( SCIPisExactSolve(scip) )
+         {
+            int c;
+               
+            for( c = 0; c < scip->origprob->nconss; ++c )
+            {
+               if( SCIPconsIsChecked(scip->origprob->conss[c]) && !SCIPconsIsModifiable(scip->origprob->conss[c]) )
+               {
+                  SCIP_CALL( SCIPcheckBestSolex(scip, scip->origprob->conss[c], &feasible, TRUE) );
+               }
+            }
+
+            if( !feasible )
+            {
+               SCIPmessagePrintInfo("best exact solution is not feasible in original problem\n");
+            }
+
+            return SCIP_OKAY;
+         }
+#endif
+
+         assert(!SCIPisExactSolve(scip));
 
          sol = SCIPgetBestSol(scip);
          if( sol != NULL )
          {
-            SCIP_Bool feasible;
             SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
-            
+
             if( !feasible )
             {
                SCIPmessagePrintInfo("best solution is not feasible in original problem\n");
@@ -13912,6 +14022,19 @@ SCIP_Real SCIPgetAvgDualbound(
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetAvgDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE) );
 
+#ifdef EXACTSOLVE
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CONS** conss;
+      
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+      assert(SCIPgetNConss(scip) == 1);
+      
+      return SCIPgetExternSafeObjval(scip, conss[0], SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound), TRUE);
+   }
+#endif
+
    return SCIPprobExternObjval(scip->transprob, scip->set,
       SCIPtreeGetAvgLowerbound(scip->tree, scip->primal->cutoffbound));
 }
@@ -13962,7 +14085,22 @@ SCIP_Real SCIPgetDualboundRoot(
    if( SCIPsetIsInfinity(scip->set, scip->stat->rootlowerbound) )
       return getPrimalbound(scip);
    else
+   {
+#ifdef EXACTSOLVE
+      if( SCIPisExactSolve(scip) )
+      {
+         SCIP_CONS** conss;
+         
+         conss = SCIPgetConss(scip);
+         assert(conss != NULL);
+         assert(SCIPgetNConss(scip) == 1);
+         
+         return SCIPgetExternSafeObjval(scip, conss[0], scip->stat->rootlowerbound, TRUE);
+      }
+#endif
+
       return SCIPprobExternObjval(scip->transprob, scip->set, scip->stat->rootlowerbound);
+   }
 }
 
 /** gets lower (dual) bound in transformed problem of the root node */

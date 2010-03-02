@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310.2.6 2009/08/12 09:27:16 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.7 2010/03/02 17:20:51 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -1422,6 +1422,13 @@ SCIP_RETCODE SCIPsetObjsense(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJSENSE         objsense            /**< new objective sense */
    );
+
+/** sets objective scale of the tranformed problem */
+extern
+void SCIPsetTransObjscale(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             objscale            /**< new objective scalar */
+   );   
 
 /** sets limit on objective function, such that only solutions better than this limit are accepted */
 extern

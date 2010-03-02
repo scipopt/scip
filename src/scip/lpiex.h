@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.3 2009/08/07 13:24:47 bzfsteff Exp $"
+#pragma ident "@(#) $Id: lpiex.h,v 1.1.2.4 2010/03/02 17:20:51 bzfwolte Exp $"
 
 /**@file   lpiex.h
  * @brief  interface methods for specific LP solvers
@@ -127,7 +127,7 @@ SCIP_RETCODE SCIPlpiexAddCols(
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*            beg,                /**< start index of each column in ind- and val-array, or NULL if nnonz == 0 */
    const int*            ind,                /**< row indices of constraint matrix entries, or NULL if nnonz == 0 */
-   const mpq_t*           val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
+   const mpq_t*          val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    );
 
 /** deletes all columns in the given range from LP */
@@ -157,6 +157,7 @@ SCIP_RETCODE SCIPlpiexAddRows(
    char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*            beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
+   const int*            len,                /**< number of nonzeros of each row in ind- and val-array, or NULL if only nonzeros */
    const int*            ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
    const mpq_t*          val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    );

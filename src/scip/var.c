@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.218.2.2 2009/06/19 07:53:54 bzfwolte Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.218.2.3 2010/03/02 17:20:52 bzfwolte Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -441,7 +441,8 @@ SCIP_RETCODE SCIPboundchgApply(
       /* check, if the bound change is still active (could be replaced by inference due to repropagation of higher node) */
       if( SCIPsetIsGT(set, boundchg->newbound, var->locdom.lb) )
       {
-         if( SCIPsetIsLE(set, boundchg->newbound, var->locdom.ub) )
+         if( (!set->misc_exactsolve && SCIPsetIsLE(set, boundchg->newbound, var->locdom.ub))
+            || (set->misc_exactsolve && boundchg->newbound <= var->locdom.ub) )
          {
             /* add the bound change info to the variable's bound change info array */
             switch( boundchg->boundchgtype )
@@ -507,7 +508,8 @@ SCIP_RETCODE SCIPboundchgApply(
       /* check, if the bound change is still active (could be replaced by inference due to repropagation of higher node) */
       if( SCIPsetIsLT(set, boundchg->newbound, var->locdom.ub) )
       {
-         if( SCIPsetIsGE(set, boundchg->newbound, var->locdom.lb) )
+         if( (!set->misc_exactsolve && SCIPsetIsGE(set, boundchg->newbound, var->locdom.lb))
+            || (set->misc_exactsolve && boundchg->newbound >= var->locdom.lb) )
          {
             /* add the bound change info to the variable's bound change info array */
             switch( boundchg->boundchgtype )
@@ -704,11 +706,25 @@ SCIP_RETCODE boundchgApplyGlobal(
       boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", newbound);
 
    /* check for cutoff */
-   if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, newbound, SCIPvarGetUbGlobal(var)))
-      || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, newbound, SCIPvarGetLbGlobal(var))) )
+   if( !set->misc_exactsolve )
    {
-      *cutoff = TRUE;
-      return SCIP_OKAY;
+      if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, newbound, SCIPvarGetUbGlobal(var)))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, newbound, SCIPvarGetLbGlobal(var))) )
+      {
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      assert(set->misc_exactsolve);
+
+      if( (boundtype == SCIP_BOUNDTYPE_LOWER && newbound > SCIPvarGetUbGlobal(var))
+         || (boundtype == SCIP_BOUNDTYPE_UPPER && newbound < SCIPvarGetLbGlobal(var)) )
+      {
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
    }
 
    /* apply bound change */
@@ -1308,14 +1324,26 @@ SCIP_Real adjustedLb(
    SCIP_Real             lb                  /**< lower bound to adjust */
    )
 {
-   if( SCIPsetIsInfinity(set, -lb) )
-      return -SCIPsetInfinity(set);
-   else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-      return SCIPsetFeasCeil(set, lb);
-   else if( SCIPsetIsZero(set, lb) )
-      return 0.0;
+   if( set->misc_exactsolve )
+   {
+      if( SCIPsetIsInfinity(set, -lb) )
+         return -SCIPsetInfinity(set);
+      else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+         return ceil(lb);
+      else
+         return lb;
+   }
    else
-      return lb;
+   {
+      if( SCIPsetIsInfinity(set, -lb) )
+         return -SCIPsetInfinity(set);
+      else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+         return SCIPsetFeasCeil(set, lb);
+      else if( SCIPsetIsZero(set, lb) )
+         return 0.0;
+      else
+         return lb;
+   }
 }
 
 /** returns adjusted upper bound value, which is rounded for integral variable types */
@@ -1326,14 +1354,26 @@ SCIP_Real adjustedUb(
    SCIP_Real             ub                  /**< upper bound to adjust */
    )
 {
-   if( SCIPsetIsInfinity(set, ub) )
-      return SCIPsetInfinity(set);
-   else if( vartype != SCIP_VARTYPE_CONTINUOUS )
-      return SCIPsetFeasFloor(set, ub);
-   else if( SCIPsetIsZero(set, ub) )
-      return 0.0;
+   if( set->misc_exactsolve )
+   {
+      if( SCIPsetIsInfinity(set, ub) )
+         return SCIPsetInfinity(set);
+      else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+         return SCIPsetFeasFloor(set, ub);
+      else if( SCIPsetIsZero(set, ub) )
+         return 0.0;
+      else
+         return ub;
+   }
    else
-      return ub;
+   {
+      if( SCIPsetIsInfinity(set, ub) )
+         return SCIPsetInfinity(set);
+      else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+         return floor(ub);
+      else
+         return ub;
+   }
 }
 
 /* removes (redundant) implications and variable bounds of variable from all other variables' implications and variable
@@ -4750,7 +4790,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    assert(set != NULL);
    assert(stat != NULL);
 
-   SCIPdebugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound);
+   SCIPdebugMessage("process changing global upper bound of <%s> from %f to %f\n", var->name, var->glbdom.ub, newbound); 
    
    if( SCIPsetIsEQ(set, newbound, var->glbdom.ub) )
       return SCIP_OKAY;
@@ -4896,7 +4936,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
 
    SCIPdebugMessage("changing global lower bound of <%s> from %g to %g\n", var->name, var->glbdom.lb, newbound);
 
-   if( SCIPsetIsZero(set, newbound) )
+   if( !set->misc_exactsolve && SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
 
    if( SCIPsetIsEQ(set, var->glbdom.lb, newbound) )
@@ -5017,7 +5057,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
 
    SCIPdebugMessage("changing global upper bound of <%s> from %g to %g\n", var->name, var->glbdom.ub, newbound);
 
-   if( SCIPsetIsZero(set, newbound) )
+   if( !set->misc_exactsolve && SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
 
    if( SCIPsetIsEQ(set, var->glbdom.ub, newbound) )
@@ -5470,7 +5510,7 @@ SCIP_RETCODE SCIPvarChgLbLocal(
 
    SCIPdebugMessage("changing lower bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsZero(set, newbound) )
+   if( !set->misc_exactsolve && SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
 
    if( SCIPsetIsEQ(set, var->locdom.lb, newbound) )
@@ -5586,7 +5626,7 @@ SCIP_RETCODE SCIPvarChgUbLocal(
 
    SCIPdebugMessage("changing upper bound of <%s>[%g,%g] to %g\n", var->name, var->locdom.lb, var->locdom.ub, newbound);
 
-   if( SCIPsetIsZero(set, newbound) )
+   if( !set->misc_exactsolve && SCIPsetIsZero(set, newbound) )
       newbound = 0.0;
    
    if( SCIPsetIsEQ(set, var->locdom.ub, newbound) )
@@ -10784,21 +10824,27 @@ int SCIPvarGetConflictingBdchgDepth(
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
    {
       /* check if the bound is in conflict with the current local bounds */
-      if( SCIPsetIsLE(set, bound, var->locdom.ub) )
+      if( (!set->misc_exactsolve && SCIPsetIsLE(set, bound, var->locdom.ub))
+         || (set->misc_exactsolve && bound <= var->locdom.ub) )
          return -1;
 
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nubchginfos > 0);
-      assert(SCIPsetIsGT(set, bound, var->ubchginfos[var->nubchginfos-1].newbound));
+      assert((!set->misc_exactsolve && SCIPsetIsGT(set, bound, var->ubchginfos[var->nubchginfos-1].newbound))
+         || (set->misc_exactsolve && bound > var->ubchginfos[var->nubchginfos-1].newbound));
 
       /* search for the first conflicting bound change */
-      for( i = var->nubchginfos-1; i > 0 && SCIPsetIsGT(set, bound, var->ubchginfos[i-1].newbound); --i )
+      for( i = var->nubchginfos-1; i > 0 && 
+              ((!set->misc_exactsolve && SCIPsetIsGT(set, bound, var->ubchginfos[i-1].newbound))
+                 || (set->misc_exactsolve && bound > var->ubchginfos[i-1].newbound)); --i )
       {
          assert(var->ubchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
          assert((SCIP_BOUNDTYPE)var->ubchginfos[i].boundtype == SCIP_BOUNDTYPE_UPPER);
       }
-      assert(SCIPsetIsGT(set, bound, var->ubchginfos[i].newbound));             /* bound change i is conflicting */
-      assert(i == 0 || SCIPsetIsLE(set, bound, var->ubchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
+      assert((!set->misc_exactsolve && SCIPsetIsGT(set, bound, var->ubchginfos[i].newbound))
+         || (set->misc_exactsolve && bound > var->ubchginfos[i].newbound)); /* bound change i is conflicting */
+      assert(i == 0 || (!set->misc_exactsolve && SCIPsetIsLE(set, bound, var->ubchginfos[i-1].newbound))
+         || (set->misc_exactsolve && bound <= var->ubchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
 
       /* return the depth at which the first conflicting bound change took place */
       return var->ubchginfos[i].bdchgidx.depth;
@@ -10808,21 +10854,27 @@ int SCIPvarGetConflictingBdchgDepth(
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
 
       /* check if the bound is in conflict with the current local bounds */
-      if( SCIPsetIsGE(set, bound, var->locdom.lb) )
+      if( (!set->misc_exactsolve && SCIPsetIsGE(set, bound, var->locdom.lb))
+         || (set->misc_exactsolve && bound >= var->locdom.lb) )
          return -1;
 
       /* local bounds are in conflict with the given bound -> there must be at least one conflicting change! */
       assert(var->nlbchginfos > 0);
-      assert(SCIPsetIsLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound));
+      assert((!set->misc_exactsolve && SCIPsetIsLT(set, bound, var->lbchginfos[var->nlbchginfos-1].newbound))
+         || (set->misc_exactsolve && bound < var->lbchginfos[var->nlbchginfos-1].newbound));
 
       /* search for the first conflicting bound change */
-      for( i = var->nlbchginfos-1; i > 0 && SCIPsetIsLT(set, bound, var->lbchginfos[i-1].newbound); --i )
+      for( i = var->nlbchginfos-1; i > 0 && 
+              ((!set->misc_exactsolve && SCIPsetIsLT(set, bound, var->lbchginfos[i-1].newbound))
+                 || (set->misc_exactsolve && bound < var->lbchginfos[i-1].newbound)); --i )
       {
          assert(var->lbchginfos[i].var == var); /* perform sanity check on the search for the first conflicting bound */
          assert((SCIP_BOUNDTYPE)var->lbchginfos[i].boundtype == SCIP_BOUNDTYPE_LOWER);
       }
-      assert(SCIPsetIsLT(set, bound, var->lbchginfos[i].newbound));             /* bound change i is conflicting */
-      assert(i == 0 || SCIPsetIsGE(set, bound, var->lbchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
+      assert((!set->misc_exactsolve && SCIPsetIsLT(set, bound, var->lbchginfos[i].newbound))
+         || (set->misc_exactsolve && bound < var->lbchginfos[i].newbound));             /* bound change i is conflicting */
+      assert(i == 0 || (!set->misc_exactsolve && SCIPsetIsGE(set, bound, var->lbchginfos[i-1].newbound))
+         || (set->misc_exactsolve && bound >= var->lbchginfos[i-1].newbound)); /* bound change i-1 is not conflicting */
 
       /* return the depth at which the first conflicting bound change took place */
       return var->lbchginfos[i].bdchgidx.depth;

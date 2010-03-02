@@ -12,8 +12,9 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.6 2009/08/12 09:27:15 bzfwolte Exp $"
-//#define SCIP_DEBUG2 /*?????????????????*/
+#pragma ident "@(#) $Id: lpiex_qsoex.c,v 1.1.2.7 2010/03/02 17:20:51 bzfwolte Exp $"
+//#define SCIP_DEBUG /*?????????????????*/
+
 /**@file   lpiex_qsoex.c
  * @brief  LP interface for QSopt_ex version >= 2.5.4 (r239)
  * @author Daniel Espinoza
@@ -727,6 +728,7 @@ SCIP_RETCODE SCIPlpiexAddRows(
    char**                rownames,           /**< row names, or NULL */
    int                   nnonz,              /**< number of nonzero elements to be added to the constraint matrix */
    const int*            beg,                /**< start index of each row in ind- and val-array, or NULL if nnonz == 0 */
+   const int*            len,                /**< number of nonzeros of each row in ind- and val-array, or NULL if only nonzeros */
    const int*            ind,                /**< column indices of constraint matrix entries, or NULL if nnonz == 0 */
    const mpq_t*          val                 /**< values of constraint matrix entries, or NULL if nnonz == 0 */
    )
@@ -747,15 +749,23 @@ SCIP_RETCODE SCIPlpiexAddRows(
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs) );
 
    /* compute row count */
-   for (i = 0 ; i < nrows -1 ; i++)
+   if( len != NULL )
    {
-      lpi->ircnt[i] = beg[i+1] - beg[i];
-      assert( lpi->ircnt[i] >= 0 );
+      for( i = 0; i < nrows; i++ )
+         lpi->ircnt[i] = len[i];
    }
-   if ( nrows > 0 )
+   else
    {
-      lpi->ircnt[nrows-1] = nnonz - beg[nrows-1];
-      assert( lpi->ircnt[nrows-1] >= 0 );
+      for( i = 0; i < nrows-1; i++ )
+      {
+         lpi->ircnt[i] = beg[i+1] - beg[i];
+         assert(lpi->ircnt[i] >= 0);
+      }
+      if( nrows > 0 )
+      {
+         lpi->ircnt[nrows-1] = nnonz - beg[nrows-1];
+         assert(lpi->ircnt[nrows-1] >= 0);
+      }
    }
 
    /* now we add the rows */

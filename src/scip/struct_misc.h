@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_misc.h,v 1.17.2.1 2009/06/19 07:53:52 bzfwolte Exp $"
+#pragma ident "@(#) $Id: struct_misc.h,v 1.17.2.2 2010/03/02 17:20:52 bzfwolte Exp $"
 
 /**@file   struct_misc.h
  * @brief  miscellaneous datastructures
@@ -128,5 +128,15 @@ struct SCIP_PtrArray
    int                   maxusedidx;         /**< index of last non zero element in vals array */
 };
 
+/** dynamic array for storing mpq_t values */
+struct SCIP_MpqArray
+{
+   BMS_BLKMEM*           blkmem;             /**< block memory that stores the vals array */
+   mpq_t*                vals;               /**< array values */
+   int                   valssize;           /**< size of vals array */
+   int                   firstidx;           /**< index of first element in vals array */
+   int                   minusedidx;         /**< index of first non zero element in vals array */
+   int                   maxusedidx;         /**< index of last non zero element in vals array */
+};
 
 #endif

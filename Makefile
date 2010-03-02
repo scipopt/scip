@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.230.2.5 2009/08/12 15:58:37 bzfwolte Exp $
+# $Id: Makefile,v 1.230.2.6 2010/03/02 17:20:50 bzfwolte Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -476,6 +476,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/pricestore.o \
 			scip/pricer.o \
 			scip/primal.o \
+			scip/primalex.o \
 			scip/prob.o \
 			scip/prop.o \
 			scip/reader.o \
@@ -488,6 +489,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/sepastore.o \
 			scip/set.o \
 			scip/sol.o \
+			scip/solex.o \
 			scip/solve.o \
 			scip/stat.o \
 			scip/tree.o \

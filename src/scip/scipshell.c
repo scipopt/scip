@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.7.2.1 2009/06/19 07:53:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.7.2.2 2010/03/02 17:20:52 bzfwolte Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -136,9 +136,30 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "=============\n\n");
    SCIP_CALL( SCIPsolve(scip) );
 
+#ifdef EXACTSOLVE
+   if( SCIPisExactSolve(scip) )
+   {
+      SCIP_CONS** conss;
+
+      conss = SCIPgetConss(scip);
+      assert(conss != NULL);
+
+      SCIPinfoMessage(scip, NULL, "\nexact primal solution:\n");
+      SCIPinfoMessage(scip, NULL, "================\n\n");
+      SCIP_CALL( SCIPprintBestSolex(scip, conss[0], NULL, FALSE) );
+   }
+   else
+   {
+      SCIPinfoMessage(scip, NULL, "\nprimal solution:\n");
+      SCIPinfoMessage(scip, NULL, "================\n\n");
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+   }
+#else
+   assert(!SCIPisExactSolve(scip));
    SCIPinfoMessage(scip, NULL, "\nprimal solution:\n");
    SCIPinfoMessage(scip, NULL, "================\n\n");
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+#endif
 
 
    /**************

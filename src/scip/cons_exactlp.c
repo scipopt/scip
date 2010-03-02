@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.7 2009/08/12 09:27:14 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.8 2010/03/02 17:20:50 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -21,6 +21,8 @@
 //#define EXLPSOLVER_OUT /* only for debugging ???????????????? */
 //#define DETAILED_DEBUG /* only for debugging ???????????????? */
 //#define PS_OUT /* only for debugging ???????????????? */
+//#define READER_OUT /* only for debugging ???????????????? */
+//#define PRESOL_OUT /* only for debugging ?????????? */
 
 /**@file   cons_exactlp.c
  * @ingroup CONSHDLRS 
@@ -38,9 +40,12 @@
 
 #include "scip/cons_exactlp.h"
 #include "scip/struct_lp.h" /* only for debugging ??????????*/
-#include "scip/struct_scip.h" /* only for debugging ??????????*/
+#include "scip/struct_scip.h" 
+#include "scip/solex.h" 
+#include "scip/primalex.h" 
 #include "EGlib.h" 
 #include "QSopt_ex.h" 
+#include "scip/misc.h" 
 
 
 /* constraint handler properties */
@@ -78,35 +83,47 @@ struct SCIP_ConshdlrData
    SCIP_LPIEX*           lpiex;              /**< Exact LP solver interface */
    SCIP_Bool             lpexconstructed;    /**< was the exact LP of some prior node already constructed (constraints)? */
    SCIP_NODE*            lastenfopsnode;     /**< last node at which enfops was called */ 
-   mpq_t                 pseudoobjval;       /**< current pseudo solution value with all variables set to their best bounds,
-                                              *   ignoring variables, with infinite best bound */
-   int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in current pseudo solution */
+   mpq_t                 pseudoobjval;       /**< pseudo solution value at node where all unprocessed bound changes were
+                                              *   applied last with all variables set to their best bounds, ignoring 
+                                              *   variables with infinite best bound */
+   int                   pseudoobjvalinf;    /**< number of variables with infinite best bound in pseudo solution at node 
+                                              *   where all unprocessed bound changes were applied last */
    SCIP_LPIEX*           psfactor;           /**< stores factorized matrix for project and scale */
    mpq_t*                interiorpt;         /**< stores relative interior point for root node dual problem */
    int*                  impliedeq;          /**< 1 if constraints dual variable is always zero, 0 otherwise */
    int                   psdim;              /**< dimension of interior point */
    mpq_t                 commonslack;        /**< slack by which interior point satisfies all dual inequalities */
+   SCIP_PRIMALEX*        primal;             /**< exact primal data and solution storage */
 };
 
 /** constraint data for exactlp constraints */
 struct SCIP_ConsData
 {
    SCIP_OBJSEN           objsense;           /**< objective sense */
+   mpq_t                 objoffset;          /**< objective offset from bound shifting and fixing (fixed vars result) */
+   mpq_t                 objscale;           /**< scalar applied to objective function; external objective value is
+                                              *   extobj = objsense * objscale * (intobj + objoffset) */
    int                   nvars;              /**< number of variables */
    mpq_t*                obj;                /**< objective function values of variables */
+   SCIP_Bool             objneedscaling;     /**< do objective function values need to be scaled because some are not FP representable? */
    mpq_t*                lb;                 /**< lower bounds of variables */
    mpq_t*                ub;                 /**< upper bounds of variables */
-   mpq_t*                lbloc;              /**< local lower bounds of variables */
-   mpq_t*                ubloc;              /**< local upper bounds of variables */
+   mpq_t*                lbloc;              /**< local lower bounds of variables at node where all unprocessed 
+                                              *   bound changes were applied last */
+   mpq_t*                ubloc;              /**< local upper bounds of variables when exact LP was last updated */
    int*                  bndchglbpos;        /**< positions of variables in unprocessed lower bound change arrays, or -1 */
    int*                  bndchgubpos;        /**< positions of variables in unprocessed upper bound change arrays, or -1 */
-   int                   nconss;             /**< number of constraints */
+   int*                  lockdown;           /**< rounding down locks of variables */
+   int*                  lockup;             /**< rounding up locks of variables */
+   int                   nconss;             /**< number of constraints in exactlp data structure */
+   int                   conssize;           /**< size of constraint specific array in exactlp data structure */
    mpq_t*                lhs;                /**< left hand sides of constraints */
    mpq_t*                rhs;                /**< right hand sides of constraints */
-   int                   nnonz;              /**< number of nonzero elements in the constraint matrix */
-   int*                  beg;                /**< start index of each constraint in ind- and val-array */
-   int*                  ind;                /**< indices of variables (probindex) corresponding to nonzero matrix entries */
-   mpq_t*                val;                /**< values of nonzero constraint matrix entries */
+   int                   nnonz;              /**< number of nonzero lements in the constraint matrix */
+   int*                  beg;                /**< start index of each constraint in ind and val array */
+   int*                  len;                /**< number of nonzeros in val array corresponding to constraint */
+   int*                  ind;                /**< variable indices (var->probindex) of constraint matrix entries */
+   mpq_t*                val;                /**< values of nonzero constraint matrix entries (and some zeros) */
    SCIP_ROW**            rows;               /**< rows for LP relaxation/approximation (FP data) of exactlp constraint */
    SCIP_EVENTDATA**      eventdatas;         /**< event datas for bound change events of the variables */
    int                   nbndchglb;          /**< number of variables with unprocessed lower bound changes */
@@ -132,6 +149,11 @@ struct SCIP_EventData
  * Local methods
  */
 
+
+/*
+ * local methods for consistency checks
+ */
+
 /* just for debugging ????????????? */
 #ifdef DETAILED_DEBUG /* just for debugging ?????????? */
 static
@@ -148,27 +170,6 @@ void checkOrigVars(
    {
       assert(SCIPvarIsOriginal(origvars[i]));
    }
-}
-
-static
-SCIP_RETCODE printCurrentLP(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_ROW** rows;
-   int nrows;
-   int i;
-
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-   
-   SCIPdebugMessage("current inexact LP rows:\n");
-
-   for( i = 0; i < nrows; ++i )
-   {
-      SCIP_CALL( SCIPprintRow(scip, rows[i], NULL) );
-   }
-
-   return SCIP_OKAY;
 }
 
 static
@@ -291,7 +292,7 @@ static
 void checkPseudoobjval(
    SCIP*                 scip,              /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,      /**< exactlp constraint handler data */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata           /**< constraint data */
    )
 {
       mpq_t pseudoobjval;
@@ -338,6 +339,11 @@ void checkPseudoobjval(
       mpq_clear(prod);
 }
 #endif
+
+
+/*
+ * local methods for working with rational numbers
+ */
 
 /** returns value treated as negative infinite in exactlp constraint handler */
 const mpq_t* negInfinity(
@@ -492,98 +498,39 @@ SCIP_Real mpqGetRealApprox(
    return valapprox;
 }
 
-/** creates constaint handler data for exactlp constraint handler */
+/** returns rational number rounded down */
 static
-SCIP_RETCODE conshdlrdataCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
-   )
+void mpqFloor(
+   mpq_t                 floorval,           /**< pointer to store rational number rounded down */
+   mpq_t                 val                 /**< given rational number */
+)
 {
-   assert(conshdlrdata != NULL);
+   mpz_t floorint;
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
-
-   QSexactStart(); /* todo: find a good way/place to call this method ?????????????? */
-
-   /* open exact LP Solver interface */
-   SCIP_CALL( SCIPlpiexCreate(&(*conshdlrdata)->lpiex, NULL, SCIP_OBJSEN_MINIMIZE) );
-
-   /* open exact LP Solver interface for factorization */
-   SCIP_CALL( SCIPlpiexCreate(&(*conshdlrdata)->psfactor, NULL, SCIP_OBJSEN_MINIMIZE) );
-   (*conshdlrdata)->psdim = 0;
-   mpq_init((*conshdlrdata)->commonslack);
-
-   
-   mpq_init((*conshdlrdata)->posinfinity);
-   mpq_init((*conshdlrdata)->neginfinity);
-
-   mpq_set((*conshdlrdata)->posinfinity, *SCIPlpiexPosInfinity((*conshdlrdata)->lpiex));
-   mpq_set((*conshdlrdata)->neginfinity, *SCIPlpiexNegInfinity((*conshdlrdata)->lpiex));
-
-   (*conshdlrdata)->lpexconstructed = FALSE;
-   (*conshdlrdata)->lastenfopsnode = NULL;
-
-   mpq_init((*conshdlrdata)->pseudoobjval);
-   mpq_set_d((*conshdlrdata)->pseudoobjval, 0.0);
-   (*conshdlrdata)->pseudoobjvalinf = 0;
-
-   (*conshdlrdata)->interiorpt = NULL;
-   (*conshdlrdata)->impliedeq = NULL;
-
-   /* get event handler for updating bounds of variables in the exact LP */
-   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   if( (*conshdlrdata)->eventhdlr == NULL )
-   {
-      SCIPerrorMessage("event handler for exactlp constraints not found\n");
-      return SCIP_PLUGINNOTFOUND;
-   }
-
-   return SCIP_OKAY;
+   mpz_init(floorint);
+   mpz_fdiv_q(floorint, mpq_numref(val), mpq_denref(val));
+   mpq_set_z(floorval, floorint);
+   mpz_clear(floorint);
 }
 
-/** frees constraint handler data for linear constraint handler */
+/** returns rational number rounded up */
 static
-SCIP_RETCODE conshdlrdataFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
-   )
+void mpqCeil(
+   mpq_t                 ceilval,             /**< pointer to store rational number rounded up */
+   mpq_t                 val                  /**< given rational number */
+)
 {
-   int i;
+   mpz_t ceilint;
 
-   assert(conshdlrdata != NULL);
-   assert(*conshdlrdata != NULL);
-
-   if( (*conshdlrdata)->psdim > 0 )
-   {
-      for(i=0;i< (*conshdlrdata)->psdim;i++)
-         mpq_clear((*conshdlrdata)->interiorpt[i]);
-      SCIPfreeBlockMemory(scip,(*conshdlrdata)->interiorpt);
-      SCIPfreeBlockMemory(scip,&(*conshdlrdata)->impliedeq);
-   }
-
-   if( (*conshdlrdata)->psfactor != NULL )
-   {
-      SCIP_CALL( SCIPlpiexFree(&(*conshdlrdata)->psfactor) );
-   }
-   assert((*conshdlrdata)->psfactor == NULL);
-
-   if( (*conshdlrdata)->lpiex != NULL )
-   {
-      SCIP_CALL( SCIPlpiexFree(&(*conshdlrdata)->lpiex) );
-   }
-   assert((*conshdlrdata)->lpiex == NULL);
-
-   mpq_clear((*conshdlrdata)->pseudoobjval);
-   mpq_clear((*conshdlrdata)->commonslack);
-   mpq_clear((*conshdlrdata)->posinfinity);
-   mpq_clear((*conshdlrdata)->neginfinity);
-
-   SCIPfreeMemory(scip, conshdlrdata);
-
-   QSexactClear();/* todo: find a good way/place to call this method ?????????????? */
-
-   return SCIP_OKAY;
+   mpz_init(ceilint);
+   mpz_cdiv_q(ceilint, mpq_numref(val), mpq_denref(val));
+   mpq_set_z(ceilval, ceilint);
+   mpz_clear(ceilint);
 }
+
+/*
+ * local methods for managing event data
+ */
 
 /** creates event data */
 static
@@ -707,6 +654,106 @@ SCIP_RETCODE dropEvents(
    return SCIP_OKAY;
 }
 
+
+/*
+ * local methods for managing constraint handler data and constraint data 
+ */
+
+/** creates constaint handler data for exactlp constraint handler */
+static
+SCIP_RETCODE conshdlrdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
+   )
+{
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+
+   QSexactStart(); /* todo: find a good way/place to call this method ?????????????? */
+
+   /* open exact LP Solver interface */
+   SCIP_CALL( SCIPlpiexCreate(&(*conshdlrdata)->lpiex, NULL, SCIP_OBJSEN_MINIMIZE) );
+
+   /* open exact LP Solver interface for factorization */
+   SCIP_CALL( SCIPlpiexCreate(&(*conshdlrdata)->psfactor, NULL, SCIP_OBJSEN_MINIMIZE) );
+   (*conshdlrdata)->psdim = 0;
+   mpq_init((*conshdlrdata)->commonslack);
+
+   
+   mpq_init((*conshdlrdata)->posinfinity);
+   mpq_init((*conshdlrdata)->neginfinity);
+
+   mpq_set((*conshdlrdata)->posinfinity, *SCIPlpiexPosInfinity((*conshdlrdata)->lpiex));
+   mpq_set((*conshdlrdata)->neginfinity, *SCIPlpiexNegInfinity((*conshdlrdata)->lpiex));
+
+   (*conshdlrdata)->lpexconstructed = FALSE;
+   (*conshdlrdata)->lastenfopsnode = NULL;
+
+   mpq_init((*conshdlrdata)->pseudoobjval);
+   mpq_set_d((*conshdlrdata)->pseudoobjval, 0.0);
+   (*conshdlrdata)->pseudoobjvalinf = 0;
+
+   (*conshdlrdata)->interiorpt = NULL;
+   (*conshdlrdata)->impliedeq = NULL;
+
+   /* get event handler for updating bounds of variables in the exact LP */
+   (*conshdlrdata)->eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   if( (*conshdlrdata)->eventhdlr == NULL )
+   {
+      SCIPerrorMessage("event handler for exactlp constraints not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   (*conshdlrdata)->primal = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** frees constraint handler data for exactlp constraint handler */
+static
+SCIP_RETCODE conshdlrdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to the constraint handler data */
+   )
+{
+   int i;
+
+   assert(conshdlrdata != NULL);
+   assert(*conshdlrdata != NULL);
+
+   if( (*conshdlrdata)->psdim > 0 )
+   {
+      for(i=0;i< (*conshdlrdata)->psdim;i++)
+         mpq_clear((*conshdlrdata)->interiorpt[i]);
+      SCIPfreeBlockMemory(scip,(*conshdlrdata)->interiorpt);
+      SCIPfreeBlockMemory(scip,&(*conshdlrdata)->impliedeq);
+   }
+
+   if( (*conshdlrdata)->psfactor != NULL )
+   {
+      SCIP_CALL( SCIPlpiexFree(&(*conshdlrdata)->psfactor) );
+   }
+   assert((*conshdlrdata)->psfactor == NULL);
+
+   if( (*conshdlrdata)->lpiex != NULL )
+   {
+      SCIP_CALL( SCIPlpiexFree(&(*conshdlrdata)->lpiex) );
+   }
+   assert((*conshdlrdata)->lpiex == NULL);
+
+   mpq_clear((*conshdlrdata)->pseudoobjval);
+   mpq_clear((*conshdlrdata)->commonslack);
+   mpq_clear((*conshdlrdata)->posinfinity);
+   mpq_clear((*conshdlrdata)->neginfinity);
+
+   SCIPfreeMemory(scip, conshdlrdata);
+
+   QSexactClear();/* todo: find a good way/place to call this method ?????????????? */
+
+   return SCIP_OKAY;
+}
+
 /** gets number of LP rows needed for the LP relaxation of the exactlp constraint */
 static
 int consdataGetNRows(
@@ -729,13 +776,16 @@ SCIP_RETCODE consdataCreate(
    mpq_t*                obj,                /**< objective function values of variables */
    mpq_t*                lb,                 /**< lower bounds of variables */
    mpq_t*                ub,                 /**< upper bounds of variables */
-   int                   nconss,              /**< number of constraints */
+   int                   nconss,             /**< number of constraints in exactlp data structure */
+   int                   conssize,           /**< size of constraint specific array in exactlp data structure */
    mpq_t*                lhs,                /**< left hand sides of constraints */
    mpq_t*                rhs,                /**< right hand sides of constraints */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
-   int*                  beg,                /**< start index of each variable in ind- and val-array */
+   int*                  beg,                /**< start index of each constraint in ind and val array */
+   int*                  len,                /**< number of nonzeros in val array corresponding to constraint */
    int*                  ind,                /**< variable indices (var->probindex) of constraint matrix entries */
-   mpq_t*                val                 /**< values of nonzero constraint matrix entries */
+   mpq_t*                val,                /**< values of nonzero constraint matrix entries (and some zeros) */
+   SCIP_Bool             objneedscaling      /**< do objective function values need to be scaled because some are not FP representable? */
    )
 {
    int j;
@@ -744,6 +794,7 @@ SCIP_RETCODE consdataCreate(
    assert(nvars > 0 || (nconss == 0 && nconss == 0) );
    assert(nconss > 0 || (nvars >= 0 && nnonz == 0) );
    assert(nnonz > 0 || (nconss >= 0 && nvars >= 0) );
+   assert(nconss <= conssize);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, consdata) );
    
@@ -756,6 +807,8 @@ SCIP_RETCODE consdataCreate(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->ub, nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->lbloc, nvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->ubloc, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->lockdown, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->lockup, nvars) );
 
       for( j = 0; j < nvars; ++j )
       {
@@ -771,6 +824,8 @@ SCIP_RETCODE consdataCreate(
          mpq_set((*consdata)->lbloc[j], lb[j]);
          mpq_set((*consdata)->ubloc[j], ub[j]);
       }
+      BMSclearMemoryArray((*consdata)->lockdown, nvars);
+      BMSclearMemoryArray((*consdata)->lockup, nvars);
    }
    else
    {
@@ -779,25 +834,31 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->ub = NULL;
       (*consdata)->lbloc = NULL;
       (*consdata)->ubloc = NULL;
+      (*consdata)->lockdown = NULL;
+      (*consdata)->lockup = NULL;
    }
    
    /* store constraint specific information */ 
-   if( nconss > 0 )
+   if( conssize > 0 )
    {
       /* allocate and copy integer array */
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->beg, beg, nconss+1) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->beg, beg, conssize + 1) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->len, len, conssize) );
 
       /* allocate, initialize, and copy rational arrays */
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->lhs, nconss) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->rhs, nconss) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->lhs, conssize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*consdata)->rhs, conssize) );
 
-      for( j = 0; j < nconss; ++j )
+      for( j = 0; j < conssize; ++j )
       {
          mpq_init((*consdata)->lhs[j]);
          mpq_init((*consdata)->rhs[j]);
 
-         mpq_set((*consdata)->lhs[j], lhs[j]);
-         mpq_set((*consdata)->rhs[j], rhs[j]);
+         if( j < nconss )
+         {
+            mpq_set((*consdata)->lhs[j], lhs[j]);
+            mpq_set((*consdata)->rhs[j], rhs[j]);
+         }
       }
    }
    else
@@ -805,6 +866,7 @@ SCIP_RETCODE consdataCreate(
       (*consdata)->lhs = NULL;
       (*consdata)->rhs = NULL;
       (*consdata)->beg = NULL;
+      (*consdata)->len = NULL;
    }
 
    /* store matrix specific information */ 
@@ -830,13 +892,19 @@ SCIP_RETCODE consdataCreate(
    }
 
    (*consdata)->objsense = objsense;
+   mpq_init((*consdata)->objscale);
+   mpq_set_d((*consdata)->objscale, 1.0);
+   mpq_init((*consdata)->objoffset);
+   mpq_set_d((*consdata)->objoffset, 0.0);
    (*consdata)->nvars = nvars;
    (*consdata)->nconss = nconss;
+   (*consdata)->conssize = conssize;
    (*consdata)->nnonz = nnonz;
    (*consdata)->rows = NULL;
    (*consdata)->eventdatas = NULL;
    (*consdata)->nbndchglb = 0;
    (*consdata)->nbndchgub = 0;
+   (*consdata)->objneedscaling = objneedscaling;
 
    /* catch events for variables, if we are in the transformed problem */
    if( SCIPisTransformed(scip) )
@@ -916,8 +984,8 @@ SCIP_RETCODE consdataFree(
 
       for( j = 0; j < (*consdata)->nvars; ++j )
       {
-         mpq_init((*consdata)->bndchglb[j]);
-         mpq_init((*consdata)->bndchgub[j]);
+         mpq_clear((*consdata)->bndchglb[j]);
+         mpq_clear((*consdata)->bndchgub[j]);
       }
 
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->bndchgubind, (*consdata)->nvars);
@@ -929,6 +997,9 @@ SCIP_RETCODE consdataFree(
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->bndchglbpos, (*consdata)->nvars);
    }
 
+   mpq_clear((*consdata)->objoffset);
+   mpq_clear((*consdata)->objscale);
+
    /* free matrix specific information */ 
    for( j = 0; j < (*consdata)->nnonz; ++j )
    {
@@ -938,14 +1009,15 @@ SCIP_RETCODE consdataFree(
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->ind, (*consdata)->nnonz);
 
    /* free constraint specific information */ 
-   for( j = 0; j < (*consdata)->nconss; ++j )
+   for( j = 0; j < (*consdata)->conssize; ++j )
    {
       mpq_clear((*consdata)->rhs[j]);
       mpq_clear((*consdata)->lhs[j]);
    }
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->rhs, (*consdata)->nconss);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->lhs, (*consdata)->nconss);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->beg, (*consdata)->nconss+1);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->rhs, (*consdata)->conssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->lhs, (*consdata)->conssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->len, (*consdata)->conssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->beg, (*consdata)->conssize+1);
 
    /* free variable specific information */ 
    for( j = 0; j < (*consdata)->nvars; ++j )
@@ -956,6 +1028,8 @@ SCIP_RETCODE consdataFree(
       mpq_clear((*consdata)->lbloc[j]);
       mpq_clear((*consdata)->ubloc[j]);
    }
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->lockup, (*consdata)->nvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->lockdown, (*consdata)->nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->ubloc, (*consdata)->nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->lbloc, (*consdata)->nvars);
    SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->ub, (*consdata)->nvars);
@@ -967,20 +1041,20 @@ SCIP_RETCODE consdataFree(
  
    return SCIP_OKAY;
 }
-
+ 
 /** print single constraint of exactlp constraint in CIP format to file stream */
 static
 void printSingleCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
    FILE*                 file,               /**< output file (or NULL for standard output) */
    SCIP_VAR**            vars,               /**< problem variables */
-   int                   i                   /**< index of constraint in exactlp datas tructures */    
+   int                   i                   /**< index of constraint in exactlp data structures */    
    )
 {
    char s[SCIP_MAXSTRLEN];
-      int v;
+   int v;
 
    assert(i >= 0 && i < consdata->nconss);
 
@@ -994,11 +1068,11 @@ void printSingleCons(
    }
    
    /* print coefficients and variables */
-   if( consdata->beg[i] == consdata->beg[i+1] )
+   if( consdata->len[i] == 0 )
       SCIPinfoMessage(scip, file, "0 ");
    else
    {
-      for( v = consdata->beg[i]; v < consdata->beg[i+1]; v++ )
+      for( v = consdata->beg[i]; v < consdata->beg[i] + consdata->len[i]; v++ )
       {
          assert(consdata->ind[v] >= 0 && consdata->ind[v] < consdata->nvars);
          assert(SCIPvarGetProbindex(vars[consdata->ind[v]]) == consdata->ind[v]);
@@ -1028,17 +1102,65 @@ void printSingleCons(
       SCIPinfoMessage(scip, file, " [free]\n");
 }
 
+
+/** print variable of exactlp constraint to file stream */
+static
+void printVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_VAR*             var                 /**< problem variable to be printed */
+   )
+{
+   char s[SCIP_MAXSTRLEN];
+   int i;
+
+   i = SCIPvarGetProbindex(var);
+
+   /* name */
+   SCIPmessageFPrintInfo(file, "<%s>:", SCIPvarGetName(var));
+   
+   /* objective value */
+   gmp_snprintf(s, SCIP_MAXSTRLEN, " obj=%Qd", consdata->obj[i]);
+   SCIPinfoMessage(scip, file, s);
+
+   /* bounds (global bounds for transformed variables, original bounds for original variables) */
+   SCIPmessageFPrintInfo(file, ", bounds=");
+
+   if( isPosInfinity(conshdlrdata, consdata->lb[i]) )
+      SCIPmessageFPrintInfo(file, "[+inf,");
+   else if( isNegInfinity(conshdlrdata, consdata->lb[i]) )
+      SCIPmessageFPrintInfo(file, "[-inf,");
+   else
+   {
+      gmp_snprintf(s, SCIP_MAXSTRLEN, "[%Qd,", consdata->lb[i]);
+      SCIPinfoMessage(scip, file, s);
+   }
+
+   if( isPosInfinity(conshdlrdata, consdata->ub[i]) )
+      SCIPmessageFPrintInfo(file, "+inf]");
+   else if( isNegInfinity(conshdlrdata, consdata->ub[i]) )
+      SCIPmessageFPrintInfo(file, "-inf]");
+   else
+   {
+      gmp_snprintf(s, SCIP_MAXSTRLEN, "%Qd]", consdata->ub[i]);
+      SCIPinfoMessage(scip, file, s);
+   }
+
+   SCIPmessageFPrintInfo(file, "\n");
+}
+
 /** prints exactlp constraint in CIP format to file stream */
 static
 void consdataPrint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
    SCIP_VAR** vars;
-   char s[SCIP_MAXSTRLEN];
    int i;
 
    assert(conshdlrdata != NULL);
@@ -1062,37 +1184,8 @@ void consdataPrint(
       {
          assert(SCIPvarGetProbindex(vars[i]) == i);
 
-         /* name */
-         SCIPmessageFPrintInfo(file, "    <%s>:", SCIPvarGetName(vars[i]));
-         
-         /* objective value */
-         gmp_snprintf(s, SCIP_MAXSTRLEN, " obj=%Qd", consdata->obj[i]);
-         SCIPinfoMessage(scip, file, s);
-
-         /* bounds (global bounds for transformed variables, original bounds for original variables) */
-         SCIPmessageFPrintInfo(file, ", bounds=");
-
-         if( isPosInfinity(conshdlrdata, consdata->lb[i]) )
-            SCIPmessageFPrintInfo(file, "[+inf,");
-         else if( isNegInfinity(conshdlrdata, consdata->lb[i]) )
-            SCIPmessageFPrintInfo(file, "[-inf,");
-         else
-         {
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "[%Qd,", consdata->lb[i]);
-            SCIPinfoMessage(scip, file, s);
-         }
-
-         if( isPosInfinity(conshdlrdata, consdata->ub[i]) )
-            SCIPmessageFPrintInfo(file, "+inf]");
-         else if( isNegInfinity(conshdlrdata, consdata->ub[i]) )
-            SCIPmessageFPrintInfo(file, "-inf]");
-         else
-         {
-            gmp_snprintf(s, SCIP_MAXSTRLEN, "%Qd]", consdata->ub[i]);
-            SCIPinfoMessage(scip, file, s);
-         }
-
-         SCIPmessageFPrintInfo(file, "\n");
+         SCIPmessageFPrintInfo(file, "    ");
+         printVar(scip, conshdlrdata, consdata, file, vars[i]);
       }
    }
 
@@ -1116,9 +1209,10 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
    SCIP_CONS*            cons,               /**< exactlp constraint */
-   SCIP_SOL*             sol,                /**< solution to be checked */
+   SCIP_SOL*             sol,                /**< solution to be checked; or NULL */
+   SCIP_SOLEX*           solex,              /**< exact solution to be checked; or NULL */
    SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
-   SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
+   SCIP_Bool*            feasible            /**< pointer to store whether the constraint is feasible */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -1128,18 +1222,28 @@ SCIP_RETCODE checkCons(
    mpq_t solval;
    mpq_t prod;
    mpq_t violation;
+   int v;
    int c;
    int i;
 
-   assert(violated != NULL);
+   assert(feasible != NULL);
+   assert((sol != NULL && solex == NULL) || (sol == NULL && solex != NULL));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   
+   if( sol != NULL )
+   {
+      SCIPdebugMessage("checking exactlp constraint <%s> for feasibility of solution %p\n",
+         SCIPconsGetName(cons), (void*)sol);
+   }
+   else
+   {
+      SCIPdebugMessage("checking exactlp constraint <%s> for feasibility of exact solution %p\n",
+         SCIPconsGetName(cons), (void*)solex);
+   }
 
-   SCIPdebugMessage("checking exactlp constraint <%s> for feasibility of solution %p\n",
-      SCIPconsGetName(cons), (void*)sol);
-
-   *violated = FALSE;
+   *feasible = TRUE;
 
    /* increase age of constraint; age is reset to zero, if a violation was found */
    SCIP_CALL( SCIPincConsAge(scip, cons) );
@@ -1154,22 +1258,71 @@ SCIP_RETCODE checkCons(
    mpq_init(prod);
    mpq_init(violation);
    
-   /* check each linear constraint for exact feasibility */
-   for( c = 0; c < consdata->nconss && !(*violated); ++c )
+   /* check bounds of variables for exact feasibility */
+   for( v = 0; v < consdata->nvars && *feasible; ++v )
+   {
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+
+      if( sol != NULL )
+      {
+         /** @todo: ????????????
+          *  - This only works if presolving is disabled (solval may already be an approximation since 
+          *    solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
+          */
+         mpq_set_d(solval, SCIPgetSolVal(scip, sol, vars[v]));
+      }
+      else
+         SCIPsolexGetVal(solex, vars[v], solval);
+     
+      if( mpq_cmp(solval, consdata->ub[v]) > 0 || mpq_cmp(solval, consdata->lb[v]) < 0 )
+      { 
+         *feasible = FALSE;
+
+         if( printreason )
+         {
+            printVar(scip, conshdlrdata, consdata, NULL, vars[v]);
+            if( mpq_cmp(solval, consdata->ub[v]) > 0 )
+            {
+               /* upper bound of current variable is violated */
+               mpq_sub(violation, solval, consdata->ub[v]);
+               assert(mpq_sgn(violation) > 0);
+               gmp_snprintf(s, SCIP_MAXSTRLEN, "violation: upper bound is violated by %Qd\n", violation);
+            }
+            else
+            {
+               assert(mpq_cmp(solval, consdata->lb[v]) < 0);
+
+               /* lower bound of current variable is violated */
+               mpq_sub(violation, consdata->lb[v], solval);
+               assert(mpq_sgn(violation) > 0);
+               gmp_snprintf(s, SCIP_MAXSTRLEN, "violation: lower bound is violated by %Qd\n", violation);
+            }
+            SCIPinfoMessage(scip, NULL, s);
+         }
+      }
+   }
+
+   /* check each linear constraint of exactlp constraint for exact feasibility */
+   for( c = 0; c < consdata->nconss && *feasible; ++c )
    {
       mpq_set_d(activity, 0.0);
   
       /* calculate activity of current constraint */
-      for( i = consdata->beg[c]; i < consdata->beg[c+1]; ++i )
+      for( i = consdata->beg[c]; i < consdata->beg[c] + consdata->len[c]; ++i )
       {
          assert(consdata->ind[i] >= 0 && consdata->ind[i] < SCIPgetNVars(scip));
 
-         /** @todo: ????????????
-          *  - This only works if presolving is disabled (solval may already be an approximation since 
-          *    solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
-          */ 
-         mpq_set_d(solval, SCIPgetSolVal(scip, sol, vars[consdata->ind[i]]));
-         
+         if( sol != NULL )
+         {
+            /** @todo: ????????????
+             *  - This only works if presolving is disabled (solval may already be an approximation since 
+             *    solution values of aggregated variables are calculated in floating point arithmetic in SCIPgetSolVal()) 
+             */ 
+            mpq_set_d(solval, SCIPgetSolVal(scip, sol, vars[consdata->ind[i]]));
+         }
+         else
+            SCIPsolexGetVal(solex, vars[consdata->ind[i]], solval);
+        
          mpq_mul(prod, consdata->val[i], solval);
          mpq_add(activity, activity, prod);
       }
@@ -1177,7 +1330,7 @@ SCIP_RETCODE checkCons(
       /* current constraint is violated */
       if( mpq_cmp(activity, consdata->rhs[c]) > 0 || mpq_cmp(activity, consdata->lhs[c]) < 0 )
       { 
-         *violated = TRUE;
+         *feasible = FALSE;
 
          if( printreason )
          {
@@ -1212,6 +1365,83 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
+/** returns the exact external value of the given exact internal objective value */
+static
+void getExternObjvalex(
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   mpq_t                 objintern,          /**< exact internal objective value */
+   mpq_t                 objextern           /**< pointer to store exact external objective value */ 
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+   mpq_t objsense;
+
+   assert(cons != NULL);
+
+   /* get exactlp constraint handler */
+   conshdlr = SCIPconsGetHdlr(cons);
+
+   if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not of type exactlp\n");
+      SCIPABORT();
+   }
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* get constraint data */
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   mpq_init(objsense);
+   mpq_set_d(objsense, (SCIP_Real) consdata->objsense);
+
+   if( isPosInfinity(conshdlrdata, objintern) )
+      mpq_mul(objextern, objsense, posInfinity(conshdlrdata)); 
+   if( isNegInfinity(conshdlrdata, objintern) )
+      mpq_mul(objextern, objsense, negInfinity(conshdlrdata)); 
+   else
+   {
+      /* objextern = objsense * objscale * (objintern + objoffset) */
+      mpq_add(objextern, objintern, consdata->objoffset);
+      mpq_mul(objextern, consdata->objscale, objextern); 
+      mpq_mul(objextern, objsense, objextern); 
+   }
+
+   mpq_clear(objsense);
+}
+
+/*
+ * local methods for managing exact primal solutions
+ */
+
+/** gets current pseudo objective value */
+static
+const mpq_t* getPseudoObjval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata            /**< exactlp constraint data to process the bound change for */
+   )
+{
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->pseudoobjvalinf >= 0);
+   assert(conshdlrdata->lpexconstructed && consdata->nbndchgub == 0 && consdata->nbndchglb == 0);
+   
+   if( conshdlrdata->pseudoobjvalinf > 0 || SCIPignorePseudosol(scip) )
+      return negInfinity(conshdlrdata);
+   else
+      return (const mpq_t*) (&conshdlrdata->pseudoobjval);
+}
+
+
+/*
+ * local methods for managing the LP relaxation 
+ */
+
 /** creates LP rows corresponding to exactlp constraint */
 static 
 SCIP_RETCODE createRelaxation(
@@ -1226,10 +1456,10 @@ SCIP_RETCODE createRelaxation(
    SCIP_Real* rowvals; 
    SCIP_Real rowlhs;
    SCIP_Real rowrhs;
-   int nrowvars;
    
    char rowname[SCIP_MAXSTRLEN];
    int nrows;
+   int v;
    int c;
    int i;
 
@@ -1262,29 +1492,25 @@ SCIP_RETCODE createRelaxation(
       /* for each row of the exactlp constraint, create a row with FP data that defines a relaxation */
       for( c = 0; c < consdata->nconss; ++c )
       {
-         int v;
+         assert(consdata->len[c] >= 0 && consdata->len[c] <= SCIPgetNVars(scip));
 
          /* calculate lhs and rhs of row */
          rowlhs = mpqGetRealRelax(scip, consdata->lhs[c], GMP_RNDD);
          rowrhs = mpqGetRealRelax(scip, consdata->rhs[c], GMP_RNDU);
 
-         v = 0;
-         nrowvars = consdata->beg[c+1] - consdata->beg[c];
-         assert(nrowvars >= 0 && nrowvars <= SCIPgetNVars(scip));
-
          /* calculate coefficients of all variables in the row */
-         for( i = consdata->beg[c]; i < consdata->beg[c+1]; ++i )
+         for( i = consdata->beg[c], v = 0; v < consdata->len[c]; ++i, ++v )
          {
             int probidx;
 
             probidx = consdata->ind[i];
             
             assert(SCIPvarGetProbindex(vars[probidx]) == probidx);
-            assert(consdata->objsense * mpqGetRealApprox(scip, consdata->obj[probidx]) == SCIPvarGetObj(vars[probidx]));
-            assert(mpqGetRealRelax(scip, consdata->lb[probidx], GMP_RNDD) == SCIPvarGetLbGlobal(vars[probidx]));
-            assert(mpqGetRealRelax(scip, consdata->ub[probidx], GMP_RNDU) == SCIPvarGetUbGlobal(vars[probidx]));
-            assert(mpqGetRealRelax(scip, consdata->lb[probidx], GMP_RNDD) == SCIPvarGetLbLocal(vars[probidx]));
-            assert(mpqGetRealRelax(scip, consdata->ub[probidx], GMP_RNDU) == SCIPvarGetUbLocal(vars[probidx]));
+            assert(mpqGetRealApprox(scip, consdata->obj[probidx]) == SCIPvarGetObj(vars[probidx]));
+            assert(mpqGetRealRelax(scip, consdata->lb[probidx], GMP_RNDD) >= SCIPvarGetLbGlobal(vars[probidx]));
+            assert(mpqGetRealRelax(scip, consdata->ub[probidx], GMP_RNDU) <= SCIPvarGetUbGlobal(vars[probidx]));
+            assert(mpqGetRealRelax(scip, consdata->lb[probidx], GMP_RNDD) >= SCIPvarGetLbLocal(vars[probidx]));
+            assert(mpqGetRealRelax(scip, consdata->ub[probidx], GMP_RNDU) <= SCIPvarGetUbLocal(vars[probidx]));
             assert(mpq_cmp(consdata->lb[probidx], consdata->ub[probidx]) <= 0);
 
             /* x_j >= 0 holds always ==> 
@@ -1344,14 +1570,13 @@ SCIP_RETCODE createRelaxation(
             }
 
             rowvars[v] = vars[probidx];
-            v++;
          }
          
          /* create the row */
          (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_relax_%d", SCIPconsGetName(cons), c);
          SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[c], rowname, rowlhs, rowrhs, SCIPconsIsLocal(cons), 
                SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-         SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rows[c], nrowvars, rowvars, rowvals) );
+         SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rows[c], consdata->len[c], rowvars, rowvals) );
 
 #ifdef LP_OUT /* only for debugging ???????????????? */
          SCIPdebug(SCIPprintRow(scip, consdata->rows[c], NULL)); 
@@ -1363,39 +1588,35 @@ SCIP_RETCODE createRelaxation(
       /* for each row of the exactlp constraint, create a row with FP data that defines an approximation */
       for( c = 0; c < consdata->nconss; ++c )
       {
-         int v;
-
+         assert(consdata->len[c] >= 0 && consdata->len[c] <= SCIPgetNVars(scip));
+         
          /* calculate lhs and rhs of row */
          rowlhs = mpqGetRealApprox(scip, consdata->lhs[c]);
          rowrhs = mpqGetRealApprox(scip, consdata->rhs[c]);
 
-         v = 0;
-         nrowvars = consdata->beg[c+1] - consdata->beg[c];
-         assert(nrowvars >= 0 && nrowvars <= SCIPgetNVars(scip));
-
          /* add all variables to the row */
-         for( i = consdata->beg[c]; i < consdata->beg[c+1]; ++i )
+         for( i = consdata->beg[c], v = 0; v < consdata->len[c]; ++i, ++v )
          {
             int probidx;
             probidx = consdata->ind[i];
 
             assert(SCIPvarGetProbindex(vars[probidx]) == probidx);
-            assert(consdata->objsense * mpqGetRealApprox(scip, consdata->obj[probidx]) == SCIPvarGetObj(vars[probidx]));
-            assert(mpqGetRealRelax(scip, consdata->lb[probidx], GMP_RNDD) == SCIPvarGetLbGlobal(vars[probidx]));
-            assert(mpqGetRealRelax(scip, consdata->ub[probidx], GMP_RNDU) == SCIPvarGetUbGlobal(vars[probidx]));
-            assert(mpqGetRealRelax(scip, consdata->lb[probidx], GMP_RNDD) == SCIPvarGetLbLocal(vars[probidx]));
-            assert(mpqGetRealRelax(scip, consdata->ub[probidx], GMP_RNDU) == SCIPvarGetUbLocal(vars[probidx]));
-            
+            assert(mpqGetRealApprox(scip, consdata->obj[probidx]) == SCIPvarGetObj(vars[probidx]));
+            assert(mpqGetRealRelax(scip, consdata->lb[probidx], GMP_RNDD) >= SCIPvarGetLbGlobal(vars[probidx]));
+            assert(mpqGetRealRelax(scip, consdata->ub[probidx], GMP_RNDU) <= SCIPvarGetUbGlobal(vars[probidx]));
+            assert(mpqGetRealRelax(scip, consdata->lb[probidx], GMP_RNDD) >= SCIPvarGetLbLocal(vars[probidx]));
+            assert(mpqGetRealRelax(scip, consdata->ub[probidx], GMP_RNDU) <= SCIPvarGetUbLocal(vars[probidx]));
+            assert(mpq_cmp(consdata->lb[probidx], consdata->ub[probidx]) <= 0);
+         
             rowvals[v] = mpqGetRealApprox(scip, consdata->val[i]);
             rowvars[v] = vars[probidx];
-            v++;
          }
 
          /* create the row */
          (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "%s_approx_%d", SCIPconsGetName(cons), c);
          SCIP_CALL( SCIPcreateEmptyRow(scip, &consdata->rows[c], rowname, rowlhs, rowrhs, SCIPconsIsLocal(cons), 
                SCIPconsIsModifiable(cons), SCIPconsIsRemovable(cons)) );
-         SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rows[c], nrowvars, rowvars, rowvals) );
+         SCIP_CALL( SCIPaddVarsToRow(scip, consdata->rows[c], consdata->len[c], rowvars, rowvals) );
          
 #ifdef LP_OUT /* only for debugging ???????????????? */
          SCIPdebug(SCIPprintRow(scip, consdata->rows[c], NULL)); 
@@ -1444,23 +1665,77 @@ SCIP_RETCODE addRelaxation(
    return SCIP_OKAY;
 }
 
-/** gets current pseudo objective value */
 static
-const mpq_t* getPseudoObjval(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   SCIP_CONSDATA*        consdata            /**< exactlp constraint data to process the bound change for */
+SCIP_RETCODE printCurrentLP(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   assert(conshdlrdata != NULL);
-   assert(conshdlrdata->pseudoobjvalinf >= 0);
-   assert(conshdlrdata->lpexconstructed && consdata->nbndchgub == 0 && consdata->nbndchglb == 0);
+   SCIP_ROW** rows;
+   int nrows;
+   int i;
+
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    
-   if( conshdlrdata->pseudoobjvalinf > 0 || SCIPignorePseudosol(scip) )
-      return negInfinity(conshdlrdata);
-   else
-      return (const mpq_t*) (&conshdlrdata->pseudoobjval);
+   SCIPdebugMessage("current inexact LP rows:\n");
+
+   for( i = 0; i < nrows; ++i )
+   {
+      SCIP_CALL( SCIPprintRow(scip, rows[i], NULL) );
+   }
+
+   return SCIP_OKAY;
 }
+
+/** loads LP state from exact LP into inexact LP solver */
+static
+SCIP_RETCODE loadLPEXState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_Bool*            success             /**< pointer to store whether LP state was excepted by inexact LP solver */
+   )
+{
+   SCIP_LPISTATE* lpistate;
+   int ncolsex;
+   int nrowsex;
+
+   assert(success != NULL);
+   
+   *success = TRUE;
+
+   SCIP_CALL( SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncolsex) );
+   SCIP_CALL( SCIPlpiexGetNRows(conshdlrdata->lpiex, &nrowsex) );
+
+   if( ncolsex == SCIPgetNLPCols(scip) && nrowsex == SCIPgetNLPRows(scip) )
+   {
+      /* stores LP state (like basis information) of exact LP solver into LP state object */
+      SCIP_CALL( SCIPlpiexGetState(conshdlrdata->lpiex, SCIPblkmem(scip), &lpistate) );
+      
+      /* loads LP state (like basis information) into exact LP solver */
+      SCIP_CALL( SCIPsetLPState(scip, lpistate) ); 
+      
+#ifdef DETAILED_DEBUG
+      SCIP_CALL( checkLoadState(scip, conshdlrdata) );
+#endif
+
+      assert(*success);
+   }
+   else
+   {
+      *success = FALSE;
+
+#ifdef BASIS_OUT
+      SCIPdebugMessage("loading LP basis into LPEX failed because dimensions don't match (LP: %d x %d, LPEX: %d x %d)\n",
+         SCIPgetNLPRows(scip), SCIPgetNLPCols(scip), nrowsex, ncolsex);
+#endif
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * local methods for managing the exact LP relaxation 
+ */
 
 /** updates current pseudo objective values for a change in a variable's  objective value or bounds */
 static
@@ -1554,90 +1829,7 @@ SCIP_RETCODE updateVar(
    return SCIP_OKAY;
 }
 
-/** loads LP state from inexact LP into exact LP solver */
-static
-SCIP_RETCODE loadLPState(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata        /**< exactlp constraint handler data */
-   )
-{
-   SCIP_LPISTATE* lpistate;
-   int ncolsex;
-   int nrowsex;
-   
-   SCIP_CALL( SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncolsex) );
-   SCIP_CALL( SCIPlpiexGetNRows(conshdlrdata->lpiex, &nrowsex) );
 
-   if( ncolsex == SCIPgetNLPCols(scip) && nrowsex == SCIPgetNLPRows(scip) )
-   {
-      /* stores LP state (like basis information) of inexact LP solver into LP state object */
-      /* todo: check whether this gives the basis corresponding to the node from which the unbounded ray was 
-       *       found in case of an infeasible LP ???????????? 
-       */
-      SCIP_CALL( SCIPgetLPState(scip, &lpistate) ); 
-      
-      /* loads LP state (like basis information) into exact LP solver */
-      SCIP_CALL( SCIPlpiexSetState(conshdlrdata->lpiex, SCIPblkmem(scip), lpistate) );
-      
-#ifdef DETAILED_DEBUG
-      SCIP_CALL( checkLoadState(scip, conshdlrdata) );
-#endif
-   }
-#ifdef BASIS_OUT
-   else
-   {
-      SCIPdebugMessage("loading LP basis into LPEX failed because dimensions don't match (LP: %d x %d, LPEX: %d x %d)\n",
-         SCIPgetNLPRows(scip), SCIPgetNLPCols(scip), nrowsex, ncolsex);
-   }
-#endif
-   return SCIP_OKAY;
-}
-
-/** loads LP state from exact LP into inexact LP solver */
-static
-SCIP_RETCODE loadLPEXState(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   SCIP_Bool*            success             /**< pointer to store whether LP state was excepted by inexact LP solver */
-   )
-{
-   SCIP_LPISTATE* lpistate;
-   int ncolsex;
-   int nrowsex;
-
-   assert(success != NULL);
-   
-   *success = TRUE;
-
-   SCIP_CALL( SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncolsex) );
-   SCIP_CALL( SCIPlpiexGetNRows(conshdlrdata->lpiex, &nrowsex) );
-
-   if( ncolsex == SCIPgetNLPCols(scip) && nrowsex == SCIPgetNLPRows(scip) )
-   {
-      /* stores LP state (like basis information) of exact LP solver into LP state object */
-      SCIP_CALL( SCIPlpiexGetState(conshdlrdata->lpiex, SCIPblkmem(scip), &lpistate) );
-      
-      /* loads LP state (like basis information) into exact LP solver */
-      SCIP_CALL( SCIPsetLPState(scip, lpistate) ); 
-      
-#ifdef DETAILED_DEBUG
-      SCIP_CALL( checkLoadState(scip, conshdlrdata) );
-#endif
-
-      assert(*success);
-   }
-   else
-   {
-      *success = FALSE;
-
-#ifdef BASIS_OUT
-      SCIPdebugMessage("loading LP basis into LPEX failed because dimensions don't match (LP: %d x %d, LPEX: %d x %d)\n",
-         SCIPgetNLPRows(scip), SCIPgetNLPCols(scip), nrowsex, ncolsex);
-#endif
-   }
-
-   return SCIP_OKAY;
-}
 
 /** constructs the exact LP of the current node, but does not load the LP state and warmstart information  */
 static
@@ -1673,21 +1865,21 @@ SCIP_RETCODE constructCurrentLPEX(
          colnames[i] = (char*) (SCIPvarGetName(vars[i]));
 
          assert(SCIPvarGetProbindex(vars[i]) == i);
-         assert(consdata->objsense * mpqGetRealApprox(scip, consdata->obj[i]) == SCIPvarGetObj(vars[i]));
-         assert(mpqGetRealRelax(scip, consdata->lb[i], GMP_RNDD) <= SCIPvarGetLbGlobal(vars[i]));
-         assert(mpqGetRealRelax(scip, consdata->ub[i], GMP_RNDU) >= SCIPvarGetUbGlobal(vars[i]));
-         assert(mpqGetRealRelax(scip, consdata->lb[i], GMP_RNDD) <= SCIPvarGetLbLocal(vars[i]));
-         assert(mpqGetRealRelax(scip, consdata->ub[i], GMP_RNDU) >= SCIPvarGetUbLocal(vars[i]));
+         assert(mpqGetRealApprox(scip, consdata->obj[i]) == SCIPvarGetObj(vars[i]));
+         assert(SCIPisLE(scip, mpqGetRealRelax(scip, consdata->lb[i], GMP_RNDD), SCIPvarGetLbGlobal(vars[i])));
+         assert(SCIPisGE(scip, mpqGetRealRelax(scip, consdata->ub[i], GMP_RNDU), SCIPvarGetUbGlobal(vars[i])));
+         assert(SCIPisLE(scip, mpqGetRealRelax(scip, consdata->lb[i], GMP_RNDD), SCIPvarGetLbLocal(vars[i])));
+         assert(SCIPisGE(scip, mpqGetRealRelax(scip, consdata->ub[i], GMP_RNDU), SCIPvarGetUbLocal(vars[i])));
       }
 
       /* add all columns to the exact LP */
       /* todo: check whether I implement SCIPlpiexAddCols() correctly (handling of case: beg=ind=val=NULL) ????????????? */
-      SCIP_CALL( SCIPlpiexAddCols(conshdlrdata->lpiex, consdata->nvars, consdata->obj, consdata->lb, consdata->ub, colnames,
-            0, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPlpiexAddCols(conshdlrdata->lpiex, consdata->nvars, consdata->obj, consdata->lb, consdata->ub, 
+            colnames, 0, NULL, NULL, NULL) );
 
       /* add all constraints to the exact LP */
       SCIP_CALL( SCIPlpiexAddRows(conshdlrdata->lpiex, consdata->nconss, consdata->lhs, consdata->rhs, NULL, 
-            consdata->nnonz, consdata->beg, consdata->ind, consdata->val) );
+            consdata->nnonz, consdata->beg, consdata->len, consdata->ind, consdata->val) );
 
       //SCIP_CALL( SCIPlpiexWriteLP(conshdlrdata->lpiex, "testset/debug2.lp") ); /* ????????????*/
       //SCIPABORT(); /*lint --e{527}*/ /* ????????????*/
@@ -1724,7 +1916,7 @@ SCIP_RETCODE constructCurrentLPEX(
             consdata->bndchglb, NULL) );
 
       /* update pseudo objective value and local lower bounds */
-      for( i = 0; i <  consdata->nbndchglb; ++i )
+      for( i = 0; i < consdata->nbndchglb; ++i )
       {
          int probidx;
          
@@ -1780,6 +1972,457 @@ SCIP_RETCODE constructCurrentLPEX(
 
    return SCIP_OKAY;
 }
+
+/** loads LP state from inexact LP into exact LP solver */
+static
+SCIP_RETCODE loadLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata        /**< exactlp constraint handler data */
+   )
+{
+   SCIP_LPISTATE* lpistate;
+   int ncolsex;
+   int nrowsex;
+   
+   SCIP_CALL( SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncolsex) );
+   SCIP_CALL( SCIPlpiexGetNRows(conshdlrdata->lpiex, &nrowsex) );
+
+   if( ncolsex == SCIPgetNLPCols(scip) && nrowsex == SCIPgetNLPRows(scip) )
+   {
+      /* stores LP state (like basis information) of inexact LP solver into LP state object */
+      /* todo: check whether this gives the basis corresponding to the node from which the unbounded ray was 
+       *       found in case of an infeasible LP ???????????? 
+       */
+      SCIP_CALL( SCIPgetLPState(scip, &lpistate) ); 
+      
+      /* loads LP state (like basis information) into exact LP solver */
+      SCIP_CALL( SCIPlpiexSetState(conshdlrdata->lpiex, SCIPblkmem(scip), lpistate) );
+      
+#ifdef DETAILED_DEBUG
+      SCIP_CALL( checkLoadState(scip, conshdlrdata) );
+#endif
+   }
+#ifdef BASIS_OUT
+   else
+   {
+      SCIPdebugMessage("loading LP basis into LPEX failed because dimensions don't match (LP: %d x %d, LPEX: %d x %d)\n",
+         SCIPgetNLPRows(scip), SCIPgetNLPCols(scip), nrowsex, ncolsex);
+   }
+#endif
+   return SCIP_OKAY;
+}
+
+/** solves the exact LP with the given algorithm and evaluates return status */
+static
+SCIP_RETCODE solveLPEX(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
+   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
+   )
+{
+   SCIP_RETCODE retcode;
+   int iterations;
+   int ncols;
+   int nrows;
+
+   assert(scip != NULL);
+   assert(lperror != NULL);
+
+   SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncols);
+   SCIPlpiexGetNRows(conshdlrdata->lpiex, &nrows);
+   
+   *lperror = FALSE;
+
+#ifdef EXLPSOLVER_OUT /* only for debugging ???????????????? */
+   SCIP_CALL( SCIPlpiexSetIntpar(conshdlrdata->lpiex, SCIP_LPPAR_LPINFO, TRUE) ); 
+#endif
+
+   switch( lpalgo )
+   {
+   case SCIP_LPALGO_PRIMALSIMPLEX:
+      SCIPdebugMessage("solving current primal exact LP (%d cols, %d rows):\n", ncols, nrows);
+
+      /* call primal simplex */
+      retcode = SCIPlpiexSolvePrimal(conshdlrdata->lpiex);
+      if( retcode == SCIP_LPERROR )
+      {
+         *lperror = TRUE;
+         SCIPdebugMessage("   (node %"SCIP_LONGINT_FORMAT") primal simplex solving error in current exact LP\n", 
+            SCIPgetNNodes(scip));
+      }
+      else
+      {
+         SCIP_CALL( retcode );
+      }
+ 
+      SCIP_CALL( SCIPlpiexGetIterations(conshdlrdata->lpiex, &iterations) );
+      SCIPdebugMessage("   solved primal exact LP in %d iterations\n", iterations);
+      break;
+
+   case SCIP_LPALGO_DUALSIMPLEX:
+      SCIPdebugMessage("solving current dual exact LP (%d cols, %d rows)\n", ncols, nrows);
+      
+      /* call dual simplex */
+      retcode = SCIPlpiexSolveDual(conshdlrdata->lpiex);
+      if( retcode == SCIP_LPERROR )
+      {
+         *lperror = TRUE;
+         SCIPdebugMessage("   (node %"SCIP_LONGINT_FORMAT") dual simplex solving error in current exact LP\n", 
+            SCIPgetNNodes(scip));
+      }
+      else
+      {
+         SCIP_CALL( retcode );
+      }
+
+      SCIP_CALL( SCIPlpiexGetIterations(conshdlrdata->lpiex, &iterations) );
+      SCIPdebugMessage("   solved dual exact LP in %d iterations\n", iterations);
+      break;
+
+   default:
+      SCIPerrorMessage("invalid exact LP algorithm\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** checks whether primal solution of exact LP solver satisfies all integrality restrictions */
+static
+SCIP_RETCODE checkIntegrality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
+   )
+{
+   SCIP_VAR** vars;
+   mpq_t* primsol;
+   mpq_t lpobjval;
+   int nvars;
+   int nbin;
+   int nint;
+   int v;
+   int ncols;
+   SCIP_Bool fpvalue;
+   SCIP_Bool inrange;
+   SCIP_Bool integral;
+   int branchvar;
+#ifdef DETAILED_DEBUG /*????????? */
+   SCIP_Real oldlb;
+#endif
+
+   assert(scip != NULL);
+   assert(conshdlrdata != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMessage("checking integrality of exact LP solution:\n");
+
+   SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncols);
+   assert(SCIPgetNVars(scip) == ncols);
+
+   /* allocate and initialize temporary arrays */
+   SCIP_CALL( SCIPallocBufferArray(scip, &primsol, ncols) );
+   for( v = 0; v < ncols; ++v )
+   {
+      mpq_init(primsol[v]);
+   }
+   mpq_init(lpobjval);
+   
+   /* gets primal solution vector of exact LP */
+   SCIP_CALL( SCIPlpiexGetSol(conshdlrdata->lpiex, &lpobjval, primsol, NULL, NULL, NULL) );
+
+   /* get all problem variables and integer region in vars array */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbin, &nint, NULL, NULL) );
+   
+   /* check whether primal solution satisfies all integrality restrictions */
+   integral = TRUE;
+   branchvar = -1;
+   for( v = 0; v < nbin + nint && integral; ++v )
+   {
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
+
+      if( mpz_get_si(mpq_denref(primsol[v])) != 1 ) 
+      {
+         integral = FALSE;
+         branchvar = v;
+#ifdef DETAILED_DEBUG  /*???????????????*/
+         SCIPdebugMessage("   exact LP value of intvar %s ", SCIPvarGetName(vars[v]));
+         gmp_printf("<%Qd> is not integral\n", primsol[v]); 
+#endif
+      }
+   }
+
+   /* try to improve current local lower bound by using the result of the exact LP solver */
+#ifdef DETAILED_DEBUG /*????????? */
+   oldlb = SCIPgetLocalLowerbound(scip);
+#endif
+   SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, lpobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
+#ifdef DETAILED_DEBUG /*????????? */
+   if( oldlb < SCIPgetLocalLowerbound(scip) )
+   {
+      SCIPdebugMessage("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+   }
+   else
+   {
+      SCIPdebugMessage("lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
+   }
+#endif
+
+   /* store exact LP solution as feasible MIP solution and cut off current node */
+   if( integral )
+   {
+      SCIP_SOL* sol;
+      SCIP_SOLEX* solex;
+      mpq_t tmp;
+      SCIP_Bool stored;
+
+      assert(branchvar == -1);
+
+      mpq_init(tmp);
+
+#ifdef DETAILED_DEBUG  /*???????????????*/
+      SCIPdebugMessage("   current exact LP solution is integral\n");
+#endif
+
+      /* create exact and approximate primal solution */
+      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+      SCIP_CALL( SCIPsolexCreate(&solex, SCIPblkmem(scip), NULL) );
+      
+      fpvalue = TRUE;
+      inrange = TRUE;
+
+      /* check whether it is likely that the lpobjval is treated as infinite in scip, i.e., is out of range in scip */
+      if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, lpobjval))) )
+         inrange = FALSE;
+
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_Real scipsolval;
+
+         scipsolval = mpqGetRealApprox(scip, primsol[v]);
+
+         /* check whether we can store the primal solution without FP errors */
+         mpq_set_d(tmp, scipsolval);
+         if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, primsol[v]))) )
+            inrange = FALSE;
+         if( !mpq_equal(primsol[v], tmp) )
+            fpvalue = FALSE;
+
+         /* set value of variabel in exact and approximate solution */
+         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[v], scipsolval) );
+         /* todo: using scip->set is ugly! think about a general way to get information from the constraint handler 
+          *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
+          *       ??????????? 
+          */
+         SCIP_CALL( SCIPsolexSetVal(solex, scip->set, vars[v], consdata->obj[v], consdata->lb[v], primsol[v]) );
+      }
+      mpq_set_d(tmp, SCIPgetSolTransObj(scip, sol));
+      assert(!inrange || !fpvalue || !SCIPuseFPRelaxation(scip) || mpq_cmp(lpobjval, tmp) <= 0);
+
+      /* add approximate primal solution */ 
+      if( !inrange )   
+         SCIPfreeSol(scip, &sol);
+      else   
+      {
+         /* @todo (later): ????????? 
+          * 1. maybe improve objval (using SCIPsetSolTransObj() is only a workaround, and this method is not very safe, 
+          *    i.e., should be deleted from the source code later when point 2. was implemented)
+          * 2. store all primal solutions in the exactlp conshdlr with the exact objval and 
+          *    hand over an FP approximation of the exact sol with safe objval to scip (step 3c)
+          */
+         /* store safe objective value for approximate primal solution */ 
+         SCIP_CALL( SCIPsetSolTransObj(scip, sol, mpqGetRealRelax(scip, lpobjval, GMP_RNDU)) );
+
+         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+         
+         if( stored && !fpvalue )
+         {
+            SCIPwarningMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
+         }
+      }
+
+      /* add exact primal solution */ 
+      /* todo: using scip->set is ugly! think about a general way get information from the constraint handler 
+       *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
+       *       ??????????? 
+       */
+      SCIP_CALL( SCIPprimalexAddSolFree(conshdlrdata->primal, SCIPblkmem(scip), scip->set, scip->transprob, 
+            &solex, &stored) );
+
+      *result = SCIP_CUTOFF;
+
+      mpq_clear(tmp);
+   }
+   else
+   {
+      SCIP_Bool solvelpagain; 
+
+      /* if the inexact LP was claimed to be infeasible, i.e., a pseudo solution is enforced here, but the exact LP 
+       * has been proved to be feasible, try to solve the inexact LP again with starting basis equal to optimal 
+       * basis of the exact LP; in order to avoid an infinite loop, this is only done once at a node 
+       */
+      solvelpagain = FALSE;
+      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && conshdlrdata->lastenfopsnode != SCIPgetCurrentNode(scip) )
+      {
+         SCIP_CALL( loadLPEXState(scip, conshdlrdata, &solvelpagain) );
+
+         if( solvelpagain )
+         {
+            solvelpagain = TRUE;
+            *result = SCIP_SOLVELP;
+#ifdef DETAILED_DEBUG  /*???????????????*/
+            SCIPdebugMessage("   ---> LP was infeasible but LPEX not: solve LP once again with basis of LPEX\n");
+#endif
+         }
+      }
+
+      /* branch on the first fractional variable in the exact LP solution */
+      if( !solvelpagain )
+      {
+         SCIP_NODE* node;
+         SCIP_Real downub;
+         SCIP_Real uplb;
+
+         /* @todo (later): ???????????
+          *  - implement more sophisticated branching rules 
+          */
+
+         assert(branchvar >= 0 && branchvar < nvars);
+      
+         /* create left child: add x_i <= floor(x_i^*) */
+         downub = floor(mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDD));
+         SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], downub),
+               SCIPcalcChildEstimate(scip, vars[branchvar], downub)) );
+         SCIP_CALL( SCIPchgVarUbNode(scip, node, vars[branchvar], downub) );
+      
+         /* create right child: add x_i >= ceil(x_i^*) */
+         uplb = ceil(mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDU)); 
+         SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], uplb),
+               SCIPcalcChildEstimate(scip, vars[branchvar], uplb)) );
+         SCIP_CALL( SCIPchgVarLbNode(scip, node, vars[branchvar], uplb) );
+ 
+         assert(uplb = downub + 1.0);
+
+#ifndef NDEBUG
+         {
+            mpq_t resultuplb;
+            mpq_t resultdownub;
+         
+            mpq_init(resultuplb);
+            mpq_init(resultdownub);
+
+            mpq_set_d(resultuplb, uplb);
+            mpq_set_d(resultdownub, downub);
+         
+            assert(mpq_cmp(resultdownub, primsol[branchvar]) < 0);
+            assert(mpq_cmp(resultuplb, primsol[branchvar]) > 0);
+
+            mpq_clear(resultuplb);
+            mpq_clear(resultdownub);
+         }
+#endif
+         *result = SCIP_BRANCHED;
+#ifdef DETAILED_DEBUG  /*???????????????*/
+         SCIPdebugMessage("   ---> LP was not solved: branch on result of LPEX\n");
+#endif
+      }
+   }
+
+   /* free temporary arrays */
+   for( v = 0; v < ncols; ++v )
+   {
+      mpq_clear(primsol[v]);
+   }
+   mpq_clear(lpobjval);
+   SCIPfreeBufferArray(scip, &primsol);
+
+   if( integral && !inrange )   
+   {
+      SCIPerrorMessage("storing optimal solutions of subproblems that is out of FP range is not supported yet\n");
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** evaluates the result of the exact LP */
+static
+SCIP_RETCODE evaluateLPEX(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
+   )
+{
+   /* evaluate solution status */
+   if( SCIPlpiexIsOptimal(conshdlrdata->lpiex) )
+   {
+      SCIPdebugMessage("   exact LP solved to optimality\n"); 
+
+#ifndef NDEBUG
+      {
+         SCIP_Bool primalfeasible;
+         SCIP_Bool dualfeasible;
+         
+         SCIP_CALL( SCIPlpiexGetSolFeasibility(conshdlrdata->lpiex, &primalfeasible, &dualfeasible) );
+         assert(primalfeasible);
+         assert(dualfeasible);
+      }      
+#endif
+      /* check whether exact LP solution is feasible for the MIP; if it is feasible the solution is stored 
+       * and the current node is cut off otherwise a branching is created
+       */
+      SCIP_CALL( checkIntegrality(scip, conshdlrdata, consdata, result) );
+      assert(*result == SCIP_CUTOFF || SCIP_BRANCHED);
+
+   }
+   else if( SCIPlpiexIsObjlimExc(conshdlrdata->lpiex) )
+   {
+      SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
+      return SCIP_ERROR;
+   }
+   else if( SCIPlpiexIsPrimalInfeasible(conshdlrdata->lpiex) )
+   {
+      SCIPdebugMessage("   exact LP is primal infeasible\n"); 
+      
+      *result = SCIP_CUTOFF;
+   }
+   else if( SCIPlpiexExistsPrimalRay(conshdlrdata->lpiex) ) /* todo: check why in lp.c SCIPlpiIsPrimalUnbounded() is not used ????*/
+   {
+      SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
+      return SCIP_ERROR;
+   }
+   else if( SCIPlpiexIsIterlimExc(conshdlrdata->lpiex) )
+   {
+      SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
+      return SCIP_ERROR;
+   }
+   else if( SCIPlpiexIsTimelimExc(conshdlrdata->lpiex) )
+   {
+      SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
+      return SCIP_ERROR;
+   }
+   else
+   {
+      SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") error or unknown return status in current exact LP (internal status: %d)\n", 
+         SCIPgetNNodes(scip), SCIPlpiexGetInternalStatus(conshdlrdata->lpiex));
+      return SCIP_LPERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/*
+ * local methods for generating safe dual bounds
+ */
+
+/* todo: tell Dan that length array is present now because val array can have zero entries (dummies). 
+ *       he has to adapt his code ???????? 
+ */  
 
 /** constructs the exact LP for the project and scale dual bound method  */
 static
@@ -1917,7 +2560,7 @@ SCIP_RETCODE constructPSData(
       if( i < consdata->nvars)
          mpq_set( pslb[i], conshdlrdata->neginfinity );
       else
-         mpq_set_si( pslb[i],0, 1);      
+         mpq_set_si( pslb[i], 0, 1);      
    }
    
    /* we assume original constraints are all inequalities (min cx: Ax >= b), this is checked here */
@@ -2010,7 +2653,7 @@ SCIP_RETCODE constructPSData(
    SCIP_CALL( SCIPlpiexAddCols(pslpiex, psnvars, psobj, pslb, psub, colnames, 0, NULL, NULL, NULL) );
 
    /* add all constraints to the exact LP */
-   SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnconss, pslhs, psrhs, NULL, psnnonz, psbeg, psind, psval) );
+   SCIP_CALL( SCIPlpiexAddRows(pslpiex, psnconss, pslhs, psrhs, NULL, psnnonz, psbeg, NULL, psind, psval) );
 
    /* write LP to file */
    //SCIP_CALL( SCIPlpiexWriteLP(pslpiex, "prob/psdebug.lp") ); /* ????????????*/
@@ -2039,7 +2682,7 @@ SCIP_RETCODE constructPSData(
       if(mpq_sgn(dualsol[psnconss - 1]))
          mpq_inv(conshdlrdata->commonslack,dualsol[psnconss - 1]);
       else
-         mpq_set_si(conshdlrdata->commonslack,0, 1);
+         mpq_set_si(conshdlrdata->commonslack, 0, 1);
 
 #ifdef PS_OUT /*???????????????????*/
       printf("Constraints all satisfied by slack of:  ");
@@ -2399,390 +3042,781 @@ SCIP_RETCODE getPSdualbound(
 }
 
 
+/*
+ * local methods for presolving
+ */
 
-
-
-/** checks whether primal solution of exact LP solver satisfies all integrality restrictions */
+/** removes rounding locks of exactlp constraint for all variables in the given linear constraint */
 static
-SCIP_RETCODE checkIntegrality(
+void unlockRoundingSingleCons(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   int                   c                   /**< index of constraint in exactlp data structures */    
    )
 {
    SCIP_VAR** vars;
-   mpq_t* primsol;
-   mpq_t lpobjval;
-   int nvars;
-   int nbin;
-   int nint;
+   SCIP_Bool haslhs;
+   SCIP_Bool hasrhs;
+   int j;
+
+   /* get problem variables */
+   vars = SCIPgetVars(scip);
+   assert(SCIPgetNVars(scip) == consdata->nvars);
+
+   haslhs = !isNegInfinity(conshdlrdata, consdata->lhs[c]);
+   hasrhs = !isPosInfinity(conshdlrdata, consdata->rhs[c]);
+   
+   /* check all variables of the current constraint */
+   for( j = consdata->beg[c]; j < consdata->beg[c] + consdata->len[c]; ++j )
+   {
+      assert(consdata->ind[j] >= 0 && consdata->ind[j] < consdata->nvars);
+      assert(consdata->lockup[consdata->ind[j]] >= 0 && consdata->lockdown[consdata->ind[j]] >= 0);
+      
+      assert(SCIPvarGetProbindex(vars[consdata->ind[j]]) == consdata->ind[j]);
+
+
+      /* val > 0 */
+      if( mpq_sgn(consdata->val[j]) > 0 )
+      {
+         if( haslhs )
+            consdata->lockdown[consdata->ind[j]]--;
+         
+         if( hasrhs )
+           consdata->lockup[consdata->ind[j]]--;
+
+         SCIPunlockVarCons(scip, vars[consdata->ind[j]], cons, 
+            haslhs && consdata->lockdown[consdata->ind[j]] == 0, hasrhs && consdata->lockup[consdata->ind[j]] == 0);
+      }
+      
+      /* val < 0 */
+      if( mpq_sgn(consdata->val[j]) < 0 )
+      {
+         if( haslhs )
+            consdata->lockup[consdata->ind[j]]--;
+         
+         if( hasrhs )
+            consdata->lockdown[consdata->ind[j]]--;
+
+         SCIPunlockVarCons(scip, vars[consdata->ind[j]], cons, 
+            hasrhs && consdata->lockdown[consdata->ind[j]] == 0, haslhs && consdata->lockup[consdata->ind[j]] == 0);
+      }
+      assert(consdata->lockup[consdata->ind[j]] >= 0 && consdata->lockdown[consdata->ind[j]] >= 0);
+   } 
+}
+
+/** removes linear constraint from exactlp constraint data */
+static
+void delSingleCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   int                   c                   /**< index of constraint in exactlp data structures */    
+   )
+{
+   int i;
+
+   assert(consdata->len[c] > 0);
+   assert(consdata->rows == NULL); /* @todo: otherwise the LP/LPEX rows have to be deleted as well */ 
+   assert(!conshdlrdata->lpexconstructed);
+
+   unlockRoundingSingleCons(scip, cons, conshdlrdata, consdata, c);
+   
+   for( i = c; i < consdata->nconss - 1; ++i )
+   {
+      consdata->beg[i] = consdata->beg[i+1];
+      consdata->len[i] = consdata->len[i+1];
+      mpq_set(consdata->lhs[i], consdata->lhs[i+1]);
+      mpq_set(consdata->rhs[i], consdata->rhs[i+1]);
+   }
+   assert(i == consdata->nconss - 1);
+
+   /* move dummy entry of beg array */
+   consdata->beg[i] = consdata->beg[i+1];
+   
+   /* update number of linear constraint in exactlp constraint */
+   consdata->nconss--;
+}
+
+/** gets activity bounds for linear constraint of exactlp constraint */
+static
+void singleConsGetActivityBounds(
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   int                   c,                  /**< index of constraint in exactlp data structures */    
+   mpq_t                 minactivity,        /**< pointer to store the minimal activity */
+   mpq_t                 maxactivity         /**< pointer to store the maximal activity */
+   )
+{
+   assert(minactivity != NULL);
+   assert(maxactivity != NULL);
+
+   /* @todo: implement more general case with more than one variable */
+   if( consdata->len[c] > 1 )
+   {
+      mpq_set(minactivity, *negInfinity(conshdlrdata));
+      mpq_set(maxactivity, *posInfinity(conshdlrdata));
+   }
+   else
+   {
+      int varind;
+      int v;
+
+      v = consdata->beg[c];
+      varind = consdata->ind[v];
+      
+      /* val > 0 */
+      if( mpq_sgn(consdata->val[v]) > 0 )
+      {
+         /* maxactivity = val*ub */
+         if( isPosInfinity(conshdlrdata, consdata->ubloc[varind]) )
+            mpq_set(maxactivity, *posInfinity(conshdlrdata));
+         else
+            mpq_mul(maxactivity, consdata->val[v], consdata->ubloc[varind]);
+
+         /* minactivity = val*lb */
+         if( isNegInfinity(conshdlrdata, consdata->lbloc[varind]) )
+            mpq_set(minactivity, *negInfinity(conshdlrdata));
+         else
+            mpq_mul(minactivity, consdata->val[v], consdata->lbloc[varind]);
+      }
+      /* val < 0 */
+      else
+      {
+         assert(mpq_sgn(consdata->val[v]) < 0);
+
+         /* maxactivity = val*lb */
+         if( isNegInfinity(conshdlrdata, consdata->lbloc[varind]) )
+            mpq_set(maxactivity, *posInfinity(conshdlrdata));
+         else
+            mpq_mul(maxactivity, consdata->val[v], consdata->lbloc[varind]);
+
+         /* minactivity = val*ub */
+         if( isPosInfinity(conshdlrdata, consdata->ubloc[varind]) )
+            mpq_set(minactivity, *negInfinity(conshdlrdata));
+         else
+            mpq_mul(minactivity, consdata->val[v], consdata->ubloc[varind]);
+      }
+   }
+}
+
+/** returns adjusted lower bound value, which is rounded for integral variable types */
+static
+void adjustedLb(
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   mpq_t                 lb,                 /**< lower bound to adjust */
+   mpq_t                 newlb               /**< pointer to store adjusted lower bound */
+   )
+{
+   if( isNegInfinity(conshdlrdata, lb) )
+      mpq_set(newlb, *negInfinity(conshdlrdata));
+   else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+      mpqCeil(newlb, lb);
+   else
+      mpq_set(newlb, lb);
+}
+
+/** returns adjusted upper bound value, which is rounded for integral variable types */
+static
+void adjustedUb(
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_VARTYPE          vartype,            /**< type of variable */
+   mpq_t                 ub,                 /**< upper bound to adjust */
+   mpq_t                 newub               /**< pointer to store adjusted upper bound */
+   )
+{
+   if( isPosInfinity(conshdlrdata, ub) )
+      mpq_set(newub, *posInfinity(conshdlrdata));
+   else if( vartype != SCIP_VARTYPE_CONTINUOUS )
+      mpqFloor(newub, ub);
+   else
+      mpq_set(newub, ub);
+}
+
+/** adjust lower bound to integral value, if variable is integral */
+static
+void varAdjustLb(
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_VAR*             var,                /**< problem variable */
+   mpq_t                 bound,              /**< lower bound to adjust */
+   mpq_t                 newbound            /**< pointer to store adjusted lower bound */
+   )
+{
+#ifdef SCIP_DEBUG
+   char s[SCIP_MAXSTRLEN];
+#endif
+   assert(var != NULL);
+
+#ifdef SCIP_DEBUG
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "adjust lower bound %Qd of <%s>\n", bound, SCIPvarGetName(var));
+   SCIPdebugMessage(s);
+#endif
+
+   adjustedLb(conshdlrdata, SCIPvarGetType(var), bound, newbound);
+}
+
+/** adjust upper bound to integral value, if variable is integral */
+static
+void varAdjustUb(
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_VAR*             var,                /**< problem variable */
+   mpq_t                 bound,              /**< upper bound to adjust */
+   mpq_t                 newbound            /**< pointer to store adjusted upper bound */
+   )
+{
+#ifdef SCIP_DEBUG
+   char s[SCIP_MAXSTRLEN];
+#endif
+   assert(var != NULL);
+
+#ifdef SCIP_DEBUG
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "adjust upper bound %Qd of <%s>\n", bound, SCIPvarGetName(var));
+   SCIPdebugMessage(s);
+#endif
+
+   adjustedUb(conshdlrdata, SCIPvarGetType(var), bound, newbound);
+}
+
+/** changes local exact lower bound of variable; if possible, adjusts bound to integral value */
+static
+void chgVarLbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   v,                  /**< index of variable in ind and val array to change the bound for */
+   mpq_t                 newbound            /**< new value for bound */
+   )
+{
+   mpq_t adjustedbound;
+   
+   /* @todo: changing local bounds is currently only supported at the root 
+    * (because keeping track of bound changes which is necessary for switching between different subtrees 
+    * is not supported yet). implement this. ??????????? */
+   if( SCIPgetDepth(scip) > 0 )
+      return;
+
+   /* adjust bound for integral variables */
+   mpq_init(adjustedbound);
+   varAdjustLb(conshdlrdata, var, newbound, adjustedbound);
+   mpq_set(newbound, adjustedbound);
+   mpq_clear(adjustedbound);
+   
+   /* change the local bound */
+   mpq_set(consdata->lbloc[consdata->ind[v]], newbound);
+   assert(mpq_cmp(consdata->lbloc[consdata->ind[v]], consdata->lb[consdata->ind[v]]) >= 0);
+   assert(mpq_cmp(consdata->ubloc[consdata->ind[v]], consdata->ub[consdata->ind[v]]) <= 0);
+}
+
+/** changes local exact upper bound of variable; if possible, adjusts bound to integral value */
+static
+void chgVarUbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   v,                  /**< index of variable in ind and val array to change the bound for */
+   mpq_t                 newbound            /**< new value for bound */
+   )
+{
+   mpq_t adjustedbound;
+   
+   /* @todo: changing local bounds is currently only supported at the root 
+    * (because keeping track of bound changes which is necessary for switching between different subtrees 
+    * is not supported yet). implement this. ??????????? */
+   if( SCIPgetDepth(scip) > 0 )
+      return;
+
+   /* adjust bound for integral variables */
+   mpq_init(adjustedbound);
+   varAdjustUb(conshdlrdata, var, newbound, adjustedbound);
+   mpq_set(newbound, adjustedbound);
+   mpq_clear(adjustedbound);
+   
+   /* change the local bound */
+   mpq_set(consdata->ubloc[consdata->ind[v]], newbound);
+   assert(mpq_cmp(consdata->lbloc[consdata->ind[v]], consdata->lb[consdata->ind[v]]) >= 0);
+   assert(mpq_cmp(consdata->ubloc[consdata->ind[v]], consdata->ub[consdata->ind[v]]) <= 0);
+}
+
+/** changes global exact lower bound of variable; if possible, adjusts bound to integral value */
+static
+void chgVarLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   v,                  /**< index of variable in ind and val array to change the bound for */
+   mpq_t                 newbound            /**< new value for bound */
+   )
+{
+   mpq_t adjustedbound;
+   
+   /* adjust bound for integral variables */
+   mpq_init(adjustedbound);
+   varAdjustLb(conshdlrdata, var, newbound, adjustedbound);
+   mpq_set(newbound, adjustedbound);
+   mpq_clear(adjustedbound);
+
+   /* change the local bound */
+   if( mpq_cmp(newbound, consdata->lbloc[consdata->ind[v]]) > 0 )
+      chgVarLbLocal(scip, conshdlrdata, consdata, var, v, newbound);
+   
+   /* change the global bound */
+   mpq_set(consdata->lb[consdata->ind[v]], newbound);
+   assert(mpq_cmp(consdata->lbloc[consdata->ind[v]], consdata->lb[consdata->ind[v]]) >= 0);
+   assert(mpq_cmp(consdata->ubloc[consdata->ind[v]], consdata->ub[consdata->ind[v]]) <= 0);
+}
+
+/** changes global exact upper bound of variable; if possible, adjusts bound to integral value */
+static
+void chgVarUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   v,                  /**< index of variable in ind and val array to change the bound for */
+   mpq_t                 newbound            /**< new value for bound */
+   )
+{
+   mpq_t adjustedbound;
+   
+   /* adjust bound for integral variables */
+   mpq_init(adjustedbound);
+   varAdjustUb(conshdlrdata, var, newbound, adjustedbound);
+   mpq_set(newbound, adjustedbound);
+   mpq_clear(adjustedbound);
+
+   /* change the local bound */
+   if( mpq_cmp(newbound, consdata->ubloc[consdata->ind[v]]) < 0 )
+      chgVarUbLocal(scip, conshdlrdata, consdata, var, v, newbound);
+   
+   /* change the global bound */
+   mpq_set(consdata->ub[consdata->ind[v]], newbound);
+   assert(mpq_cmp(consdata->lbloc[consdata->ind[v]], consdata->lb[consdata->ind[v]]) >= 0);
+   assert(mpq_cmp(consdata->ubloc[consdata->ind[v]], consdata->ub[consdata->ind[v]]) <= 0);
+}
+
+
+/** changes exact lower bound of variable; if possible, adjusts bound to integral value */
+static
+void chgVarLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   v,                  /**< index of variable in ind and val array to change the bound for */
+   mpq_t                 newbound            /**< new value for bound */
+   )
+{
+   mpq_t adjustedbound;
+   
+   /* adjust bound for integral variables */
+   mpq_init(adjustedbound);
+   varAdjustLb(conshdlrdata, var, newbound, adjustedbound);
+   mpq_set(newbound, adjustedbound);
+   mpq_clear(adjustedbound);
+
+   /* change the bound */
+   if( SCIPgetDepth(scip) == 0 )
+      chgVarLbGlobal(scip, conshdlrdata, consdata, var, v, newbound);
+   else
+      chgVarLbLocal(scip, conshdlrdata, consdata, var, v, newbound);
+}
+
+/** changes exact upper bound of variable; if possible, adjusts bound to integral value */
+static
+void chgVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   v,                  /**< index of variable in ind and val array to change the bound for */
+   mpq_t                 newbound            /**< new value for bound */
+   )
+{
+   mpq_t adjustedbound;
+   
+   /* adjust bound for integral variables */
+   mpq_init(adjustedbound);
+   varAdjustUb(conshdlrdata, var, newbound, adjustedbound);
+   mpq_set(newbound, adjustedbound);
+   mpq_clear(adjustedbound);
+
+   /* change the bound */
+   if( SCIPgetDepth(scip) == 0 )
+      chgVarUbGlobal(scip, conshdlrdata, consdata, var, v, newbound);
+   else
+      chgVarUbLocal(scip, conshdlrdata, consdata, var, v, newbound);
+}
+
+/** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  than the current bound; if possible, adjusts bound to integral value
+ */
+static
+void tightenVarLb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   v,                  /**< index of variable in ind and val array to change the bound for */
+   mpq_t                 newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   mpq_t adjustedbound;
+
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   /* adjust bound for integral variables */
+   mpq_init(adjustedbound);
+   varAdjustLb(conshdlrdata, var, newbound, adjustedbound);
+   mpq_set(newbound, adjustedbound);
+   mpq_clear(adjustedbound);
+
+   if( mpq_cmp(newbound, consdata->ubloc[consdata->ind[v]]) > 0 )
+   {
+      *infeasible = TRUE;
+      return;
+   }
+
+   if( mpq_cmp(newbound, consdata->lbloc[consdata->ind[v]]) <= 0 )
+      return;
+
+   chgVarLb(scip, conshdlrdata, consdata, var, v, newbound);
+   
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return;
+}
+
+/** changes upper bound of variable in preprocessing or in the current node, if the new bound is tighter
+ *  than the current bound; if possible, adjusts bound to integral value
+ */
+static
+void tightenVarUb(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   v,                  /**< index of variable in ind and val array to change the bound for */
+   mpq_t                 newbound,           /**< new value for bound */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the new domain is empty */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   )
+{
+   mpq_t adjustedbound;
+
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+   if( tightened != NULL )
+      *tightened = FALSE;
+
+   /* adjust bound for integral variables */
+   mpq_init(adjustedbound);
+   varAdjustUb(conshdlrdata, var, newbound, adjustedbound);
+   mpq_set(newbound, adjustedbound);
+   mpq_clear(adjustedbound);
+
+   if( mpq_cmp(newbound, consdata->lbloc[consdata->ind[v]]) < 0 )
+   {
+      *infeasible = TRUE;
+      return;
+   }
+
+   if( mpq_cmp(newbound, consdata->ubloc[consdata->ind[v]]) >= 0 )
+      return;
+
+   chgVarUb(scip, conshdlrdata, consdata, var, v, newbound);
+   
+   if( tightened != NULL )
+      *tightened = TRUE;
+
+   return;
+}
+
+/** tightens bounds of a single variable due to activity bounds */
+static
+SCIP_RETCODE tightenVarBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   c,                  /**< index of constraint in exactlp data structures */    
+   int                   v,                  /**< index of variable in ind and val array */
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
+   )
+{
+   SCIP_VAR* var;
+   SCIP_Bool infeasible;
+   SCIP_Bool tightened;
+   mpq_t minresactivity;
+   mpq_t maxresactivity;
+   mpq_t newlb;
+   mpq_t newub;
+   SCIP_Real newlbrelax;
+   SCIP_Real newubrelax;
+
+   assert(cutoff != NULL);
+   assert(nchgbds != NULL);
+   
+   assert(consdata->len[c] > 0);
+   assert(consdata->beg[c] <= v && v < consdata->beg[c] + consdata->len[c]);
+   assert(consdata->ind[v] >= 0 && consdata->ind[v] < consdata->nvars);
+   assert(SCIPvarGetProbindex(vars[consdata->ind[v]]) == consdata->ind[v]);
+
+   var = vars[consdata->ind[v]];
+   assert(var != NULL);
+   assert(consdata->ind[v] == SCIPvarGetProbindex(var));
+
+   /* we cannot tighten bounds of multi-aggregated variables */
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+      return SCIP_OKAY;
+
+   assert(mpq_sgn(consdata->val[v]) != 0);
+   assert(!isPosInfinity(conshdlrdata, consdata->lhs[c]));
+   assert(!isNegInfinity(conshdlrdata, consdata->rhs[c]));
+   
+   /* @todo: changing local bounds is currently only supported at the root 
+    * (because keeping track of bound changes which is necessary for switching between different subtrees 
+    * is not supported yet). implement this. ??????????? */
+   if( SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY; 
+
+   /* @todo: implement general case with more than one variable ?????? */
+   if( consdata->len[c] > 1 )
+      return SCIP_OKAY;
+   
+   /* initialize gmp data */
+   mpq_init(minresactivity);
+   mpq_init(maxresactivity);
+   mpq_init(newlb);
+   mpq_init(newub);
+
+   /* get activity bounds for linear constraint after setting variable to zero */
+   mpq_set_d(minresactivity, 0.0);
+   mpq_set_d(maxresactivity, 0.0);
+   
+   /* val > 0 */
+   if( mpq_sgn(consdata->val[v]) > 0 )
+   {
+      /* check, if we can tighten the variable's bounds */
+      if( !isNegInfinity(conshdlrdata, minresactivity) && !isPosInfinity(conshdlrdata, consdata->rhs[c]) )
+      {
+         /* newub = (rhs - minresactivity)/val */
+         mpq_set(newub, consdata->rhs[c]);
+         mpq_sub(newub, newub, minresactivity);
+         mpq_div(newub, newub, consdata->val[v]);
+
+         if( mpq_cmp(newub, consdata->ubloc[consdata->ind[v]]) < 0 )
+         {
+            /* tighten exact bound of variable */
+            tightenVarUb(scip, conshdlrdata, consdata, var, v, newub, &infeasible, &tightened);
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               goto TERMINATE;
+            }
+
+            if( tightened )
+            {
+#ifdef SCIP_DEBUG
+               char s[SCIP_MAXSTRLEN];
+               
+               gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d>: tighten <%s>, new bds=[%Qd,%Qd]\n",
+                  c, SCIPvarGetName(var), consdata->lbloc[consdata->ind[v]], consdata->ubloc[consdata->ind[v]]);
+               SCIPdebugMessage(s);
+#endif
+               newubrelax = mpqGetRealRelax(scip, consdata->ubloc[consdata->ind[v]], GMP_RNDU);
+              
+               /* change relaxed bound of variable */
+               if( SCIPisLT(scip, newubrelax, SCIPvarGetUbLocal(var)) )
+               {
+                  SCIP_CALL( SCIPchgVarUb(scip, var, newubrelax) );
+                  assert(SCIPvarGetUbLocal(var) >= newubrelax);
+                  
+                  (*nchgbds)++;
+               }
+            }
+         }
+      }
+
+      if( !isPosInfinity(conshdlrdata, maxresactivity) && !isNegInfinity(conshdlrdata, consdata->lhs[c]) )
+      {
+         /* newlb = (lhs - maxresactivity)/val */
+         mpq_set(newlb, consdata->lhs[c]);
+         mpq_sub(newlb, newlb, maxresactivity);
+         mpq_div(newlb, newlb, consdata->val[v]);
+
+         if( mpq_cmp(newlb, consdata->lbloc[consdata->ind[v]]) > 0 )
+         {
+            /* tighten exact bound of variable */
+            tightenVarLb(scip, conshdlrdata, consdata, var, v, newlb, &infeasible, &tightened);
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               goto TERMINATE;
+            }
+
+            if( tightened )
+            {
+#ifdef SCIP_DEBUG
+               char s[SCIP_MAXSTRLEN];
+               
+               gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d>: tighten <%s>, new bds=[%Qd,%Qd]\n",
+                  c, SCIPvarGetName(var), consdata->lbloc[consdata->ind[v]], consdata->ubloc[consdata->ind[v]]);
+               SCIPdebugMessage(s);
+#endif
+               newlbrelax = mpqGetRealRelax(scip, consdata->lbloc[consdata->ind[v]], GMP_RNDD);
+
+               /* change relaxed bound of variable */
+               if( SCIPisGT(scip, newlbrelax, SCIPvarGetLbLocal(var)) )
+               {
+                  SCIP_CALL( SCIPchgVarLb(scip, var, newlbrelax) );
+                  assert(SCIPvarGetLbLocal(var) <= newlbrelax);
+                  
+                  (*nchgbds)++;
+               }
+            }
+         }         
+      }
+   }
+   /* val < 0 */
+   else
+   {
+      assert(mpq_sgn(consdata->val[v]) == -1);
+
+      /* todo: CONTINUE here ???????*/
+      /* check, if we can tighten the variable's bounds */
+      if( !isNegInfinity(conshdlrdata, minresactivity) && !isPosInfinity(conshdlrdata, consdata->rhs[c]) )
+      {
+         /* newlb = (rhs - minresactivity)/val */
+         mpq_set(newlb, consdata->rhs[c]);
+         mpq_sub(newlb, newlb, minresactivity);
+         mpq_div(newlb, newlb, consdata->val[v]);
+
+         if( mpq_cmp(newlb, consdata->lbloc[consdata->ind[v]]) > 0 )
+         {
+
+            /* tighten exact bound of variable */
+            tightenVarLb(scip, conshdlrdata, consdata, var, v, newlb, &infeasible, &tightened);
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               goto TERMINATE;
+            }
+
+            if( tightened )
+            {
+#ifdef SCIP_DEBUG
+               char s[SCIP_MAXSTRLEN];
+               
+               gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d>: tighten <%s>, new bds=[%Qd,%Qd]\n",
+                  c, SCIPvarGetName(var), consdata->lbloc[consdata->ind[v]], consdata->ubloc[consdata->ind[v]]);
+               SCIPdebugMessage(s);
+#endif
+               newlbrelax = mpqGetRealRelax(scip, consdata->lbloc[consdata->ind[v]], GMP_RNDD);
+
+               /* change relaxed bound of variable */
+               if( SCIPisGT(scip, newlbrelax, SCIPvarGetLbLocal(var)) )
+               {
+                  SCIP_CALL( SCIPchgVarLb(scip, var, newlbrelax) );
+                  assert(SCIPvarGetLbLocal(var) <= newlbrelax);
+                  
+                  (*nchgbds)++;
+               }
+            }
+         }         
+      }
+
+      if( !isPosInfinity(conshdlrdata, maxresactivity) && !isNegInfinity(conshdlrdata, consdata->lhs[c]) )
+      {
+         /* newub = (lhs - maxresactivity)/val */
+         mpq_set(newub, consdata->lhs[c]);
+         mpq_sub(newub, newub, maxresactivity);
+         mpq_div(newub, newub, consdata->val[v]);
+
+         if( mpq_cmp(newub, consdata->ubloc[consdata->ind[v]]) < 0 )
+         {
+            /* tighten exact bound of variable */
+            tightenVarUb(scip, conshdlrdata, consdata, var, v, newub, &infeasible, &tightened);
+
+            if( infeasible )
+            {
+               *cutoff = TRUE;
+               goto TERMINATE;
+            }
+
+            if( tightened )
+            {
+#ifdef SCIP_DEBUG
+               char s[SCIP_MAXSTRLEN];
+               
+               gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d>: tighten <%s>, new bds=[%Qd,%Qd]\n",
+                  c, SCIPvarGetName(var), consdata->lbloc[consdata->ind[v]], consdata->ubloc[consdata->ind[v]]);
+               SCIPdebugMessage(s);
+#endif
+               newubrelax = mpqGetRealRelax(scip, consdata->ubloc[consdata->ind[v]], GMP_RNDU);
+              
+               /* change relaxed bound of variable */
+               if( SCIPisLT(scip, newubrelax, SCIPvarGetUbLocal(var)) )
+               {
+                  SCIP_CALL( SCIPchgVarUb(scip, var, newubrelax) );
+                  assert(SCIPvarGetUbLocal(var) >= newubrelax);
+                  
+                  (*nchgbds)++;
+               }
+            }
+         }
+      }
+   }
+
+TERMINATE:
+   /* free gmp data */
+   mpq_clear(newub);
+   mpq_clear(newlb);
+   mpq_clear(maxresactivity);
+   mpq_clear(minresactivity);
+
+   return SCIP_OKAY;
+}
+
+/** tightens bounds of variables in linear constraint of exactlp constraint due to activity bounds */
+static
+SCIP_RETCODE tightenBounds(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< exactlp constraint data */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   c,                  /**< index of constraint in exactlp data structures */    
+   SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
+   int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
+   )
+{
    int v;
-   int ncols;
-   SCIP_Bool fpvalue;
-   SCIP_Bool inrange;
-   SCIP_Bool integral;
-   int branchvar;
-#ifdef DETAILED_DEBUG /*????????? */
-   SCIP_Real oldlb;
-#endif
 
-   assert(scip != NULL);
-   assert(conshdlrdata != NULL);
-   assert(result != NULL);
+   assert(nchgbds != NULL);
+   assert(cutoff != NULL);
 
-   SCIPdebugMessage("checking integrality of exact LP solution:\n");
+   *cutoff = FALSE;
 
-   SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncols);
-   assert(SCIPgetNVars(scip) == ncols);
-
-   /* allocate and initialize temporary arrays */
-   SCIP_CALL( SCIPallocBufferArray(scip, &primsol, ncols) );
-   for( v = 0; v < ncols; ++v )
+   for( v = consdata->beg[c]; v < consdata->beg[c] + consdata->len[c]; ++v )
    {
-      mpq_init(primsol[v]);
-   }
-   mpq_init(lpobjval);
-   
-   /* gets primal solution vector of exact LP */
-   SCIP_CALL( SCIPlpiexGetSol(conshdlrdata->lpiex, &lpobjval, primsol, NULL, NULL, NULL) );
-
-   /* get all problem variables and integer region in vars array */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbin, &nint, NULL, NULL) );
-   
-   /* check whether primal solution satisfies all integrality restrictions */
-   integral = TRUE;
-   branchvar = -1;
-   for( v = 0; v < nbin + nint && integral; ++v )
-   {
-      assert(SCIPvarGetProbindex(vars[v]) == v);
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER );
-
-      if( mpz_get_si(mpq_denref(primsol[v])) != 1 ) 
-      {
-         integral = FALSE;
-         branchvar = v;
-#ifdef DETAILED_DEBUG  /*???????????????*/
-         SCIPdebugMessage("   exact LP value of intvar %s ", SCIPvarGetName(vars[v]));
-         gmp_printf("<%Qd> is not integral\n", primsol[v]); 
-#endif
-      }
-   }
-
-   /* try to improve current local lower bound by using the result of the exact LP solver */
-#ifdef DETAILED_DEBUG /*????????? */
-   oldlb = SCIPgetLocalLowerbound(scip);
-#endif
-   SCIP_CALL( SCIPupdateLocalLowerbound(scip, mpqGetRealRelax(scip, lpobjval, GMP_RNDD)) ); /* todo: check whether it is ok to use this function instead of SCIPupdateLocalDualbound() ?????????? */ 
-#ifdef DETAILED_DEBUG /*????????? */
-   if( oldlb < SCIPgetLocalLowerbound(scip) )
-   {
-      SCIPdebugMessage("lower bound improved: %.50f --> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-   }
-   else
-   {
-      SCIPdebugMessage("lower bound did not improve: %.50f -/-> %.50f\n", oldlb, SCIPgetLocalLowerbound(scip));
-   }
-#endif
-
-   /* store exact LP solution as feasible MIP solution and cut off current node */
-   if( integral )
-   {
-      SCIP_SOL* sol;
-      mpq_t tmp;
-
-      assert(branchvar == -1);
-
-      mpq_init(tmp);
-
-#ifdef DETAILED_DEBUG  /*???????????????*/
-      SCIPdebugMessage("   current exact LP solution is integral\n");
-#endif
-
-      /* create primal solution */
-      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-      
-      fpvalue = TRUE;
-      inrange = TRUE;
-
-      /* check whether it is likely that the lpobjval is treated as infinite in scip, i.e., is out of range in scip */
-      if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, lpobjval))) )
-         inrange = FALSE;
-
-      for( v = 0; v < nvars && inrange; ++v )
-      {
-         SCIP_Real scipsolval;
-
-         scipsolval = mpqGetRealApprox(scip, primsol[v]);
-
-         /* check whether we can store the primal solution without FP errors */
-         mpq_set_d(tmp, scipsolval);
-         if( SCIPisInfinity(scip, REALABS(mpqGetRealApprox(scip, primsol[v]))) )
-            inrange = FALSE;
-         if( !mpq_equal(primsol[v], tmp) )
-            fpvalue = FALSE;
-
-         /* set solution value */
-         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[v], scipsolval) );
-      }
-      mpq_set_d(tmp, SCIPgetSolTransObj(scip, sol));
-      assert(!inrange || !fpvalue || !SCIPuseFPRelaxation(scip) || mpq_cmp(lpobjval, tmp) <= 0);
-
-      if( !inrange )   
-         SCIPfreeSol(scip, &sol);
-      else   
-      {
-         SCIP_Bool stored;
-
-         /* @todo (later): ????????? 
-          * 1. maybe improve objval (using SCIPsetSolTransObj() is only a workaround, and this method is not very safe, 
-          *    i.e., should be deleted from the source code later when point 2. was implemented)
-          * 2. store all primal solutions in the exactlp conshdlr with the exact objval and 
-          *    hand over an FP approximation of the exact sol with safe objval to scip (step 3c)
-          */
-         /* store safe objective value for approximate primal solution */ 
-         SCIP_CALL( SCIPsetSolTransObj(scip, sol, mpqGetRealRelax(scip, lpobjval, GMP_RNDU)) );
-
-         SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
-         
-         if( stored && !fpvalue )
-         {
-            SCIPwarningMessage("Note: Primal solution found is NOT FP representable (primal bound stored is safe, but primal solution stored is only an FP approximation)!\n");
-         }
-      }
-
-      *result = SCIP_CUTOFF;
-
-      mpq_clear(tmp);
-   }
-   else
-   {
-      SCIP_Bool solvelpagain; 
-
-      /* if the inexact LP was claimed to be infeasible, i.e., a pseudo solution is enforced here, but the exact LP 
-       * has been proved to be feasible, try to solve the inexact LP again with starting basis equal to optimal 
-       * basis of the exact LP; in order to avoid an infinite loop, this is only done once at a node 
-       */
-      solvelpagain = FALSE;
-      if( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_INFEASIBLE && conshdlrdata->lastenfopsnode != SCIPgetCurrentNode(scip) )
-      {
-         SCIP_CALL( loadLPEXState(scip, conshdlrdata, &solvelpagain) );
-
-         if( solvelpagain )
-         {
-            solvelpagain = TRUE;
-            *result = SCIP_SOLVELP;
-#ifdef DETAILED_DEBUG  /*???????????????*/
-            SCIPdebugMessage("   ---> LP was infeasible but LPEX not: solve LP once again with basis of LPEX\n");
-#endif
-         }
-      }
-
-      /* branch on the first fractional variable in the exact LP solution */
-      if( !solvelpagain )
-      {
-         SCIP_NODE* node;
-         SCIP_Real downub;
-         SCIP_Real uplb;
-
-         /* @todo (later): ???????????
-          *  - implement more sophisticated branching rules 
-          */
-
-         assert(branchvar >= 0 && branchvar < nvars);
-      
-         /* create left child: add x_i <= floor(x_i^*) */
-         downub = floor(mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDD));
-         SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], downub),
-               SCIPcalcChildEstimate(scip, vars[branchvar], downub)) );
-         SCIP_CALL( SCIPchgVarUbNode(scip, node, vars[branchvar], downub) );
-      
-         /* create right child: add x_i >= ceil(x_i^*) */
-         uplb = ceil(mpqGetRealRelax(scip, primsol[branchvar], GMP_RNDU)); 
-         SCIP_CALL( SCIPcreateChild(scip, &node, SCIPcalcNodeselPriority(scip, vars[branchvar], uplb),
-               SCIPcalcChildEstimate(scip, vars[branchvar], uplb)) );
-         SCIP_CALL( SCIPchgVarLbNode(scip, node, vars[branchvar], uplb) );
- 
-         assert(uplb = downub + 1.0);
-
-#ifndef NDEBUG
-         {
-            mpq_t resultuplb;
-            mpq_t resultdownub;
-         
-            mpq_init(resultuplb);
-            mpq_init(resultdownub);
-
-            mpq_set_d(resultuplb, uplb);
-            mpq_set_d(resultdownub, downub);
-         
-            assert(mpq_cmp(resultdownub, primsol[branchvar]) < 0);
-            assert(mpq_cmp(resultuplb, primsol[branchvar]) > 0);
-
-            mpq_clear(resultuplb);
-            mpq_clear(resultdownub);
-         }
-#endif
-         *result = SCIP_BRANCHED;
-#ifdef DETAILED_DEBUG  /*???????????????*/
-         SCIPdebugMessage("   ---> LP was not solved: branch on result of LPEX\n");
-#endif
-      }
-   }
-
-   /* free temporary arrays */
-   for( v = 0; v < ncols; ++v )
-   {
-      mpq_clear(primsol[v]);
-   }
-   mpq_clear(lpobjval);
-   SCIPfreeBufferArray(scip, &primsol);
-
-   if( integral && !inrange )   
-   {
-      SCIPerrorMessage("storing optimal solutions of subproblems that is out of FP range is not supported yet\n");
-      return SCIP_ERROR;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** solves the exact LP with the given algorithm and evaluates return status */
-static
-SCIP_RETCODE solveLPEX(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   SCIP_LPALGO           lpalgo,             /**< LP algorithm that should be applied */
-   SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error occured */
-   )
-{
-   SCIP_RETCODE retcode;
-   int iterations;
-   int ncols;
-   int nrows;
-
-   assert(scip != NULL);
-   assert(lperror != NULL);
-
-   SCIPlpiexGetNCols(conshdlrdata->lpiex, &ncols);
-   SCIPlpiexGetNRows(conshdlrdata->lpiex, &nrows);
-   
-   *lperror = FALSE;
-
-#ifdef EXLPSOLVER_OUT /* only for debugging ???????????????? */
-   SCIP_CALL( SCIPlpiexSetIntpar(conshdlrdata->lpiex, SCIP_LPPAR_LPINFO, TRUE) ); 
-#endif
-
-   switch( lpalgo )
-   {
-   case SCIP_LPALGO_PRIMALSIMPLEX:
-      SCIPdebugMessage("solving current primal exact LP (%d cols, %d rows):\n", ncols, nrows);
-
-      /* call primal simplex */
-      retcode = SCIPlpiexSolvePrimal(conshdlrdata->lpiex);
-      if( retcode == SCIP_LPERROR )
-      {
-         *lperror = TRUE;
-         SCIPdebugMessage("   (node %"SCIP_LONGINT_FORMAT") primal simplex solving error in current exact LP\n", 
-            SCIPgetNNodes(scip));
-      }
-      else
-      {
-         SCIP_CALL( retcode );
-      }
- 
-      SCIP_CALL( SCIPlpiexGetIterations(conshdlrdata->lpiex, &iterations) );
-      SCIPdebugMessage("   solved primal exact LP in %d iterations\n", iterations);
-      break;
-
-   case SCIP_LPALGO_DUALSIMPLEX:
-      SCIPdebugMessage("solving current dual exact LP (%d cols, %d rows)\n", ncols, nrows);
-      
-      /* call dual simplex */
-      retcode = SCIPlpiexSolveDual(conshdlrdata->lpiex);
-      if( retcode == SCIP_LPERROR )
-      {
-         *lperror = TRUE;
-         SCIPdebugMessage("   (node %"SCIP_LONGINT_FORMAT") dual simplex solving error in current exact LP\n", 
-            SCIPgetNNodes(scip));
-      }
-      else
-      {
-         SCIP_CALL( retcode );
-      }
-
-      SCIP_CALL( SCIPlpiexGetIterations(conshdlrdata->lpiex, &iterations) );
-      SCIPdebugMessage("   solved dual exact LP in %d iterations\n", iterations);
-      break;
-
-   default:
-      SCIPerrorMessage("invalid exact LP algorithm\n");
-      return SCIP_INVALIDDATA;
-   }
-
-   return SCIP_OKAY;
-}
-
-/** evaluates the result of the exact LP */
-static
-SCIP_RETCODE evaluateLPEX(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< exactlp constraint handler data */
-   SCIP_RESULT*          result              /**< pointer to store the result of the lp enforcement call */
-   )
-{
-   /* evaluate solution status */
-   if( SCIPlpiexIsOptimal(conshdlrdata->lpiex) )
-   {
-      SCIPdebugMessage("   exact LP solved to optimality\n"); 
-
-#ifndef NDEBUG
-      {
-         SCIP_Bool primalfeasible;
-         SCIP_Bool dualfeasible;
-         
-         SCIP_CALL( SCIPlpiexGetSolFeasibility(conshdlrdata->lpiex, &primalfeasible, &dualfeasible) );
-         assert(primalfeasible);
-         assert(dualfeasible);
-      }      
-#endif
-      /* check whether exact LP solution is feasible for the MIP; if it is feasible the solution is stored 
-       * and the current node is cut off otherwise a branching is created
-       */
-      SCIP_CALL( checkIntegrality(scip, conshdlrdata, result) );
-      assert(*result == SCIP_CUTOFF || SCIP_BRANCHED);
-
-   }
-   else if( SCIPlpiexIsObjlimExc(conshdlrdata->lpiex) )
-   {
-      SCIPerrorMessage("exact LP exceeds objlimit: case not handled yet\n");
-      return SCIP_ERROR;
-   }
-   else if( SCIPlpiexIsPrimalInfeasible(conshdlrdata->lpiex) )
-   {
-      SCIPdebugMessage("   exact LP is primal infeasible\n"); 
-      
-      *result = SCIP_CUTOFF;
-   }
-   else if( SCIPlpiexExistsPrimalRay(conshdlrdata->lpiex) ) /* todo: check why in lp.c SCIPlpiIsPrimalUnbounded() is not used ????*/
-   {
-      SCIPerrorMessage("exact LP has primal ray: case not handled yet\n");
-      return SCIP_ERROR;
-   }
-   else if( SCIPlpiexIsIterlimExc(conshdlrdata->lpiex) )
-   {
-      SCIPerrorMessage("exact LP exceeds iteration limit: case not handled yet\n");
-      return SCIP_ERROR;
-   }
-   else if( SCIPlpiexIsTimelimExc(conshdlrdata->lpiex) )
-   {
-      SCIPerrorMessage("exact LP exceeds time limit: case not handled yet\n");
-      return SCIP_ERROR;
-   }
-   else
-   {
-      SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") error or unknown return status in current exact LP (internal status: %d)\n", 
-         SCIPgetNNodes(scip), SCIPlpiexGetInternalStatus(conshdlrdata->lpiex));
-      return SCIP_LPERROR;
+      SCIP_CALL( tightenVarBounds(scip, conshdlrdata, consdata, vars, c, v, cutoff, nchgbds) );
    }
 
    return SCIP_OKAY;
@@ -2814,26 +3848,53 @@ SCIP_DECL_CONSFREE(consFreeExactlp)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitExactlp NULL
+static
+SCIP_DECL_CONSINIT(consInitExactlp)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   SCIP_CALL( SCIPprimalexCreate(&conshdlrdata->primal) );
+   
+   return SCIP_OKAY;
+}
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
-#define consExitExactlp NULL
+static
+SCIP_DECL_CONSEXIT(consExitExactlp)
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   SCIP_CALL( SCIPprimalexFree(&conshdlrdata->primal, SCIPblkmem(scip)) );
+   
+   return SCIP_OKAY;
+}
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
 static
 SCIP_DECL_CONSINITPRE(consInitpreExactlp)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of exactlp constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+{
+   SCIP_CONSDATA* consdata;
+   
+   assert(nconss >= 0 && nconss <= 1);
+   
+   if( nconss == 0 )
+      return SCIP_OKAY;
+
+   consdata = SCIPconsGetData(conss[0]);
+   assert(consdata != NULL);
+   
+   /* update objscale of transforemd problem; 
+    * note that this value is not reliable and should never be used to compute dual and primal bounds 
+    */
+   SCIPsetTransObjscale(scip, mpqGetRealApprox(scip, consdata->objscale));
 
    return SCIP_OKAY;
 }
-#else
-#define consInitpreExactlp NULL
-#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -2917,6 +3978,10 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* sourcedata;
    SCIP_CONSDATA* targetdata;
+   SCIP_Bool success; 
+   mpq_t* newobj;
+   mpq_t intscalar;
+   int i;
 
    /*debugMessage("Trans method of exactlp constraints\n");*/
 
@@ -2934,17 +3999,107 @@ SCIP_DECL_CONSTRANS(consTransExactlp)
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr != NULL);
 
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &newobj, sourcedata->nvars) );
+     
+   /* initialize objective coefficients for transformed constraint */
+   for( i = 0; i < sourcedata->nvars; ++i )
+   {         
+      mpq_init(newobj[i]);
+      mpq_set(newobj[i], sourcedata->obj[i]); 
+   }
+   mpq_init(intscalar);
+   mpq_set_d(intscalar, 1.0);
+
+   success = TRUE;
+
+   /* in case of maximization, use negative objective coefficients in the transformed constraint */
+   if( sourcedata->objsense == SCIP_OBJSEN_MAXIMIZE )
+   {
+      mpq_t objsense;
+      
+      mpq_init(objsense);
+      mpq_set_d(objsense, -1.0);
+      
+      /* update exact objective values */
+      for( i = 0; i < sourcedata->nvars; ++i )
+         mpq_mul(newobj[i], newobj[i], objsense); 
+      
+      mpq_clear(objsense);
+   }
+
+   /* in case of working with an FP relaxation, all objective coefficients need to be FP representable;
+    * if this is not the case yet, scale all objective coefficients to integral values
+    */
+   if( sourcedata->objneedscaling )
+   {
+      SCIP_VAR** origvars; 
+      SCIP_VAR** vars; 
+
+      assert(SCIPuseFPRelaxation(scip));
+
+      /* todo: check what value is suitable for maxscale such that there is no overflow ?????????? */
+      SCIP_CALL( SCIPmpqCalcIntegralScalar(newobj, sourcedata->nvars, SCIPinfinity(scip), intscalar, &success) );
+      
+      if( !success )
+         goto TERMINATE;
+
+      /* allocate temporary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, sourcedata->nvars) );
+      
+      /* get transformed problem variables */
+      origvars = SCIPgetOrigVars(scip);
+      assert(SCIPgetNOrigVars(scip) == sourcedata->nvars);
+      SCIP_CALL( SCIPgetTransformedVars(scip, sourcedata->nvars, origvars, vars) );
+         
+      /* scale exact objective values s.t. all become FP representable and store these values in the transformed problem */
+      for( i = 0; i < sourcedata->nvars; ++i )
+      {
+         assert(SCIPvarIsOriginal(origvars[i]));
+         assert(SCIPvarIsTransformed(vars[i]));
+
+         mpq_mul(newobj[i], newobj[i], intscalar); 
+
+         assert(mpqIsReal(scip, newobj[i]));
+         SCIP_CALL( SCIPchgVarObj(scip, vars[i], mpqGetRealApprox(scip, newobj[i])) );
+      }
+      
+#ifdef DETAILED_DEBUG /*????????????????*/
+      checkOrigVars(scip);
+#endif
+         
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &vars);
+   }
+
    /* create exactlp constraint data for target constraint */
    SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr, sourcedata->objsense, sourcedata->nvars, 
-         sourcedata->obj, sourcedata->lb, sourcedata->ub, sourcedata->nconss, sourcedata->lhs, sourcedata->rhs, 
-         sourcedata->nnonz, sourcedata->beg, sourcedata->ind, sourcedata->val) );
- 
+         newobj, sourcedata->lb, sourcedata->ub, sourcedata->nconss, sourcedata->conssize, sourcedata->lhs, sourcedata->rhs,
+         sourcedata->nnonz, sourcedata->beg, sourcedata->len, sourcedata->ind, sourcedata->val, FALSE) );
+
    /* create target constraint */
    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   /* update objscale of transformed constraint */
+   mpq_div(targetdata->objscale, targetdata->objscale, intscalar); 
+
+TERMINATE:
+   /* free temporary memory */
+   mpq_clear(intscalar);
+
+   for( i = 0; i < sourcedata->nvars; ++i )
+      mpq_clear(newobj[i]);
+   SCIPfreeBufferArray(scip, &newobj);
+   
+   if( !success )
+   {
+      SCIPerrorMessage("given obj coefficient of var is not FP representable which is required for working with an FP relaxation\n");
+      return SCIP_INVALIDDATA;
+   }
 
    return SCIP_OKAY;
 }
@@ -3170,7 +4325,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    SCIP_CALL( loadLPState(scip, conshdlrdata) );
 
    /* solve exact LP */
-   algo = 'd'; /* todo: what should be do here (selection by warmstartinfo is not useful, algo used in inexact LP solver better?) ?????????? */
+   algo = 'd'; /* todo: what should be done here (selection by warmstartinfo is not useful, algo used in inexact LP solver better?) ?????????? */
    switch( algo )
    {
    case 'd':
@@ -3193,7 +4348,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExactlp)
    }
 
    /* evaluate result of exact LP solver */
-   SCIP_CALL( evaluateLPEX(scip, conshdlrdata, result) );
+   SCIP_CALL( evaluateLPEX(scip, conshdlrdata, consdata, result) );
 
    return SCIP_OKAY;
 }
@@ -3256,7 +4411,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    }
 
    /* solve exact LP */
-   algo = 'd'; /* todo: what should be do here (selection by warmstartinfo is not useful, algo used in inexact LP solver better?) ?????????? */
+   algo = 'd'; /* todo: what should be done here (selection by warmstartinfo is not useful, algo used in inexact LP solver better?) ?????????? */
    switch( algo )
    {
    case 'd':
@@ -3279,7 +4434,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
    }
 
    /* evaluate result of exact LP solver */
-   SCIP_CALL( evaluateLPEX(scip, conshdlrdata, result) );
+   SCIP_CALL( evaluateLPEX(scip, conshdlrdata, consdata, result) );
 
    SCIPdebugMessage(" -> enforcing pseudo solution returned result <%d>\n", *result);
 
@@ -3299,7 +4454,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExactlp)
 static
 SCIP_DECL_CONSCHECK(consCheckExactlp)
 {  /*lint --e{715}*/
-   SCIP_Bool violated;
+   SCIP_Bool feasible;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -3310,12 +4465,12 @@ SCIP_DECL_CONSCHECK(consCheckExactlp)
    
    /*debugMessage("Check method of exactlp constraint\n");*/
 
-   SCIP_CALL( checkCons(scip, SCIPconshdlrGetData(conshdlr), conss[0], sol, printreason, &violated) );
+   SCIP_CALL( checkCons(scip, SCIPconshdlrGetData(conshdlr), conss[0], sol, NULL, printreason, &feasible) );
 
-   if( violated )
-      *result = SCIP_INFEASIBLE;
-   else
+   if( feasible )
       *result = SCIP_FEASIBLE;
+   else
+      *result = SCIP_INFEASIBLE;
    
    return SCIP_OKAY;
 }
@@ -3337,18 +4492,136 @@ SCIP_DECL_CONSPROP(consPropExactlp)
 
 
 /** presolving method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPRESOL(consPresolExactlp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of exactlp constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONS* cons;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Bool cutoff;
+   SCIP_Bool delay;
+   mpq_t minactivity;
+   mpq_t maxactivity;
+   int oldnchgbds;
+   int oldndelconss;
+   int c;
+   int i;
+#ifdef SCIP_DEBUG
+   char s[SCIP_MAXSTRLEN];
+#endif
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   /*debugMessage("Presol method of exactlp constraints\n");*/
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* get problem variables */
+   vars = SCIPgetVars(scip);
+   
+   /* remember old preprocessing counters */
+   cutoff = FALSE;
+   delay = FALSE;
+   oldnchgbds = *nchgbds;
+   oldndelconss = *ndelconss;
+
+   /* initialize gmp data */
+   mpq_init(minactivity);
+   mpq_init(maxactivity);
+
+   /* process single exactlp constraints */
+   for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+   {
+      cons = conss[c];
+      assert(SCIPconsIsActive(cons));
+      
+      consdata = SCIPconsGetData(cons);
+      assert(consdata != NULL);
+      assert(SCIPgetNVars(scip) == consdata->nvars);
+      
+      /* we can only presolve exactlp constraints, that are not modifiable */
+      if( SCIPconsIsModifiable(cons) )
+         continue;
+      
+      SCIPdebugMessage("presolving exactlp constraint <%s>\n", SCIPconsGetName(cons));
+      SCIPdebug(SCIP_CALL( SCIPprintCons(scip, cons, NULL) ));
+
+      /* process single linear constraints of exactlp constraint */
+      for( i = 0; i < consdata->nconss && !SCIPisStopped(scip); ++i )
+      {
+         SCIPdebugMessage("presolving linear constraint <%d> of exactlp constraint\n", i);
+         
+         /* check bounds */
+         if( mpq_cmp(consdata->lhs[i], consdata->rhs[i]) > 0 )
+         {
+#ifdef SCIP_DEBUG
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d> of exactlp constraint is infeasible: sides=[%Qd,%Qd]\n", 
+               consdata->lhs[i], consdata->rhs[i]);
+            SCIPdebugMessage(s);
+#endif
+            cutoff = TRUE;
+            break;
+         }
+
+         /* tighten variable's bounds */
+         SCIP_CALL( tightenBounds(scip, conshdlrdata, consdata, vars, i, &cutoff, nchgbds) );
+         if( cutoff )
+            break;
+         
+         /* todo: CONTINUE HERE ???????? 
+          *  - search for redundant constraints 
+          *    (in particulat delete constraints with only one variable if it is redundant) 
+          */
+         /* check constraint for infeasibility and redundancy */
+         singleConsGetActivityBounds(conshdlrdata, consdata, i, minactivity, maxactivity);
+         
+         if( mpq_cmp(minactivity, consdata->rhs[i]) > 0 || mpq_cmp(maxactivity, consdata->lhs[i]) < 0 )
+         {
+#ifdef SCIP_DEBUG
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d> of exactlp constraint is infeasible: activitybounds=[%Qd,%Qd], sides=[%Qd,%Qd]\n",
+               i, minactivity, maxactivity, consdata->lhs[i], consdata->rhs[i]);
+            SCIPdebugMessage(s);
+#endif
+            cutoff = TRUE;
+            break;
+         }
+         else if( mpq_cmp(minactivity, consdata->lhs[i]) >= 0 && mpq_cmp(maxactivity, consdata->rhs[i]) <= 0 )
+         {
+#ifdef SCIP_DEBUG
+            gmp_snprintf(s, SCIP_MAXSTRLEN, "linear constraint <%d> of exactlp constraint is redundant: activitybounds=[%Qd,%Qd], sides=[%Qd,%Qd]\n",
+               i, minactivity, maxactivity, consdata->lhs[i], consdata->rhs[i]);
+            SCIPdebugMessage(s);
+#endif
+            delSingleCons(scip, cons, conshdlrdata, consdata, i);
+            i--;
+            (*ndelconss)++;
+         }
+      }
+      
+      if( cutoff )
+         break;
+   }
+
+   /* free gmp data */
+   mpq_clear(maxactivity);
+   mpq_clear(minactivity);
+
+   /* return the correct result code */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( delay )
+      *result = SCIP_DELAYED;
+   else if( *nchgbds > oldnchgbds || *ndelconss > oldndelconss )
+      *result = SCIP_SUCCESS;
+   else
+      *result = SCIP_DIDNOTFIND;
 
    return SCIP_OKAY;
 }
-#else
-#define consPresolExactlp NULL
-#endif
 
 
 /** propagation conflict resolving method of constraint handler */
@@ -3373,12 +4646,10 @@ SCIP_DECL_CONSLOCK(consLockExactlp)
    SCIP_VAR** vars;
    SCIP_CONSDATA* consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool* roundinguplocked;
-   SCIP_Bool* roundingdownlocked;
    SCIP_Bool haslhs;
    SCIP_Bool hasrhs;
-   int j;
    int c;
+   int j;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -3386,52 +4657,48 @@ SCIP_DECL_CONSLOCK(consLockExactlp)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   assert(consdata->lockup != NULL);
+   assert(consdata->lockdown != NULL);
+
    /* get problem variables; in transforming stage we can only access original variables, 
     * however, SCIPaddVarLocks() will use the transformed variable if it exists 
     */
    vars = SCIPgetOrigVars(scip); 
    assert(SCIPgetNOrigVars(scip) == consdata->nvars);
 
-   /* allocate and initialize temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &roundingdownlocked, consdata->nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &roundinguplocked, consdata->nvars) );
-   BMSclearMemoryArray(roundingdownlocked, consdata->nvars);
-   BMSclearMemoryArray(roundinguplocked, consdata->nvars);
-
    /* for every variable, check whether rounding up or down could lead to the violation of some constraint */
-   j = 0; 
    for( c = 0; c < consdata->nconss; ++c )
    {
       haslhs = !isNegInfinity(conshdlrdata, consdata->lhs[c]);
       hasrhs = !isPosInfinity(conshdlrdata, consdata->rhs[c]);
 
       /* check all variables of the current constraint */
-      for( ; j < consdata->beg[c+1]; ++j )
+      for( j = consdata->beg[c]; j < consdata->beg[c] + consdata->len[c]; ++j )
       {
          assert(consdata->ind[j] >= 0 && consdata->ind[j] < consdata->nvars);
+         assert(consdata->lockup[consdata->ind[j]] >= 0 && consdata->lockdown[consdata->ind[j]] >= 0);
 
          /* val > 0 */
          if( mpq_sgn(consdata->val[j]) > 0 )
          {
             if( haslhs )
-               roundingdownlocked[consdata->ind[j]] = TRUE;
+               consdata->lockdown[consdata->ind[j]]++;
             
             if( hasrhs )
-               roundinguplocked[consdata->ind[j]] = TRUE;
+               consdata->lockup[consdata->ind[j]]++;
          }
 
          /* val < 0 */
          if( mpq_sgn(consdata->val[j]) < 0 )
          {
             if( haslhs )
-               roundinguplocked[consdata->ind[j]] = TRUE;
+               consdata->lockup[consdata->ind[j]]++;
             
             if( hasrhs )
-               roundingdownlocked[consdata->ind[j]] = TRUE;
+               consdata->lockdown[consdata->ind[j]]++;
          }
       } 
    }
-   assert(j == consdata->nnonz);
 
    /* set rounding locks for all variables */
    for( j = 0; j < consdata->nvars; ++j )
@@ -3440,27 +4707,23 @@ SCIP_DECL_CONSLOCK(consLockExactlp)
 
       probindex = SCIPvarGetProbindex(vars[j]);
 
-      if( roundingdownlocked[probindex] && roundinguplocked[probindex] )
+      if( consdata->lockdown[probindex] > 0 && consdata->lockup[probindex] > 0 )
       {
          SCIP_CALL( SCIPaddVarLocks(scip, vars[j], nlockspos + nlocksneg, nlockspos + nlocksneg) );
       }
-      else if( roundingdownlocked[probindex] )
+      else if( consdata->lockdown[probindex] > 0 )
       { 
-         assert(!roundinguplocked[probindex]);
+         assert(consdata->lockup[probindex] == 0);
 
          SCIP_CALL( SCIPaddVarLocks(scip, vars[j], nlockspos, nlocksneg) );
       } 
-      else if( roundinguplocked[probindex] )
+      else if( consdata->lockup[probindex] > 0 )
       { 
-         assert(!roundingdownlocked[probindex]);
+         assert(consdata->lockdown[probindex] == 0);
 
          SCIP_CALL( SCIPaddVarLocks(scip, vars[j], nlocksneg, nlockspos) );
       } 
    }
-   
-   /* free temporary memory */
-   SCIPfreeBufferArray(scip, &roundinguplocked);
-   SCIPfreeBufferArray(scip, &roundingdownlocked);
 
    return SCIP_OKAY;
 }
@@ -3612,6 +4875,16 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_LBRELAXED:
+
+      /* catch only bound changes that are not originated by the exactlp constraint handler (e.g., exact presolving),
+       * i.e., those that come from branching decisions. the bound changes found by the exactlp constraint handler are 
+       * already stored here and the given bound is only a relaxation and probaly weaker. 
+       * bound changes on integral variables can be catched in any case as they are identical to the ones already stored. 
+       */
+      /* todo: check whether this argumentation is correct ???????? */
+      if( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_CONTINUOUS )
+         break;
+
 #ifdef BOUNDCHG_OUT /* ?????????? */
       {
          char s[SCIP_MAXSTRLEN];
@@ -3621,6 +4894,7 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
          SCIPdebugMessage(s);
       }
 #endif
+
       /* check whether variable already has unprocessed lower bound change events */ 
       if( consdata->bndchglbpos[varind] == -1 )
       {
@@ -3652,6 +4926,16 @@ SCIP_DECL_EVENTEXEC(eventExecExactlp)
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
    case SCIP_EVENTTYPE_UBRELAXED:
+
+      /* catch only bound changes that are not originated by the exactlp constraint handler (e.g., exact presolving),
+       * i.e., those that come from branching decisions. the bound changes found by the exactlp constraint handler are 
+       * already stored here and the given bound is only a relaxation and probaly weaker. 
+       * bound changes on integral variables can be catched in any case as they are identical to the ones already stored. 
+       */
+      /* todo: check whether this argumentation is correct ???????? */
+      if( SCIPvarGetType(SCIPeventGetVar(event)) == SCIP_VARTYPE_CONTINUOUS )
+         break;
+
 #ifdef BOUNDCHG_OUT /* ?????????? */
       {
          char s[SCIP_MAXSTRLEN];
@@ -3773,13 +5057,15 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    mpq_t*                obj,                /**< objective function values of variables */
    mpq_t*                lb,                 /**< lower bounds of variables */
    mpq_t*                ub,                 /**< upper bounds of variables */
-   int                   nconss,              /**< number of constraints */
+   int                   nconss,             /**< number of constraints */
    mpq_t*                lhs,                /**< left hand sides of constraints */
    mpq_t*                rhs,                /**< right hand sides of constraints */
    int                   nnonz,              /**< number of nonzero elements in the constraint matrix */
-   int*                  beg,                /**< start index of each variable in ind- and val-array */
+   int*                  beg,                /**< start index of each constraint in ind and val array */
+   int*                  len,                /**< number of nonzeros in val array corresponding to constraint */
    int*                  ind,                /**< variable indices (var->probindex) of constraint matrix entries */
-   mpq_t*                val,                /**< values of nonzero constraint matrix entries */
+   mpq_t*                val,                /**< values of nonzero constraint matrix entries (and some zeros) */
+   SCIP_Bool             objneedscaling,     /**< do objective function values need to be scaled because some are not FP representable? */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -3823,8 +5109,8 @@ SCIP_RETCODE SCIPcreateConsExactlp(
    assert(conshdlrdata->eventhdlr != NULL);
 
    /* create constraint data */
-   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, objsense, nvars, obj, lb, ub, nconss, lhs, rhs, 
-         nnonz, beg, ind, val) );
+   SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, objsense, nvars, obj, lb, ub, nconss, nconss, lhs, rhs, 
+         nnonz, beg, len, ind, val, objneedscaling) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -3832,3 +5118,470 @@ SCIP_RETCODE SCIPcreateConsExactlp(
 
    return SCIP_OKAY;
 }
+
+/** checks if value is treated as positive infinite in exactlp constraint handler */
+SCIP_Bool SCIPisPosInfinityExactlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   mpq_t                 val                 /**< value to be compared against infinity */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   /* find the exactlp constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("exactlp constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   return isPosInfinity(conshdlrdata, val);
+}
+
+/** checks if value is treated as negative infinite in exactlp constraint handler */
+SCIP_Bool SCIPisNegInfinityExactlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   mpq_t                 val                 /**< value to be compared against infinity */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   /* find the exactlp constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("exactlp constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* get event handler */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   return isNegInfinity(conshdlrdata, val);
+}
+
+/** returns a safe external value for the given exact internal objective value, i.e., a lower or upper approximation 
+ *  of the exact external value depending on the objective sense of the original problem and whether the given internal 
+ *  value is a lower or upper bound in the transformed problem. 
+*/
+SCIP_Real SCIPgetExternSafeObjval(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   SCIP_Real             objval,             /**< safe internal objective value */
+   SCIP_Bool             lowerbound          /**< TRUE if objval is lower bound in transformed prob; FALSE if upper bound */
+   )
+{
+   SCIP_Real objextern;
+   SCIP_Bool down;
+   mpq_t mpqobjintern; 
+   mpq_t mpqobjextern; 
+
+   mpq_init(mpqobjintern);  
+   mpq_init(mpqobjextern);
+   
+   mpq_set_d(mpqobjintern, objval);
+   
+   getExternObjvalex(cons, mpqobjintern, mpqobjextern); 
+
+   down = (((SCIPgetObjsense(scip) == SCIP_OBJSEN_MINIMIZE) && lowerbound) 
+      || ((SCIPgetObjsense(scip) == SCIP_OBJSEN_MAXIMIZE) && !lowerbound));
+
+   if( down )
+      objextern = mpqGetRealRelax(scip, mpqobjextern, GMP_RNDD);
+   else
+      objextern = mpqGetRealRelax(scip, mpqobjextern, GMP_RNDU);
+
+   mpq_clear(mpqobjintern);  
+   mpq_clear(mpqobjextern);
+
+   return objextern;
+}
+
+/** gets number of feasible exact primal solutions stored in the exact solution storage */
+int SCIPgetNSolexs(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   
+   /* find the exactlp constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("exactlp constraint handler not found\n");
+      SCIPABORT();
+      return 0;
+   }
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   if( conshdlrdata->primal != NULL )
+      return conshdlrdata->primal->nsols;
+   else
+      return 0;
+}
+
+/** gets best feasible exact primal solution found so far, or NULL if no solution has been found */
+SCIP_SOLEX* SCIPgetBestSolex(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   /* find the exactlp constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("exactlp constraint handler not found\n");
+      SCIPABORT();
+      return NULL;
+   }
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   
+   if( conshdlrdata->primal != NULL && conshdlrdata->primal->nsols > 0 )
+   {
+      assert(conshdlrdata->primal->sols != NULL);
+      assert(conshdlrdata->primal->sols[0] != NULL);
+      return conshdlrdata->primal->sols[0];
+   }
+
+   return NULL;
+}
+
+/** returns objective value of exact primal CIP solution w.r.t. original problem */
+void SCIPgetSolexOrigObj(
+   SCIP*                scip,               /**< SCIP data structure */
+   SCIP_CONS*           cons,               /**< exactlp constraint data */
+   SCIP_SOLEX*          sol,                /**< exact primal solution */
+   mpq_t                obj                 /**< pointer to store objective value */ 
+   )
+{
+   mpq_t objintern;
+
+   assert(sol != NULL);
+
+   mpq_init(objintern);
+   SCIPsolexGetObj(sol, objintern);
+
+   getExternObjvalex(cons, objintern, obj);
+
+   mpq_clear(objintern);
+}
+
+/** returns transformed objective value of exact primal CIP solution */
+void SCIPgetSolexTransObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOLEX*           sol,                /**< exact primal solution */
+   mpq_t                 obj                 /**< pointer to store objective value */ 
+   )
+{
+   assert(sol != NULL);
+
+   SCIPsolexGetObj(sol, obj);
+}
+
+/** returns objective value of best exact primal CIP solution found so far w.r.t. original problem */
+void SCIPgetBestSolexObj(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   mpq_t                 obj                 /**< pointer to store objective value */ 
+   )
+{
+   SCIP_SOLEX* sol;
+
+   /* get best exact solution found so far */
+   sol = SCIPgetBestSolex(scip);
+   if( sol != NULL )
+   {
+      SCIPgetSolexOrigObj(scip, cons, sol, obj);
+   }
+   else
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_CONSHDLR* conshdlr;
+
+      /* find the exactlp constraint handler */
+      conshdlr = SCIPconsGetHdlr(cons);
+
+      if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+      {
+         SCIPerrorMessage("constraint is not of type exactlp\n");
+         SCIPABORT();
+      }
+
+      /* get constraint handler data */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+      assert(conshdlrdata != NULL);
+      getExternObjvalex(cons, posInfinity(conshdlrdata), obj);
+   }
+}
+
+/** outputs non-zero variables of exact solution in original problem space to file stream */
+SCIP_RETCODE SCIPprintSolex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   SCIP_SOLEX*           sol,                /**< exact primal solution */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   char s[SCIP_MAXSTRLEN];
+   mpq_t obj;
+
+   mpq_init(obj);
+   
+   SCIPgetSolexOrigObj(scip, cons, sol, obj);
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "objective value:                 %20Qd\n", obj);
+   SCIPmessageFPrintInfo(file, s);
+
+   /* todo: usinf scip->orig/transprob is ugly! think about a general way get information from the constraint handler 
+    *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
+    *       ??????????? 
+    */
+   SCIP_CALL( SCIPsolexPrint(sol, scip->origprob, scip->transprob, file, printzeros) );
+
+   mpq_clear(obj);
+
+   return SCIP_OKAY;
+}
+
+/** outputs non-zero variables of exact solution in original problem space in transformed problem space to file stream */
+SCIP_RETCODE SCIPprintTransSolex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOLEX*           sol,                /**< exact primal solution */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   char s[SCIP_MAXSTRLEN];
+   mpq_t obj;
+
+   mpq_init(obj);
+   
+   if( SCIPsolexGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+   {
+      SCIPerrorMessage("cannot print original space solution as transformed solution\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIPgetSolexTransObj(scip, sol, obj);
+   gmp_snprintf(s, SCIP_MAXSTRLEN, "objective value:                 %20Qd\n", obj);
+   SCIPmessageFPrintInfo(file, s);
+
+   /* todo: usinf scip->orig/transprob is ugly! think about a general way get information from the constraint handler 
+    *       implement all the methods in cons_exactlp.c that operate and use exact problem data, like exact solutions
+    *       ??????????? 
+    */
+   SCIP_CALL( SCIPsolexPrint(sol, scip->transprob, scip->transprob, file, printzeros) );
+
+   mpq_clear(obj);
+
+   return SCIP_OKAY;
+}
+
+/** outputs best feasible exact primal solution found so far to file stream */
+SCIP_RETCODE SCIPprintBestSolex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< exactlp constraint data */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_SOLEX* sol;
+
+   sol = SCIPgetBestSolex(scip);
+
+   if( sol == NULL )
+      SCIPmessageFPrintInfo(file, "no solution available\n");
+   else
+   {
+      SCIP_CALL( SCIPprintSolex(scip, cons, sol, file, printzeros) );
+   }
+   return SCIP_OKAY;
+}
+
+/** outputs best feasible exact primal solution found so far in transformed problem space to file stream */
+SCIP_RETCODE SCIPprintBestTransSolex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_SOLEX* sol;
+
+   sol = SCIPgetBestSolex(scip);
+
+   if( sol == NULL )
+      SCIPmessageFPrintInfo(file, "no exact solution available\n");
+   else
+   {
+      if( SCIPsolexGetOrigin(sol) == SCIP_SOLORIGIN_ORIGINAL )
+      {
+         SCIPdialogMessage(scip, NULL, "best exact solution exists only in original problem space\n");
+      }
+      else
+      {
+         SCIP_CALL( SCIPprintTransSolex(scip, sol, file, printzeros) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** outputs value of variable in best feasible exact primal solution found so far to file stream */
+SCIP_RETCODE SCIPprintBestSolexVar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable for which solution value should be printed */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_SOLEX* sol;
+   char s[SCIP_MAXSTRLEN];
+   mpq_t solval;
+
+   sol = SCIPgetBestSolex(scip);
+
+   if( sol == NULL )
+      SCIPmessageFPrintInfo(file, "no exact solution available\n");
+   else
+   {
+      mpq_init(solval);
+      
+      SCIPsolexGetVal(sol, var, solval);
+
+      SCIPmessageFPrintInfo(file, "%-32s", SCIPvarGetName(var));
+      gmp_snprintf(s, SCIP_MAXSTRLEN, " %20Qd\n", solval);
+      SCIPmessageFPrintInfo(file, s);
+      
+      mpq_clear(solval);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** checks best exact primal solution for feasibility without adding it to the solution store;
+ *  called for original exactlp constraints the method is used to double check the best exact solution in order to 
+ *  validate the presolving process
+ */
+SCIP_RETCODE SCIPcheckBestSolex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Bool*            feasible,           /**< stores whether given solution is feasible */
+   SCIP_Bool             printreason         /**< should the reason for the violation be printed? */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_SOLEX* sol;
+
+   assert(scip != NULL);
+   assert(feasible != NULL);
+
+   *feasible = TRUE;
+
+   /* find the exactlp constraint handler */
+   conshdlr = SCIPconsGetHdlr(cons);
+
+   if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not of type exactlp\n");
+      SCIPABORT();
+   }
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* get best exact primal solution */
+   sol = SCIPgetBestSolex(scip);
+   if( sol == NULL )
+   {
+      SCIPdialogMessage(scip, NULL, "no feasible exact solution available\n");
+   }
+   else
+   {
+      SCIP_CALL( checkCons(scip, conshdlrdata, cons, NULL, sol, printreason, feasible) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gets exact objective function value of variable */
+void SCIPvarGetObjExactlp(
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   mpq_t                 obj                 /**< pointer to store objective value */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not of type exactlp\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   mpq_set(obj, consdata->obj[SCIPvarGetProbindex(var)]);
+}
+
+/** gets exact global lower bound of variable */
+void SCIPvarGetLbGlobalExactlp(
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   mpq_t                 lb                  /**< pointer to store global lower bound */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not of type exactlp\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   mpq_set(lb, consdata->lb[SCIPvarGetProbindex(var)]);
+}
+
+/** gets exact global upper bound of variable */
+void SCIPvarGetUbGlobalExactlp(
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< problem variable */
+   mpq_t                 ub                  /**< pointer to store global upper bound */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not of type exactlp\n");
+      SCIPABORT();
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   mpq_set(ub, consdata->ub[SCIPvarGetProbindex(var)]);
+}
+
