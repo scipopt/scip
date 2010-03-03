@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cluster.sh,v 1.31 2010/02/26 08:56:37 bzfheinz Exp $
+# $Id: check_cluster.sh,v 1.32 2010/03/03 08:39:16 bzfheinz Exp $
 #
 # Call with "make testcluster"
 #
@@ -96,11 +96,11 @@ then
 fi
 
 
-# we add 10% to the hard time limit and additional 600 seconds in case of small time limits
+# we add 100% to the hard time limit and additional 600 seconds in case of small time limits
 # NOTE: the jobs should have a hard running time of more than 5 minutes; if not so, these
 #       jobs get automatically assigned in the "exrpess" queue; this queue has only 4 CPUs
 #       available 
-HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + \`expr $TIMELIMIT / 5\``
+HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 600\` + $TIMELIMIT`
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
