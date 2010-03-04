@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.18 2010/02/16 11:07:21 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.19 2010/03/04 18:53:03 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -1086,7 +1086,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMessage("catched new sol event %d from heur %p; have %d conss\n", SCIPeventGetType(event), SCIPsolGetHeur(sol), nconss);
+   SCIPdebugMessage("catched new sol event %d from heur %p; have %d conss\n", SCIPeventGetType(event), (void*)SCIPsolGetHeur(sol), nconss);
 
    for( c = 0; c < nconss; ++c )
    {
@@ -1230,7 +1230,7 @@ SCIP_RETCODE presolveReplaceInactiveVariablesOnce(
          }
          case SCIP_VARSTATUS_MULTAGGR:
          { /* var is replaced by sum_i scalar_i * aggrvar_i + constant */
-            //TODO do something if SCIPvarGetMultaggrNVars(x) == 1
+            /* TODO do something if SCIPvarGetMultaggrNVars(x) == 1 */
             break;
          }
          case SCIP_VARSTATUS_NEGATED:
@@ -1333,7 +1333,7 @@ SCIP_RETCODE presolveReplaceInactiveVariablesOnce(
       }
       case SCIP_VARSTATUS_MULTAGGR:
       { /* var is replaced by sum_i scalar_i * aggrvar_i + constant */
-         //TODO do something if SCIPvarGetMultaggrNVars(x) == 1
+         /* TODO do something if SCIPvarGetMultaggrNVars(x) == 1 */
          break;
       }
       case SCIP_VARSTATUS_NEGATED:

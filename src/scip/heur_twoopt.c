@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.1 2010/02/24 16:12:06 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.2 2010/03/04 18:53:03 bzfviger Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -1408,9 +1408,10 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       /* check if this is a feasible solution */
       if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
+         SCIP_Bool success;
+         
          /* copy the current LP solution to the working solution */
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
-         SCIP_Bool success;
 
          /* check solution for feasibility */
          SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, &success) );
