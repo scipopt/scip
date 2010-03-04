@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_leastinf.c,v 1.30 2010/02/11 17:25:17 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_leastinf.c,v 1.31 2010/03/04 20:28:32 bzfviger Exp $"
 
 /**@file   branch_leastinf.c
  * @ingroup BRANCHINGRULES
@@ -67,21 +67,20 @@ SCIP_RETCODE selectBranchingPoint(
    ub = SCIPvarGetUbLocal(var);
 
    if( suggestion != SCIP_INVALID && !SCIPisInfinity(scip, ABS(suggestion)) )
-   { /* user suggested branching point, so if it is not out of or too close to the bounds, then accept it */
-      branchpoint = suggestion;
-      if( (SCIPisInfinity(scip, -lb) || SCIPisGT(scip, suggestion, lb)) && (SCIPisInfinity(scip, ub) || SCIPisLT(scip, suggestion, ub)) )
-      {
-         if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-            *leftub = *rightlb = suggestion;
-         else
-         {
-            *leftub  = SCIPfloor(scip, suggestion);
-            *rightlb = MAX(SCIPceil(scip, suggestion), *leftub + 1);
-         }
+   { /* user suggested branching point */
+      /* first, project it onto the current domain */
+      branchpoint = MAX(lb, MIN(suggestion, ub));
+      if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
+      { /* if it is a discrete variable, then round it down and up and accept this choice */
+         *leftub  = SCIPfloor(scip, branchpoint);
+         *rightlb = MAX(SCIPceil(scip, branchpoint), *leftub + 1);
          return SCIP_OKAY;
       }
-      /* otherwise project it onto the box (may be infinity if before and var is unbounded) */
-      branchpoint = MAX(lb, MIN(branchpoint, ub));
+      else if( (SCIPisInfinity(scip, -lb) || SCIPisGT(scip, branchpoint, lb)) && (SCIPisInfinity(scip, ub) || SCIPisLT(scip, branchpoint, ub)) )
+      { /* if it is continuous and inside the box, then accept it */ 
+         *leftub = *rightlb = branchpoint;
+         return SCIP_OKAY;
+      }
    }
    else
    { /* try the LP or pseudo LP solution */
