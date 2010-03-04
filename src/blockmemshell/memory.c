@@ -12,7 +12,7 @@
 /*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: memory.c,v 1.20 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: memory.c,v 1.21 2010/03/04 18:58:42 bzfviger Exp $"
 
 /**@file   memory.c
  * @brief  memory allocation routines
@@ -1158,7 +1158,7 @@ void garbagecollectChkmem(
 #ifndef NDEBUG
       if( chunk == NULL )
       {
-         errorMessage("chunk for lazy free chunk %p not found in chunk block %p\n", lazyfree, chkmem);
+         errorMessage("chunk for lazy free chunk %p not found in chunk block %p\n", (void*)lazyfree, (void*)chkmem);
       }
 #endif
       assert(chunk != NULL);

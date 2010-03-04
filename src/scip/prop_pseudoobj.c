@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.29 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.30 2010/03/04 18:58:42 bzfviger Exp $"
 
 /**@file   prop_pseudoobj.c
  * @ingroup PROPAGATORS
@@ -549,7 +549,7 @@ SCIP_DECL_PROPINITSOL(propInitsolPseudoobj)
 
       /* allocate memory for non-zero objective variables */
       SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->objvars, nobjvars) );
-      SCIPdebugMessage("Store objective variables at adress <%p>.\n",propdata->objvars);
+      SCIPdebugMessage("Store objective variables at address <%p>.\n", (void*)propdata->objvars);
 
       k = 0;
       for( v = 0; v < nvars; v++ )
