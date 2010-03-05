@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.230 2010/02/08 20:05:52 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.231 2010/03/05 09:38:50 bzfviger Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -4456,8 +4456,31 @@ SCIP_RETCODE SCIPtreeBranchVar(
    if( upchild != NULL )
       *upchild = NULL;
 
-   /* get the corresponding active problem variable */
-   var = SCIPvarGetProbvar(var);
+   /* get the corresponding active problem variable
+    * if branching value is given, then transform it to the value of the active variable */
+   if( val == SCIP_INVALID )
+   {
+      var = SCIPvarGetProbvar(var);
+   }
+   else
+   {
+      SCIP_Real scalar;
+      SCIP_Real constant;
+      
+      scalar   = 1.0;
+      constant = 0.0;
+      
+      SCIP_CALL( SCIPvarGetProbvarSum(&var, &scalar, &constant) );
+      
+      if( scalar == 0.0 )
+      {
+         SCIPerrorMessage("cannot branch on fixed variable <%s>\n", SCIPvarGetName(var));
+         return SCIP_INVALIDDATA;
+      }
+      
+      /* we should have givenvariable = scalar * activevariable + constant */
+      val = (val - constant) / scalar;
+   }   
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
