@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.26 2010/03/05 10:05:56 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.27 2010/03/05 14:35:45 bzfviger Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -27,6 +27,7 @@
 #include <limits.h>
 
 #include "scip/cons_bounddisjunction.h"
+#include "scip/cons_linear.h"
 #include "scip/pub_misc.h"
 
 
@@ -845,11 +846,15 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
-/* registers variables of a constraint as branching candidates */
+/* registers variables of a constraint as branching candidates 
+ * indicates whether an n-ary branch is necessary to enforce this constraint, 
+ * because all active literals are w.r.t. continuous variables which bound (in the literal) is at the variable's bound 
+ */
 static
 SCIP_RETCODE registerBranchingCandidates(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< bound disjunction constraint which variables should be registered for branching */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint which variables should be registered for branching */
+   SCIP_Bool*            neednarybranch      /**< pointer to store TRUE, if n-ary branching is necessary to enforce this constraint */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -861,6 +866,133 @@ SCIP_RETCODE registerBranchingCandidates(
    SCIP_Real varub;
    int nvars;
    int v;
+   
+   assert(cons != NULL);
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(neednarybranch != NULL);
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   nvars = consdata->nvars;
+   vars = consdata->vars;
+   boundtypes = consdata->boundtypes;
+   bounds = consdata->bounds;
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || boundtypes != NULL);
+   assert(nvars == 0 || bounds != NULL);
+   
+   *neednarybranch = TRUE;
+   
+   for( v = 0; v < nvars; ++v )
+   {
+      /* constraint should be violated */
+      assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) &&
+         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) );
+
+      varlb = SCIPvarGetLbLocal(vars[v]);
+      varub = SCIPvarGetUbLocal(vars[v]);
+      /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
+       * thus there is no use for branching */
+      if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, varub, bounds[v]) )
+         continue;
+      /* if literal is x <= varub, but lower bound on x is > varub, then this literal can never be satisfied,
+       * thus there is no use for branching */
+      if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, varlb, bounds[v]) )
+         continue;
+
+      violation = SCIPgetSolVal(scip, NULL, vars[v]) - bounds[v];
+
+      /* if variable is continuous, then we cannot branch on one of the variable bounds */
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS &&
+         ((!SCIPisInfinity(scip, -varlb) && SCIPisFeasEQ(scip, bounds[v], varlb)) ||
+          (!SCIPisInfinity(scip,  varub) && SCIPisFeasEQ(scip, bounds[v], varub))) )
+      {
+         continue;
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddRelaxBranchCand(scip, vars[v], ABS(violation), bounds[v]) );
+         *neednarybranch = FALSE;
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
+/** enforces the pseudo or LP solution on the given constraint */
+static
+SCIP_RETCODE enforceCurrentSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< bound disjunction constraint to be separated */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
+   SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the constraint was infeasible */
+   SCIP_Bool*            reduceddom,         /**< pointer to store TRUE, if a domain reduction was found */
+   SCIP_Bool*            registeredbrcand    /**< pointer to store TRUE, if branching variable candidates were registered */
+   )
+{
+   SCIP_Bool mustcheck;
+   SCIP_Bool neednarybranch;
+
+   assert(cons != NULL);
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   assert(cutoff != NULL);
+   assert(infeasible != NULL);
+   assert(reduceddom != NULL);
+   assert(registeredbrcand != NULL);
+
+   /* update and check the watched variables, if they were changed since last processing */
+   if( SCIPconsIsPropagationEnabled(cons) )
+   {
+      SCIP_CALL( processWatchedVars(scip, cons, eventhdlr, cutoff, infeasible, reduceddom, &mustcheck) );
+   }
+   else
+      mustcheck = TRUE;
+
+   if( mustcheck )
+   {
+      SCIP_Bool violated;
+
+      SCIP_CALL( checkCons(scip, cons, NULL, &violated) );
+      if( violated )
+      {
+         /* constraint was infeasible -> reset age */
+         SCIP_CALL( SCIPresetConsAge(scip, cons) );
+         *infeasible = TRUE;
+         
+         /* register branching candidates */
+         SCIP_CALL( registerBranchingCandidates(scip, cons, &neednarybranch) );
+         
+         if( neednarybranch )
+            *registeredbrcand = TRUE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** enforces a constraint by creating an n-ary branch consisting of a set of child nodes, each enforcing one literal
+ */
+static
+SCIP_RETCODE createNAryBranch(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< bound disjunction constraint to branch on */
+)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
+   SCIP_Real varlb;
+   SCIP_Real varub;
+   int nvars;
+   int v;
+   
+   SCIP_Real  priority;
+   SCIP_Real  estimate;
+   SCIP_NODE* node;
    
    assert(cons != NULL);
    assert(SCIPconsGetHdlr(cons) != NULL);
@@ -885,82 +1017,69 @@ SCIP_RETCODE registerBranchingCandidates(
       varlb = SCIPvarGetLbLocal(vars[v]);
       varub = SCIPvarGetUbLocal(vars[v]);
       /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
-       * thus there is no use for branching */
+       * thus there is no use in creating an extra child for it */
       if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, varub, bounds[v]) )
          continue;
       /* if literal is x <= varub, but lower bound on x is > varub, then this literal can never be satisfied,
-       * thus there is no use for branching */
+       * thus there is no use in creating an extra child for it */
       if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, varlb, bounds[v]) )
          continue;
 
-      violation = SCIPgetSolVal(scip, NULL, vars[v]) - bounds[v];
+      /* create a child that enforces the current literal */
+      
+      priority = SCIPcalcNodeselPriority(scip, vars[v], bounds[v]);
+      estimate = SCIPcalcChildEstimate  (scip, vars[v], bounds[v]);
 
-      /* if variable is continuous, then we cannot branch on one of the variable bounds
-       * instead we branch on the solution value, which at least is not at the same bound, since otherwise constraint is not violated 
-       * if it is on the other bound, then branching rule will take care to move it inside the box */
-      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS &&
-         ((!SCIPisInfinity(scip, -varlb) && SCIPisFeasEQ(scip, bounds[v], varlb)) ||
-          (!SCIPisInfinity(scip,  varub) && SCIPisFeasEQ(scip, bounds[v], varub))) )
+      SCIPdebugMessage(" -> creating child to enforce: <%s> %c= %g (priority: %g, estimate: %g)\n",
+         SCIPvarGetName(vars[v]), boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? '>' : '<', bounds[v], priority, estimate);
+      
+      SCIP_CALL( SCIPcreateChild(scip, &node, priority, estimate) );
+
+      /* enforce current literal */
+      if( SCIPvarGetStatus(SCIPvarGetProbvar(vars[v])) == SCIP_VARSTATUS_MULTAGGR )
       {
-         SCIP_CALL( SCIPaddRelaxBranchCand(scip, vars[v], ABS(violation), SCIPgetSolVal(scip, NULL, vars[v])) );
+         SCIP_CONS* brcons;
+         SCIP_Real  one;
+
+         one = 1.0;
+         
+         if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
+         {
+            SCIP_CALL( SCIPcreateConsLinear(scip, &brcons, "bounddisjbranch", 1, &vars[v], &one, bounds[v], SCIPinfinity(scip),
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               SCIPconsIsStickingAtNode(cons)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsLinear(scip, &brcons, "bounddisjbranch", 1, &vars[v], &one, -SCIPinfinity(scip), bounds[v],
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+               SCIPconsIsStickingAtNode(cons)) );
+         }
+         SCIP_CALL( SCIPaddConsNode(scip, node, brcons, NULL) );
+         SCIP_CALL( SCIPreleaseCons(scip, &brcons) );
       }
       else
       {
-         SCIP_CALL( SCIPaddRelaxBranchCand(scip, vars[v], ABS(violation), bounds[v]) );
+         if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER )
+         {
+            SCIP_CALL( SCIPchgVarLbNode(scip, node, vars[v], bounds[v]) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgVarUbNode(scip, node, vars[v], bounds[v]) );
+         }
       }
+      
+      /* delete bound disjunction constraint from child node */
+      SCIP_CALL( SCIPdelConsNode(scip, node, cons) );      
    }
    
    return SCIP_OKAY;
 }
-
-/** enforces the pseudo or LP solution on the given constraint */
-static
-SCIP_RETCODE enforceCurrentSol(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< bound disjunction constraint to be separated */
-   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
-   SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
-   SCIP_Bool*            infeasible,         /**< pointer to store TRUE, if the constraint was infeasible */
-   SCIP_Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
-   )
-{
-   SCIP_Bool mustcheck;
-
-   assert(cons != NULL);
-   assert(SCIPconsGetHdlr(cons) != NULL);
-   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
-   assert(cutoff != NULL);
-   assert(infeasible != NULL);
-   assert(reduceddom != NULL);
-
-   /* update and check the watched variables, if they were changed since last processing */
-   if( SCIPconsIsPropagationEnabled(cons) )
-   {
-      SCIP_CALL( processWatchedVars(scip, cons, eventhdlr, cutoff, infeasible, reduceddom, &mustcheck) );
-   }
-   else
-      mustcheck = TRUE;
-
-   if( mustcheck )
-   {
-      SCIP_Bool violated;
-
-      SCIP_CALL( checkCons(scip, cons, NULL, &violated) );
-      if( violated )
-      {
-         /* constraint was infeasible -> reset age */
-         SCIP_CALL( SCIPresetConsAge(scip, cons) );
-         *infeasible = TRUE;
-         
-         /* register branching candidates */
-         SCIP_CALL( registerBranchingCandidates(scip, cons) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-
 
 
 /*
@@ -1082,7 +1201,9 @@ SCIP_DECL_CONSENFOLP(consEnfolpBounddisjunction)
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
    SCIP_Bool reduceddom;
+   SCIP_Bool registeredbrcand;
    int c;
+   SCIP_CONS* narybranchcons; /* constraint that is a candidate for an n-ary branch */
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1099,11 +1220,19 @@ SCIP_DECL_CONSENFOLP(consEnfolpBounddisjunction)
    cutoff = FALSE;
    infeasible = FALSE;
    reduceddom = FALSE;
+   registeredbrcand = FALSE;
+   narybranchcons = NULL;
 
    /* check all bound disjunction constraints for feasibility */
    for( c = 0; c < nconss && !cutoff && !reduceddom; ++c )
    {
-      SCIP_CALL( enforceCurrentSol(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom) );
+      SCIP_CALL( enforceCurrentSol(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom, &registeredbrcand) );
+      if( !registeredbrcand )
+      {
+         /* if cons. c has less literals than the previous candidate for an n-ary branch, then keep cons. c as candidate for n-ary branch */
+         if( !narybranchcons || SCIPconsGetData(conss[c])->nvars < SCIPconsGetData(narybranchcons)->nvars )
+            narybranchcons = conss[c];
+      }
    }
 
    if( cutoff )
@@ -1111,7 +1240,17 @@ SCIP_DECL_CONSENFOLP(consEnfolpBounddisjunction)
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
    else if( infeasible )
-      *result = SCIP_INFEASIBLE;
+   {
+      if( registeredbrcand )
+      {
+         *result = SCIP_INFEASIBLE;
+      }
+      else
+      {
+         SCIP_CALL( createNAryBranch(scip, narybranchcons) );
+         *result = SCIP_BRANCHED;
+      }
+   }
    
    return SCIP_OKAY;
 }
@@ -1125,7 +1264,9 @@ SCIP_DECL_CONSENFOPS(consEnfopsBounddisjunction)
    SCIP_Bool cutoff;
    SCIP_Bool infeasible;
    SCIP_Bool reduceddom;
+   SCIP_Bool registeredbrcand;
    int c;
+   SCIP_CONS* narybranchcons; /* constraint that is a candidate for an n-ary branch */
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -1142,11 +1283,19 @@ SCIP_DECL_CONSENFOPS(consEnfopsBounddisjunction)
    cutoff = FALSE;
    infeasible = FALSE;
    reduceddom = FALSE;
+   registeredbrcand = FALSE;
+   narybranchcons = NULL;
 
    /* check all bound disjunction constraints for feasibility */
    for( c = 0; c < nconss && !cutoff && !reduceddom; ++c )
    {
-      SCIP_CALL( enforceCurrentSol(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom) );
+      SCIP_CALL( enforceCurrentSol(scip, conss[c], conshdlrdata->eventhdlr, &cutoff, &infeasible, &reduceddom, &registeredbrcand) );
+      if( !registeredbrcand )
+      {
+         /* if cons. c has less literals than the previous candidate for an n-ary branch, then keep cons. c as candidate for n-ary branch */
+         if( !narybranchcons || SCIPconsGetData(conss[c])->nvars < SCIPconsGetData(narybranchcons)->nvars )
+            narybranchcons = conss[c];
+      }
    }
 
    if( cutoff )
@@ -1154,7 +1303,17 @@ SCIP_DECL_CONSENFOPS(consEnfopsBounddisjunction)
    else if( reduceddom )
       *result = SCIP_REDUCEDDOM;
    else if( infeasible )
-      *result = SCIP_INFEASIBLE;
+   {
+      if( registeredbrcand )
+      {
+         *result = SCIP_INFEASIBLE;
+      }
+      else
+      {
+         SCIP_CALL( createNAryBranch(scip, narybranchcons) );
+         *result = SCIP_BRANCHED;
+      }
+   }
    
    return SCIP_OKAY;
 }
