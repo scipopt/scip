@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.19 2010/03/04 18:53:03 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.20 2010/03/05 20:13:58 bzfviger Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -171,7 +171,7 @@ SCIP_RETCODE consdataSetOffset(
          return SCIP_OKAY;
       
       SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->offsets, consdata->nvars) );
-      BMSclearMemoryArray(&consdata->offsets, consdata->nvars);
+      BMSclearMemoryArray(consdata->offsets, consdata->nvars);
    }
 
    consdata->offsets[idx] = newoffset;
@@ -981,7 +981,6 @@ SCIP_RETCODE separatePoint(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
-   SCIP_Real          efficacy;
    SCIP_Real          minefficacy;
    int                c;
    SCIP_ROW*          row;
@@ -1029,7 +1028,7 @@ SCIP_RETCODE separatePoint(
          SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE) );
          SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          *success = TRUE;
-         SCIPdebugMessage("added cut with efficacy %g\n", efficacy);
+         SCIPdebugMessage("added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
@@ -2347,22 +2346,25 @@ SCIP_RETCODE propagateBounds(
       SCIPintervalAdd(SCIPinfinity(scip), &lhsrange, lhsrange, lhsranges[i]);
    }
 
-   SCIPintervalSquareRoot(SCIPinfinity(scip), &a, lhsrange);
-   if( consdata->rhscoeff != 1.0 )
-      SCIPintervalDivScalar(SCIPinfinity(scip), &a, a, consdata->rhscoeff);
-   if( consdata->rhsoffset )
-      SCIPintervalSubScalar(SCIPinfinity(scip), &a, a, consdata->rhsoffset);
-   SCIP_CALL( SCIPtightenVarLb(scip, consdata->rhsvar, SCIPintervalGetInf(a), FALSE, &infeas, &tightened) );
-   if( infeas )
+   if( SCIPvarGetStatus(consdata->rhsvar) != SCIP_VARSTATUS_MULTAGGR )
    {
-      SCIPdebugMessage("propagation found constraint <%s> infeasible\n", SCIPconsGetName(cons));
-      *result = SCIP_CUTOFF;
-   }
-   else if( tightened )
-   {
-      SCIPdebugMessage("propagation tightened bounds of rhs variable <%s> in constraint <%s>\n", SCIPvarGetName(consdata->rhsvar), SCIPconsGetName(cons));
-      *result = SCIP_REDUCEDDOM;
-      ++*nchgbds;
+      SCIPintervalSquareRoot(SCIPinfinity(scip), &a, lhsrange);
+      if( consdata->rhscoeff != 1.0 )
+         SCIPintervalDivScalar(SCIPinfinity(scip), &a, a, consdata->rhscoeff);
+      if( consdata->rhsoffset )
+         SCIPintervalSubScalar(SCIPinfinity(scip), &a, a, consdata->rhsoffset);
+      SCIP_CALL( SCIPtightenVarLb(scip, consdata->rhsvar, SCIPintervalGetInf(a), FALSE, &infeas, &tightened) );
+      if( infeas )
+      {
+         SCIPdebugMessage("propagation found constraint <%s> infeasible\n", SCIPconsGetName(cons));
+         *result = SCIP_CUTOFF;
+      }
+      else if( tightened )
+      {
+         SCIPdebugMessage("propagation tightened bounds of rhs variable <%s> in constraint <%s>\n", SCIPvarGetName(consdata->rhsvar), SCIPconsGetName(cons));
+         *result = SCIP_REDUCEDDOM;
+         ++*nchgbds;
+      }
    }
 
    if( *result != SCIP_CUTOFF )
@@ -2380,6 +2382,9 @@ SCIP_RETCODE propagateBounds(
       SCIPintervalSub(SCIPinfinity(scip), &b, rhsrange, lhsrange);
       for( i = 0; i < consdata->nvars; ++i )
       {
+         if( SCIPvarGetStatus(consdata->vars[i]) == SCIP_VARSTATUS_MULTAGGR )
+            continue;
+         
          SCIPintervalUndoSub(SCIPinfinity(scip), &a, b, lhsranges[i]);
          SCIPintervalSquareRoot(SCIPinfinity(scip), &a, a);
          
@@ -2464,6 +2469,10 @@ SCIP_RETCODE branchOnRhsVariable(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
       
+      /* branching on multiaggr. variables does not work well */
+      if( SCIPvarGetStatus(consdata->rhsvar) == SCIP_VARSTATUS_MULTAGGR )
+         continue;
+
       if( SCIPisFeasPositive(scip, consdata->violation) )
       {
          if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->rhsvar)) )
@@ -3216,7 +3225,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
          return SCIP_OKAY;
       }
    }
-      
+
    /* branch on variable on right hand side */
    SCIP_CALL( branchOnRhsVariable(scip, &maxviolcons, 1, &success) );
    if( !success ) /* if branching on maximal violated constraint was not possible, consider all (violated) constraints */
