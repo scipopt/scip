@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.25 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.26 2010/03/05 10:05:56 bzfviger Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -845,6 +845,74 @@ SCIP_RETCODE checkCons(
    return SCIP_OKAY;
 }
 
+/* registers variables of a constraint as branching candidates */
+static
+SCIP_RETCODE registerBranchingCandidates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< bound disjunction constraint which variables should be registered for branching */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_BOUNDTYPE* boundtypes;
+   SCIP_Real* bounds;
+   SCIP_Real violation;
+   SCIP_Real varlb;
+   SCIP_Real varub;
+   int nvars;
+   int v;
+   
+   assert(cons != NULL);
+   assert(SCIPconsGetHdlr(cons) != NULL);
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0);
+   
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   nvars = consdata->nvars;
+   vars = consdata->vars;
+   boundtypes = consdata->boundtypes;
+   bounds = consdata->bounds;
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || boundtypes != NULL);
+   assert(nvars == 0 || bounds != NULL);
+   
+   for( v = 0; v < nvars; ++v )
+   {
+      /* constraint should be violated */
+      assert( !(boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisFeasGE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) &&
+         !(boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisFeasLE(scip, SCIPgetSolVal(scip, NULL, vars[v]), bounds[v])) );
+
+      varlb = SCIPvarGetLbLocal(vars[v]);
+      varub = SCIPvarGetUbLocal(vars[v]);
+      /* if literal is x >= varlb, but upper bound on x is < varlb, then this literal can never be satisfied,
+       * thus there is no use for branching */
+      if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPisLT(scip, varub, bounds[v]) )
+         continue;
+      /* if literal is x <= varub, but lower bound on x is > varub, then this literal can never be satisfied,
+       * thus there is no use for branching */
+      if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPisGT(scip, varlb, bounds[v]) )
+         continue;
+
+      violation = SCIPgetSolVal(scip, NULL, vars[v]) - bounds[v];
+
+      /* if variable is continuous, then we cannot branch on one of the variable bounds
+       * instead we branch on the solution value, which at least is not at the same bound, since otherwise constraint is not violated 
+       * if it is on the other bound, then branching rule will take care to move it inside the box */
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS &&
+         ((!SCIPisInfinity(scip, -varlb) && SCIPisFeasEQ(scip, bounds[v], varlb)) ||
+          (!SCIPisInfinity(scip,  varub) && SCIPisFeasEQ(scip, bounds[v], varub))) )
+      {
+         SCIP_CALL( SCIPaddRelaxBranchCand(scip, vars[v], ABS(violation), SCIPgetSolVal(scip, NULL, vars[v])) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddRelaxBranchCand(scip, vars[v], ABS(violation), bounds[v]) );
+      }
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** enforces the pseudo or LP solution on the given constraint */
 static
 SCIP_RETCODE enforceCurrentSol(
@@ -883,6 +951,9 @@ SCIP_RETCODE enforceCurrentSol(
          /* constraint was infeasible -> reset age */
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
          *infeasible = TRUE;
+         
+         /* register branching candidates */
+         SCIP_CALL( registerBranchingCandidates(scip, cons) );
       }
    }
 
