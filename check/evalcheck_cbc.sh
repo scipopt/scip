@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cbc.sh,v 1.7 2010/01/04 20:35:33 bzfheinz Exp $
+# $Id: evalcheck_cbc.sh,v 1.8 2010/03/08 14:06:19 bzfwanie Exp $
 
 export LANG=C
 

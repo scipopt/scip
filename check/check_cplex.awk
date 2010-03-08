@@ -1,4 +1,4 @@
-#!/bin/awk -f
+#!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,12 +13,13 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cplex.awk,v 1.41 2010/01/04 20:35:33 bzfheinz Exp $
+# $Id: check_cplex.awk,v 1.42 2010/03/08 14:06:19 bzfwanie Exp $
 #
 #@file    check_cplex.awk
 #@brief   CPLEX Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
+#@author  Robert Waniek
 #
 function abs(x)
 {
@@ -69,6 +70,7 @@ BEGIN {
    timeouts = 0;
    settings = "default";
    version = "?";
+   threads = 1;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
@@ -119,6 +121,8 @@ BEGIN {
 }
 /^Welcome/ {version = $6;}
 
+/^CPLEX> CPLEX> New value for time limit in seconds:/ {timelimit = $10;}
+
 /^CPLEX> Parameter file / {
    settings = $4;
    settings = substr(settings, 2, length(settings)-2);
@@ -155,6 +159,12 @@ BEGIN {
 /^New value for absolute mixed integer optimality gap tolerance: / {
    absmipgap = $10;
 }
+/^CPLEX> New value for default parallel thread count: / {
+   threads = $9;
+}
+/^New value for default parallel thread count: / {
+   threads = $8;
+}
 #
 # problem size
 #
@@ -187,6 +197,7 @@ BEGIN {
 #
 # solution
 #
+/^CPLEX Error  1001: Out of memory./ { timeout = 1; }
 /^Integer /  {
    if ($2 == "infeasible." || $2 == "infeasible")
    {
@@ -286,10 +297,28 @@ BEGIN {
    bbnodes   = $11;
    aborted   = 0;
 }
+#
+# evaluation
+#
+# solver status overview (in order of priority): 
+# 1) solver broke before returning solution => abort
+# 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
+#    (especially of problem is claimed to be solved but solution is not the optimal solution)
+# 3) solver solved problem with the value in solu-file (if existing) => ok
+# 4) solver solved problem which has no (optimal) value in solu-file => solved
+# 5) solver found solution better than known best solution (or no solution was known so far) => better
+# 6) solver reached any other limit (like time or nodes) => timeout
+# 7) otherwise => unknown
+#
 /^=ready=/ {
    if( !onlyinsolufile || solstatus[prob] != "" )
    {
-      bbnodes = max(bbnodes, 1); # CPLEX reports 0 nodes if the primal heuristics find the optimal solution in the root node
+      temp = pb;
+      pb = 1.0*temp;
+      temp = db;
+      db = 1.0*temp;
+
+      bbnodes = max(bbnodes, 1); # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
 
       nprobs++;
     
@@ -301,16 +330,16 @@ BEGIN {
          optimal = 1;
          markersym = "  ";
       }
-      else if( abs(db)*1.0 < 1e-06 )
+      else if( abs(db) < 1e-06 )
          gap = -1.0;
-      else if( pb*db*1.0 < 0.0 )
+      else if( pb*db < 0.0 )
          gap = -1.0;
-      else if( abs(db)*1.0 >= +infty )
+      else if( abs(db) >= +infty )
          gap = -1.0;
-      else if( abs(pb)*1.0 >= +infty )
+      else if( abs(pb) >= +infty )
          gap = -1.0;
       else
-         gap = 100.0*abs((pb-db)*1.0/(1.0*db));
+         gap = 100.0*abs((pb-db)/db);
 
       if( gap < 0.0 )
          gapstr = "  --  ";
@@ -351,9 +380,16 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
- 	 reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
-	 abstol = max(absmipgap, 1e-4);
-         if( (abs(pb - db) > max(abstol, reltol)) || (abs(pb - sol[prob]) > reltol) )
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( (db <= pb && (db-sol[prob] > reltol || sol[prob]-pb > reltol)) || (db >= pb && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
+         }
+         else
          {
             if (timeout)
             {
@@ -363,15 +399,93 @@ BEGIN {
             }
             else
             {
-               printf("fail\n");
-               failtime += tottime;
-               fail++;
+               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+               {
+                  printf("ok\n");
+                  pass++;
+               }
+               else
+               {
+                  printf("fail\n");
+                  failtime += tottime;
+                  fail++;
+               }
             }
+         }
+      }
+      else if( solstatus[prob] == "best" )
+      {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( (db <= pb && db-sol[prob] > reltol) || (db >= pb && sol[prob]-db > reltol) )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
          }
          else
          {
-            printf("ok\n");
+            if (timeout)
+            {
+               if ( (db <= pb && sol[prob]-pb > reltol) || (db >= pb && pb-sol[prob] > reltol) )
+               {
+                  printf("better\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+               {
+                  printf("timeout\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+            }
+            else
+            {
+               if( abs(pb - db) <= max(abstol, reltol) )
+               {
+                  printf("solved\n");
+                  pass++;
+               }
+               else
+               {
+                  printf("fail\n");
+                  failtime += tottime;
+                  fail++;
+               }
+            }
+         }
+      }
+      else if( solstatus[prob] == "unkn" )
+      {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+         
+         if( abs(pb - db) <= max(abstol, reltol) )
+         {
+            printf("solved\n");
             pass++;
+         }
+         else
+         {
+            if( abs(pb) < infty )
+            {
+               printf("better\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               if( timeout )
+               {
+                  printf("timeout\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+                  printf("unknown\n");
+            }
          }
       }
       else if( solstatus[prob] == "inf" )
@@ -449,5 +563,7 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
+   printf("@02 threads: %g\n", threads);
+   printf("@02 timelimit: %g\n", timelimit);
    printf("@01 CPLEX(%s):%s\n", version, settings);
 }

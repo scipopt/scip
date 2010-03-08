@@ -1,4 +1,4 @@
-#!/bin/gawk -f
+#!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -14,11 +14,12 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.50 2010/01/04 20:35:33 bzfheinz Exp $
+# $Id: cmpres.awk,v 1.51 2010/03/08 14:06:19 bzfwanie Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
 #@author  Tobias Achterberg
+#@author  Robert Waniek
 #
 function abs(x)
 {
@@ -60,14 +61,19 @@ function mod(x,m)
    return (x - m*floor(x/m));
 }
 
-function printhline(nsolver)
+function printhline(nsolver,short)
 {
    for( s = 0; s < nsolver; ++s )
    {
       if( s == 0 )
          printf("--------------------+-+---------+--------+");
       else
-         printf("-+---------+--------+------+------+");
+      {
+         if( !short )
+            printf("-+---------+--------+------+------+");
+         else
+            printf("-+---------+--------+");
+      }
    }
    printf("-------------\n");
 }
@@ -152,6 +158,7 @@ function texsolvername(s, sname)
 }
 
 BEGIN {
+   short = 0;
    infinity = 1e+20;
    timegeomshift = 10.0;
    nodegeomshift = 100.0;
@@ -216,10 +223,21 @@ BEGIN {
    nprobs[nsolver] = 0;
 }
 // {
+   statuses["ok"];
+   statuses["timeout"];
+   statuses["unknown"];
+   statuses["abort"];
+   statuses["fail"];
+   statuses["readerror"];
+   statuses["better"];
+   statuses["solved"];
+   statuses["sollimit"];
+   statuses["gaplimit"];
+   
    # check if this is a useable line
-   if( $10 == "ok" || $10 == "timeout" || $10 == "unknown" || $10 == "abort" || $10 == "fail" || $10 == "readerror" ) # BLIS, SYMPHONY
+   if( $10 in statuses ) # BLIS, SYMPHONY
    {
-      # collect data
+      # collect data (line with problem size and simplex iterations)
       name[nsolver,nprobs[nsolver]] = $1;
       type[nsolver,nprobs[nsolver]] = "?";
       conss[nsolver,nprobs[nsolver]] = $2;
@@ -231,6 +249,10 @@ BEGIN {
       nodes[nsolver,nprobs[nsolver]] = max($8,1);
       time[nsolver,nprobs[nsolver]] = fracceil(max($9,mintime),0.1);
       status[nsolver,nprobs[nsolver]] = $10;
+      if( status[nsolver,nprobs[nsolver]] == "better" )
+         status[nsolver,nprobs[nsolver]] = "timeout";
+      if( status[nsolver,nprobs[nsolver]] == "sollimit" || status[nsolver,nprobs[nsolver]] == "gaplimit" || status[nsolver,nprobs[nsolver]] == "solved" )
+         status[nsolver,nprobs[nsolver]] = "ok";
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
       nprobs[nsolver]++;
@@ -240,7 +262,34 @@ BEGIN {
          problistlen++;
       }
    }
-   else if( $12 == "ok" || $12 == "timeout" || $12 == "unknown" || $12 == "abort" || $12 == "fail" || $12 == "readerror" ) # GUROBI, CBC
+   if( $11 in statuses ) # from NLP-trace-files
+   {
+      # collect data (line with problem type, problem size and simplex iterations)
+      name[nsolver,nprobs[nsolver]] = $1;
+      type[nsolver,nprobs[nsolver]] = $2;
+      conss[nsolver,nprobs[nsolver]] = $3;
+      vars[nsolver,nprobs[nsolver]] = $4;
+      dualbound[nsolver,nprobs[nsolver]] = max(min($5, +infinity), -infinity);
+      primalbound[nsolver,nprobs[nsolver]] = max(min($6, +infinity), -infinity);
+      gap[nsolver,nprobs[nsolver]] = $7;
+      iters[nsolver,nprobs[nsolver]] = $8;
+      nodes[nsolver,nprobs[nsolver]] = max($9,1);
+      time[nsolver,nprobs[nsolver]] = fracceil(max($10,mintime),0.1);
+      status[nsolver,nprobs[nsolver]] = $11;
+      if( status[nsolver,nprobs[nsolver]] == "better" )
+         status[nsolver,nprobs[nsolver]] = "timeout";
+      if( status[nsolver,nprobs[nsolver]] == "sollimit" || status[nsolver,nprobs[nsolver]] == "gaplimit" || status[nsolver,nprobs[nsolver]] == "solved" )
+         status[nsolver,nprobs[nsolver]] = "ok";
+      probidx[$1,nsolver] = nprobs[nsolver];
+      probcnt[$1]++;
+      nprobs[nsolver]++;
+      if( probcnt[$1] == 1 )
+      {
+         problist[problistlen] = $1;
+         problistlen++;
+      }
+   }
+   if( $12 in statuses ) # GUROBI, CBC
    {
       # collect data (line with original and presolved problem size and simplex iterations)
       name[nsolver,nprobs[nsolver]] = $1;
@@ -254,6 +303,10 @@ BEGIN {
       nodes[nsolver,nprobs[nsolver]] = max($10,1);
       time[nsolver,nprobs[nsolver]] = fracceil(max($11,mintime),0.1);
       status[nsolver,nprobs[nsolver]] = $12;
+      if( status[nsolver,nprobs[nsolver]] == "better" )
+         status[nsolver,nprobs[nsolver]] = "timeout";
+      if( status[nsolver,nprobs[nsolver]] == "sollimit" || status[nsolver,nprobs[nsolver]] == "gaplimit" || status[nsolver,nprobs[nsolver]] == "solved" )
+         status[nsolver,nprobs[nsolver]] = "ok";
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
       nprobs[nsolver]++;
@@ -263,9 +316,9 @@ BEGIN {
          problistlen++;
       }
    }
-   else if( $13 == "ok" || $13 == "timeout" || $13 == "unknown" || $13 == "abort" || $13 == "fail" || $13 == "readerror" ) # SCIP, GLPK, CPLEX
+   if( $13 in statuses ) # SCIP, GLPK, CPLEX
    {
-      # collect data (line with original and presolved problem size and simplex iterations)
+      # collect data (line with problem type, original and presolved problem size and simplex iterations)
       name[nsolver,nprobs[nsolver]] = $1;
       type[nsolver,nprobs[nsolver]] = $2;
       conss[nsolver,nprobs[nsolver]] = $5;
@@ -277,6 +330,10 @@ BEGIN {
       nodes[nsolver,nprobs[nsolver]] = max($11,1);
       time[nsolver,nprobs[nsolver]] = fracceil(max($12,mintime),0.1);
       status[nsolver,nprobs[nsolver]] = $13;
+      if( status[nsolver,nprobs[nsolver]] == "better" )
+         status[nsolver,nprobs[nsolver]] = "timeout";
+      if( status[nsolver,nprobs[nsolver]] == "sollimit" || status[nsolver,nprobs[nsolver]] == "gaplimit" || status[nsolver,nprobs[nsolver]] == "solved" )
+         status[nsolver,nprobs[nsolver]] = "ok";
       probidx[$1,nsolver] = nprobs[nsolver];
       probcnt[$1]++;
       nprobs[nsolver]++;
@@ -392,24 +449,34 @@ END {
          printf(" %39s |", solvername[s]);
       else
       {
-         if( length(solvername[s]) <= 33 )
-            printf("%33s |", solvername[s]);
-	 else
-            printf("%34s|", solvername[s]);
+         if( short )
+         {
+            if( length(solvername[s]) <= 19 )
+               printf("%19s |", solvername[s]);
+            else
+               printf("%20s|", solvername[s]);
+         }
+         else
+         {
+            if( length(solvername[s]) <= 33 )
+               printf("%33s |", solvername[s]);
+            else
+               printf("%34s|", solvername[s]);
+         }
       }
    }
    printf("\n");
-   printhline(nsolver);
+   printhline(nsolver,short);
    printf("  Name              |");
    for( s = 0; s < nsolver; ++s )
    {
-      if( s == 0 )
+      if( s == 0 || short )
          printf("F|   Nodes |   Time |");
       else
          printf("F|   Nodes |   Time | NodQ | TimQ |");
    }
    printf(" bounds check\n");
-   printhline(nsolver);
+   printhline(nsolver,short);
 
    # tex comparison headers
    if( texcmpfile != "" )
@@ -486,15 +553,15 @@ END {
          pidx = probidx[p,s];
          processed = (pidx != "");
 
-	 # make sure, nodes and time are non-zero for geometric means
-	 nodes[s,pidx] = max(nodes[s,pidx], 1);
-	 time[s,pidx] = max(time[s,pidx], mintime);
+         # make sure, nodes and time are non-zero for geometric means
+         nodes[s,pidx] = max(nodes[s,pidx], 1);
+         time[s,pidx] = max(time[s,pidx], mintime);
          fulltotaltime += time[s,pidx];
 
          # If we got a timeout although the time limit has not been reached (e.g., due to a memory limit),
          # we assume that the run would have been continued with the same nodes/sec.
          # Set the time to the time limit and increase the nodes accordingly.
-         if( status[s,pidx] == "timeout" && time[s,pidx] < timelimit[s] )
+         if( ( status[s,pidx] == "timeout" ) && time[s,pidx] < timelimit[s] )
          {
             nodes[s,pidx] *= timelimit[s]/time[s,pidx];
             time[s,pidx] = timelimit[s];
@@ -509,10 +576,10 @@ END {
 
          # check if all solvers processed the problem
          if( !processed )
-	 {
+         {
             marker = "?";
-	    unprocessed = 1;
-	 }
+            unprocessed = 1;
+         }
 
          # check if solver ran successfully (i.e., no abort nor fail)
          if( processed && (status[s,pidx] == "ok" || status[s,pidx] == "unknown" || status[s,pidx] == "timeout") )
@@ -520,22 +587,22 @@ END {
             besttime = min(besttime, time[s,pidx]);
             bestnodes = min(bestnodes, nodes[s,pidx]);
             worsttime = max(worsttime, time[s,pidx]);
-	    worstnodes = max(worstnodes, nodes[s,pidx]);
-	    worstiters = max(worstiters, iters[s,pidx]);
+            worstnodes = max(worstnodes, nodes[s,pidx]);
+            worstiters = max(worstiters, iters[s,pidx]);
          }
          else
             countprob = 0;
-      }
-      worsttime = max(worsttime, mintime);
-      worstnodes = max(worstnodes, 1);
-      worstiters = max(worstiters, 0);
+         }
+         worsttime = max(worsttime, mintime);
+         worstnodes = max(worstnodes, 1);
+         worstiters = max(worstiters, 0);
 
-      # check for each solver if it has same path as reference solver -> category
-      for( o = 0; o < nsolver; ++o )
-      {
-         s = printorder[o];
-         pidx = probidx[p,s];
-         processed = (pidx != "");
+         # check for each solver if it has same path as reference solver -> category
+         for( o = 0; o < nsolver; ++o )
+         {
+            s = printorder[o];
+            pidx = probidx[p,s];
+            processed = (pidx != "");
 
          if( !processed )
             continue;
@@ -570,7 +637,7 @@ END {
 
          # check if solver ran successfully (i.e., no abort nor fail)
          if( processed )
-	 {
+         {
             if( status[s,pidx] == "ok" || status[s,pidx] == "unknown" )
             {
                marker = " ";
@@ -617,27 +684,27 @@ END {
             }
          }
 
-	 if( primalbound[s,pidx] < infinity )
-	    feasmark = " ";
-	 else
-	    feasmark = "#";
+         if( primalbound[s,pidx] < infinity )
+            feasmark = " ";
+         else
+            feasmark = "#";
 
          if( processed && !fail )
-	 {
-	    mindb = min(mindb, dualbound[s,pidx]);
+         {
+            mindb = min(mindb, dualbound[s,pidx]);
             maxdb = max(maxdb, dualbound[s,pidx]);
             minpb = min(minpb, primalbound[s,pidx]);
-	    maxpb = max(maxpb, primalbound[s,pidx]);
-	    ismini = ismini || (primalbound[s,pidx] > dualbound[s,pidx] + 1e-06);
-	    ismaxi = ismaxi || (primalbound[s,pidx] < dualbound[s,pidx] - 1e-06);
-	 }
+            maxpb = max(maxpb, primalbound[s,pidx]);
+            ismini = ismini || (primalbound[s,pidx] > dualbound[s,pidx] + 1e-06);
+            ismaxi = ismaxi || (primalbound[s,pidx] < dualbound[s,pidx] - 1e-06);
+         }
 
          # print statistics
          if( !processed )
             line = sprintf("%s           -        -", line);
          else
             line = sprintf("%s %s%10d %s%7.1f", line, feasmark, nodes[s,pidx], marker, time[s,pidx]);
-         if( o > 0 )
+         if( o > 0 && !short )
          {
             if( !processed )
                line = sprintf("%s      -", line);
@@ -650,34 +717,34 @@ END {
             else if( time[s,pidx]/timecomp > 999.99 )
                line = sprintf("%s  Large", line);
             else
-	       line = sprintf("%s %6.2f", line, time[s,pidx]/timecomp);
-	    if( processed &&
-		(nodes[s,pidx] > markworsenodes * nodecomp ||
-		 nodes[s,pidx] < 1.0/markbetternodes * nodecomp ||
-		 isfaster(time[s,pidx], timecomp, markbettertime) ||
-		 isslower(time[s,pidx], timecomp, markworsetime)) )
-	       mark = "*";
+               line = sprintf("%s %6.2f", line, time[s,pidx]/timecomp);
+            if( processed &&
+                (nodes[s,pidx] > markworsenodes * nodecomp ||
+                 nodes[s,pidx] < 1.0/markbetternodes * nodecomp ||
+                 isfaster(time[s,pidx], timecomp, markbettertime) ||
+                 isslower(time[s,pidx], timecomp, markworsetime)) )
+               mark = "*";
          }
       }
 
       # update the best status information
       if( nthissolved > 0 )
-	bestnsolved++;
+        bestnsolved++;
       else if( nthistimeouts > 0 )
-	bestntimeouts++;
+        bestntimeouts++;
       else if( nthisfails == nsolver - nthisunprocessed )
-	bestnfails++;
+        bestnfails++;
 
       # check for inconsistency in the primal and dual bounds
       if( readerror )
       {
          line = sprintf("%s  readerror", line);
-	 mark = " ";
+         mark = " ";
       }
       else if( fail )
       {
          line = sprintf("%s  fail", line);
-	 mark = " ";
+         mark = " ";
       }
       else if( consistency &&
          ((ismini && ismaxi) ||
@@ -687,17 +754,17 @@ END {
       {
          line = sprintf("%s  inconsistent", line);
          fail = 1;
-	 mark = " ";
+         mark = " ";
       }
       else if( excluded[p] )
       {
          line = sprintf("%s  excluded", line);
-	 mark = " ";
+         mark = " ";
       }
       else if( unprocessed )
       {
          line = sprintf("%s  unprocessed", line);
-	 mark = " ";
+         mark = " ";
       }
       else
          line = sprintf("%s  ok", line);
@@ -711,14 +778,14 @@ END {
             nprocessedprobs[s,0]++;
             nprocessedprobs[s,category[s]]++;
             pidx = probidx[p,s];
-	    if( primalbound[s,pidx] < infinity ) {
-	       feasibles[s,0]++;
-	       feasibles[s,category[s]]++;
-	       hasfeasible = 1;
-	    }
-	 }
-	 if( hasfeasible )
-	   bestfeasibles++;
+            if( primalbound[s,pidx] < infinity ) {
+               feasibles[s,0]++;
+               feasibles[s,category[s]]++;
+               hasfeasible = 1;
+            }
+         }
+         if( hasfeasible )
+           bestfeasibles++;
       }
 
       if( (!onlymarked || mark == "*") && (!onlyprocessed || !unprocessed) &&
@@ -777,11 +844,11 @@ END {
       if( !fail && !unprocessed &&
           (!onlyfeasible || hasfeasible) && (!onlyinfeasible || !hasfeasible) )
       {
-	 reftime = time[printorder[0],probidx[p,printorder[0]]];
+         reftime = time[printorder[0],probidx[p,printorder[0]]];
          refnodes = nodes[printorder[0],probidx[p,printorder[0]]];
-	 refobj = primalbound[printorder[0],probidx[p,printorder[0]]];
+         refobj = primalbound[printorder[0],probidx[p,printorder[0]]];
          hasbetter = 0;
-	 hasbetterobj = 0;
+         hasbetterobj = 0;
          for( s = 0; s < nsolver; ++s )
          {
             pidx = probidx[p,s];
@@ -826,17 +893,17 @@ END {
             }
          }
          s = printorder[0];
-	 besttimegeom = besttimegeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * besttime^(1.0/nevalprobs[s,0]);
-	 bestnodegeom = bestnodegeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * bestnodes^(1.0/nevalprobs[s,0]);
-	 besttimeshiftedgeom = besttimeshiftedgeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * (besttime+timegeomshift)^(1.0/nevalprobs[s,0]);
-	 bestnodeshiftedgeom = bestnodeshiftedgeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * (bestnodes+nodegeomshift)^(1.0/nevalprobs[s,0]);
+         besttimegeom = besttimegeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * besttime^(1.0/nevalprobs[s,0]);
+         bestnodegeom = bestnodegeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * bestnodes^(1.0/nevalprobs[s,0]);
+         besttimeshiftedgeom = besttimeshiftedgeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * (besttime+timegeomshift)^(1.0/nevalprobs[s,0]);
+         bestnodeshiftedgeom = bestnodeshiftedgeom^((nevalprobs[s,0]-1)/nevalprobs[s,0]) * (bestnodes+nodegeomshift)^(1.0/nevalprobs[s,0]);
          if( hasbetter )
             bestbetter++;
-	 if( hasbetterobj )
-	   bestbetterobj++;
+         if( hasbetterobj )
+           bestbetterobj++;
       }
    }
-   printhline(nsolver);
+   printhline(nsolver,short);
 
    # make sure total time and nodes it not zero
    for( s = 0; s < nsolver; ++s )
@@ -856,29 +923,39 @@ END {
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      if( o == 0 )
+      if( o == 0 || short )
          printf(" %11d %8d", nodetotal[s,0], timetotal[s,0]);
       else
          printf(" %11d %8d              ", nodetotal[s,0], timetotal[s,0]);
    }
    printf("\n");
    printf("%-20s", "geom. mean");
+   nodegeomcomp = -1;
+   timegeomcomp = -1;
+   nodetotalcomp = -1;
+   timetotalcomp = -1;
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
-      if( o == 0 )
+      if( o == 0 || short )
       {
          printf(" %11d %8.1f", nodegeom[s,0], timegeom[s,0]);
-         nodegeomcomp = nodegeom[s,0];
-         timegeomcomp = timegeom[s,0];
-         nodetotalcomp = nodetotal[s,0];
-         timetotalcomp = timetotal[s,0];
+         if( nodegeomcomp < 0 )
+            nodegeomcomp = nodegeom[s,0];
+         if( timegeomcomp < 0 )
+            timegeomcomp = timegeom[s,0];
+         if( nodetotalcomp < 0 )
+            nodetotalcomp = nodetotal[s,0];
+         if( timetotalcomp < 0 )
+            timetotalcomp = timetotal[s,0];
       }
       else
          printf(" %11d %8.1f %6.2f %6.2f", nodegeom[s,0], timegeom[s,0], nodegeom[s,0]/nodegeomcomp, timegeom[s,0]/timegeomcomp);
    }
    printf("\n");
    printf("%-20s", "shifted geom.");
+   nodeshiftedgeomcomp = -1;
+   timeshiftedgeomcomp = -1;
    for( o = 0; o < nsolver; ++o )
    {
       s = printorder[o];
@@ -893,11 +970,13 @@ END {
          refnodeshiftedgeom[s,cat] = max(refnodeshiftedgeom[s,cat], mintime);
          reftimeshiftedgeom[s,cat] = max(reftimeshiftedgeom[s,cat], mintime);
       }
-      if( o == 0 )
+      if( o == 0 || short )
       {
          printf(" %11d %8.1f", nodeshiftedgeom[s,0], timeshiftedgeom[s,0]);
-         nodeshiftedgeomcomp = nodeshiftedgeom[s,0];
-         timeshiftedgeomcomp = timeshiftedgeom[s,0];
+         if( nodeshiftedgeomcomp < 0 )
+            nodeshiftedgeomcomp = nodeshiftedgeom[s,0];
+         if( timeshiftedgeomcomp < 0 )
+            timeshiftedgeomcomp = timeshiftedgeom[s,0];
       }
       else
          printf(" %11d %8.1f %6.2f %6.2f", nodeshiftedgeom[s,0], timeshiftedgeom[s,0],
@@ -909,7 +988,40 @@ END {
    besttimeshiftedgeom = max(besttimeshiftedgeom, 1.0);
    
    printf("\n");
-   printhline(nsolver);
+
+   #since the rows of the quotients are not printed, print the quotients of the geometric means
+   if( short )
+   {
+      printf("quot. geom. mean                         ");
+      for( o = 0; o < nsolver; ++o )
+      {
+         if( o > 0 )
+         {
+            s = printorder[o];
+            printf("      %6.2f   %6.2f",nodegeom[s,0]/nodegeomcomp, timegeom[s,0]/timegeomcomp);
+         }
+      }
+      printf("\n");
+      printf("quot. sh. geom. mean                     ");
+      for( o = 0; o < nsolver; ++o )
+      {
+         if( o > 0 )
+         {
+            s = printorder[o];
+            printf("      %6.2f   %6.2f",nodeshiftedgeom[s,0]/nodeshiftedgeomcomp, timeshiftedgeom[s,0]/timeshiftedgeomcomp);
+         }
+      }
+      printf("\n");
+      printf("percent not solved                 ");
+      for( o = 0; o < nsolver; ++o )
+      {
+         s = printorder[o];
+         printf("%6.2f",100-100*nsolved[s,0]/nprocessedprobs[s,0]);
+         printf("               ");
+      }
+      printf("\n");
+   }
+   printhline(nsolver,short);
 
    # tex comparison footer
    if( texcmpfile != "" )
@@ -941,49 +1053,51 @@ END {
       printf("}\n") > texcmpfile;
    }
 
-
-   for( cat = 0; cat <= 3; cat++ )
+   if( !short )
    {
-#      if( nprocessedprobs[cat] == 0 )
-#         continue;
-
-      header = (cat == 0 ? "all" : (cat == 1 ? "diff" : (cat == 2 ? "equal" : "timeout")));
-      printf("\n");
-      printf("%-7s                             proc eval fail time solv wins bett wors bobj wobj feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n",
-         header);
-
-      for( o = 0; o < nsolver; ++o )
-      {
-         s = printorder[o];
-         if( o == 0 )
+      for( cat = 0; cat <= 3; cat++ )
+      {   
+#         if( nprocessedprobs[cat] == 0 )
+#            continue;
+      
+         header = (cat == 0 ? "all" : (cat == 1 ? "diff" : (cat == 2 ? "equal" : "timeout")));
+         printf("\n");
+         printf("%-7s                             proc eval fail time solv wins bett wors bobj wobj feas     nodes   shnodes    nodesQ  shnodesQ    time  shtime   timeQ shtimeQ   score\n",
+            header);
+   
+         for( o = 0; o < nsolver; ++o )
          {
-            nodegeomcomp = nodegeom[s,cat];
-            timegeomcomp = timegeom[s,cat];
-            nodeshiftedgeomcomp = nodeshiftedgeom[s,cat];
-            timeshiftedgeomcomp = timeshiftedgeom[s,cat];
+            s = printorder[o];
+            if( o == 0 )
+            {
+               nodegeomcomp = nodegeom[s,cat];
+               timegeomcomp = timegeom[s,cat];
+               nodeshiftedgeomcomp = nodeshiftedgeom[s,cat];
+               timeshiftedgeomcomp = timeshiftedgeom[s,cat];
+            }
+            if( (o > 0 || cat == 0) && nevalprobs[s,cat] > 0 )
+            {
+               printf("%-35s %4d %4d %4d %4d %4d %4d", solvername[s], nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
+                  ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
+               printf(" %4d %4d", better[s,cat], worse[s,cat]);
+               printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
+                  betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],
+                  nodegeom[s,cat], nodeshiftedgeom[s,cat], nodegeom[s,cat]/refnodegeom[s,cat],
+                  nodeshiftedgeom[s,cat]/refnodeshiftedgeom[s,cat],
+                  timegeom[s,cat], timeshiftedgeom[s,cat], timegeom[s,cat]/reftimegeom[s,cat],
+                  timeshiftedgeom[s,cat]/reftimeshiftedgeom[s,cat], score[s,cat]);
+            }
          }
-         if( (o > 0 || cat == 0) && nevalprobs[s,cat] > 0 )
+         if( cat == 0 )
          {
-            printf("%-35s %4d %4d %4d %4d %4d %4d", solvername[s], nprocessedprobs[s,cat], nevalprobs[s,cat], nfails[s,cat],
-               ntimeouts[s,cat], nsolved[s,cat], wins[s,cat]);
-            printf(" %4d %4d", better[s,cat], worse[s,cat]);
-            printf(" %4d %4d %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7.2f\n", 
-               betterobj[s,cat], worseobj[s,cat], feasibles[s,cat],
-               nodegeom[s,cat], nodeshiftedgeom[s,cat], nodegeom[s,cat]/refnodegeom[s,cat],
-               nodeshiftedgeom[s,cat]/refnodeshiftedgeom[s,cat],
-               timegeom[s,cat], timeshiftedgeom[s,cat], timegeom[s,cat]/reftimegeom[s,cat],
-               timeshiftedgeom[s,cat]/reftimeshiftedgeom[s,cat], score[s,cat]);
+            printf("%-35s           %4d %4d %4d %4s", "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
+            printf(" %4d %4s", bestbetter, "");
+            printf(" %4d %4s %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7s\n",
+                   bestbetterobj, "", bestfeasibles,
+                   bestnodegeom, bestnodeshiftedgeom, bestnodegeom/nodegeomcomp, bestnodeshiftedgeom/nodeshiftedgeomcomp,
+                   besttimegeom, besttimeshiftedgeom, besttimegeom/timegeomcomp, besttimeshiftedgeom/timeshiftedgeomcomp,
+                   "");
          }
-      }
-      if( cat == 0 )
-      {
-         printf("%-35s           %4d %4d %4d %4s", "optimal auto settings", bestnfails, bestntimeouts, bestnsolved, "");
-         printf(" %4d %4s", bestbetter, "");
-         printf(" %4d %4s %4d %9d %9d %9.2f %9.2f %7.1f %7.1f %7.2f %7.2f %7s\n",
-                bestbetterobj, "", bestfeasibles,
-                bestnodegeom, bestnodeshiftedgeom, bestnodegeom/nodegeomcomp, bestnodeshiftedgeom/nodeshiftedgeomcomp,
-                besttimegeom, besttimeshiftedgeom, besttimegeom/timegeomcomp, besttimeshiftedgeom/timeshiftedgeomcomp,
-                "");
       }
    }
 

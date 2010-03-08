@@ -1,4 +1,4 @@
-#!/bin/awk -f
+#!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,12 +13,13 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_cbc.awk,v 1.10 2010/01/04 20:35:32 bzfheinz Exp $
+# $Id: check_cbc.awk,v 1.11 2010/03/08 14:06:19 bzfwanie Exp $
 #
 #@file    check_cbc.awk
 #@brief   CBC Check Report Generator
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
+#@author  Robert Waniek
 #
 function abs(x)
 {
@@ -68,6 +69,7 @@ BEGIN {
    pass     = 0;
    timeouts = 0;
    settings = "default";
+   threads  = 1;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }  # get optimum
 /=inf=/  { solstatus[$2] = "inf"; sol[$2] = 0.0; } # problem infeasible
@@ -150,7 +152,9 @@ BEGIN {
 /^seconds has value/ {
    timelimit = $4;
 }
-
+/^threads was changed from/ {
+   threads = $7;
+}
 #
 # problem size
 #
@@ -233,6 +237,17 @@ BEGIN {
    timeout  = 1;
    aborted  = 0;
 }
+/^Result - User ctrl-c objective/ { 
+   pb       = $6;
+   bbnodes  = $8;
+   dualiter = $11;
+   iters    = dualiter;
+   tottime  = $15;
+   feasible = (pb < +infty);
+   opti     = 0;
+   timeout  = 1;
+   aborted  = 0;
+}
 /^Cputime limit exceeded/ {
    feasible = (pb < +infty);
    opti     = 0;
@@ -266,10 +281,25 @@ BEGIN {
 #
 # evaluation
 #
+# solver status overview (in order of priority): 
+# 1) solver broke before returning solution => abort
+# 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
+#    (especially of problem is claimed to be solved but solution is not the optimal solution)
+# 3) solver solved problem with the value in solu-file (if existing) => ok
+# 4) solver solved problem which has no (optimal) value in solu-file => solved
+# 5) solver found solution better than known best solution (or no solution was known so far) => better
+# 6) solver reached any other limit (like time or nodes) => timeout
+# 7) otherwise => unknown
+#
 /^=ready=/ {
    if( !onlyinsolufile || solstatus[prob] != "" )
    {
-      bbnodes = max(bbnodes, 1);
+      temp = pb;
+      pb = 1.0*temp;
+      temp = db;
+      db = 1.0*temp;
+
+      bbnodes = max(bbnodes, 1); # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
 
       nprobs++;
     
@@ -312,9 +342,16 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
- 	 reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
-	 abstol = max(absmipgap, 1e-4);
-         if( (abs(pb - db) > max(abstol, reltol)) || (abs(pb - sol[prob]) > reltol) )
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( (db <= pb && (db-sol[prob] > reltol || sol[prob]-pb > reltol)) || (db >= pb && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
+         }
+         else
          {
             if (timeout)
             {
@@ -324,15 +361,93 @@ BEGIN {
             }
             else
             {
-               printf("fail\n");
-               failtime += tottime;
-               fail++;
+               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+               {
+                  printf("ok\n");
+                  pass++;
+               }
+               else
+               {
+                  printf("fail\n");
+                  failtime += tottime;
+                  fail++;
+               }
             }
+         }
+      }
+      else if( solstatus[prob] == "best" )
+      {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( (db <= pb && db-sol[prob] > reltol) || (db >= pb && sol[prob]-db > reltol) )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
          }
          else
          {
-            printf("ok\n");
+            if (timeout)
+            {
+               if ( (db <= pb && sol[prob]-pb > reltol) || (db >= pb && pb-sol[prob] > reltol) )
+               {
+                  printf("better\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+               {
+                  printf("timeout\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+            }
+            else
+            {
+               if( abs(pb - db) <= max(abstol, reltol) )
+               {
+                  printf("solved\n");
+                  pass++;
+               }
+               else
+               {
+                  printf("fail\n");
+                  failtime += tottime;
+                  fail++;
+               }
+            }
+         }
+      }
+      else if( solstatus[prob] == "unkn" )
+      {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+         
+         if( abs(pb - db) <= max(abstol, reltol) )
+         {
+            printf("solved\n");
             pass++;
+         }
+         else
+         {
+            if( abs(pb) < infty )
+            {
+               printf("better\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               if( timeout )
+               {
+                  printf("timeout\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+                  printf("unknown\n");
+            }
          }
       }
       else if( solstatus[prob] == "inf" )
@@ -393,7 +508,7 @@ END {
    printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{tabular*}\n")                                           >TEXFILE;
-   printf("\\caption{CPLEX with default settings}\n")                    >TEXFILE;
+   printf("\\caption{CBC with default settings}\n")                      >TEXFILE;
    printf("\\end{center}\n")                                             >TEXFILE;
    printf("\\end{table}\n")                                              >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
@@ -410,5 +525,7 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
+   printf("@02 threads: %g\n", threads);
+   printf("@02 timelimit: %g\n", timelimit);
    printf("@01 CBC(%s):%s\n", cbcversion, settings);
 }

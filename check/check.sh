@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check.sh,v 1.61 2010/01/04 20:35:32 bzfheinz Exp $
+# $Id: check.sh,v 1.62 2010/03/08 14:06:19 bzfwanie Exp $
 TSTNAME=$1
 BINNAME=$2
 SETNAME=$3
@@ -21,12 +21,13 @@ BINID=$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-DISPFREQ=$9
-CONTINUE=${10}
-LOCK=${11}
-VERSION=${12}
-LPS=${13}
+THREADS=$8
+FEASTOL=$9
+DISPFREQ=${10}
+CONTINUE=${11}
+LOCK=${12}
+VERSION=${13}
+LPS=${14}
 
 SETDIR=../settings
 
@@ -148,6 +149,7 @@ do
 	    echo set limits time $TIMELIMIT        >> $TMPFILE
 	    echo set limits nodes $NODELIMIT       >> $TMPFILE
 	    echo set limits memory $MEMLIMIT       >> $TMPFILE
+#THREADS not supported yet (version 1.2.0.8)
 	    echo set timing clocktype 1            >> $TMPFILE
 	    echo set display verblevel 4           >> $TMPFILE
 	    echo set display freq $DISPFREQ        >> $TMPFILE

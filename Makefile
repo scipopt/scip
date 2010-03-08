@@ -12,7 +12,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: Makefile,v 1.332 2010/03/05 16:03:22 bzfheinz Exp $
+# $Id: Makefile,v 1.333 2010/03/08 14:06:18 bzfwanie Exp $
 
 #@file    Makefile
 #@brief   SCIP Makefile
@@ -36,6 +36,7 @@ VERSION		:=	1.2.0.8
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	1536
+THREADS         =       1
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	shortmiplib
@@ -90,6 +91,7 @@ LINT		=	flexelint
 DOXY		=	doxygen
 CPLEX		=	cplex
 CBC		=	cbc
+CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
 GUROBI          =       gurobi.sh
 GLPK            =       glpsol
@@ -639,7 +641,7 @@ check:		test
 .PHONY: test
 test:		
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: testcount
 testcount:		
@@ -649,17 +651,22 @@ testcount:
 .PHONY: testcplex
 testcplex:		
 		cd check; \
-		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: testmosek
 testmosek:		
 		cd check; \
-		$(SHELL) ./check_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./check_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcbc
 testcbc:		
 		cd check; \
-		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
+
+.PHONY: testcbcparallel
+testcbcparallel:                
+		cd check; \
+                $(SHELL) ./check_cbc.sh $(TEST) $(CBCPARALLEL) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: testcluster
 testcluster:		
@@ -674,22 +681,22 @@ testclustercbc:
 .PHONY: testgurobi
 testgurobi:		
 		cd check; \
-		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: testglpk
 testglpk:		
 		cd check; \
-		$(SHELL) ./check_glpk.sh $(TEST) $(GLPK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_glpk.sh $(TEST) $(GLPK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: testsymphony
 testsymphony:		
 		cd check; \
-		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: testblis
 testblis:		
 		cd check; \
-		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) 0.0 $(CONTINUE);
+		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) 0.0 $(CONTINUE);
 
 .PHONY: tags
 tags:

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -21,9 +21,10 @@ BINNAME=$GLPKBIN.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-MIPGAP=$9
-CONTINUE=${10}
+THREADS=$8
+FEASTOL=$9
+MIPGAP=${10}
+CONTINUE=${11}
 
 if test ! -e results
 then
@@ -59,7 +60,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`getlastprob.awk $OUTFILE`
+    LASTPROB=`./getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -103,17 +104,20 @@ do
 #		echo "IntFeasTol $FEASTOL"            >> $TMPFILE
 #	    fi
 	    PARAMETERS="--fpump --cuts --tmlim $TIMELIMIT --memlim $MEMLIMIT"
+# $THREADS not supported (version 4.43)
 	    if test $MIPGAP != "default"
 	    then
 		PARAMETERS=$PARAMETERS" --mipgap $MIPGAP"
 	    fi
-# parameter NODELIMIT not available (version 4.39)
+# $NODELIMIT not supported (version 4.43)
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $GLPKBIN $PARAMETERS $i" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    echo =ready=
 	else

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: evalcheck_cluster.sh,v 1.14 2010/03/03 08:58:05 bzfheinz Exp $
+# $Id: evalcheck_cluster.sh,v 1.15 2010/03/08 14:06:19 bzfwanie Exp $
 
 export LANG=C
 

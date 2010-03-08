@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -21,9 +21,10 @@ BINNAME=$SYMPHONYBIN.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-MIPGAP=$9
-CONTINUE=${10}
+THREADS=$8
+FEASTOL=$9
+MIPGAP=${10}
+CONTINUE=${11}
 
 if test ! -e results
 then
@@ -62,7 +63,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`getlastprob.awk $OUTFILE`
+    LASTPROB=`./getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -115,12 +116,11 @@ do
 		echo "set gap_limit" $MIPGAP        >> $TMPFILE
 	    fi
 	    echo "set node_limit $NODELIMIT"        >> $TMPFILE
-#memory limit not supported (version 5.2)
-#	    echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+#$MEMLIMIT not supported (version 5.2)
+#$THREADS only supported as command line parameter (version 5.2)
 #writing of parameters not supported (version 5.2)
-#	    echo write $SETFILE                     >> $TMPFILE
 	    echo "load $i"                          >> $TMPFILE
-#when using .gz-files, the filetype has to be given explicitly
+#WORKAROUND: when using .gz-files, the filetype has to be given explicitly (version 5.2)
             echo "mps"                              >> $TMPFILE
 #           echo "lp"                               >> $TMPFILE
 	    echo "solve"                            >> $TMPFILE
@@ -128,10 +128,12 @@ do
 	    echo "quit"                             >> $TMPFILE
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $SYMPHONYBIN < $TMPFILE" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    echo =ready=
 	else

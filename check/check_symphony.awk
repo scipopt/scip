@@ -1,4 +1,4 @@
-#!/bin/awk -f
+#!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: check_symphony.awk,v 1.2 2010/01/04 20:35:33 bzfheinz Exp $
+# $Id: check_symphony.awk,v 1.3 2010/03/08 14:06:19 bzfwanie Exp $
 #
 #@file    check_symphony.awk
 #@brief   SYMPHONY Check Report Generator
@@ -119,6 +119,7 @@ BEGIN {
    aborted    = 1;
 }
 /^*   This is SYMPHONY Version/ {version = $6;}
+/^SYMPHONY: SYMPHONY: Setting time_limit to:/ {timelimit = $6;}
 #
 # problem size
 #
@@ -171,10 +172,28 @@ BEGIN {
    cuts += $3;
 }
 #iters not displayed (version 5.2)
+#
+# evaluation
+#
+# solver status overview (in order of priority): 
+# 1) solver broke before returning solution => abort
+# 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
+#    (especially of problem is claimed to be solved but solution is not the optimal solution)
+# 3) solver solved problem with the value in solu-file (if existing) => ok
+# 4) solver solved problem which has no (optimal) value in solu-file => solved
+# 5) solver found solution better than known best solution (or no solution was known so far) => better
+# 6) solver reached any other limit (like time or nodes) => timeout
+# 7) otherwise => unknown
+#
 /^=ready=/ {
    if( !onlyinsolufile || solstatus[prob] != "" )
    {
-      bbnodes = max(bbnodes, 1); # CPLEX reports 0 nodes if the primal heuristics find the optimal solution in the root node
+      temp = pb;
+      pb = 1.0*temp;
+      temp = db;
+      db = 1.0*temp;
+
+      bbnodes = max(bbnodes, 1); # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
 
       nprobs++;
     
@@ -186,16 +205,16 @@ BEGIN {
          optimal = 1;
          markersym = "  ";
       }
-      else if( abs(db)*1.0 < 1e-06 )
+      else if( abs(db) < 1e-06 )
          gap = -1.0;
-      else if( pb*db*1.0 < 0.0 )
+      else if( pb*db < 0.0 )
          gap = -1.0;
-      else if( abs(db)*1.0 >= infty )
+      else if( abs(db) >= infty )
          gap = -1.0;
-      else if( abs(pb)*1.0 >= infty )
+      else if( abs(pb) >= infty )
          gap = -1.0;
       else
-         gap = 100.0*abs((pb-db)*1.0/(1.0*db));
+         gap = 100.0*abs((pb-db)/db);
 
       if( gap < 0.0 )
          gapstr = "  --  ";
@@ -218,9 +237,16 @@ BEGIN {
       }
       else if( solstatus[prob] == "opt" )
       {
- 	 reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
-	 abstol = max(absmipgap, 1e-4);
-         if( (abs(pb - db) > max(abstol, reltol)) || (abs(pb - sol[prob]) > reltol) )
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( (db <= pb && (db-sol[prob] > reltol || sol[prob]-pb > reltol)) || (db >= pb && (sol[prob]-db > reltol || pb-sol[prob] > reltol)) )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
+         }
+         else
          {
             if (timeout)
             {
@@ -230,15 +256,93 @@ BEGIN {
             }
             else
             {
-               printf("fail\n");
-               failtime += tottime;
-               fail++;
+               if( (abs(pb - db) <= max(abstol, reltol)) && abs(pb - sol[prob]) <= reltol )
+               {
+                  printf("ok\n");
+                  pass++;
+               }
+               else
+               {
+                  printf("fail\n");
+                  failtime += tottime;
+                  fail++;
+               }
             }
+         }
+      }
+      else if( solstatus[prob] == "best" )
+      {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+
+         if( (db <= pb && db-sol[prob] > reltol) || (db >= pb && sol[prob]-db > reltol) )
+         {
+            printf("fail\n");
+            failtime += tottime;
+            fail++;
          }
          else
          {
-            printf("ok\n");
+            if (timeout)
+            {
+               if ( (db <= pb && sol[prob]-pb > reltol) || (db >= pb && pb-sol[prob] > reltol) )
+               {
+                  printf("better\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+               {
+                  printf("timeout\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+            }
+            else
+            {
+               if( abs(pb - db) <= max(abstol, reltol) )
+               {
+                  printf("solved\n");
+                  pass++;
+               }
+               else
+               {
+                  printf("fail\n");
+                  failtime += tottime;
+                  fail++;
+               }
+            }
+         }
+      }
+      else if( solstatus[prob] == "unkn" )
+      {
+         reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
+         abstol = max(absmipgap, 1e-4);
+         
+         if( abs(pb - db) <= max(abstol, reltol) )
+         {
+            printf("solved\n");
             pass++;
+         }
+         else
+         {
+            if( abs(pb) < infty )
+            {
+               printf("better\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else
+            {
+               if( timeout )
+               {
+                  printf("timeout\n");
+                  timeouttime += tottime;
+                  timeouts++;
+               }
+               else
+                  printf("unknown\n");
+            }
          }
       }
       else if( solstatus[prob] == "inf" )
@@ -316,5 +420,6 @@ END {
       nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
+   printf("@02 timelimit: %g\n", timelimit);
    printf("@01 SYMPHONY(%s):%s\n", version, settings);
 }

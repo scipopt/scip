@@ -28,8 +28,8 @@
 =opt= irp         1.2159492836e+04
 =opt= l152lav     4.7220000000e+03
 =opt= lrn         4.4479255127e+07  
-=opt= markshare1_1        0.0000000000e+00
-=unkn= markshare2_1  ?
+=opt= markshare1_1   0.0000000000e+00
+=opt= markshare2_1   0.0000000000e+00
 =opt=  markshare4_0  1.0000000000e+00
 =opt= mas74       1.1801185700e+04
 =opt= mas76       4.0005054100e+04
@@ -59,7 +59,7 @@
 =opt= neos13     -9.5474806559e+01
 =opt= neos14      7.4333343343e+04
 =opt= neos15     8.0598430097e+04
-=best= neos16     4.4900000000e+02
+=best= neos16     4.4600000000e+02
 =unkn= neos17     ?
 =unkn= neos18     ?
 =unkn= neos19     ?

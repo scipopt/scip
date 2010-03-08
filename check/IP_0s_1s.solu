@@ -496,4 +496,4 @@
 =opt= stp-s-18                                      11 
 =opt= santiago-vmax=17-freq=12-int=int-maxz=9-maxs=170-limx=510-limy=238-obj=sumw        98975.886
 =opt= santiago-vmax=17-freq=12-int=-maxz=0-maxs=inf-sumx=inf-sumy=inf-obj=sumxy           1019.502
-=feas= no_request.pre                                0
+=opt= no_request.pre                                0

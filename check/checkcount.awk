@@ -1,4 +1,4 @@
-#!/bin/awk -f
+#!/usr/bin/awk -f
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: checkcount.awk,v 1.5 2010/01/04 20:35:33 bzfheinz Exp $
+# $Id: checkcount.awk,v 1.6 2010/03/08 14:06:19 bzfwanie Exp $
 #
 #@file    checkcount.awk
 #@brief   SCIP Check Report Generator for counting tests

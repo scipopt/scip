@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -21,10 +21,11 @@ BINNAME=$MOSEKBIN.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-MIPGAP=$9
-DISPFREQ=${10}
-CONTINUE=${11}
+THREADS=$8
+FEASTOL=$9
+MIPGAP=${10}
+DISPFREQ=${11}
+CONTINUE=${12}
 
 if test ! -e results
 then
@@ -63,7 +64,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`getlastprob.awk $OUTFILE`
+    LASTPROB=`./getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -103,6 +104,9 @@ do
 	    ENVPARAM="$ENVPARAM -d MSK_DPAR_OPTIMIZER_MAX_TIME $TIMELIMIT"
 	    ENVPARAM="$ENVPARAM -d MSK_IPAR_MIO_MAX_NUM_BRANCHES $NODELIMIT"
 #	    echo set mip limits treememory $MEMLIMIT >> $TMPFILE
+#THREADS only used for interior point method, not in solution tree (version 6)
+	    ENVPARAM="$ENVPARAM -d MSK_IPAR_INTPNT_NUM_THREADS $THREADS"
+ 
 	    if test $FEASTOL != "default"
 	    then
 		ENVPARAM="$ENVPARAM -d  MSK_DPAR_MIO_TOL_REL_GAP $FEASTOL"
@@ -110,10 +114,12 @@ do
 	    ENVPARAM="$ENVPARAM -d MSK_DPAR_MIO_NEAR_TOL_REL_GAP $MIPGAP"
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $MOSEKBIN $ENVPARAM -pari $SETTINGS -paro $SETFILE $i" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    echo =ready=
 	else

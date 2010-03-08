@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: testfiles.sh,v 1.4 2010/01/04 20:35:33 bzfheinz Exp $
+# $Id: testfiles.sh,v 1.5 2010/03/08 14:06:19 bzfwanie Exp $
 
 # Test the file names contained in all "*.test" files in the current directory.
 # Output names of files that do not exist.

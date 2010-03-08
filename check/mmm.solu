@@ -59,7 +59,7 @@
 =opt=  markshare1    1.0000000000e+00
 =opt=  markshare1_1  0.0000000000e+00
 =opt=  markshare2    1.0000000000e+00
-=unkn= markshare2_1  ?
+=opt=  markshare2_1  0.0000000000e+00
 =opt=  markshare4_0  1.0000000000e+00
 =opt=  mas74         1.1801185700e+04
 =opt=  mas76         4.0005054100e+04
@@ -98,7 +98,7 @@
 =opt=  neos11        9.0000000000e+00
 =opt=  neos12        1.3000000000e+01
 =opt=  neos13       -9.5474806559e+01
-=best= neos16        4.4900000000e+02
+=best= neos16        4.4600000000e+02
 =opt=  neos20       -4.3400000000e+02
 =opt=  neos21        7.0000000000e+00
 =opt=  neos22        7.7971500000e+05

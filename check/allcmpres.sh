@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -13,7 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: allcmpres.sh,v 1.18 2010/01/04 20:35:32 bzfheinz Exp $
+# $Id: allcmpres.sh,v 1.19 2010/03/08 14:06:19 bzfwanie Exp $
 
 AWKARGS=""
 FILES=""

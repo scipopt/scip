@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 #*                                                                           *
 #*                  This file is part of the program and library             *
@@ -21,9 +21,10 @@ BINNAME=$GUROBIBIN.$4
 TIMELIMIT=$5
 NODELIMIT=$6
 MEMLIMIT=$7
-FEASTOL=$8
-MIPGAP=$9
-CONTINUE=${10}
+THREADS=$8
+FEASTOL=$9
+MIPGAP=${10}
+CONTINUE=${11}
 
 GRBNODEFILEDIR=gurobi_nodefiledir
 
@@ -64,7 +65,7 @@ fi
 
 if test "$CONTINUE" = "true"
 then
-    LASTPROB=`getlastprob.awk $OUTFILE`
+    LASTPROB=`./getlastprob.awk $OUTFILE`
     echo Continuing benchmark. Last solved instance: $LASTPROB
     echo "" >> $OUTFILE
     echo "----- Continuing from here. Last solved: $LASTPROB -----" >> $OUTFILE
@@ -80,6 +81,9 @@ date >>$ERRFILE
 
 # we add 10% to the hard time limit and additional 10 seconds in case of small time limits
 HARDTIMELIMIT=`expr \`expr $TIMELIMIT + 10\` + \`expr $TIMELIMIT / 10\``
+
+# since bash counts cpu time we need the time limit for each thread
+HARDTIMELIMIT=`expr $HARDTIMELIMIT \* $THREADS`
 
 # we add 10% to the hard memory limit and additional 100mb to the hard memory limit
 HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
@@ -128,7 +132,7 @@ do
             rm -fr $GRBNODEFILEDIR
             mkdir $GRBNODEFILEDIR
             echo "setParam(\"NodefileDir\",\"$GRBNODEFILEDIR\")" >> $TMPFILE
-	    echo "setParam(\"Threads\",1)"            >> $TMPFILE
+	    echo "setParam(\"Threads\",$THREADS)"     >> $TMPFILE
 	    echo "writeParams(\"$SETFILE\")"          >> $TMPFILE
 	    echo "problem=read(\"$i\")"               >> $TMPFILE
 	    echo "problem.printStats()"               >> $TMPFILE
@@ -136,10 +140,12 @@ do
 	    echo "quit()"                             >> $TMPFILE
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    bash -c "ulimit -t $HARDTIMELIMIT; ulimit -v $HARDMEMLIMIT; ulimit -f 1000000; $GUROBIBIN < $TMPFILE" 2>>$ERRFILE
 	    echo -----------------------------
 	    date
+	    date >>$ERRFILE
 	    echo -----------------------------
 	    echo =ready=
 	else
