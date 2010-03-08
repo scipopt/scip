@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.2 2010/03/04 18:53:03 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.3 2010/03/08 13:12:41 bzfhende Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -1344,8 +1344,9 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
          *result = SCIP_FOUNDSOL;
 
 #ifdef STATISTIC_INFORMATION
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "***Twoopt improved solution found by %10s . \n ", 
-            SCIPheurGetName(SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol) :"Tree");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "***Twoopt improved solution found by %10s . \n", 
+            SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol)) :"Tree");
+               
 #endif
       }
    }
@@ -1424,8 +1425,8 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
             *result = SCIP_FOUNDSOL;
 
 #ifdef STATISTIC_INFORMATION
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "***Twoopt improved solution found by %10s . \n ", 
-               SCIPheurGetName(SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol) :"Tree");
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "***Twoopt improved solution found by %10s . \n", 
+               SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol)) :"Tree");
 #endif
          }
       }
