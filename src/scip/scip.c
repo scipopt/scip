@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.427.2.8 2010/03/02 17:20:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.427.2.9 2010/03/09 09:00:01 bzfwolte Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -10068,6 +10068,20 @@ SCIP_RETCODE SCIPsetLPState(
    SCIP_CALL( checkStage(scip, "SCIPgetLPState", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPlpSetState(scip->lp, scip->mem->solvemem, scip->set, lpistate) );
+
+   return SCIP_OKAY;
+}
+
+/** frees LP state information */
+SCIP_RETCODE SCIPfreeLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPgetLPState", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+
+   SCIP_CALL( SCIPlpFreeState(scip->lp, scip->mem->solvemem, lpistate) );
 
    return SCIP_OKAY;
 }

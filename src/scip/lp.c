@@ -13,7 +13,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lp.c,v 1.254.2.4 2009/08/12 09:27:15 bzfwolte Exp $"
+#pragma ident "@(#) $Id: lp.c,v 1.254.2.5 2010/03/09 09:00:01 bzfwolte Exp $"
 
 /**@file   lp.c
  * @brief  LP management methods and datastructures
@@ -6216,7 +6216,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
 
-   /*  if we want to solve the problem exactly and work with an FP approxination we cannot generated proved lower bounds 
+   /*  if we want to solve the problem exactly and work with an FP approximation we cannot generated proved lower bounds 
     *  via LP plus loose objval nor via the pseudo objval; therefore they are ignored
     */
    if( set->misc_exactsolve && !set->misc_usefprelax )

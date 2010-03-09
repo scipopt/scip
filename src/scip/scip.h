@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.h,v 1.310.2.7 2010/03/02 17:20:51 bzfwolte Exp $"
+#pragma ident "@(#) $Id: scip.h,v 1.310.2.8 2010/03/09 09:00:02 bzfwolte Exp $"
 
 /**@file   scip.h
  * @brief  SCIP callable library
@@ -3517,6 +3517,13 @@ extern
 SCIP_RETCODE SCIPsetLPState(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   );
+
+/** frees LP state information */
+extern
+SCIP_RETCODE SCIPfreeLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE**       lpistate            /**< pointer to LP state information (like basis information) */
    );
 
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding

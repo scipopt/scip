@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.8 2010/03/02 17:20:50 bzfwolte Exp $"
+#pragma ident "@(#) $Id: cons_exactlp.c,v 1.1.2.9 2010/03/09 09:00:01 bzfwolte Exp $"
 //#define SCIP_DEBUG /*??????????????*/
 //#define LP_OUT /* only for debugging ???????????????? */
 //#define BOUNDCHG_OUT /* only for debugging ?????????? */
@@ -1717,6 +1717,9 @@ SCIP_RETCODE loadLPEXState(
       SCIP_CALL( checkLoadState(scip, conshdlrdata) );
 #endif
 
+      /* frees LP state */
+      SCIP_CALL( SCIPlpiexFreeState(conshdlrdata->lpiex, SCIPblkmem(scip), &lpistate) );
+
       assert(*success);
    }
    else
@@ -2001,6 +2004,9 @@ SCIP_RETCODE loadLPState(
 #ifdef DETAILED_DEBUG
       SCIP_CALL( checkLoadState(scip, conshdlrdata) );
 #endif
+
+      /* free LP state */
+      SCIP_CALL( SCIPfreeLPState(scip, &lpistate) );
    }
 #ifdef BASIS_OUT
    else
@@ -4212,6 +4218,10 @@ SCIP_DECL_CONSSEPALP(consSepalpExactlp)
 #endif
          SCIP_CALL( SCIPlpiexStateDualFeasible(conshdlrdata->lpiex, SCIPblkmem(scip), lpistate, &dualfeasible, 
                &dualobjval) );
+         
+         /* free LP state */
+         SCIP_CALL( SCIPfreeLPState(scip, &lpistate) );
+         
 #ifdef EXLPSOLVER_OUT /* only for debugging ????????? */ 
          printf("<<<<<<<<<<<<<<<<<< Load LP basis into LPEX solver and only check basis   - END   >>>>>>>>>>>>>>>>\n\n");
 #endif
