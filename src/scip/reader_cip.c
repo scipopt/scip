@@ -12,9 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cip.c,v 1.16 2010/01/04 20:35:46 bzfheinz Exp $"
-
-#define SCIP_DEBUG
+#pragma ident "@(#) $Id: reader_cip.c,v 1.17 2010/03/10 16:56:50 bzfheinz Exp $"
 
 /**@file   reader_cip.c
  * @ingroup FILEREADERS 
