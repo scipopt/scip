@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: intervalarith.c,v 1.37 2010/01/04 20:35:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: intervalarith.c,v 1.38 2010/03/10 12:08:08 bzfviger Exp $"
 
 /**@file   intervalarith.c
  * @brief  interval arithmetics for provable bounds
@@ -133,9 +133,9 @@ void setRoundingMode(
    ROUNDMODE        roundmode           /**< rounding mode to activate */
    )
 {
-   if( _controlfp(roundmode, _MCW_RC) & _MCW_RC != roundmode )
+   if( (_controlfp(roundmode, _MCW_RC) & _MCW_RC) != roundmode )
    {
-      SCIPerrorMessage("error setting rounding mode to %d\n", roundmode);
+      SCIPerrorMessage("error setting rounding mode to %x\n", roundmode);
       SCIPABORT();
    }
 }
