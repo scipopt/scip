@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.11 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.12 2010/03/10 11:18:53 bzfheinz Exp $"
 
 /**@file   presol_inttobinary.c
  * @ingroup PRESOLVERS
@@ -26,7 +26,6 @@
 #include <string.h>
 
 #include "scip/presol_inttobinary.h"
-#include "scip/pub_misc.h"
 
 
 #define PRESOL_NAME            "inttobinary"
