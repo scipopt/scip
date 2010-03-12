@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.3 2010/03/08 13:12:41 bzfhende Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.4 2010/03/12 10:36:20 bzfviger Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -1094,8 +1094,8 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
    /* ensure that presolve has detected structures in the problem to which the 2-optimization can be applied.
     * That is if at least one of the sorted arrays in heuristic data, 'binvars' or 'intvars' exists and at least 
     * some of the variables' objective function coefficient differ. */
-   if( (heurdata->binequalcoeffs || heurdata->nobinarymatching || nbinvars <= 1)
-      && (!heurdata->intopt || heurdata->intequalcoeffs || heurdata->nointmatching  || nintvars <= 1) )
+   if( (nbinvars <= 1 || heurdata->binequalcoeffs || heurdata->nobinarymatching)
+      && (!heurdata->intopt || nintvars <= 1 || heurdata->intequalcoeffs || heurdata->nointmatching) )
    {
       return SCIP_OKAY;
    }
