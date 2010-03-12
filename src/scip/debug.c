@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: debug.c,v 1.38 2010/02/19 10:03:18 bzfheinz Exp $"
+#pragma ident "@(#) $Id: debug.c,v 1.39 2010/03/12 10:54:09 bzfwinkm Exp $"
 
 /**@file   debug.c
  * @brief  methods for debugging
@@ -285,7 +285,7 @@ SCIP_Bool debugSolIsAchieved(
 
       solvalue = SCIPgetSolOrigObj(scip, bestsol);
 
-      if( (SCIPgetObjsense(scip) == SCIP_OBJSEN_MINIMIZE && solvalue <= debugsolval) || (SCIPgetObjsense(scip) == SCIP_OBJSEN_MAXIMIZE && solvalue >= debugsolval) )
+      if( (SCIPgetObjsense(scip) == SCIP_OBJSEN_MINIMIZE && SCIPsetIsLE(set, solvalue, debugsolval)) || (SCIPgetObjsense(scip) == SCIP_OBJSEN_MAXIMIZE && SCIPsetIsGE(set, solvalue, debugsolval)) )
          solisachieved = TRUE;
    }
 
