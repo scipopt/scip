@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.h,v 1.51 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch.h,v 1.52 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   branch.h
  * @brief  internal methods for branching rules and branching candidate storage
@@ -212,6 +212,13 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
  * branching rules
  */
 
+/** copies the given branchrule to a new scip */
+extern
+SCIP_RETCODE SCIPbranchruleCopyInclude(
+   SCIP_BRANCHRULE*      branchrule,         /**< branchrule */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a branching rule */
 extern
 SCIP_RETCODE SCIPbranchruleCreate(
@@ -225,6 +232,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying branching rule
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule */
    SCIP_DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    SCIP_DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */

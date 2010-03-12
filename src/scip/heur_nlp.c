@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_nlp.c,v 1.49 2010/02/16 17:14:20 bzfviger Exp $"
+#pragma ident "@(#) $Id: heur_nlp.c,v 1.50 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file    heur_nlp.c
  * @ingroup PRIMALHEURISTICS
@@ -1232,6 +1232,20 @@ SCIP_RETCODE SCIPapplyNlpHeur(
  * Callback methods of primal heuristic
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyNlp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurNlp(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeNlp)
@@ -1468,12 +1482,15 @@ SCIP_RETCODE SCIPincludeHeurNlp(
 
    /* include variable event handler */
    SCIP_CALL( SCIPincludeEventhdlr(scip, HEUR_NAME, "propagates a global bound change to the NLP",
-      NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
    heurdata->eventhdlr = SCIPfindEventhdlr(scip, HEUR_NAME);
-
+   
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, heurFreeNlp, heurInitNlp, heurExitNlp, heurInitsolNlp, heurExitsolNlp, heurExecNlp,
+         HEUR_MAXDEPTH, HEUR_TIMING, 
+         heurCopyNlp,
+         heurFreeNlp, heurInitNlp, heurExitNlp, heurInitsolNlp, heurExitsolNlp, heurExecNlp,
          heurdata) );
 
    /* add Nlp primal heuristic parameters */

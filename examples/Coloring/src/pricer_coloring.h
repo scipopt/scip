@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.h,v 1.4 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.h,v 1.5 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   pricer_coloring.h
  * @brief  coloring variable pricer
@@ -35,7 +35,6 @@ extern
 SCIP_RETCODE SCIPincludePricerColoring(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
 
 /** sets the way, the pricer handles variables with negative reduced costs found during the tclique-algorithm
     if onlybest is true, only the best n variables are added to the lp, while onlybest = false means, that 

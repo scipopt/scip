@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.7 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_healthcare.c,v 1.8 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   pricer_healthcare.c
  * @brief  healthcare variable pricer
@@ -22,6 +22,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "pricer_healthcare.h"
 #include "probdata_healthcare.h"
@@ -64,6 +65,20 @@ struct SCIP_PricerData
  */
 
 /* TODO: Implement all necessary variable pricer methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for pricer plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRICERCOPY(pricerCopyHealthcare)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(pricer != NULL);
+   assert(strcmp(SCIPpricerGetName(pricer), PRICER_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( HCPincludePricerHealthcare(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 #if 0
@@ -231,6 +246,7 @@ SCIP_RETCODE HCPincludePricerHealthcare(
 
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
+         pricerCopyHealthcare,
          pricerFreeHealthcare, pricerInitHealthcare, pricerExitHealthcare, 
          pricerInitsolHealthcare, pricerExitsolHealthcare, pricerRedcostHealthcare, pricerFarkasHealthcare,
          pricerdata) );

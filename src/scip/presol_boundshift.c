@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_boundshift.c,v 1.10 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_boundshift.c,v 1.11 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   presol_boundshift.c
  * @ingroup PRESOLVERS
@@ -79,6 +79,21 @@ void initPresoldata(
 /*
  * Callback methods of presolver
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolBoundshift(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
@@ -247,6 +262,7 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyBoundshift,
          presolFreeBoundshift, presolInitBoundshift, presolExitBoundshift, 
          presolInitpreBoundshift, presolExitpreBoundshift, presolExecBoundshift,
          presoldata) );

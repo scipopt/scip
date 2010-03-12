@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.4 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.5 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   cons_xxx.c
  * @brief  constraint handler for xxx constraints
@@ -80,6 +80,39 @@ struct SCIP_ConshdlrData
 /* put your local methods here, and declare them static */
 
 
+/*
+ * Linear constraint upgrading
+ */
+
+#ifdef LINCONSUPGD_PRIORITY
+/** tries to upgrade a linear constraint into a xxx constraint */
+static
+SCIP_DECL_LINCONSUPGD(linconsUpgdXxx)
+{  /*lint --e{715}*/
+   SCIP_Bool upgrade;
+
+   assert(upgdcons != NULL);
+   
+   /* check, if linear constraint can be upgraded to xxx constraint */
+   upgrade = FALSE;
+   /* TODO: put the constraint's properties here, in terms of the statistics given by nposbin, nnegbin, ... */
+
+   if( upgrade )
+   {
+      SCIPdebugMessage("upgrading constraint <%s> to xxx constraint\n", SCIPconsGetName(cons));
+      
+      /* create the bin Xxx constraint (an automatically upgraded constraint is always unmodifiable) */
+      assert(!SCIPconsIsModifiable(cons));
+      SCIP_CALL( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+   }
+
+   return SCIP_OKAY;
+}
+#endif
 
 
 /*
@@ -87,6 +120,20 @@ struct SCIP_ConshdlrData
  */
 
 /* TODO: Implement all necessary constraint handler methods. The methods with #if 0 ... #else #define ... are optional */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+if 0
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+ 
+   return SCIP_OKAY;
+}
+#else
+#define conshdlrCopyXxx NULL
+#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #if 0
@@ -104,12 +151,18 @@ SCIP_DECL_CONSFREE(consFreeXxx)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSINIT(consInitXxx)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xxx constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+#ifdef LINCONSUPGD_PRIORITY
+   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   {
+      /* include the linear constraint to setppc constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -435,43 +488,6 @@ SCIP_DECL_CONSPRINT(consPrintXxx)
 
 
 /*
- * Linear constraint upgrading
- */
-
-#ifdef LINCONSUPGD_PRIORITY
-/** tries to upgrade a linear constraint into a xxx constraint */
-static
-SCIP_DECL_LINCONSUPGD(linconsUpgdXxx)
-{  /*lint --e{715}*/
-   SCIP_Bool upgrade;
-
-   assert(upgdcons != NULL);
-   
-   /* check, if linear constraint can be upgraded to xxx constraint */
-   upgrade = FALSE;
-   /* TODO: put the constraint's properties here, in terms of the statistics given by nposbin, nnegbin, ... */
-
-   if( upgrade )
-   {
-      SCIPdebugMessage("upgrading constraint <%s> to xxx constraint\n", SCIPconsGetName(cons));
-      
-      /* create the bin Xxx constraint (an automatically upgraded constraint is always unmodifiable) */
-      assert(!SCIPconsIsModifiable(cons));
-      SCIP_CALL( SCIPcreateConsXxx(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-   }
-
-   return SCIP_OKAY;
-}
-#endif
-
-
-
-
-/*
  * constraint specific interface methods
  */
 
@@ -491,6 +507,7 @@ SCIP_RETCODE SCIPincludeConshdlrXxx(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyXxx,
          consFreeXxx, consInitXxx, consExitXxx, 
          consInitpreXxx, consExitpreXxx, consInitsolXxx, consExitsolXxx,
          consDeleteXxx, consTransXxx, consInitlpXxx,
@@ -500,11 +517,6 @@ SCIP_RETCODE SCIPincludeConshdlrXxx(
          consEnableXxx, consDisableXxx,
          consPrintXxx,
          conshdlrdata) );
-
-#ifdef LINCONSUPGD_PRIORITY
-   /* include the linear constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdXxx, LINCONSUPGD_PRIORITY) );
-#endif
 
    /* add xxx constraint handler parameters */
    /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_branch.h,v 1.25 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_branch.h,v 1.26 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   type_branch.h
  * @ingroup TYPEDEFINITIONS
@@ -37,6 +37,14 @@ typedef struct SCIP_BranchCand SCIP_BRANCHCAND;   /**< branching candidate stora
 typedef struct SCIP_Branchrule SCIP_BRANCHRULE;   /**< branching method data structure */
 typedef struct SCIP_BranchruleData SCIP_BRANCHRULEDATA; /**< branching method specific data */
 
+
+/** copy method for branchrule plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - branchrule      : the branching rule itself
+ */
+#define SCIP_DECL_BRANCHCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_BRANCHRULE* branchrule)
 
 /** destructor of branching method to free user data (called when SCIP is exiting)
  *

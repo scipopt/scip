@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_xxx.c,v 1.21 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_xxx.c,v 1.22 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   reader_xxx.c
  * @ingroup FILEREADERS 
@@ -61,6 +61,21 @@ struct SCIP_ReaderData
 /*
  * Callback methods of reader
  */
+
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_READERCOPY(readerCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx reader not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+ 
+   return SCIP_OKAY;
+}
+#else
+#define readerCopyXxx NULL
+#endif
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #if 0
@@ -124,7 +139,9 @@ SCIP_RETCODE SCIPincludeReaderXxx(
    
    /* include xxx reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeXxx, readerReadXxx, readerWriteXxx, readerdata) );
+         readerCopyXxx,
+         readerFreeXxx, readerReadXxx, readerWriteXxx,
+         readerdata) );
 
    /* add xxx reader parameters */
    /* TODO: (optional) add reader specific parameters with SCIPaddTypeParam() here */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_xxx.c,v 1.20 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_xxx.c,v 1.21 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   pricer_xxx.c
  * @ingroup PRICERS
@@ -63,6 +63,20 @@ struct SCIP_PricerData
  */
 
 /* TODO: Implement all necessary variable pricer methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for pricer plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_PRICERCOPY(pricerCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx variable pricer not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+ 
+   return SCIP_OKAY;
+}
+#else
+#define pricerCopyXxx NULL
+#endif
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 #if 0
@@ -184,6 +198,7 @@ SCIP_RETCODE SCIPincludePricerXxx(
 
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
+         pricerCopyXxx,
          pricerFreeXxx, pricerInitXxx, pricerExitXxx, 
          pricerInitsolXxx, pricerExitsolXxx, pricerRedcostXxx, pricerFarkasXxx,
          pricerdata) );

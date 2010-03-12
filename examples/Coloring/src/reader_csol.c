@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_csol.c,v 1.7 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_csol.c,v 1.8 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   reader_csol.c
  * @brief  CSOL file writer
@@ -83,6 +83,19 @@ long getNextNumber(
 
 /* put your local methods here, and declare them static */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyCsol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderCsol(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** problem reading method of reader */
 static
@@ -435,6 +448,7 @@ SCIP_RETCODE SCIPincludeReaderCsol(
    
    /* include csol reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+         readerCopyCsol,
          readerFreeCsol, readerReadCsol, readerWriteCsol, readerdata) );
 
    return SCIP_OKAY;

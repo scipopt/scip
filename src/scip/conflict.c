@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.c,v 1.151 2010/01/05 17:42:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.c,v 1.152 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   conflict.c
  * @brief  methods and datastructures for conflict analysis
@@ -364,6 +364,25 @@ SCIP_DECL_PARAMCHGD(paramChgdConflicthdlrPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given conflict handler to a new scip */
+SCIP_RETCODE SCIPconflicthdlrCopyInclude(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(conflicthdlr != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( conflicthdlr->conflictcopy != NULL )
+   {
+      SCIPdebugMessage("including conflict handler %s in subscip %p\n", SCIPconflicthdlrGetName(conflicthdlr), set->scip);
+      SCIP_CALL( conflicthdlr->conflictcopy(set->scip, conflicthdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates a conflict handler */
 SCIP_RETCODE SCIPconflicthdlrCreate(
    SCIP_CONFLICTHDLR**   conflicthdlr,       /**< pointer to conflict handler data structure */
@@ -372,6 +391,7 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    const char*           name,               /**< name of conflict handler */
    const char*           desc,               /**< description of conflict handler */
    int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
@@ -392,6 +412,7 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conflicthdlr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*conflicthdlr)->desc, desc, strlen(desc)+1) );
    (*conflicthdlr)->priority = priority;
+   (*conflicthdlr)->conflictcopy = conflictcopy;
    (*conflicthdlr)->conflictfree = conflictfree;
    (*conflicthdlr)->conflictinit = conflictinit;
    (*conflicthdlr)->conflictexit = conflictexit;

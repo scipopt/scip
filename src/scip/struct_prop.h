@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_prop.h,v 1.16 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_prop.h,v 1.17 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_prop.h
  * @brief  datastructures for propagators
@@ -41,6 +41,7 @@ struct SCIP_Prop
    SCIP_Longint          ndomredsfound;      /**< number of domain reductions found so far by this constraint handler */
    char*                 name;               /**< name of propagator */
    char*                 desc;               /**< description of propagator */
+   SCIP_DECL_PROPCOPY    ((*propcopy));      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PROPFREE    ((*propfree));      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit));      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit));      /**< deinitialize propagator */

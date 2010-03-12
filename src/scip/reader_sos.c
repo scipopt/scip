@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_sos.c,v 1.15 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_sos.c,v 1.16 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   reader_sos.c
  * @ingroup FILEREADERS 
@@ -631,6 +631,21 @@ SCIP_RETCODE readSOSFile(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopySOS)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderSOS(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeSOS NULL
 
@@ -688,7 +703,9 @@ SCIP_RETCODE SCIPincludeReaderSOS(
 
    /* include sos reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeSOS, readerReadSOS, readerWriteSOS, readerdata) );
+         readerCopySOS,
+         readerFreeSOS, readerReadSOS, readerWriteSOS,
+         readerdata) );
 
    return SCIP_OKAY;
 }

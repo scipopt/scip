@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_inference.c,v 1.29 2010/02/11 16:50:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_inference.c,v 1.30 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   branch_inference.c
  * @ingroup BRANCHINGRULES
@@ -122,6 +122,20 @@ SCIP_RETCODE performBranching(
 /*
  * Callback methods
  */
+
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyInference)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleInference(scip) );
+   
+   return SCIP_OKAY;
+}
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
@@ -239,6 +253,7 @@ SCIP_RETCODE SCIPincludeBranchruleInference(
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
+         branchCopyInference,
          branchFreeInference, branchInitInference, branchExitInference, branchInitsolInference, branchExitsolInference, 
          branchExeclpInference, branchExecrelInference, branchExecpsInference,
          branchruledata) );

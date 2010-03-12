@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event_xxx.c,v 1.2 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event_xxx.c,v 1.3 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   event_xxx.c
  * @ingroup EVENTS 
@@ -50,6 +50,20 @@ struct SCIP_EventhdlrData
 /*
  * Callback methods of event handler
  */
+
+/** copy method for event handler plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_EVENTCOPY(eventCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx dialog not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define eventCopyXxx NULL
+#endif
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 #if 0
@@ -158,6 +172,7 @@ SCIP_RETCODE SCIPincludeEventHdlrXxx(
 
    /* imclude event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         eventCopyXxx,
          eventFreeXxx, eventInitXxx, eventExitXxx, 
          eventInitsolXxx, eventExitsolXxx, eventDeleteXxx, eventExecXxx,
          eventhdlrdata) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_storeGraph.h,v 1.4 2010/01/04 20:35:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_storeGraph.h,v 1.5 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   cons_storeGraph.h
  * @brief  constraint handler for storing the graph at each node of the tree
@@ -100,10 +100,10 @@ void COLORconsGetUnion(
 
 
 /** creates the handler for graph storing constraints and includes it in SCIP */
+extern
 SCIP_RETCODE COLORincludeConshdlrStoreGraph(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
 
 /** creates and captures a storeGraph constraint, uses knowledge of the B&B-father*/
 extern

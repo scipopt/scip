@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_xxx.c,v 1.24 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_xxx.c,v 1.25 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   branch_xxx.c
  * @ingroup BRANCHINGRULES
@@ -64,6 +64,20 @@ struct SCIP_BranchruleData
  */
 
 /* TODO: Implement all necessary branching rule methods. The methods with an #if 0 ... #else #define ... are optional */
+
+
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_BRANCHCOPY(branchCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx branching rule not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#define branchCopyXxx NULL
+#endif
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 #if 0
@@ -195,7 +209,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsXxx)
 /** creates the xxx branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleXxx(
    SCIP*                 scip                /**< SCIP data structure */
-   )
+)
 {
    SCIP_BRANCHRULEDATA* branchruledata;
 
@@ -206,6 +220,7 @@ SCIP_RETCODE SCIPincludeBranchruleXxx(
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
 	 BRANCHRULE_MAXBOUNDDIST,
+         branchCopyXxx,
          branchFreeXxx, branchInitXxx, branchExitXxx,
          branchInitsolXxx, branchExitsolXxx,
          branchExeclpXxx, branchExecrelXxx, branchExecpsXxx,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_conflict.h,v 1.29 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_conflict.h,v 1.30 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_conflict.h
  * @brief  datastructures for conflict analysis
@@ -41,6 +41,7 @@ struct SCIP_Conflicthdlr
 {
    char*                 name;               /**< name of conflict handler */
    char*                 desc;               /**< description of conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy));  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONFLICTFREE((*conflictfree));  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit));  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit));  /**< deinitialize conflict handler */

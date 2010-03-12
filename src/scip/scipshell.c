@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scipshell.c,v 1.15 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scipshell.c,v 1.16 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   scipshell.c
  * @brief  SCIP command line interface
@@ -27,7 +27,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
-
 
 /*
  * Message Handler
@@ -395,7 +394,6 @@ SCIP_RETCODE SCIPrunShell(
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-
 
    /**********************************
     * Process command line arguments *

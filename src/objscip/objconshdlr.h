@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.h,v 1.60 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.h,v 1.61 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objconshdlr.h
  * @brief  C++ wrapper for constraint handlers
@@ -29,12 +29,13 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
 /** C++ wrapper object for constraint handlers */
-class ObjConshdlr
+class ObjConshdlr : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

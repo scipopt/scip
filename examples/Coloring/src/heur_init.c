@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_init.c,v 1.5 2010/01/04 20:35:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_init.c,v 1.6 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   heur_init.c
  * @brief  initial primal heuristic for coloring
@@ -63,6 +63,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "heur_init.h"
 #include "pricer_coloring.h"
@@ -518,6 +519,20 @@ SCIP_Bool runTabuCol(
  * Callback methods of primal heuristic
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyInit)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurInit(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeInit)
@@ -695,6 +710,7 @@ SCIP_RETCODE SCIPincludeHeurInit(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyInit,
          heurFreeInit, heurInitInit, heurExitInit, 
          heurInitsolInit, heurExitsolInit, heurExecInit,
          heurdata) );

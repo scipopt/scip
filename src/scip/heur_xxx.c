@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_xxx.c,v 1.25 2010/01/04 20:35:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_xxx.c,v 1.26 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   heur_xxx.c
  * @ingroup PRIMALHEURISTICS
@@ -67,6 +67,20 @@ struct SCIP_HeurData
  */
 
 /* TODO: Implement all necessary primal heuristic methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_HEURCOPY(heurCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx primal heuristic not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define heurCopyXxx NULL
+#endif
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 #if 0
@@ -175,6 +189,7 @@ SCIP_RETCODE SCIPincludeHeurXxx(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyXxx,
          heurFreeXxx, heurInitXxx, heurExitXxx, 
          heurInitsolXxx, heurExitsolXxx, heurExecXxx,
          heurdata) );

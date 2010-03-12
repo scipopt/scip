@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.30 2010/03/04 18:58:42 bzfviger Exp $"
+#pragma ident "@(#) $Id: prop_pseudoobj.c,v 1.31 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   prop_pseudoobj.c
  * @ingroup PROPAGATORS
@@ -23,6 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/prop_pseudoobj.h"
 
@@ -485,6 +486,20 @@ SCIP_RETCODE propagateLowerbound(
  * Callback methods of propagator
  */
 
+/** copy method for propagator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyPseudoobj)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of propagator */
+   SCIP_CALL( SCIPincludePropPseudoobj(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PROPFREE(propFreePseudoobj)
@@ -721,7 +736,8 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    SCIP_PROPDATA* propdata;
 
    /* include event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecPseudoobj, NULL) );
 
    /* create pseudoobj propagator data */
@@ -742,6 +758,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+         propCopyPseudoobj,
          propFreePseudoobj, propInitPseudoobj, propExitPseudoobj, 
          propInitsolPseudoobj, propExitsolPseudoobj, propExecPseudoobj, propRespropPseudoobj,
          propdata) );

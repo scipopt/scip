@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_polynomial.h,v 1.4 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_polynomial.h,v 1.5 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   cons_polynomial.h
  * @brief  constraint handler for polynomial constraints
@@ -49,9 +49,7 @@ typedef struct PolynomialTag
 
 /** creates the handler for polynomial constraints and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeConshdlrPolynomial(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+SCIP_DECL_INCLUDEPLUGIN(SCIPincludeConshdlrPolynomial);
 
 /** creates and captures a polynomial constraint */
 extern

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_rlp.c,v 1.11 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_rlp.c,v 1.12 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   reader_rlp.c
  * @ingroup FILEREADERS 
@@ -21,6 +21,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#include <string.h>
 
 #include "scip/reader_lp.h"
 #include "scip/reader_rlp.h"
@@ -33,6 +35,21 @@
 /*
  * Callback methods of reader
  */
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyRlp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderRlp(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeRlp NULL
@@ -94,7 +111,9 @@ SCIP_RETCODE SCIPincludeReaderRlp(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeRlp, readerReadRlp, readerWriteRlp, readerdata) );
+         readerCopyRlp,
+         readerFreeRlp, readerReadRlp, readerWriteRlp,
+         readerdata) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.51 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.52 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -120,6 +120,7 @@ struct SCIP_Conshdlr
    SCIP_Real             ageresetavg;        /**< exp. decaying weighted average of constraint ages at moment of age reset */
    char*                 name;               /**< name of constraint handler */
    char*                 desc;               /**< description of constraint handler */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy));  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONSFREE    ((*consfree));      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit));      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit));      /**< deinitialize constraint handler */

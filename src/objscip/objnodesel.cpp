@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objnodesel.cpp,v 1.21 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objnodesel.cpp,v 1.22 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objnodesel.cpp
  * @brief  C++ wrapper for node selectors
@@ -48,6 +48,31 @@ struct SCIP_NodeselData
 
 extern "C"
 {
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyObj)
+{  /*lint --e{715}*/
+   SCIP_NODESELDATA* nodeseldata;
+   
+   assert(scip != NULL);
+   
+   nodeseldata = SCIPnodeselGetData(nodesel);
+   assert(nodeseldata != NULL);
+   assert(nodeseldata->objnodesel != NULL);
+
+   if( nodeseldata->objnodesel->iscloneable() )
+   {
+      scip::ObjNodesel*  newobjnodesel;
+      newobjnodesel = (scip::ObjNodesel*) nodeseldata->objnodesel->clone();
+
+      /* call include method of node selector object */
+      SCIP_CALL( SCIPincludeObjNodesel(scip, newobjnodesel, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_NODESELFREE(nodeselFreeObj)
@@ -188,6 +213,9 @@ SCIP_RETCODE SCIPincludeObjNodesel(
 {
    SCIP_NODESELDATA* nodeseldata;
 
+   assert(scip != NULL);
+   assert(objnodesel != NULL);
+
    /* create node selector data */
    nodeseldata = new SCIP_NODESELDATA;
    nodeseldata->objnodesel = objnodesel;
@@ -196,6 +224,7 @@ SCIP_RETCODE SCIPincludeObjNodesel(
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, objnodesel->scip_name_, objnodesel->scip_desc_, 
          objnodesel->scip_stdpriority_, objnodesel->scip_memsavepriority_,
+         nodeselCopyObj,
          nodeselFreeObj, nodeselInitObj, nodeselExitObj, 
          nodeselInitsolObj, nodeselExitsolObj, nodeselSelectObj, nodeselCompObj,
          nodeseldata) ); /*lint !e429*/

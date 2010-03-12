@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.9 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nodesel_estimate.c,v 1.10 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   nodesel_estimate.c
  * @ingroup NODESELECTORS
@@ -65,6 +65,20 @@ struct SCIP_NodeselData
 /*
  * Callback methods
  */
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyEstimate)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   /* call inclusion method of node selector */
+   SCIP_CALL( SCIPincludeNodeselEstimate(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
@@ -315,6 +329,7 @@ SCIP_RETCODE SCIPincludeNodeselEstimate(
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+         nodeselCopyEstimate,
          nodeselFreeEstimate, nodeselInitEstimate, nodeselExitEstimate, 
          nodeselInitsolEstimate, nodeselExitsolEstimate, nodeselSelectEstimate, nodeselCompEstimate,
          nodeseldata) );

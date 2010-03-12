@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_dialog.h,v 1.19 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_dialog.h,v 1.20 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   type_dialog.h
  * @ingroup TYPEDEFINITIONS
@@ -38,6 +38,14 @@ typedef struct SCIP_DialogData SCIP_DIALOGDATA;   /**< user defined dialog data 
 typedef struct SCIP_Dialoghdlr SCIP_DIALOGHDLR;   /**< dialog handler */
 typedef struct SCIP_Linelist SCIP_LINELIST;       /**< linked list of single input lines */
 
+
+/** copy method for dialog plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - dialog          : the dialog itself
+ */
+#define SCIP_DECL_DIALOGCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIALOG* dialog)
 
 /** destructor of dialog to free user data (called when the dialog is not captured anymore)
  *

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_disp.h,v 1.16 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_disp.h,v 1.17 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_disp.h
  * @brief  datastructures for displaying runtime statistics
@@ -38,6 +38,7 @@ struct SCIP_Disp
    char*                 name;               /**< name of display column */
    char*                 desc;               /**< description of display column */
    char*                 header;             /**< head line of display column */
+   SCIP_DECL_DISPCOPY    ((*dispcopy));      /**< copy method of display column or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_DISPFREE    ((*dispfree));      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit));      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit));      /**< deinitialize display column */

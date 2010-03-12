@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.43 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objconshdlr.cpp,v 1.44 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objconshdlr.cpp
  * @brief  C++ wrapper for constraint handlers
@@ -48,6 +48,31 @@ struct SCIP_ConshdlrData
 
 extern "C"
 {
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   
+   assert(scip != NULL);
+   
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   if( conshdlrdata->objconshdlr->iscloneable() )
+   {
+      scip::ObjConshdlr*  newobjconshdlr;
+      newobjconshdlr = (scip::ObjConshdlr*) conshdlrdata->objconshdlr->clone();
+
+      /* call include method of constraint handler object */
+      SCIP_CALL( SCIPincludeObjConshdlr(scip, newobjconshdlr, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeObj)
@@ -518,6 +543,9 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
+   assert(scip != NULL);
+   assert(objconshdlr != NULL);
+
    /* create obj constraint handler data */
    conshdlrdata = new SCIP_CONSHDLRDATA;
    conshdlrdata->objconshdlr = objconshdlr;
@@ -530,6 +558,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          objconshdlr->scip_maxprerounds_, 
          objconshdlr->scip_delaysepa_, objconshdlr->scip_delayprop_, objconshdlr->scip_delaypresol_,
          objconshdlr->scip_needscons_,
+         conshdlrCopyObj,
          consFreeObj, consInitObj, consExitObj, 
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
          consDeleteObj, consTransObj, consInitlpObj,

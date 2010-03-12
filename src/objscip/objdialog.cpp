@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdialog.cpp,v 1.7 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objdialog.cpp,v 1.8 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objdialog.cpp
  * @brief  C++ wrapper for dialogs
@@ -48,6 +48,31 @@ struct SCIP_DialogData
 
 extern "C"
 {
+
+/** copy method for dialog plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_DIALOGCOPY(dialogCopyObj)
+{  /*lint --e{715}*/
+   SCIP_DIALOGDATA* dialogdata;
+   
+   assert(scip != NULL);
+   
+   dialogdata = SCIPdialogGetData(dialog);
+   assert(dialogdata != NULL);
+   assert(dialogdata->objdialog != NULL);
+
+   if( dialogdata->objdialog->iscloneable() )
+   {
+      scip::ObjDialog*  newobjdialog;
+      newobjdialog = (scip::ObjDialog*) dialogdata->objdialog->clone();
+
+      /* call include method of dialog object */
+      SCIP_CALL( SCIPincludeObjDialog(scip, newobjdialog, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of dialog to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_DIALOGFREE(dialogFreeObj)
@@ -121,6 +146,9 @@ SCIP_RETCODE SCIPincludeObjDialog(
 {/*lint --e{429} */
    SCIP_DIALOG* parentdialog;
 
+   assert(scip != NULL);
+   assert(objdialog != NULL);
+
    /* get parent dialog */
    parentdialog = SCIPgetRootDialog(scip);
    assert(parentdialog != NULL);
@@ -137,8 +165,10 @@ SCIP_RETCODE SCIPincludeObjDialog(
       dialogdata->objdialog = objdialog;
       dialogdata->deleteobject = deleteobject;
 
-      SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecObj, dialogDescObj, dialogFreeObj,
-				  objdialog->scip_name_, objdialog->scip_desc_, objdialog->scip_issubmenu_, dialogdata) );
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
+            dialogCopyObj,
+            dialogExecObj, dialogDescObj, dialogFreeObj,
+            objdialog->scip_name_, objdialog->scip_desc_, objdialog->scip_issubmenu_, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

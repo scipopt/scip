@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.h,v 1.52 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur.h,v 1.53 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   heur.h
  * @brief  internal methods for primal heuristics
@@ -38,6 +38,13 @@
 extern "C" {
 #endif
 
+/** copies the given primal heuristic to a new scip */
+extern
+SCIP_RETCODE SCIPheurCopyInclude(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a primal heuristic */
 extern
 SCIP_RETCODE SCIPheurCreate(
@@ -52,6 +59,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */

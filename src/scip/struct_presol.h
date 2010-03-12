@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_presol.h,v 1.20 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_presol.h,v 1.21 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_presol.h
  * @brief  datastructures for presolvers
@@ -38,6 +38,7 @@ struct SCIP_Presol
 {
    char*                 name;               /**< name of presolver */
    char*                 desc;               /**< description of presolver */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy));    /**< copy method of presolver or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PRESOLFREE  ((*presolfree));    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    SCIP_DECL_PRESOLINIT  ((*presolinit));    /**< initialization method of presolver (called after problem was transformed) */
    SCIP_DECL_PRESOLEXIT  ((*presolexit));    /**< deinitialization method of presolver (called before transformed problem is freed) */

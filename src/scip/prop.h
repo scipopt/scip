@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.h,v 1.20 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop.h,v 1.21 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   prop.h
  * @brief  internal methods for propagators
@@ -40,6 +40,13 @@
 extern "C" {
 #endif
 
+/** copies the given propagator to a new scip */
+extern
+SCIP_RETCODE SCIPpropCopyInclude(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a propagator */
 extern
 SCIP_RETCODE SCIPpropCreate(
@@ -51,6 +58,7 @@ SCIP_RETCODE SCIPpropCreate(
    int                   priority,           /**< priority of propagator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */

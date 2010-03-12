@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_countsols.c,v 1.38 2010/02/22 20:56:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_countsols.c,v 1.39 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   cons_countsols.c
  * @ingroup CONSHDLRS 
@@ -1201,6 +1201,20 @@ SCIP_RETCODE checkSolution(
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCountsols)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static 
 SCIP_DECL_CONSFREE(consFreeCountsols)
@@ -2085,7 +2099,7 @@ SCIP_RETCODE createCountDialog(
    
    if( !SCIPdialogHasEntry(root, "count") )
    {
-      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecCount, NULL, NULL,
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecCount, NULL, NULL,
             "count", "count number of feasible solutions", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
@@ -2093,7 +2107,7 @@ SCIP_RETCODE createCountDialog(
 
    if( !SCIPdialogHasEntry(root, "write") )
    {
-      SCIP_CALL( SCIPcreateDialog(scip, &submenu, SCIPdialogExecMenu, NULL, NULL,
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu, NULL, SCIPdialogExecMenu, NULL, NULL,
             "write", "write information to file", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
@@ -2110,7 +2124,7 @@ SCIP_RETCODE createCountDialog(
 
    if( !SCIPdialogHasEntry(submenu, "allsolutions") )
    {
-      SCIP_CALL( SCIPcreateDialog(scip, &dialog, SCIPdialogExecAllsolutions, NULL, NULL,
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecAllsolutions, NULL, NULL,
             "allsolutions", "writes all counted primal solutions to file", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
@@ -2194,6 +2208,7 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyCountsols,
          consFreeCountsols, consInitCountsols, consExitCountsols, 
          consInitpreCountsols, consExitpreCountsols, consInitsolCountsols, consExitsolCountsols,
          consDeleteCountsols, consTransCountsols, consInitlpCountsols,
@@ -2231,9 +2246,11 @@ SCIP_RETCODE SCIPincludeConshdlrCountsols(
    
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, DISP_SOLS_NAME, DISP_SOLS_DESC, DISP_SOLS_HEADER, SCIP_DISPSTATUS_OFF, 
+         NULL,
          NULL, NULL, NULL, NULL, NULL, dispOutputSols, 
          NULL, DISP_SOLS_WIDTH, DISP_SOLS_PRIORITY, DISP_SOLS_POSITION, DISP_SOLS_STRIPLINE) );
    SCIP_CALL( SCIPincludeDisp(scip, DISP_CUTS_NAME, DISP_CUTS_DESC, DISP_CUTS_HEADER, SCIP_DISPSTATUS_OFF, 
+         NULL,
          NULL, NULL, NULL, NULL, NULL, dispOutputFeasSubtrees, 
          NULL, DISP_CUTS_WIDTH, DISP_CUTS_PRIORITY, DISP_CUTS_POSITION, DISP_CUTS_STRIPLINE) );
    

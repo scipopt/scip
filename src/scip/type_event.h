@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_event.h,v 1.30 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_event.h,v 1.31 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   type_event.h
  * @ingroup TYPEDEFINITIONS
@@ -116,6 +116,13 @@ typedef struct SCIP_EventData SCIP_EVENTDATA;     /**< locally defined event spe
 typedef struct SCIP_EventFilter SCIP_EVENTFILTER; /**< event filter to select events to be processed by an event handler */
 typedef struct SCIP_EventQueue SCIP_EVENTQUEUE;   /**< event queue to cache events and process them later */
 
+/** copy method for event handler plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *    scip            : SCIP main data structure
+ *    eventhdlr       : the event handler itself
+ */
+#define SCIP_DECL_EVENTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_EVENTHDLR* eventhdlr)
 
 /** destructor of event handler to free user data (called when SCIP is exiting)
  *

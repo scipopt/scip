@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.46 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_eqknapsack.c,v 1.47 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   cons_eqknapsack.c
  * @ingroup CONSHDLRS 
@@ -65,6 +65,20 @@
  */
 
 /* TODO: Implement all necessary constraint handler methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyEqknapsack)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of eqknapsack constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+ 
+   return SCIP_OKAY;
+}
+#else
+#define conshdlrCopyEqknapsack NULL
+#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #if 0
@@ -476,6 +490,7 @@ SCIP_RETCODE SCIPincludeConshdlrEqknapsack(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyEqknapsack,
          consFreeEqknapsack, consInitEqknapsack, consExitEqknapsack, 
          consInitpreEqknapsack, consExitpreEqknapsack, consInitsolEqknapsack, consExitsolEqknapsack,
          consDeleteEqknapsack, consTransEqknapsack, consInitlpEqknapsack,

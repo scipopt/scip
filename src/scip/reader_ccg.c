@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ccg.c,v 1.11 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ccg.c,v 1.12 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_ccg.c
  * @ingroup FILEREADERS 
@@ -335,6 +335,20 @@ SCIP_RETCODE handleLinearCons(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyCcg)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderCcg(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeCcg NULL
 
@@ -362,7 +376,9 @@ SCIP_RETCODE SCIPincludeReaderCcg(
 {
    /* include ccg reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-				readerFreeCcg, readerReadCcg, readerWriteCcg, NULL) );
+         readerCopyCcg,
+         readerFreeCcg, readerReadCcg, readerWriteCcg, 
+         NULL) );
 
    return SCIP_OKAY;
 }

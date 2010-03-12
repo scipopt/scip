@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.4 2010/02/04 12:10:06 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: sepa_rapidlearning.c,v 1.5 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa_rapidlearning.c
  * @ingroup SEPARATORS
@@ -211,6 +211,20 @@ SCIP_RETCODE createNewSol(
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyRapidlearning)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaRapidlearning(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeRapidlearning)
@@ -333,7 +347,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* initializing the subproblem */  
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+#ifndef NDEBUG
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+#endif
 
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
    SCIP_CALL( SCIPsetIntParam(subscip, "lp/solvefreq", -1) );
@@ -689,6 +709,7 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
+         sepaCopyRapidlearning,
          sepaFreeRapidlearning, sepaInitRapidlearning, sepaExitRapidlearning, 
          sepaInitsolRapidlearning, sepaExitsolRapidlearning,
          sepaExeclpRapidlearning, sepaExecsolRapidlearning,

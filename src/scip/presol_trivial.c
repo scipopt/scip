@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_trivial.c,v 1.34 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_trivial.c,v 1.35 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   presol_trivial.c
  * @ingroup PRESOLVERS
@@ -42,6 +42,21 @@
 /*
  * Callback methods of presolver
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyTrivial)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolTrivial(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #define presolFreeTrivial NULL
@@ -203,6 +218,7 @@ SCIP_RETCODE SCIPincludePresolTrivial(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyTrivial,
          presolFreeTrivial, presolInitTrivial, presolExitTrivial, 
          presolInitpreTrivial, presolExitpreTrivial, presolExecTrivial,
          presoldata) );

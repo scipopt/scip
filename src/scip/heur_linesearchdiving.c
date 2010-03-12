@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.46 2010/01/04 20:35:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_linesearchdiving.c,v 1.47 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   heur_linesearchdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -23,6 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/heur_linesearchdiving.h"
 
@@ -99,6 +100,20 @@ struct SCIP_HeurData
  */
 
 /* TODO: Implement all necessary primal heuristic methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyLinesearchdiving)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -556,6 +571,7 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyLinesearchdiving,
          heurFreeLinesearchdiving, heurInitLinesearchdiving, heurExitLinesearchdiving, 
          heurInitsolLinesearchdiving, heurExitsolLinesearchdiving, heurExecLinesearchdiving,
          heurdata) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trivial.c,v 1.11 2010/03/01 12:01:21 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_trivial.c,v 1.12 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 
 /**@file   heur_trivial.c
@@ -24,6 +24,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/heur_trivial.h"
 
@@ -40,6 +41,20 @@
 /*
  * Local methods
  */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyTrivial)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurTrivial(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 #define heurFreeTrivial NULL
 #define heurInitTrivial NULL
@@ -213,6 +228,7 @@ SCIP_RETCODE SCIPincludeHeurTrivial(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyTrivial,
          heurFreeTrivial, heurInitTrivial, heurExitTrivial, 
          heurInitsolTrivial, heurExitsolTrivial, heurExecTrivial,
          NULL) );

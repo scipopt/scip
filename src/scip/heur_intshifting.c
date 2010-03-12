@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_intshifting.c,v 1.13 2010/01/04 20:35:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_intshifting.c,v 1.14 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   heur_intshifting.c
  * @ingroup PRIMALHEURISTICS
@@ -465,9 +465,22 @@ void addFracCounter(
  * Callback methods
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyIntshifting)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurIntshifting(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 #define heurFreeIntshifting NULL
-
 
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
@@ -1001,6 +1014,7 @@ SCIP_RETCODE SCIPincludeHeurIntshifting(
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyIntshifting,
          heurFreeIntshifting, heurInitIntshifting, heurExitIntshifting, 
          heurInitsolIntshifting, heurExitsolIntshifting, heurExecIntshifting,
          NULL) );

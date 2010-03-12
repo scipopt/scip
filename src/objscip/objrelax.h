@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.h,v 1.26 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objrelax.h,v 1.27 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objrelax.h
  * @brief  C++ wrapper for relaxators
@@ -27,12 +27,13 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
 /** C++ wrapper object for relaxators */
-class ObjRelax
+class ObjRelax : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

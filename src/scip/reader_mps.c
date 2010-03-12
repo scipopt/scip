@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_mps.c,v 1.120 2010/02/03 14:20:57 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_mps.c,v 1.121 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_mps.c
  * @ingroup FILEREADERS 
@@ -2942,6 +2942,21 @@ void printBoundSection(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyMps)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderMps(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeMps NULL
 
@@ -3756,7 +3771,9 @@ SCIP_RETCODE SCIPincludeReaderMps(
 
    /* include mps reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeMps, readerReadMps, readerWriteMps, readerdata) );
+         readerCopyMps,
+         readerFreeMps, readerReadMps, readerWriteMps,
+         readerdata) );
 
    /* add mps reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

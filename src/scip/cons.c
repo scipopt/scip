@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.193 2010/02/17 08:37:03 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.194 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -1708,6 +1708,25 @@ SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompCheck)
    return ((SCIP_CONSHDLR*)elem2)->checkpriority - ((SCIP_CONSHDLR*)elem1)->checkpriority;
 }
 
+/** copies the given constraint handler to a new scip */
+SCIP_RETCODE SCIPconshdlrCopyInclude(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( conshdlr->conshdlrcopy != NULL )
+   {
+      SCIPdebugMessage("including constraint handler %s in subscip %p\n", SCIPconshdlrGetName(conshdlr), set->scip);
+      SCIP_CALL( conshdlr->conshdlrcopy(set->scip, conshdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates a constraint handler */
 SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CONSHDLR**       conshdlr,           /**< pointer to constraint handler data structure */
@@ -1727,6 +1746,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
@@ -1775,6 +1795,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->propfreq = propfreq;
    (*conshdlr)->eagerfreq = eagerfreq;
    (*conshdlr)->maxprerounds = maxprerounds;
+   (*conshdlr)->conshdlrcopy = conshdlrcopy;
    (*conshdlr)->consfree = consfree;
    (*conshdlr)->consinit = consinit;
    (*conshdlr)->consexit = consexit;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_branch.h,v 1.27 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_branch.h,v 1.28 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_branch.h
  * @brief  datastructures for branching rules and branching candidate storage
@@ -81,6 +81,7 @@ struct SCIP_Branchrule
    SCIP_Longint          nchildren;          /**< number of children created so far by this branching rule */
    char*                 name;               /**< name of branching rule */
    char*                 desc;               /**< description of branching rule */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy));    /**< copy method of branching rule or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_BRANCHFREE  ((*branchfree));    /**< destructor of branching rule */
    SCIP_DECL_BRANCHINIT  ((*branchinit));    /**< initialize branching rule */
    SCIP_DECL_BRANCHEXIT  ((*branchexit));    /**< deinitialize branching rule */
@@ -94,6 +95,7 @@ struct SCIP_Branchrule
    int                   priority;           /**< priority of the branching rule */
    int                   maxdepth;           /**< maximal depth level, up to which this branching rule should be used (or -1) */
    SCIP_Bool             initialized;        /**< is branching rule initialized? */
+   SCIP_Bool             isobjbranchrule;    /**< is branching rule an obj branching rule? */
 };
 
 #ifdef __cplusplus

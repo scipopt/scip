@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.c,v 1.63 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event.c,v 1.64 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   event.c
  * @brief  methods and datastructures for managing events
@@ -40,11 +40,31 @@
  * Event handler methods
  */
 
+/** copies the given event handler to a new scip */
+SCIP_RETCODE SCIPeventhdlrCopyInclude(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(eventhdlr != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( eventhdlr->eventcopy != NULL )
+   {
+      SCIPdebugMessage("including event handler %s in subscip %p\n", SCIPeventhdlrGetName(eventhdlr), set->scip);
+      SCIP_CALL( eventhdlr->eventcopy(set->scip, eventhdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates an event handler */
 SCIP_RETCODE SCIPeventhdlrCreate(
    SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*           name,               /**< name of event handler */
    const char*           desc,               /**< description of event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
@@ -63,6 +83,7 @@ SCIP_RETCODE SCIPeventhdlrCreate(
    SCIP_ALLOC( BMSallocMemory(eventhdlr) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*eventhdlr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*eventhdlr)->desc, desc, strlen(desc)+1) );
+   (*eventhdlr)->eventcopy = eventcopy;
    (*eventhdlr)->eventfree = eventfree;
    (*eventhdlr)->eventinit = eventinit;
    (*eventhdlr)->eventexit = eventexit;

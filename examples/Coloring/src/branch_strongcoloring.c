@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.12 2010/01/04 20:35:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_strongcoloring.c,v 1.13 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   branch_strongcoloring.c
  * @brief  coloring branching rule
@@ -380,6 +380,20 @@ SCIP_DECL_SORTINDCOMP(consdataCompValues)
  * Callback methods of branching rule
  */
 
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyStrongcoloring)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of primal branchruleistic */
+   SCIP_CALL( SCIPincludeBranchruleStrongcoloring(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** branching execution method for fractional LP solutions */
 static
@@ -739,6 +753,7 @@ SCIP_RETCODE SCIPincludeBranchruleStrongcoloring(
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
 	 BRANCHRULE_MAXBOUNDDIST,
+         branchCopyStrongcoloring,
          branchFreeStrongcoloring, branchInitStrongcoloring, branchExitStrongcoloring,
          branchInitsolStrongcoloring, branchExitsolStrongcoloring,
          branchExeclpStrongcoloring, branchExecrelStrongcoloring, branchExecpsStrongcoloring,

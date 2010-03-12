@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprobdata.h,v 1.22 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objprobdata.h,v 1.23 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objprobdata.h
  * @brief  C++ wrapper for user problem data
@@ -28,6 +28,7 @@
 #include <cassert>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_undercover.c,v 1.43 2010/02/22 20:57:23 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_undercover.c,v 1.44 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   heur_undercover.c
  * @ingroup PRIMALHEURISTICS
@@ -1523,7 +1523,14 @@ SCIP_RETCODE SCIPapplyUndercover(
 
    /* initializing ppc problem */
    SCIP_CALL( SCIPcreate(&ppcscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(ppcscip) );
+#ifndef NDEBUG
+   SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, ppcscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+#endif
+
    SCIP_CALL( SCIPallocBufferArray(scip, &ppcvars, nvars) ); 
    SCIP_CALL( SCIPallocBufferArray(scip, &ppcsolvals, nvars) ); 
    /* create ppc problem */
@@ -1561,8 +1568,14 @@ SCIP_RETCODE SCIPapplyUndercover(
 #ifdef WITH_CONSBRANCHNL
    SCIP_CALL( SCIPincludeConshdlrBranchNonlinear(subscip) );
 #endif
-   
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+
+#ifndef NDEBUG
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+#endif
 
 #ifdef WITH_UNIVARDEFINITE
    SCIP_CALL( SCIPincludeConshdlrUnivardefinite(subscip) );
@@ -1689,6 +1702,20 @@ SCIP_RETCODE SCIPapplyUndercover(
 /*
  * Callback methods of primal heuristic
  */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyUndercover)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurUndercover(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -1926,6 +1953,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyUndercover,
          heurFreeUndercover, heurInitUndercover, heurExitUndercover, 
          heurInitsolUndercover, heurExitsolUndercover, heurExecUndercover,
          heurdata) );

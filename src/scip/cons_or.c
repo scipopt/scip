@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_or.c,v 1.78 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_or.c,v 1.79 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   cons_or.c
  * @ingroup CONSHDLRS 
@@ -1331,6 +1331,20 @@ SCIP_RETCODE upgradeCons(
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOr)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrOr(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeOr)
@@ -1825,6 +1839,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
 
    /* create event handler for events on variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecOr,
          NULL) );
 
@@ -1836,6 +1851,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyOr,
          consFreeOr, consInitOr, consExitOr, 
          consInitpreOr, consExitpreOr, consInitsolOr, consExitsolOr,
          consDeleteOr, consTransOr, consInitlpOr,

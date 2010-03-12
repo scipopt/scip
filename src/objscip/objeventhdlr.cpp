@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.12 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.cpp,v 1.13 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objeventhdlr.cpp
  * @brief  C++ wrapper for event handlers
@@ -48,6 +48,31 @@ struct SCIP_EventhdlrData
 
 extern "C"
 {
+
+/** copy method for event handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_EVENTCOPY(eventhdlrCopyObj)
+{  /*lint --e{715}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   
+   assert(scip != NULL);
+   
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+   assert(eventhdlrdata->objeventhdlr != NULL);
+
+   if( eventhdlrdata->objeventhdlr->iscloneable() )
+   {
+      scip::ObjEventhdlr*  newobjeventhdlr;
+      newobjeventhdlr = (scip::ObjEventhdlr*) eventhdlrdata->objeventhdlr->clone();
+
+      /* call include method of event handler object */
+      SCIP_CALL( SCIPincludeObjEventhdlr(scip, newobjeventhdlr, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_EVENTFREE(eventhdlrFreeObj)
@@ -190,6 +215,9 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
+   assert(scip != NULL);
+   assert(objeventhdlr != NULL);
+
    /* create event handler data */
    eventhdlrdata = new SCIP_EVENTHDLRDATA;
    eventhdlrdata->objeventhdlr = objeventhdlr;
@@ -197,6 +225,7 @@ SCIP_RETCODE SCIPincludeObjEventhdlr(
 
    /* include event handler */
    SCIP_CALL( SCIPincludeEventhdlr(scip, objeventhdlr->scip_name_, objeventhdlr->scip_desc_,
+         eventhdlrCopyObj,
          eventhdlrFreeObj, eventhdlrInitObj, eventhdlrExitObj, 
          eventhdlrInitsolObj, eventhdlrExitsolObj, eventhdlrDeleteObj, eventhdlrExecObj,
          eventhdlrdata) ); /*lint !e429*/

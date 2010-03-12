@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.c,v 1.24 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: relax.c,v 1.25 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   relax.c
  * @brief  methods and datastructures for relaxators
@@ -60,6 +60,24 @@ SCIP_DECL_PARAMCHGD(paramChgdRelaxPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given relaxator to a new scip */
+SCIP_RETCODE SCIPrelaxCopyInclude(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(relax != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( relax->relaxcopy != NULL )
+   {
+      SCIPdebugMessage("including relaxator %s in subscip %p\n", SCIPrelaxGetName(relax), set->scip);
+      SCIP_CALL( relax->relaxcopy(set->scip, relax) );
+   }
+   return SCIP_OKAY;
+}
+
 /** creates a relaxator */
 SCIP_RETCODE SCIPrelaxCreate(
    SCIP_RELAX**          relax,              /**< pointer to relaxator data structure */
@@ -69,6 +87,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    const char*           desc,               /**< description of relaxator */
    int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxator */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
@@ -92,6 +111,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*relax)->desc, desc, strlen(desc)+1) );
    (*relax)->priority = priority;
    (*relax)->freq = freq;
+   (*relax)->relaxcopy = relaxcopy;
    (*relax)->relaxfree = relaxfree;
    (*relax)->relaxinit = relaxinit;
    (*relax)->relaxexit = relaxexit;

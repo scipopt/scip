@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.h,v 1.126 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons.h,v 1.127 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   cons.h
  * @brief  internal methods for constraints and constraint handlers
@@ -54,6 +54,13 @@ extern "C" {
  * Constraint handler methods
  */
 
+/** copies the given constraint handler to a new scip */
+extern
+SCIP_RETCODE SCIPconshdlrCopyInclude(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a constraint handler */
 extern
 SCIP_RETCODE SCIPconshdlrCreate(
@@ -74,6 +81,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */

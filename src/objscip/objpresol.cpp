@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpresol.cpp,v 1.21 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objpresol.cpp,v 1.22 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objpresol.cpp
  * @brief  C++ wrapper for presolvers
@@ -48,6 +48,31 @@ struct SCIP_PresolData
 
 extern "C"
 {
+
+/** copy method for presolver plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyObj)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+   
+   assert(scip != NULL);
+   
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+   assert(presoldata->objpresol != NULL);
+
+   if( presoldata->objpresol->iscloneable() )
+   {
+      scip::ObjPresol*  newobjpresol;
+      newobjpresol = (scip::ObjPresol*) presoldata->objpresol->clone();
+
+      /* call include method of presolver object */
+      SCIP_CALL( SCIPincludeObjPresol(scip, newobjpresol, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRESOLFREE(presolFreeObj)
@@ -177,6 +202,9 @@ SCIP_RETCODE SCIPincludeObjPresol(
 {
    SCIP_PRESOLDATA* presoldata;
 
+   assert(scip != NULL);
+   assert(objpresol != NULL);
+
    /* create presolver data */
    presoldata = new SCIP_PRESOLDATA;
    presoldata->objpresol = objpresol;
@@ -185,6 +213,7 @@ SCIP_RETCODE SCIPincludeObjPresol(
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, objpresol->scip_name_, objpresol->scip_desc_, 
          objpresol->scip_priority_, objpresol->scip_maxrounds_, objpresol->scip_delay_,
+         presolCopyObj,
          presolFreeObj, presolInitObj, presolExitObj, 
          presolInitpreObj, presolExitpreObj, presolExecObj,
          presoldata) ); /*lint !e429*/

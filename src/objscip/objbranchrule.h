@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.h,v 1.33 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objbranchrule.h,v 1.34 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objbranchrule.h
  * @brief  C++ wrapper for branching rules
@@ -29,12 +29,13 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
 /** C++ wrapper object for branching rules */
-class ObjBranchrule
+class ObjBranchrule : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/
@@ -178,7 +179,6 @@ public:
 
 } /* namespace scip */
 
-
    
 /** creates the branching rule for the given branching rule object and includes it in SCIP
  *
@@ -187,7 +187,7 @@ public:
  *   1. The user is resposible of deleting the object:
  *       SCIP_CALL( SCIPcreate(&scip) );
  *       ...
- *       MyBranchrule* mybranchrule = new MyBranchrule(...);
+ *       scip::ObjCloneable* mybranchrule = new MyBranchrule(...);
  *       SCIP_CALL( SCIPincludeObjBranchrule(scip, &mybranchrule, FALSE) );
  *       ...
  *       SCIP_CALL( SCIPfree(&scip) );
@@ -203,7 +203,7 @@ public:
 extern
 SCIP_RETCODE SCIPincludeObjBranchrule(
    SCIP*                 scip,               /**< SCIP data structure */
-   scip::ObjBranchrule*  objbranchrule,      /**< branching rule object */
+   scip::ObjCloneable*   objcloneable,       /**< branching rule object */
    SCIP_Bool             deleteobject        /**< should the branching rule object be deleted when branching rule is freed? */
    );
 

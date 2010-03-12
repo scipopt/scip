@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_ppm.h,v 1.6 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_ppm.h,v 1.7 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   reader_ppm.h
  * @brief  PPM file reader
@@ -37,7 +37,6 @@ extern
 SCIP_RETCODE SCIPincludeReaderPpm(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
 
 /* writes problem to file */
 extern

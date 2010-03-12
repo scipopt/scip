@@ -185,6 +185,19 @@ SCIP_RETCODE createConsStoreGraphAtRoot(
  * Callback methods
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyStoreGraph)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( COLORincludeConshdlrStoreGraph(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
@@ -711,7 +724,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
 /** creates the handler for storeGraph constraints and includes it in SCIP */
 SCIP_RETCODE COLORincludeConshdlrStoreGraph(
    SCIP*                 scip                /**< SCIP data structure */
-		       )
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrData;
 
@@ -727,6 +740,7 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyStoreGraph,
          consFreeStoreGraph, consInitStoreGraph, consExitStoreGraph,
          consInitpreStoreGraph, consExitpreStoreGraph, consInitsolStoreGraph, consExitsolStoreGraph,
          consDeleteStoreGraph, consTransStoreGraph, consInitlpStoreGraph,

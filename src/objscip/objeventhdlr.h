@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objeventhdlr.h,v 1.17 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objeventhdlr.h,v 1.18 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objeventhdlr.h
  * @brief  C++ wrapper for event handlers
@@ -27,12 +27,13 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
 /** C++ wrapper object for event handlers */
-class ObjEventhdlr
+class ObjEventhdlr : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

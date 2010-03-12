@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objprop.cpp,v 1.17 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objprop.cpp,v 1.18 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objprop.cpp
  * @brief  C++ wrapper for propagators
@@ -48,6 +48,31 @@ struct SCIP_PropData
 
 extern "C"
 {
+
+/** copy method for propagator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyObj)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+   
+   assert(scip != NULL);
+   
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+   assert(propdata->objprop != NULL);
+
+   if( propdata->objprop->iscloneable() )
+   {
+      scip::ObjProp*  newobjprop;
+      newobjprop = (scip::ObjProp*) propdata->objprop->clone();
+
+      /* call include method of propagator object */
+      SCIP_CALL( SCIPincludeObjProp(scip, newobjprop, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PROPFREE(propFreeObj)
@@ -190,6 +215,9 @@ SCIP_RETCODE SCIPincludeObjProp(
 {
    SCIP_PROPDATA* propdata;
 
+   assert(scip != NULL);
+   assert(objprop != NULL);
+
    /* create propagator data */
    propdata = new SCIP_PROPDATA;
    propdata->objprop = objprop;
@@ -198,6 +226,7 @@ SCIP_RETCODE SCIPincludeObjProp(
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, objprop->scip_name_, objprop->scip_desc_, 
          objprop->scip_priority_, objprop->scip_freq_, objprop->scip_delay_,
+         propCopyObj,
          propFreeObj, propInitObj, propExitObj, propInitsolObj, propExitsolObj,
          propExecObj, propRespropObj,
          propdata) ); /*lint !e429*/

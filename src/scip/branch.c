@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch.c,v 1.88 2010/03/10 11:20:11 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch.c,v 1.89 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   branch.c
  * @brief  methods for branching rules and branching candidate storage
@@ -1081,6 +1081,25 @@ SCIP_DECL_PARAMCHGD(paramChgdBranchrulePriority)
    return SCIP_OKAY;
 }
 
+/** copies the given branchrule to a new scip */
+SCIP_RETCODE SCIPbranchruleCopyInclude(
+   SCIP_BRANCHRULE*      branchrule,         /**< branchrule */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(branchrule != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( branchrule->branchcopy != NULL )
+   {
+      SCIPdebugMessage("including branching rule %s in subscip %p\n", SCIPbranchruleGetName(branchrule), set->scip);
+      SCIP_CALL( branchrule->branchcopy(set->scip, branchrule) );
+   }
+   
+   return SCIP_OKAY;
+}
+
 /** creates a branching rule */
 SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_BRANCHRULE**     branchrule,         /**< pointer to store branching rule */
@@ -1093,6 +1112,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying branching rule
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule */
    SCIP_DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    SCIP_DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -1117,6 +1137,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    (*branchrule)->priority = priority;
    (*branchrule)->maxdepth = maxdepth;
    (*branchrule)->maxbounddist = maxbounddist;
+   (*branchrule)->branchcopy = branchcopy;
    (*branchrule)->branchfree = branchfree;
    (*branchrule)->branchinit = branchinit;
    (*branchrule)->branchexit = branchexit;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_polynomial.c,v 1.5 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_polynomial.c,v 1.6 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   cons_polynomial.h
  * @brief  constraint handler for polynomial constraints
@@ -944,6 +944,43 @@ SCIP_RETCODE improveSolByIpopt(
    return SCIP_OKAY;
 }
 
+
+/*
+ * Linear constraint upgrading
+ */
+
+#ifdef LINCONSUPGD_PRIORITY
+/** tries to upgrade a linear constraint into a polynomial constraint */
+static
+SCIP_DECL_LINCONSUPGD(linconsUpgdPolynomial)
+{  /*lint --e{715}*/
+   SCIP_Bool upgrade;
+
+   assert(upgdcons != NULL);
+   
+   /* check, if linear constraint can be upgraded to polynomial constraint */
+   upgrade = FALSE;
+   /* TODO: put the constraint's properties here, in terms of the statistics given by nposbin, nnegbin, ... */
+
+   if( upgrade )
+   {
+      SCIPdebugMessage("upgrading constraint <%s> to polynomial constraint\n", SCIPconsGetName(cons));
+      
+      /* create the bin Polynomial constraint (an automatically upgraded constraint is always unmodifiable) */
+      assert(!SCIPconsIsModifiable(cons));
+      SCIP_CALL( SCIPcreateConsPolynomial(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+   }
+
+   return SCIP_OKAY;
+}
+#endif
+
+
+
 /*
  * Callback methods of constraint handler
  */
@@ -966,13 +1003,19 @@ SCIP_DECL_CONSFREE(consFreePolynomial)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSINIT(consInitPolynomial)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of polynomial constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != null);
 
+   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   {
+#ifdef LINCONSUPGD_PRIORITY
+      /* include the linear constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdPolynomial, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+#endif
+   }
    return SCIP_OKAY;
 }
 #else
@@ -1432,43 +1475,34 @@ SCIP_DECL_CONSPRINT(consPrintPolynomial)
 #endif
 
 
-
-
-/*
- * Linear constraint upgrading
- */
-
-#ifdef LINCONSUPGD_PRIORITY
-/** tries to upgrade a linear constraint into a polynomial constraint */
+/** constraint copying method of constraint handler */
+#if 0
 static
-SCIP_DECL_LINCONSUPGD(linconsUpgdPolynomial)
+SCIP_DECL_CONSCOPY(consCopyPolynomial)
 {  /*lint --e{715}*/
-   SCIP_Bool upgrade;
-
-   assert(upgdcons != NULL);
-   
-   /* check, if linear constraint can be upgraded to polynomial constraint */
-   upgrade = FALSE;
-   /* TODO: put the constraint's properties here, in terms of the statistics given by nposbin, nnegbin, ... */
-
-   if( upgrade )
-   {
-      SCIPdebugMessage("upgrading constraint <%s> to polynomial constraint\n", SCIPconsGetName(cons));
-      
-      /* create the bin Polynomial constraint (an automatically upgraded constraint is always unmodifiable) */
-      assert(!SCIPconsIsModifiable(cons));
-      SCIP_CALL( SCIPcreateConsPolynomial(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, lhs, rhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-   }
+   SCIPerrorMessage("method of polynomial constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
+#else
+#define consCopyPolynomial NULL
 #endif
 
 
+/** constraint parsing method of constraint handler */
+#if 0
+static
+SCIP_DECL_CONSPARSE(consParsePolynomial)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of polynomial constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consParsePolynomial NULL
+#endif
 
 
 /*
@@ -1476,9 +1510,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdPolynomial)
  */
 
 /** creates the handler for polynomial constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrPolynomial(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
+SCIP_DECL_INCLUDEPLUGIN(SCIPincludeConshdlrPolynomial)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -1491,6 +1523,7 @@ SCIP_RETCODE SCIPincludeConshdlrPolynomial(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         SCIPincludeConshdlrPolynomial,
          consFreePolynomial, consInitPolynomial, consExitPolynomial, 
          consInitprePolynomial, consExitprePolynomial, consInitsolPolynomial, consExitsolPolynomial,
          consDeletePolynomial, consTransPolynomial, consInitlpPolynomial,
@@ -1498,13 +1531,8 @@ SCIP_RETCODE SCIPincludeConshdlrPolynomial(
          consPropPolynomial, consPresolPolynomial, consRespropPolynomial, consLockPolynomial,
          consActivePolynomial, consDeactivePolynomial, 
          consEnablePolynomial, consDisablePolynomial,
-         consPrintPolynomial,
+         consPrintPolynomial, consCopyPolynomial, consParsePolynomial,
          conshdlrdata) );
-
-#ifdef LINCONSUPGD_PRIORITY
-   /* include the linear constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdPolynomial, LINCONSUPGD_PRIORITY) );
-#endif
 
    /* add polynomial constraint handler parameters */
    /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
@@ -1534,12 +1562,11 @@ SCIP_RETCODE SCIPcreateConsPolynomial(
    )
 {
    /* TODO: (optional) modify the definition of the SCIPcreateConsPolynomial() call, if you don't need all the information */
-
-   printf("Creating consdata\n");
-   
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
+   printf("Creating consdata\n");
+   
    /* find the polynomial constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.cpp,v 1.23 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objsepa.cpp,v 1.24 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objsepa.cpp
  * @brief  C++ wrapper for cut separators
@@ -47,6 +47,31 @@ struct SCIP_SepaData
 
 extern "C"
 {
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyObj)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+   
+   assert(scip != NULL);
+   
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   assert(sepadata->objsepa != NULL);
+
+   if( sepadata->objsepa->iscloneable() )
+   {
+      scip::ObjSepa*  newobjsepa;
+      newobjsepa = (scip::ObjSepa*) sepadata->objsepa->clone();
+
+      /* call include method of separator object */
+      SCIP_CALL( SCIPincludeObjSepa(scip, newobjsepa, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of cut separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeObj)
@@ -189,6 +214,9 @@ SCIP_RETCODE SCIPincludeObjSepa(
 {
    SCIP_SEPADATA* sepadata;
 
+   assert(scip != NULL);
+   assert(objsepa != NULL);
+
    /* create cut separator data */
    sepadata = new SCIP_SEPADATA;
    sepadata->objsepa = objsepa;
@@ -197,6 +225,7 @@ SCIP_RETCODE SCIPincludeObjSepa(
    /* include cut separator */
    SCIP_CALL( SCIPincludeSepa(scip, objsepa->scip_name_, objsepa->scip_desc_, 
          objsepa->scip_priority_, objsepa->scip_freq_, objsepa->scip_maxbounddist_, objsepa->scip_delay_,
+         sepaCopyObj,
          sepaFreeObj, sepaInitObj, sepaExitObj, sepaInitsolObj, sepaExitsolObj, 
          sepaExeclpObj, sepaExecsolObj,
          sepadata) ); /*lint !e429*/

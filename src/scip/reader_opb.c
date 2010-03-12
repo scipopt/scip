@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_opb.c,v 1.45 2010/02/23 14:19:26 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: reader_opb.c,v 1.46 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   reader_opb.c
  * @ingroup FILEREADERS 
@@ -2699,6 +2699,21 @@ SCIP_RETCODE writeOpb(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyOpb)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderOpb(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeOpb NULL
 
@@ -2874,7 +2889,9 @@ SCIP_RETCODE SCIPincludeReaderOpb(
 
    /* include opb reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeOpb, readerReadOpb, readerWriteOpb, readerdata) );
+         readerCopyOpb,
+         readerFreeOpb, readerReadOpb, readerWriteOpb,
+         readerdata) );
 
    /* add opb reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

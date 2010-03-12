@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.24 2010/02/04 17:20:55 bzfwolte Exp $"
+#pragma ident "@(#) $Id: sepa_zerohalf.c,v 1.25 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /* prints short statistics (callback, preprocessing, adding cuts) */
 /* // #define SCIP_DEBUG */
@@ -4934,7 +4934,14 @@ SCIP_RETCODE createSubscip(
    /* create and initialize framework */
 
    SCIP_CALL( SCIPcreate(&(auxipdata->subscip)) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(auxipdata->subscip) );  
+#ifndef NDEBUG
+   SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+#endif
+
    SCIP_CALL( SCIPcreateProb(auxipdata->subscip, "sepa_zerohalf auxiliary IP (AuxIP)",
          NULL , NULL , NULL , NULL , NULL , NULL) );
 
@@ -6720,6 +6727,20 @@ void printZerohalfCutsStatistics(
  * -------------------------------------------------------------------------------------------------------------------- */
 
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyZerohalf)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeZerohalf)
@@ -7347,6 +7368,7 @@ SCIP_RETCODE SCIPincludeSepaZerohalf(
   
    /* include separator */
    SCIP_CALL(SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, 0.0 , SEPA_DELAY,
+         sepaCopyZerohalf,
          sepaFreeZerohalf, sepaInitZerohalf, sepaExitZerohalf, 
          sepaInitsolZerohalf, sepaExitsolZerohalf,
          sepaExeclpZerohalf, sepaExecsolZerohalf,

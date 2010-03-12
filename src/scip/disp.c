@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.c,v 1.59 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp.c,v 1.60 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   disp.c
  * @brief  methods and datastructures for displaying runtime statistics
@@ -52,6 +52,24 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispActive)
    return SCIP_OKAY;
 }
 
+/** copies the given display to a new scip */
+SCIP_RETCODE SCIPdispCopyInclude(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(disp != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( disp->dispcopy != NULL )
+   {
+      SCIPdebugMessage("including display column %s in subscip %p\n", SCIPdispGetName(disp), set->scip);
+      SCIP_CALL( disp->dispcopy(set->scip, disp) );
+   }
+   return SCIP_OKAY;
+}
+
 /** creates a display column */
 SCIP_RETCODE SCIPdispCreate(
    SCIP_DISP**           disp,               /**< pointer to store display column */
@@ -61,6 +79,7 @@ SCIP_RETCODE SCIPdispCreate(
    const char*           desc,               /**< description of display column */
    const char*           header,             /**< head line of display column */
    SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
+   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
@@ -89,6 +108,7 @@ SCIP_RETCODE SCIPdispCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*disp)->desc, desc, strlen(desc)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*disp)->header, header, strlen(header)+1) );
    (*disp)->dispstatus = dispstatus;
+   (*disp)->dispcopy = dispcopy;
    (*disp)->dispfree = dispfree;
    (*disp)->dispinit = dispinit;
    (*disp)->dispexit = dispexit;

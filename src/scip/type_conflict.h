@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_conflict.h,v 1.26 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_conflict.h,v 1.27 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   type_conflict.h
  * @ingroup TYPEDEFINITIONS
@@ -40,6 +40,13 @@ typedef struct SCIP_ConflictSet SCIP_CONFLICTSET; /**< set of conflicting bound 
 typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data structure */
 
 
+/** copy method for conflict handler plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conflicthdlr    : the conflict handler itself
+ */
+#define SCIP_DECL_CONFLICTCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr)
 
 /** destructor of conflict handler to free conflict handler data (called when SCIP is exiting)
  *

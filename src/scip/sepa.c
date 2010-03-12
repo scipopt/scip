@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.c,v 1.70 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa.c,v 1.71 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa.c
  * @brief  methods and datastructures for separators
@@ -61,6 +61,24 @@ SCIP_DECL_PARAMCHGD(paramChgdSepaPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given separator to a new scip */
+SCIP_RETCODE SCIPsepaCopyInclude(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(sepa != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( sepa->sepacopy != NULL )
+   {
+      SCIPdebugMessage("including separator %s in subscip %p\n", SCIPsepaGetName(sepa), set->scip);
+      SCIP_CALL( sepa->sepacopy(set->scip, sepa) );
+   }
+   return SCIP_OKAY;
+}
+
 /** creates a separator */
 SCIP_RETCODE SCIPsepaCreate(
    SCIP_SEPA**           sepa,               /**< pointer to separator data structure */
@@ -73,6 +91,7 @@ SCIP_RETCODE SCIPsepaCreate(
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for applying separation */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
@@ -99,6 +118,7 @@ SCIP_RETCODE SCIPsepaCreate(
    (*sepa)->priority = priority;
    (*sepa)->freq = freq;
    (*sepa)->maxbounddist = maxbounddist;
+   (*sepa)->sepacopy = sepacopy;
    (*sepa)->sepafree = sepafree;
    (*sepa)->sepainit = sepainit;
    (*sepa)->sepaexit = sepaexit;

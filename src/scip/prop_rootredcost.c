@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.12 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_rootredcost.c,v 1.13 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   prop_rootredcost.c
  * @ingroup PROPAGATORS
@@ -23,6 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/prop_rootredcost.h"
 
@@ -52,6 +53,20 @@ struct SCIP_PropData
 /*
  * Callback methods of propagator
  */
+
+/** copy method for propagator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyRootredcost)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of propagator */
+   SCIP_CALL( SCIPincludePropRootredcost(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
@@ -283,6 +298,7 @@ SCIP_RETCODE SCIPincludePropRootredcost(
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+         propCopyRootredcost,
          propFreeRootredcost, propInitRootredcost, propExitRootredcost, 
          propInitsolRootredcost, propExitsolRootredcost, propExecRootredcost, propRespropRootredcost,
          propdata) );

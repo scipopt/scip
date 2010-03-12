@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objrelax.cpp,v 1.17 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objrelax.cpp,v 1.18 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objrelax.cpp
  * @brief  C++ wrapper for relaxators
@@ -48,6 +48,31 @@ struct SCIP_RelaxData
 
 extern "C"
 {
+
+/** copy method for relaxator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_RELAXCOPY(relaxCopyObj)
+{  /*lint --e{715}*/
+   SCIP_RELAXDATA* relaxdata;
+   
+   assert(scip != NULL);
+   
+   relaxdata = SCIPrelaxGetData(relax);
+   assert(relaxdata != NULL);
+   assert(relaxdata->objrelax != NULL);
+
+   if( relaxdata->objrelax->iscloneable() )
+   {
+      scip::ObjRelax*  newobjrelax;
+      newobjrelax = (scip::ObjRelax*) relaxdata->objrelax->clone();
+
+      /* call include method of relaxator object */
+      SCIP_CALL( SCIPincludeObjRelax(scip, newobjrelax, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_RELAXFREE(relaxFreeObj)
@@ -173,6 +198,9 @@ SCIP_RETCODE SCIPincludeObjRelax(
 {
    SCIP_RELAXDATA* relaxdata;
 
+   assert(scip != NULL);
+   assert(objrelax != NULL);
+
    /* create relaxator data */
    relaxdata = new SCIP_RELAXDATA;
    relaxdata->objrelax = objrelax;
@@ -181,6 +209,7 @@ SCIP_RETCODE SCIPincludeObjRelax(
    /* include relaxator */
    SCIP_CALL( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_, 
          objrelax->scip_priority_, objrelax->scip_freq_,
+         relaxCopyObj,
          relaxFreeObj, relaxInitObj, relaxExitObj, 
          relaxInitsolObj, relaxExitsolObj, relaxExecObj,
          relaxdata) ); /*lint !e429*/

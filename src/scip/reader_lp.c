@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.c,v 1.86 2010/01/05 17:44:07 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.c,v 1.87 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_lp.c
  * @ingroup FILEREADERS 
@@ -2415,6 +2415,21 @@ void checkConsnames(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyLp)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderLp(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeLp NULL
 
@@ -2457,7 +2472,9 @@ SCIP_RETCODE SCIPincludeReaderLp(
 
    /* include lp reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeLp, readerReadLp, readerWriteLp, readerdata) );
+         readerCopyLp,
+         readerFreeLp, readerReadLp, readerWriteLp, 
+         readerdata) );
 
    /* add lp reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

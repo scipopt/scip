@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.h,v 1.106 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: set.h,v 1.107 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   set.h
  * @brief  internal methods for global SCIP settings
@@ -57,6 +57,27 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** copies plugins from sourcescip to targetscip */
+extern
+SCIP_RETCODE SCIPsetCopyPlugins(
+   SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
+   SCIP_SET*             targetset,          /**< target SCIP_SET data structure */
+   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
+   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
+   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
+   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
+   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
+   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
+   SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
+   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
+   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
+   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
+   SCIP_Bool             copydialogs         /**< should the dialogs be copied */
+   );
 
 /** creates global SCIP settings */
 extern
@@ -534,6 +555,20 @@ extern
 SCIP_DISP* SCIPsetFindDisp(
    SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name                /**< name of event handler */
+   );
+
+/** inserts dialog in dialog list */
+extern
+SCIP_RETCODE SCIPsetIncludeDialog(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOG*          dialog              /**< dialog */
+   );
+
+/** returns if the dialog already exists */
+extern
+SCIP_Bool SCIPsetExistsDialog(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOG*          dialog              /**< dialog */
    );
 
 /** calls init methods of all plugins */

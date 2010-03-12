@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_reader.h,v 1.22 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_reader.h,v 1.23 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   type_reader.h
  * @ingroup TYPEDEFINITIONS
@@ -36,6 +36,16 @@ extern "C" {
 
 typedef struct SCIP_Reader SCIP_READER;               /**< reader data structure */
 typedef struct SCIP_ReaderData SCIP_READERDATA;       /**< reader specific data */
+
+
+/** copy method for reader plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - reader          : the reader itself
+ */
+#define SCIP_DECL_READERCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_READER* reader)
+
 
 /** destructor of reader to free user data (called when SCIP is exiting)
  *

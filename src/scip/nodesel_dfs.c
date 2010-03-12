@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.34 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nodesel_dfs.c,v 1.35 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   nodesel_dfs.c
  * @ingroup NODESELECTORS
@@ -39,6 +39,21 @@
 /*
  * Callback methods
  */
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyDfs)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   /* call inclusion method of node selector */
+   SCIP_CALL( SCIPincludeNodeselDfs(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 #define nodeselFreeDfs NULL
@@ -139,6 +154,7 @@ SCIP_RETCODE SCIPincludeNodeselDfs(
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+         nodeselCopyDfs,
          nodeselFreeDfs, nodeselInitDfs, nodeselExitDfs, 
          nodeselInitsolDfs, nodeselExitsolDfs, nodeselSelectDfs, nodeselCompDfs,
          nodeseldata) );

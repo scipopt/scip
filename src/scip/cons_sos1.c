@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_sos1.c,v 1.29 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_sos1.c,v 1.30 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   cons_sos1.c
  * @ingroup CONSHDLRS 
@@ -833,6 +833,20 @@ SCIP_RETCODE generateRowSOS1(
 
 
 /* ---------------------------- constraint handler callback methods ----------------------*/
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopySOS1)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrSOS1(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
@@ -1774,7 +1788,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-			 NULL, NULL, NULL, NULL, NULL, NULL, eventExecSOS1, NULL) );
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecSOS1, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
@@ -1793,6 +1808,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 	 CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
 	 CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
 	 CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopySOS1,
 	 consFreeSOS1, consInitSOS1, consExitSOS1,
 	 consInitpreSOS1, consExitpreSOS1, consInitsolSOS1, consExitsolSOS1,
 	 consDeleteSOS1, consTransSOS1, consInitlpSOS1,

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_event.h,v 1.26 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_event.h,v 1.27 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_event.h
  * @brief  datastructures for managing events
@@ -120,6 +120,7 @@ struct SCIP_Eventhdlr
 {
    char*                 name;               /**< name of event handler */
    char*                 desc;               /**< description of event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy));     /**< copy method of event handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_EVENTFREE   ((*eventfree));     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit));     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit));     /**< deinitialize event handler */

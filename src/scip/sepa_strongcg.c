@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.41 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_strongcg.c,v 1.42 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa_strongcg.c
  * @ingroup SEPARATORS
@@ -192,6 +192,20 @@ SCIP_RETCODE storeCutInArrays(
 /*
  * Callback methods
  */
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyStrongcg)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
@@ -577,6 +591,7 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
+         sepaCopyStrongcg,
          sepaFreeStrongcg, sepaInitStrongcg, sepaExitStrongcg,
          sepaInitsolStrongcg, sepaExitsolStrongcg, 
          sepaExeclpStrongcg, sepaExecsolStrongcg,

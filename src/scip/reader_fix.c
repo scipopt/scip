@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fix.c,v 1.14 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_fix.c,v 1.15 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_fix.c
  * @ingroup FILEREADERS 
@@ -166,6 +166,21 @@ SCIP_RETCODE readSol(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyFix)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderFix(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeFix NULL
 
@@ -218,7 +233,9 @@ SCIP_RETCODE SCIPincludeReaderFix(
 
    /* include fix reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeFix, readerReadFix, readerWriteFix, readerdata) );
+         readerCopyFix,
+         readerFreeFix, readerReadFix, readerWriteFix,
+         readerdata) );
 
    return SCIP_OKAY;
 }

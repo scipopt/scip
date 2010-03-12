@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_setppc.c,v 1.147 2010/03/02 17:24:10 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_setppc.c,v 1.148 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   cons_setppc.c
  * @ingroup CONSHDLRS 
@@ -2179,9 +2179,256 @@ SCIP_RETCODE removeRedundantConstraints(
    return SCIP_OKAY;
 }
 
+
+/*
+ * upgrading of linear constraints
+ */
+
+
+/** creates and captures a set partitioning / packing / covering constraint */
+static
+SCIP_RETCODE createConsSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? 
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? 
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? 
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? 
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? 
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally? 
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? 
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? 
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+
+   /* find the set partitioning constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("set partitioning / packing / covering constraint handler not found\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* create the constraint specific data */
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+   {
+      /* create constraint in original problem */
+      SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, setppctype) );
+   }
+   else
+   {
+      /* create constraint in transformed problem */
+      SCIP_CALL( consdataCreateTransformed(scip, &consdata, nvars, vars, setppctype) );
+   }
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
+         local, modifiable, dynamic, removable, stickingatnode) );
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      /* get event handler */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
+
+      /* catch bound change events of variables */
+      SCIP_CALL( catchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures a normalized (with all coefficients +1) setppc constraint */
+static
+SCIP_RETCODE createNormalizedSetppc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   int                   nvars,              /**< number of variables in the constraint */
+   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
+   SCIP_Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
+   int                   mult,               /**< multiplier on the coefficients(+1 or -1) */
+   SCIP_SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
+   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? 
+                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
+   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? 
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? 
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? 
+                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
+   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? 
+                                              *   Usually set to TRUE. */
+   SCIP_Bool             local,              /**< is constraint only valid locally? 
+                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
+   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? 
+                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
+                                              *   adds coefficients to this constraint. */
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   are seperated as constraints. */
+   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
+                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
+   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
+                                              *   if it may be moved to a more global node? 
+                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
+   )
+{
+   SCIP_VAR** transvars;
+   int v;
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
+   assert(mult == +1 || mult == -1);
+
+   /* get temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
+
+   /* negate positive or negative variables */
+   for( v = 0; v < nvars; ++v )
+   {
+      if( mult * vals[v] > 0.0 )
+         transvars[v] = vars[v];
+      else
+      {
+         SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
+      }
+      assert(transvars[v] != NULL);
+   }
+
+   /* create the constraint */
+   SCIP_CALL( createConsSetppc(scip, cons, name, nvars, transvars, setppctype,
+         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   /* release temporary memory */
+   SCIPfreeBufferArray(scip, &transvars);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
+{  /*lint --e{715}*/
+   assert(upgdcons != NULL);
+
+   /* check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint
+    * - all set partitioning / packing / covering constraints consist only of binary variables with a
+    *   coefficient of +1.0 or -1.0 (variables with -1.0 coefficients can be negated):
+    *        lhs     <= x1 + ... + xp - y1 - ... - yn <= rhs
+    * - negating all variables y = (1-Y) with negative coefficients gives:
+    *        lhs + n <= x1 + ... + xp + Y1 + ... + Yn <= rhs + n
+    * - negating all variables x = (1-X) with positive coefficients and multiplying with -1 gives:
+    *        p - rhs <= X1 + ... + Xp + y1 + ... + yn <= p - lhs
+    * - a set partitioning constraint has left hand side of +1.0, and right hand side of +1.0 : x(S) == 1.0
+    *    -> without negations:  lhs == rhs == 1 - n  or  lhs == rhs == p - 1
+    * - a set packing constraint has left hand side of -infinity, and right hand side of +1.0 : x(S) <= 1.0
+    *    -> without negations:  (lhs == -inf  and  rhs == 1 - n)  or  (lhs == p - 1  and  rhs = +inf)
+    * - a set covering constraint has left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
+    *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
+    */
+   if( nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars )
+   {
+      int mult;
+
+      if( SCIPisEQ(scip, lhs, rhs) && (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) || SCIPisEQ(scip, lhs, ncoeffspone - 1.0)) )
+      {
+         SCIPdebugMessage("upgrading constraint <%s> to set partitioning constraint\n", SCIPconsGetName(cons));
+
+         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
+         mult = SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) ? +1 : -1;
+
+         /* create the set partitioning constraint (an automatically upgraded constraint is always unmodifiable) */
+         assert(!SCIPconsIsModifiable(cons));
+         SCIP_CALL( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
+               SCIP_SETPPCTYPE_PARTITIONING,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+      }
+      else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1.0 - ncoeffsnone))
+         || (SCIPisEQ(scip, lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, rhs)) )
+      {
+         SCIPdebugMessage("upgrading constraint <%s> to set packing constraint\n", SCIPconsGetName(cons));
+
+         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
+         mult = SCIPisInfinity(scip, -lhs) ? +1 : -1;
+
+         /* create the set packing constraint (an automatically upgraded constraint is always unmodifiable) */
+         assert(!SCIPconsIsModifiable(cons));
+         SCIP_CALL( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
+               SCIP_SETPPCTYPE_PACKING,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+      }
+      else if( (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
+         || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0)) )
+      {
+         SCIPdebugMessage("upgrading constraint <%s> to set covering constraint\n", SCIPconsGetName(cons));
+
+         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
+         mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
+
+         /* create the set covering constraint (an automatically upgraded constraint is always unmodifiable) */
+         assert(!SCIPconsIsModifiable(cons));
+         SCIP_CALL( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
+               SCIP_SETPPCTYPE_COVERING,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
+               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Callback methods of constraint handler
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopySetppc)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrSetppc(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
@@ -2206,7 +2453,26 @@ SCIP_DECL_CONSFREE(consFreeSetppc)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitSetppc NULL
+static 
+SCIP_DECL_CONSINIT(consInitSetppc)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   {
+      /* include the linear constraint to setppc constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetppc, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
@@ -3559,231 +3825,6 @@ SCIP_DECL_CONSCOPY(consCopySetppc)
 
 
 
-/** creates and captures a set partitioning / packing / covering constraint */
-static
-SCIP_RETCODE createConsSetppc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? 
-                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? 
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? 
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? 
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? 
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally? 
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? 
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node? 
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
-   assert(scip != NULL);
-
-   /* find the set partitioning constraint handler */
-   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if( conshdlr == NULL )
-   {
-      SCIPerrorMessage("set partitioning / packing / covering constraint handler not found\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   /* create the constraint specific data */
-   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
-   {
-      /* create constraint in original problem */
-      SCIP_CALL( consdataCreate(scip, &consdata, nvars, vars, setppctype) );
-   }
-   else
-   {
-      /* create constraint in transformed problem */
-      SCIP_CALL( consdataCreateTransformed(scip, &consdata, nvars, vars, setppctype) );
-   }
-
-   /* create constraint */
-   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
-         local, modifiable, dynamic, removable, stickingatnode) );
-
-   if( SCIPgetStage(scip) != SCIP_STAGE_PROBLEM )
-   {
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
-      /* get event handler */
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-      assert(conshdlrdata->eventhdlr != NULL);
-
-      /* catch bound change events of variables */
-      SCIP_CALL( catchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );
-   }
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a normalized (with all coefficients +1) setppc constraint */
-static
-SCIP_RETCODE createNormalizedSetppc(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
-   const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            vals,               /**< array with coefficients (+1.0 or -1.0) */
-   int                   mult,               /**< multiplier on the coefficients(+1 or -1) */
-   SCIP_SETPPCTYPE       setppctype,         /**< type of constraint: set partitioning, packing, or covering constraint */
-   SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP? 
-                                              *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
-   SCIP_Bool             separate,           /**< should the constraint be separated during LP processing? 
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             enforce,            /**< should the constraint be enforced during node processing? 
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             check,              /**< should the constraint be checked for feasibility? 
-                                              *   TRUE for model constraints, FALSE for additional, redundant constraints. */
-   SCIP_Bool             propagate,          /**< should the constraint be propagated during node processing? 
-                                              *   Usually set to TRUE. */
-   SCIP_Bool             local,              /**< is constraint only valid locally? 
-                                              *   Usually set to FALSE. Has to be set to TRUE, e.g., for branching constraints. */
-   SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)? 
-                                              *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
-                                              *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< is constraint subject to aging? 
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
-                                              *   are seperated as constraints. */
-   SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup? 
-                                              *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
-   SCIP_Bool             stickingatnode      /**< should the constraint always be kept at the node where it was added, even
-                                              *   if it may be moved to a more global node? 
-                                              *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
-   )
-{
-   SCIP_VAR** transvars;
-   int v;
-
-   assert(nvars == 0 || vars != NULL);
-   assert(nvars == 0 || vals != NULL);
-   assert(mult == +1 || mult == -1);
-
-   /* get temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &transvars, nvars) );
-
-   /* negate positive or negative variables */
-   for( v = 0; v < nvars; ++v )
-   {
-      if( mult * vals[v] > 0.0 )
-         transvars[v] = vars[v];
-      else
-      {
-         SCIP_CALL( SCIPgetNegatedVar(scip, vars[v], &transvars[v]) );
-      }
-      assert(transvars[v] != NULL);
-   }
-
-   /* create the constraint */
-   SCIP_CALL( createConsSetppc(scip, cons, name, nvars, transvars, setppctype,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-
-   /* release temporary memory */
-   SCIPfreeBufferArray(scip, &transvars);
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
-{  /*lint --e{715}*/
-   assert(upgdcons != NULL);
-
-   /* check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint
-    * - all set partitioning / packing / covering constraints consist only of binary variables with a
-    *   coefficient of +1.0 or -1.0 (variables with -1.0 coefficients can be negated):
-    *        lhs     <= x1 + ... + xp - y1 - ... - yn <= rhs
-    * - negating all variables y = (1-Y) with negative coefficients gives:
-    *        lhs + n <= x1 + ... + xp + Y1 + ... + Yn <= rhs + n
-    * - negating all variables x = (1-X) with positive coefficients and multiplying with -1 gives:
-    *        p - rhs <= X1 + ... + Xp + y1 + ... + yn <= p - lhs
-    * - a set partitioning constraint has left hand side of +1.0, and right hand side of +1.0 : x(S) == 1.0
-    *    -> without negations:  lhs == rhs == 1 - n  or  lhs == rhs == p - 1
-    * - a set packing constraint has left hand side of -infinity, and right hand side of +1.0 : x(S) <= 1.0
-    *    -> without negations:  (lhs == -inf  and  rhs == 1 - n)  or  (lhs == p - 1  and  rhs = +inf)
-    * - a set covering constraint has left hand side of +1.0, and right hand side of +infinity: x(S) >= 1.0
-    *    -> without negations:  (lhs == 1 - n  and  rhs == +inf)  or  (lhs == -inf  and  rhs = p - 1)
-    */
-   if( nposbin + nnegbin == nvars && ncoeffspone + ncoeffsnone == nvars )
-   {
-      int mult;
-
-      if( SCIPisEQ(scip, lhs, rhs) && (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) || SCIPisEQ(scip, lhs, ncoeffspone - 1.0)) )
-      {
-         SCIPdebugMessage("upgrading constraint <%s> to set partitioning constraint\n", SCIPconsGetName(cons));
-
-         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-         mult = SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) ? +1 : -1;
-
-         /* create the set partitioning constraint (an automatically upgraded constraint is always unmodifiable) */
-         assert(!SCIPconsIsModifiable(cons));
-         SCIP_CALL( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-               SCIP_SETPPCTYPE_PARTITIONING,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-      }
-      else if( (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, 1.0 - ncoeffsnone))
-         || (SCIPisEQ(scip, lhs, ncoeffspone - 1.0) && SCIPisInfinity(scip, rhs)) )
-      {
-         SCIPdebugMessage("upgrading constraint <%s> to set packing constraint\n", SCIPconsGetName(cons));
-
-         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-         mult = SCIPisInfinity(scip, -lhs) ? +1 : -1;
-
-         /* create the set packing constraint (an automatically upgraded constraint is always unmodifiable) */
-         assert(!SCIPconsIsModifiable(cons));
-         SCIP_CALL( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-               SCIP_SETPPCTYPE_PACKING,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-      }
-      else if( (SCIPisEQ(scip, lhs, 1.0 - ncoeffsnone) && SCIPisInfinity(scip, rhs))
-         || (SCIPisInfinity(scip, -lhs) && SCIPisEQ(scip, rhs, ncoeffspone - 1.0)) )
-      {
-         SCIPdebugMessage("upgrading constraint <%s> to set covering constraint\n", SCIPconsGetName(cons));
-
-         /* check, if we have to multiply with -1 (negate the positive vars) or with +1 (negate the negative vars) */
-         mult = SCIPisInfinity(scip, rhs) ? +1 : -1;
-
-         /* create the set covering constraint (an automatically upgraded constraint is always unmodifiable) */
-         assert(!SCIPconsIsModifiable(cons));
-         SCIP_CALL( createNormalizedSetppc(scip, upgdcons, SCIPconsGetName(cons), nvars, vars, vals, mult,
-               SCIP_SETPPCTYPE_COVERING,
-               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),
-               SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
-               SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
 
 
 
@@ -3919,11 +3960,13 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecSetppc,
          NULL) );
 
    /* create conflict handler for setppc constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, conflictExecSetppc,
          NULL) );
 
@@ -3935,6 +3978,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopySetppc,
          consFreeSetppc, consInitSetppc, consExitSetppc,
          consInitpreSetppc, consExitpreSetppc, consInitsolSetppc, consExitsolSetppc,
          consDeleteSetppc, consTransSetppc, consInitlpSetppc,
@@ -3944,9 +3988,6 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
          consEnableSetppc, consDisableSetppc,
          consPrintSetppc, consCopySetppc, consParseSetppc,
          conshdlrdata) );
-
-   /* include the linear constraint to set partitioning constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdSetppc, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
 
    /* set partitioning constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

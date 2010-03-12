@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.c,v 1.54 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog.c,v 1.55 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   dialog.c
  * @brief  methods for user interface dialog
@@ -277,6 +277,24 @@ SCIP_RETCODE readInputLine(
 /*
  * dialog handler
  */
+
+/** copies the given dialog to a new scip */
+SCIP_RETCODE SCIPdialogCopyInclude(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(dialog != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( dialog->dialogcopy != NULL )
+   {
+      SCIPdebugMessage("including dialog %s in subscip %p\n", SCIPdialogGetName(dialog), set->scip);
+      SCIP_CALL( dialog->dialogcopy(set->scip, dialog) );
+   }
+   return SCIP_OKAY;
+}
 
 /** creates a dialog handler */
 SCIP_RETCODE SCIPdialoghdlrCreate(
@@ -676,6 +694,7 @@ SCIP_RETCODE ensureSubdialogMem(
 /** creates and captures a user interface dialog */
 SCIP_RETCODE SCIPdialogCreate(
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< copy method of dialog or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
@@ -689,6 +708,7 @@ SCIP_RETCODE SCIPdialogCreate(
    assert(name != NULL);
 
    SCIP_ALLOC( BMSallocMemory(dialog) );
+   (*dialog)->dialogcopy = dialogcopy;
    (*dialog)->dialogexec = dialogexec;
    (*dialog)->dialogdesc = dialogdesc;
    (*dialog)->dialogfree = dialogfree;

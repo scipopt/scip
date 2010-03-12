@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_relax.h,v 1.17 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_relax.h,v 1.18 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   struct_relax.h
  * @brief  datastructures for relaxators
@@ -40,6 +40,7 @@ struct SCIP_Relax
    SCIP_Longint          lastsolvednode;     /**< last total nodes counter, where the current relaxation was solved */
    char*                 name;               /**< name of relaxator */
    char*                 desc;               /**< description of relaxator */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy));     /**< copy method of relaxator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_RELAXFREE   ((*relaxfree));     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit));     /**< initialize relaxator */
    SCIP_DECL_RELAXEXIT   ((*relaxexit));     /**< deinitialize relaxator */

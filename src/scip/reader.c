@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.c,v 1.53 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.c,v 1.54 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader.c
  * @brief  interface for input file readers
@@ -39,6 +39,23 @@
 #include "scip/struct_reader.h"
 
 
+/** copies the given reader to a new scip */
+SCIP_RETCODE SCIPreaderCopyInclude(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(reader != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( reader->readercopy != NULL )
+   {
+      SCIPdebugMessage("including reader %s in subscip %p\n", SCIPreaderGetName(reader), set->scip);
+      SCIP_CALL( reader->readercopy(set->scip, reader) );
+   }
+   return SCIP_OKAY;
+}
 
 /** creates a reader */
 SCIP_RETCODE SCIPreaderCreate(
@@ -46,6 +63,7 @@ SCIP_RETCODE SCIPreaderCreate(
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
@@ -61,6 +79,7 @@ SCIP_RETCODE SCIPreaderCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->desc, desc, strlen(desc)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*reader)->extension, extension, strlen(extension)+1) );
+   (*reader)->readercopy = readercopy;
    (*reader)->readerfree = readerfree;
    (*reader)->readerread = readerread;
    (*reader)->readerwrite = readerwrite;

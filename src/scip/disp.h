@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp.h,v 1.37 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp.h,v 1.38 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   disp.h
  * @brief  internal methods for displaying runtime statistics
@@ -43,6 +43,13 @@ extern "C" {
 extern
 SCIP_DECL_PARAMCHGD(SCIPparamChgdDispActive);
 
+/** copies the given display to a new scip */
+extern
+SCIP_RETCODE SCIPdispCopyInclude(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a display column */
 extern
 SCIP_RETCODE SCIPdispCreate(
@@ -53,6 +60,7 @@ SCIP_RETCODE SCIPdispCreate(
    const char*           desc,               /**< description of display column */
    const char*           header,             /**< head line of display column */
    SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
+   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */

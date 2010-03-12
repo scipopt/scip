@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_mcf.c,v 1.124 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_mcf.c,v 1.125 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /* #define COUNTNETWORKVARIABLETYPES */
 /* #define SCIP_DEBUG */
@@ -49,6 +49,7 @@
 #define BETTERWEIGHTFORDEMANDNODES
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_mcf.h"
 #include "scip/cons_knapsack.h"
@@ -6626,6 +6627,20 @@ SCIP_RETCODE separateCuts(
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyMcf)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaMcf(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeMcf)
@@ -6752,7 +6767,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolMcf)
 /** creates the mcf separator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSepaMcf(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_SEPADATA* sepadata;
 
@@ -6766,10 +6781,11 @@ SCIP_RETCODE SCIPincludeSepaMcf(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
-                              sepaFreeMcf, sepaInitMcf, sepaExitMcf,
-                              sepaInitsolMcf, sepaExitsolMcf,
-                              sepaExeclpMcf, sepaExecsolMcf,
-                              sepadata) );
+         sepaCopyMcf,
+         sepaFreeMcf, sepaInitMcf, sepaExitMcf,
+         sepaInitsolMcf, sepaExitsolMcf,
+         sepaExeclpMcf, sepaExecsolMcf,
+         sepadata) );
 
    /** @todo introduce parameters such as maxrounds (see other separators) */
    /* add mcf separator parameters */

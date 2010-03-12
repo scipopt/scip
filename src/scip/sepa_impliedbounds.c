@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.27 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_impliedbounds.c,v 1.28 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa_impliedbounds.c
  * @ingroup SEPARATORS
@@ -24,6 +24,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_impliedbounds.h"
 #include "scip/pub_misc.h"
@@ -249,6 +250,20 @@ SCIP_RETCODE separateCuts(
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyImpliedbounds)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 #define sepaFreeImpliedbounds NULL
@@ -401,6 +416,7 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
+         sepaCopyImpliedbounds,
          sepaFreeImpliedbounds, sepaInitImpliedbounds, sepaExitImpliedbounds, 
          sepaInitsolImpliedbounds, sepaExitsolImpliedbounds, 
          sepaExeclpImpliedbounds, sepaExecsolImpliedbounds,

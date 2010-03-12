@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_col.c,v 1.7 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_col.c,v 1.8 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   reader_col.c
  * @brief  COL file reader
@@ -355,6 +355,21 @@ SCIP_RETCODE readCol(
 /*
  * Callback methods of reader
  */
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyCol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderCol(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 #define readerFreeCol NULL
 
 /** problem reading method of reader */
@@ -392,6 +407,7 @@ SCIP_RETCODE SCIPincludeReaderCol(
 
   /* include col reader */
   SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+        readerCopyCol,
         readerFreeCol, readerReadCol, NULL, readerdata) );
 
 

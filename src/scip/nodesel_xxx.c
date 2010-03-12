@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.21 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nodesel_xxx.c,v 1.22 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   nodesel_xxx.c
  * @ingroup NODESELECTORS
@@ -63,6 +63,20 @@ struct SCIP_NodeselData
  */
 
 /* TODO: Implement all necessary node selector methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx node selector not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+ 
+   return SCIP_OKAY;
+}
+#else
+#define nodeselCopyXxx NULL
+#endif
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 #if 0
@@ -179,6 +193,7 @@ SCIP_RETCODE SCIPincludeNodeselXxx(
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+         nodeselCopyXxx,
          nodeselFreeXxx, nodeselInitXxx, nodeselExitXxx, 
          nodeselInitsolXxx, nodeselExitsolXxx, nodeselSelectXxx, nodeselCompXxx,
          nodeseldata) );

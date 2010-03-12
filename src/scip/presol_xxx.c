@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_xxx.c,v 1.24 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_xxx.c,v 1.25 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   presol_xxx.c
  * @ingroup PRESOLVERS
@@ -64,6 +64,22 @@ struct SCIP_PresolData
  */
 
 /* TODO: Implement all necessary presolver methods. The methods with an #if 0 ... #else #define ... are optional */
+
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_PRESOLCOPY(presolCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx presolver not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+ 
+   return SCIP_OKAY;
+}
+#else
+#define presolCopyXxx NULL
+#endif
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #if 0
@@ -171,6 +187,7 @@ SCIP_RETCODE SCIPincludePresolXxx(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyXxx,
          presolFreeXxx, presolInitXxx, presolExitXxx, 
          presolInitpreXxx, presolExitpreXxx, presolExecXxx,
          presoldata) );

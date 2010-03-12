@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_clique.c,v 1.41 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_clique.c,v 1.42 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa_clique.c
  * @ingroup SEPARATORS
@@ -24,6 +24,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_clique.h"
 #include "tclique/tclique.h"
@@ -1229,6 +1230,21 @@ SCIP_RETCODE separateCuts(
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyClique)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaClique(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeClique)
@@ -1326,6 +1342,7 @@ SCIP_RETCODE SCIPincludeSepaClique(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
+         sepaCopyClique,
          sepaFreeClique, sepaInitClique, sepaExitClique,
          sepaInitsolClique, sepaExitsolClique,
          sepaExeclpClique, sepaExecsolClique,

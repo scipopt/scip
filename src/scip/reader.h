@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader.h,v 1.34 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader.h,v 1.35 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader.h
  * @brief  internal methods for input file readers
@@ -37,6 +37,14 @@
 extern "C" {
 #endif
 
+
+/** copies the given reader to a new scip */
+extern
+SCIP_RETCODE SCIPreaderCopyInclude(
+   SCIP_READER*          reader,             /**< reader */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a reader */
 extern
 SCIP_RETCODE SCIPreaderCreate(
@@ -44,6 +52,7 @@ SCIP_RETCODE SCIPreaderCreate(
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */

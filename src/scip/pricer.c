@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.c,v 1.29 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer.c,v 1.30 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   pricer.c
  * @brief  methods for variable pricers
@@ -65,6 +65,24 @@ SCIP_DECL_PARAMCHGD(paramChgdPricerPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given pricer to a new scip */
+SCIP_RETCODE SCIPpricerCopyInclude(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(pricer != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( pricer->pricercopy != NULL )
+   {
+      SCIPdebugMessage("including pricer %s in subscip %p\n", SCIPpricerGetName(pricer), set->scip);
+      SCIP_CALL( pricer->pricercopy(set->scip, pricer) );
+   }
+   return SCIP_OKAY;
+}
+
 /** creates a variable pricer
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
  */
@@ -77,6 +95,7 @@ SCIP_RETCODE SCIPpricerCreate(
    int                   priority,           /**< priority of the variable pricer */
    SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
                                               *   problem variables with negative reduced costs are found */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of pricer or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
@@ -99,6 +118,7 @@ SCIP_RETCODE SCIPpricerCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*pricer)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*pricer)->desc, desc, strlen(desc)+1) );
    (*pricer)->priority = priority;
+   (*pricer)->pricercopy = pricercopy;
    (*pricer)->pricerfree = pricerfree;
    (*pricer)->pricerinit = pricerinit;
    (*pricer)->pricerexit = pricerexit;

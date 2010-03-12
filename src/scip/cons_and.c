@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_and.c,v 1.114 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_and.c,v 1.115 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   cons_and.c
  * @ingroup CONSHDLRS 
@@ -1940,6 +1940,20 @@ SCIP_RETCODE mapVariable(
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyAnd)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeAnd)
@@ -2690,13 +2704,14 @@ SCIP_DECL_EVENTEXEC(eventExecAnd)
 
 /** creates the handler for and constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrAnd(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip               /**< SCIP data structure */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    /* create event handler for events on variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecAnd,
          NULL) );
 
@@ -2708,6 +2723,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyAnd,
          consFreeAnd, consInitAnd, consExitAnd, 
          consInitpreAnd, consExitpreAnd, consInitsolAnd, consExitsolAnd,
          consDeleteAnd, consTransAnd, consInitlpAnd,

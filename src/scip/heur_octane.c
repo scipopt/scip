@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_octane.c,v 1.28 2010/01/04 20:35:40 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_octane.c,v 1.29 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   heur_octane.c
  * @ingroup PRIMALHEURISTICS
@@ -532,6 +532,19 @@ SCIP_Bool isZero(
  * Callback methods of primal heuristic
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyOctane)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurOctane(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -992,6 +1005,7 @@ SCIP_RETCODE SCIPincludeHeurOctane(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyOctane,
          heurFreeOctane, heurInitOctane, heurExitOctane, 
          heurInitsolOctane, heurExitsolOctane, heurExecOctane,
          heurdata) );

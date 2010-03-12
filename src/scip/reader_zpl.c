@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl.c,v 1.50 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl.c,v 1.51 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   reader_zpl.c
  * @ingroup FILEREADERS 
@@ -919,6 +919,21 @@ Bool xlp_concheck(const Con* con)
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyZpl)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderZpl(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeZpl NULL
 
@@ -1176,7 +1191,9 @@ SCIP_RETCODE SCIPincludeReaderZpl(
 
    /* include zpl reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeZpl, readerReadZpl, readerWriteZpl, readerdata) );
+         readerCopyZpl,
+         readerFreeZpl, readerReadZpl, readerWriteZpl,
+         readerdata) );
 
    /* add zpl reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

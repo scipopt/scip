@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_coloring.c,v 1.10 2010/01/04 20:35:33 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_coloring.c,v 1.11 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   branch_coloring.c
  * @brief  coloring branching rule
@@ -67,6 +67,20 @@ struct SCIP_BranchruleData
 /*
  * Callback methods of branching rule
  */
+
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyColoring)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleColoring(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** branching execution method for fractional LP solutions */
 static
@@ -363,6 +377,7 @@ SCIP_RETCODE SCIPincludeBranchruleColoring(
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, 
 	 BRANCHRULE_MAXBOUNDDIST,
+         branchCopyColoring,
          branchFreeColoring, branchInitColoring, branchExitColoring,
          branchInitsolColoring, branchExitsolColoring,
          branchExeclpColoring, branchExecrelColoring, branchExecpsColoring,

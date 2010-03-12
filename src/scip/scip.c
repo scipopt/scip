@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.545 2010/03/12 11:09:45 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.546 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -71,7 +71,6 @@
 #include "scip/sepa.h"
 #include "scip/prop.h"
 #include "scip/debug.h"
-
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -489,6 +488,39 @@ void SCIPprintError(
 /*
  * general SCIP methods
  */
+
+/** copies plugins from sourcescip to targetscip */
+SCIP_RETCODE SCIPcopyPlugins(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
+   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
+   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
+   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
+   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
+   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
+   SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
+   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
+   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
+   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
+   SCIP_Bool             copydialogs         /**< should the dialogs be copied */
+   )
+{
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+
+   SCIP_CALL( checkStage(sourcescip, "SCIPgetStatus", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopyPlugins", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsetCopyPlugins(sourcescip->set, targetscip->set, 
+         copyreaders, copypricers, copyconshdlrs, copyconflicthdlrs, copypresolvers, copyrelaxators, copyseparators, copypropagators,
+         copyheuristics, copyeventhdlrs, copynodeselectors, copybranchrules, copydisplays, copydialogs) );
+
+   return SCIP_OKAY;
+}
 
 /** creates and initializes SCIP data structures */
 SCIP_RETCODE SCIPcreate(
@@ -1258,6 +1290,7 @@ SCIP_RETCODE SCIPincludeReader(
    const char*           name,               /**< name of reader */
    const char*           desc,               /**< description of reader */
    const char*           extension,          /**< file extension that reader processes */
+   SCIP_DECL_READERCOPY  ((*readercopy)),    /**< copy method of reader or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_READERFREE  ((*readerfree)),    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread)),    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite)),   /**< write method */
@@ -1275,7 +1308,7 @@ SCIP_RETCODE SCIPincludeReader(
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readerfree, readerread, readerwrite, readerdata) );
+   SCIP_CALL( SCIPreaderCreate(&reader, name, desc, extension, readercopy, readerfree, readerread, readerwrite, readerdata) );
    SCIP_CALL( SCIPsetIncludeReader(scip->set, reader) );
 
    return SCIP_OKAY;
@@ -1329,6 +1362,7 @@ SCIP_RETCODE SCIPincludePricer(
                                               *   that already exist in the problem (which are also priced in by the
                                               *   default problem variable pricing in the same round)
                                               */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of variable pricer or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */
@@ -1352,6 +1386,7 @@ SCIP_RETCODE SCIPincludePricer(
 
    SCIP_CALL( SCIPpricerCreate(&pricer, scip->set, scip->mem->setmem,
          name, desc, priority, delay,
+         pricercopy,
          pricerfree, pricerinit, pricerexit, pricerinitsol, pricerexitsol, pricerredcost, pricerfarkas, pricerdata) );
    SCIP_CALL( SCIPsetIncludePricer(scip->set, pricer) );
 
@@ -1464,6 +1499,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
+   SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
    SCIP_DECL_CONSEXIT    ((*consexit)),      /**< deinitialize constraint handler */
@@ -1507,6 +1543,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_CALL( SCIPconshdlrCreate(&conshdlr, scip->set, scip->mem->setmem,
          name, desc, sepapriority, enfopriority, chckpriority, sepafreq, propfreq, eagerfreq, maxprerounds,
          delaysepa, delayprop, delaypresol, needscons,
+         conshdlrcopy,
          consfree, consinit, consexit, consinitpre, consexitpre, consinitsol, consexitsol,
          consdelete, constrans, consinitlp, conssepalp, conssepasol, consenfolp, consenfops, conscheck, consprop,
          conspresol, consresprop, conslock, consactive, consdeactive, consenable, consdisable, consprint, 
@@ -1555,6 +1592,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
    const char*           name,               /**< name of conflict handler */
    const char*           desc,               /**< description of conflict handler */
    int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */
@@ -1576,6 +1614,7 @@ SCIP_RETCODE SCIPincludeConflicthdlr(
    }
 
    SCIP_CALL( SCIPconflicthdlrCreate(&conflicthdlr, scip->set, scip->mem->setmem, name, desc, priority,
+         conflictcopy,
          conflictfree, conflictinit, conflictexit, conflictinitsol, conflictexitsol, conflictexec,
          conflicthdlrdata) );
    SCIP_CALL( SCIPsetIncludeConflicthdlr(scip->set, conflicthdlr) );
@@ -1640,6 +1679,7 @@ SCIP_RETCODE SCIPincludePresol(
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */
@@ -1661,6 +1701,7 @@ SCIP_RETCODE SCIPincludePresol(
    }
 
    SCIP_CALL( SCIPpresolCreate(&presol, scip->set, scip->mem->setmem, name, desc, priority, maxrounds, delay,
+         presolcopy,
          presolfree, presolinit, presolexit, presolinitpre, presolexitpre, presolexec, presoldata) );
    SCIP_CALL( SCIPsetIncludePresol(scip->set, presol) );
 
@@ -1723,6 +1764,7 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxator */
    int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxator */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
@@ -1745,6 +1787,7 @@ SCIP_RETCODE SCIPincludeRelax(
 
    SCIP_CALL( SCIPrelaxCreate(&relax, scip->set, scip->mem->setmem,
          name, desc, priority, freq,
+         relaxcopy,
          relaxfree, relaxinit, relaxexit, relaxinitsol, relaxexitsol, relaxexec, relaxdata) );
    SCIP_CALL( SCIPsetIncludeRelax(scip->set, relax) );
 
@@ -1810,6 +1853,7 @@ SCIP_RETCODE SCIPincludeSepa(
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for applying separation */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */
@@ -1833,6 +1877,7 @@ SCIP_RETCODE SCIPincludeSepa(
 
    SCIP_CALL( SCIPsepaCreate(&sepa, scip->set, scip->mem->setmem,
          name, desc, priority, freq, maxbounddist, delay,
+         sepacopy,
          sepafree, sepainit, sepaexit, sepainitsol, sepaexitsol, sepaexeclp, sepaexecsol, sepadata) );
    SCIP_CALL( SCIPsetIncludeSepa(scip->set, sepa) );
 
@@ -1896,6 +1941,7 @@ SCIP_RETCODE SCIPincludeProp(
    int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
@@ -1919,6 +1965,7 @@ SCIP_RETCODE SCIPincludeProp(
 
    SCIP_CALL( SCIPpropCreate(&prop, scip->set, scip->mem->setmem,
          name, desc, priority, freq, delay,
+         propcopy,
          propfree, propinit, propexit, propinitsol, propexitsol, propexec, propresprop, propdata) );
    SCIP_CALL( SCIPsetIncludeProp(scip->set, prop) );
 
@@ -1985,6 +2032,7 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -2007,6 +2055,7 @@ SCIP_RETCODE SCIPincludeHeur(
 
    SCIP_CALL( SCIPheurCreate(&heur, scip->set, scip->mem->setmem,
          name, desc, dispchar, priority, freq, freqofs, maxdepth, timingmask,
+         heurcopy,
          heurfree, heurinit, heurexit, heurinitsol, heurexitsol, heurexec, heurdata) );
    SCIP_CALL( SCIPsetIncludeHeur(scip->set, heur) );
 
@@ -2067,6 +2116,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of event handler */
    const char*           desc,               /**< description of event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */
@@ -2089,6 +2139,7 @@ SCIP_RETCODE SCIPincludeEventhdlr(
    }
 
    SCIP_CALL( SCIPeventhdlrCreate(&eventhdlr, name, desc,
+         eventcopy,
          eventfree, eventinit, eventexit, eventinitsol, eventexitsol, eventdelete, eventexec,
          eventhdlrdata) );
    SCIP_CALL( SCIPsetIncludeEventhdlr(scip->set, eventhdlr) );
@@ -2136,6 +2187,7 @@ SCIP_RETCODE SCIPincludeNodesel(
    const char*           desc,               /**< description of node selector */
    int                   stdpriority,        /**< priority of the node selector in standard mode */
    int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy)),   /**< copy method of node selector or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
@@ -2158,6 +2210,7 @@ SCIP_RETCODE SCIPincludeNodesel(
    }
 
    SCIP_CALL( SCIPnodeselCreate(&nodesel, scip->set, scip->mem->setmem, name, desc, stdpriority, memsavepriority,
+         nodeselcopy,
          nodeselfree, nodeselinit, nodeselexit, nodeselinitsol, nodeselexitsol,
          nodeselselect, nodeselcomp, nodeseldata) );
    SCIP_CALL( SCIPsetIncludeNodesel(scip->set, nodesel) );
@@ -2246,6 +2299,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound
                                               *   compared to best node's dual bound for applying branching rule
                                               *   (0.0: only on current best node, 1.0: on all nodes) */
+   SCIP_DECL_BRANCHCOPY  ((*branchcopy)),    /**< copy method of branching rule or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_BRANCHFREE  ((*branchfree)),    /**< destructor of branching rule */
    SCIP_DECL_BRANCHINIT  ((*branchinit)),    /**< initialize branching rule */
    SCIP_DECL_BRANCHEXIT  ((*branchexit)),    /**< deinitialize branching rule */
@@ -2269,7 +2323,7 @@ SCIP_RETCODE SCIPincludeBranchrule(
    }
 
    SCIP_CALL( SCIPbranchruleCreate(&branchrule, scip->mem->setmem, scip->set, name, desc, priority, maxdepth,
-         maxbounddist, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
+         maxbounddist, branchcopy, branchfree, branchinit, branchexit, branchinitsol, branchexitsol,
          branchexeclp, branchexecrel, branchexecps, branchruledata) );
    SCIP_CALL( SCIPsetIncludeBranchrule(scip->set, branchrule) );
 
@@ -2360,6 +2414,7 @@ SCIP_RETCODE SCIPincludeDisp(
    const char*           desc,               /**< description of display column */
    const char*           header,             /**< head line of display column */
    SCIP_DISPSTATUS       dispstatus,         /**< display activation status of display column */
+   SCIP_DECL_DISPCOPY    ((*dispcopy)),      /**< copy method of display column or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_DISPFREE    ((*dispfree)),      /**< destructor of display column */
    SCIP_DECL_DISPINIT    ((*dispinit)),      /**< initialize display column */
    SCIP_DECL_DISPEXIT    ((*dispexit)),      /**< deinitialize display column */
@@ -2385,7 +2440,9 @@ SCIP_RETCODE SCIPincludeDisp(
    }
 
    SCIP_CALL( SCIPdispCreate(&disp, scip->set, scip->mem->setmem,
-         name, desc, header, dispstatus, dispfree, dispinit, dispexit, dispinitsol, dispexitsol, dispoutput, dispdata,
+         name, desc, header, dispstatus, 
+         dispcopy,
+         dispfree, dispinit, dispexit, dispinitsol, dispexitsol, dispoutput, dispdata,
          width, priority, position, stripline) );
    SCIP_CALL( SCIPsetIncludeDisp(scip->set, disp) );
 
@@ -2395,7 +2452,7 @@ SCIP_RETCODE SCIPincludeDisp(
 /** returns the display column of the given name, or NULL if not existing */
 SCIP_DISP* SCIPfindDisp(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of event handler */
+   const char*           name                /**< name of display */
    )
 {
    assert(name != NULL);
@@ -2444,10 +2501,11 @@ SCIP_RETCODE SCIPautoselectDisps(
  * user interactive dialog methods
  */
 
-/** creates and captures a dialog */
-SCIP_RETCODE SCIPcreateDialog(
+/** creates and includes dialog */
+SCIP_RETCODE SCIPincludeDialog(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< copy method of dialog or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */
@@ -2457,11 +2515,35 @@ SCIP_RETCODE SCIPcreateDialog(
    SCIP_DIALOGDATA*      dialogdata          /**< user defined dialog data */
    )
 {
+   assert(scip != NULL);
+   assert(dialog != NULL);
+
    SCIP_CALL( checkStage(scip, "SCIPcreateDialog", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
 
-   SCIP_CALL( SCIPdialogCreate(dialog, dialogexec, dialogdesc, dialogfree, name, desc, issubmenu, dialogdata) );
+   /* check whether display column is already present */
+   if( dialogcopy != NULL && SCIPexistsDialog(scip, *dialog) )
+   {
+      SCIPerrorMessage("dialog <%s> already included.\n", name);
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIP_CALL( SCIPdialogCreate(dialog, dialogcopy, dialogexec, dialogdesc, dialogfree, name, desc, issubmenu, dialogdata) );
+   SCIP_CALL( SCIPsetIncludeDialog(scip->set, *dialog) );
 
    return SCIP_OKAY;
+}
+
+/** returns if the dialog already exists */
+SCIP_Bool SCIPexistsDialog(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIALOG*          dialog              /**< dialog */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPexistsDialog", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   return SCIPsetExistsDialog(scip->set, dialog);
 }
 
 /** captures a dialog */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_heur.h,v 1.28 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_heur.h,v 1.29 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   type_heur.h
  * @ingroup TYPEDEFINITIONS
@@ -64,6 +64,13 @@ typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 
 
+/** copy method for heuristic plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - heur            : the primal heuristic itself
+ */
+#define SCIP_DECL_HEURCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur)
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting)
  *

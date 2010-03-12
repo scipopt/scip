@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.83 2010/03/04 18:53:03 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.84 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -215,6 +215,42 @@ enum CipSense
    CIP_SENSE_NOTHING, CIP_SENSE_LE, CIP_SENSE_GE, CIP_SENSE_EQ
 };
 typedef enum CipSense CIPSENSE;                   /**< enum type for constraint sense */
+
+
+/*
+ * local methods for managing quadratic constraint update methods
+ */
+
+
+/** creates a linear constraint upgrade data object */
+static
+SCIP_Bool conshdlrdataHasUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_DECL_QUADCONSUPGD((*quadconsupgd)),  /**< method to call for upgrading quadratic constraint */
+   const char*           conshdlrname        /**< name of the constraint handler */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlrdata != NULL);
+   assert(quadconsupgd != NULL);
+   assert(conshdlrname != NULL);
+
+   for( i = conshdlrdata->nquadconsupgrades - 1; i >= 0; --i )
+   {
+      if( conshdlrdata->quadconsupgrades[i]->quadconsupgd == quadconsupgd )
+      {
+#ifdef SCIP_DEBUG
+         SCIPwarningMessage("Try to add already known upgrade message %p for constraint handler %s.\n", quadconsupgd, conshdlrname);
+#endif
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
 
 /*
  * Local methods
@@ -5577,6 +5613,20 @@ SCIP_RETCODE SCIPconsInitNlpiQuadratic(
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyQuadratic)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrQuadratic(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeQuadratic)
@@ -7420,6 +7470,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyQuadratic,
          consFreeQuadratic, consInitQuadratic, consExitQuadratic,
          consInitpreQuadratic, consExitpreQuadratic, consInitsolQuadratic, consExitsolQuadratic,
          consDeleteQuadratic, consTransQuadratic, consInitlpQuadratic,
@@ -7493,11 +7544,13 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
 #endif
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
-      NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
-      NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
 
    return SCIP_OKAY;
 }
@@ -7531,37 +7584,40 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* create a quadratic constraint upgrade data object */
-   SCIP_CALL( SCIPallocMemory(scip, &quadconsupgrade) );
-   quadconsupgrade->quadconsupgd = quadconsupgd;
-   quadconsupgrade->priority     = priority;
-   quadconsupgrade->active       = TRUE;
-
-   /* insert quadratic constraint update method into constraint handler data */
-   assert(conshdlrdata->nquadconsupgrades <= conshdlrdata->quadconsupgradessize);
-   if( conshdlrdata->nquadconsupgrades+1 > conshdlrdata->quadconsupgradessize )
+   if( !conshdlrdataHasUpgrade(scip, conshdlrdata, quadconsupgd, conshdlrname) )
    {
-      int newsize;
+      /* create a quadratic constraint upgrade data object */
+      SCIP_CALL( SCIPallocMemory(scip, &quadconsupgrade) );
+      quadconsupgrade->quadconsupgd = quadconsupgd;
+      quadconsupgrade->priority     = priority;
+      quadconsupgrade->active       = TRUE;
 
-      newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nquadconsupgrades+1);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->quadconsupgrades, newsize) );
-      conshdlrdata->quadconsupgradessize = newsize;
+      /* insert quadratic constraint update method into constraint handler data */
+      assert(conshdlrdata->nquadconsupgrades <= conshdlrdata->quadconsupgradessize);
+      if( conshdlrdata->nquadconsupgrades+1 > conshdlrdata->quadconsupgradessize )
+      {
+         int newsize;
+
+         newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nquadconsupgrades+1);
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->quadconsupgrades, newsize) );
+         conshdlrdata->quadconsupgradessize = newsize;
+      }
+      assert(conshdlrdata->nquadconsupgrades+1 <= conshdlrdata->quadconsupgradessize);
+   
+      for( i = conshdlrdata->nquadconsupgrades; i > 0 && conshdlrdata->quadconsupgrades[i-1]->priority < quadconsupgrade->priority; --i )
+         conshdlrdata->quadconsupgrades[i] = conshdlrdata->quadconsupgrades[i-1];
+      assert(0 <= i && i <= conshdlrdata->nquadconsupgrades);
+      conshdlrdata->quadconsupgrades[i] = quadconsupgrade;
+      conshdlrdata->nquadconsupgrades++;
+
+      /* adds parameter to turn on and off the upgrading step */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/"CONSHDLR_NAME"/upgrade/%s", conshdlrname);
+      (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable quadratic upgrading for constraint handler <%s>", conshdlrname);
+      SCIP_CALL( SCIPaddBoolParam(scip,
+            paramname, paramdesc,
+            &quadconsupgrade->active, FALSE, TRUE, NULL, NULL) );
    }
-   assert(conshdlrdata->nquadconsupgrades+1 <= conshdlrdata->quadconsupgradessize);
-   
-   for( i = conshdlrdata->nquadconsupgrades; i > 0 && conshdlrdata->quadconsupgrades[i-1]->priority < quadconsupgrade->priority; --i )
-      conshdlrdata->quadconsupgrades[i] = conshdlrdata->quadconsupgrades[i-1];
-   assert(0 <= i && i <= conshdlrdata->nquadconsupgrades);
-   conshdlrdata->quadconsupgrades[i] = quadconsupgrade;
-   conshdlrdata->nquadconsupgrades++;
 
-   /* adds parameter to turn on and off the upgrading step */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/"CONSHDLR_NAME"/upgrade/%s", conshdlrname);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable quadratic upgrading for constraint handler <%s>", conshdlrname);
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         paramname, paramdesc,
-         &quadconsupgrade->active, FALSE, TRUE, NULL, NULL) );
-   
    return SCIP_OKAY;
 }
 

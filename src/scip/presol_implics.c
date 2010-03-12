@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_implics.c,v 1.12 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_implics.c,v 1.13 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   presol_implics.c
  * @ingroup PRESOLVERS
@@ -23,6 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/presol_implics.h"
 
@@ -39,6 +40,21 @@
 /*
  * Callback methods of presolver
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyImplics)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolImplics(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #define presolFreeImplics NULL
@@ -360,6 +376,7 @@ SCIP_RETCODE SCIPincludePresolImplics(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyImplics,
          presolFreeImplics, presolInitImplics, presolExitImplics, 
          presolInitpreImplics, presolExitpreImplics, presolExecImplics,
          presoldata) );

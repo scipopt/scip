@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_fzn.c,v 1.39 2010/01/23 07:53:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: reader_fzn.c,v 1.40 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_fzn.h
  * @ingroup FILEREADERS 
@@ -3607,6 +3607,21 @@ SCIP_RETCODE writeFzn(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyFzn)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderFzn(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeFzn NULL
 
@@ -3758,7 +3773,9 @@ SCIP_RETCODE SCIPincludeReaderFzn(
 
    /* include fzn reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeFzn, readerReadFzn, readerWriteFzn, readerdata) );
+         readerCopyFzn,
+         readerFreeFzn, readerReadFzn, readerWriteFzn, 
+         readerdata) );
 
    return SCIP_OKAY;
 }

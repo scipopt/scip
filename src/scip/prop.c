@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop.c,v 1.25 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop.c,v 1.26 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   prop.c
  * @brief  methods and datastructures for propagators
@@ -61,6 +61,24 @@ SCIP_DECL_PARAMCHGD(paramChgdPropPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given propagator to a new scip */
+SCIP_RETCODE SCIPpropCopyInclude(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(prop != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( prop->propcopy != NULL )
+   {
+      SCIPdebugMessage("including propagator %s in subscip %p\n", SCIPpropGetName(prop), set->scip);
+      SCIP_CALL( prop->propcopy(set->scip, prop) );
+   }
+   return SCIP_OKAY;
+}
+
 /** creates a propagator */
 SCIP_RETCODE SCIPpropCreate(
    SCIP_PROP**           prop,               /**< pointer to propagator data structure */
@@ -71,6 +89,7 @@ SCIP_RETCODE SCIPpropCreate(
    int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
+   SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
    SCIP_DECL_PROPEXIT    ((*propexit)),      /**< deinitialize propagator */
@@ -95,6 +114,7 @@ SCIP_RETCODE SCIPpropCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*prop)->desc, desc, strlen(desc)+1) );
    (*prop)->priority = priority;
    (*prop)->freq = freq;
+   (*prop)->propcopy = propcopy;
    (*prop)->propfree = propfree;
    (*prop)->propinit = propinit;
    (*prop)->propexit = propexit;

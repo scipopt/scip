@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.24 2010/03/04 20:28:32 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.25 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -176,6 +176,20 @@ SCIP_DECL_SORTPTRCOMP(compptr)
 /*
  * Callback methods
  */
+
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyPscost)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
@@ -516,7 +530,7 @@ SCIP_DECL_BRANCHEXECREL(branchExecrelPscost)
 /** creates the pseudo cost braching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP*                 scip                /**< SCIP data structure */
-   )
+)
 {
    SCIP_BRANCHRULEDATA* branchruledata;
 
@@ -526,6 +540,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
+         branchCopyPscost,
          branchFreePscost, branchInitPscost, branchExitPscost, branchInitsolPscost, branchExitsolPscost, 
          branchExeclpPscost, branchExecrelPscost, branchExecpsPscost,
          branchruledata) );

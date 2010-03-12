@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.h,v 1.32 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objpricer.h,v 1.33 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objpricer.h
  * @brief  C++ wrapper for variable pricers
@@ -27,12 +27,13 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
 /** C++ wrapper object for variable pricers */
-class ObjPricer
+class ObjPricer : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

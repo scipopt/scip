@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objpricer.cpp,v 1.24 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objpricer.cpp,v 1.25 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objpricer.cpp
  * @brief  C++ wrapper for variable pricers
@@ -48,6 +48,31 @@ struct SCIP_PricerData
 
 extern "C"
 {
+
+/** copy method for pricer plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRICERCOPY(pricerCopyObj)
+{  /*lint --e{715}*/
+   SCIP_PRICERDATA* pricerdata;
+   
+   assert(scip != NULL);
+   
+   pricerdata = SCIPpricerGetData(pricer);
+   assert(pricerdata != NULL);
+   assert(pricerdata->objpricer != NULL);
+
+   if( pricerdata->objpricer->iscloneable() )
+   {
+      scip::ObjPricer*  newobjpricer;
+      newobjpricer = (scip::ObjPricer*) pricerdata->objpricer->clone();
+
+      /* call include method of pricer object */
+      SCIP_CALL( SCIPincludeObjPricer(scip, newobjpricer, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRICERFREE(pricerFreeObj)
@@ -190,6 +215,9 @@ SCIP_RETCODE SCIPincludeObjPricer(
 {
    SCIP_PRICERDATA* pricerdata;
 
+   assert(scip != NULL);
+   assert(objpricer != NULL);
+
    /* create variable pricer data */
    pricerdata = new SCIP_PRICERDATA;
    pricerdata->objpricer = objpricer;
@@ -198,6 +226,7 @@ SCIP_RETCODE SCIPincludeObjPricer(
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricer(scip, objpricer->scip_name_, objpricer->scip_desc_, objpricer->scip_priority_,
          objpricer->scip_delay_,
+         pricerCopyObj,
          pricerFreeObj, pricerInitObj, pricerExitObj, 
          pricerInitsolObj, pricerExitsolObj, pricerRedcostObj, pricerFarkasObj,
          pricerdata) ); /*lint !e429*/

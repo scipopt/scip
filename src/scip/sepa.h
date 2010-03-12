@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa.h,v 1.50 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa.h,v 1.51 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa.h
  * @brief  internal methods for separators
@@ -39,6 +39,13 @@
 extern "C" {
 #endif
 
+/** copies the given separator to a new scip */
+extern
+SCIP_RETCODE SCIPsepaCopyInclude(
+   SCIP_SEPA*            sepa,               /**< separator */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a separator */
 extern
 SCIP_RETCODE SCIPsepaCreate(
@@ -52,6 +59,7 @@ SCIP_RETCODE SCIPsepaCreate(
    SCIP_Real             maxbounddist,       /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for applying separation */
    SCIP_Bool             delay,              /**< should separator be delayed, if other separators found cuts? */
+   SCIP_DECL_SEPACOPY    ((*sepacopy)),      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_SEPAFREE    ((*sepafree)),      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit)),      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit)),      /**< deinitialize separator */

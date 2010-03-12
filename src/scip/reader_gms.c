@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.c,v 1.37 2010/02/02 15:32:54 bzfviger Exp $"
+#pragma ident "@(#) $Id: reader_gms.c,v 1.38 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_gms.c
  * @ingroup FILEReaders 
@@ -1037,6 +1037,21 @@ SCIP_RETCODE checkConsnames(
  * Callback methods of reader
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyGms)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderGms(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeGms NULL
 
@@ -1071,7 +1086,9 @@ SCIP_RETCODE SCIPincludeReaderGms(
 
    /* include gms reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeGms, readerReadGms, readerWriteGms, readerdata) );
+         readerCopyGms,
+         readerFreeGms, readerReadGms, readerWriteGms, 
+         readerdata) );
 
    /* add gms reader parameters for writing routines*/
    SCIP_CALL( SCIPaddBoolParam(scip,

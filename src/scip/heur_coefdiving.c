@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.62 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_coefdiving.c,v 1.63 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   heur_coefdiving.c
  * @ingroup PRIMALHEURISTICS
@@ -92,6 +92,20 @@ struct SCIP_HeurData
 /*
  * Callback methods
  */
+
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyCoefdiving)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
@@ -613,6 +627,7 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyCoefdiving,
          heurFreeCoefdiving, heurInitCoefdiving, heurExitCoefdiving, 
          heurInitsolCoefdiving, heurExitsolCoefdiving, heurExecCoefdiving,
          heurdata) );

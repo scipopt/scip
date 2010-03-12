@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.c,v 1.20 2010/03/05 20:13:58 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_soc.c,v 1.21 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   cons_soc.c
  * @ingroup CONSHDLRS 
@@ -261,220 +261,6 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    return SCIP_OKAY;
 }
 
-#ifdef QUADCONSUPGD_PRIORITY
-/** tries to upgrade a quadratic constraint to a SOC constraint
- * @todo more general quadratic constraints then sums of squares might allow an upgrade to a SOC
- */
-static
-SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
-{
-   int            nquadvars;
-   SCIP_VAR*      var;
-   SCIP_VAR**     lhsvars;
-   SCIP_Real*     lhscoefs = NULL;
-   SCIP_Real*     lhsoffsets = NULL;
-   SCIP_Real      lhsconstant = 0.0;
-   int            lhscount = 0;
-   SCIP_VAR*      rhsvar = NULL; 
-   SCIP_Real      rhscoef = 0.0;
-   SCIP_Real      rhsoffset = 0.0;
-   SCIP_Real      sqrcoef, lincoef;
-   int            i, j;
-   
-   assert(scip != NULL);
-   assert(cons != NULL);
-   assert(upgdconslhs != NULL);
-   assert(upgdconsrhs != NULL);
-   
-   *upgdconslhs = NULL;
-   *upgdconsrhs = NULL;
-   
-   SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
-   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
-   
-   /* currently do not support linear parts in upgrading of SOC constraints */
-   if( SCIPgetNLinearVarsQuadratic(scip, cons) )
-      return SCIP_OKAY;
-
-   /* currently do not support bilinear parts in upgrading of SOC constraints */
-   if( SCIPgetNBilinTermsQuadratic(scip, cons) )
-      return SCIP_OKAY;
-
-   nquadvars = SCIPgetNQuadVarsQuadratic(scip, cons);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhsvars, nquadvars-1) );
-
-   if( !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
-   { /* try whether constraint on right hand side is SOC */
-      lhsconstant = -SCIPgetRhsQuadratic(scip, cons);
-
-      for( i = 0; i < nquadvars; ++i )
-      {
-         var  = SCIPgetQuadVarsQuadratic(scip, cons)[i];
-         sqrcoef = SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons)[i];
-         lincoef = SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons)[i];
-         
-         assert(sqrcoef != 0.0);
-            
-         if( sqrcoef > 0.0 )
-         {
-            if( lhscount >= nquadvars - 1 )
-            { /* too many variables on lhs, i.e., all variables seem to have positive coefficient */
-               rhsvar = NULL;
-               break;
-            }
-            
-            lhsvars[lhscount] = var;
-
-            if( sqrcoef != 1.0 )
-            {
-               if( !lhscoefs )
-               {
-                  SCIP_CALL( SCIPallocBufferArray(scip, &lhscoefs, nquadvars - 1) );
-                  for( j = 0; j < lhscount; ++j )
-                     lhscoefs[j] = 1.0;
-               }
-               lhscoefs[lhscount] = sqrt(sqrcoef);
-            }
-            else if( lhscoefs )
-               lhscoefs[lhscount] = 1.0;
-
-            if( lincoef != 0.0 )
-            {
-               if( !lhsoffsets )
-               {
-                  SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffsets, nquadvars - 1) );
-                  for( j = 0; j < lhscount; ++j )
-                     lhsoffsets[j] = 0.0;
-               }
-               lhsoffsets[lhscount] = lincoef / (2 * sqrcoef);
-               lhsconstant -= lincoef * lincoef / (4 * sqrcoef);
-            }
-            else if( lhsoffsets )
-               lhsoffsets[lhscount] = 0.0;
-
-            ++lhscount;
-         }
-         else if( rhsvar != NULL || SCIPisLT(scip, SCIPvarGetLbGlobal(var), lincoef / (2*sqrcoef)) )
-         { /* second variable with negative coefficient -> cannot be SOC */
-            /* or lower bound of variable does not ensure positivity of right hand side */
-            rhsvar = NULL;
-            break;
-         }
-         else
-         {
-            rhsvar       = var;
-            rhscoef      = sqrt(-sqrcoef);
-            rhsoffset    = lincoef / (2 * sqrcoef);
-            lhsconstant -= lincoef * lincoef / (4 * sqrcoef);
-         }
-      }
-   }
-   
-   if( rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
-   { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
-      SCIPdebugMessage("found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
-  
-      SCIP_CALL( SCIPcreateConsSOC(scip, upgdconsrhs, SCIPconsGetName(cons),
-         lhscount, lhsvars, lhscoefs, lhsoffsets, lhsconstant,
-         rhsvar, rhscoef, rhsoffset,
-         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconsrhs, NULL) ) );
-   }
-   else if( !SCIPisInfinity(scip, - SCIPgetLhsQuadratic(scip, cons)) )
-   { /* if the first failed, try if constraint on left hand side is SOC (using negated coefficients) */
-      SCIPfreeBufferArrayNull(scip, &lhscoefs);
-      SCIPfreeBufferArrayNull(scip, &lhsoffsets);
-      lhscount = 0;
-      rhsvar = NULL;
-      
-      lhsconstant = SCIPgetLhsQuadratic(scip, cons);
-
-      for (i = 0; i < nquadvars; ++i)
-      {
-         var  = SCIPgetQuadVarsQuadratic(scip, cons)[i];
-         sqrcoef = SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons)[i];
-         lincoef = SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons)[i];
-         
-         assert(sqrcoef != 0.0);
-         
-         if( sqrcoef < 0.0 )
-         {
-            if( lhscount >= nquadvars )
-            { /* too many variables on lhs, i.e., all variables seem to have negative coefficient */
-               rhsvar = NULL;
-               break;
-            }
-
-            lhsvars[lhscount] = var;
-
-            if( sqrcoef != -1.0 )
-            {
-               if( !lhscoefs )
-               {
-                  SCIP_CALL( SCIPallocBufferArray(scip, &lhscoefs, nquadvars - 1) );
-                  for( j = 0; j < lhscount; ++j )
-                     lhscoefs[j] = 1.0;
-               }
-               lhscoefs[lhscount] = sqrt(-sqrcoef);
-            }
-            else if( lhscoefs )
-               lhscoefs[lhscount] = 1.0;
-
-            if( lincoef != 0.0 )
-            {
-               if( !lhsoffsets )
-               {
-                  SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffsets, nquadvars - 1) );
-                  for( j = 0; j < lhscount; ++j )
-                     lhsoffsets[j] = 0.0;
-               }
-               lhsoffsets[lhscount] = lincoef / (2 * sqrcoef);
-               lhsconstant += lincoef * lincoef / (4 * sqrcoef);
-            }
-            else if( lhsoffsets )
-               lhsoffsets[lhscount] = 0.0;
-
-            ++lhscount;
-         }
-         else if( rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(var), lincoef / (2*sqrcoef)) )
-         { /* second variable with positive coefficient -> cannot be SOC */
-            /* or lower bound of variable does not ensure positivity of right hand side */
-            rhsvar = NULL;
-            break;
-         }
-         else
-         {
-            rhsvar       = var;
-            rhscoef      = sqrt(sqrcoef);
-            rhsoffset    = lincoef / (2 * sqrcoef);
-            lhsconstant += lincoef * lincoef / (4 * sqrcoef);
-         }
-      }
-      
-      if (rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant))
-      { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
-         SCIPdebugMessage("found left hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
-     
-         SCIP_CALL( SCIPcreateConsSOC(scip, upgdconslhs, SCIPconsGetName(cons),
-            lhscount, lhsvars, lhscoefs, lhsoffsets, lhsconstant,
-            rhsvar, rhscoef, rhsoffset,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
-            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
-         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconslhs, NULL) ) );
-      }
-   }
-
-   SCIPfreeBufferArray(scip, &lhsvars);
-   SCIPfreeBufferArrayNull(scip, &lhscoefs);
-   SCIPfreeBufferArrayNull(scip, &lhsoffsets);
-   
-   return SCIP_OKAY;
-}
-#endif
 
 /** evaluates the left hand side of a SOC constraint */ 
 static
@@ -2575,6 +2361,228 @@ SCIP_RETCODE branchOnRhsVariable(
    return SCIP_OKAY;
 }
 
+
+/*
+ * Quadratic constraint upgrading
+ */
+
+
+#ifdef QUADCONSUPGD_PRIORITY
+/** tries to upgrade a quadratic constraint to a SOC constraint
+ * @todo more general quadratic constraints then sums of squares might allow an upgrade to a SOC
+ */
+static
+SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
+{
+   int            nquadvars;
+   SCIP_VAR*      var;
+   SCIP_VAR**     lhsvars;
+   SCIP_Real*     lhscoefs = NULL;
+   SCIP_Real*     lhsoffsets = NULL;
+   SCIP_Real      lhsconstant = 0.0;
+   int            lhscount = 0;
+   SCIP_VAR*      rhsvar = NULL; 
+   SCIP_Real      rhscoef = 0.0;
+   SCIP_Real      rhsoffset = 0.0;
+   SCIP_Real      sqrcoef, lincoef;
+   int            i, j;
+   
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(upgdconslhs != NULL);
+   assert(upgdconsrhs != NULL);
+   
+   *upgdconslhs = NULL;
+   *upgdconsrhs = NULL;
+   
+   SCIPdebugMessage("upgradeConsQuadratic called for constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
+   
+   /* currently do not support linear parts in upgrading of SOC constraints */
+   if( SCIPgetNLinearVarsQuadratic(scip, cons) )
+      return SCIP_OKAY;
+
+   /* currently do not support bilinear parts in upgrading of SOC constraints */
+   if( SCIPgetNBilinTermsQuadratic(scip, cons) )
+      return SCIP_OKAY;
+
+   nquadvars = SCIPgetNQuadVarsQuadratic(scip, cons);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhsvars, nquadvars-1) );
+
+   if( !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
+   { /* try whether constraint on right hand side is SOC */
+      lhsconstant = -SCIPgetRhsQuadratic(scip, cons);
+
+      for( i = 0; i < nquadvars; ++i )
+      {
+         var  = SCIPgetQuadVarsQuadratic(scip, cons)[i];
+         sqrcoef = SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons)[i];
+         lincoef = SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons)[i];
+         
+         assert(sqrcoef != 0.0);
+            
+         if( sqrcoef > 0.0 )
+         {
+            if( lhscount >= nquadvars - 1 )
+            { /* too many variables on lhs, i.e., all variables seem to have positive coefficient */
+               rhsvar = NULL;
+               break;
+            }
+            
+            lhsvars[lhscount] = var;
+
+            if( sqrcoef != 1.0 )
+            {
+               if( !lhscoefs )
+               {
+                  SCIP_CALL( SCIPallocBufferArray(scip, &lhscoefs, nquadvars - 1) );
+                  for( j = 0; j < lhscount; ++j )
+                     lhscoefs[j] = 1.0;
+               }
+               lhscoefs[lhscount] = sqrt(sqrcoef);
+            }
+            else if( lhscoefs )
+               lhscoefs[lhscount] = 1.0;
+
+            if( lincoef != 0.0 )
+            {
+               if( !lhsoffsets )
+               {
+                  SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffsets, nquadvars - 1) );
+                  for( j = 0; j < lhscount; ++j )
+                     lhsoffsets[j] = 0.0;
+               }
+               lhsoffsets[lhscount] = lincoef / (2 * sqrcoef);
+               lhsconstant -= lincoef * lincoef / (4 * sqrcoef);
+            }
+            else if( lhsoffsets )
+               lhsoffsets[lhscount] = 0.0;
+
+            ++lhscount;
+         }
+         else if( rhsvar != NULL || SCIPisLT(scip, SCIPvarGetLbGlobal(var), lincoef / (2*sqrcoef)) )
+         { /* second variable with negative coefficient -> cannot be SOC */
+            /* or lower bound of variable does not ensure positivity of right hand side */
+            rhsvar = NULL;
+            break;
+         }
+         else
+         {
+            rhsvar       = var;
+            rhscoef      = sqrt(-sqrcoef);
+            rhsoffset    = lincoef / (2 * sqrcoef);
+            lhsconstant -= lincoef * lincoef / (4 * sqrcoef);
+         }
+      }
+   }
+   
+   if( rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
+      SCIPdebugMessage("found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
+  
+      SCIP_CALL( SCIPcreateConsSOC(scip, upgdconsrhs, SCIPconsGetName(cons),
+         lhscount, lhsvars, lhscoefs, lhsoffsets, lhsconstant,
+         rhsvar, rhscoef, rhsoffset,
+         SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+         SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+         SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+      SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconsrhs, NULL) ) );
+   }
+   else if( !SCIPisInfinity(scip, - SCIPgetLhsQuadratic(scip, cons)) )
+   { /* if the first failed, try if constraint on left hand side is SOC (using negated coefficients) */
+      SCIPfreeBufferArrayNull(scip, &lhscoefs);
+      SCIPfreeBufferArrayNull(scip, &lhsoffsets);
+      lhscount = 0;
+      rhsvar = NULL;
+      
+      lhsconstant = SCIPgetLhsQuadratic(scip, cons);
+
+      for (i = 0; i < nquadvars; ++i)
+      {
+         var  = SCIPgetQuadVarsQuadratic(scip, cons)[i];
+         sqrcoef = SCIPgetSqrCoefsQuadVarsQuadratic(scip, cons)[i];
+         lincoef = SCIPgetLinearCoefsQuadVarsQuadratic(scip, cons)[i];
+         
+         assert(sqrcoef != 0.0);
+         
+         if( sqrcoef < 0.0 )
+         {
+            if( lhscount >= nquadvars )
+            { /* too many variables on lhs, i.e., all variables seem to have negative coefficient */
+               rhsvar = NULL;
+               break;
+            }
+
+            lhsvars[lhscount] = var;
+
+            if( sqrcoef != -1.0 )
+            {
+               if( !lhscoefs )
+               {
+                  SCIP_CALL( SCIPallocBufferArray(scip, &lhscoefs, nquadvars - 1) );
+                  for( j = 0; j < lhscount; ++j )
+                     lhscoefs[j] = 1.0;
+               }
+               lhscoefs[lhscount] = sqrt(-sqrcoef);
+            }
+            else if( lhscoefs )
+               lhscoefs[lhscount] = 1.0;
+
+            if( lincoef != 0.0 )
+            {
+               if( !lhsoffsets )
+               {
+                  SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffsets, nquadvars - 1) );
+                  for( j = 0; j < lhscount; ++j )
+                     lhsoffsets[j] = 0.0;
+               }
+               lhsoffsets[lhscount] = lincoef / (2 * sqrcoef);
+               lhsconstant += lincoef * lincoef / (4 * sqrcoef);
+            }
+            else if( lhsoffsets )
+               lhsoffsets[lhscount] = 0.0;
+
+            ++lhscount;
+         }
+         else if( rhsvar || SCIPisLT(scip, SCIPvarGetLbGlobal(var), lincoef / (2*sqrcoef)) )
+         { /* second variable with positive coefficient -> cannot be SOC */
+            /* or lower bound of variable does not ensure positivity of right hand side */
+            rhsvar = NULL;
+            break;
+         }
+         else
+         {
+            rhsvar       = var;
+            rhscoef      = sqrt(sqrcoef);
+            rhsoffset    = lincoef / (2 * sqrcoef);
+            lhsconstant += lincoef * lincoef / (4 * sqrcoef);
+         }
+      }
+      
+      if (rhsvar && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant))
+      { /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax left hand side */
+         SCIPdebugMessage("found left hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
+     
+         SCIP_CALL( SCIPcreateConsSOC(scip, upgdconslhs, SCIPconsGetName(cons),
+            lhscount, lhsvars, lhscoefs, lhsoffsets, lhsconstant,
+            rhsvar, rhscoef, rhsoffset,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+         SCIPdebug( SCIP_CALL( SCIPprintCons(scip, *upgdconslhs, NULL) ) );
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &lhsvars);
+   SCIPfreeBufferArrayNull(scip, &lhscoefs);
+   SCIPfreeBufferArrayNull(scip, &lhsoffsets);
+   
+   return SCIP_OKAY;
+}
+#endif
+
+
 /*
  * Callback methods of constraint handler
  */
@@ -2785,6 +2793,21 @@ SCIP_RETCODE SCIPconsInitNlpiSOC(
    return SCIP_OKAY;
 }
 
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopySOC)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrSOC(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #if 1
 static
@@ -2809,12 +2832,21 @@ SCIP_DECL_CONSFREE(consFreeSOC)
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSINIT(consInitSOC)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of soc constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+#ifdef QUADCONSUPGD_PRIORITY
+   if( SCIPfindConshdlr(scip,"quadratic") != NULL )
+   {
+      /* notify function that upgrades quadratic constraint to SOC's */
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -3719,17 +3751,20 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    conshdlrdata->nlpheur   = NULL;
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a second order cone constraint",
-      NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, processVarEvent, NULL) );
    conshdlrdata->eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_boundchange");
 
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_newsolution", "handles the event that a new primal solution has been found",
-      NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, processNewSolutionEvent, NULL) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopySOC,
          consFreeSOC, consInitSOC, consExitSOC, 
          consInitpreSOC, consExitpreSOC, consInitsolSOC, consExitsolSOC,
          consDeleteSOC, consTransSOC, consInitlpSOC,
@@ -3751,11 +3786,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sparsify",     "whether to sparsify cuts",                                                                                      &conshdlrdata->sparsify,         FALSE, FALSE,         NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifymaxloss", "maximal loss in cut efficacy by sparsification",                                                             &conshdlrdata->sparsifymaxloss,  FALSE, 0.2, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifynzgrowth", "growth rate of maximal allowed nonzeros in cuts in sparsification",                                         &conshdlrdata->sparsifynzgrowth, FALSE, 1.3, 1.000001, SCIPinfinity(scip), NULL, NULL) );
-
-#ifdef QUADCONSUPGD_PRIORITY
-   /* notify function that upgrades quadratic constraint to SOC's */
-   SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, upgradeConsQuadratic, QUADCONSUPGD_PRIORITY, CONSHDLR_NAME) );
-#endif
 
    return SCIP_OKAY;
 }

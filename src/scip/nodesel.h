@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.h,v 1.51 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nodesel.h,v 1.52 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   nodesel.h
  * @brief  internal methods for node selectors and node priority queues
@@ -172,6 +172,13 @@ SCIP_RETCODE SCIPnodepqBound(
  * node selector methods 
  */
 
+/** copies the given node selector to a new scip */
+extern
+SCIP_RETCODE SCIPnodeselCopyInclude(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a node selector */
 extern
 SCIP_RETCODE SCIPnodeselCreate(
@@ -182,6 +189,7 @@ SCIP_RETCODE SCIPnodeselCreate(
    const char*           desc,               /**< description of node selector */
    int                   stdpriority,        /**< priority of the node selector in standard mode */
    int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy)),   /**< copy method of node selector or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */

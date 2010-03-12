@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog.h,v 1.23 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog.h,v 1.24 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   dialog.h
  * @brief  internal methods for user interface dialog
@@ -38,6 +38,13 @@ extern "C" {
 /*
  * dialog handler
  */
+
+/** copies the given dialog to a new scip */
+extern
+SCIP_RETCODE SCIPdialogCopyInclude(
+   SCIP_DIALOG*          dialog,             /**< dialog */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
 
 /** creates a dialog handler */
 extern
@@ -78,6 +85,7 @@ SCIP_RETCODE SCIPdialoghdlrSetRoot(
 extern
 SCIP_RETCODE SCIPdialogCreate(
    SCIP_DIALOG**         dialog,             /**< pointer to store the dialog */
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy)),    /**< copy method of dialog or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec)),    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc)),    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree)),    /**< destructor of dialog to free user data, or NULL */

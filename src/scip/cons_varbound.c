@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_varbound.c,v 1.89 2010/02/04 16:54:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_varbound.c,v 1.90 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   cons_varbound.c
  * @ingroup CONSHDLRS 
@@ -1058,19 +1058,115 @@ SCIP_RETCODE tightenCoefs(
    return SCIP_OKAY;
 }
 
+/*
+ * Linear constraint upgrading
+ */
 
+/** tries to upgrade a linear constraint into a variable bound constraint */
+static
+SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
+{  /*lint --e{715}*/
+   SCIP_Bool upgrade;
+
+   assert(upgdcons != NULL);
+   
+   /* check, if linear constraint can be upgraded to a variable bound constraint  lhs <= x + a*y <= rhs
+    * - there are exactly two variables
+    * - one of the variables is non-binary (called the bounded variable x)
+    * - one of the variables is non-continuous (called the bounding variable y)
+    */
+   upgrade = (nvars == 2) && (nposbin + nnegbin <= 1) && (nposcont + nnegcont <= 1);
+
+   if( upgrade )
+   {
+      SCIP_VAR* var;
+      SCIP_VAR* vbdvar;
+      SCIP_Real vbdcoef;
+      SCIP_Real vbdlhs;
+      SCIP_Real vbdrhs;
+      int vbdind;
+
+      SCIPdebugMessage("upgrading constraint <%s> to variable bound constraint\n", SCIPconsGetName(cons));
+
+      /* decide which variable we want to use as bounding variable y */
+      if( SCIPvarGetType(vars[0]) < SCIPvarGetType(vars[1]) )
+         vbdind = 0;
+      else if( SCIPvarGetType(vars[0]) > SCIPvarGetType(vars[1]) )
+         vbdind = 1;
+      else if( SCIPisIntegral(scip, vals[0]) && !SCIPisIntegral(scip, vals[1]) )
+         vbdind = 0;
+      else if( !SCIPisIntegral(scip, vals[0]) && SCIPisIntegral(scip, vals[1]) )
+         vbdind = 1;
+      else if( REALABS(REALABS(vals[0]) - 1.0) < REALABS(REALABS(vals[1]) - 1.0) )
+         vbdind = 0;
+      else
+         vbdind = 1;
+
+      var = vars[1-vbdind];
+      vbdvar = vars[vbdind];
+      vbdcoef = vals[vbdind]/vals[1-vbdind];
+      if( vals[1-vbdind] > 0.0 )
+      {
+         vbdlhs = SCIPisInfinity(scip, -lhs) ? -SCIPinfinity(scip) : lhs/vals[1-vbdind];
+         vbdrhs = SCIPisInfinity(scip, rhs) ? SCIPinfinity(scip) : rhs/vals[1-vbdind];
+      }
+      else
+      {
+         vbdlhs = SCIPisInfinity(scip, rhs) ? -SCIPinfinity(scip) : rhs/vals[1-vbdind];
+         vbdrhs = SCIPisInfinity(scip, -lhs) ? SCIPinfinity(scip) : lhs/vals[1-vbdind];
+      }
+
+      /* create the bin variable bound constraint (an automatically upgraded constraint is always unmodifiable) */
+      assert(!SCIPconsIsModifiable(cons));
+      SCIP_CALL( SCIPcreateConsVarbound(scip, upgdcons, SCIPconsGetName(cons), var, vbdvar, vbdcoef, vbdlhs, vbdrhs,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
+            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
+            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /*
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyVarbound)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #define consFreeVarbound NULL
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
-#define consInitVarbound NULL
+static 
+SCIP_DECL_CONSINIT(consInitVarbound)
+{  /*lint --e{715}*/
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+
+   if( SCIPfindConshdlr(scip,"linear") != NULL )
+   {
+      /* include the linear constraint to varbound constraint upgrade in the linear constraint handler */
+      SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdVarbound, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
@@ -1617,79 +1713,6 @@ SCIP_DECL_CONSCOPY(consCopyVarbound)
 
 
 /*
- * Linear constraint upgrading
- */
-
-/** tries to upgrade a linear constraint into a variable bound constraint */
-static
-SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
-{  /*lint --e{715}*/
-   SCIP_Bool upgrade;
-
-   assert(upgdcons != NULL);
-   
-   /* check, if linear constraint can be upgraded to a variable bound constraint  lhs <= x + a*y <= rhs
-    * - there are exactly two variables
-    * - one of the variables is non-binary (called the bounded variable x)
-    * - one of the variables is non-continuous (called the bounding variable y)
-    */
-   upgrade = (nvars == 2) && (nposbin + nnegbin <= 1) && (nposcont + nnegcont <= 1);
-
-   if( upgrade )
-   {
-      SCIP_VAR* var;
-      SCIP_VAR* vbdvar;
-      SCIP_Real vbdcoef;
-      SCIP_Real vbdlhs;
-      SCIP_Real vbdrhs;
-      int vbdind;
-
-      SCIPdebugMessage("upgrading constraint <%s> to variable bound constraint\n", SCIPconsGetName(cons));
-
-      /* decide which variable we want to use as bounding variable y */
-      if( SCIPvarGetType(vars[0]) < SCIPvarGetType(vars[1]) )
-         vbdind = 0;
-      else if( SCIPvarGetType(vars[0]) > SCIPvarGetType(vars[1]) )
-         vbdind = 1;
-      else if( SCIPisIntegral(scip, vals[0]) && !SCIPisIntegral(scip, vals[1]) )
-         vbdind = 0;
-      else if( !SCIPisIntegral(scip, vals[0]) && SCIPisIntegral(scip, vals[1]) )
-         vbdind = 1;
-      else if( REALABS(REALABS(vals[0]) - 1.0) < REALABS(REALABS(vals[1]) - 1.0) )
-         vbdind = 0;
-      else
-         vbdind = 1;
-
-      var = vars[1-vbdind];
-      vbdvar = vars[vbdind];
-      vbdcoef = vals[vbdind]/vals[1-vbdind];
-      if( vals[1-vbdind] > 0.0 )
-      {
-         vbdlhs = SCIPisInfinity(scip, -lhs) ? -SCIPinfinity(scip) : lhs/vals[1-vbdind];
-         vbdrhs = SCIPisInfinity(scip, rhs) ? SCIPinfinity(scip) : rhs/vals[1-vbdind];
-      }
-      else
-      {
-         vbdlhs = SCIPisInfinity(scip, rhs) ? -SCIPinfinity(scip) : rhs/vals[1-vbdind];
-         vbdrhs = SCIPisInfinity(scip, -lhs) ? SCIPinfinity(scip) : lhs/vals[1-vbdind];
-      }
-
-      /* create the bin variable bound constraint (an automatically upgraded constraint is always unmodifiable) */
-      assert(!SCIPconsIsModifiable(cons));
-      SCIP_CALL( SCIPcreateConsVarbound(scip, upgdcons, SCIPconsGetName(cons), var, vbdvar, vbdcoef, vbdlhs, vbdrhs,
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), 
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), 
-            SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons), 
-            SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
-   }
-
-   return SCIP_OKAY;
-}
-
-
-
-
-/*
  * Event Handler
  */
 
@@ -1731,6 +1754,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyVarbound,
          consFreeVarbound, consInitVarbound, consExitVarbound, 
          consInitpreVarbound, consExitpreVarbound, consInitsolVarbound, consExitsolVarbound,
          consDeleteVarbound, consTransVarbound, consInitlpVarbound,
@@ -1743,12 +1767,10 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecVarbound,
          eventhdlrdata) );
-
-   /* include the linear constraint upgrade in the linear constraint handler */
-   SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdVarbound, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
 
    return SCIP_OKAY;
 }

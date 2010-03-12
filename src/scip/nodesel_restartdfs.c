@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.33 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nodesel_restartdfs.c,v 1.34 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   nodesel_restartdfs.c
  * @ingroup NODESELECTORS
@@ -57,6 +57,20 @@ struct SCIP_NodeselData
 /*
  * Callback methods
  */
+
+/** copy method for node selector plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_NODESELCOPY(nodeselCopyRestartdfs)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(nodesel != NULL);
+   assert(strcmp(SCIPnodeselGetName(nodesel), NODESEL_NAME) == 0);
+
+   /* call inclusion method of node selector */
+   SCIP_CALL( SCIPincludeNodeselRestartdfs(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
 static
@@ -170,6 +184,7 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodesel(scip, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
+         nodeselCopyRestartdfs,
          nodeselFreeRestartdfs, nodeselInitRestartdfs, nodeselExitRestartdfs, 
          nodeselInitsolRestartdfs, nodeselExitsolRestartdfs, nodeselSelectRestartdfs, nodeselCompRestartdfs,
          nodeseldata) );

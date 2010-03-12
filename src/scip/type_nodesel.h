@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_nodesel.h,v 1.20 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_nodesel.h,v 1.21 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   type_nodesel.h
  * @ingroup TYPEDEFINITIONS
@@ -37,6 +37,15 @@ extern "C" {
 typedef struct SCIP_NodePQ SCIP_NODEPQ;           /**< node priority queue */
 typedef struct SCIP_Nodesel SCIP_NODESEL;         /**< node selector data structure */
 typedef struct SCIP_NodeselData SCIP_NODESELDATA; /**< node selector specific data */
+
+
+/** copy method for node selector plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - nodesel         : the node selector itself
+ */
+#define SCIP_DECL_NODESELCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_NODESEL* nodesel)
 
 
 /** destructor of node selector to free user data (called when SCIP is exiting)

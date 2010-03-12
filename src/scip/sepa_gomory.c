@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_gomory.c,v 1.82 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_gomory.c,v 1.83 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa_gomory.c
  * @ingroup SEPARATORS
@@ -194,6 +194,20 @@ SCIP_RETCODE storeCutInArrays(
 /*
  * Callback methods
  */
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyGomory)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaGomory(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
@@ -581,6 +595,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
+         sepaCopyGomory,
          sepaFreeGomory, sepaInitGomory, sepaExitGomory,
          sepaInitsolGomory, sepaExitsolGomory, 
          sepaExeclpGomory, sepaExecsolGomory,

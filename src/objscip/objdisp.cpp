@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objdisp.cpp,v 1.5 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objdisp.cpp,v 1.6 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objdisp.cpp
  * @brief  C++ wrapper for display column
@@ -48,6 +48,31 @@ struct SCIP_DispData
 
 extern "C"
 {
+
+/** copy method for display column plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_DISPCOPY(dispCopyObj)
+{  /*lint --e{715}*/
+   SCIP_DISPDATA* dispdata;
+   
+   assert(scip != NULL);
+   
+   dispdata = SCIPdispGetData(disp);
+   assert(dispdata != NULL);
+   assert(dispdata->objdisp != NULL);
+
+   if( dispdata->objdisp->iscloneable() )
+   {
+      scip::ObjDisp*  newobjdisp;
+      newobjdisp = (scip::ObjDisp*) dispdata->objdisp->clone();
+
+      /* call include method of display column object */
+      SCIP_CALL( SCIPincludeObjDisp(scip, newobjdisp, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of display column to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_DISPFREE(dispFreeObj)
@@ -173,6 +198,9 @@ SCIP_RETCODE SCIPincludeObjDisp(
 {
    SCIP_DISPDATA* dispdata;
 
+   assert(scip != NULL);
+   assert(objdisp != NULL);
+   
    /* create display column data */
    dispdata = new SCIP_DISPDATA;
    dispdata->objdisp = objdisp;
@@ -180,7 +208,9 @@ SCIP_RETCODE SCIPincludeObjDisp(
 
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, objdisp->scip_name_, objdisp->scip_desc_, 
-         objdisp->scip_header_, SCIP_DISPSTATUS_AUTO, dispFreeObj, dispInitObj, dispExitObj, dispInitsolObj, 
+         objdisp->scip_header_, SCIP_DISPSTATUS_AUTO,
+         dispCopyObj,
+         dispFreeObj, dispInitObj, dispExitObj, dispInitsolObj, 
          dispExitsolObj, dispOutputObj, dispdata, objdisp->scip_width_, objdisp->scip_priority_, objdisp->scip_position_, 
          objdisp->scip_stripline_) ); /*lint !e429*/
 

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_xxx.c,v 1.16 2010/01/04 20:35:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_xxx.c,v 1.17 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   prop_xxx.c
  * @ingroup PROPAGATORS
@@ -64,6 +64,21 @@ struct SCIP_PropData
  */
 
 /* TODO: Implement all necessary propagator methods. The methods with an #if 0 ... #else #define ... are optional */
+
+
+/** copy method for propagator plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_PROPCOPY(propCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx propagator not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+ 
+   return SCIP_OKAY;
+}
+#else
+#define propCopyXxx NULL
+#endif
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 #if 0
@@ -181,6 +196,7 @@ SCIP_RETCODE SCIPincludePropXxx(
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+         propCopyXxx,
          propFreeXxx, propInitXxx, propExitXxx, 
          propInitsolXxx, propExitsolXxx, propExecXxx, propRespropXxx,
          propdata) );

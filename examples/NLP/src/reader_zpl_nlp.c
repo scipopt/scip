@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_zpl_nlp.c,v 1.4 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_zpl_nlp.c,v 1.5 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   reader_zpl.c
  * @brief  ZIMPL model file reader
@@ -808,9 +808,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
  */
 
 /** includes the zpl file reader in SCIP */
-SCIP_RETCODE SCIPincludeReaderZpl(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
+SCIP_DECL_INCLUDEPLUGIN(SCIPincludeReaderZpl)
 {
 #ifdef WITH_ZIMPL
    SCIP_READERDATA* readerdata;
@@ -820,6 +818,7 @@ SCIP_RETCODE SCIPincludeReaderZpl(
    
    /* include zpl reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
+         SCIPincludeReaderZpl,
          readerFreeZpl, readerReadZpl, readerdata) );
 
    /* add zpl reader parameters */

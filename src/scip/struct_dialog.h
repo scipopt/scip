@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_dialog.h,v 1.19 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_dialog.h,v 1.20 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_dialog.h
  * @brief  datastructures for user interface dialog
@@ -35,6 +35,7 @@ extern "C" {
 /** user interface dialog */
 struct SCIP_Dialog
 {
+   SCIP_DECL_DIALOGCOPY  ((*dialogcopy));    /**< copy method of dialog or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_DIALOGEXEC  ((*dialogexec));    /**< execution method of dialog */
    SCIP_DECL_DIALOGDESC  ((*dialogdesc));    /**< description output method of dialog, or NULL */
    SCIP_DECL_DIALOGFREE  ((*dialogfree));    /**< destructor of dialog to free user data, or NULL */

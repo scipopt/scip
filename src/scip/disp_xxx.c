@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: disp_xxx.c,v 1.6 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: disp_xxx.c,v 1.7 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   disp_xxx.c
  * @ingroup DISPLAYS
@@ -67,6 +67,20 @@ struct SCIP_DispData
  */
 
 /* TODO: Implement all necessary display column methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for dialog plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_DISPCOPY(dispCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx display column not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+ 
+   return SCIP_OKAY;
+}
+#else
+#define dispCopyXxx NULL
+#endif
 
 /** destructor of display column to free user data (called when SCIP is exiting) */
 #if 0
@@ -176,6 +190,7 @@ SCIP_RETCODE SCIPincludeDispXxx(
 
    /* include display column */
    SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME, DISP_DESC, DISP_HEADER, SCIP_DISPSTATUS_AUTO, 
+         dispCopyXxx,
          dispFreeXxx, dispInitXxx, dispExitXxx, 
          dispInitsolXxx, dispExitsolXxx, dispOutputXxx, 
          dispdata, DISP_WIDTH, DISP_PRIORITY, DISP_POSITION, DISP_STRIPLINE) );

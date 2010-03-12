@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objreader.cpp,v 1.20 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objreader.cpp,v 1.21 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objreader.cpp
  * @brief  C++ wrapper for file readers
@@ -48,6 +48,31 @@ struct SCIP_ReaderData
 
 extern "C"
 {
+
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyObj)
+{  /*lint --e{715}*/
+   SCIP_READERDATA* readerdata;
+   
+   assert(scip != NULL);
+   
+   readerdata = SCIPreaderGetData(reader);
+   assert(readerdata != NULL);
+   assert(readerdata->objreader != NULL);
+
+   if( readerdata->objreader->iscloneable() )
+   {
+      scip::ObjReader*  newobjreader;
+      newobjreader = (scip::ObjReader*) readerdata->objreader->clone();
+
+      /* call include method of reader object */
+      SCIP_CALL( SCIPincludeObjReader(scip, newobjreader, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of file reader to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_READERFREE(readerFreeObj)
@@ -124,6 +149,9 @@ SCIP_RETCODE SCIPincludeObjReader(
 {
    SCIP_READERDATA* readerdata;
 
+   assert(scip != NULL);
+   assert(objreader != NULL);
+
    /* create file reader data */
    readerdata = new SCIP_READERDATA;
    readerdata->objreader = objreader;
@@ -131,6 +159,7 @@ SCIP_RETCODE SCIPincludeObjReader(
 
    /* include file reader */
    SCIP_CALL( SCIPincludeReader(scip, objreader->scip_name_, objreader->scip_desc_, objreader->scip_extension_,
+         readerCopyObj,
          readerFreeObj, readerReadObj, readerWriteObj, readerdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/

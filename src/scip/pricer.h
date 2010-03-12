@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer.h,v 1.28 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer.h,v 1.29 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   pricer.h
  * @brief  internal methods for variable pricers
@@ -40,6 +40,14 @@
 extern "C" {
 #endif
 
+
+/** copies the given pricer to a new scip */
+extern
+SCIP_RETCODE SCIPpricerCopyInclude(
+   SCIP_PRICER*          pricer,             /**< pricer */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a variable pricer */
 extern
 SCIP_RETCODE SCIPpricerCreate(
@@ -51,6 +59,7 @@ SCIP_RETCODE SCIPpricerCreate(
    int                   priority,           /**< priority of the variable pricer */
    SCIP_Bool             delay,              /**< should the pricer be delayed until no other pricers or already existing
                                               *   problem variables with negative reduced costs are found */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of pricer or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit)),    /**< deinitialize variable pricer */

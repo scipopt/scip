@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol.h,v 1.36 2010/01/04 20:35:45 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol.h,v 1.37 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   presol.h
  * @brief  internal methods for presolvers
@@ -37,6 +37,13 @@
 extern "C" {
 #endif
 
+/** copies the given presolver to a new scip */
+extern
+SCIP_RETCODE SCIPpresolCopyInclude(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a presolver */
 extern
 SCIP_RETCODE SCIPpresolCreate(
@@ -48,6 +55,7 @@ SCIP_RETCODE SCIPpresolCreate(
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
    SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
    SCIP_DECL_PRESOLEXIT  ((*presolexit)),    /**< deinitialization method of presolver (called before transformed problem is freed) */

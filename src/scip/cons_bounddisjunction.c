@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.27 2010/03/05 14:35:45 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_bounddisjunction.c,v 1.28 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   cons_bounddisjunction.c
  * @ingroup CONSHDLRS 
@@ -1086,6 +1086,20 @@ SCIP_RETCODE createNAryBranch(
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBounddisjunction)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeBounddisjunction)
@@ -1831,11 +1845,13 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
 
    /* create event handler for events on watched variables */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecBounddisjunction,
          NULL) );
 
    /* create conflict handler for bound disjunction constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, conflictExecBounddisjunction,
          NULL) );
 
@@ -1847,6 +1863,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyBounddisjunction,
          consFreeBounddisjunction, consInitBounddisjunction, consExitBounddisjunction, 
          consInitpreBounddisjunction, consExitpreBounddisjunction, consInitsolBounddisjunction, consExitsolBounddisjunction,
          consDeleteBounddisjunction, consTransBounddisjunction, 

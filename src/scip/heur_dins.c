@@ -23,6 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
@@ -358,6 +359,20 @@ SCIP_RETCODE createNewSol(
  * Callback methods of primal heuristic
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyDins)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurDins(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeDins)
@@ -547,7 +562,14 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* create the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+#ifndef NDEBUG
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+#endif
+
    SCIP_CALL( SCIPallocBufferArray( scip, &subvars, nvars ) ); 
    SCIP_CALL( SCIPcreateProb( subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL ) );
    
@@ -778,6 +800,7 @@ SCIP_RETCODE SCIPincludeHeurDins(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur( scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyDins,
          heurFreeDins, heurInitDins, heurExitDins, 
          heurInitsolDins, heurExitsolDins, heurExecDins,
          heurdata ) );

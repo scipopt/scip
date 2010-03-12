@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: set.c,v 1.211 2010/01/23 07:53:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: set.c,v 1.212 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   set.c
  * @brief  methods for global SCIP settings
@@ -38,6 +38,7 @@
 #include "scip/conflict.h"
 #include "scip/cons.h"
 #include "scip/disp.h"
+#include "scip/dialog.h"
 #include "scip/heur.h"
 #include "scip/nodesel.h"
 #include "scip/presol.h"
@@ -346,6 +347,206 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdDispWidth)
    return SCIP_OKAY;
 }
 
+/** copies plugins from sourcescip to targetscip */
+SCIP_RETCODE SCIPsetCopyPlugins(
+   SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
+   SCIP_SET*             targetset,          /**< target SCIP_SET data structure */
+   SCIP_Bool             copyreaders,        /**< should the file readers be copied */
+   SCIP_Bool             copypricers,        /**< should the variable pricers be copied */
+   SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
+   SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
+   SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
+   SCIP_Bool             copyrelaxators,     /**< should the relaxators be copied */
+   SCIP_Bool             copyseparators,     /**< should the separators be copied */
+   SCIP_Bool             copypropagators,    /**< should the propagators be copied */
+   SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
+   SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
+   SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
+   SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
+   SCIP_Bool             copydisplays,       /**< should the display columns be copied */
+   SCIP_Bool             copydialogs         /**< should the dialogs be copied */
+   )
+{
+   int p;
+
+   assert(sourceset != NULL);
+   assert(targetset != NULL);
+   assert(sourceset != targetset);
+   assert(sourceset->scip != NULL);
+   assert(targetset->scip != NULL);
+   assert(sourceset->scip != targetset->scip);
+
+   /* copy all reader plugins */
+   if( copyreaders )
+   {
+      if( sourceset->readers != NULL )
+      {
+         for( p = sourceset->nreaders - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPreaderCopyInclude(sourceset->readers[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all variable pricer plugins */
+   if( copypricers )
+   {
+      if( sourceset->pricers != NULL )
+      {
+         for( p = sourceset->npricers - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPpricerCopyInclude(sourceset->pricers[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all constraint handler plugins */
+   if( copyconshdlrs )
+   {
+      if( sourceset->conshdlrs != NULL )
+      {
+         for( p = sourceset->nconshdlrs - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all conflict handler plugins */
+   if( copyconflicthdlrs )
+   {
+      if( sourceset->conflicthdlrs != NULL )
+      {
+         for( p = sourceset->nconflicthdlrs - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPconflicthdlrCopyInclude(sourceset->conflicthdlrs[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all presolver plugins */
+   if( copypresolvers )
+   {
+      if( sourceset->presols != NULL )
+      {
+         for( p = sourceset->npresols - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPpresolCopyInclude(sourceset->presols[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all relaxator plugins */
+   if( copyrelaxators )
+   {
+      if( sourceset->relaxs != NULL )
+      {
+         for( p = sourceset->nrelaxs - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPrelaxCopyInclude(sourceset->relaxs[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all separator plugins */
+   if( copyseparators )
+   {
+      if( sourceset->sepas != NULL )
+      {
+         for( p = sourceset->nsepas - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPsepaCopyInclude(sourceset->sepas[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all propagators plugins */
+   if( copypropagators )
+   {
+      if( sourceset->props != NULL )
+      {
+         for( p = sourceset->nprops - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPpropCopyInclude(sourceset->props[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all primal heuristics plugins */
+   if( copyheuristics )
+   {
+      if( sourceset->heurs != NULL )
+      {
+         for( p = sourceset->nheurs - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPheurCopyInclude(sourceset->heurs[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all event handler plugins */
+   if( copyeventhdlrs )
+   {
+      if( sourceset->eventhdlrs != NULL )
+      {
+         for( p = sourceset->neventhdlrs - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPeventhdlrCopyInclude(sourceset->eventhdlrs[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all node selector plugins */
+   if( copynodeselectors )
+   {
+      if( sourceset->nodesels != NULL )
+      {
+         for( p = sourceset->nnodesels - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPnodeselCopyInclude(sourceset->nodesels[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all branchrule plugins */
+   if( copybranchrules )
+   {
+      if( sourceset->branchrules != NULL )
+      {
+         for( p = sourceset->nbranchrules - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPbranchruleCopyInclude(sourceset->branchrules[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all display plugins */
+   if( copydisplays )
+   {
+      if( sourceset->disps != NULL )
+      {
+         for( p = sourceset->ndisps - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPdispCopyInclude(sourceset->disps[p], targetset) );
+         }
+      }
+   }
+
+   /* copy all dialog plugins */
+   if( copydialogs )
+   {
+      if( sourceset->dialogs != NULL )
+      {
+         for( p = sourceset->ndialogs - 1; p >= 0; --p )
+         {
+            SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates global SCIP settings */
 SCIP_RETCODE SCIPsetCreate(
    SCIP_SET**            set,                /**< pointer to SCIP settings */
@@ -415,6 +616,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->disps = NULL;
    (*set)->ndisps = 0;
    (*set)->dispssize = 0;
+   (*set)->dialogs = NULL;
+   (*set)->ndialogs = 0;
+   (*set)->dialogssize = 0;
    (*set)->vbc_filename = NULL;
 
    /* branching parameters */
@@ -1193,6 +1397,9 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPdispFree(&(*set)->disps[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->disps);
+
+   /* free dialogs */
+   BMSfreeMemoryArrayNull(&(*set)->dialogs);
 
    BMSfreeMemory(set);
 
@@ -2313,7 +2520,7 @@ SCIP_RETCODE SCIPsetIncludeDisp(
 /** returns the display column of the given name, or NULL if not existing */
 SCIP_DISP* SCIPsetFindDisp(
    SCIP_SET*             set,                /**< global SCIP settings */
-   const char*           name                /**< name of event handler */
+   const char*           name                /**< name of display */
    )
 {
    int i;
@@ -2328,6 +2535,50 @@ SCIP_DISP* SCIPsetFindDisp(
    }
 
    return NULL;
+}
+
+/** inserts dialog in dialog list */
+SCIP_RETCODE SCIPsetIncludeDialog(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOG*          dialog              /**< dialog */
+   )
+{
+   assert(set != NULL);
+   assert(dialog != NULL);
+
+   if( set->ndialogs >= set->dialogssize )
+   {
+      set->dialogssize = SCIPsetCalcMemGrowSize(set, set->ndialogs+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->dialogs, set->dialogssize) );
+   }
+   assert(set->ndialogs < set->dialogssize);
+
+   set->dialogs[set->ndialogs] = dialog;
+   set->ndialogs++;
+
+   return SCIP_OKAY;
+}
+
+/** returns if the dialog already exists */
+SCIP_Bool SCIPsetExistsDialog(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIALOG*          dialog              /**< dialog */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+
+   if( dialog == NULL )
+      return FALSE;
+
+   for( i = 0; i < set->ndialogs; ++i )
+   {
+      if( set->dialogs[i] == dialog )
+         return TRUE;
+   }
+
+   return FALSE;
 }
 
 /** calls init methods of all plugins */

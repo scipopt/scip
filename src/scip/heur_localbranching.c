@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_localbranching.c,v 1.37 2010/01/23 07:53:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: heur_localbranching.c,v 1.38 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   heur_localbranching.c
  * @ingroup PRIMALHEURISTICS
@@ -23,6 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 #include "scip/scip.h"
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
@@ -276,6 +277,20 @@ SCIP_RETCODE createNewSol(
  * Callback methods of primal heuristic
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyLocalbranching)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeLocalbranching)
@@ -439,7 +454,13 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* initializing the subproblem */  
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
-   SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+#ifndef NDEBUG
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+#else
+   SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+#endif
  
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -638,6 +659,7 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING,
+         heurCopyLocalbranching,
          heurFreeLocalbranching, heurInitLocalbranching, heurExitLocalbranching, 
          heurInitsolLocalbranching, heurExitsolLocalbranching, heurExecLocalbranching,
          heurdata) );

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_indicator.c,v 1.52 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_indicator.c,v 1.53 2010/03/12 14:54:27 bzfwinkm Exp $"
 /* #define SCIP_DEBUG */
 /* #define SCIP_OUTPUT */
 /* #define SCIP_ENABLE_IISCHECK */
@@ -2059,6 +2059,20 @@ SCIP_RETCODE separateIISRounding(
 
 /* ---------------------------- constraint handler callback methods ----------------------*/
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyIndicator)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrIndicator(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeIndicator)
@@ -3167,7 +3181,8 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-			 NULL, NULL, NULL, NULL, NULL, NULL, eventExecIndicator, NULL) );
+         NULL,
+         NULL, NULL, NULL, NULL, NULL, NULL, eventExecIndicator, NULL) );
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
@@ -3204,6 +3219,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyIndicator,
          consFreeIndicator, consInitIndicator, consExitIndicator,
          consInitpreIndicator, consExitpreIndicator, consInitsolIndicator, consExitsolIndicator,
          consDeleteIndicator, consTransIndicator, consInitlpIndicator, consSepalpIndicator,

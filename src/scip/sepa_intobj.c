@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_intobj.c,v 1.34 2010/01/04 20:35:48 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_intobj.c,v 1.35 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa_intobj.c
  * @ingroup SEPARATORS
@@ -23,6 +23,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/sepa_intobj.h"
 
@@ -248,6 +249,20 @@ SCIP_RETCODE separateCuts(
  * Callback methods of separator
  */
 
+/** copy method for separator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_SEPACOPY(sepaCopyIntobj)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeSepaIntobj(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of separator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_SEPAFREE(sepaFreeIntobj)
@@ -433,6 +448,7 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
+         sepaCopyIntobj,
          sepaFreeIntobj, sepaInitIntobj, sepaExitIntobj, 
          sepaInitsolIntobj, sepaExitsolIntobj, 
          sepaExeclpIntobj, sepaExecsolIntobj,
@@ -441,6 +457,7 @@ SCIP_RETCODE SCIPincludeSepaIntobj(
    /* include event handler for objective change events */
    eventhdlrdata = (SCIP_EVENTHDLRDATA*)sepadata;
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+         NULL,
          eventFreeIntobj, eventInitIntobj, eventExitIntobj, 
          eventInitsolIntobj, eventExitsolIntobj, eventDeleteIntobj, eventExecIntobj,
          eventhdlrdata) );

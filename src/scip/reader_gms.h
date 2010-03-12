@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_gms.h,v 1.4 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_gms.h,v 1.5 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_gms.h
  * @brief  GAMS file reader
@@ -34,9 +34,8 @@ extern "C" {
 /** includes the gms file reader into SCIP */
 extern
 SCIP_RETCODE SCIPincludeReaderGms(
-   SCIP*              scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
-
 
 /* writes problem to file */
 extern

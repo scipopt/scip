@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.36 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: branch_allfullstrong.c,v 1.37 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   branch_allfullstrong.c
  * @ingroup BRANCHINGRULES
@@ -351,6 +351,20 @@ SCIP_RETCODE branch(
  * Callback methods
  */
 
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyAllfullstrong)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
+   
+   return SCIP_OKAY;
+}
+
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_BRANCHFREE(branchFreeAllfullstrong)
@@ -451,6 +465,7 @@ SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    /* include allfullstrong branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
+         branchCopyAllfullstrong,
          branchFreeAllfullstrong, branchInitAllfullstrong, branchExitAllfullstrong, 
          branchInitsolAllfullstrong, branchExitsolAllfullstrong, 
          branchExeclpAllfullstrong,  branchExecrelAllfullstrong, branchExecpsAllfullstrong,

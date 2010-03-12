@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: conflict.h,v 1.43 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: conflict.h,v 1.44 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   conflict.h
  * @brief  internal methods for conflict analysis
@@ -45,6 +45,13 @@ extern "C" {
  * Conflict Handler
  */
 
+/** copies the given conflict handler to a new scip */
+extern
+SCIP_RETCODE SCIPconflicthdlrCopyInclude(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a conflict handler */
 extern
 SCIP_RETCODE SCIPconflicthdlrCreate(
@@ -54,6 +61,7 @@ SCIP_RETCODE SCIPconflicthdlrCreate(
    const char*           name,               /**< name of conflict handler */
    const char*           desc,               /**< description of conflict handler */
    int                   priority,           /**< priority of the conflict handler */
+   SCIP_DECL_CONFLICTCOPY((*conflictcopy)),  /**< copy method of conflict handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_CONFLICTFREE((*conflictfree)),  /**< destructor of conflict handler */
    SCIP_DECL_CONFLICTINIT((*conflictinit)),  /**< initialize conflict handler */
    SCIP_DECL_CONFLICTEXIT((*conflictexit)),  /**< deinitialize conflict handler */

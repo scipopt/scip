@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_trysol.c,v 1.6 2010/01/04 20:35:41 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur_trysol.c,v 1.7 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   heur_trysol.c
  * @ingroup PRIMALHEURISTICS
@@ -58,10 +58,23 @@ struct SCIP_HeurData
  * Callback methods of primal heuristic
  */
 
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_HEURCOPY(heurCopyTrySol)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(heur != NULL);
+   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeHeurTrySol(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_HEURFREE(heurFreeTrysol)
+SCIP_DECL_HEURFREE(heurFreeTrySol)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -83,7 +96,7 @@ SCIP_DECL_HEURFREE(heurFreeTrysol)
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
-SCIP_DECL_HEUREXITSOL(heurExitsolTrysol)
+SCIP_DECL_HEUREXITSOL(heurExitsolTrySol)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
@@ -107,7 +120,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolTrysol)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecTrysol)
+SCIP_DECL_HEUREXEC(heurExecTrySol)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_Bool stored;
@@ -141,9 +154,9 @@ SCIP_DECL_HEUREXEC(heurExecTrysol)
 }
 
 
-#define heurInitTrysol NULL
-#define heurExitTrysol NULL
-#define heurInitsolTrysol NULL
+#define heurInitTrySol NULL
+#define heurExitTrySol NULL
+#define heurInitsolTrySol NULL
 
 
 /*
@@ -163,8 +176,11 @@ SCIP_RETCODE SCIPincludeHeurTrySol(
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, heurFreeTrysol, heurInitTrysol, heurExitTrysol,
-         heurInitsolTrysol, heurExitsolTrysol, heurExecTrysol, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, 
+         heurCopyTrySol,
+         heurFreeTrySol, heurInitTrySol, heurExitTrySol,
+         heurInitsolTrySol, heurExitsolTrySol, heurExecTrySol,
+         heurdata) );
 
    return SCIP_OKAY;
 }

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objsepa.h,v 1.32 2010/01/04 20:35:36 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objsepa.h,v 1.33 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objsepa.h
  * @brief  C++ wrapper for cut separators
@@ -27,12 +27,13 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
 /** C++ wrapper object for cut separators */
-class ObjSepa
+class ObjSepa : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

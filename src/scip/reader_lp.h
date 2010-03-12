@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_lp.h,v 1.10 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_lp.h,v 1.11 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_lp.h
  * @brief  LP file reader
@@ -37,7 +37,6 @@ SCIP_RETCODE SCIPincludeReaderLp(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-
 /* reads problem from file */
 extern
 SCIP_RETCODE SCIPreadLp(
@@ -46,7 +45,6 @@ SCIP_RETCODE SCIPreadLp(
    const char*        filename,           /**< full path and name of file to read, or NULL if stdin should be used */
    SCIP_RESULT*       result              /**< pointer to store the result of the file reading call */
    );
-
 
 /* writes problem to file */
 extern

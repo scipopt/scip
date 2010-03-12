@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_pricer.h,v 1.20 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_pricer.h,v 1.21 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_pricer.h
  * @brief  datastructures for variable pricers
@@ -38,6 +38,7 @@ struct SCIP_Pricer
 {
    char*                 name;               /**< name of variable pricer */
    char*                 desc;               /**< description of variable pricer */
+   SCIP_DECL_PRICERCOPY  ((*pricercopy));    /**< copy method of pricer or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_PRICERFREE  ((*pricerfree));    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit));    /**< initialize variable pricer */
    SCIP_DECL_PRICEREXIT  ((*pricerexit));    /**< deinitialize variable pricer */

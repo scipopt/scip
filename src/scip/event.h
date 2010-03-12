@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: event.h,v 1.49 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: event.h,v 1.50 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   event.h
  * @brief  internal methods for managing events
@@ -47,12 +47,20 @@ extern "C" {
  * Event handler methods
  */
 
+/** copies the given event handler to a new scip */
+extern
+SCIP_RETCODE SCIPeventhdlrCopyInclude(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates an event handler */
 extern
 SCIP_RETCODE SCIPeventhdlrCreate(
    SCIP_EVENTHDLR**      eventhdlr,          /**< pointer to event handler data structure */
    const char*           name,               /**< name of event handler */
    const char*           desc,               /**< description of event handler */
+   SCIP_DECL_EVENTCOPY   ((*eventcopy)),     /**< copy method of event handler or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_EVENTFREE   ((*eventfree)),     /**< destructor of event handler */
    SCIP_DECL_EVENTINIT   ((*eventinit)),     /**< initialize event handler */
    SCIP_DECL_EVENTEXIT   ((*eventexit)),     /**< deinitialize event handler */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_relpscost.c,v 1.61 2010/02/11 16:50:51 bzfviger Exp $"
+#pragma ident "@(#) $Id: branch_relpscost.c,v 1.62 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   branch_relpscost.c
  * @ingroup BRANCHINGRULES
@@ -754,6 +754,20 @@ SCIP_RETCODE execRelpscost(
  * Callback methods
  */
 
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyRelpscost)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
@@ -839,6 +853,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY, 
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST,
+         branchCopyRelpscost,
          branchFreeRelpscost, branchInitRelpscost, branchExitRelpscost, branchInitsolRelpscost, branchExitsolRelpscost, 
          branchExeclpRelpscost, branchExecrelRelpscost, branchExecpsRelpscost,
          branchruledata) );

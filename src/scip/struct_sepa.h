@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_sepa.h,v 1.24 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_sepa.h,v 1.25 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   struct_sepa.h
  * @brief  datastructures for separators
@@ -46,6 +46,7 @@ struct SCIP_Sepa
                                               *   to best node's dual bound for applying separation */
    char*                 name;               /**< name of separator */
    char*                 desc;               /**< description of separator */
+   SCIP_DECL_SEPACOPY    ((*sepacopy));      /**< copy method of separator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_SEPAFREE    ((*sepafree));      /**< destructor of separator */
    SCIP_DECL_SEPAINIT    ((*sepainit));      /**< initialize separator */
    SCIP_DECL_SEPAEXIT    ((*sepaexit));      /**< deinitialize separator */

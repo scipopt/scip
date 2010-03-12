@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_soc.h,v 1.5 2010/01/04 20:35:38 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_soc.h,v 1.6 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   cons_soc.h
  * @brief  constraint handler for second order cone constraints
@@ -39,7 +39,7 @@
 extern "C" {
 #endif
 
-/** creates the handler for soc constraints and includes it in SCIP */
+/** creates the handler for second order cone constraints and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP*                 scip                /**< SCIP data structure */

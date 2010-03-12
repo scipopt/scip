@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.25 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objbranchrule.cpp,v 1.26 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   objbranchrule.cpp
  * @brief  C++ wrapper for branching rules
@@ -48,6 +48,31 @@ struct SCIP_BranchruleData
 
 extern "C"
 {
+
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyObj)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+   
+   assert(scip != NULL);
+   
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert(branchruledata->objbranchrule != NULL);
+
+   if( branchruledata->objbranchrule->iscloneable() )
+   {
+      scip::ObjBranchrule*  newobjbranchrule;
+      newobjbranchrule = (scip::ObjBranchrule*) branchruledata->objbranchrule->clone();
+
+      /* call include method of branchrule object */
+      SCIP_CALL( SCIPincludeObjBranchrule(scip, newobjbranchrule, TRUE) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_BRANCHFREE(branchFreeObj)
@@ -207,6 +232,9 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
 {
    SCIP_BRANCHRULEDATA* branchruledata;
 
+   assert(scip != NULL);
+   assert(objbranchrule != NULL);
+
    /* create branching rule data */
    branchruledata = new SCIP_BRANCHRULEDATA;
    branchruledata->objbranchrule = objbranchrule;
@@ -215,12 +243,14 @@ SCIP_RETCODE SCIPincludeObjBranchrule(
    /* include branching rule */
    SCIP_CALL( SCIPincludeBranchrule(scip, objbranchrule->scip_name_, objbranchrule->scip_desc_, 
          objbranchrule->scip_priority_, objbranchrule->scip_maxdepth_, objbranchrule->scip_maxbounddist_,
+         branchCopyObj,
          branchFreeObj, branchInitObj, branchExitObj, branchInitsolObj, branchExitsolObj,
          branchExeclpObj, branchExecrelObj, branchExecpsObj,
          branchruledata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }
+
 
 /** returns the branchrule object of the given name, or 0 if not existing */
 scip::ObjBranchrule* SCIPfindObjBranchrule(

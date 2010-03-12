@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax_xxx.c,v 1.14 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: relax_xxx.c,v 1.15 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   relax_xxx.c
  * @ingroup RELAXATORS
@@ -63,6 +63,20 @@ struct SCIP_RelaxData
  */
 
 /* TODO: Implement all necessary relaxator methods. The methods with an #if 0 ... #else #define ... are optional */
+
+/** copy method for relaxator plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_RELAXCOPY(relaxCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx relaxator not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define relaxCopyXxx NULL
+#endif
 
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
 #if 0
@@ -169,8 +183,10 @@ SCIP_RETCODE SCIPincludeRelaxXxx(
    /* TODO: (optional) create relaxator specific data here */
 
    /* include relaxator */
-   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, relaxFreeXxx, relaxInitXxx, 
-         relaxExitXxx, relaxInitsolXxx, relaxExitsolXxx, relaxExecXxx, relaxdata) );
+   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, 
+         relaxCopyXxx,
+         relaxFreeXxx, relaxInitXxx, relaxExitXxx, relaxInitsolXxx, relaxExitsolXxx, relaxExecXxx,
+         relaxdata) );
 
    /* add xxx relaxator parameters */
    /* TODO: (optional) add relaxator specific parameters with SCIPaddTypeParam() here */

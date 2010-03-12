@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: objheur.h,v 1.35 2010/01/04 20:35:35 bzfheinz Exp $"
+#pragma ident "@(#) $Id: objheur.h,v 1.36 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   objheur.h
  * @brief  C++ wrapper for primal heuristics
@@ -27,12 +27,13 @@
 #include <cstring>
 
 #include "scip/scip.h"
+#include "objscip/objcloneable.h"
 
 namespace scip
 {
 
 /** C++ wrapper object for primal heuristics */
-class ObjHeur
+class ObjHeur : public ObjCloneable
 {
 public:
    /*lint --e{1540}*/

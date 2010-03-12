@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: type_presol.h,v 1.21 2010/01/04 20:35:51 bzfheinz Exp $"
+#pragma ident "@(#) $Id: type_presol.h,v 1.22 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   type_presol.h
  * @ingroup TYPEDEFINITIONS
@@ -37,6 +37,14 @@ extern "C" {
 typedef struct SCIP_Presol SCIP_PRESOL;           /**< presolver data structure */
 typedef struct SCIP_PresolData SCIP_PRESOLDATA;   /**< presolver specific data */
 
+
+/** copy method for presolver plugins (called when SCIP copies plugins)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - presol          : the presolver itself
+ */
+#define SCIP_DECL_PRESOLCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_PRESOL* presol)
 
 /** destructor of presolver to free user data (called when SCIP is exiting)
  *

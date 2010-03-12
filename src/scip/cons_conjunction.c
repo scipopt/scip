@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_conjunction.c,v 1.39 2010/01/04 20:35:37 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_conjunction.c,v 1.40 2010/03/12 14:54:27 bzfwinkm Exp $"
 
 /**@file   cons_conjunction.c
  * @ingroup CONSHDLRS 
@@ -250,6 +250,10 @@ SCIP_RETCODE checkAllConss(
 /*
  * Callback methods of constraint handler
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+#define conshdlrCopyConjunction NULL
+
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #define consFreeConjunction NULL
@@ -533,6 +537,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS, 
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyConjunction,
          consFreeConjunction, consInitConjunction, consExitConjunction, 
          consInitpreConjunction, consExitpreConjunction, consInitsolConjunction, consExitsolConjunction,
          consDeleteConjunction, consTransConjunction, consInitlpConjunction,

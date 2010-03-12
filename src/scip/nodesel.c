@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: nodesel.c,v 1.62 2010/01/04 20:35:44 bzfheinz Exp $"
+#pragma ident "@(#) $Id: nodesel.c,v 1.63 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   nodesel.c
  * @brief  methods for node selectors
@@ -677,6 +677,24 @@ SCIP_DECL_PARAMCHGD(paramChgdNodeselMemsavePriority)
    return SCIP_OKAY;
 }
 
+/** copies the given node selector to a new scip */
+SCIP_RETCODE SCIPnodeselCopyInclude(
+   SCIP_NODESEL*         nodesel,            /**< node selector */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(nodesel != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( nodesel->nodeselcopy != NULL )
+   {
+      SCIPdebugMessage("including node selector %s in subscip %p\n", SCIPnodeselGetName(nodesel), set->scip);
+      SCIP_CALL( nodesel->nodeselcopy(set->scip, nodesel) );
+   }
+   return SCIP_OKAY;
+}
+
 /** creates a node selector */
 SCIP_RETCODE SCIPnodeselCreate(
    SCIP_NODESEL**        nodesel,            /**< pointer to store node selector */
@@ -686,6 +704,7 @@ SCIP_RETCODE SCIPnodeselCreate(
    const char*           desc,               /**< description of node selector */
    int                   stdpriority,        /**< priority of the node selector in standard mode */
    int                   memsavepriority,    /**< priority of the node selector in memory saving mode */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy)),   /**< copy method of node selector or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_NODESELFREE ((*nodeselfree)),   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit)),   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit)),   /**< deinitialize node selector */
@@ -710,6 +729,7 @@ SCIP_RETCODE SCIPnodeselCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*nodesel)->desc, desc, strlen(desc)+1) );
    (*nodesel)->stdpriority = stdpriority;
    (*nodesel)->memsavepriority = memsavepriority;
+   (*nodesel)->nodeselcopy = nodeselcopy;
    (*nodesel)->nodeselfree = nodeselfree;
    (*nodesel)->nodeselinit = nodeselinit;
    (*nodesel)->nodeselexit = nodeselexit;

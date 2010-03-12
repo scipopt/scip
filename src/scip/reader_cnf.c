@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: reader_cnf.c,v 1.50 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: reader_cnf.c,v 1.51 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   reader_cnf.c
  * @ingroup FILEREADERS 
@@ -347,6 +347,21 @@ SCIP_RETCODE readCnf(
  * Callback methods
  */
 
+/** copy method for reader plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_READERCOPY(readerCopyCnf)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(reader != NULL);
+   assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
+
+   /* call inclusion method of reader */
+   SCIP_CALL( SCIPincludeReaderCnf(scip) );
+ 
+   return SCIP_OKAY;
+}
+
+
 /** destructor of reader to free user data (called when SCIP is exiting) */
 #define readerFreeCnf NULL
 
@@ -407,7 +422,9 @@ SCIP_RETCODE SCIPincludeReaderCnf(
 
    /* include cnf reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,
-         readerFreeCnf, readerReadCnf, readerWriteCnf, readerdata) );
+         readerCopyCnf,
+         readerFreeCnf, readerReadCnf, readerWriteCnf, 
+         readerdata) );
 
    /* add cnf reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,

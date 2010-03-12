@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_nodesel.h,v 1.19 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_nodesel.h,v 1.20 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_nodesel.h
  * @brief  datastructures for node selectors and node priority queues
@@ -53,6 +53,7 @@ struct SCIP_Nodesel
 {
    char*                 name;               /**< name of node selector */
    char*                 desc;               /**< description of node selector */
+   SCIP_DECL_NODESELCOPY ((*nodeselcopy));   /**< copy method of node selector or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_NODESELFREE ((*nodeselfree));   /**< destructor of node selector */
    SCIP_DECL_NODESELINIT ((*nodeselinit));   /**< initialize node selector */
    SCIP_DECL_NODESELEXIT ((*nodeselexit));   /**< deinitialize node selector */

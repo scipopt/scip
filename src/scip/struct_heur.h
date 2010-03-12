@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_heur.h,v 1.25 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_heur.h,v 1.26 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   struct_heur.h
  * @brief  datastructures for primal heuristics
@@ -41,6 +41,7 @@ struct SCIP_Heur
    SCIP_Longint          nbestsolsfound;     /**< number of new best primal CIP solutions found so far by this heuristic */
    char*                 name;               /**< name of primal heuristic */
    char*                 desc;               /**< description of primal heuristic */
+   SCIP_DECL_HEURCOPY    ((*heurcopy));      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_HEURFREE    ((*heurfree));      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit));      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit));      /**< deinitialize primal heuristic */

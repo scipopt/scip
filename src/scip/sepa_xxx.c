@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: sepa_xxx.c,v 1.23 2010/01/04 20:35:49 bzfheinz Exp $"
+#pragma ident "@(#) $Id: sepa_xxx.c,v 1.24 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   sepa_xxx.c
  * @ingroup SEPARATORS
@@ -65,6 +65,21 @@ struct SCIP_SepaData
  */
 
 /* TODO: Implement all necessary separator methods. The methods with an #if 0 ... #else #define ... are optional */
+
+
+/** copy method for separator plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_SEPACOPY(sepaCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx separator not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define sepaCopyXxx NULL
+#endif
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
 #if 0
@@ -190,6 +205,7 @@ SCIP_RETCODE SCIPincludeSepaXxx(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepa(scip, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST, SEPA_DELAY,
+         sepaCopyXxx,
          sepaFreeXxx, sepaInitXxx, sepaExitXxx, 
          sepaInitsolXxx, sepaExitsolXxx,
          sepaExeclpXxx, sepaExecsolXxx,

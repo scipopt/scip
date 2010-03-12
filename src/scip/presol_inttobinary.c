@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.12 2010/03/10 11:18:53 bzfheinz Exp $"
+#pragma ident "@(#) $Id: presol_inttobinary.c,v 1.13 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   presol_inttobinary.c
  * @ingroup PRESOLVERS
@@ -40,6 +40,21 @@
 /*
  * Callback methods of presolver
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRESOLCOPY(presolCopyInttobinary)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(presol != NULL);
+   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
+
+   /* call inclusion method of presolver */
+   SCIP_CALL( SCIPincludePresolInttobinary(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 #define presolFreeInttobinary NULL
@@ -160,6 +175,7 @@ SCIP_RETCODE SCIPincludePresolInttobinary(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresol(scip, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+         presolCopyInttobinary,
          presolFreeInttobinary, presolInitInttobinary, presolExitInttobinary, 
          presolInitpreInttobinary, presolExitpreInttobinary, presolExecInttobinary,
          presoldata) );

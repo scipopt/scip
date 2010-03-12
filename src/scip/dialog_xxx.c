@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: dialog_xxx.c,v 1.5 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: dialog_xxx.c,v 1.6 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   dialog_xxx.c
  * @ingroup DIALOGS
@@ -63,6 +63,21 @@ struct SCIP_DialogData
 
 /* TODO: Implement all necessary dialog methods. The methods with an #if 0 ... #else #define ... are optional */
 
+
+/** copy method for dialog plugins (called when SCIP copies plugins) */
+#if 0
+static
+SCIP_DECL_DIALOGCOPY(dialogCopyXxx)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xxx dialog not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define dialogCopyXxx NULL
+#endif
+
 /** destructor of dialog to free user data (called when the dialog is not captured anymore) */
 #if 0
 static
@@ -111,9 +126,7 @@ SCIP_DECL_DIALOGEXEC(dialogExecXxx)
  */
 
 /** creates the xxx dialog and includes it in SCIP */
-SCIP_RETCODE SCIPincludeDialogXxx(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
+SCIP_DECL_INCLUDEPLUGIN(SCIPincludeDialogXxx)
 {
    SCIP_DIALOGDATA* dialogdata;
    SCIP_DIALOG* dialog;
@@ -131,7 +144,9 @@ SCIP_RETCODE SCIPincludeDialogXxx(
    /* create, include, and release dialog */
    if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
    {
-      SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecXxx, dialogDescXxx, dialogFreeXxx,
+      SCIP_CALL( SCIPcreateDialog(scip, &dialog, 
+            SCIPincludeDialogXxx,
+            dialogExecXxx, dialogDescXxx, dialogFreeXxx,
             DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
       SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );

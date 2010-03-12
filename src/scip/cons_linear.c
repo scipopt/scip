@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linear.c,v 1.348 2010/01/23 07:53:52 bzfberth Exp $"
+#pragma ident "@(#) $Id: cons_linear.c,v 1.349 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   cons_linear.c
  * @ingroup CONSHDLRS 
@@ -326,6 +326,7 @@ SCIP_RETCODE conshdlrdataEnsureLinconsupgradesSize(
    int                   num                 /**< minimum number of entries to store */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->nlinconsupgrades <= conshdlrdata->linconsupgradessize);
 
@@ -350,6 +351,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
    int                   num                 /**< minimum number of entries to store */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(consdata->nvars <= consdata->varssize);
 
@@ -387,6 +389,7 @@ SCIP_RETCODE linconsupgradeCreate(
    int                   priority            /**< priority of upgrading method */
    )
 {
+   assert(scip != NULL);
    assert(linconsupgrade != NULL);
    assert(linconsupgd != NULL);
 
@@ -405,6 +408,7 @@ void linconsupgradeFree(
    SCIP_LINCONSUPGRADE** linconsupgrade      /**< pointer to the linear constraint upgrade */
    )
 {
+   assert(scip != NULL);
    assert(linconsupgrade != NULL);
    assert(*linconsupgrade != NULL);
 
@@ -418,6 +422,7 @@ SCIP_RETCODE conshdlrdataCreate(
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store the constraint handler data */
    )
 {
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
@@ -445,6 +450,7 @@ void conshdlrdataFree(
 {
    int i;
 
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
@@ -457,6 +463,36 @@ void conshdlrdataFree(
    SCIPfreeMemory(scip, conshdlrdata);
 }
 
+/** creates a linear constraint upgrade data object */
+static
+SCIP_Bool conshdlrdataHasUpgrade(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_DECL_LINCONSUPGD((*linconsupgd)),    /**< method to call for upgrading linear constraint */
+   const char*           conshdlrname        /**< name of the constraint handler */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlrdata != NULL);
+   assert(linconsupgd != NULL);
+   assert(conshdlrname != NULL);
+
+   for( i = conshdlrdata->nlinconsupgrades - 1; i >= 0; --i )
+   {
+      if( conshdlrdata->linconsupgrades[i]->linconsupgd == linconsupgd )
+      {
+#ifdef SCIP_DEBUG
+         SCIPwarningMessage("Try to add already known upgrade message %p for constraint handler %s.\n", linconsupgd, conshdlrname);
+#endif
+         return TRUE;
+      }
+   }
+
+   return FALSE;
+}
+
 /** adds a linear constraint update method to the constraint handler's data */
 static
 SCIP_RETCODE conshdlrdataIncludeUpgrade(
@@ -467,6 +503,7 @@ SCIP_RETCODE conshdlrdataIncludeUpgrade(
 {
    int i;
 
+   assert(scip != NULL);
    assert(conshdlrdata != NULL);
    assert(linconsupgrade != NULL);
 
@@ -571,6 +608,7 @@ SCIP_Bool isValue(
    SCIP_Real*            value               /**< pointer to store the value (unchanged, if token is no value) */
    )
 {
+   assert(scip != NULL);
    assert(lpinput != NULL);
    assert(value != NULL);
 
@@ -715,6 +753,10 @@ SCIP_RETCODE lockRounding(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(!SCIPisZero(scip, val));
@@ -744,6 +786,10 @@ SCIP_RETCODE unlockRounding(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(!SCIPisZero(scip, val));
@@ -771,6 +817,7 @@ SCIP_RETCODE consdataCatchEvent(
    int                   pos                 /**< array position of variable to catch bound change events for */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(eventhdlr != NULL);
    assert(0 <= pos && pos < consdata->nvars);
@@ -800,6 +847,7 @@ SCIP_RETCODE consdataDropEvent(
    int                   pos                 /**< array position of variable to catch bound change events for */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(eventhdlr != NULL);
    assert(0 <= pos && pos < consdata->nvars);
@@ -828,6 +876,7 @@ SCIP_RETCODE consdataCatchAllEvents(
 {
    int i;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(consdata->eventdatas == NULL);
 
@@ -855,6 +904,7 @@ SCIP_RETCODE consdataDropAllEvents(
 {
    int i;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(consdata->eventdatas != NULL);
 
@@ -877,6 +927,8 @@ SCIP_Bool needEvents(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   assert(scip != NULL);
+
    return (SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) < SCIP_STAGE_FREETRANS);
 }
 
@@ -893,6 +945,7 @@ SCIP_RETCODE consdataCreate(
    SCIP_Real             rhs                 /**< right hand side of row */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || vals != NULL);
@@ -1007,6 +1060,7 @@ SCIP_RETCODE consdataFree(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler to call for the event processing */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(*consdata != NULL);
    assert((*consdata)->varssize >= 0);
@@ -1042,6 +1096,7 @@ void consdataPrint(
 {
    int v;
    
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    /* print left hand side for ranged rows */
@@ -1117,6 +1172,7 @@ SCIP_Bool isNewActivityUnreliable(
 {
    SCIP_Real quotient;
 
+   assert(scip != NULL);
    assert( reliableactivity < SCIP_INVALID );
 
    quotient = (REALABS(newactivity)+1.0) / (REALABS(reliableactivity) + 1.0);
@@ -1136,7 +1192,9 @@ void consdataUpdateChgLb(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
+   assert(var != NULL);
 
    if( consdata->validactivities )
    {
@@ -1284,7 +1342,9 @@ void consdataUpdateChgUb(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
+   assert(var != NULL);
 
    if( consdata->validactivities )
    {
@@ -1432,6 +1492,7 @@ void consdataUpdateChgGlbLb(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    if( consdata->validactivities )
@@ -1576,6 +1637,7 @@ void consdataUpdateChgGlbUb(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    if( consdata->validactivities )
@@ -1718,7 +1780,9 @@ void consdataUpdateAddCoef(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
+   assert(var != NULL);
 
    /* update maximum absolute value */
    if( consdata->validmaxabsval )
@@ -1757,7 +1821,9 @@ void consdataUpdateDelCoef(
    SCIP_Bool             checkreliability    /**< should the reliability of the recalculated activity be checked? */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
+   assert(var != NULL);
 
    /* invalidate maximum absolute value, if this coefficient was the maximum */
    if( consdata->validmaxabsval )
@@ -1850,6 +1916,7 @@ void consdataCalcActivities(
 {
    int i;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(!consdata->validactivities);
    assert(consdata->pseudoactivity >= SCIP_INVALID);
@@ -1891,6 +1958,7 @@ SCIP_Real consdataGetPseudoActivity(
    SCIP_CONSDATA*        consdata            /**< linear constraint */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    if( !consdata->validactivities )
@@ -1916,6 +1984,7 @@ SCIP_Real consdataGetPseudoFeasibility(
 {
    SCIP_Real activity;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    activity = consdataGetPseudoActivity(scip, consdata);
@@ -1933,6 +2002,7 @@ void consdataGetActivityBounds(
    SCIP_Real*            maxactivity         /**< pointer to store the maximal activity */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(minactivity != NULL);
    assert(maxactivity != NULL);
@@ -1975,6 +2045,11 @@ void consdataGetReliableResidualActivity(
 {       
    int v;
    
+   assert(scip != NULL);
+   assert(consdata != NULL);
+   assert(cancelvar != NULL);
+   assert(resactivity != NULL);
+
    *resactivity = 0.0;
    
    for( v = 0; v < consdata->nvars; ++v )
@@ -2054,6 +2129,7 @@ void consdataGetActivityResiduals(
    SCIP_Real lb;
    SCIP_Real ub;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(var != NULL);
    assert(minresactivity != NULL);
@@ -2249,6 +2325,7 @@ void consdataGetGlbActivityBounds(
    SCIP_Real*            glbmaxactivity      /**< pointer to store the maximal activity */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(glbminactivity != NULL);
    assert(glbmaxactivity != NULL);
@@ -2293,6 +2370,7 @@ void consdataGetGlbActivityResiduals(
    SCIP_Real lb;
    SCIP_Real ub;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(var != NULL);
    assert((minresactivity != NULL && isminsettoinfinity != NULL ) || (maxresactivity != NULL && ismaxsettoinfinity != NULL));
@@ -2506,6 +2584,7 @@ SCIP_Real consdataGetActivity(
    SCIP_Real activity;
    SCIP_Real scipinf;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    if( sol == NULL && !SCIPhasCurrentNodeLP(scip) )
@@ -2547,6 +2626,7 @@ SCIP_Real consdataGetFeasibility(
 {
    SCIP_Real activity;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    activity = consdataGetActivity(scip, consdata, sol);
@@ -2561,6 +2641,8 @@ SCIP_Longint getVarSignature(
    )
 {
    int sigidx;
+
+   assert(var != NULL);
 
    sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
    return ((SCIP_Longint)1) << sigidx;
@@ -2633,6 +2715,7 @@ SCIP_RETCODE consdataSort(
    SCIP_CONSDATA*        consdata            /**< linear constraint data */
    )
 {
+   assert(scip != NULL);
    assert(consdata != NULL);
 
    if( consdata->nvars == 0 )
@@ -2727,6 +2810,8 @@ SCIP_RETCODE chgLhs(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(!SCIPisInfinity(scip, lhs));
 
    consdata = SCIPconsGetData(cons);
@@ -2829,6 +2914,8 @@ SCIP_RETCODE chgRhs(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(!SCIPisInfinity(scip, -rhs));
 
    consdata = SCIPconsGetData(cons);
@@ -2935,6 +3022,8 @@ SCIP_RETCODE addCoef(
    SCIP_CONSDATA* consdata;
    SCIP_Bool transformed;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(var != NULL);
 
    /* ignore coefficient if it is nearly zero */
@@ -3031,6 +3120,9 @@ SCIP_RETCODE delCoefPos(
    SCIP_VAR* var;
    SCIP_Real val;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
@@ -3117,6 +3209,8 @@ SCIP_RETCODE chgCoefPos(
    SCIP_VAR* var;
    SCIP_Real val;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(!SCIPisZero(scip, newval));
 
    consdata = SCIPconsGetData(cons);
@@ -3172,6 +3266,9 @@ SCIP_RETCODE scaleCons(
    SCIP_Real newval;
    SCIP_Real absscalar;
    int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -3267,6 +3364,9 @@ SCIP_RETCODE normalizeCons(
    int nposcoeffs;
    int nnegcoeffs;
    int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    /* we must not change a modifiable constraint in any way */
    if( SCIPconsIsModifiable(cons) )
@@ -3431,6 +3531,9 @@ SCIP_RETCODE mergeMultiples(
    SCIP_Real valsum;
    int v;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -3494,6 +3597,10 @@ SCIP_RETCODE applyFixings(
    int v;
    int naggrvars;
    int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(infeasible != NULL);
 
    *infeasible = FALSE;
 
@@ -3688,6 +3795,9 @@ SCIP_RETCODE addConflictBounds(
    int nvars;
    int i;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    vars = consdata->vars;
@@ -3846,6 +3956,8 @@ SCIP_RETCODE resolvePropagation(
    int nvars;
    int inferpos;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(result != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -3951,6 +4063,8 @@ SCIP_RETCODE tightenVarBounds(
    SCIP_Bool isminsettoinfinity;
    SCIP_Bool ismaxsettoinfinity;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
 
@@ -4199,6 +4313,8 @@ SCIP_RETCODE tightenBounds(
    int nrounds;
    int lastchange;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(nchgbds != NULL);
    assert(cutoff != NULL);
 
@@ -4250,6 +4366,8 @@ SCIP_RETCODE checkCons(
    SCIP_CONSDATA* consdata;
    SCIP_Real activity;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(violated != NULL);
 
    SCIPdebugMessage("checking linear constraint <%s>\n", SCIPconsGetName(cons));
@@ -4300,6 +4418,9 @@ SCIP_RETCODE createRow(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->row == NULL);
@@ -4321,6 +4442,9 @@ SCIP_RETCODE addRelaxation(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -4358,6 +4482,9 @@ SCIP_RETCODE separateCons(
    SCIP_CONSDATA* consdata;
    SCIP_Bool violated;
    int oldncuts;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(ncuts != NULL);
@@ -4440,6 +4567,8 @@ SCIP_RETCODE propagateCons(
    SCIP_Real minactivity;
    SCIP_Real maxactivity;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
 
@@ -4541,6 +4670,8 @@ SCIP_RETCODE extractCliques(
    int nposcoefs;
    int nnegcoefs;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(nchgbds != NULL);
 
@@ -4610,6 +4741,8 @@ SCIP_RETCODE tightenSides(
    SCIP_Bool integral;
    int i;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(nchgsides != NULL);
 
    consdata = SCIPconsGetData(cons);
@@ -4707,6 +4840,8 @@ SCIP_RETCODE consdataTightenCoefs(
    SCIP_Real ub;
    int i;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(nchgcoefs != NULL);
    assert(nchgsides != NULL);
 
@@ -5063,6 +5198,8 @@ SCIP_RETCODE convertUnaryEquality(
    SCIP_Bool infeasible;
    SCIP_Bool fixed;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(nfixedvars != NULL);
    assert(ndelconss != NULL);
@@ -5114,6 +5251,8 @@ SCIP_RETCODE convertBinaryEquality(
    SCIP_Bool redundant;
    SCIP_Bool aggregated;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(naggrvars != NULL);
    assert(ndelconss != NULL);
@@ -5169,6 +5308,7 @@ void getNewSidesAfterAggregation(
    SCIP_Real slackvarlb;
    SCIP_Real slackvarub;
 
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(newlhs != NULL);
    assert(newrhs != NULL);
@@ -5240,6 +5380,8 @@ SCIP_RETCODE convertLongEquality(
    int intvarpos;
    int v;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(naggrvars != NULL);
 
@@ -5589,6 +5731,13 @@ SCIP_RETCODE convertEquality(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(cutoff != NULL);
+   assert(nfixedvars != NULL);
+   assert(naggrvars != NULL);
+   assert(ndelconss != NULL);
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->removedfixings);
@@ -5630,6 +5779,7 @@ SCIP_Bool consdataIsResidualIntegral(
 {
    int v;
    
+   assert(scip != NULL);
    assert(consdata != NULL);
    assert(0 <= pos && pos < consdata->nvars);
 
@@ -5709,7 +5859,10 @@ SCIP_RETCODE dualPresolve(
    int i;
    int maxotherlocks;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
+   assert(nfixedvars != NULL);
    assert(naggrvars != NULL);
    assert(ndelconss != NULL);
 
@@ -6056,6 +6209,8 @@ SCIP_RETCODE fixVariables(
    SCIP_Bool infeasible;
    int v;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(cutoff != NULL);
    assert(nfixedvars != NULL);
 
@@ -6341,6 +6496,7 @@ SCIP_RETCODE simplifyInequalities(
    SCIP_VAR* oddbinvar;
    int noddvals = 0;
    int pos = 0;
+
    assert( scip != NULL );
    assert( cons != NULL );
    assert( nchgcoefs != NULL );
@@ -6503,6 +6659,9 @@ SCIP_RETCODE aggregateConstraints(
    int v;
    int i;
 
+   assert(scip != NULL);
+   assert(cons0 != NULL);
+   assert(cons1 != NULL);
    assert(commonidx0 != NULL);
    assert(commonidx1 != NULL);
    assert(diffidx0minus1 != NULL);
@@ -6734,6 +6893,8 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    SCIP_Bool coefsnegated;
    int i;
 
+   assert(key1 != NULL);
+   assert(key2 != NULL);
    consdata1 = SCIPconsGetData((SCIP_CONS*)key1);
    consdata2 = SCIPconsGetData((SCIP_CONS*)key2);
    assert(consdata1->sorted);
@@ -6786,6 +6947,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    int maxidx;
    int maxabsval;
 
+   assert(key != NULL);
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
    assert(consdata->nvars > 0);
@@ -6875,7 +7037,10 @@ SCIP_RETCODE detectRedundantConstraints(
    int hashtablesize;
    int c;
 
+   assert(scip != NULL);
+   assert(blkmem != NULL);
    assert(conss != NULL);
+   assert(firstchange != NULL);
    assert(cutoff != NULL);
    assert(ndelconss != NULL);
    assert(nchgsides != NULL);
@@ -7047,11 +7212,13 @@ SCIP_RETCODE preprocessConstraintPairs(
    SCIP_Real cons0rhs;
    SCIP_Bool cons0upgraded;
 
+   assert(scip != NULL);
    assert(conss != NULL);
    assert(firstchange <= chkind);
    assert(cutoff != NULL);
    assert(ndelconss != NULL);
    assert(nchgsides != NULL);
+   assert(nchgcoefs != NULL);
 
    /* get the constraint to be checked against all prior constraints */
    cons0 = conss[chkind];
@@ -7653,6 +7820,7 @@ SCIP_RETCODE fullDualPresolve(
     * by one of these constraints, and in all cases, the value of the variable is integral.
     */
 
+   assert(scip != NULL);
    assert(nconss == 0 || conss != NULL);
    assert(nchgbds != NULL);
 
@@ -8054,12 +8222,27 @@ SCIP_RETCODE fullDualPresolve(
  * Callback methods of constraint handler
  */
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinear)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrLinear(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
 SCIP_DECL_CONSFREE(consFreeLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
@@ -8081,6 +8264,8 @@ SCIP_DECL_CONSINIT(consInitLinear)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
+
+   assert(scip != NULL);
 
    /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -8112,6 +8297,8 @@ SCIP_DECL_CONSEXIT(consExitLinear)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
+
+   assert(scip != NULL);
 
    /* get event handler */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -8152,6 +8339,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
    /* delete all linear constraints that were upgraded to a more specific constraint type;
     * make sure, only active variables remain in the remaining constraints
     */
+   assert(scip != NULL);
+   assert(result != NULL);
 
    *result = SCIP_FEASIBLE;
 
@@ -8193,6 +8382,8 @@ static
 SCIP_DECL_CONSEXITSOL(consExitsolLinear)
 {  /*lint --e{715}*/
    int c;
+
+   assert(scip != NULL);
 
    /* release the rows of all constraints */
    for( c = 0; c < nconss; ++c )
@@ -8275,6 +8466,7 @@ SCIP_DECL_CONSDELETE(consDeleteLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
@@ -8300,6 +8492,7 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 
    /*debugMessage("Trans method of linear constraints\n");*/
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
@@ -8336,6 +8529,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinear)
 {  /*lint --e{715}*/
    int c;
 
+   assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    for( c = 0; c < nconss; ++c )
@@ -8364,6 +8558,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinear)
    int maxsepacuts;
    int ncuts;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
@@ -8424,6 +8619,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
    int maxsepacuts;
    int ncuts;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
@@ -8474,6 +8670,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
    SCIP_Bool violated;
    int c;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
@@ -8525,6 +8722,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinear)
    SCIP_Bool violated;
    int c;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
@@ -8559,6 +8757,7 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
    SCIP_Bool violated;
    int c;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
@@ -8610,6 +8809,7 @@ SCIP_DECL_CONSPROP(consPropLinear)
    int nchgbds;
    int c;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
@@ -8679,6 +8879,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
    int firstupgradetry;
    int c;
 
+   assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
@@ -9051,6 +9252,11 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 static
 SCIP_DECL_CONSRESPROP(consRespropLinear)
 {  /*lint --e{715}*/
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(result != NULL);
+
    SCIP_CALL( resolvePropagation(scip, cons, infervar, intToInferInfo(inferinfo), boundtype, bdchgidx, result) );
 
    return SCIP_OKAY;
@@ -9066,6 +9272,8 @@ SCIP_DECL_CONSLOCK(consLockLinear)
    SCIP_Bool hasrhs;
    int i;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -9140,6 +9348,10 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
    const char* consname;
    int nvars;
 
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+
    /* get variables and coefficients of the source constraint */
    sourcevars = SCIPgetVarsLinear(sourcescip, sourcecons);
    sourcecoefs = SCIPgetValsLinear(sourcescip, sourcecons); 
@@ -9178,6 +9390,9 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    int coefssize;
    int ncoefs;
    
+   assert(scip != NULL);
+   assert(success != NULL);
+
    /* initialize tokenizer */
    tokenizer.strbuf = str;
    SCIP_CALL( SCIPallocBufferArray(scip, &tokenizer.token, SCIP_MAXSTRLEN) );
@@ -9502,6 +9717,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
    SCIP_VAR* var;
    SCIP_EVENTTYPE eventtype;
 
+   assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(eventdata != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -9636,6 +9852,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
    SCIP_Real lhs;
    int i;
 
+   assert(scip != NULL);
    assert(conflicthdlr != NULL);
    assert(strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0);
    assert(bdchginfos != NULL || nbdchginfos == 0);
@@ -9722,13 +9939,17 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
+   assert(scip != NULL);
+
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecLinear,
          NULL) );
 
    /* create conflict handler for linear constraints */
    SCIP_CALL( SCIPincludeConflicthdlr(scip, CONFLICTHDLR_NAME, CONFLICTHDLR_DESC, CONFLICTHDLR_PRIORITY,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, conflictExecLinear,
          NULL) );
 
@@ -9740,6 +9961,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyLinear,
          consFreeLinear, consInitLinear, consExitLinear,
          consInitpreLinear, consExitpreLinear, consInitsolLinear, consExitsolLinear,
          consDeleteLinear, consTransLinear, consInitlpLinear,
@@ -9821,8 +10043,9 @@ SCIP_RETCODE SCIPincludeLinconsUpgrade(
    char paramname[SCIP_MAXSTRLEN];
    char paramdesc[SCIP_MAXSTRLEN];
    
+   assert(scip != NULL);
    assert(linconsupgd != NULL);
-   assert( conshdlrname != NULL );
+   assert(conshdlrname != NULL );
 
    /* find the linear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -9835,19 +10058,22 @@ SCIP_RETCODE SCIPincludeLinconsUpgrade(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   /* create a linear constraint upgrade data object */
-   SCIP_CALL( linconsupgradeCreate(scip, &linconsupgrade, linconsupgd, priority) );
-
-   /* insert linear constraint update method into constraint handler data */
-   SCIP_CALL( conshdlrdataIncludeUpgrade(scip, conshdlrdata, linconsupgrade) );
-
-   /* adds parameter to turn on and off the upgrading step */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/linear/upgrade/%s", conshdlrname);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable linear upgrading for constraint handler <%s>", conshdlrname);
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         paramname, paramdesc,
-         &linconsupgrade->active, FALSE, TRUE, NULL, NULL) );
-
+   /* check if linear constraint update method already exists in constraint handler data */
+   if( !conshdlrdataHasUpgrade(scip, conshdlrdata, linconsupgd, conshdlrname) )
+   {
+      /* create a linear constraint upgrade data object */
+      SCIP_CALL( linconsupgradeCreate(scip, &linconsupgrade, linconsupgd, priority) );
+      
+      /* insert linear constraint update method into constraint handler data */
+      SCIP_CALL( conshdlrdataIncludeUpgrade(scip, conshdlrdata, linconsupgrade) );
+      
+      /* adds parameter to turn on and off the upgrading step */
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/linear/upgrade/%s", conshdlrname);
+      (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable linear upgrading for constraint handler <%s>", conshdlrname);
+      SCIP_CALL( SCIPaddBoolParam(scip,
+            paramname, paramdesc,
+            &linconsupgrade->active, FALSE, TRUE, NULL, NULL) );
+   }
 
    return SCIP_OKAY;
 }
@@ -9890,6 +10116,9 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    /* find the linear constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -10038,6 +10267,8 @@ SCIP_RETCODE SCIPaddCoefLinear(
    SCIP_Real             val                 /**< coefficient of constraint entry */
    )
 {
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(var != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -10059,6 +10290,9 @@ SCIP_Real SCIPgetLhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
@@ -10079,6 +10313,9 @@ SCIP_Real SCIPgetRhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
@@ -10098,6 +10335,9 @@ SCIP_RETCODE SCIPchgLhsLinear(
    SCIP_Real             lhs                 /**< new left hand side */
    )
 {
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
@@ -10135,6 +10375,9 @@ int SCIPgetNVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
@@ -10154,6 +10397,9 @@ SCIP_VAR** SCIPgetVarsLinear(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -10175,6 +10421,9 @@ SCIP_Real* SCIPgetValsLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
@@ -10195,6 +10444,9 @@ SCIP_Real SCIPgetActivityLinear(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -10220,6 +10472,9 @@ SCIP_Real SCIPgetFeasibilityLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
@@ -10243,6 +10498,9 @@ SCIP_Real SCIPgetDualsolLinear(
 {
    SCIP_CONSDATA* consdata;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not linear\n");
@@ -10265,6 +10523,9 @@ SCIP_Real SCIPgetDualfarkasLinear(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -10290,6 +10551,9 @@ SCIP_ROW* SCIPgetRowLinear(
    )
 {
    SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -10336,6 +10600,8 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    int ncoeffsnfrac;
    int i;
 
+   assert(scip != NULL);
+   assert(cons != NULL);
    assert(upgdcons != NULL);
 
    *upgdcons = NULL;

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_reader.h,v 1.16 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_reader.h,v 1.17 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   struct_reader.h
  * @brief  datastructures for input file readers
@@ -38,6 +38,7 @@ struct SCIP_Reader
    const char*           name;               /**< name of reader */
    const char*           desc;               /**< description of reader */
    const char*           extension;          /**< file extension that reader processes */
+   SCIP_DECL_READERCOPY  ((*readercopy));    /**< copy method of reader or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_READERFREE  ((*readerfree));    /**< destructor of reader */
    SCIP_DECL_READERREAD  ((*readerread));    /**< read method */
    SCIP_DECL_READERWRITE ((*readerwrite));   /**< write method */

@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prop_vbounds.c,v 1.1 2010/02/04 16:54:46 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prop_vbounds.c,v 1.2 2010/03/12 14:54:29 bzfwinkm Exp $"
 
 /**@file   prop_vbounds.c
  * @ingroup PROPAGATORS
@@ -44,6 +44,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/prop_vbounds.h"
 
@@ -503,6 +504,20 @@ SCIP_RETCODE propagateVbounds(
  * Callback methods of propagator
  */
 
+/** copy method for propagator plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyVbounds)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of propagator */
+   SCIP_CALL( SCIPincludePropVbounds(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PROPFREE(propFreeVbounds)
@@ -741,12 +756,14 @@ SCIP_RETCODE SCIPincludePropVbounds(
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY,
+         propCopyVbounds,
          propFreeVbounds, propInitVbounds, propExitVbounds, 
          propInitsolVbounds, propExitsolVbounds, propExecVbounds, propRespropVbounds,
          propdata) );
 
    /* include event handler for bound change events */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC, 
+   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
+         NULL,
          NULL, NULL, NULL, NULL, NULL, NULL, eventExecVbound, NULL) );
 
    return SCIP_OKAY;

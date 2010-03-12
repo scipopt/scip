@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_linearordering.c,v 1.9 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: cons_linearordering.c,v 1.10 2010/03/12 14:54:26 bzfwinkm Exp $"
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
 
@@ -148,7 +148,19 @@ SCIP_RETCODE LinearOrderingSeparate(
 
 
 
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinearOrdering)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrLinearOrdering(scip) );
+ 
+   return SCIP_OKAY;
+}
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 #define consFreeLinearOrdering NULL
@@ -959,6 +971,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
+         conshdlrCopyLinearOrdering,
          consFreeLinearOrdering, consInitLinearOrdering, consExitLinearOrdering,
          consInitpreLinearOrdering, consExitpreLinearOrdering, consInitsolLinearOrdering, consExitsolLinearOrdering,
          consDeleteLinearOrdering, consTransLinearOrdering, consInitlpLinearOrdering,

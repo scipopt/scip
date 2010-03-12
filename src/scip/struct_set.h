@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_set.h,v 1.86 2010/01/23 07:53:53 bzfberth Exp $"
+#pragma ident "@(#) $Id: struct_set.h,v 1.87 2010/03/12 14:54:31 bzfwinkm Exp $"
 
 /**@file   struct_set.h
  * @brief  datastructures for global SCIP settings
@@ -37,6 +37,7 @@
 #include "scip/type_conflict.h"
 #include "scip/type_cons.h"
 #include "scip/type_disp.h"
+#include "scip/type_dialog.h"
 #include "scip/type_heur.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
@@ -73,6 +74,7 @@ struct SCIP_Set
    SCIP_NODESEL*         nodesel;            /**< currently used node selector, or NULL if invalid */
    SCIP_BRANCHRULE**     branchrules;        /**< branching rules */
    SCIP_DISP**           disps;              /**< display columns */
+   SCIP_DIALOG**         dialogs;            /**< dialogs */
    int                   nreaders;           /**< number of file readers */
    int                   readerssize;        /**< size of readers array */
    int                   npricers;           /**< number of variable pricers */
@@ -100,6 +102,8 @@ struct SCIP_Set
    int                   branchrulessize;    /**< size of branchrules array */
    int                   ndisps;             /**< number of display columns */
    int                   dispssize;          /**< size of disps array */
+   int                   ndialogs;           /**< number of dialogs */
+   int                   dialogssize;        /**< size of dialogs array */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
    SCIP_Bool             conflicthdlrssorted;/**< are the conflict handlers sorted by priority? */
    SCIP_Bool             presolssorted;      /**< are the presolvers sorted by priority? */

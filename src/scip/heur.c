@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur.c,v 1.74 2010/01/04 20:35:39 bzfheinz Exp $"
+#pragma ident "@(#) $Id: heur.c,v 1.75 2010/03/12 14:54:28 bzfwinkm Exp $"
 
 /**@file   heur.c
  * @brief  methods for primal heuristics
@@ -81,6 +81,25 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
    return SCIP_OKAY;
 }
 
+/** copies the given primal heuristic to a new scip */
+SCIP_RETCODE SCIPheurCopyInclude(
+   SCIP_HEUR*            heur,               /**< primal heuristic */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   )
+{
+   assert(heur != NULL);
+   assert(set != NULL);
+   assert(set->scip != NULL);
+
+   if( heur->heurcopy != NULL )
+   {
+      SCIPdebugMessage("including heur %s in subscip %p\n", SCIPheurGetName(heur), set->scip);
+      SCIP_CALL( heur->heurcopy(set->scip, heur) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates a primal heuristic */
 SCIP_RETCODE SCIPheurCreate(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
@@ -94,6 +113,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
+   SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
    SCIP_DECL_HEUREXIT    ((*heurexit)),      /**< deinitialize primal heuristic */
@@ -123,6 +143,7 @@ SCIP_RETCODE SCIPheurCreate(
    (*heur)->maxdepth = maxdepth;
    (*heur)->delaypos = -1;
    (*heur)->timingmask = timingmask;
+   (*heur)->heurcopy = heurcopy;
    (*heur)->heurfree = heurfree;
    (*heur)->heurinit = heurinit;
    (*heur)->heurexit = heurexit;

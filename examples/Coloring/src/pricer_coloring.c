@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricer_coloring.c,v 1.7 2010/01/04 20:35:34 bzfheinz Exp $"
+#pragma ident "@(#) $Id: pricer_coloring.c,v 1.8 2010/03/12 14:54:26 bzfwinkm Exp $"
 
 /**@file   pricer_coloring.c
  * @brief  coloring variable pricer
@@ -37,6 +37,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "pricer_coloring.h"
 #include "probdata_coloring.h"
@@ -261,9 +262,22 @@ TCLIQUE_NEWSOL(tcliqueNewsolPricer)
  * Callback methods of variable pricer
  */
 
+/** copy method for pricer plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PRICERCOPY(pricerCopyColoring)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(pricer != NULL);
+   assert(strcmp(SCIPpricerGetName(pricer), PRICER_NAME) == 0);
+
+   /* call inclusion method of pricer */
+   SCIP_CALL( SCIPincludePricerColoring(scip) );
+ 
+   return SCIP_OKAY;
+}
+
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
-
 static
 SCIP_DECL_PRICERFREE(pricerFreeColoring)
 { 
@@ -698,6 +712,7 @@ SCIP_RETCODE SCIPincludePricerColoring(
 
    /* include variable pricer */
    SCIP_CALL( SCIPincludePricer(scip, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
+         pricerCopyColoring, 
          pricerFreeColoring, pricerInitColoring, pricerExitColoring, 
          pricerInitsolColoring, pricerExitsolColoring, pricerRedcostColoring, pricerFarkasColoring,
          pricerdata) );

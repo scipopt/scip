@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: relax.h,v 1.20 2010/01/04 20:35:47 bzfheinz Exp $"
+#pragma ident "@(#) $Id: relax.h,v 1.21 2010/03/12 14:54:30 bzfwinkm Exp $"
 
 /**@file   relax.h
  * @brief  internal methods for relaxators
@@ -38,6 +38,13 @@
 extern "C" {
 #endif
 
+/** copies the given relaxator to a new scip */
+extern
+SCIP_RETCODE SCIPrelaxCopyInclude(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_SET*             set                 /**< SCIP_SET of SCIP to copy to */
+   );
+
 /** creates a relaxator */
 extern
 SCIP_RETCODE SCIPrelaxCreate(
@@ -48,6 +55,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    const char*           desc,               /**< description of relaxator */
    int                   priority,           /**< priority of the relaxator (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxator */
+   SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxator or NULL if you don't want to copy your plugin into subscips */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxator */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxator */
    SCIP_DECL_RELAXEXIT   ((*relaxexit)),     /**< deinitialize relaxator */
