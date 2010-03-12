@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.187 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.188 2010/03/12 15:19:19 bzfwinkm Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -837,14 +837,13 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &tempsort, nitems) );
    for( j = nitems - 1; j >= 0; --j )
-   {
       tempsort[j] = profits[j]/weights[j];
-   }
+
    SCIPsortDownRealLongRealInt(tempsort, weights, profits, items, nitems);
 
    /* fills dynamic programming table with optimal values */
    for( d = 0; d <= intcap; d++ )
-      optvalues[IDX(0,d)] = 0.0;
+      optvalues[d] = 0.0; // simpler as optvalues[IDX(0,d)] = 0.0;
    for( j = 1; j <= nitems; j++ )
    {
       int intweight;
@@ -1098,6 +1097,11 @@ SCIP_RETCODE getCover(
       SCIP_CALL( SCIPallocBufferArray(scip, &modtransweights, nvars) );
       SCIP_CALL( SCIPallocBufferArray(scip, &modtransprofits, nvars) );
    }
+   else
+   {
+      modtransweights = NULL;
+      modtransprofits = NULL;
+   }
 
    *found = FALSE;
    *ncovervars = 0;
@@ -1192,7 +1196,7 @@ SCIP_RETCODE getCover(
    /* if capacity of transformed knapsack problem is less than zero, there is no cover 
     * (when variables fixed to zero are not used)
     */
-   if( SCIPisFeasLT(scip, transcapacity, 0.0) )
+   if( transcapacity < 0 )
    {
       assert(!(*found));
       goto TERMINATE;
@@ -1200,6 +1204,8 @@ SCIP_RETCODE getCover(
    
    if( modtransused )
    {
+      assert(modtransweights != NULL);
+      assert(modtransprofits != NULL);
       /* transforms the modified separation problem (under consideration of the following fixing: 
        * z_j = 1 for all j in N_1, z_j = 0 for all j in N_0)
        *
@@ -2174,7 +2180,6 @@ SCIP_RETCODE separateSequLiftedMinimalCoverInequality(
    int*                  nonmincovervars,    /**< nonmincover variables */
    int                   nmincovervars,      /**< number of mincover variables */
    int                   nnonmincovervars,   /**< number of nonmincover variables */
-   SCIP_Longint          mincoverweight,     /**< weight of minimal cover */
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
@@ -2329,7 +2334,6 @@ SCIP_RETCODE separateSequLiftedExtendedWeightInequality(
    int*                  nonfeassetvars,     /**< variables not in feasible set */
    int                   nfeassetvars,       /**< number of variables in feasible set */
    int                   nnonfeassetvars,    /**< number of variables not in feasible set */
-   SCIP_Bool             modtransused,       /**< TRUE if mod trans sepa prob was used to find initial cover */    
    SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    )
@@ -2789,7 +2793,7 @@ SCIP_RETCODE getFeasibleSet(
       if( (*coverweight) <= capacity )
       {
          SCIP_CALL( separateSequLiftedExtendedWeightInequality(scip, cons, vars, nvars, ntightened, weights, capacity, solvals, 
-               covervars, noncovervars, *ncovervars, *nnoncovervars, modtransused, sol, ncuts) );
+               covervars, noncovervars, *ncovervars, *nnoncovervars, sol, ncuts) );
       }
    }
 
@@ -2888,7 +2892,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
 
       /* separates lifted minimal cover inequalities using sequential up- and down-lifting */
       SCIP_CALL( separateSequLiftedMinimalCoverInequality(scip, cons, vars, nvars, ntightened, weights, capacity, solvals,
-            covervars, noncovervars, ncovervars, nnoncovervars, coverweight, sol, ncuts) );
+            covervars, noncovervars, ncovervars, nnoncovervars, sol, ncuts) );
 
       if( USESUPADDLIFT )
       { 
@@ -2912,7 +2916,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP_CALL( getCover(scip, vars, nvars, weights, capacity, solvals, covervars, noncovervars, &ncovervars, 
             &nnoncovervars, &coverweight, &coverfound, modtransused, &ntightened, &fractional) );
    assert(fractional);
-   assert(!coverfound || !fractional || ncovervars + nnoncovervars == nvars - ntightened);
+   assert(!coverfound || ncovervars + nnoncovervars == nvars - ntightened);
    
    /* if no cover was found we stop the separation routine */
    if( !coverfound )
@@ -3915,6 +3919,7 @@ SCIP_RETCODE propagateCons(
       for( i = 0; i < nvars; ++i )
       {
          assert(consdata->cliquepartitioned || minweightsum == 0);
+         assert(usenegatedclique ? (secondmaxweights != NULL) : TRUE);
 
          /* 1. if all weights of fixed variables to one plus any weight exceeds the capacity the variables have to be
           *    fixed to zero
