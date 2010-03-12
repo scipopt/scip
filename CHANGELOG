@@ -58,6 +58,11 @@ features:
 - support for FreeBSD (32- and 64-bit) including minor changes in several scripts in the check-folder
 - added scripts for testruns and evaluation for gurobi, blis, symphony, glpk
 - minor changes on several evaluation scripts (new statuses: better, solved, sollimit, gaplimit) and short-mode for cmpres.awk
+- added new sorting method SCIPsortLongPtr, SCIPsortDownLongPtr and all corresponding methods
+- knapsack constraint handler is now able to pairwise presolving constraints
+- "negated cliques" (1<=i<=n : sum (x_i) >= n-1) were added and we are using them now inside the knapsack constraint 
+  handler, the cliquepartitioning which is returned by SCIPcalcCliquePartition contains now integer != 0, negatives ones
+  indicates a negated clique and positive ones indicates a normal clique
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node
@@ -115,6 +120,9 @@ parameters:
 - added parameter <heuristics/crossover/dontwaitatroot> that allows to call crossover at root node independently from nwaitingnodes
 - added parameter <heuristics/rens/uselprows> that allows to switch between LP row and SCIP constraints as basis for the subSCIP, 
   default is TRUE (uses LP rows)
+- added parameter <constraints/knapsack/presolpairwise> that allows pairwise presolving of knapsack constraints, default is TRUE 
+- added parameter <constraints/knapsack/presolusehashing> that allows fast pairwise presolving of knapsack constraints, default is TRUE 
+
 
 SCIP version 1.2.0
 ===============

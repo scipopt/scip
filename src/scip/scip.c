@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: scip.c,v 1.544 2010/03/01 13:14:42 bzfheinz Exp $"
+#pragma ident "@(#) $Id: scip.c,v 1.545 2010/03/12 11:09:45 bzfwinkm Exp $"
 
 /**@file   scip.c
  * @brief  SCIP callable library
@@ -8085,15 +8085,18 @@ SCIP_RETCODE SCIPaddClique(
 /** calculates a partition of the given set of binary variables into cliques;
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
- *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one
- *  of the preceeding variables was assigned to clique i-1;
- *  from each clique at most one variable can be set to TRUE in a feasible solution
+ *  these values are positive if we have a "normal" clique and negative if we have "negated" clique;
+ *  the first variable is always assigned to clique +/-1 (depending if it is normal or negated clique), and a variable can only 
+ *  be assigned to clique +/-i if at least one of the preceeding variables was assigned to clique +/-(i-1);
+ *  from each clique with a positive index at most one variable can be set to TRUE in a feasible solution;
+ *  from each clique with a negative index at most one variable can be set to FALSE in a feasible solution
  */
 SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    int                   nvars,              /**< number of variables in the clique */
-   int*                  cliquepartition     /**< array of length nvars to store the clique partition */
+   int*                  cliquepartition,    /**< array of length nvars to store the clique partition */
+   int*                  ncliques            /**< pointer to store the number of cliques actually contained in the partition */
    )
 {
    SCIP_VAR** tmpvars;
@@ -8101,15 +8104,20 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_Bool* cliquevalues;
    SCIP_Bool* tmpvalues;
    int ncliquevars;
-   int ncliques;
    int i;
-   int j;
-   int k;
 
+   assert(scip != NULL);
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || cliquepartition != NULL);
+   assert(ncliques != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPcalcCliquePartition", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE) );
+
+   if( nvars == 0 )
+     {
+       *ncliques = 0;
+       return SCIP_OKAY;
+     }
 
    /* allocate temporary memory for storing the variables of the current clique */
    SCIP_CALL( SCIPsetAllocBufferArray(scip->set, &cliquevars, nvars) );
@@ -8118,24 +8126,28 @@ SCIP_RETCODE SCIPcalcCliquePartition(
    SCIP_CALL( SCIPsetDuplicateBufferArray(scip->set, &tmpvars, vars, nvars) );
    ncliquevars = 0;
 
-   /* initialize the cliquepartition and tmpvalues array */
-   for( i = nvars - 1; i >= 0; --i )
-   {
-      cliquepartition[i] = -1;
-      tmpvalues[i] = TRUE;
-   }
+   /* initialize the cliquepartition array with zeros */
+   BMSclearMemoryArray(cliquepartition, nvars);
 
+   /* initialize the tmpvalues array */
+   for( i = nvars - 1; i >= 0; --i )
+      tmpvalues[i] = TRUE;
+   
    /* get corresponding active problem variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&tmpvars, &tmpvalues, nvars) );
 
    /* calculate the clique partition */
-   ncliques = 0;
+   *ncliques = 1;
    for( i = 0; i < nvars; ++i )
    {
-      if( cliquepartition[i] == -1 )
+      if( cliquepartition[i] == 0 )
       {
+         SCIP_Bool sign;
+         int j;
+
          /* variable starts a new clique */
-         cliquepartition[i] = ncliques;
+         sign = TRUE;
+         cliquepartition[i] = *ncliques;
          cliquevars[0] = tmpvars[i];
          cliquevalues[0] = tmpvalues[i];
          ncliquevars = 1;
@@ -8146,35 +8158,55 @@ SCIP_RETCODE SCIPcalcCliquePartition(
             /* greedily fill up the clique */
             for( j = i+1; j < nvars; ++j )
             {
-               if( cliquepartition[j] == -1 )
+	       /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+	       if( cliquepartition[j] == 0 && SCIPvarIsActive(tmpvars[j]) )
                {
-                  /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-                  if( SCIPvarIsActive(tmpvars[j]) )
+                  int k;
+
+                  /* check if the variable has an edge in the implication graph to all other variables in this clique,
+		   * the first variable pair for which an implication is found, determines the type of the clique: "normal" or "negated" 
+		   */
+                  k = 0;
+                  if( ncliquevars == 1 )
                   {
-                     /* check if the variable has an edge in the implication graph to all other variables in this clique */
-                     for( k = ncliquevars - 1; k >= 0; --k )
+                     if( SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[0], cliquevalues[0], TRUE) )
+                        k = -1;
+                     else if( SCIPvarsHaveCommonClique(tmpvars[j], !tmpvalues[j], cliquevars[0], !cliquevalues[0], TRUE) )
                      {
-                        if( !SCIPvarsHaveCommonClique(tmpvars[j], tmpvalues[j], cliquevars[k], cliquevalues[k], TRUE) )
+                        sign = FALSE;
+                        cliquepartition[i] *= -1;     
+                        k = -1;
+                     }
+                  }
+                  else
+                  {
+		     /* check if every variable in the actual clique is in clique with the actual variable */ 
+		     for( k = ncliquevars - 1; k >= 0; --k )
+                     {
+                        if( !SCIPvarsHaveCommonClique(tmpvars[j], sign ? tmpvalues[j] : !tmpvalues[j], cliquevars[k],  sign ? cliquevalues[k] : !cliquevalues[k], TRUE) )
                            break;
                      }
-                     if( k == -1 )
-                     {
-                        /* put the variable into the same clique */
-                        cliquepartition[j] = ncliques;
-                        cliquevars[ncliquevars] = tmpvars[j];
-                        cliquevalues[ncliquevars] = tmpvalues[j];
-                        ncliquevars++;
-                     }
+                  }
+                  
+                  if( k == -1 )
+                  {
+                     /* put the variable into the same clique */
+                     cliquepartition[j] = cliquepartition[i];
+                     cliquevars[ncliquevars] = tmpvars[j];
+                     cliquevalues[ncliquevars] = tmpvalues[j];
+                     ncliquevars++;
                   }
                }
             }
          }
 
          /* this clique is finished */
-         ncliques++;
+         (*ncliques)++;
       }
-      assert(0 <= cliquepartition[i] && cliquepartition[i] <= i);
+      assert(0 != cliquepartition[i] && ABS(cliquepartition[i]) <= i+1);
    }
+
+   --(*ncliques);
 
    /* free temporary memory */
    SCIPsetFreeBufferArray(scip->set, &tmpvars);
