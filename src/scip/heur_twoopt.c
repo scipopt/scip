@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: heur_twoopt.c,v 1.5 2010/03/12 14:54:29 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: heur_twoopt.c,v 1.6 2010/03/15 18:52:12 bzfhende Exp $"
 
 /**@file   heur_twoopt.c
  * @ingroup PRIMALHEURISTICS
@@ -29,7 +29,7 @@
 
 #define HEUR_NAME             "twoopt"
 #define HEUR_DESC             "primal heuristic to improve incumbent solution by flipping pairs of variables"
-#define HEUR_DISPCHAR         '2'
+#define HEUR_DISPCHAR         'B'
 #define HEUR_PRIORITY         -20100
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
@@ -1135,7 +1135,13 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       assert(SCIProwGetLPPos(row) == i);
                
       activities[i] = SCIPgetRowSolActivity(scip, row, bestsol);
-      assert(SCIProwIsLocal(row) || (SCIPisFeasGE(scip, activities[i], SCIProwGetLhs(row)) && SCIPisFeasLE(scip, activities[i], SCIProwGetRhs(row))));
+
+      /* Heuristic does not provide infeasibility recovery, thus if any constraint is violated,
+       * execution has to be terminated.
+       */
+      if( !SCIProwIsLocal(row) && (SCIPisFeasLT(scip, activities[i], SCIProwGetLhs(row)) 
+            || SCIPisFeasGT(scip, activities[i], SCIProwGetRhs(row))) )
+         goto TERMINATE;
    }
 
    heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
@@ -1222,13 +1228,14 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
                      SCIPdebugMessage("Exchange is feasible and executed. Changed Objective: <%.4g>\n", changedobjective);
                      SCIPdebugMessage("-> Variables: <%d><%g><%g> &&  <%d><%g><%g> (<index><value><objective coefficient>)\n",
                         endindex, mastersolvalue, masterobjective, j, slavesolvalue, slaveobjective);
-
+                     
 
 #ifdef STATISTIC_INFORMATION
                      /* update statistics */
                      ++(heurdata->binnexchanges);
 #endif
                      improvement = TRUE;
+                     mastershiftvalue *= -1.0;
                   }
                }
             }
@@ -1290,26 +1297,26 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
 
                /* the shifting directions have to be determined, choose the direction in favor of objective function.
                 * if objective coefficients are feasibly equal, shifting will not have any impact on objective funtion,
-                * thus this pair can be skipped. */
-	       if( !SCIPisFeasEQ(scip, masterobjective - slaveobjective, 0.0) )
-	       {
-                  if( SCIPisFeasLT(scip, masterobjective - slaveobjective, 0.0) )
-                     masterdirection = 1; 
-                  else 
-                     masterdirection = -1;
-	       }
-	       else
+                * thus this pair can be skipped. 
+                */
+	       if( SCIPisFeasEQ(scip, masterobjective, slaveobjective) )
                   continue;
-
+               else if( SCIPisFeasLT(scip, masterobjective, slaveobjective) )
+                  masterdirection = 1; 
+               else 
+                  masterdirection = -1;
+	       
                slavedirection = -masterdirection;
 
 	       /* the bound is determined, the smallest positive Integer to preserve feasibility of all rows 
-                * if variables' solution values are shifted */
+                * if variables' solution values are shifted
+                */
                bound = determineBound(scip, worksol, master, masterdirection, slave, slavedirection, activities, nlprows);
                changedobjective = masterobjective * masterdirection * bound + slaveobjective * slavedirection * bound;
    
 	       /* if shifting has a negative impact on objective function (which is quite favorable with respect to minimization),
-                * try to shift the variables, update the activitities and and store the new solution values*/
+                * try to shift the variables, update the activitities and and store the new solution values
+                */
                if( SCIPisFeasLT(scip, changedobjective, 0.0) )
                {
                   SCIP_Bool feasible;
@@ -1448,7 +1455,7 @@ SCIP_DECL_HEUREXEC(heurExecTwoopt)
       /* terminate the diving */
       SCIP_CALL( SCIPendDive(scip) );
    }
-
+ TERMINATE:
    SCIPfreeBufferArray(scip, &activities);
    SCIP_CALL( SCIPfreeSol(scip, &worksol) );
 
