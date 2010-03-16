@@ -64,6 +64,8 @@ features:
 - "negated cliques" (1<=i<=n : sum (x_i) >= n-1) were added and we are using them now inside the knapsack constraint 
   handler, the cliquepartitioning which is returned by SCIPcalcCliquePartition contains now integer != 0, negatives ones
   indicates a negated clique and positive ones indicates a normal clique
+- SCIP is now able to detect in DEBUG-mode whether a constraint or variables which will be added, was also created in
+  the same scip instance, if not an error is thrown
 
 performance improvements:
 - improved settings/emphasis/cpsolver.set to decrease time per node

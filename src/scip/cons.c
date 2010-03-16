@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons.c,v 1.194 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons.c,v 1.195 2010/03/16 16:40:54 bzfwinkm Exp $"
 
 /**@file   cons.c
  * @brief  methods for constraints and constraint handlers
@@ -4399,6 +4399,9 @@ SCIP_RETCODE SCIPconsCreate(
    /* create constraint data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, cons) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*cons)->name, name, strlen(name)+1) );
+#ifndef NDEBUG
+   (*cons)->scip = set->scip;
+#endif
    (*cons)->conshdlr = conshdlr;
    (*cons)->consdata = consdata;
    (*cons)->transorigcons = NULL;

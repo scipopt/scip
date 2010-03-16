@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.231 2010/03/05 09:38:50 bzfviger Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.232 2010/03/16 16:40:54 bzfwinkm Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1462,6 +1462,15 @@ SCIP_RETCODE SCIPnodeAddCons(
    assert(tree->effectiverootdepth >= 0);
    assert(tree->root != NULL);
    assert(SCIPconsIsGlobal(cons) || SCIPnodeGetDepth(node) > tree->effectiverootdepth);
+
+#ifdef NDEBUG
+   /* check if we add this constraint to the same scip, where we create the constraint */
+   if( cons->scip != set->scip )
+   {
+      SCIPerrorMessage("try to add a constraint of another scip instance\n");
+      return SCIP_INVALIDDATA;
+   }
+#endif
 
    /* add constraint addition to the node's constraint set change data, and activate constraint if node is active */
    SCIP_CALL( SCIPconssetchgAddAddedCons(&node->conssetchg, blkmem, set, stat, cons, node->depth,

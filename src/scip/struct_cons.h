@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_cons.h,v 1.52 2010/03/12 14:54:30 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: struct_cons.h,v 1.53 2010/03/16 16:40:54 bzfwinkm Exp $"
 
 /**@file   struct_cons.h
  * @brief  datastructures for constraints and constraint handlers
@@ -36,6 +36,9 @@ extern "C" {
 /** constraint data structure */
 struct SCIP_Cons
 {
+#ifndef NDEBUG
+   SCIP*                 scip;               /**< SCIP data structure */
+#endif
    SCIP_Real             age;                /**< age of constraint: number of successive times, the constraint was irrelevant */
    char*                 name;               /**< name of the constraint */
    SCIP_CONSHDLR*        conshdlr;           /**< constraint handler for this constraint */

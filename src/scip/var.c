@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: var.c,v 1.270 2010/02/22 20:56:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: var.c,v 1.271 2010/03/16 16:40:54 bzfwinkm Exp $"
 
 /**@file   var.c
  * @brief  methods for problem variables
@@ -1658,6 +1658,9 @@ SCIP_RETCODE varCreate(
    {
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*var)->name, name, strlen(name)+1) );
    }
+#ifndef NDEBUG
+   (*var)->scip = set->scip;
+#endif
    (*var)->obj = obj;
    (*var)->branchfactor = 1.0;
    (*var)->rootsol = 0.0;

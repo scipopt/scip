@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.109 2010/01/07 11:50:15 bzfheinz Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.110 2010/03/16 16:40:54 bzfwinkm Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -664,12 +664,21 @@ SCIP_RETCODE SCIPprobAddVar(
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
+#ifdef NDEBUG
+   /* check if we add this variables to the same scip, where we created it */
+   if( var->scip != set->scip )
+   {
+      SCIPerrorMessage("try to add a variable of another scip instance\n");
+      return SCIP_INVALIDDATA;
+   }
+#endif
+
    /* capture variable */
    SCIPvarCapture(var);
 
    /* allocate additional memory */
    SCIP_CALL( probEnsureVarsMem(prob, set, prob->nvars+1) );
-   
+
    /* insert variable in vars array and mark it to be in problem */
    probInsertVar(prob, var);
 
@@ -914,6 +923,15 @@ SCIP_RETCODE SCIPprobAddCons(
    assert(cons != NULL);
    assert(cons->addconssetchg == NULL);
    assert(cons->addarraypos == -1);
+
+#ifdef NDEBUG
+   /* check if we add this constraint to the same scip, where we create the constraint */
+   if( cons->scip != set->scip )
+   {
+      SCIPerrorMessage("try to add a constraint of another scip instance\n");
+      return SCIP_INVALIDDATA;
+   }
+#endif
 
    SCIPdebugMessage("adding constraint <%s> to global problem -> %d constraints\n",
       SCIPconsGetName(cons), prob->nconss+1);

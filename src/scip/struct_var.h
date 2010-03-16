@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: struct_var.h,v 1.53 2010/01/04 20:35:50 bzfheinz Exp $"
+#pragma ident "@(#) $Id: struct_var.h,v 1.54 2010/03/16 16:40:54 bzfwinkm Exp $"
 
 /**@file   struct_var.h
  * @brief  datastructures for problem variables
@@ -195,6 +195,9 @@ struct SCIP_Negate
 /** variable of the problem */
 struct SCIP_Var
 {
+#ifndef NDEBUG
+   SCIP*                 scip;               /**< SCIP data structure */
+#endif
    SCIP_Real             obj;                /**< objective function value of variable */
    SCIP_Real             branchfactor;       /**< factor to weigh variable's branching score with */
    SCIP_Real             rootsol;            /**< primal solution of variable in root node, or SCIP_INVALID */
