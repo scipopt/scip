@@ -14,7 +14,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-# $Id: cmpres.awk,v 1.51 2010/03/08 14:06:19 bzfwanie Exp $
+# $Id: cmpres.awk,v 1.52 2010/03/16 19:35:38 bzfpfets Exp $
 #
 #@file    cmpres.awk
 #@brief   SCIP Check Comparison Report Generator
@@ -135,7 +135,11 @@ function texint(x, ts,r)
       x = floor(x/1000);
       if( ts != "" )
          ts = "\\," ts;
-      ts = r "" ts;
+
+      if ( x > 0 )
+	 ts = sprintf("%03d", r) "" ts;
+      else
+	 ts = r "" ts;
    }
 
    return ts;
@@ -487,6 +491,15 @@ END {
       printf("\\setlength{\\tabcolsep}{2pt}\n") > texcmpfile;
       printf("\\newcommand{\\g}{\\raisebox{0.25ex}{\\tiny $>$}}\n") > texcmpfile;
       printf("\\newcommand{\\spc}{\\hspace{2em}}\n") > texcmpfile;
+
+      # add names of solvers
+      for ( o = 0; o < nsolver; ++o )
+      {
+	 s = printorder[o];
+         solverextension = solverextension "i";
+	 printf("\\newcommand{\\solvername%s}{%s}\n", solverextension, solvername[s]) > texcmpfile;
+      }
+
       printf("\\begin{tabular*}{\\columnwidth}{@{\\extracolsep{\\fill}}l") > texcmpfile;
       for( s = 0; s < nsolver; ++s )
          printf("@{\\spc}rr") > texcmpfile;
