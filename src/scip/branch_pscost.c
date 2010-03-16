@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: branch_pscost.c,v 1.25 2010/03/12 14:54:27 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: branch_pscost.c,v 1.26 2010/03/16 19:35:05 bzfviger Exp $"
 
 /**@file   branch_pscost.c
  * @ingroup BRANCHINGRULES
@@ -74,8 +74,16 @@ SCIP_RETCODE selectBranchingPoint(
       branchpoint = MAX(lb, MIN(suggestion, ub));
       if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
       { /* if it is a discrete variable, then round it down and up and accept this choice */
-         *leftub  = SCIPfloor(scip, branchpoint);
-         *rightlb = MAX(SCIPceil(scip, branchpoint), *leftub + 1);
+         if( SCIPisEQ(scip, branchpoint, ub) )
+         {
+            *leftub  = SCIPfloor(scip, branchpoint) - 1.0;
+            *rightlb = *leftub + 1;
+         }
+         else
+         {
+            *leftub  = SCIPfloor(scip, branchpoint);
+            *rightlb = MAX(SCIPceil(scip, branchpoint), *leftub + 1);
+         }
          return SCIP_OKAY;
       }
       else if( (SCIPisInfinity(scip, -lb) || SCIPisGT(scip, branchpoint, lb)) && (SCIPisInfinity(scip, ub) || SCIPisLT(scip, branchpoint, ub)) )
