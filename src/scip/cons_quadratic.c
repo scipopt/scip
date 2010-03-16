@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.84 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.85 2010/03/16 16:32:30 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -50,7 +50,7 @@
 #include "cons_branchnonlinear.h"
 #endif
 
-/* #define USE_RELAXBRANCH */
+#define USE_RELAXBRANCH
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "quadratic"
