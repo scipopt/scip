@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_quadratic.c,v 1.85 2010/03/16 16:32:30 bzfviger Exp $"
+#pragma ident "@(#) $Id: cons_quadratic.c,v 1.86 2010/03/16 18:42:18 bzfviger Exp $"
 
 /**@file   cons_quadratic.c
  * @ingroup CONSHDLRS
@@ -163,6 +163,8 @@ struct SCIP_ConshdlrData
    SCIP_Real             defaultbound;              /**< a bound to set for variables that are unbounded and in a nonconvex term after presolve */
    SCIP_Real             cutmaxrange;               /**< maximal range (maximal coef / minimal coef) of a cut in order to be added to LP */
    SCIP_Bool             linearizenlpsol;           /**< whether convex quadratic constraints should be linearized in a solution found by the NLP or RENSNL heuristic */
+   SCIP_Bool             upgrades;                  /**< whether upgrade methods should be tried */
+   SCIP_Bool             checkcurvature;            /**< whether functions should be checked for convexity/concavity */
 
    SCIP_HEUR*            nlpheur;                   /**< a pointer to the NLP heuristic, if available */
    SCIP_HEUR*            rensnlheur;                /**< a pointer to the RENSNL heuristic, if available */
@@ -3067,7 +3069,8 @@ static
 SCIP_RETCODE checkCurvature(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< quadratic constraint handler */
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_Bool             checkmultivariate   /**< whether curvature should also be checked for multivariate functions */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -3115,6 +3118,13 @@ SCIP_RETCODE checkCurvature(
          consdata->isconvex  = consdata->isconvex  && !SCIPisNegative(scip, consdata->quadsqrcoefs[i]);
          consdata->isconcave = consdata->isconcave && !SCIPisPositive(scip, consdata->quadsqrcoefs[i]);
       }
+      return SCIP_OKAY;
+   }
+
+   if( !checkmultivariate )
+   {
+      consdata->isconvex  = FALSE;
+      consdata->isconcave = FALSE;
       return SCIP_OKAY;
    }
 
@@ -5855,7 +5865,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      SCIP_CALL( checkCurvature(scip, conshdlr, conss[c]) );
+      SCIP_CALL( checkCurvature(scip, conshdlr, conss[c], conshdlrdata->checkcurvature ) );
 
       if( !SCIPisInfinity(scip,  consdata->rhs) && !consdata->isconvex )
       {
@@ -6401,50 +6411,53 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
    
    /** call upgrade method before aggregated variables are replaced or disaggregation takes place */
    havechange = FALSE;
-   for( c = 0; c < nconss; ++c )
+   if( conshdlrdata->upgrades )
    {
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-      for( i = 0; i < consdata->nlinvars; ++i )
+      for( c = 0; c < nconss; ++c )
       {
-         SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
-      }
-      SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgdconslhs, &upgdconsrhs) );
-      if( upgdconslhs != NULL || upgdconsrhs != NULL )
-      {
-         /* add the upgraded constraint(s) to the problem */
-         if( upgdconslhs != NULL && upgdconslhs != upgdconsrhs )
+         consdata = SCIPconsGetData(conss[c]);
+         assert(consdata != NULL);
+         for( i = 0; i < consdata->nlinvars; ++i )
          {
-            SCIP_CALL( SCIPaddCons(scip, upgdconslhs) );
-            SCIP_CALL( SCIPreleaseCons(scip, &upgdconslhs) );
+            SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
          }
-
-         if( upgdconsrhs != NULL )
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgdconslhs, &upgdconsrhs) );
+         if( upgdconslhs != NULL || upgdconsrhs != NULL )
          {
-            SCIP_CALL( SCIPaddCons(scip, upgdconsrhs) );
-            SCIP_CALL( SCIPreleaseCons(scip, &upgdconsrhs) );
+            /* add the upgraded constraint(s) to the problem */
+            if( upgdconslhs != NULL && upgdconslhs != upgdconsrhs )
+            {
+               SCIP_CALL( SCIPaddCons(scip, upgdconslhs) );
+               SCIP_CALL( SCIPreleaseCons(scip, &upgdconslhs) );
+            }
+
+            if( upgdconsrhs != NULL )
+            {
+               SCIP_CALL( SCIPaddCons(scip, upgdconsrhs) );
+               SCIP_CALL( SCIPreleaseCons(scip, &upgdconsrhs) );
+            }
+
+            (*nupgdconss)++;
+            *result = SCIP_SUCCESS;
+            havechange = TRUE;
+
+            /* delete upgraded constraint */
+            if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+            {
+               SCIPdebugMessage("delete constraint %s after upgrade\n", SCIPconsGetName(conss[c]));
+               SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+               continue;
+            }
          }
-
-         (*nupgdconss)++;
-         *result = SCIP_SUCCESS;
-         havechange = TRUE;
-
-         /* delete upgraded constraint */
-         if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+         for( i = 0; i < consdata->nlinvars; ++i )
          {
-            SCIPdebugMessage("delete constraint %s after upgrade\n", SCIPconsGetName(conss[c]));
-            SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-            SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-            continue;
+            SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
          }
       }
-      for( i = 0; i < consdata->nlinvars; ++i )
-      {
-         SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
-      }
+      if( havechange )
+         return SCIP_OKAY;
    }
-   if( havechange )
-      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -6627,45 +6640,48 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
          consdata->isremovedfixings = TRUE;
 #if 0         
-         /** let other constraint handlers try upgrading cons to a more specific quadratic constraint
-          * since the locking of the linear variables changes if their is an upgrade, we unlock them all here (could be improved)
-          */
-         for( i = 0; i < consdata->nlinvars; ++i )
+         if( conshdlrdata->upgrades )
          {
-            SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
-         }
-         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgdconslhs, &upgdconsrhs) );
-         if( upgdconslhs != NULL || upgdconsrhs != NULL )
-         {
-            /* add the upgraded constraint(s) to the problem */
-            if( upgdconslhs != NULL && upgdconslhs != upgdconsrhs )
+            /** let other constraint handlers try upgrading cons to a more specific quadratic constraint
+             * since the locking of the linear variables changes if their is an upgrade, we unlock them all here (could be improved)
+             */
+            for( i = 0; i < consdata->nlinvars; ++i )
             {
-               SCIP_CALL( SCIPaddCons(scip, upgdconslhs) );
-               SCIP_CALL( SCIPreleaseCons(scip, &upgdconslhs) );
+               SCIP_CALL( unlockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
             }
+            SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgdconslhs, &upgdconsrhs) );
+            if( upgdconslhs != NULL || upgdconsrhs != NULL )
+            {
+               /* add the upgraded constraint(s) to the problem */
+               if( upgdconslhs != NULL && upgdconslhs != upgdconsrhs )
+               {
+                  SCIP_CALL( SCIPaddCons(scip, upgdconslhs) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &upgdconslhs) );
+               }
 
-            if( upgdconsrhs != NULL )
-            {
-               SCIP_CALL( SCIPaddCons(scip, upgdconsrhs) );
-               SCIP_CALL( SCIPreleaseCons(scip, &upgdconsrhs) );
-            }
+               if( upgdconsrhs != NULL )
+               {
+                  SCIP_CALL( SCIPaddCons(scip, upgdconsrhs) );
+                  SCIP_CALL( SCIPreleaseCons(scip, &upgdconsrhs) );
+               }
 
-            (*nupgdconss)++;
-            
-            /* delete upgraded constraint */
-            if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
-            {
-               SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
-               SCIP_CALL( SCIPdelCons(scip, conss[c]) );
-               *result = SCIP_SUCCESS;
-               continue;
+               (*nupgdconss)++;
+
+               /* delete upgraded constraint */
+               if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+               {
+                  SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[c]) );
+                  SCIP_CALL( SCIPdelCons(scip, conss[c]) );
+                  *result = SCIP_SUCCESS;
+                  continue;
+               }
+               else
+                  havechange = TRUE;
             }
-            else
-               havechange = TRUE;
-         }
-         for( i = 0; i < consdata->nlinvars; ++i )
-         {
-            SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+            for( i = 0; i < consdata->nlinvars; ++i )
+            {
+               SCIP_CALL( lockLinearVariable(scip, conss[c], consdata->linvars[i], consdata->lincoefs[i]) );
+            }
          }
 #endif
       }
@@ -7542,6 +7558,14 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          "minimal fractional distance of branching point to variable bounds; a value of 0.5 leads to branching always in the middle of a bounded domain",
          &conshdlrdata->mindistbrpointtobound, FALSE, 0.2, 0.0001, 0.5, NULL, NULL) );
 #endif
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/upgrades",
+         "whether upgrade methods should be tried",
+         &conshdlrdata->upgrades, FALSE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkcurvature",
+         "whether multivariate quadratic functions should be checked for convexity/concavity",
+         &conshdlrdata->checkcurvature, FALSE, TRUE, NULL, NULL) );
    
    SCIP_CALL( SCIPincludeEventhdlr(scip, CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
          NULL,
@@ -7726,7 +7750,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
 
       if( SCIPgetStage(scip) > SCIP_STAGE_INITSOLVE )
       {
-         SCIP_CALL( checkCurvature(scip, conshdlr, *cons) );
+         SCIP_CALL( checkCurvature(scip, conshdlr, *cons, conshdlrdata->checkcurvature) );
          SCIPdebugMessage("new quadratic constraint %s is %sconvex and %sconcave\n", name, consdata->isconvex ? "" : "not ", consdata->isconcave ? "" : "not ");
       }
    }
@@ -7886,7 +7910,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
 
       if( SCIPgetStage(scip) > SCIP_STAGE_INITSOLVE )
       {
-         SCIP_CALL( checkCurvature(scip, conshdlr, *cons) );
+         SCIP_CALL( checkCurvature(scip, conshdlr, *cons, conshdlrdata->checkcurvature) );
          SCIPdebugMessage("new quadratic constraint %s is %sconvex and %sconcave\n", name, consdata->isconvex ? "" : "not ", consdata->isconcave ? "" : "not ");
       }
    }
