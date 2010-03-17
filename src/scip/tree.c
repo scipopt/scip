@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: tree.c,v 1.232 2010/03/16 16:40:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: tree.c,v 1.233 2010/03/17 14:47:47 bzfwanie Exp $"
 
 /**@file   tree.c
  * @brief  methods for branch and bound tree
@@ -1463,7 +1463,7 @@ SCIP_RETCODE SCIPnodeAddCons(
    assert(tree->root != NULL);
    assert(SCIPconsIsGlobal(cons) || SCIPnodeGetDepth(node) > tree->effectiverootdepth);
 
-#ifdef NDEBUG
+#ifndef NDEBUG
    /* check if we add this constraint to the same scip, where we create the constraint */
    if( cons->scip != set->scip )
    {

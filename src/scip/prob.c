@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: prob.c,v 1.110 2010/03/16 16:40:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: prob.c,v 1.111 2010/03/17 14:47:47 bzfwanie Exp $"
 
 /**@file   prob.c
  * @brief  Methods and datastructures for storing and manipulating the main problem
@@ -664,7 +664,7 @@ SCIP_RETCODE SCIPprobAddVar(
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE
       || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
-#ifdef NDEBUG
+#ifndef NDEBUG
    /* check if we add this variables to the same scip, where we created it */
    if( var->scip != set->scip )
    {
@@ -924,7 +924,7 @@ SCIP_RETCODE SCIPprobAddCons(
    assert(cons->addconssetchg == NULL);
    assert(cons->addarraypos == -1);
 
-#ifdef NDEBUG
+#ifndef NDEBUG
    /* check if we add this constraint to the same scip, where we create the constraint */
    if( cons->scip != set->scip )
    {

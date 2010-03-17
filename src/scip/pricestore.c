@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: pricestore.c,v 1.40 2010/03/16 16:40:54 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: pricestore.c,v 1.41 2010/03/17 14:47:47 bzfwanie Exp $"
 
 /**@file   pricestore.c
  * @brief  methods for storing priced variables
@@ -185,7 +185,7 @@ SCIP_RETCODE SCIPpricestoreAddVar(
    assert(set != NULL);
    assert(var != NULL);
 
-#ifdef NDEBUG
+#ifndef NDEBUG
    /* check if we add this variables to the same scip, where we created it */
    if( var->scip != set->scip )
    {
