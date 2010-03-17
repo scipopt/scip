@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_knapsack.c,v 1.188 2010/03/12 15:19:19 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_knapsack.c,v 1.189 2010/03/17 17:55:14 bzfwanie Exp $"
 
 /**@file   cons_knapsack.c
  * @ingroup CONSHDLRS 
@@ -5386,7 +5386,7 @@ SCIP_RETCODE tightenWeights(
                /* check if our clique information results out of this knapsack constraint and if so check if we would loose the clique information */
                if( nnewweights > 1 )
                {
-#ifdef NDEBUG
+#ifndef NDEBUG
                   j = newweightidxs[nnewweights - 2];
                   assert(0 <= j && j < consdata->nvars);
                   assert(getCliqueNum(consdata->cliquepartition[j]) == i);
