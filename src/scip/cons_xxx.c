@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: cons_xxx.c,v 1.52 2010/03/12 14:54:28 bzfwinkm Exp $"
+#pragma ident "@(#) $Id: cons_xxx.c,v 1.53 2010/03/18 16:51:58 bzfviger Exp $"
 
 /**@file   cons_xxx.c
  * @ingroup CONSHDLRS 
@@ -123,7 +123,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXxx)
 /* TODO: Implement all necessary constraint handler methods. The methods with #if 0 ... #else #define ... are optional */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-if 0
+#if 0
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyXxx)
 {  /*lint --e{715}*/
