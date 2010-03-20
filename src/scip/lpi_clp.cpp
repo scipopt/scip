@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.65 2010/01/04 20:35:43 bzfheinz Exp $"
+#pragma ident "@(#) $Id: lpi_clp.cpp,v 1.66 2010/03/20 17:22:41 bzfpfets Exp $"
 
 /**@file   lpi_clp.cpp
  * @ingroup LPIS
@@ -2609,7 +2609,18 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    int* idx;
    SCIP_ALLOC( BMSallocMemoryArray(&idx, nrows) );
-   clp->getBasics(idx);
+
+   /* If secondaryStatus == 6, clp says the LP is empty. Mose likely this happened, because the
+      matrix is empty, i.e., all rows were redundant/empty. In this case, we construct a basis
+      consisting of slack variables. */
+   if ( clp->secondaryStatus() == 6 )
+   {
+      assert( clp->getNumElements() == 0 );
+      for (int i = 0; i < nrows; ++i)
+	 idx[i] = ncols + i;
+   }
+   else
+      clp->getBasics(idx);
 
    for (int i = 0; i < nrows; ++i)
    {
